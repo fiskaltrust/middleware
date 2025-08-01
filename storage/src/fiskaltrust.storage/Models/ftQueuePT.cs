@@ -33,10 +33,6 @@ namespace fiskaltrust.storage.V0
         /*
          * The following fields should probably be moved to a different config
          */
-        public string TaxRegion { get; set; }
         public string IssuerTIN { get; set; }
-        public string ATCUD { get; set; }
-        public string SimplifiedInvoiceSeries { get; set; }
-        public long SimplifiedInvoiceSeriesNumerator { get; set; }
     }
 }

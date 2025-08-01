@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.Middleware.Contracts.Models;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 public class QueuePTConfiguration
 {

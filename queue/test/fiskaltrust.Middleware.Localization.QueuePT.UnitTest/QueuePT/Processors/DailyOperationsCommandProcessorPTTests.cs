@@ -7,6 +7,7 @@ using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Moq;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
@@ -40,15 +41,17 @@ public class DailyOperationsCommandProcessorPTTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
-
         result.receiptResponse.Should().Be(receiptResponse);
+        result.receiptResponse.ftSignatures.Should().BeEmpty();
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_ShouldReturnError_IfInvalidCaseIsUsed()
+    public async Task ProcessReceiptAsync_ShouldReturnError()
     {
         var queue = TestHelpers.CreateQueue();
+        var queuePT = new ftQueuePT();
+        var scuPT = new ftSignaturCreationUnitPT();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -64,8 +67,8 @@ public class DailyOperationsCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE);
     }

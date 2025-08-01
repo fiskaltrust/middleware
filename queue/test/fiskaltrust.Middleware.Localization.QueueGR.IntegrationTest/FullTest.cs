@@ -8,14 +8,14 @@ using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using System.Text;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
     [Trait("only", "local")]
     public class FullTest()
     {
-        private readonly MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
+        private readonly MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", true, new MasterDataConfiguration
         {
             Account = new AccountMasterData
             {
@@ -121,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 },
             });
 
-            var xml = aadeFactory.MapToInvoicesDoc(receiptRequest, new ReceiptResponse
+            (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, new ReceiptResponse
             {
                 ftCashBoxIdentification = cashBoxId.ToString(),
                 ftQueueID = Guid.NewGuid(),
@@ -132,7 +132,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftState = 0
             });
 
-            var data = aadeFactory.GenerateInvoicePayload(xml);
+            var data = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
 
             d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
         }
@@ -330,7 +330,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             }));
             Directory.CreateDirectory(folder);
             File.WriteAllBytes($"{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
-            File.WriteAllText($"{folder}\\{casename}_aade.xml", (xmlData.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(xmlData.contentType.CharSet!)).GetString((await xmlData.reader.ReadAsync()).Buffer));
+            //File.WriteAllText($"{folder}\\{casename}_aade.xml", xmlData);
         }
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)

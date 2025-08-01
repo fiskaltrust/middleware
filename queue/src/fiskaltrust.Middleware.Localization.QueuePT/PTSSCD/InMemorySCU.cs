@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
@@ -7,14 +8,8 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 
-public class PTSSCDInfo
-{
-}
-
-public class InMemorySCUConfiguration
-{
-
-}
+public class PTSSCDInfo { }
+public class InMemorySCUConfiguration { }
 
 public class InMemorySCU : IPTSSCD
 {
@@ -25,13 +20,13 @@ public class InMemorySCU : IPTSSCD
         _signaturCreationUnitPT = signaturCreationUnitPT;
     }
 
-    public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, string invoiceNo, string? lastHash)
+    public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
         return new PTInvoiceElement
         {
             InvoiceDate = receipt.cbReceiptMoment,
-            SystemEntryDate = DateTime.UtcNow, // wrong
-            InvoiceNo = invoiceNo, // wrong
+            SystemEntryDate = receipt.cbReceiptMoment,
+            InvoiceNo = receiptResponse.ftReceiptIdentification, 
             GrossTotal = receipt.cbChargeItems.Sum(x => x.Amount),
             Hash = lastHash ?? ""
         };
@@ -42,21 +37,28 @@ public class InMemorySCU : IPTSSCD
         return $"{element.InvoiceDate:yyyy-MM-dd};" +
                $"{element.SystemEntryDate:yyyy-MM-ddTHH:mm:ss};" +
                $"{element.InvoiceNo};" +
-               $"{element.GrossTotal:0.00};" +
+               $"{element.GrossTotal.ToString("0.00", CultureInfo.InvariantCulture)};" +
                $"{element.Hash}";
     }
 
-#pragma warning disable
-    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string invoiceNo, string? lastHash)
+    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request,string? lastHash)
     {
         var rsa = RSA.Create();
         rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
-        var hash1 = GetHashForItem(GetPTInvoiceElementFromReceiptRequest(request.ReceiptRequest, invoiceNo, lastHash ?? ""));
+        var hash1 = GetHashForItem(GetPTInvoiceElementFromReceiptRequest(request.ReceiptRequest, request.ReceiptResponse, lastHash ?? ""));
         var signature1 = rsa.SignData(Encoding.UTF8.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
         return await Task.FromResult((new ProcessResponse
         {
             ReceiptResponse = request.ReceiptResponse,
         }, Convert.ToBase64String(signature1)));
+    }
+
+    public string SignData(string hash1)
+    {
+        var rsa = RSA.Create();
+        rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
+        var signature1 = rsa.SignData(Encoding.ASCII.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+        return Convert.ToBase64String(signature1);
     }
 
     public Task<PTSSCDInfo> GetInfoAsync() => throw new NotImplementedException();

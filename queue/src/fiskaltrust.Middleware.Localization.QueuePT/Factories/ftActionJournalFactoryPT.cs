@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
 
-public static class ftActionJournalFactory
+public static class ftActionJournalFactoryPT
 {
     public static ftActionJournal CreateDailyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
@@ -46,7 +46,7 @@ public static class ftActionJournalFactory
         var notification = new DeactivateQueuePT
         {
             CashBoxId = request.ftCashBoxID!.Value,
-            QueueId = receiptResponse.ftQueueItemID,
+            QueueId = receiptResponse.ftQueueID,
             Moment = DateTime.UtcNow,
             IsStopReceipt = true,
             Version = "V0"

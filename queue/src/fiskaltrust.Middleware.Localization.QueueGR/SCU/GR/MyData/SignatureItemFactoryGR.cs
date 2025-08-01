@@ -4,8 +4,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
 
-#pragma warning disable
-namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
+namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
 public static class SignatureItemFactoryGR
 {
@@ -19,7 +18,6 @@ public static class SignatureItemFactoryGR
             ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
         });
     }
-
 
     public static void AddMarksForConnectedMarks(ProcessRequest request, InvoicesDoc doc)
     {
@@ -63,6 +61,30 @@ public static class SignatureItemFactoryGR
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
         });
+    }
+
+    public static void AddHandwrittenReceiptSignature(ProcessRequest request, string hashPayload, bool sandbox)
+    {
+        if (sandbox)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = $"https://r-sb.ft.ms/{hashPayload}",
+                Caption = "",
+                ftSignatureFormat = SignatureFormat.Link,
+                ftSignatureType = ((SignatureType) 0x4752_2000_0000_0000).WithFlag(SignatureTypeFlags.DontVisualize)
+            });
+        }
+        else
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = $"https://r.ft.ms/{hashPayload}",
+                Caption = "",
+                ftSignatureFormat = SignatureFormat.Link,
+                ftSignatureType = ((SignatureType) 0x4752_2000_0000_0000).WithFlag(SignatureTypeFlags.DontVisualize)
+            });
+        }
     }
 
     public static void AddInvoiceSignature(ProcessRequest request, InvoicesDoc doc)

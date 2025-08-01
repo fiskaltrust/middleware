@@ -6,6 +6,28 @@ namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
 public static class ReceiptRequestExtensions
 {
+    public static bool TryDeserializeftReceiptCaseData<T>(this ReceiptRequest request, out T? result) where T : class
+    {
+        result = default;
+        try
+        {
+            if (request.ftReceiptCaseData is null)
+            {
+                return false;
+            }
+            result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(request.ftReceiptCaseData), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return result != null;
+        }
+        catch (Exception)
+        {
+            result = default;
+            return false;
+        }
+    }
+
     public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItems(this ReceiptRequest receiptRequest)
     {
         var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
@@ -53,15 +75,5 @@ public static class ReceiptRequestExtensions
             });
         }
         return null;
-    }
-
-    public static bool HasGreeceCountryCode(this ReceiptRequest receiptRequest)
-    {
-        return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x4752_0000_0000_0000;
-    }
-
-    public static bool HasNonEUCountryCode(this ReceiptRequest receiptRequest)
-    {
-        return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x0000_0000_0000_0000;
     }
 }

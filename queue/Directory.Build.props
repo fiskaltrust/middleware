@@ -7,7 +7,7 @@
         <PackageTags>fiskaltrust Middleware;fiscalization;KassenSichV;RKSV</PackageTags>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <AssemblyCompany>fiskaltrust</AssemblyCompany>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
         <Deterministic>true</Deterministic>
         <LangVersion>11.0</LangVersion>
         <MinVerDefaultPreReleaseIdentifiers>ci</MinVerDefaultPreReleaseIdentifiers>

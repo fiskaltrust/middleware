@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 using fiskaltrust.ifPOS.v2.Cases;
 using Xunit;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -25,6 +26,7 @@ public class ReceiptRequestValidatorPTTests
             };
         var receiptRequest = new ReceiptRequest
         {
+
             cbTerminalID = "1",
             cbReceiptAmount = chargeItems.Sum(x => x.Amount),
             cbReceiptMoment = DateTime.UtcNow,

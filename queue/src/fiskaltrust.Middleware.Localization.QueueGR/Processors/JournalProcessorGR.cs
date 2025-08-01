@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -42,7 +43,11 @@ public class JournalProcessorGR : IJournalProcessor
 
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         using var memoryStream = new MemoryStream();
-        var invoiceDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
+        var invoiceDoc = aadFactory.LoadInvoiceDocsFromQueueItems(queueItems.ToList());
+        if (request.To == -1)
+        {
+            invoiceDoc.invoice = invoiceDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
+        }
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
         xmlSerializer.Serialize(memoryStream, invoiceDoc);
         memoryStream.Position = 0;

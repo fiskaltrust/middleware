@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using System.Linq;
+using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
@@ -37,7 +38,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -58,6 +59,24 @@ public class InvoiceCommandProcessorGRTests
         var queueGR = new ftQueueGR();
         var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
+        queueItem.request = JsonSerializer.Serialize(new ReceiptRequest
+        {
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceUnknown0x1000),
+            cbTerminalID = "terminalId",
+            cbPreviousReceiptReference = "previousReceiptReference",
+        });
+        queueItem.response = JsonSerializer.Serialize(new ReceiptResponse
+        {
+            cbReceiptReference = "previousReceiptReference",
+            ftQueueItemID = queueItem.ftQueueItemId,
+            ftQueueID = queueItem.ftQueueId,
+            ftState = (State) 0x4752_2000_0000_0000,
+            ftCashBoxIdentification = "cashBoxIdentification",
+            ftQueueRow = 1,
+            ftReceiptIdentification = "receiptIdentification",
+            ftReceiptMoment = DateTime.UtcNow,
+        });
+
         var receiptRequest = new ReceiptRequest
         {
             ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceUnknown0x1000),
@@ -75,7 +94,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.Is<List<(ReceiptRequest, ReceiptResponse)>>(x => x.Count == 1)))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -114,7 +133,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -151,7 +170,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -188,7 +207,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -225,7 +244,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
