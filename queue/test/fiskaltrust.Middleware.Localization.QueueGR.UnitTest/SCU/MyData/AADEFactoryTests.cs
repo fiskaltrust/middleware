@@ -98,7 +98,7 @@ public class AADEFactoryTests
     [Fact]
     public void MapToInvoicesDoc_ShouldThrowException_IfHandwritten_FieldsAreDefined_HashPayloadMatches_EverythingGreen()
     {
-        var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
+        var dateTime = new DateTime(2025, 12, 15, 15, 13, 14, DateTimeKind.Utc);
         var merchantId = "Test";
         var series = "test";
         var aa = 1;
@@ -137,7 +137,7 @@ public class AADEFactoryTests
                     Series = series, // This should be defined
                     AA = aa,
                     HashAlg = "SHA256",
-                    HashPayload = merchantId + "-" + series + "-" + aa + "-" + cbReceiptReference + "-2025-12-15T12:13:14Z-" + chargeItems.Sum(x => x.Amount)
+                    HashPayload = merchantId + "-" + series + "-" + aa + "-" + cbReceiptReference + "-2025-12-15T15:13:14Z-" + chargeItems.Sum(x => x.Amount)
                 }
             },
             cbReceiptAmount = chargeItems.Sum(x => x.Amount),
