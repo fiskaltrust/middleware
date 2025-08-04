@@ -421,7 +421,7 @@ public static class AADECertificationExamplesCard
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_3004,
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0002,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,

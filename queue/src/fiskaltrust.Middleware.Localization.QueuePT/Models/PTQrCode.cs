@@ -132,37 +132,37 @@ public class PTQrCode
 
         sb.Append($"I1:{TaxCountryRegion}*");
 
-        if (TaxableBasisOfVAT_ExemptRate.HasValue)
+        if (TaxableBasisOfVAT_ExemptRate.HasValue && TaxableBasisOfVAT_ExemptRate > 0m)
         {
             sb.Append($"I2:{CreateCurrencyValue(TaxableBasisOfVAT_ExemptRate.Value)}*");
         }
 
-        if (TaxableBasisOfVAT_ReducedRate.HasValue)
+        if (TaxableBasisOfVAT_ReducedRate.HasValue && TaxableBasisOfVAT_ReducedRate > 0m)
         {
             sb.Append($"I3:{CreateCurrencyValue(TaxableBasisOfVAT_ReducedRate.Value)}*");
         }
 
-        if (TotalVAT_ReducedRate.HasValue)
+        if (TotalVAT_ReducedRate.HasValue && TotalVAT_ReducedRate > 0m)
         {
             sb.Append($"I4:{CreateCurrencyValue(TotalVAT_ReducedRate.Value)}*");
         }
 
-        if (TaxableBasisOfVAT_IntermediateRate.HasValue)
+        if (TaxableBasisOfVAT_IntermediateRate.HasValue && TaxableBasisOfVAT_IntermediateRate > 0m)
         {
             sb.Append($"I5:{CreateCurrencyValue(TaxableBasisOfVAT_IntermediateRate.Value)}*");
         }
 
-        if (TotalVAT_IntermediateRate.HasValue)
+        if (TotalVAT_IntermediateRate.HasValue && TotalVAT_IntermediateRate > 0m)
         {
             sb.Append($"I6:{CreateCurrencyValue(TotalVAT_IntermediateRate.Value)}*");
         }
 
-        if (TaxableBasisOfVAT_StandardRate.HasValue)
+        if (TaxableBasisOfVAT_StandardRate.HasValue && TaxableBasisOfVAT_StandardRate > 0m)
         {
             sb.Append($"I7:{CreateCurrencyValue(TaxableBasisOfVAT_StandardRate.Value)}*");
         }
 
-        if (TotalVAT_StandardRate.HasValue)
+        if (TotalVAT_StandardRate.HasValue && TotalVAT_StandardRate > 0m)
         {
             sb.Append($"I8:{CreateCurrencyValue(TotalVAT_StandardRate.Value)}*");
         }

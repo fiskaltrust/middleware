@@ -46,7 +46,7 @@ public class JournalProcessorPT : IJournalProcessor
         {
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
-        var data = SAFTMapping.SerializeAuditFile(masterData, queueItems, (int) request.To);
+        var data = new SaftExporter().SerializeAuditFile(masterData, queueItems, (int) request.To);
         yield return Encoding.UTF8.GetBytes(data);
     }
 }
