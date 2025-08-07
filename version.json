@@ -8,9 +8,6 @@
       "enabled": true
     }
   },
-  "publicReleaseRefSpec": [
-    "^refs/heads/release/v.+"
-  ],
   "release": {
     "branchName": "release/v{version}",
     "versionIncrement": "build",
