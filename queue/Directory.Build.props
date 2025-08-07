@@ -11,4 +11,11 @@
         <Deterministic>true</Deterministic>
         <LangVersion>11.0</LangVersion>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Nerdbank.GitVersioning" Condition="Exists('version.json')">
+            <PrivateAssets>all</PrivateAssets>
+            <Version>3.7.115</Version>
+        </PackageReference>
+    </ItemGroup>
 </Project>

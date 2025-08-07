@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "version": "1.3.21",
+  "pathFilters": [
+    "/storage/src/fiskaltrust.storage"
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/tags/storage/v.+",
+    "^refs/heads/release/v.+"
+  ],
+  "release": {
+    "tagName": "storage/v{version}"
+  },
+  "inherit": true
+}
