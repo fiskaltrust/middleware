@@ -4,8 +4,7 @@
     "/scu-it/src/fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-it/epsonrtprinter/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/scu-it/epsonrtprinter/v.+"
   ],
   "release": {
     "tagName": "scu-it/epsonrtprinter/v{version}"

@@ -4,8 +4,7 @@
     "/queue"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/mysql/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/queue/mysql/v.+"
   ],
   "release": {
     "tagName": "queue/mysql/v{version}"

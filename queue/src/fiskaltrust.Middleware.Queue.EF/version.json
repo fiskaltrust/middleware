@@ -4,8 +4,7 @@
     "/queue"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/ef/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/queue/ef/v.+"
   ],
   "release": {
     "tagName": "queue/ef/v{version}"

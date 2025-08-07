@@ -5,8 +5,7 @@
     "/storage/src/fiskaltrust.storage"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/storage/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/storage/v.+"
   ],
   "release": {
     "tagName": "storage/v{version}"

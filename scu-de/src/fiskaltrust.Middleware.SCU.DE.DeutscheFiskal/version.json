@@ -4,8 +4,7 @@
     "/scu-de/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-de/deutschefiskal/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/scu-de/deutschefiskal/v.+"
   ],
   "release": {
     "tagName": "scu-de/deutschefiskal/v{version}"

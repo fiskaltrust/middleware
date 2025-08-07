@@ -4,8 +4,7 @@
     "/scu-it/src/fiskaltrust.Middleware.SCU.IT.CustomRTServer"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-it/customrtserver/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/scu-it/customrtserver/v.+"
   ],
   "release": {
     "tagName": "scu-it/customrtserver/v{version}"

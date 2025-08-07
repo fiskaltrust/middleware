@@ -4,8 +4,7 @@
     "/scu-me/src/fiskaltrust.Middleware.SCU.ME.InMemory"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-me/inmemory/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/scu-me/inmemory/v.+"
   ],
   "release": {
     "tagName": "scu-me/inmemory/v{version}"

@@ -4,8 +4,7 @@
     "/storage/src/fiskaltrust.storage.serialization"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/storage/serialization/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/storage/serialization/v.+"
   ],
   "release": {
     "tagName": "storage/serialization/v{version}"

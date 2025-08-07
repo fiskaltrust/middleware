@@ -4,8 +4,7 @@
     "/storage/src/fiskaltrust.storage.encryption"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/storage/encryption/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/storage/encryption/v.+"
   ],
   "release": {
     "tagName": "storage/encryption/v{version}"

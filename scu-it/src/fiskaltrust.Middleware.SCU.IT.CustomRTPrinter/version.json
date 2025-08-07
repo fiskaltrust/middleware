@@ -4,8 +4,7 @@
     "/scu-it/src/fiskaltrust.Middleware.SCU.IT.CustomRTPrinter"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-it/customrtprinter/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/scu-it/customrtprinter/v.+"
   ],
   "release": {
     "tagName": "scu-it/customrtprinter/v{version}"

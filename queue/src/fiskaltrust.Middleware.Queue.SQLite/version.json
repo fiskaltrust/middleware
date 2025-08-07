@@ -4,8 +4,7 @@
     "/queue"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/sqlite/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/queue/sqlite/v.+"
   ],
   "release": {
     "tagName": "queue/sqlite/v{version}"

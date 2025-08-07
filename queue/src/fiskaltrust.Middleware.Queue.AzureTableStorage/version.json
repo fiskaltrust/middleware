@@ -4,8 +4,7 @@
     "/queue"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/azuretablestorage/v.+",
-    "^refs/heads/release/v.+"
+    "^refs/tags/queue/azuretablestorage/v.+"
   ],
   "release": {
     "tagName": "queue/azuretablestorage/v{version}"
