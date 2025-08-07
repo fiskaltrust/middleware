@@ -70,15 +70,20 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
             throw new Exception("ftStateData must be empty.");
         }
 
+        var lastReceipt = lastQueueItem is null ? null : new LastReceipt
+        {
+            Request = JsonSerializer.Deserialize<ReceiptRequest>(lastQueueItem.request)!,
+            Response = JsonSerializer.Deserialize<ReceiptResponse>(lastQueueItem.response)!,
+        };
+        if (lastReceipt is not null)
+        {
+            lastReceipt.Response.ftStateData = null;
+        }
         request.ReceiptResponse.ftStateData = new MiddlewareState
         {
             ES = new MiddlewareQueueESState
             {
-                LastReceipt = lastQueueItem is null ? null : new LastReceipt
-                {
-                    Request = JsonSerializer.Deserialize<ReceiptRequest>(lastQueueItem.request)!,
-                    Response = JsonSerializer.Deserialize<ReceiptResponse>(lastQueueItem.response)!,
-                }
+                LastReceipt = lastReceipt
             }
         };
 
@@ -92,7 +97,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
 
         try
         {
-            var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement)response.ReceiptResponse.ftStateData!).GetRawText())!;
+            var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
             await (await _journalESRepository).InsertAsync(new ftJournalES
             {
                 ftJournalESId = Guid.NewGuid(),
