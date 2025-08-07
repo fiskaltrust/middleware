@@ -4,7 +4,8 @@
     "/scu-me/src/fiskaltrust.Middleware.SCU.ME.FiscalizationService"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-me/fiscalizationservice/v.+"
+    "^refs/tags/scu-me/fiscalizationservice/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-me/fiscalizationservice/v{version}"

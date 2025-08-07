@@ -4,7 +4,8 @@
     "/scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAI"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-es/ticketbai/v.+"
+    "^refs/tags/scu-es/ticketbai/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-es/ticketbai/v{version}"

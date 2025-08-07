@@ -4,7 +4,8 @@
     "/scu-es/src/fiskaltrust.Middleware.SCU.ES.VeriFactu"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-es/verifactu/v.+"
+    "^refs/tags/scu-es/verifactu/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-es/verifactu/v{version}"

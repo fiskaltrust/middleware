@@ -4,7 +4,8 @@
     "/scu-at/src/fiskaltrust.Middleware.SCU.AT.PrimeSignHSM"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-at/primesignhsm/v.+"
+    "^refs/tags/scu-at/primesignhsm/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-at/primesignhsm/v{version}"

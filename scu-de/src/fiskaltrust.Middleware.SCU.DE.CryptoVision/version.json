@@ -4,7 +4,8 @@
     "/scu-de/src/fiskaltrust.Middleware.SCU.DE.CryptoVision"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-de/cryptovision/v.+"
+    "^refs/tags/scu-de/cryptovision/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-de/cryptovision/v{version}"

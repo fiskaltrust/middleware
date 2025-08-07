@@ -4,7 +4,8 @@
     "/scu-de/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-de/fiskalycertified/v.+"
+    "^refs/tags/scu-de/fiskalycertified/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-de/fiskalycertified/v{version}"

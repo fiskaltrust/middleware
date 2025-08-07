@@ -4,7 +4,8 @@
     "/scu-de/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-de/swissbitcloudv2/v.+"
+    "^refs/tags/scu-de/swissbitcloudv2/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "scu-de/swissbitcloudv2/v{version}"

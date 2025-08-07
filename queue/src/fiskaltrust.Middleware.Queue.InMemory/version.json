@@ -4,7 +4,8 @@
     "/queue"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/inmemory/v.+"
+    "^refs/tags/queue/inmemory/v.+",
+    "^refs/heads/release/v.+"
   ],
   "release": {
     "tagName": "queue/inmemory/v{version}"
