@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
   "pathFilters": [
-    "/queue"
+    "/scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAI"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/sqlite/v.+"
+    "^refs/tags/scu-es/ticketbai/v.+"
   ],
   "release": {
-    "tagName": "queue/sqlite/v{version}"
+    "tagName": "scu-es/ticketbai/v{version}"
   },
   "inherit": true
 }

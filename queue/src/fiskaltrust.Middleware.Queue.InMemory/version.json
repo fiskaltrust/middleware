@@ -4,10 +4,10 @@
     "/queue"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/sqlite/v.+"
+    "^refs/tags/queue/inmemory/v.+"
   ],
   "release": {
-    "tagName": "queue/sqlite/v{version}"
+    "tagName": "queue/inmemory/v{version}"
   },
   "inherit": true
 }

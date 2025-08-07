@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
   "pathFilters": [
-    "/queue"
+    "/scu-at/src/fiskaltrust.Middleware.SCU.AT.ATrustSmartcard"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/sqlite/v.+"
+    "^refs/tags/scu-at/atrustsmartcard/v.+"
   ],
   "release": {
-    "tagName": "queue/sqlite/v{version}"
+    "tagName": "scu-at/atrustsmartcard/v{version}"
   },
   "inherit": true
 }

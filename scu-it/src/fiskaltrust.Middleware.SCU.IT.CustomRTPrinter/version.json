@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
   "pathFilters": [
-    "/queue"
+    "/scu-it/src/fiskaltrust.Middleware.SCU.IT.CustomRTPrinter"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/sqlite/v.+"
+    "^refs/tags/scu-it/customrtprinter/v.+"
   ],
   "release": {
-    "tagName": "queue/sqlite/v{version}"
+    "tagName": "scu-it/customrtprinter/v{version}"
   },
   "inherit": true
 }

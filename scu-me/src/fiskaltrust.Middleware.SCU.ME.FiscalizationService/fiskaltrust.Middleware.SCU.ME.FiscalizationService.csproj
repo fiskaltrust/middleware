@@ -4,7 +4,6 @@
         <Description>The fiskaltrust Middleware implementation of the Fiscalization SCU for Montenegro.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
-        <MinVerTagPrefix>scu-me/fiscalizationservice/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,10 +17,6 @@
         <PackageReference Include="System.ServiceModel.Http" Version="4.4.*" />
         <PackageReference Include="System.ServiceModel.NetTcp" Version="4.4.*" />
         <PackageReference Include="System.ServiceModel.Security" Version="4.4.*" />
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

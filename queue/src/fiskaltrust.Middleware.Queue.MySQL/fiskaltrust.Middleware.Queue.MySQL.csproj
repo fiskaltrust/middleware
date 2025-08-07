@@ -4,7 +4,6 @@
         <Description>The fiskaltrust Middleware Queue with an MySQL storage provider.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
-        <MinVerTagPrefix>queue/mysql/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -20,10 +19,6 @@
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.2" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
         <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
     <ItemGroup Label="FilesToCopy">

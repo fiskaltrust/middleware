@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
   "pathFilters": [
-    "/queue"
+    "/scu-de/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/queue/sqlite/v.+"
+    "^refs/tags/scu-de/swissbitcloudv2/v.+"
   ],
   "release": {
-    "tagName": "queue/sqlite/v{version}"
+    "tagName": "scu-de/swissbitcloudv2/v{version}"
   },
   "inherit": true
 }
