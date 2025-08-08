@@ -523,27 +523,35 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     var scus = await _sscdProvider.GetAllInstances();
                     var retry = 0;
 
+                    var currentIndex = await _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
                     do
                     {
-                        var (scu, sscd, startIndex) = await _sscdProvider.GetCurrentlyActiveInstanceAsync();
-                        var currentIndex = startIndex;
+                        var startIndex = currentIndex;
+
                         do
                         {
-                            // Skip SCU if using a backup SCU on the first retry, and the previously used SCU was not a backup one
-                            // TODO Clarify why this is required
-                            if (retry == 0 && scu.IsBackup() && scus.Any(x => !x.IsBackup()) && !scus[startIndex].IsBackup())
+                            // If there exists a normal scu
+                            // and on the first try of the retries in max-scu-retries
+                            // we check for every scu if
+                            // the current scu is a backup scu
+                            // and the scu that we started with is a normal scu
+                            // switch to next scu and skip this one
+                            // 
+                            // Explanation: on the first run if we start with a normal scu skip all backup scus.
+                            if (scus.Any(x => !x.scu.IsBackup()) && retry == 0 && scus[currentIndex].scu.IsBackup() && !scus[startIndex].scu.IsBackup())
                             {
                                 currentIndex = _sscdProvider.SwitchToNextScu();
                                 continue;
                             }
 
-                            isBackupScuUsed = scu.IsBackup();
+
+                            isBackupScuUsed = scus[currentIndex].scu.IsBackup();
 
                             try
                             {
 #pragma warning disable CS0618
-                                var zda = sscd.ZDA();
-                                var certResponse = sscd.Certificate();
+                                var zda = scus[currentIndex].sscd.ZDA();
+                                var certResponse = scus[currentIndex].sscd.Certificate();
 #pragma warning restore
                                 var cert = new X509CertificateParser().ReadCertificate(certResponse);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
@@ -572,10 +580,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 var jwsDataToSign = Encoding.UTF8.GetBytes($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}");
 
 #pragma warning disable CS0618
-                                var jwsSignature = sscd.Sign(jwsDataToSign);
+                                var jwsSignature = scus[currentIndex].sscd.Sign(jwsDataToSign);
 #pragma warning restore
                                 journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature);
-                                journalAT.ftSignaturCreationUnitId = scu.ftSignaturCreationUnitATId;
+                                journalAT.ftSignaturCreationUnitId = scus[currentIndex].scu.ftSignaturCreationUnitATId;
 
                                 queueAT.ftCashNumerator = cashNumerator;
                                 queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
@@ -589,12 +597,12 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "An error occured while trying to sign a receipt with the SCU {ScuId}.", scu.ftSignaturCreationUnitATId);
+                                _logger.LogError(ex, "An error occured while trying to sign a receipt with the SCU {ScuId}.", scus[currentIndex].scu.ftSignaturCreationUnitATId);
                             }
 
                             currentIndex = _sscdProvider.SwitchToNextScu();
                         } while (currentIndex != startIndex);
-                    } while (retry++ < _queueATConfiguration.ScuMaxRetries);
+                    } while (retry++ < (_queueATConfiguration?.ScuMaxRetries ?? 3));
                 }
 
                 if (string.IsNullOrWhiteSpace(queueAT.LastSignatureZDA) || string.IsNullOrWhiteSpace(queueAT.LastSignatureCertificateSerialNumber))
