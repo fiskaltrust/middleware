@@ -23,9 +23,12 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using System.Linq;
 using FluentAssertions;
+using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Localization.QueueAT.UnitTest.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
 {
+
     public class SignProcessorATFixture
     {
         private const string CERT_PASSWORD = "password";
@@ -39,6 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
         public ILogger<RequestCommand> logger;
         public IConfigurationRepository configurationRepository;
         private ftSignaturCreationUnitAT _signaturCreationUnitAT;
+        private ftSignaturCreationUnitAT _backupSignaturCreationUnitAT;
         private readonly byte[] _certificate;
 
         public SignProcessorATFixture()
@@ -50,7 +54,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
                 IsSandbox = true,
                 Configuration = new Dictionary<string, object>()
                 {
-                    { "EnableMonthlyExport", false }
+                    { "EnableMonthlyExport", false },
+                    {"scu-max-retries", 3}
                 },
                 ProcessingVersion = "test"
             };
@@ -80,21 +85,49 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
             }
         }
 
-        public IATSSCDProvider GetIATSSCDProvider(string zda)
+        public IATSSCDProvider GetIATSSCDProvider(string zda, bool addBackupSCU = false)
         {
-            var sscd = new Mock<IATSSCD>();
-            sscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda });
-            sscd.Setup(x => x.ZDA()).Returns(zda);
-            sscd.Setup(x => x.Sign(It.IsAny<byte[]>())).Returns(new byte[] { 0x01, 0x02, 0x03 });
-            sscd.Setup(x => x.Certificate()).Returns(_certificate);
-            var sscdProvider = new Mock<IATSSCDProvider>();
-            sscdProvider.Setup(x => x.GetCurrentlyActiveInstanceAsync()).ReturnsAsync((_signaturCreationUnitAT, sscd.Object, 0));
-            var scus = new List<ftSignaturCreationUnitAT>
+            if (addBackupSCU)
             {
-                _signaturCreationUnitAT
-            };
-            sscdProvider.Setup(x => x.GetAllInstances()).ReturnsAsync(scus);
-            return sscdProvider.Object;
+                var instances = new Dictionary<string, IATSSCD>();
+
+                var normalSscd = new Mock<IATSSCD>();
+                normalSscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda });
+                normalSscd.Setup(x => x.ZDA()).Returns(zda);
+                normalSscd.Setup(x => x.Sign(It.IsAny<byte[]>())).Throws(new Exception("normal SCU does not work"));
+                normalSscd.Setup(x => x.Certificate()).Returns(_certificate);
+                instances.Add("http://normal/", normalSscd.Object);
+
+                var backupSscd = new Mock<IATSSCD>();
+                backupSscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda });
+                backupSscd.Setup(x => x.ZDA()).Returns(zda + "backup");
+                backupSscd.Setup(x => x.Sign(It.IsAny<byte[]>())).Returns(new byte[] { 0x01, 0x02, 0x03 });
+                backupSscd.Setup(x => x.Certificate()).Returns(_certificate);
+                instances.Add("http://backup/", backupSscd.Object);
+
+                return new ATSSCDProvider(
+                    Mock.Of<ILogger<ATSSCDProvider>>(),
+                    new MockClientFactory(instances),
+                    configurationRepository,
+                    queueATConfiguration
+                );
+            }
+            else
+            {
+                var sscd = new Mock<IATSSCD>();
+                sscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda });
+                sscd.Setup(x => x.ZDA()).Returns(zda);
+                sscd.Setup(x => x.Sign(It.IsAny<byte[]>())).Returns(new byte[] { 0x01, 0x02, 0x03 });
+                sscd.Setup(x => x.Certificate()).Returns(_certificate);
+                var sscdProvider = new Mock<IATSSCDProvider>();
+                sscdProvider.Setup(x => x.GetCurrentlyActiveInstanceIndexAsync()).ReturnsAsync(0);
+                var scus = new List<ftSignaturCreationUnitAT>
+                {
+                    _signaturCreationUnitAT
+                };
+                sscdProvider.Setup(x => x.GetAllInstances()).ReturnsAsync(scus.Select(x => (x, sscd.Object)).ToList());
+                return sscdProvider.Object;
+            }
         }
 
         public ftQueueItem CreateQueueItem(ReceiptRequest request)
@@ -121,14 +154,26 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
             return queueItem;
         }
 
-        public async Task CreateConfigurationRepository(bool inFailedMode = false, DateTime? startMoment = null, DateTime? stopMoment = null)
+        public async Task CreateConfigurationRepository(bool inFailedMode = false, DateTime? startMoment = null, DateTime? stopMoment = null, bool addBackupSCU = false)
         {
             configurationRepository = new InMemoryConfigurationRepository();
             _signaturCreationUnitAT = new ftSignaturCreationUnitAT()
             {
-                ftSignaturCreationUnitATId = Guid.NewGuid()
+                ftSignaturCreationUnitATId = Guid.NewGuid(),
+                Mode = 0,
+                Url = "http://normal/"
             };
             await configurationRepository.InsertOrUpdateSignaturCreationUnitATAsync(_signaturCreationUnitAT);
+            if (addBackupSCU)
+            {
+                _backupSignaturCreationUnitAT = new ftSignaturCreationUnitAT()
+                {
+                    ftSignaturCreationUnitATId = Guid.NewGuid(),
+                    Mode = 1,
+                    Url = "http://backup/"
+                };
+                await configurationRepository.InsertOrUpdateSignaturCreationUnitATAsync(_backupSignaturCreationUnitAT);
+            }
 
             queue = new ftQueue
             {
