@@ -47,8 +47,8 @@ jobs:
         uses: ./.github/actions/test
         env:
           APISECRET_FISKALYCERTIFIED_TESTS: ${{ secrets.APISECRET_FISKALYCERTIFIED_TESTS }}
-          API_KEY_FISKALY_CERTIFIED_TESTS: ${{ secrets.APIKEY_FISKALYCERTIFIED_TESTS }}
-          ADMIN_PIN_FISKALY_CERTIFIED_TESTS: ${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}
+          APIKEY_FISKALYCERTIFIED_TESTS: ${{ secrets.APIKEY_FISKALYCERTIFIED_TESTS }}
+          ADMINPIN_FISKALYCERTIFIED_TESTS: ${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}
         with:
           directory: scu-de/test
           pattern: "fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest"
