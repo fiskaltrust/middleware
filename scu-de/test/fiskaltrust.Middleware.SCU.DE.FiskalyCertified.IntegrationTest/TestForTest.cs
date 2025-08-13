@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
         
         [Fact]
         [Trait("TseCategory", "Cloud")]
-        public async Task StartTransactionAsync_Should_Return_Valid_Transaction_Result()
+        public void Test_shouldreurnCorrect()
         {
             var apiSecret = Environment.GetEnvironmentVariable("APISECRET_FISKALYCERTIFIED_TESTS");
             var apiKey = Environment.GetEnvironmentVariable("APIKEY_FISKALYCERTIFIED_TESTS");
