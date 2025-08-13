@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
             var adminPin = Environment.GetEnvironmentVariable("ADMINPIN_FISKALYCERTIFIED_TESTS");
             apiSecret.Should().Be("APISECRET_FISKALYCERTIFIED_TESTS");
             apiKey.Should().Be("APIKEY_FISKALYCERTIFIED_TESTS");
-            adminPin.Should().Be("ADMINPIN_FISKALYCERTIFIED_TESTS");
+            adminPin.Should().Be("ADMINPIN_FISKALYCERTIFIED_TESTS1");
         }
 
 }
