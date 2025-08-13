@@ -43,6 +43,36 @@ jobs:
           pattern: "AcceptanceTests"
           args: '--no-build'
 
+      - name: Integration Tests
+        uses: ./.github/actions/test
+        env:
+          APISECRET_FISKALYCERTIFIED_TESTS: "${{ secrets.APISECRET_FISKALYCERTIFIED_TESTS }}"
+          API_KEY_FISKALY_CERTIFIED_TESTS: "${{ secrets.APIKEY_FISKALYCERTIFIED_TESTS }}"
+          ADMIN_PIN_FISKALY_CERTIFIED_TESTS: "${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}"
+        with:
+          directory: scu-de/test
+          pattern: "fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest"
+          args: '--no-build'
+  
+  # integration-tests:
+  #   runs-on: windows-latest
+  #   strategy:
+  #     matrix:
+  #       pattern:
+  #         - "fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest"
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Integration Tests
+  #       uses: ./.github/actions/test
+  #       env:
+  #         APISECRET_FISKALYCERTIFIED_TESTS: "${{ secrets.APISECRET_FISKALYCERTIFIED_TESTS }}"
+  #         API_KEY_FISKALY_CERTIFIED_TESTS: "${{ secrets.APIKEY_FISKALYCERTIFIED_TESTS }}"
+  #         ADMIN_PIN_FISKALY_CERTIFIED_TESTS: "${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}"
+  #       with:
+  #         directory: scu-de/test
+  #         pattern: "${{ matrix.pattern }}"
+  #         args: '--no-build'
+
   publish-test-results:
     name: Publish Tests Results
     needs: test
