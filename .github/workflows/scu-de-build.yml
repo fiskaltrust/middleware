@@ -57,6 +57,7 @@ jobs:
   
   integration-tests:
     runs-on: windows-latest
+    needs: test
     strategy:
       matrix:
         pattern:
