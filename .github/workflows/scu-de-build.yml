@@ -48,8 +48,8 @@ jobs:
     strategy:
       matrix:
         pattern:
-          - "fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest"
-          - "fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest"
+          - fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
+          - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
     steps:
       - uses: actions/checkout@v4
       - name: Integration Tests
