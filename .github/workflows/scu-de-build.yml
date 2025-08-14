@@ -59,6 +59,8 @@ jobs:
         pattern:
           - fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
     steps:
+      - uses: actions/checkout@v4
+  
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
