@@ -86,8 +86,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         {
             var logs = logger.GetLog();
             logs.Should().HaveCount(2);
-            logs[0].Should().Be("HttpStatusCode BadGateway from Fiskaly retry 1 from 2, DelayOnRetriesInMs: 100.");
-            logs[1].Should().Be("HttpStatusCode BadGateway from Fiskaly retry 2 from 2, DelayOnRetriesInMs: 100.");
+            logs[0].Should().Be("HttpStatusCode BadGateway from Fiskaly retry 1 from 2, DelayOnRetriesInMs: 1000.");
+            logs[1].Should().Be("HttpStatusCode BadGateway from Fiskaly retry 2 from 2, DelayOnRetriesInMs: 1000.");
         }
 
         private HttpClient MockHttpCient(string content)
