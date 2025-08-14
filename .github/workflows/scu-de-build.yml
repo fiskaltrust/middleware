@@ -29,15 +29,6 @@ jobs:
           pattern: scu-de/fiskaltrust.Middleware.SCU.DE.sln
           configuration: Debug
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: |
-            **/bin/**
-            **/obj/**
-            scu-de/**/*.csproj
-
       - name: Unit Tests
         uses: ./.github/actions/test
         with:
@@ -62,10 +53,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
   
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: ./.github/actions/build
         with:
-          name: build-output
+          pattern: scu-de/test/${{ matrix.pattern }}/${{ matrix.pattern }}.csproj
+          configuration: Debug
 
       - name: Integration Tests
         uses: ./.github/actions/test
@@ -75,7 +66,7 @@ jobs:
           ADMIN_PIN_FISKALY_CERTIFIED_TESTS: ${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}
         with:
           directory: scu-de/test
-          pattern: fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest #${{ matrix.pattern }}
+          pattern: ${{ matrix.pattern }}
           args: '--no-build'
 
   publish-test-results:
