@@ -41,7 +41,19 @@ jobs:
         with:
           directory: scu-de/test
           pattern: "AcceptanceTests"
-          args: '--no-build'     
+          args: '--no-build'
+
+      - name: Integration Tests
+        uses: ./.github/actions/test
+        with:
+          directory: scu-de/test
+          pattern: "fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest"
+          args: '--no-build'
+        env:
+          APISECRET_FISKALYCERTIFIED_TESTS: ${{ secrets.APISECRET_FISKALYCERTIFIED_TESTS }}
+          API_KEY_FISKALY_CERTIFIED_TESTS: ${{ secrets.APIKEY_FISKALYCERTIFIED_TESTS }}
+          ADMIN_PIN_FISKALY_CERTIFIED_TESTS: ${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}
+    
   
   integration-tests:
     runs-on: windows-latest
