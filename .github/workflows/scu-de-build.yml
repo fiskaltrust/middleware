@@ -52,6 +52,12 @@ jobs:
           - fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
     steps:
       - uses: actions/checkout@v4
+  
+      - uses: ./.github/actions/build
+        with:
+          pattern: scu-de/fiskaltrust.Middleware.SCU.DE.sln
+          configuration: Debug
+
       - name: Integration Tests
         uses: ./.github/actions/test
         env:
@@ -65,7 +71,7 @@ jobs:
 
   publish-test-results:
     name: Publish Tests Results
-    needs: test
+    needs: [test, integration-tests]
     runs-on: ubuntu-latest
     permissions:
       checks: write
