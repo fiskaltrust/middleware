@@ -29,6 +29,14 @@ jobs:
           pattern: scu-de/fiskaltrust.Middleware.SCU.DE.sln
           configuration: Debug
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            **/bin/**
+            **/obj/**
+
       - name: Unit Tests
         uses: ./.github/actions/test
         with:
@@ -51,12 +59,10 @@ jobs:
         pattern:
           - fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
     steps:
-      - uses: actions/checkout@v4
-  
-      - uses: ./.github/actions/build
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          pattern: scu-de/fiskaltrust.Middleware.SCU.DE.sln
-          configuration: Debug
+          name: build-output
 
       - name: Integration Tests
         uses: ./.github/actions/test
