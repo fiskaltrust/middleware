@@ -59,7 +59,7 @@ jobs:
           ADMIN_PIN_FISKALY_CERTIFIED_TESTS: ${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}
         with:
           directory: scu-de/test
-          pattern: ${{ matrix.pattern }}
+          pattern: fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest #${{ matrix.pattern }}
           args: '--no-build'
 
   publish-test-results:
