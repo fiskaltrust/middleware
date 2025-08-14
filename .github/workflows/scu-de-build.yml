@@ -36,6 +36,7 @@ jobs:
           path: |
             **/bin/**
             **/obj/**
+            scu-de/**/*.csproj
 
       - name: Unit Tests
         uses: ./.github/actions/test
