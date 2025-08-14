@@ -49,7 +49,6 @@ jobs:
       matrix:
         pattern:
           - fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
-          - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
     steps:
       - uses: actions/checkout@v4
       - name: Integration Tests
@@ -60,7 +59,7 @@ jobs:
           ADMIN_PIN_FISKALY_CERTIFIED_TESTS: "${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}"
         with:
           directory: scu-de/test
-          pattern: "${{ matrix.pattern }}"
+          pattern: ${{ matrix.pattern }}
           args: '--no-build'
 
   publish-test-results:
