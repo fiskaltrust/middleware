@@ -3,7 +3,6 @@
     <Authors>fiskaltrust</Authors>
     <Company>fiskaltrust</Company>
     <Copyright>Copyright 2019</Copyright>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <AssemblyCompany>fiskaltrust</AssemblyCompany>  
   </PropertyGroup>
   <ItemGroup>
