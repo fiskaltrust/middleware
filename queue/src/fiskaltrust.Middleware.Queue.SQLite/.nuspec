@@ -24,7 +24,7 @@
         <dependency id="fiskaltrust.Exports.DSFinVK" version="1.6.8" />
         <dependency id="fiskaltrust.Exports.TAR" version="1.1.2" />
         <dependency id="Microsoft.Data.Sqlite" version="9.0.4" />
-        <dependency id="System.Linq.Async" version="4.1.1" />
+        <dependency id="System.Linq.Async" Version="5.0.0" />
         <dependency id="SharpCompress" version="0.28.2" />
         <dependency id="CsvHelper" version="15.0.5" />
       </group>
