@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
                 ApiSecret = Environment.GetEnvironmentVariable("APISECRET_FISKALYCERTIFIED_TESTS"),
                 ApiKey = Environment.GetEnvironmentVariable("APIKEY_FISKALYCERTIFIED_TESTS"),
                 TssId = Guid.NewGuid(),
-                AdminPin = "adminpin",
+                AdminPin = Environment.GetEnvironmentVariable("ADMINPIN_FISKALYCERTIFIED_TESTS"),,
             };
             
             try
