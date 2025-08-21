@@ -40,6 +40,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
                     "3BDF97008131FE468031905241026405C903AC73D622C030",
                     "3BDF96FF918131FE468031905241026405C903AC73D622C05F",
                     "3BDF18FF918131FE468031905241026405C903AC73D622C0D1",
+                    "3BDF97008131FE4680319052410464050401AC73D622C0F9",
             }.Any(id => atrHex.Replace("-", "").StartsWith(id, StringComparison.OrdinalIgnoreCase)))
             {
                 _logger.LogDebug("Detected an A-Trust AcosID card");
