@@ -62,6 +62,7 @@ jobs:
         env:
           APISECRET_FISKALYCERTIFIED_TESTS: ${{ secrets.APISECRET_FISKALYCERTIFIED_TESTS }}
           APIKEY_FISKALYCERTIFIED_TESTS: ${{ secrets.APIKEY_FISKALYCERTIFIED_TESTS }}
+          ADMINPIN_FISKALYCERTIFIED_TESTS: ${{ secrets.ADMINPIN_FISKALYCERTIFIED_TESTS }}
         with:
           directory: scu-de/test
           pattern: ${{ matrix.pattern }}
