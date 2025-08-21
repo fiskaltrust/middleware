@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
             _queueATConfiguration = queueATConfiguration;
         }
 
-        public async Task<(ftSignaturCreationUnitAT scu, IATSSCD sscd, int currentIndex)> GetCurrentlyActiveInstanceAsync()
+        public async Task<int> GetCurrentlyActiveInstanceIndexAsync()
         {
             try
             {
@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                     _instances = await GetScusFromConfigurationAsync().ToListAsync();
                 }
 
-                return (_instances[_currentlyActiveInstance].scu, _instances[_currentlyActiveInstance].client, _currentlyActiveInstance);
+                return _currentlyActiveInstance;
             }
             finally
             {
@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
             }
         }
 
-        public async Task<List<ftSignaturCreationUnitAT>> GetAllInstances()
+        public async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances()
         {
             try
             {
@@ -61,7 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                     _instances = await GetScusFromConfigurationAsync().ToListAsync();
                 }
 
-                return _instances.Select(x => x.scu).ToList();
+                return _instances.ToList();
             }
             finally
             {
