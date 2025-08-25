@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
@@ -26,8 +27,8 @@ public class InMemorySCU : IPTSSCD
         {
             InvoiceDate = receipt.cbReceiptMoment,
             SystemEntryDate = receipt.cbReceiptMoment,
-            InvoiceNo = receiptResponse.ftReceiptIdentification, 
-            GrossTotal = receipt.cbChargeItems.Sum(x => x.Amount),
+            InvoiceNo = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            GrossTotal = receipt.cbChargeItems.Sum(x => receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? -x.Amount : x.Amount),
             Hash = lastHash ?? ""
         };
     }
@@ -41,7 +42,7 @@ public class InMemorySCU : IPTSSCD
                $"{element.Hash}";
     }
 
-    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request,string? lastHash)
+    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
     {
         var rsa = RSA.Create();
         rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);

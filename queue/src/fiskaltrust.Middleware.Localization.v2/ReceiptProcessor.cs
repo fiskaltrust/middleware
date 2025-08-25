@@ -5,6 +5,10 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.v2;
+public static class VATHelpers
+{
+    public static decimal CalculateVAT(decimal amount, decimal rate) => decimal.Round(amount / (100M + rate) * rate, 6, MidpointRounding.ToEven);
+}
 
 public class ReceiptProcessor : IReceiptProcessor
 {
@@ -30,6 +34,14 @@ public class ReceiptProcessor : IReceiptProcessor
         var processCommandRequest = new ProcessCommandRequest(queue, request, receiptResponse);
         ProcessCommandResponse? processCommandResponse = null;
         var receiptCase = request.ftReceiptCase.Case();
+
+        foreach (var chargeItem in request.cbChargeItems)
+        {
+            if (!chargeItem.VATAmount.HasValue)
+            {
+                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
+            }
+        }
 
         try
         {

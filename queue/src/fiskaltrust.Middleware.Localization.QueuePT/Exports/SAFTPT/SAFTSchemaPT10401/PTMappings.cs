@@ -24,7 +24,7 @@ public static class PTMappings
 
     public static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             return "NC";
         }

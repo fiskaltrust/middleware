@@ -82,7 +82,7 @@ public static class SignatureItemFactoryPT
         {
             Caption = "Hash",
             Data = hash,
-            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.AfterHeader),
             ftSignatureType = SignatureTypePT.Hash.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize),
         };
     }
@@ -91,8 +91,8 @@ public static class SignatureItemFactoryPT
     {
         return new SignatureItem
         {
-            Caption = $"Referencia: Proforma {receiptReferences[0].Item2.ftReceiptIdentification}",
-            Data = $"",
+            Caption = $"",
+            Data = $"Referencia: Proforma {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };
@@ -102,7 +102,7 @@ public static class SignatureItemFactoryPT
     {
         return new SignatureItem
         {
-            Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification}",
+            Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
             Data = $"Rasão: Devolução",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),

@@ -79,9 +79,9 @@ public class StaticNumeratorStorage
                 }
 
 
-                if (lastReceiptResponse.ftReceiptIdentification.StartsWith(series.Identifier))
+                if (lastReceiptResponse.ftReceiptIdentification.Split("#").Last().StartsWith(series.Identifier))
                 {
-                    series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("/")[1]);
+                    series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("#").Last().Split("/")[1]);
                     var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == SignatureTypePT.Hash.As<SignatureType>());
                     if (lastSignature != null)
                     {

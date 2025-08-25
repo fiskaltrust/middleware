@@ -28,6 +28,38 @@ public static class ReceiptRequestExtensions
         }
     }
 
+    public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItemsModifyPositionsIfNotSet(this ReceiptRequest receiptRequest)
+    {
+        var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
+        var currentPos = 1;
+        foreach (var receiptChargeItem in receiptRequest.cbChargeItems)
+        {            
+            if(receiptChargeItem.Position == 0)
+            {
+                receiptChargeItem.Position = 1;
+            }
+            if (receiptChargeItem.IsVoucherRedeem() || receiptChargeItem.IsDiscountOrExtra())
+            {
+                var last = data.LastOrDefault();
+                if (last == default)
+                {
+                    data.Add((receiptChargeItem, new List<ChargeItem>()));
+                }
+                else
+                {
+                    last.modifiers.Add(receiptChargeItem);
+                }
+            }
+            else
+            {
+                data.Add((receiptChargeItem, new List<ChargeItem>()));
+                currentPos++;
+            }
+        }
+        return data;
+    }
+
+
     public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItems(this ReceiptRequest receiptRequest)
     {
         var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();

@@ -59,7 +59,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             series = StaticNumeratorStorage.SimplifiedInvoiceSeries;
         }
         series.Numerator++;
-        receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+        receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -72,7 +72,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
-                Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification}",
+                Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#")[1]}",
                 Data = $"Razão: Devolução",
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
@@ -110,7 +110,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
         var series = StaticNumeratorStorage.PaymentSeries;
         series.Numerator++;
-        receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+        receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -125,10 +125,10 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         {
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
-                Caption = $"Origem: {receiptReferences[0].Item2.ftReceiptIdentification}",
-                Data = $"",
+                Caption = "",
+                Data = $"Origem: {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
                 ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+                ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
             });
         }
         return new ProcessCommandResponse(response.ReceiptResponse, []);

@@ -92,7 +92,7 @@ public class SaftExporter
         using var writer = XmlWriter.Create(memoryStream, settings);
         serializer.Serialize(writer, data);
         memoryStream.Position = 0;
-        return Encoding.UTF8.GetString(memoryStream.ToArray());
+        return Encoding.GetEncoding("windows-1252").GetString(memoryStream.ToArray());
     }
 
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
@@ -327,7 +327,7 @@ public class SaftExporter
                     TaxPercentage = 5.000000m,
                 }
         };
-        var lines = receipt.SelectMany(x => x.receiptRequest.GetGroupedChargeItems().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
+        var lines = receipt.SelectMany(x => x.receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
         var taxTableEntries = lines.Select(x => staticTaxes.Single(t => t.TaxType == x.Tax.TaxType && t.TaxCountryRegion == x.Tax.TaxCountryRegion && t.TaxCode == x.Tax.TaxCode && t.TaxPercentage == x.Tax.TaxPercentage)).DistinctBy(x => x.TaxCode).ToList();
         return new TaxTable
         {
@@ -371,13 +371,13 @@ public class SaftExporter
     public WorkDocument? GetWorkDocumentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = receiptRequest.GetGroupedChargeItems().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
+        var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
         }
 
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
+        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
@@ -391,7 +391,7 @@ public class SaftExporter
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new WorkDocument
         {
-            DocumentNumber = receipt.receiptResponse.ftReceiptIdentification,
+            DocumentNumber = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
             DocumentStatus = new WorkDocumentStatus
             {
@@ -417,11 +417,11 @@ public class SaftExporter
             }
         };
 
-        if (InvoicedProformas.ContainsKey(receipt.receiptResponse.ftReceiptIdentification))
+        if (InvoicedProformas.ContainsKey(receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()))
         {
             workDocument.DocumentStatus.WorkStatus = "F";
-            workDocument.DocumentStatus.WorkStatusDate = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification].receiptRequest.cbReceiptMoment;
-            workDocument.DocumentStatus.SourceID = JsonSerializer.Serialize(InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification].receiptRequest.cbUser);
+            workDocument.DocumentStatus.WorkStatusDate = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest.cbReceiptMoment;
+            workDocument.DocumentStatus.SourceID = JsonSerializer.Serialize(InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest.cbUser);
             workDocument.DocumentStatus.Reason = "Faturado";
         }
 
@@ -432,7 +432,7 @@ public class SaftExporter
     {
         var receiptRequest = receipt.receiptRequest;
         var payItem = receiptRequest.cbPayItems.First();
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
+        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
@@ -447,7 +447,7 @@ public class SaftExporter
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new PaymentDocument
         {
-            PaymentRefNo = receipt.receiptResponse.ftReceiptIdentification,
+            PaymentRefNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
             DocumentStatus = new PaymentDocumentStatus
             {
@@ -498,14 +498,14 @@ public class SaftExporter
     public Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = receiptRequest.GetGroupedChargeItems().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
+        var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
         }
 
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
-        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
+        var taxable = receiptRequest.cbChargeItems.Sum(x => (x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)) ? x.GetVATAmount() * -1 : x.GetVATAmount());
+        var grossAmount = receiptRequest.cbChargeItems.Sum(x => (x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
         atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
@@ -518,7 +518,7 @@ public class SaftExporter
         var customer = GetCustomerData(receiptRequest);
         var invoice = new Invoice
         {
-            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification,
+            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
             DocumentStatus = new InvoiceDocumentStatus
             {
@@ -563,7 +563,7 @@ public class SaftExporter
     public Payment GetPayment(ReceiptRequest receiptRequest, PayItem payItem)
     {
         var amount = payItem.Amount;
-        if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund))
+        if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             amount *= -1;
         }
@@ -588,11 +588,11 @@ public class SaftExporter
 
 
         var grossAmount = chargeItemData.Amount;
-        var vatAmount = chargeItem.chargeItem.VATAmount ?? 0.0m;
+        var vatAmount = chargeItem.chargeItem.GetVATAmount();
         var netAmount = grossAmount - vatAmount;
 
         var grossAmountModifiers = chargeItem.modifiers.Sum(x => x.Amount);
-        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m);
+        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.GetVATAmount());
         var netAmountModifiers = grossAmountModifiers - vatAmountModifiers;
         if (netAmountModifiers < 0)
         {
@@ -600,7 +600,7 @@ public class SaftExporter
         }
         var netLinePrice = netAmount - netAmountModifiers;
         var quantity = chargeItemData.Quantity;
-        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund))
+        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             netLinePrice *= -1;
             quantity *= -1;
@@ -650,12 +650,12 @@ public class SaftExporter
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.OrderReferences = new OrderReferences
             {
-                OriginatingON = referencedReceiptReference!.ftReceiptIdentification,
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
                 OrderDate = referencedReceiptReference!.ftReceiptMoment
             };
-            if (!InvoicedProformas.ContainsKey(referencedReceiptReference!.ftReceiptIdentification))
+            if (!InvoicedProformas.ContainsKey(referencedReceiptReference!.ftReceiptIdentification.Split("#").Last()))
             {
-                InvoicedProformas.Add(referencedReceiptReference.ftReceiptIdentification, (receiptRequest, receiptResponse));
+                InvoicedProformas.Add(referencedReceiptReference.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
             }
         }
 
