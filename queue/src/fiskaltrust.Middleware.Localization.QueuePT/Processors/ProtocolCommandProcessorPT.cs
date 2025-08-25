@@ -52,8 +52,8 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
     {
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
     }
 
