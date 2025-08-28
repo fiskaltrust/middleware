@@ -410,8 +410,10 @@ public static class AADEMappings
         PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
         PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
-        PayItemCase.SEPATransfer => payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
-        PayItemCase.OtherBankTransfer => -1,
+        // TODO => We will need to map this properly when we have more information. Currently there are a few different types that can be SEP
+        // MyDataPaymentMethods.DomesticPaymentAccount or MyDataPaymentMethods.ForeignPaymentsSpecialAccount or MyDataPaymentMethods.IrisDirectPayments
+        PayItemCase.SEPATransfer => payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : MyDataPaymentMethods.DomesticPaymentAccount,
+        PayItemCase.OtherBankTransfer => MyDataPaymentMethods.ForeignPaymentsSpecialAccount,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
         PayItemCase.Grant => -1,
