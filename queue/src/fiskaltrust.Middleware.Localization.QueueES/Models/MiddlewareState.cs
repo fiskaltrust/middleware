@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Models;
 
@@ -14,7 +15,6 @@ public class MiddlewareState
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
 }
-
 
 public class MiddlewareQueueESState
 {
