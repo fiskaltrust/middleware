@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "pathFilters": [
+    "/storage/src/fiskaltrust.storage.encryption"
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/tags/storage/encryption/v.+"
+  ],
+  "release": {
+    "tagName": "storage/encryption/v{version}"
+  },
+  "inherit": true
+}
