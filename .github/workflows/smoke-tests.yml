@@ -1,0 +1,46 @@
+name: smoke-tests
+
+on:
+  workflow_dispatch:
+  
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  LAUNCHER: "fiskaltrust.service.launcher"
+  version: "1.3"
+jobs:
+  download-launcher:
+    runs-on: windows-latest
+    steps:
+      - name: Download launcher package
+        shell: pwsh
+        run: |
+          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
+          $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
+          $offline = "true"
+
+          $pair = "$cashboxId:$accessToken"
+          $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
+          $headers = @{ Authorization = "Basic $encoded" }
+
+          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          $output = "$launcher.$cashboxId.zip"
+
+          Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
+
+      - name: Extract launcher package
+        shell: pwsh
+        run: |
+         $zipPath = "$launcher.$cashboxId.zip"
+          $extractPath = "."
+
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+      # - name: Cleanup package folder
+      #   shell: pwsh
+      #   run: |
+      #     if (Test-Path "package") {
+      #       Remove-Item "package/*" -Recurse -Force
+      #     }
