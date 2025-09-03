@@ -39,7 +39,7 @@ jobs:
       - name: Extract launcher package
         shell: pwsh
         run: |
-         $launcher =  ${{ env.launcher }} 
+         $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
          $extractPath = "."
 
