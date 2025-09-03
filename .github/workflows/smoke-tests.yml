@@ -46,15 +46,18 @@ jobs:
 
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
-      - name: Run test.exe
-        shell: pwsh
+      - name: Run test.exe and capture output
+        shell: cmd
         run: |
-          if (Test-Path "./test.exe") {
-            Write-Host "Running test.exe..."
-            ./test.exe
-          } else {
-            Write-Error "test.exe not found after extraction!"
-          }
+          echo Running test.exe...
+          test.exe > test-output.log 2>&1
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.log
+      
       # - name: Cleanup package folder
       #   shell: pwsh
       #   run: |
