@@ -18,7 +18,18 @@ using Org.BouncyCastle.Asn1.Ocsp;
 var accountId = Guid.Parse("");
 var accessToken = "";
 var testRunner = await TestRunner.InitializeDryTestRun(accountId, accessToken);
-await PTCertificationExamplesAll(testRunner);
+
+Console.WriteLine("Starting Phase 1 Certification Tests...");
+await PTCertificationExamplesPhase1(testRunner);
+
+// Run Phase 1 certification tests
+Console.WriteLine("Starting Phase 2 Certification Tests...");
+await PTCertificationExamplesPhase2(testRunner);
+
+// Run Phase 2 certification tests
+//Console.WriteLine("Starting Phase 2 Certification Tests...");
+//await PTCertificationExamplesPhase2(testRunner);
+
 Console.WriteLine("Done");
 Console.ReadLine();
 
@@ -116,7 +127,7 @@ async Task SubmissionRound2(TestRunner runner)
     //File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", Encoding.UTF8.GetString(xmlData));
 }
 
-async Task PTCertificationExamplesAll(TestRunner runner)
+async Task PTCertificationExamplesPhase1(TestRunner runner)
 {
     var timestamp = DateTime.UtcNow.Ticks;
     var cases = new Dictionary<string, (ReceiptRequest request, ReceiptResponse response, long ticks, byte[] journal)>();
@@ -124,19 +135,19 @@ async Task PTCertificationExamplesAll(TestRunner runner)
     {
         try
         {
-            if (!businessCase.supported)
+            if (!businessCase.supported || businessCase.receiptRequest == null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Skipping case {businessCase.title} as it is not supported.");
+                Console.WriteLine($"Skipping case {businessCase.title} as it is not supported or has no receipt request.");
                 Console.ResetColor();
                 continue;
             }
 
             var request = businessCase.receiptRequest;
-            if (businessCase.referencedCase is not null)
+            if (businessCase.referencedCase is not null && cases.ContainsKey(businessCase.referencedCase))
             {
                 var receiptResponse = cases[businessCase.referencedCase].Item2;
-                request.cbPreviousReceiptReference = receiptResponse.cbReceiptReference;
+                request.cbPreviousReceiptReference = receiptResponse.cbReceiptReference ?? "";
             }
             var result = await runner.ExecuteSign(request);
             var journal = testRunner.ExecuteJournal(new JournalRequest
@@ -158,7 +169,7 @@ async Task PTCertificationExamplesAll(TestRunner runner)
         }
     }
 
-    var basePath = "C:\\GitHub\\market-pt\\dddd";
+    var basePath = "C:\\GitHub\\market-pt\\phase1";
     basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
     Directory.CreateDirectory(basePath);
     foreach (var cased in cases)
@@ -173,3 +184,63 @@ async Task PTCertificationExamplesAll(TestRunner runner)
     });
     File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.UTF8.GetString(xmlData));
 }
+
+
+async Task PTCertificationExamplesPhase2(TestRunner runner)
+{
+    var timestamp = DateTime.UtcNow.Ticks;
+    var cases = new Dictionary<string, (ReceiptRequest request, ReceiptResponse response, long ticks, byte[] journal)>();
+    foreach (var businessCase in PTCertificationTestCasesPhase2.Cases)
+    {
+        try
+        {
+            if (!businessCase.supported || businessCase.receiptRequest == null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Skipping case {businessCase.title} as it is not supported or has no receipt request.");
+                Console.ResetColor();
+                continue;
+            }
+
+            var request = businessCase.receiptRequest;
+            if (businessCase.referencedCase is not null && cases.ContainsKey(businessCase.referencedCase))
+            {
+                var receiptResponse = cases[businessCase.referencedCase].Item2;
+                request.cbPreviousReceiptReference = receiptResponse.cbReceiptReference ?? "";
+            }
+            var result = await runner.ExecuteSign(request);
+            var journal = testRunner.ExecuteJournal(new JournalRequest
+            {
+                ftJournalType = (JournalType) 0x5054_2000_0000_0001,
+                From = result.ticks
+            }).Result;
+            cases[businessCase.title] = (request, result.receiptResponse, result.ticks, journal);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Completed case {businessCase.title}");
+            Console.ResetColor();
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Error in case {businessCase.title}: {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
+    var basePath = "C:\\GitHub\\market-pt\\phase2";
+    basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
+    Directory.CreateDirectory(basePath);
+    foreach (var cased in cases)
+    {
+
+        await TestHelpers.StoreDataAsync(runner._cashboxid, runner._accessToken, Path.Combine(basePath, cased.Key), cased.Key, cased.Value.ticks, cased.Value.journal, cased.Value.request, cased.Value.response);
+    }
+    var xmlData = await runner.ExecuteJournal(new JournalRequest
+    {
+        ftJournalType = (JournalType) 0x5054_2000_0000_0001,
+        From = timestamp
+    });
+    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.UTF8.GetString(xmlData));
+}
+

@@ -14,6 +14,8 @@ public static class PTCertificationExamples
 
     public static ReceiptCase BaseCase = ((ReceiptCase) 0x2000_0000_0000).WithCountry("PT");
 
+    public static DateTime ReferenceDate = new DateTime(2025, 09, 03, 04, 15, 53);
+
     public static MiddlewareCustomer VAT_INCLUDED_CUSTOMER_1 => new MiddlewareCustomer
     {
         CustomerVATId = CUSOMTER_VATNUMBER,
@@ -42,7 +44,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_1() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(1),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -72,7 +74,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_3() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(3),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -91,7 +93,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_4() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(4),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -119,7 +121,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_5() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(5),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -149,7 +151,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_6() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(6),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -187,7 +189,7 @@ public static class PTCertificationExamples
                     VATRate = PTVATRates.Normal,
                     ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0023,
                     Quantity = 1,
-                    Description = "Line item 1"
+                    Description = "Service Line item 1"
                 }
             ],
         cbPayItems =
@@ -208,7 +210,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_7() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(7),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -259,7 +261,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_9() => new ReceiptRequest
     {
-        cbReceiptMoment = new DateTime(2025, 03, 06, 07, 34, 12, DateTimeKind.Utc),
+        cbReceiptMoment = ReferenceDate.AddMinutes(9),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -287,7 +289,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_10() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(10),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -317,7 +319,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_12() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(12),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems = [
                 new ChargeItem
@@ -337,7 +339,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_13_1_Invoice() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(13),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems =
             [
@@ -354,8 +356,8 @@ public static class PTCertificationExamples
                 new PayItem
                 {
                     Amount = 150m,
-                    Description = "Numerario",
-                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
+                    Description = "On Credit",
+                    ftPayItemCase = ((PayItemCase) 0x5054_2000_0000_0000).WithCase(PayItemCase.AccountsReceivable),
                 }
             ],
         cbUser = 1,
@@ -365,7 +367,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_13_2_Payment() => new ReceiptRequest
     {
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = ReferenceDate.AddMinutes(14),
         cbReceiptReference = Guid.NewGuid().ToString(),
         cbChargeItems = [],
         cbPayItems =

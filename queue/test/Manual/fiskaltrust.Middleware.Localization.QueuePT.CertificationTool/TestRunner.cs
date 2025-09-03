@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.storage.V0;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ public class NewCashBox
 {
     public string cashBoxId { get; set; }
     public string accessToken { get; set; }
+    public ftCashBoxConfiguration configuration { get; set; }
 }
 
 public class TestRunner
@@ -83,10 +85,25 @@ public class TestRunner
         request.Content = content;
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        var result = JsonSerializer.Deserialize<NewCashBox>(await response.Content.ReadAsStringAsync());
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<NewCashBox>(responseContent);
+        await UpdateReceiptSettigns(Guid.Parse(result.cashBoxId), result.accessToken, result.configuration.ftQueues!.First().Id);
         var testRunner = new TestRunner(Guid.Parse(result!.cashBoxId), result.accessToken);
         await testRunner.PrepareCashBox();
         return testRunner;
+    }
+
+    public static async Task UpdateReceiptSettigns(Guid cashBoxId, string accessToken, Guid queueId)
+    {
+        var client = new HttpClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"https://receipts-sandbox.fiskaltrust.eu/v1/configuration/{queueId}/receiptsettings");
+        request.Headers.Add("cashboxid", cashBoxId.ToString());
+        request.Headers.Add("accesstoken", accessToken);
+        var content = new StringContent("{\r\n    \"name1Text\": \"FISKALTRUST CONSULTING GMBH - SUCURSAL EM\",\r\n    \"address1Text\": \"AV DA REPUBLICA N 35 4 ANDAR\",\r\n    \"vat\": \"980833310\",\r\n    \"logourl\": null,\r\n    \"logowidth\": null,\r\n    \"logoheight\": null,\r\n    \"address1PostalCode\": \"1050-189\",\r\n    \"address1City\": \"Lisboa\",\r\n    \"Country\": \"PT\",\r\n    \"footertext\": null,\r\n    \"showFeedback\": null,\r\n    \"printBewirtungsBeleg\": null,\r\n    \"feedbackRedirectAppId\": null,\r\n    \"shareButtonAppIds\": null\r\n}", null, "application/json");
+        request.Content = content;
+        var response = await client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        Console.WriteLine(await response.Content.ReadAsStringAsync());
     }
 
     public static async Task<TestRunner> InitializeWithCashBox(Guid cashBoxId, string accessToken)

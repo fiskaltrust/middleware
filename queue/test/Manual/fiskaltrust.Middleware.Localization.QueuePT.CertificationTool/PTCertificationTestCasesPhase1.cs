@@ -18,6 +18,6 @@ public static class PTCertificationTestCasesPhase1
         new BusinessCase("5_12", "a budget or pro forma invoice", true, PTCertificationExamples.Case_5_12()),
         new BusinessCase("5_13", "", false, PTCertificationExamples.Case_5_13()),
         new BusinessCase("5_13_1", "", true, PTCertificationExamples.Case_5_13_1_Invoice()),
-        new BusinessCase("5_13_2", "", true, PTCertificationExamples.Case_5_13_2_Payment(), "5_6"),
+        new BusinessCase("5_13_2", "", true, PTCertificationExamples.Case_5_13_2_Payment(), "5_13_1"),
     ];
 }
