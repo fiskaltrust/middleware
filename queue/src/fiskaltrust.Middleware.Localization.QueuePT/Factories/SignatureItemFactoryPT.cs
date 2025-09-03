@@ -69,8 +69,8 @@ public static class SignatureItemFactoryPT
     {
         return new SignatureItem
         {
-            Caption = $"{printHash} - Processado por programa certificado",
-            Data = $"No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
+            Caption = $"-----",
+            Data = $"{printHash} - Processado por programa certificado" + $" No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
         };
@@ -103,7 +103,7 @@ public static class SignatureItemFactoryPT
         return new SignatureItem
         {
             Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
-            Data = $"Rasão: Devolução",
+            Data = $"Razão: Devolução",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };

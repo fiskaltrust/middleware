@@ -62,12 +62,14 @@ public static class PTMappings
 
     public static string GetTaxExemptionCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
     {
+        ChargeItemCaseNatureOfVatPT.Group0x30 => "M06",
         _ => "M16",
     };
 
     public static string GetTaxExemptionReason(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
     {
-        _ => "Isento Artigo 14.  do RITI (ou similar)",
+        ChargeItemCaseNatureOfVatPT.Group0x30 => "Isento artigo 15.º do CIVA",
+        _ => "Isento artigo 14.º do RITI",
     };
 
     public static string GetPaymentMecahnism(PayItem payItem) => payItem.ftPayItemCase.Case() switch

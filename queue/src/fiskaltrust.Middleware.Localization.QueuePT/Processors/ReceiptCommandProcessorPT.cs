@@ -29,7 +29,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => WithPreparations(request, () => PointOfSaleReceipt0x0001Async(request));
 
     public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
-    {        
+    {
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
@@ -70,13 +70,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         {
             var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#")[1]}",
-                Data = $"Razão: Devolução",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            });
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
         }
         else
         {

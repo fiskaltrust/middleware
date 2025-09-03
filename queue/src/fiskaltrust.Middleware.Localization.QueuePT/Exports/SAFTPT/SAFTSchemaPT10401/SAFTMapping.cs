@@ -487,7 +487,7 @@ public class SaftExporter
             var referencedReceiptReference = ((JsonElement) receipt.receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             workDocument.Line[0].SourceDocumentID = new SourceDocument
             {
-                OriginatingON = referencedReceiptReference!.ftReceiptIdentification,
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
                 InvoiceDate = receiptRequest.cbReceiptMoment
             };
         }
@@ -556,7 +556,7 @@ public class SaftExporter
         //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
         //    };
         //}
-        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => GetPayment(receiptRequest, x)).ToList();
+        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, x)).ToList();
         return invoice;
     }
 
