@@ -49,7 +49,12 @@ jobs:
          $extractPath = "."
 
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-      
+
+      - uses: ./.github/actions/build
+        with:
+          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+          configuration: Debug
+
       - name: Build new NuGet package
         uses: ./.github/actions/package
         with:
