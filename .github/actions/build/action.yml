@@ -17,7 +17,7 @@ runs:
           8.0.x
 
     - name: Restore
-      run: dotnet restore "${{ inputs.pattern }}"
+      run: dotnet restore "${{ inputs.pattern }}" --verbosity detailed
       shell: pwsh
       
     - name: Build
