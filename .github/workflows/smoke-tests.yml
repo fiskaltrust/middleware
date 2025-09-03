@@ -44,6 +44,15 @@ jobs:
 
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
+      - name: Run test.exe
+        shell: pwsh
+        run: |
+          if (Test-Path "./test.exe") {
+            Write-Host "Running test.exe..."
+            ./test.exe
+          } else {
+            Write-Error "test.exe not found after extraction!"
+          }
       # - name: Cleanup package folder
       #   shell: pwsh
       #   run: |
