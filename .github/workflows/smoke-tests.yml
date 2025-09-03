@@ -1,4 +1,4 @@
-name: smoke-tests
+name: smoke.tests
 
 on:
   workflow_dispatch:
