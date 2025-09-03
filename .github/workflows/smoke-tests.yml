@@ -13,6 +13,7 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   version: "latest"
+  project: "fiskaltrust.Middleware.Queue.SQLite"
 jobs:
   download-launcher:
     runs-on: windows-latest
@@ -44,7 +45,23 @@ jobs:
          $zipPath = "$launcher.$cashboxId.zip"
          $extractPath = "."
 
-          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+         Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+      
+      - name: Build new NuGet package
+        uses: ./.github/actions/package
+        with:
+         path: queue/src
+         project: ${{ env.project }}
+
+      - name: Update launcher packages
+        shell: pwsh
+        run: |
+         $project = "${{ env.project }}"
+         $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
+         $packageDest = "./packages/"
+
+         Write-Host "Copying NuGet package from $packageSrc to $packageDest"
+         Copy-Item -Path $packageSrc -Destination $packageDest -Force
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
