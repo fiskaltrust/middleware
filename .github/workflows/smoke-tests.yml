@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 env:
-  LAUNCHER: "fiskaltrust.service.launcher"
+  launcher: "fiskaltrust.service.launcher"
   version: "1.3"
 jobs:
   download-launcher:
@@ -20,6 +20,8 @@ jobs:
           $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
           $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
           $offline = "true"
+          $launcher =  ${{ env.launcher }} 
+          $version =  ${{ env.version }} 
 
           $pair = "$cashboxId:$accessToken"
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
@@ -33,8 +35,9 @@ jobs:
       - name: Extract launcher package
         shell: pwsh
         run: |
+         $launcher =  ${{ env.launcher }} 
          $zipPath = "$launcher.$cashboxId.zip"
-          $extractPath = "."
+         $extractPath = "."
 
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
