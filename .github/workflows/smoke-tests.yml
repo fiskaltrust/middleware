@@ -26,7 +26,7 @@ jobs:
           $launcher =  ${{ env.launcher }} 
           $version =  ${{ env.version }} 
 
-          $pair = "$cashboxId:$accessToken"
+          $pair = "${cashboxId}:${accessToken}"
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
           $headers = @{ Authorization = "Basic $encoded" }
 
