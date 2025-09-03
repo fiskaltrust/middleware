@@ -50,7 +50,7 @@ jobs:
         shell: cmd
         run: |
           echo Running test.exe...
-          test.exe > test-output.log 2>&1
+          test.cmd > test-output.log 2>&1
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
