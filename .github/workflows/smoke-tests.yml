@@ -1,4 +1,4 @@
-name: smoke tests
+﻿name: smoke tests
 
 on:
   workflow_dispatch:
@@ -32,7 +32,8 @@ jobs:
 
           $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
           $output = "$launcher.$cashboxId.zip"
-
+          Write-Host "👉 Downloading from URL: $url"
+          Write-Host "👉 Saving as: $output"
           Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
 
       - name: Extract launcher package
