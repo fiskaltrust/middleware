@@ -18,12 +18,8 @@ jobs:
   download-launcher:
     runs-on: windows-latest
     steps:
-      - name: Checkout only .github folder
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-         fetch-depth: 0
-         sparse-checkout: |
-          .github
 
       - name: Download launcher package
         shell: pwsh
