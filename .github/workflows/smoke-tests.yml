@@ -46,11 +46,29 @@ jobs:
 
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
-      - name: Run test.exe and capture output
-        shell: cmd
+      - name: Run test.cmd, send request, and stop
+        shell: pwsh
         run: |
-          echo Running test.exe...
-          test.cmd > test-output.log 2>&1
+          Write-Host "Starting test.cmd..."
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output.log
+
+          # Wait a few seconds to let test.cmd start listening
+          Start-Sleep -Seconds 300
+
+          # Send POST request to the launcher
+          $url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
+          $body = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
+          Write-Host "Sending POST request to $url..."
+          try {
+              $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json"
+              Write-Host "Response: $($response | ConvertTo-Json)"
+          } catch {
+              Write-Error "Request failed: $_"
+          }
+
+          # Stop the launcher
+          Write-Host "Stopping test.cmd..."
+          Stop-Process -Id $process.Id -Force
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
