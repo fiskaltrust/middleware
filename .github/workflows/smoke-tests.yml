@@ -52,7 +52,8 @@ jobs:
          
       - uses: ./.github/actions/build
         with:
-          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+          #pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+          pattern: queue/fiskaltrust.Middleware.sln
           configuration: Debug
 
       - name: create the NuGet package
