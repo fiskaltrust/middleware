@@ -77,7 +77,7 @@ jobs:
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
-
+         Get-ChildItem -Path "./packages" -Recurse | Select-Object FullName
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
@@ -85,7 +85,7 @@ jobs:
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
-          Start-Sleep -Seconds 300
+          Start-Sleep -Seconds 180
 
           # Send POST request to the launcher
           $url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
