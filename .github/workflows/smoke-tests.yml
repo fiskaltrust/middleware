@@ -120,24 +120,24 @@ jobs:
       #               Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
       #           } 
       #       }
-      - name: Generate configuration.json
-        shell: pwsh
-        run: |
-          $queueId = [guid]::NewGuid().ToString()
-          echo "queueId=$queueId" >> $env:GITHUB_ENV
+      # - name: Generate configuration.json
+      #   shell: pwsh
+      #   run: |
+      #     $queueId = [guid]::NewGuid().ToString()
+      #     echo "queueId=$queueId" >> $env:GITHUB_ENV
 
-          ./.github/scripts/generate-launcher-configuration.ps1 `
-           -OutputPath "${{ env.launcherpath }}/configuration.json" `
-           -Package "${{ env.project }}" `
-           -Version "0.0.0-ci" `
-           -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
-           -queueId $queueId
+      #     ./.github/scripts/generate-launcher-configuration.ps1 `
+      #      -OutputPath "${{ env.launcherpath }}/configuration.json" `
+      #      -Package "${{ env.project }}" `
+      #      -Version "0.0.0-ci" `
+      #      -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
+      #      -queueId $queueId
 
-      - name: Upload configuration.json as artifact
-        uses: actions/upload-artifact@v4
-        with:
-         name: configuration
-         path: ${{ env.launcherpath }}/configuration.json    
+      # - name: Upload configuration.json as artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #    name: configuration
+      #    path: ${{ env.launcherpath }}/configuration.json    
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
@@ -146,7 +146,7 @@ jobs:
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
-          Start-Sleep -Seconds 180
+          Start-Sleep -Seconds 100
 
           # Send POST request to the launcher
           $url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
