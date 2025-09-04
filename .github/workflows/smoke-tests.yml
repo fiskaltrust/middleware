@@ -12,7 +12,6 @@ permissions:
 
 env:
   launcher: "fiskaltrust.service.launcher"
-  version: "latest"
   project: "fiskaltrust.Middleware.Queue.SQLite"
 jobs:
   download-launcher:
@@ -27,8 +26,8 @@ jobs:
           $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
           $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
           $offline = "true"
-          $launcher =  "${{ env.launcher }}"
-          $version =  "${{ env.version }}" 
+          $launcher = "${{ env.launcher }}"
+          $version = "latest"
 
           $pair = "${cashboxId}:${accessToken}"
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
