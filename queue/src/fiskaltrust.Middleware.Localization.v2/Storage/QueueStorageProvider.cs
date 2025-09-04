@@ -5,6 +5,9 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
+using System.Runtime.CompilerServices;
+using fiskaltrust.Middleware.Localization.v2.Models;
+using System.Reflection.Metadata.Ecma335;
 
 namespace fiskaltrust.Middleware.Localization.v2.Storage;
 
@@ -186,5 +189,48 @@ public class QueueStorageProvider : IQueueStorageProvider
             }
         }
         return null;
+    }
+
+    public async Task<List<Receipt>?> GetReferencedReceiptsAsync(ReceiptRequest data)
+    {
+        if (data.cbPreviousReceiptReference is null)
+        {
+            return null;
+        }
+        var queueItemRepository = await _storageProvider.CreateMiddlewareQueueItemRepository();
+
+        var previousReceiptReferences = data.cbPreviousReceiptReference.Match(
+            single => [single],
+            group => group
+        );
+
+        var previousReceiptReferenceReceipts = new List<Receipt>();
+
+        foreach (var previousReceiptReference in previousReceiptReferences)
+        {
+            var previousReceiptReferenceQueueItems = await queueItemRepository.GetByReceiptReferenceAsync(previousReceiptReference).ToListAsync();
+
+            if (previousReceiptReferenceQueueItems.Count == 0)
+            {
+                throw new Exception($"Referenced queue item with reference {previousReceiptReference} not found.");
+            }
+
+            if (previousReceiptReferenceQueueItems.Count > 1)
+            {
+                throw new Exception($"Multiple queue items found with reference {previousReceiptReference}.");
+            }
+
+            var receipt = new Receipt
+            {
+                Request = JsonSerializer.Deserialize<ReceiptRequest>(previousReceiptReferenceQueueItems[0].request)!,
+                Response = JsonSerializer.Deserialize<ReceiptResponse>(previousReceiptReferenceQueueItems[0].response)!,
+            };
+
+            receipt.Response.ftStateData = null;
+
+            previousReceiptReferenceReceipts.Add(receipt);
+        }
+
+        return previousReceiptReferenceReceipts;
     }
 }

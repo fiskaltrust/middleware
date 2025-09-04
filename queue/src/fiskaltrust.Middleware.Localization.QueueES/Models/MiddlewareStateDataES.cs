@@ -2,25 +2,21 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Models;
 
-public class MiddlewareState
+public class MiddlewareStateData : v2.Models.MiddlewareStateDataBase<MiddlewareStateData>
 {
     [JsonPropertyName("ES")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public MiddlewareQueueESState? ES { get; set; }
-
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
+    public MiddlewareStateDataES? ES { get; set; }
 }
 
-public class MiddlewareQueueESState
+public class MiddlewareStateDataES
 {
     [JsonPropertyName("LastReceipt")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Receipt? LastReceipt { get; set; } = null;
+    public v2.Models.Receipt? LastReceipt { get; set; } = null;
 
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

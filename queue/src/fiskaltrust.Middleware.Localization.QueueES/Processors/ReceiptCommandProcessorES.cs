@@ -45,7 +45,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
             }
         }
 
-        var lastReceipt = lastQueueItem is null ? null : new LastReceipt
+        var lastReceipt = lastQueueItem is null ? null : new v2.Models.Receipt
         {
             Request = JsonSerializer.Deserialize<ReceiptRequest>(lastQueueItem.request)!,
             Response = JsonSerializer.Deserialize<ReceiptResponse>(lastQueueItem.response)!,
@@ -55,8 +55,8 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
             lastReceipt.Response.ftStateData = null;
         }
 
-        var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) request.ReceiptResponse.ftStateData!).GetRawText())!;
-        responseStateData.ES = new MiddlewareQueueESState
+        var responseStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+        responseStateData.ES = new MiddlewareStateDataES
         {
             LastReceipt = lastReceipt
         };
@@ -71,7 +71,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
 
         try
         {
-            responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
+            responseStateData = JsonSerializer.Deserialize<MiddlewareStateData>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
             await (await _journalESRepository).InsertAsync(new ftJournalES
             {
                 ftJournalESId = Guid.NewGuid(),

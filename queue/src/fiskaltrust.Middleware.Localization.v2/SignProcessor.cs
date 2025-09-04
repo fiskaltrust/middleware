@@ -21,13 +21,12 @@ public class SignProcessor : ISignProcessor
     private readonly Guid _queueId = Guid.Empty;
     private readonly Guid _cashBoxId = Guid.Empty;
     private readonly bool _isSandbox;
-    private readonly QueueStorageProvider _queueStorageProvider;
-    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
+    private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
-        QueueStorageProvider queueStorageProvider,
+        IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
         MiddlewareConfiguration configuration)
@@ -99,43 +98,9 @@ public class SignProcessor : ISignProcessor
                 var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
 
-                var queueItemRepository = await _queueItemRepository;
-
-                var previousReceiptReferences = receiptRequest.cbPreviousReceiptReference?.Match(
-                    single => [single],
-                    group => group
-                ) ?? [];
-
-                var previousReceiptReferenceReceipts = new List<Receipt>();
-
-                foreach (var previousReceiptReference in previousReceiptReferences)
+                receiptResponse.ftStateData = new MiddlewareStateData
                 {
-                    var previousReceiptReferenceQueueItems = await queueItemRepository.GetByReceiptReferenceAsync(previousReceiptReference).ToListAsync();
-
-                    if (previousReceiptReferenceQueueItems.Count == 0)
-                    {
-                        throw new Exception($"Referenced queue item with reference {previousReceiptReference} not found.");
-                    }
-
-                    if (previousReceiptReferenceQueueItems.Count > 1)
-                    {
-                        throw new Exception($"Multiple queue items found with reference {previousReceiptReference}.");
-                    }
-
-                    var receipt = new Receipt
-                    {
-                        Request = JsonSerializer.Deserialize<ReceiptRequest>(previousReceiptReferenceQueueItems[0].request)!,
-                        Response = JsonSerializer.Deserialize<ReceiptResponse>(previousReceiptReferenceQueueItems[0].response)!,
-                    };
-
-                    receipt.Response.ftStateData = null;
-
-                    previousReceiptReferenceReceipts.Add(receipt);
-                }
-
-                receiptResponse.ftStateData = new MiddlewareState
-                {
-                    PreviousReceiptReference = previousReceiptReferenceReceipts
+                    PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(receiptRequest)
                 };
 
                 List<ftActionJournal> countrySpecificActionJournals;

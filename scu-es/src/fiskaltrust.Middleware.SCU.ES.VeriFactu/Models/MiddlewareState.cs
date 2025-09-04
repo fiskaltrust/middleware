@@ -4,11 +4,11 @@ using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.SCU.ES.Models;
 
-public class MiddlewareState
+public class MiddlewareStateData
 {
     [JsonPropertyName("ES")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public MiddlewareQueueESState? ES { get; set; }
+    public MiddlewareStateDataES? ES { get; set; }
 
     [JsonPropertyName("ftPreviousReceiptReference")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
@@ -16,6 +16,8 @@ public class MiddlewareState
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
+
+    public static T FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<T>(((JsonElement)receiptResponse.ftStateData!).GetRawText())!;
 }
 
 public class Receipt
@@ -29,18 +31,18 @@ public class Receipt
     public required ReceiptRequest Request { get; set; }
 }
 
-public class MiddlewareQueueESState
+public class MiddlewareStateDataES
 {
     [JsonPropertyName("LastReceipt")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public LastReceipt? LastReceipt { get; set; } = null;
+    public Receipt? LastReceipt { get; set; } = null;
 
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;
 }
 
-public class LastReceipt
+public class Receipt
 {
     [JsonPropertyName("Request")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]

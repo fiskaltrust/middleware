@@ -41,8 +41,8 @@ public class VeriFactuSCU : IESSSCD
         {
             throw new Exception("ftStateData must be present.");
         }
-        var middlewareState = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) request.ReceiptResponse.ftStateData).GetRawText());
-        if (middlewareState is null || middlewareState.ES is null)
+        var middlewareStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+        if (middlewareStateData is null || middlewareStateData.ES is null)
         {
             throw new Exception("ES state must be present in ftStateData.");
         }
@@ -50,17 +50,17 @@ public class VeriFactuSCU : IESSSCD
 
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
-            if (middlewareState.ES.LastReceipt is null)
+            if (middlewareStateData.ES.LastReceipt is null)
             {
                 throw new Exception("There needs to be a last receipt in the chain to perform a void");
             }
 
-            if (middlewareState.PreviousReceiptReference is null || middlewareState.PreviousReceiptReference.Count != 1)
+            if (middlewareStateData.PreviousReceiptReference is null || middlewareStateData.PreviousReceiptReference.Count != 1)
             {
                 throw new Exception("There needs to be exactly one previous receipt to perform a void");
             }
 
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, middlewareState.ES.LastReceipt.Response, middlewareState.PreviousReceiptReference[0].Request, middlewareState.PreviousReceiptReference[0].Response);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, middlewareStateData.ES.LastReceipt.Response, middlewareStateData.PreviousReceiptReference[0].Request, middlewareStateData.PreviousReceiptReference[0].Response);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -80,7 +80,7 @@ public class VeriFactuSCU : IESSSCD
         }
         else
         {
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, middlewareState.ES.LastReceipt?.Request, middlewareState.ES.LastReceipt?.Response);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, middlewareStateData.ES.LastReceipt?.Request, middlewareStateData.ES.LastReceipt?.Response);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -101,8 +101,8 @@ public class VeriFactuSCU : IESSSCD
             );
         }
 
-        middlewareState.ES.GovernmentAPI = governmentAPI;
-        receiptResponse.ftStateData = middlewareState;
+        middlewareStateData.ES.GovernmentAPI = governmentAPI;
+        receiptResponse.ftStateData = middlewareStateData;
 
         return new ProcessResponse
         {
