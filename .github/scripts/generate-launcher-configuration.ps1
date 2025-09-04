@@ -1,12 +1,12 @@
 ﻿param (
     [string]$OutputPath = "configuration.json",
     [string]$Package,
+    [string]$queueId,
     [string]$Version = "0.0.0-ci"
 )
 
 # Generate IDs
 $cashBoxId = [guid]::NewGuid().ToString()
-$queueId   = [guid]::NewGuid().ToString()
 $scuId     = [guid]::NewGuid().ToString()
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
@@ -55,6 +55,7 @@ $config = @{
                     }
                 )
             }
+            url = @("rest://localhost:1500/$queueId")
         }
     )
     TimeStamp = $timestamp

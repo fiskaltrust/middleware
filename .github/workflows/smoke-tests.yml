@@ -60,6 +60,7 @@ jobs:
           dotnet publish --configuration Release --no-restore -f net461
           dotnet publish --configuration Release --no-restore -f netstandard2.0
           dotnet publish --configuration Release --no-restore -f netstandard2.1
+        if: ${{ env.project }} == 'fiskaltrust.Middleware.Queue.SQLite'
         working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
         name: Publish SQLite for nuget
 
@@ -78,7 +79,6 @@ jobs:
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
-         Get-ChildItem -Path "./packages" -Recurse | Select-Object FullName
 
       # - name: Check package dependencies
       #   shell: pwsh
@@ -125,12 +125,14 @@ jobs:
           -OutputPath "${{ env.launcherpath }}/configuration.json" `
           -Package "${{ env.project }}" `
           -Version "0.0.0-ci"
+          -queueId  [guid]::NewGuid().ToString()
+         echo "queueId=$queueId" >> $env:GITHUB_ENV
 
       - name: Upload configuration.json as artifact
         uses: actions/upload-artifact@v4
         with:
-         name: configuration-json
-         path: configuration.json
+         name: configuration
+         path: ${{ env.launcherpath }}/configuration.json
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
@@ -142,7 +144,7 @@ jobs:
           Start-Sleep -Seconds 180
 
           # Send POST request to the launcher
-          $url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
+          $url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
           $body = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
           Write-Host "Sending POST request to $url..."
           try {
