@@ -124,11 +124,11 @@ jobs:
           $queueId = [guid]::NewGuid().ToString()
           echo "queueId=$queueId" >> $env:GITHUB_ENV
 
-          .github/scripts/generate-launcher-configuration.ps1 `
+          ./.github/scripts/generate-launcher-configuration.ps1 `
            -OutputPath "${{ env.launcherpath }}/configuration.json" `
            -Package "${{ env.project }}" `
            -Version "0.0.0-ci"
-           -queueId "$queueId"
+           -queueId $queueId
 
       - name: Upload configuration.json as artifact
         uses: actions/upload-artifact@v4
@@ -138,6 +138,7 @@ jobs:
 
       - name: run sql-server
         uses: ./.github/workflows/setup-sqlserver.yml
+
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
