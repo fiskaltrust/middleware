@@ -340,11 +340,11 @@ public static class AADEMappings
         {
             if (chargeItem.VATRate == 13m)
             {
-                return MyDataVatCategory.VatRate13_Category2; 
+                return MyDataVatCategory.VatRate13_Category2;
             }
             if (chargeItem.VATRate == 17m)
             {
-                return MyDataVatCategory.VatRate17_Category4; 
+                return MyDataVatCategory.VatRate17_Category4;
             }
             if (chargeItem.VATRate == 6m)
             {
@@ -407,17 +407,31 @@ public static class AADEMappings
         PayItemCase.DebitCardPayment => MyDataPaymentMethods.PosEPos,
         PayItemCase.CreditCardPayment => MyDataPaymentMethods.PosEPos,
         PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => MyDataPaymentMethods.Check,
-        PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
+        PayItemCase.OnlinePayment => -1,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
         PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
-        PayItemCase.SEPATransfer => payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
-        PayItemCase.OtherBankTransfer => -1,
+        PayItemCase.SEPATransfer => GetSEPATransferPaymentType(payItem.Description),
+        PayItemCase.OtherBankTransfer => MyDataPaymentMethods.ForeignPaymentsSpecialAccount,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
         PayItemCase.Grant => -1,
         PayItemCase.TicketRestaurant => -1,
         PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
+
+    private static int GetSEPATransferPaymentType(string description)
+    {
+        if (string.IsNullOrEmpty(description))
+            return MyDataPaymentMethods.DomesticPaymentAccount;
+
+        return description.ToUpper() switch
+        {
+            "IRIS" => MyDataPaymentMethods.IrisDirectPayments,
+            "RF code payment (Web banking)" => MyDataPaymentMethods.WebBanking,
+            var d when d.Contains("FOREIGN") || d.Contains("INTERNATIONAL") => MyDataPaymentMethods.ForeignPaymentsSpecialAccount,
+            _ => MyDataPaymentMethods.DomesticPaymentAccount
+        };
+    }
 
     public static bool RequiresCustomerInfo(InvoiceType invoiceType)
     {
