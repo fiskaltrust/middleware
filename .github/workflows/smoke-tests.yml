@@ -74,7 +74,7 @@ jobs:
         run: |
          $project = "${{ env.project }}"
          $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
-         $packageDest = "${{ env.launcher }}/packages/"
+         $packageDest = "${{ env.launcherpath }}/packages/"
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
@@ -97,6 +97,10 @@ jobs:
             [xml]$nuspec = Get-Content $nuspecFile
             $deps = $nuspec.package.metadata.dependencies.group.dependency
 
+            #Authentication
+            $pair = "${cashboxId}:${accessToken}"
+            $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
+            $headers = @{ Authorization = "Basic $encoded" }
             foreach ($dep in $deps) {
                 $id = $dep.id
                 $version = $dep.version
@@ -105,7 +109,7 @@ jobs:
                 if (-not (Test-Path $localPath)) {
                     Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
                     $url = "https://packages-sandbox.fiskaltrust.at/$id.$version.nupkg"
-                    Invoke-WebRequest -Uri $url -OutFile $localPath
+                    Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
                 } else {
                     Write-Host "✅ $id ($version) already present."
                 }
