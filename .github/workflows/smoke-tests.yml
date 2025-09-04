@@ -34,7 +34,7 @@ jobs:
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
           $headers = @{ Authorization = "Basic $encoded" }
 
-          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          $url = "https://packages-sandbox.fiskaltrust.cloud/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
           $output = "$launcher.$cashboxId.zip"
           Write-Host "👉 Downloading from URL: $url"
           Write-Host "👉 Saving as: $output"
@@ -108,7 +108,7 @@ jobs:
 
                 if (-not (Test-Path $localPath)) {
                     Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
-                    $url = "https://packages-sandbox.fiskaltrust.at/$id.$version.nupkg"
+                    $url = "https://packages-sandbox.fiskaltrust.cloud/$id.$version.nupkg"
                     Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
                 } else {
                     Write-Host "✅ $id ($version) already present."
