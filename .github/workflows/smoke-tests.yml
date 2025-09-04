@@ -149,7 +149,8 @@ jobs:
           Start-Sleep -Seconds 100
 
           # Send POST request to the launcher
-          $url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
+          #$url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
+          $url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
           $body = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
           Write-Host "Sending POST request to $url..."
           try {
@@ -169,9 +170,8 @@ jobs:
           name: test-output
           path: test-output.log
       
-      # - name: Cleanup package folder
-      #   shell: pwsh
-      #   run: |
-      #     if (Test-Path "package") {
-      #       Remove-Item "package/*" -Recurse -Force
-      #     }
+      - name: Start LocalDB
+        shell: pwsh
+        run: |
+          sqllocaldb create MSSQLLocalDB -s
+          sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"
