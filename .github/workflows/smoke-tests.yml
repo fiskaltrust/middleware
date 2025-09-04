@@ -112,7 +112,7 @@ jobs:
                 $version = $dep.version
                 $localPath = "${{ env.launcher }}/packages/$id.$version.nupkg"
 
-                if ($id -ne "" and $version -ne "" and -not (Test-Path $localPath)) {
+                if ($id -ne "" -and $version -ne "" -and -not (Test-Path $localPath)) {
                     Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
                     $url = "https://packages-sandbox.fiskaltrust.cloud/$id.$version.nupkg"
                     Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
