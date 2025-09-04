@@ -97,7 +97,13 @@ jobs:
             [xml]$nuspec = Get-Content $nuspecFile
             $deps = $nuspec.package.metadata.dependencies.group.dependency
 
+            Write-Host "=== NuGet dependencies ==="
+            foreach ($dep in $deps) {
+             Write-Host "Id: $($dep.id), Version: $($dep.version)"
+            }
             #Authentication
+            $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
+            $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
             $pair = "${cashboxId}:${accessToken}"
             $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
             $headers = @{ Authorization = "Basic $encoded" }
