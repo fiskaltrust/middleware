@@ -128,7 +128,7 @@ jobs:
            -OutputPath "${{ env.launcherpath }}/configuration.json" `
            -Package "${{ env.project }}" `
            -Version "0.0.0-ci"
-           -queueId $queueId
+           -queueId "$queueId"
 
       - name: Upload configuration.json as artifact
         uses: actions/upload-artifact@v4
