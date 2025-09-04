@@ -1,12 +1,12 @@
 ﻿param (
     [string]$OutputPath = "configuration.json",
     [string]$Package,
+    [string]$cashBoxId,
     [string]$queueId,
     [string]$Version = "0.0.0-ci"
 )
 
 # Generate IDs
-$cashBoxId = [guid]::NewGuid().ToString()
 $scuId     = [guid]::NewGuid().ToString()
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 

@@ -130,6 +130,7 @@ jobs:
            -OutputPath "${{ env.launcherpath }}/configuration.json" `
            -Package "${{ env.project }}" `
            -Version "0.0.0-ci" `
+           -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
            -queueId $queueId
 
       - name: Upload configuration.json as artifact
