@@ -20,22 +20,11 @@ public class MiddlewareQueueESState
 {
     [JsonPropertyName("LastReceipt")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public LastReceipt? LastReceipt { get; set; } = null;
+    public Receipt? LastReceipt { get; set; } = null;
 
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;
-}
-
-public class LastReceipt
-{
-    [JsonPropertyName("Request")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptRequest Request { get; set; }
-
-    [JsonPropertyName("Response")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptResponse Response { get; set; }
 }
 
 public class GovernmentAPI

@@ -41,7 +41,7 @@ public class VeriFactuSCU : IESSSCD
         {
             throw new Exception("ftStateData must be present.");
         }
-        var middlewareState = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement)request.ReceiptResponse.ftStateData).GetRawText());
+        var middlewareState = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) request.ReceiptResponse.ftStateData).GetRawText());
         if (middlewareState is null || middlewareState.ES is null)
         {
             throw new Exception("ES state must be present in ftStateData.");
@@ -55,7 +55,7 @@ public class VeriFactuSCU : IESSSCD
                 throw new Exception("There needs to be a last receipt in the chain to perform a void");
             }
 
-            if (middlewareState.PreviousReceiptReference.Count != 1)
+            if (middlewareState.PreviousReceiptReference is null || middlewareState.PreviousReceiptReference.Count != 1)
             {
                 throw new Exception("There needs to be exactly one previous receipt to perform a void");
             }
