@@ -46,7 +46,7 @@ jobs:
          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
          $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
-         $extractPath = ${{ env.launcherpath }}
+         $extractPath = "${{ env.launcherpath }}"
 
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
          
