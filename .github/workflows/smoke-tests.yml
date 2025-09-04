@@ -127,7 +127,7 @@ jobs:
           ./.github/scripts/generate-launcher-configuration.ps1 `
            -OutputPath "${{ env.launcherpath }}/configuration.json" `
            -Package "${{ env.project }}" `
-           -Version "0.0.0-ci"
+           -Version "0.0.0-ci" `
            -queueId $queueId
 
       - name: Upload configuration.json as artifact
