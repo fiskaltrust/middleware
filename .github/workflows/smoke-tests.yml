@@ -13,6 +13,7 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   project: "fiskaltrust.Middleware.Queue.SQLite"
+  launcherpath: "./launcher"
 jobs:
   download-launcher:
     runs-on: windows-latest
@@ -45,7 +46,7 @@ jobs:
          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
          $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
-         $extractPath = "."
+         $extractPath = ${{ env.launcherpath }}
 
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
          
@@ -73,11 +74,12 @@ jobs:
         run: |
          $project = "${{ env.project }}"
          $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
-         $packageDest = "./packages/"
+         $packageDest = "${{ env.launcher }}/packages/"
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
          Get-ChildItem -Path "./packages" -Recurse | Select-Object FullName
+
       - name: Check package dependencies
         shell: pwsh
         run: |
@@ -98,7 +100,7 @@ jobs:
             foreach ($dep in $deps) {
                 $id = $dep.id
                 $version = $dep.version
-                $localPath = "./packages/$id.$version/$id.$version.nupkg"
+                $localPath = "${{ env.launcher }}/packages/$id.$version.nupkg"
 
                 if (-not (Test-Path $localPath)) {
                     Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
@@ -108,6 +110,19 @@ jobs:
                     Write-Host "✅ $id ($version) already present."
                 }
             }
+      - name: Generate configuration.json
+        shell: pwsh
+        run: |
+         .github/scripts/generate-launcher-configuration.ps1 `
+          -OutputPath "${{ env.launcherpath }}/configuration.json" `
+          -Package "${{ env.project }}" `
+          -Version "0.0.0-ci"
+
+      - name: Upload configuration.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+         name: configuration-json
+         path: configuration.json
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
