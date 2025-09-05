@@ -1,4 +1,3 @@
-
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
@@ -11,10 +10,24 @@ public class MiddlewareState
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public MiddlewareQueueESState? ES { get; set; }
 
+    [JsonPropertyName("ftPreviousReceiptReference")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public List<Receipt> PreviousReceiptReference { get; set; } = new();
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
 }
 
+public class Receipt
+{
+    [JsonPropertyName("Response")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public ReceiptResponse Response { get; set; } = null!;
+
+    [JsonPropertyName("Request")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public ReceiptRequest Request { get; set; } = null!;
+}
 
 public class MiddlewareQueueESState
 {

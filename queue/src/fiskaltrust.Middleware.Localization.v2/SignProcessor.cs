@@ -6,6 +6,10 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using System.Linq;
+using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -18,6 +22,7 @@ public class SignProcessor : ISignProcessor
     private readonly Guid _cashBoxId = Guid.Empty;
     private readonly bool _isSandbox;
     private readonly QueueStorageProvider _queueStorageProvider;
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
     private readonly int _receiptRequestMode = 0;
 
     public SignProcessor(
@@ -93,6 +98,46 @@ public class SignProcessor : ISignProcessor
                 queueItem.ftWorkMoment = DateTime.UtcNow;
                 var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
+
+                var queueItemRepository = await _queueItemRepository;
+
+                var previousReceiptReferences = receiptRequest.cbPreviousReceiptReference?.Match(
+                    single => [single],
+                    group => group
+                ) ?? [];
+
+                var previousReceiptReferenceReceipts = new List<Receipt>();
+
+                foreach (var previousReceiptReference in previousReceiptReferences)
+                {
+                    var previousReceiptReferenceQueueItems = await queueItemRepository.GetByReceiptReferenceAsync(previousReceiptReference).ToListAsync();
+
+                    if (previousReceiptReferenceQueueItems.Count == 0)
+                    {
+                        throw new Exception($"Referenced queue item with reference {previousReceiptReference} not found.");
+                    }
+
+                    if (previousReceiptReferenceQueueItems.Count > 1)
+                    {
+                        throw new Exception($"Multiple queue items found with reference {previousReceiptReference}.");
+                    }
+
+                    var receipt = new Receipt
+                    {
+                        Request = JsonSerializer.Deserialize<ReceiptRequest>(previousReceiptReferenceQueueItems[0].request)!,
+                        Response = JsonSerializer.Deserialize<ReceiptResponse>(previousReceiptReferenceQueueItems[0].response)!,
+                    };
+
+                    receipt.Response.ftStateData = null;
+
+                    previousReceiptReferenceReceipts.Add(receipt);
+                }
+
+                receiptResponse.ftStateData = new MiddlewareState
+                {
+                    PreviousReceiptReference = previousReceiptReferenceReceipts
+                };
+
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
                 {

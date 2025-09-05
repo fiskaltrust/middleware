@@ -41,7 +41,7 @@ public class VeriFactuSCU : IESSSCD
         {
             throw new Exception("ftStateData must be present.");
         }
-        var middlewareState = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) request.ReceiptResponse.ftStateData).GetRawText());
+        var middlewareState = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement)request.ReceiptResponse.ftStateData).GetRawText());
         if (middlewareState is null || middlewareState.ES is null)
         {
             throw new Exception("ES state must be present in ftStateData.");
@@ -55,12 +55,12 @@ public class VeriFactuSCU : IESSSCD
                 throw new Exception("There needs to be a last receipt in the chain to perform a void");
             }
 
-            if (request.ReferencedReceiptRequest is null || request.ReferencedReceiptResponse is null)
+            if (middlewareState.PreviousReceiptReference.Count != 1)
             {
-                throw new Exception("There needs to be a referenced receipt to perform a void");
+                throw new Exception("There needs to be exactly one previous receipt to perform a void");
             }
 
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, middlewareState.ES.LastReceipt.Response, request.ReferencedReceiptRequest, request.ReferencedReceiptResponse);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, middlewareState.ES.LastReceipt.Response, middlewareState.PreviousReceiptReference[0].Request, middlewareState.PreviousReceiptReference[0].Response);
 
             var envelope = new Envelope<RequestBody>
             {
