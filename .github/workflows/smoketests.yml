@@ -1,0 +1,117 @@
+﻿name: smoke tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/smoke-tests.yml
+  
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  launcher: "fiskaltrust.service.launcher"
+  project: "fiskaltrust.Middleware.Queue.SQLite"
+jobs:
+  download-launcher:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download launcher package
+        shell: pwsh
+        run: |
+          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
+          $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
+          $offline = "true"
+          $launcher = "${{ env.launcher }}"
+          $version = "latest"
+
+          $pair = "${cashboxId}:${accessToken}"
+          $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
+          $headers = @{ Authorization = "Basic $encoded" }
+
+          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          $output = "$launcher.$cashboxId.zip"
+          Write-Host "👉 Downloading from URL: $url"
+          Write-Host "👉 Saving as: $output"
+          Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
+
+      - name: Extract launcher package
+        shell: pwsh
+        run: |
+         $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
+         $launcher =  "${{ env.launcher }}"
+         $zipPath = "$launcher.$cashboxId.zip"
+         $extractPath = "."
+
+         Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+         
+      - uses: ./.github/actions/build
+        with:
+          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+          #pattern: queue/fiskaltrust.Middleware.sln
+          configuration: Debug
+
+      - run: |
+          dotnet publish --configuration Release --no-restore -f net461
+          dotnet publish --configuration Release --no-restore -f netstandard2.0
+          dotnet publish --configuration Release --no-restore -f netstandard2.1
+        if: inputs.pattern == 'fiskaltrust.Middleware.Queue.SQLite'
+        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
+        name: Publish SQLite for nuget
+
+      - name: create the NuGet package
+        uses: ./.github/actions/package
+        with:
+         path: queue/src
+         project: ${{ env.project }}
+
+      - name: Update launcher packages
+        shell: pwsh
+        run: |
+         $project = "${{ env.project }}"
+         $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
+         $packageDest = "./packages/"
+
+         Write-Host "Copying NuGet package from $packageSrc to $packageDest"
+         Copy-Item -Path $packageSrc -Destination $packageDest -Force
+
+      - name: Run test.cmd, send request, and stop
+        shell: pwsh
+        run: |
+          Write-Host "Starting test.cmd..."
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+
+          # Wait a few seconds to let test.cmd start listening
+          Start-Sleep -Seconds 300
+
+          # Send POST request to the launcher
+          $url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
+          $body = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
+          Write-Host "Sending POST request to $url..."
+          try {
+              $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json"
+              Write-Host "Response: $($response | ConvertTo-Json)"
+          } catch {
+              Write-Error "Request failed: $_"
+          }
+
+          # Stop the launcher
+          Write-Host "Stopping test.cmd..."
+          Stop-Process -Id $process.Id -Force
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.log
+      
+      # - name: Cleanup package folder
+      #   shell: pwsh
+      #   run: |
+      #     if (Test-Path "package") {
+      #       Remove-Item "package/*" -Recurse -Force
+      #     }
