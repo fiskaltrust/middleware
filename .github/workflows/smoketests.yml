@@ -83,10 +83,10 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Starting test.cmd..."
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c ./launcher/test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c launcher/test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
-          Start-Sleep -Seconds 300
+          Start-Sleep -Seconds 100
 
           # Send POST request to the launcher
           $url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
