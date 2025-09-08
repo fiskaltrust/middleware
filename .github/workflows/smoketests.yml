@@ -112,6 +112,7 @@ jobs:
 
             # Load nuspec
             [xml]$nuspec = Get-Content $nuspecFile
+            $nuspec
             $deps = $nuspec.package.metadata.dependencies.group.dependency
 
             #Authentication
