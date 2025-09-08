@@ -13,6 +13,7 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   project: "fiskaltrust.Middleware.Queue.SQLite"
+  launcherpath: "./launcher"
 jobs:
   download-launcher:
     runs-on: windows-latest
@@ -45,7 +46,7 @@ jobs:
          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
          $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
-         $extractPath = "./launcher"
+         $extractPath = "${{ env.launcherpath }}"
 
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
          
@@ -74,7 +75,7 @@ jobs:
         run: |
          $project = "${{ env.project }}"
          $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
-         $packageDest = "./launcher/packages/"
+         $packageDest = "${{ env.launcherpath }}/packages/"
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
@@ -82,7 +83,7 @@ jobs:
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
-          $scriptPath = (Resolve-Path 'launcher\test.cmd').Path
+          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
           Write-Host "Starting test.cmd..."
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
