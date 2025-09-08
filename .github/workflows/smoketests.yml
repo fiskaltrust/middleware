@@ -79,6 +79,7 @@ jobs:
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
+         Get-ChildItem -Path "./packages" -Recurse 
 
       - name: Generate configuration.json
         shell: pwsh
