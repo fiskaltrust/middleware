@@ -130,6 +130,12 @@ jobs:
         with:
           name: test-output
           path: test-output.log
+
+      - name: Upload test error
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output-error.log
       
       # - name: Cleanup package folder
       #   shell: pwsh
