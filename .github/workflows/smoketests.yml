@@ -45,7 +45,7 @@ jobs:
          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
          $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
-         $extractPath = "."
+         $extractPath = "./launcher/"
 
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
          
@@ -74,7 +74,7 @@ jobs:
         run: |
          $project = "${{ env.project }}"
          $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
-         $packageDest = "./packages/"
+         $packageDest = "./launcher/packages/"
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
@@ -83,7 +83,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Starting test.cmd..."
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c ./launcher/test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
           Start-Sleep -Seconds 300
