@@ -85,7 +85,7 @@ namespace fiskaltrust.Middleware.Queue
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{request.ftReceiptCase:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", receiptRequest.cbReceiptReference);
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference);
 #endif
 
                 return response;
@@ -203,7 +203,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
