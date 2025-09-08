@@ -10,7 +10,15 @@ public class MiddlewareStateDataBase<T> where T : MiddlewareStateDataBase<T>
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
 
-    public static T FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<T>(((JsonElement) receiptResponse.ftStateData!).GetRawText())!;
+    public static T? FromReceiptResponse(ReceiptResponse receiptResponse)
+    {
+        if (receiptResponse.ftStateData is null)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<T>(((JsonElement) receiptResponse.ftStateData).GetRawText());
+    }
 }
 
 public class MiddlewareStateData : MiddlewareStateDataBase<MiddlewareStateData>

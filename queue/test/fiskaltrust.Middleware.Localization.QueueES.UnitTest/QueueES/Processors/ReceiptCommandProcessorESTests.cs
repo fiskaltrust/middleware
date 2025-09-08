@@ -307,5 +307,199 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             result.receiptResponse.ftReceiptIdentification.Should().Be("0#1/TEST");
             result.receiptResponse.ftSignatures[0].Should().BeEquivalentTo(expectedSignaturItem);
         }
+
+        [Fact]
+        public async Task PointOfSaleReceipt0x0001Async_Should_Set_MiddlewareStateData_ES_LastReceipt()
+        {
+            // Arrange
+            var queue = TestHelpers.CreateQueue();
+            var queueItem = TestHelpers.CreateQueueItem();
+            var previousQueueItem = TestHelpers.CreateQueueItem();
+
+            var previousReceiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001
+            };
+            var previousReceiptResponse = new ReceiptResponse
+            {
+                ftState = (State) 0x4553_2000_0000_0000,
+                ftQueueID = queue.ftQueueId,
+                ftQueueItemID = previousQueueItem.ftQueueItemId,
+                ftQueueRow = 1,
+                ftReceiptIdentification = "prev#",
+                ftReceiptMoment = DateTime.UtcNow
+            };
+            previousQueueItem.request = JsonSerializer.Serialize(previousReceiptRequest);
+            previousQueueItem.response = JsonSerializer.Serialize(previousReceiptResponse);
+
+            var queueES = new ftQueueES()
+            {
+                SSCDSignQueueItemId = previousQueueItem.ftQueueItemId
+            };
+
+            var configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(queueES);
+            configurationRepositoryMock.Setup(x => x.InsertOrUpdateQueueESAsync(It.IsAny<ftQueueES>())).Returns(Task.CompletedTask);
+
+            var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
+            queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
+
+            var journalESRepositoryMock = new Mock<IMiddlewareJournalESRepository>();
+            journalESRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalES>())).Returns(Task.CompletedTask);
+
+            var essscdMock = new Mock<IESSSCD>();
+            essscdMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+                .ReturnsAsync((ProcessRequest req) => new ProcessResponse
+                {
+                    ReceiptResponse = req.ReceiptResponse
+                });
+
+            var sut = new ReceiptCommandProcessorES(
+                Mock.Of<ILogger<ReceiptCommandProcessorES>>(),
+                new(() => Task.FromResult(essscdMock.Object)),
+                new(() => Task.FromResult(configurationRepositoryMock.Object)),
+                new(() => Task.FromResult(queueItemRepositoryMock.Object)),
+                new(() => Task.FromResult(journalESRepositoryMock.Object))
+            );
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                ftState = (State) 0x4553_2000_0000_0000,
+                ftQueueID = queue.ftQueueId,
+                ftQueueItemID = queueItem.ftQueueItemId,
+                ftQueueRow = 2,
+                ftReceiptIdentification = "current#",
+                ftReceiptMoment = DateTime.UtcNow,
+                ftStateData = new
+                {
+                    ExtraStuff = 2
+                }
+            };
+
+            var request = new ProcessCommandRequest(queue, receiptRequest, JsonSerializer.Deserialize<ReceiptResponse>(JsonSerializer.Serialize(receiptResponse))!);
+
+            // Act
+            var result = await sut.PointOfSaleReceipt0x0001Async(request);
+
+            // Assert
+            result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options.Excluding(x => x.ftStateData));
+            result.actionJournals.Should().BeEmpty();
+            result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
+
+            var stateData = result.receiptResponse.ftStateData as MiddlewareStateData;
+            stateData!.ExtraData.Should().ContainKey("ExtraStuff");
+            stateData.Should().NotBeNull();
+            stateData!.ES.Should().NotBeNull();
+            stateData.ES!.LastReceipt.Should().NotBeNull();
+            stateData.ES!.LastReceipt!.Request.ftReceiptCase.Should().Be(ReceiptCase.PointOfSaleReceipt0x0001);
+            stateData.ES!.LastReceipt!.Response.ftReceiptIdentification.Should().Be("prev#");
+        }
+
+        [Fact]
+        public async Task PointOfSaleReceipt0x0001Async_Should_Handle_No_LastReceipt()
+        {
+            // Arrange
+            var queue = TestHelpers.CreateQueue();
+            var queueItem = TestHelpers.CreateQueueItem();
+
+            var queueES = new ftQueueES()
+            {
+                SSCDSignQueueItemId = null
+            };
+
+            var configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(queueES);
+            configurationRepositoryMock.Setup(x => x.InsertOrUpdateQueueESAsync(It.IsAny<ftQueueES>())).Returns(Task.CompletedTask);
+
+            var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
+
+            var journalESRepositoryMock = new Mock<IMiddlewareJournalESRepository>();
+            journalESRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalES>())).Returns(Task.CompletedTask);
+
+            var essscdMock = new Mock<IESSSCD>();
+            essscdMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+                .ReturnsAsync((ProcessRequest req) => new ProcessResponse
+                {
+                    ReceiptResponse = req.ReceiptResponse
+                });
+
+            var sut = new ReceiptCommandProcessorES(
+                Mock.Of<ILogger<ReceiptCommandProcessorES>>(),
+                new(() => Task.FromResult(essscdMock.Object)),
+                new(() => Task.FromResult(configurationRepositoryMock.Object)),
+                new(() => Task.FromResult(queueItemRepositoryMock.Object)),
+                new(() => Task.FromResult(journalESRepositoryMock.Object))
+            );
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                ftState = (State) 0x4553_2000_0000_0000,
+                ftQueueID = queue.ftQueueId,
+                ftQueueItemID = queueItem.ftQueueItemId,
+                ftQueueRow = 1,
+                ftReceiptIdentification = "current#",
+                ftReceiptMoment = DateTime.UtcNow
+            };
+
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
+
+            // Act
+            var result = await sut.PointOfSaleReceipt0x0001Async(request);
+
+            // Assert
+            result.receiptResponse.Should().Be(receiptResponse);
+            result.actionJournals.Should().BeEmpty();
+            result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
+
+            var stateData = result.receiptResponse.ftStateData as MiddlewareStateData;
+            stateData.Should().NotBeNull();
+            stateData!.ES.Should().NotBeNull();
+            stateData.ES!.LastReceipt.Should().BeNull();
+        }
+
+        [Fact]
+        public void MiddlewareStateData_Should_SerializeAndDeserialize_ES()
+        {
+            var lastReceipt = new v2.Models.Receipt
+            {
+                Request = new ReceiptRequest { ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001 },
+                Response = new ReceiptResponse { ftState = (State) 0x4553_2000_0000_0000 }
+            };
+
+            var governmentApi = new GovernmentAPI
+            {
+                Request = "request",
+                Response = "response",
+                Version = "v1"
+            };
+
+            var stateData = new MiddlewareStateData
+            {
+                ES = new MiddlewareStateDataES
+                {
+                    LastReceipt = lastReceipt,
+                    GovernmentAPI = governmentApi
+                }
+            };
+
+            var json = JsonSerializer.Serialize(stateData);
+            var deserialized = JsonSerializer.Deserialize<MiddlewareStateData>(json);
+
+            deserialized.Should().NotBeNull();
+            deserialized!.ES.Should().NotBeNull();
+            deserialized.ES!.LastReceipt.Should().NotBeNull();
+            deserialized.ES!.GovernmentAPI.Should().NotBeNull();
+            deserialized.ES!.GovernmentAPI!.Request.Should().Be("request");
+            deserialized.ES!.GovernmentAPI!.Response.Should().Be("response");
+            deserialized.ES!.GovernmentAPI!.Version.Should().Be("v1");
+        }
     }
 }
