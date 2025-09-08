@@ -54,11 +54,15 @@ $config = @{
                         TimeStamp = $timestamp
                     }
                 )
+                init_ftCashBox = @{
+                    ftCashBoxId = $cashBoxId
+                    TimeStamp = $timestamp
+                }
             }
-            url = @("rest://localhost:1500/$queueId")
-        }
-    )
-    TimeStamp = $timestamp
+        url = @("rest://localhost:1500/$queueId")
+    }
+)
+TimeStamp = $timestamp
 }
 
 # Save file
