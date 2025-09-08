@@ -15,7 +15,7 @@ env:
   project: "fiskaltrust.Middleware.Queue.SQLite"
   launcherpath: "./launcher"
 jobs:
-  download-launcher:
+  test-middleware:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -79,6 +79,25 @@ jobs:
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
+
+      - name: Generate configuration.json
+        shell: pwsh
+        run: |
+          $queueId = [guid]::NewGuid().ToString()
+          echo "queueId=$queueId" >> $env:GITHUB_ENV
+
+          ./.github/scripts/generate-launcher-configuration.ps1 `
+           -OutputPath "${{ env.launcherpath }}/configuration.json" `
+           -Package "${{ env.project }}" `
+           -Version "0.0.0-ci" `
+           -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
+           -queueId $queueId
+
+      - name: Upload configuration.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+         name: configuration
+         path: ${{ env.launcherpath }}/configuration.json 
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
