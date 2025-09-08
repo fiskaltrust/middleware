@@ -5,11 +5,23 @@ using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Models;
 
-public class MiddlewareStateData : v2.Models.MiddlewareStateDataBase<MiddlewareStateData>
+public class MiddlewareStateData : v2.Models.MiddlewareStateData
 {
+    public MiddlewareStateData() { }
+    private MiddlewareStateData(v2.Models.MiddlewareStateData middlewareStateData) : base(middlewareStateData)
+    {
+
+    }
+
     [JsonPropertyName("ES")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public MiddlewareStateDataES? ES { get; set; }
+
+    public new static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse)
+    {
+        return new MiddlewareStateData(v2.Models.MiddlewareStateData.FromReceiptResponse(receiptResponse)!);
+    }
+
 }
 
 public class MiddlewareStateDataES

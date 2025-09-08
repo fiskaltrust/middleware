@@ -17,12 +17,32 @@ public class MiddlewareStateDataBase<T> where T : MiddlewareStateDataBase<T>
             return null;
         }
 
-        return JsonSerializer.Deserialize<T>(((JsonElement) receiptResponse.ftStateData).GetRawText());
+        if (receiptResponse.ftStateData is JsonElement jsonElement)
+        {
+            return JsonSerializer.Deserialize<T>(jsonElement.GetRawText());
+        }
+
+        else if (receiptResponse.ftStateData is T data)
+        {
+            return data;
+        }
+
+        return null;
     }
 }
 
 public class MiddlewareStateData : MiddlewareStateDataBase<MiddlewareStateData>
 {
+    public MiddlewareStateData()
+    {
+    }
+
+    public MiddlewareStateData(MiddlewareStateData middlewareStateData)
+    {
+        ExtraData = middlewareStateData.ExtraData;
+        PreviousReceiptReference = middlewareStateData.PreviousReceiptReference;
+    }
+
     [JsonPropertyName("ftPreviousReceiptReference")] // QUESTION: ftPreviousReceiptReferences or ftPreviousReceiptReference?
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public List<Receipt>? PreviousReceiptReference { get; set; }
