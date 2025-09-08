@@ -120,11 +120,7 @@ jobs:
             $pair = "${cashboxId}:${accessToken}"
             $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
             $headers = @{ Authorization = "Basic $encoded" }
-            foreach ($group in $deps) {
-              $tfm = $group.targetFramework
-              Write-Host "Checking dependencies for TFM: $tfm"
-
-              foreach ($dep in $group.dependency) {
+            foreach ($dep in $deps) {
                 $id = $dep.id
                 $version = $dep.version
                 $localPath = "${{ env.launcherpath }}/packages/$id.$version.nupkg"
@@ -150,8 +146,7 @@ jobs:
                 {
                         Write-Host "⚠ Failed $id ($version). "
                 }
-            }  
-            }
+            }   
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
