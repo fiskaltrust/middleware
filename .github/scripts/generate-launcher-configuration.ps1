@@ -60,9 +60,9 @@ $config = @{
                         ftSignaturCreationUnitDEId = $scuId
                         Url = @("grpc://localhost:18004")
                         TimeStamp = $timestamp
-                        TseInfoJson = null
+                        TseInfoJson = $null
                         Mode = 0
-                        ModeConfigurationJson = null
+                        ModeConfigurationJson = $null
          
                     }
                 )
