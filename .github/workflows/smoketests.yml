@@ -79,7 +79,7 @@ jobs:
 
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
-         Get-ChildItem -Path "./packages" -Recurse 
+         Get-ChildItem -Path "${{ env.launcherpath }}/packages" -Recurse 
 
       - name: Generate configuration.json
         shell: pwsh
@@ -108,7 +108,7 @@ jobs:
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
-          Start-Sleep -Seconds 100
+          Start-Sleep -Seconds 60
 
           # Send POST request to the launcher
           $url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
