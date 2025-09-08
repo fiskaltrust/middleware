@@ -54,6 +54,18 @@ $config = @{
                         TimeStamp = $timestamp
                     }
                 )
+                init_ftSignaturCreationUnitDE = @(
+                    @{
+                        
+                        ftSignaturCreationUnitDEId = $scuId
+                        Url = @(["grpc://localhost:18004")
+                        TimeStamp = $timestamp
+                        TseInfoJson = null
+                        Mode = 0
+                        ModeConfigurationJson = null
+         
+                    }
+                )
                 init_ftCashBox = @{
                     ftCashBoxId = $cashBoxId
                     TimeStamp = $timestamp
