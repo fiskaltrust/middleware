@@ -17,7 +17,7 @@ public class MiddlewareStateData
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
 
-    public static T FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<T>(((JsonElement)receiptResponse.ftStateData!).GetRawText())!;
+    public static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<MiddlewareStateData>(((JsonElement) receiptResponse.ftStateData!).GetRawText())!;
 }
 
 public class Receipt
@@ -40,17 +40,6 @@ public class MiddlewareStateDataES
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;
-}
-
-public class Receipt
-{
-    [JsonPropertyName("Request")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptRequest Request { get; set; }
-
-    [JsonPropertyName("Response")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptResponse Response { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
