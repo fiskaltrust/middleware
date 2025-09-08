@@ -123,7 +123,7 @@ jobs:
             foreach ($dep in $deps) {
                 $id = $dep.id
                 $version = $dep.version
-                $localPath = "${{ env.launcher }}/packages/$id.$version.nupkg"
+                $localPath = "${{ env.launcherpath }}/packages/$id.$version.nupkg"
 
                 if ([string]::IsNullOrEmpty($id) -or [string]::IsNullOrEmpty($version)) {
                    continue
