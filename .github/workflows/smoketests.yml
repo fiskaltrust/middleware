@@ -126,17 +126,20 @@ jobs:
           Stop-Process -Id $process.Id -Force
 
       - name: Upload test output
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-output
           path: test-output.log
+        continue-on-error: true
 
       - name: Upload test error
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output
-          path: test-output-error.log
-      
+         name: test-error
+         path: test-output-error.log
+        continue-on-error: true
       # - name: Cleanup package folder
       #   shell: pwsh
       #   run: |
