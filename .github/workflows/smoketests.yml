@@ -90,7 +90,7 @@ jobs:
           ./.github/scripts/generate-launcher-configuration.ps1 `
            -OutputPath "${{ env.launcherpath }}/configuration.json" `
            -Package "${{ env.project }}" `
-           -Version "0.0.0-ci" `
+           -Version "1.3.76-ci2" `
            -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
            -queueId $queueId
 
