@@ -82,8 +82,9 @@ jobs:
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
+          $scriptPath = (Resolve-Path 'launcher\test.cmd').Path
           Write-Host "Starting test.cmd..."
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c launcher/test.cmd" -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
           Start-Sleep -Seconds 100
