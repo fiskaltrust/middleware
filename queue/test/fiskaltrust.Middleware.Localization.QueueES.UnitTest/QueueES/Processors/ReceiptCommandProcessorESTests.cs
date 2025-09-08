@@ -446,20 +446,25 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
                 ftQueueItemID = queueItem.ftQueueItemId,
                 ftQueueRow = 1,
                 ftReceiptIdentification = "current#",
-                ftReceiptMoment = DateTime.UtcNow
+                ftReceiptMoment = DateTime.UtcNow,
+                ftStateData = new
+                {
+                    ExtraStuff = 5
+                }
             };
 
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
+            var request = new ProcessCommandRequest(queue, receiptRequest, JsonSerializer.Deserialize<ReceiptResponse>(JsonSerializer.Serialize(receiptResponse))!);
 
             // Act
             var result = await sut.PointOfSaleReceipt0x0001Async(request);
 
             // Assert
-            result.receiptResponse.Should().Be(receiptResponse);
+            result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options.Excluding(x => x.ftStateData));
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
 
             var stateData = result.receiptResponse.ftStateData as MiddlewareStateData;
+            stateData!.ExtraData.Should().ContainKey("ExtraStuff");
             stateData.Should().NotBeNull();
             stateData!.ES.Should().NotBeNull();
             stateData.ES!.LastReceipt.Should().BeNull();
