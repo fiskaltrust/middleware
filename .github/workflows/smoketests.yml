@@ -131,7 +131,7 @@ jobs:
 
                 if (-not (Test-Path $localPath)) {
                     $url = "https://www.nuget.org/api/v2/package/$id/$version"
-                    Invoke-WebRequest -Uri $url -OutFile $localPath
+                    $response = Invoke-WebRequest -Uri $url -OutFile $localPath
                     Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
                    if ($response.StatusCode -ne 200) {
                     $url = "https://packages-sandbox.fiskaltrust.cloud/$id.$version.nupkg"
