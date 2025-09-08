@@ -84,8 +84,8 @@ namespace fiskaltrust.Middleware.Queue
                 }
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{request.ftReceiptCase:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", receiptRequest.cbReceiptReference);
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference);
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", request.cbReceiptReference);
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", request.cbPreviousReceiptReference);
 #endif
 
                 return response;
