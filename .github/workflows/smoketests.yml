@@ -86,6 +86,7 @@ jobs:
         with:
          path: queue/src
          project: ${{ env.project }}
+         targetFramework: "netstandard2.0"
 
       - name: Update launcher packages
         shell: pwsh
