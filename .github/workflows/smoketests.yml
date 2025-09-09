@@ -16,20 +16,19 @@ env:
   launcherpath: "./launcher"
 
 jobs:
-  start-job:
-   runs-on: windows-latest
-   steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-  generate-package:
-    needs: start-job
-    uses: ./.github/workflows/package.yml
-    with:
-      pattern: fiskaltrust.Middleware.Queue.SQLite
-      directory: queue/src
+  # start-job:
+  #  runs-on: windows-latest
+  #  steps:
+  #   - name: Checkout repository
+  #     uses: actions/checkout@v4
+  # generate-package:
+  #   needs: start-job
+  #   uses: ./.github/workflows/package.yml
+  #   with:
+  #     pattern: fiskaltrust.Middleware.Queue.SQLite
+  #     directory: queue/src
 
   test-middleware:
-    needs: generate-package
     runs-on: windows-latest
     steps:
       - name: Download launcher package
@@ -79,25 +78,25 @@ jobs:
          name: configuration
          path: ${{ env.launcherpath }}/configuration.json
      
-      # - uses: ./.github/actions/build
-      #   with:
-      #     pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
-      #     configuration: Release
+      - uses: ./.github/actions/build
+        with:
+          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+          configuration: Release
       
-      # - name: Publish SQLite for nuget
-      #   if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
-      #   run: |
-      #     dotnet publish --configuration Release --no-restore -f net461
-      #     dotnet publish --configuration Release --no-restore -f netstandard2.0
-      #     dotnet publish --configuration Release --no-restore -f netstandard2.1       
-      #   working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
+      - name: Publish SQLite for nuget
+        if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
+        run: |
+          dotnet publish --configuration Release --no-restore -f net461
+          dotnet publish --configuration Release --no-restore -f netstandard2.0
+          dotnet publish --configuration Release --no-restore -f netstandard2.1       
+        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
         
 
-      # - name: create the NuGet package
-      #   uses: ./.github/actions/package
-      #   with:
-      #    path: queue/src
-      #    project: ${{ env.project }}
+      - name: create the NuGet package
+        uses: ./.github/actions/package
+        with:
+         path: queue/src
+         project: ${{ env.project }}
      
       - name: Update launcher packages
         shell: pwsh
