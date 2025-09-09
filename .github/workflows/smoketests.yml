@@ -103,7 +103,7 @@ jobs:
         run: |
             $nupkgPath = "./publish/package-v1-fiskaltrust.Middleware.Queue.SQLite/fiskaltrust.Middleware.Queue.SQLite.0.0.0-ci.nupkg"
 
-            # Extract nuspec from nupkg
+            # Extract nuspec file from nupkg
             $nuspecFile = Join-Path $env:RUNNER_TEMP "temp.nuspec"
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             $zip = [System.IO.Compression.ZipFile]::OpenRead((Get-Item $nupkgPath).FullName)
