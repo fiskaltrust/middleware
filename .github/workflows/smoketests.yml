@@ -112,7 +112,7 @@ jobs:
 
             # Load nuspec
             [xml]$nuspec = Get-Content $nuspecFile
-            $nuspec
+            $nuspec | Format-List * | Out-String | Write-Host
             $deps = $nuspec.package.metadata.dependencies.group.dependency
 
             #Authentication
