@@ -25,7 +25,7 @@ jobs:
     needs: start-job
     uses: ./.github/workflows/package.yml
     with:
-      pattern: ${{ env.project }}
+      pattern: fiskaltrust.Middleware.Queue.SQLite
       directory: queue/src
 
   test-middleware:
