@@ -73,13 +73,14 @@ jobs:
           pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
           configuration: Debug
 
-      - run: |
+      - name: Publish SQLite for nuget
+        if: ${{ env.project }} == 'fiskaltrust.Middleware.Queue.SQLite'
+        run: |
           dotnet publish --configuration Release --no-restore -f net461
           dotnet publish --configuration Release --no-restore -f netstandard2.0
-          dotnet publish --configuration Release --no-restore -f netstandard2.1
-        if: ${{ env.project }} == 'fiskaltrust.Middleware.Queue.SQLite'
+          dotnet publish --configuration Release --no-restore -f netstandard2.1       
         working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
-        name: Publish SQLite for nuget
+        
 
       - name: create the NuGet package
         uses: ./.github/actions/package
