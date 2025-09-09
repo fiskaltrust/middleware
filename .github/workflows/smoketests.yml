@@ -87,6 +87,7 @@ jobs:
          path: queue/src
          project: ${{ env.project }}
          targetFramework: "netstandard2.0"
+        continue-on-error: true
 
       - name: Update launcher packages
         shell: pwsh
@@ -135,14 +136,13 @@ jobs:
                         Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
                         Write-Host "Downloading from nuget..."
                         $url = "https://www.nuget.org/api/v2/package/$id/$version"
-                        Invoke-WebRequest -Uri $url -OutFile $localPath
-                       #  Write-Host " $response"
-                       # if ($response.StatusCode -ne 200) {
-                       #  Write-Host "Downloading from package-server..."
-                       #  $url = "https://packages-sandbox.fiskaltrust.cloud/$id.$version.nupkg"
-                       #  Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
-                       # }
+                        Invoke-WebRequest -Uri $url -OutFile $localPath                     
                     } 
+                    if (-not (Test-Path $localPath)) {
+                        Write-Host "Downloading from package server..."
+                        $url = "https://packages-sandbox.fiskaltrust.cloud/$id.$version.nupkg"
+                        Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
+                    }
                 }
                 catch
                 {
