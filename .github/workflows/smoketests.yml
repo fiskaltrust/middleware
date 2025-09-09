@@ -15,6 +15,12 @@ env:
   project: "fiskaltrust.Middleware.Queue.SQLite"
   launcherpath: "./launcher"
 jobs:
+  Generate-package:
+        uses: ./.github/workflows/package.yml
+        with:
+         pattern: ${{ env.project }}
+         directory: queue/src
+
   test-middleware:
     runs-on: windows-latest
     steps:
@@ -87,12 +93,7 @@ jobs:
       #   with:
       #    path: queue/src
       #    project: ${{ env.project }}
-      - name: Generate package
-        uses: ./.github/workflows/package.yml
-        with:
-         pattern: ${{ env.project }}
-         directory: queue/src
-
+     
       - name: Update launcher packages
         shell: pwsh
         run: |
