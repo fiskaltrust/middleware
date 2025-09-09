@@ -71,7 +71,7 @@ jobs:
       - uses: ./.github/actions/build
         with:
           pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
-          configuration: Debug
+          configuration: Release
 
       - name: Publish SQLite for nuget
         if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
