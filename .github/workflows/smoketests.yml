@@ -14,6 +14,7 @@ env:
   launcher: "fiskaltrust.service.launcher"
   project: "fiskaltrust.Middleware.Queue.SQLite"
   launcherpath: "./launcher"
+
 jobs:
   start-job:
    runs-on: windows-latest
