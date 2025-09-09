@@ -5,6 +5,7 @@
         <TargetFrameworks>net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <MinVerTagPrefix>queue/ef/v</MinVerTagPrefix>
+        <IncludeReferencedProjects>false</IncludeReferencedProjects>
     </PropertyGroup>
 
     <ItemGroup>
