@@ -74,7 +74,7 @@ jobs:
           configuration: Debug
 
       - name: Publish SQLite for nuget
-        if: ${{ env.project }} == 'fiskaltrust.Middleware.Queue.SQLite'
+        if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
         run: |
           dotnet publish --configuration Release --no-restore -f net461
           dotnet publish --configuration Release --no-restore -f netstandard2.0
