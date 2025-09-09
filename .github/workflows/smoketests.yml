@@ -68,25 +68,30 @@ jobs:
          name: configuration
          path: ${{ env.launcherpath }}/configuration.json
      
-      - uses: ./.github/actions/build
-        with:
-          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
-          configuration: Release
-
-      - name: Publish SQLite for nuget
-        if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
-        run: |
-          dotnet publish --configuration Release --no-restore -f net461
-          dotnet publish --configuration Release --no-restore -f netstandard2.0
-          dotnet publish --configuration Release --no-restore -f netstandard2.1       
-        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
+      # - uses: ./.github/actions/build
+      #   with:
+      #     pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+      #     configuration: Release
+      
+      # - name: Publish SQLite for nuget
+      #   if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
+      #   run: |
+      #     dotnet publish --configuration Release --no-restore -f net461
+      #     dotnet publish --configuration Release --no-restore -f netstandard2.0
+      #     dotnet publish --configuration Release --no-restore -f netstandard2.1       
+      #   working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
         
 
-      - name: create the NuGet package
-        uses: ./.github/actions/package
+      # - name: create the NuGet package
+      #   uses: ./.github/actions/package
+      #   with:
+      #    path: queue/src
+      #    project: ${{ env.project }}
+      - name: Generate package
+        uses: ./.github/workflows/package.yml
         with:
-         path: queue/src
-         project: ${{ env.project }}
+         pattern: ${{ env.project }}
+         directory: queue/src
 
       - name: Update launcher packages
         shell: pwsh
