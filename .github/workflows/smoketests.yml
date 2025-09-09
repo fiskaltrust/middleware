@@ -15,8 +15,14 @@ env:
   project: "fiskaltrust.Middleware.Queue.SQLite"
   launcherpath: "./launcher"
 jobs:
-  Generate-package:
+  start-job:
+   runs-on: windows-latest
+   steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+  generate-package:
     runs-on: windows-latest
+    needs: start-job
     steps:
       - uses: ./.github/workflows/package.yml
         with:
@@ -24,11 +30,9 @@ jobs:
          directory: queue/src
 
   test-middleware:
+    needs: generate-package
     runs-on: windows-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Download launcher package
         shell: pwsh
         run: |
