@@ -16,7 +16,9 @@ env:
   launcherpath: "./launcher"
 jobs:
   Generate-package:
-        uses: ./.github/workflows/package.yml
+    runs-on: windows-latest
+    steps:
+      - uses: ./.github/workflows/package.yml
         with:
          pattern: ${{ env.project }}
          directory: queue/src
