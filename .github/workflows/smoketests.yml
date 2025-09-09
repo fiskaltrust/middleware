@@ -12,7 +12,7 @@ permissions:
 
 env:
   launcher: "fiskaltrust.service.launcher"
-  project: "fiskaltrust.Middleware.Queue.ef"
+  project: "fiskaltrust.Middleware.Queue.SQLite"
   launcherpath: "./launcher"
 jobs:
   test-middleware:
