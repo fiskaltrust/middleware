@@ -6,9 +6,6 @@ inputs:
   project:
     required: true
     type: string  
-  targetFramework:
-    required: false
-    type: string  
 
 runs:
   using: "composite"
@@ -49,13 +46,9 @@ runs:
 
           $args += "/p:NuspecFile=.nuspec"
         }
-        if ("${{ inputs.targetFramework }}" -ne "") {
-          dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" -p:TargetFramework=${{ inputs.targetFramework }} --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
-        }
-        else{
-         dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
-        }
-
+       
+        dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
+      
 
 
     - name: Upload v1 Package

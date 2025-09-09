@@ -12,7 +12,7 @@ permissions:
 
 env:
   launcher: "fiskaltrust.service.launcher"
-  project: "fiskaltrust.Middleware.Queue.SQLite"
+  project: "fiskaltrust.Middleware.Queue.ef"
   launcherpath: "./launcher"
 jobs:
   test-middleware:
@@ -86,8 +86,6 @@ jobs:
         with:
          path: queue/src
          project: ${{ env.project }}
-         targetFramework: "netstandard2.0"
-        continue-on-error: true
 
       - name: Update launcher packages
         shell: pwsh
@@ -99,26 +97,11 @@ jobs:
          Write-Host "Copying NuGet package from $packageSrc to $packageDest"
          Copy-Item -Path $packageSrc -Destination $packageDest -Force
          Get-ChildItem -Path "${{ env.launcherpath }}/packages" -Recurse   
-      - name: Check package dependencies test
-        shell: pwsh
-        run: |
-            $nupkgPath = "${{ env.launcherpath }}/packages/fiskaltrust.Middleware.Queue.SQLite.1.3.76-ci2.nupkg"
-
-            # Extract nuspec file from nupkg
-            $nuspecFile = Join-Path $env:RUNNER_TEMP "temp1.nuspec"
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $zip = [System.IO.Compression.ZipFile]::OpenRead((Get-Item $nupkgPath).FullName)
-            $entry = $zip.Entries | Where-Object { $_.FullName -like "*.nuspec" }
-            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $nuspecFile, $true)
-            $zip.Dispose()
-
-            # Load nuspec
-            [xml]$nuspec = Get-Content $nuspecFile
-            $nuspec | Format-List * | Out-String | Write-Host
+    
       - name: Check package dependencies
         shell: pwsh
         run: |
-            $nupkgPath = "./publish/package-v1-fiskaltrust.Middleware.Queue.SQLite/fiskaltrust.Middleware.Queue.SQLite.0.0.0-ci.nupkg"
+            $nupkgPath = "./publish/package-v1-${{ env.project }}/${{ env.project }}.0.0.0-ci.nupkg"
 
             # Extract nuspec file from nupkg
             $nuspecFile = Join-Path $env:RUNNER_TEMP "temp.nuspec"
