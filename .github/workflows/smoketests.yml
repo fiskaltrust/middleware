@@ -21,13 +21,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
   generate-package:
-    runs-on: windows-latest
     needs: start-job
-    steps:
-      - uses: ./.github/workflows/package.yml
-        with:
-         pattern: ${{ env.project }}
-         directory: queue/src
+    uses: ./.github/workflows/package.yml
+    with:
+      pattern: ${{ env.project }}
+      directory: queue/src
 
   test-middleware:
     needs: generate-package
