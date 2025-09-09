@@ -140,7 +140,7 @@ jobs:
                     } 
                     if (-not (Test-Path $localPath)) {
                         Write-Host "Downloading from package server..."
-                        $url = "https://packages-sandbox.fiskaltrust.cloud/$id.$version.nupkg"
+                        $url = "https://packages-sandbox.fiskaltrust.cloud/api/v2/package/$id/$version"
                         Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
                     }
                 }
