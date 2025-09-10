@@ -108,20 +108,28 @@ jobs:
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
-          Write-Host "Waiting to launcher gets done.."
-          Start-Sleep -Seconds 100
+          Write-Host "Waiting for launcher to get done.."
+          Start-Sleep -Seconds 60
 
-          # Send POST request to the launcher
-          $url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
-          #$url = "http://localhost:1500/73a3effb-0495-49a4-a546-10e9afcd4b38/json/v1/Echo"
-          $body = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
-          Write-Host "Sending POST request to $url..."
-          try {
-              $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json"
-              Write-Host "Response: $($response | ConvertTo-Json)"
-          } catch {
-              Write-Error "Request failed: $_"
-          }
+          $ready = $false
+          $maxAttempts = 10
+          $attempt = 0
+          $pollUrl = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
+          $pollBody = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
+          while ($attempt -lt $maxAttempts) {
+              try {
+                  $pollResponse = Invoke-RestMethod -Uri $pollUrl -Method Post -Body $pollBody -ContentType "application/json" -TimeoutSec 2
+                  Write-Host "Response: $($response | ConvertTo-Json)"
+                  break;
+              } catch {
+                  Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
+                  Start-Sleep -Seconds 5
+                  $attempt++
+              }
+          } 
+          
+          Write-Error "Request failed: $_"
+         
 
           # Stop the launcher
           Write-Host "Stopping test.cmd..."
