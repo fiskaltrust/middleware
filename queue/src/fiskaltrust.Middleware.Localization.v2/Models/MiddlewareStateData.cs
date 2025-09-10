@@ -53,11 +53,11 @@ public class MiddlewareStateData : MiddlewareStateDataBase<MiddlewareStateData>
 
 public class Receipt
 {
-    [JsonPropertyName("Response")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptResponse Response { get; set; }
-
-    [JsonPropertyName("Request")]
+    [JsonPropertyName("ReceiptRequest")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required ReceiptRequest Request { get; set; }
+
+    [JsonPropertyName("ReceiptResponse")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required ReceiptResponse Response { get; set; }
 }
