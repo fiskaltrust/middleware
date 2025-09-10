@@ -12,12 +12,16 @@ permissions:
 
 env:
   launcher: "fiskaltrust.service.launcher"
-  project: "fiskaltrust.Middleware.Queue.SQLite"
   launcherpath: "./launcher"
 
 jobs:
   test-middleware:
     runs-on: windows-latest
+    strategy:
+     matrix:
+      project:
+       - fiskaltrust.Middleware.Queue.SQLite
+       - fiskaltrust.Middleware.Queue.ef
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,7 +38,9 @@ jobs:
               "Content-Type" = "application/json"
             }
 
-            $body = Get-Content ".github/scripts/template.json" -Raw
+            $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
+            $body.ftQueues[0].Package = "${{ matrix.project }}"
+            $body = $body | ConvertTo-Json -Depth 10
 
             Write-Host "👉 Sending request to $url"
             $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
@@ -79,9 +85,17 @@ jobs:
          $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
          $extractPath = "${{ env.launcherpath }}"
-
+         
+         if (Test-Path $extractPath) {
+            Write-Host "Cleaning $extractPath"
+            Remove-Item -Path $extractPath -Recurse -Force
+         }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-          
+      # - name: Start LocalDB
+      #   shell: pwsh
+      #   run: |
+      #     sqllocaldb create MSSQLLocalDB -s
+      #     sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"    
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
@@ -112,7 +126,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output
+          name: test-output-${{ matrix.project }}
           path: test-output.log
         continue-on-error: true
 
@@ -120,12 +134,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-         name: test-error
+         name: test-error-${{ matrix.project }}
          path: test-output-error.log
-        continue-on-error: true
-   
-    # - name: Start LocalDB
-    #     shell: pwsh
-    #     run: |
-    #       sqllocaldb create MSSQLLocalDB -s
-    #       sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"
+        continue-on-error: true   
+  
