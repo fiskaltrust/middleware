@@ -292,7 +292,7 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_1001
         };
     }
 

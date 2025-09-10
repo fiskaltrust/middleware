@@ -356,7 +356,7 @@ public static class PTCertificationExamples
                 new PayItem
                 {
                     Amount = 150m,
-                    Description = "On Credit",
+                    Description = "A crédito",
                     ftPayItemCase = ((PayItemCase) 0x5054_2000_0000_0000).WithCase(PayItemCase.AccountsReceivable),
                 }
             ],
