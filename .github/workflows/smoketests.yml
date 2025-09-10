@@ -107,7 +107,7 @@ jobs:
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
 
           # Wait a few seconds to let test.cmd start listening
-          Start-Sleep -Seconds 60
+          Start-Sleep -Seconds 100
 
           # Send POST request to the launcher
           $url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
@@ -132,12 +132,5 @@ jobs:
           name: test-output-${{ matrix.project }}
           path: test-output.log
         continue-on-error: true
-
-      - name: Upload test error
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-         name: test-error-${{ matrix.project }}
-         path: test-output-error.log
-        continue-on-error: true   
+ 
   
