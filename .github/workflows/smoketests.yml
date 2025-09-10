@@ -43,7 +43,7 @@ jobs:
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
             $body.ftQueues[0].Package = "${{ matrix.project }}"
             if ("${{ matrix.project }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
-              $body.ftQueues[0].Configuration.connectionstring = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=efsqldb;Integrated Security=False;"
+             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
             }
             $body = $body | ConvertTo-Json -Depth 10
 
