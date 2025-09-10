@@ -98,14 +98,14 @@ public class SignProcessor : ISignProcessor
                 var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
 
-                receiptResponse.ftStateData = new MiddlewareStateData
-                {
-                    PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(receiptRequest)
-                };
-
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
                 {
+                    receiptResponse.ftStateData = new MiddlewareStateData
+                    {
+                        PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(receiptRequest)
+                    };
+
                     (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
                     actionjournals.AddRange(countrySpecificActionJournals);
                 }
