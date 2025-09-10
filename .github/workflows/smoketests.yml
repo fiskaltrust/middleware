@@ -60,7 +60,7 @@ jobs:
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Start LocalDB
-        if: ${{ env.project == 'fiskaltrust.Middleware.Queue.ef' }}
+        if: ${{ matrix.project == 'fiskaltrust.Middleware.Queue.ef' }}
         shell: pwsh
         run: |
           sqllocaldb create MSSQLLocalDB -s
