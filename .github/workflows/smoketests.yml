@@ -126,7 +126,7 @@ jobs:
                   $attempt++
               }
           } 
-          if($attempt >= $maxAttempts)
+          if($attempt -eq $maxAttempts)
           {
             Write-Error "Request failed: $_"
           }
