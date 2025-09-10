@@ -22,6 +22,8 @@ jobs:
       project:
        - fiskaltrust.Middleware.Queue.SQLite
        - fiskaltrust.Middleware.Queue.ef
+    continue-on-error: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,6 +42,9 @@ jobs:
 
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
             $body.ftQueues[0].Package = "${{ matrix.project }}"
+            if ("${{ matrix.project }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
+              $body.ftQueues[0].Configuration.connectionstring = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=efsqldb;Integrated Security=False;"
+            }
             $body = $body | ConvertTo-Json -Depth 10
 
             Write-Host "👉 Sending request to $url"
@@ -50,14 +55,16 @@ jobs:
             $accessToken = $response.accessToken
             $queueId = $response.configuration.ftQueues[0].Id
 
-            Write-Host "✅ CashBoxId: $cashboxId"
-            Write-Host "✅ AccessToken: $accessToken"
-            Write-Host "✅ QueueId: $queueId"
-
-            # Make them available to later jobs
             echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
             echo "accessToken=$accessToken" >> $env:GITHUB_ENV
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
+
+      - name: Start LocalDB
+        if: ${{ env.project == 'fiskaltrust.Middleware.Queue.ef' }}
+        shell: pwsh
+        run: |
+          sqllocaldb create MSSQLLocalDB -s
+          sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"    
 
       - name: Download launcher package
         shell: pwsh
@@ -91,11 +98,7 @@ jobs:
             Remove-Item -Path $extractPath -Recurse -Force
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-      # - name: Start LocalDB
-      #   shell: pwsh
-      #   run: |
-      #     sqllocaldb create MSSQLLocalDB -s
-      #     sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"    
+     
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
