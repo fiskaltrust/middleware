@@ -16,29 +16,47 @@ env:
   launcherpath: "./launcher"
 
 jobs:
-  # start-job:
-  #  runs-on: windows-latest
-  #  steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v4
-  # generate-package:
-  #   needs: start-job
-  #   uses: ./.github/workflows/package.yml
-  #   with:
-  #     pattern: fiskaltrust.Middleware.Queue.SQLite
-  #     directory: queue/src
-
   test-middleware:
     runs-on: windows-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # - name: Checkout repository
+      #   uses: actions/checkout@v4
+      - name: Create cashbox
+        shell: pwsh
+        run: |
+            $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
+            $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
+
+            $headers = @{
+              accountid   = "${{ secrets.FT_ACCOUNT_ID }}"
+              accesstoken = "${{ secrets.FT_ACCESS_TOKEN }}"
+              "Content-Type" = "application/json"
+            }
+
+            $body = Get-Content ".github/scripts/template.json" -Raw
+
+            Write-Host "👉 Sending request to $url"
+            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
+
+            # Extract values
+            $cashboxId  = $response.cashBoxId
+            $accessToken = $response.accessToken
+            $queueId = $response.configuration.ftQueues[0].Id
+
+            Write-Host "✅ CashBoxId: $cashboxId"
+            Write-Host "✅ AccessToken: $accessToken"
+            Write-Host "✅ QueueId: $queueId"
+
+            # Make them available to later jobs
+            echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
+            echo "accessToken=$accessToken" >> $env:GITHUB_ENV
+            echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Download launcher package
         shell: pwsh
         run: |
-          $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
-          $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
+          $cashboxId = "${{ env.cashboxId }}"
+          $accessToken = "${{ env.accessToken }}"
           $offline = "true"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
@@ -56,118 +74,119 @@ jobs:
       - name: Extract launcher package
         shell: pwsh
         run: |
-         $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
+         $cashboxId = "${{ env.cashboxId }}"
          $launcher =  "${{ env.launcher }}"
          $zipPath = "$launcher.$cashboxId.zip"
          $extractPath = "${{ env.launcherpath }}"
 
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-      - name: Generate configuration.json
-        shell: pwsh
-        run: |
-          $queueId = [guid]::NewGuid().ToString()
-          echo "queueId=$queueId" >> $env:GITHUB_ENV
-
-          ./.github/scripts/generate-launcher-configuration.ps1 `
-           -OutputPath "${{ env.launcherpath }}/configuration.json" `
-           -Package "${{ env.project }}" `
-           -Version "0.0.0-ci" `
-           -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
-           -queueId $queueId
-
-      - name: Upload configuration.json as artifact
-        uses: actions/upload-artifact@v4
-        with:
-         name: configuration
-         path: ${{ env.launcherpath }}/configuration.json
-     
-      - uses: ./.github/actions/build
-        with:
-          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
-          configuration: Release
       
-      - name: Publish SQLite for nuget
-        if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
-        run: |
-          dotnet publish --configuration Release --no-restore -f net461
-          dotnet publish --configuration Release --no-restore -f netstandard2.0
-          dotnet publish --configuration Release --no-restore -f netstandard2.1       
-        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
+      # - name: Generate configuration.json
+      #   shell: pwsh
+      #   run: |
+      #     $queueId = [guid]::NewGuid().ToString()
+      #     echo "queueId=$queueId" >> $env:GITHUB_ENV
+
+      #     ./.github/scripts/generate-launcher-configuration.ps1 `
+      #      -OutputPath "${{ env.launcherpath }}/configuration.json" `
+      #      -Package "${{ env.project }}" `
+      #      -Version "0.0.0-ci" `
+      #      -cashBoxId "${{ secrets.FT_CASHBOX_ID }}" `
+      #      -queueId $queueId
+
+      # - name: Upload configuration.json as artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #    name: configuration
+      #    path: ${{ env.launcherpath }}/configuration.json
+     
+      # - uses: ./.github/actions/build
+      #   with:
+      #     pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
+      #     configuration: Release
+      
+      # - name: Publish SQLite for nuget
+      #   if: ${{ env.project == 'fiskaltrust.Middleware.Queue.SQLite' }}
+      #   run: |
+      #     dotnet publish --configuration Release --no-restore -f net461
+      #     dotnet publish --configuration Release --no-restore -f netstandard2.0
+      #     dotnet publish --configuration Release --no-restore -f netstandard2.1       
+      #   working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
         
 
-      - name: create the NuGet package
-        uses: ./.github/actions/package
-        with:
-         path: queue/src
-         project: ${{ env.project }}
+      # - name: create the NuGet package
+      #   uses: ./.github/actions/package
+      #   with:
+      #    path: queue/src
+      #    project: ${{ env.project }}
      
-      - name: Update launcher packages
-        shell: pwsh
-        run: |
-         $project = "${{ env.project }}"
-         $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
-         $packageDest = "${{ env.launcherpath }}/packages/"
+      # - name: Update launcher packages
+      #   shell: pwsh
+      #   run: |
+      #    $project = "${{ env.project }}"
+      #    $packageSrc = "./publish/package-v1-$project/$project.*.nupkg"
+      #    $packageDest = "${{ env.launcherpath }}/packages/"
 
-         Write-Host "Copying NuGet package from $packageSrc to $packageDest"
-         Copy-Item -Path $packageSrc -Destination $packageDest -Force
-         Get-ChildItem -Path "${{ env.launcherpath }}/packages" -Recurse   
+      #    Write-Host "Copying NuGet package from $packageSrc to $packageDest"
+      #    Copy-Item -Path $packageSrc -Destination $packageDest -Force
+      #    Get-ChildItem -Path "${{ env.launcherpath }}/packages" -Recurse   
     
-      - name: Check package dependencies
-        shell: pwsh
-        run: |
-            $nupkgPath = "./publish/package-v1-${{ env.project }}/${{ env.project }}.0.0.0-ci.nupkg"
+      # - name: Check package dependencies
+      #   shell: pwsh
+      #   run: |
+      #       $nupkgPath = "./publish/package-v1-${{ env.project }}/${{ env.project }}.0.0.0-ci.nupkg"
 
-            # Extract nuspec file from nupkg
-            $nuspecFile = Join-Path $env:RUNNER_TEMP "temp.nuspec"
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $zip = [System.IO.Compression.ZipFile]::OpenRead((Get-Item $nupkgPath).FullName)
-            $entry = $zip.Entries | Where-Object { $_.FullName -like "*.nuspec" }
-            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $nuspecFile, $true)
-            $zip.Dispose()
+      #       # Extract nuspec file from nupkg
+      #       $nuspecFile = Join-Path $env:RUNNER_TEMP "temp.nuspec"
+      #       Add-Type -AssemblyName System.IO.Compression.FileSystem
+      #       $zip = [System.IO.Compression.ZipFile]::OpenRead((Get-Item $nupkgPath).FullName)
+      #       $entry = $zip.Entries | Where-Object { $_.FullName -like "*.nuspec" }
+      #       [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $nuspecFile, $true)
+      #       $zip.Dispose()
 
-            # Load nuspec
-            [xml]$nuspec = Get-Content $nuspecFile
-            $nuspec | Format-List * | Out-String | Write-Host
-            $deps = $nuspec.package.metadata.dependencies.group.dependency
+      #       # Load nuspec
+      #       [xml]$nuspec = Get-Content $nuspecFile
+      #       $nuspec | Format-List * | Out-String | Write-Host
+      #       $deps = $nuspec.package.metadata.dependencies.group.dependency
 
-            #Authentication
-            $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
-            $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
-            $pair = "${cashboxId}:${accessToken}"
-            $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
-            $headers = @{ Authorization = "Basic $encoded" }
-            foreach ($dep in $deps) {
-                $id = $dep.id
-                $version = $dep.version
-                $localPath = "${{ env.launcherpath }}/packages/$id.$version.nupkg"
+      #       #Authentication
+      #       $cashboxId = "${{ secrets.FT_CASHBOX_ID }}"
+      #       $accessToken = "${{ secrets.FT_ACCESS_TOKEN }}"
+      #       $pair = "${cashboxId}:${accessToken}"
+      #       $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
+      #       $headers = @{ Authorization = "Basic $encoded" }
+      #       foreach ($dep in $deps) {
+      #           $id = $dep.id
+      #           $version = $dep.version
+      #           $localPath = "${{ env.launcherpath }}/packages/$id.$version.nupkg"
 
-                if ([string]::IsNullOrEmpty($id) -or [string]::IsNullOrEmpty($version)) {
-                    continue
-                }
-                try {
-                    if (-not (Test-Path $localPath)) {
-                        Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
-                        Write-Host "Downloading from nuget..."
-                        $url = "https://www.nuget.org/api/v2/package/$id/$version"
-                        Invoke-WebRequest -Uri $url -OutFile $localPath                     
-                    }                   
-                }
-                catch
-                {
-                        Write-Host "⚠ Failed $id ($version). "
-                }
-                 try {
-                   if (-not (Test-Path $localPath)) {
-                        Write-Host "Downloading from package server..."
-                        $url = "https://packages-sandbox.fiskaltrust.cloud/api/v2/package/$id/$version"
-                        Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
-                    }
-                }
-                catch
-                {
-                        Write-Host "⚠ Failed $id ($version). "
-                }
-            }   
+      #           if ([string]::IsNullOrEmpty($id) -or [string]::IsNullOrEmpty($version)) {
+      #               continue
+      #           }
+      #           try {
+      #               if (-not (Test-Path $localPath)) {
+      #                   Write-Host "⚠ Missing or wrong version for $id ($version). Downloading..."
+      #                   Write-Host "Downloading from nuget..."
+      #                   $url = "https://www.nuget.org/api/v2/package/$id/$version"
+      #                   Invoke-WebRequest -Uri $url -OutFile $localPath                     
+      #               }                   
+      #           }
+      #           catch
+      #           {
+      #                   Write-Host "⚠ Failed $id ($version). "
+      #           }
+      #            try {
+      #              if (-not (Test-Path $localPath)) {
+      #                   Write-Host "Downloading from package server..."
+      #                   $url = "https://packages-sandbox.fiskaltrust.cloud/api/v2/package/$id/$version"
+      #                   Invoke-WebRequest -Uri $url -Headers $headers -OutFile $localPath
+      #               }
+      #           }
+      #           catch
+      #           {
+      #                   Write-Host "⚠ Failed $id ($version). "
+      #           }
+      #       }   
 
       - name: Run test.cmd, send request, and stop
         shell: pwsh
