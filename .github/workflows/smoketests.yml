@@ -19,8 +19,9 @@ jobs:
   test-middleware:
     runs-on: windows-latest
     steps:
-      # - name: Checkout repository
-      #   uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Create cashbox
         shell: pwsh
         run: |
