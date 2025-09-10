@@ -5,6 +5,7 @@
     {
       "Id": "|[queue0_id]|",
       "Package": "fiskaltrust.Middleware.Queue.SQLite",
+      "Version": "latest",
       "Configuration": {
         "storageaccountname": "fta217spccloudcashbox001",
         "init_ftQueue": [

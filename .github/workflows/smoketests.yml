@@ -2,9 +2,7 @@
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - .github/workflows/smoketests.yml
+ 
   
 permissions:
   id-token: write
@@ -19,9 +17,12 @@ jobs:
     runs-on: windows-latest
     strategy:
      matrix:
-      project:
-       - fiskaltrust.Middleware.Queue.SQLite
-       - fiskaltrust.Middleware.Queue.ef
+      include:
+       - project: fiskaltrust.Middleware.Queue.SQLite
+         version: latest
+       - project: fiskaltrust.Middleware.Queue.ef
+         version: latest
+         connectionString: Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;
     continue-on-error: true
 
     steps:
@@ -42,9 +43,11 @@ jobs:
 
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
             $body.ftQueues[0].Package = "${{ matrix.project }}"
+            $body.ftQueues[0].Version = "${{ matrix.version }}"
             if ("${{ matrix.project }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
-             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
+             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "${{matrix.connectionString}}"
             }
+
             $body = $body | ConvertTo-Json -Depth 10
 
             $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
