@@ -111,7 +111,6 @@ jobs:
           Write-Host "Waiting for launcher to get done.."
           Start-Sleep -Seconds 60
 
-          $ready = $false
           $maxAttempts = 10
           $attempt = 0
           $pollUrl = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
@@ -119,7 +118,7 @@ jobs:
           while ($attempt -lt $maxAttempts) {
               try {
                   $pollResponse = Invoke-RestMethod -Uri $pollUrl -Method Post -Body $pollBody -ContentType "application/json" -TimeoutSec 2
-                  Write-Host "Response: $($response | ConvertTo-Json)"
+                  Write-Host "Response: $($pollResponse | ConvertTo-Json)"
                   break;
               } catch {
                   Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
