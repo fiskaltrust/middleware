@@ -17,6 +17,7 @@ public sealed class CustomRTServerSCU : LegacySCU
     private readonly Guid _id;
 #pragma warning disable IDE0052 // Remove unread private members
     private readonly ILogger<CustomRTServerSCU> _logger;
+    readonly CustomRTServerConfiguration _configuration;
 #pragma warning restore IDE0052 // Remove unread private members
     private readonly CustomRTServerClient _client;
     private readonly CustomRTServerCommunicationQueue _customRTServerCommunicationQueue;
@@ -30,6 +31,7 @@ public sealed class CustomRTServerSCU : LegacySCU
     {
         _id = id;
         _logger = logger;
+        _configuration = configuration;
         _client = client;
         _customRTServerCommunicationQueue = customRTServerCommunicationQueue;
         if (!string.IsNullOrEmpty(configuration.AccountMasterData))
@@ -51,7 +53,8 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     public override async Task<RTInfo> GetRTInfoAsync()
     {
-        var result = await _client.GetDailyStatusArrayAsync();
+        var result = new GetDailyStatusArrayResponse();
+        result.ArrayResponse = new List<GetDailyStatusResponseContent>();
         return new RTInfo
         {
             SerialNumber = result.ArrayResponse.FirstOrDefault()?.fiscalBoxId,

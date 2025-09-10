@@ -402,7 +402,7 @@ public static class AADEMappings
     {
         PayItemCase.UnknownPaymentType => MyDataPaymentMethods.Cash,
         PayItemCase.CashPayment => MyDataPaymentMethods.Cash,
-        PayItemCase.NonCash => MyDataPaymentMethods.Cash,
+        PayItemCase.NonCash => -1,
         PayItemCase.CrossedCheque => MyDataPaymentMethods.Check,
         PayItemCase.DebitCardPayment => MyDataPaymentMethods.PosEPos,
         PayItemCase.CreditCardPayment => MyDataPaymentMethods.PosEPos,
@@ -424,13 +424,22 @@ public static class AADEMappings
         if (string.IsNullOrEmpty(description))
             return MyDataPaymentMethods.DomesticPaymentAccount;
 
-        return description.ToUpper() switch
+        else if (description.ToUpper().Contains("IRIS"))
         {
-            "IRIS" => MyDataPaymentMethods.IrisDirectPayments,
-            "RF code payment (Web banking)" => MyDataPaymentMethods.WebBanking,
-            var d when d.Contains("FOREIGN") || d.Contains("INTERNATIONAL") => MyDataPaymentMethods.ForeignPaymentsSpecialAccount,
-            _ => MyDataPaymentMethods.DomesticPaymentAccount
-        };
+            return MyDataPaymentMethods.IrisDirectPayments;
+        }
+        else if (description.ToUpper().Contains("RF CODE PAYMENT (WEB BANKING)"))
+        {
+            return MyDataPaymentMethods.WebBanking;
+        }
+        else if (description.ToUpper().Contains("FOREIGN") || description.ToUpper().Contains("INTERNATIONAL"))
+        {
+            return MyDataPaymentMethods.ForeignPaymentsSpecialAccount;
+        }
+        else
+        {
+            return MyDataPaymentMethods.DomesticPaymentAccount;
+        }
     }
 
     public static bool RequiresCustomerInfo(InvoiceType invoiceType)
