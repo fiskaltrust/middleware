@@ -46,7 +46,7 @@ runs:
 
           $args += "/p:NuspecFile=.nuspec"
         }
-       
+
         dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
       
 
