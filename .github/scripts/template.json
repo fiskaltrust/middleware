@@ -1,0 +1,37 @@
+{
+  "ftCashBoxId": "|[cashbox_id]|",
+  "ftSignaturCreationDevices": [],
+  "ftQueues": [
+    {
+      "Id": "|[queue0_id]|",
+      "Package": "fiskaltrust.Middleware.Queue.SQLite",
+      "Version": "latest",
+      "Configuration": {
+        "storageaccountname": "fta217spccloudcashbox001",
+        "init_ftQueue": [
+          {
+            "ftQueueId": "|[queue0_id]|",
+            "ftCashBoxId": "|[cashbox_id]|",
+            "CountryCode": "DE",
+            "Timeout": 15000
+          }
+        ],
+        "init_ftQueueDE": [
+          {
+            "ftQueueDEId": "|[queue0_id]|",
+            "CashBoxIdentification": "gdfhgd"
+          }
+        ],
+        "init_ftSignaturCreationUnitDE": [
+          {
+            "Url": "[\"grpc://localhost:18004\"]",
+            "Mode": 0
+          }
+        ]
+      },
+      "Url": [
+        "rest://localhost:1500/|[queue0_id]|"
+      ]
+    }
+  ]
+}

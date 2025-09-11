@@ -48,8 +48,7 @@ runs:
         }
 
         dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
-
-
+      
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4
       with:
