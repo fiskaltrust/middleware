@@ -47,6 +47,12 @@ jobs:
           - fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
           - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
     steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+         dotnet-version: |
+          6.0.x
+          8.0.x
+
       - uses: actions/checkout@v4
         if: inputs.only == '' || inputs.only == ' ' || inputs.only == matrix.project
         with:
