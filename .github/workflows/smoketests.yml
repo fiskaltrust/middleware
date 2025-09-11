@@ -2,6 +2,18 @@
 
 on:
   workflow_dispatch:
+    inputs:
+      queuePackage:
+        description: "Queue package"
+        required: true
+        type: choice
+        options:
+          - SQLite
+          - EF
+      queueVersion:
+        description: "Queue package version"
+        type: string
+        default: latest
    
 permissions:
   id-token: write
@@ -14,15 +26,15 @@ env:
 jobs:
   test-middleware:
     runs-on: windows-latest
-    strategy:
-     matrix:
-      include:
-       - project: fiskaltrust.Middleware.Queue.SQLite
-         version: latest
-       - project: fiskaltrust.Middleware.Queue.ef
-         version: latest
-         connectionString: Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;
-    continue-on-error: true
+    # strategy:
+    #  matrix:
+    #   include:
+    #    - project: fiskaltrust.Middleware.Queue.SQLite
+    #      version: latest
+    #    - project: fiskaltrust.Middleware.Queue.ef
+    #      version: latest
+         
+    # continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -41,10 +53,11 @@ jobs:
             }
 
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
-            $body.ftQueues[0].Package = "${{ matrix.project }}"
-            $body.ftQueues[0].Version = "${{ matrix.version }}"
-            if ("${{ matrix.project }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
-             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "${{matrix.connectionString}}"
+            $body.ftQueues[0].Package = "${{ input.project }}"
+            $body.ftQueues[0].Version = "${{ input.version }}"
+            if ("${{ input.project }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
+             $connectionString = Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;
+             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
             $body = $body | ConvertTo-Json -Depth 10
@@ -61,7 +74,7 @@ jobs:
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Start LocalDB
-        if: ${{ matrix.project == 'fiskaltrust.Middleware.Queue.ef' }}
+        if: ${{ input.project == 'fiskaltrust.Middleware.Queue.ef' }}
         shell: pwsh
         run: |
           sqllocaldb create MSSQLLocalDB -s
@@ -137,7 +150,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ matrix.project }}
+          name: test-output-${{ input.project }}
           path: test-output.log
         continue-on-error: true
  
