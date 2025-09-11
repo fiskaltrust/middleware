@@ -46,9 +46,6 @@ public class MiddlewareStateData : MiddlewareStateDataBase<MiddlewareStateData>
     [JsonPropertyName("ftPreviousReceiptReference")] // QUESTION: ftPreviousReceiptReferences or ftPreviousReceiptReference?
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public List<Receipt>? PreviousReceiptReference { get; set; }
-
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
 }
 
 public class Receipt
