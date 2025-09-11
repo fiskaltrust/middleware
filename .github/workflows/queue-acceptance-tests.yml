@@ -51,6 +51,11 @@ jobs:
         if: inputs.only == '' || inputs.only == ' ' || inputs.only == matrix.project
         with:
           ref: ${{ inputs.commit }}
+      
+      - uses: actions/setup-dotnet@v4
+        with:
+         dotnet-version: |
+          6.0.x
 
       - name: ${{ matrix.project }} Acceptance Tests
         if: inputs.only == '' || inputs.only == ' ' || inputs.only == matrix.project
@@ -76,6 +81,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.commit }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+         dotnet-version: |
+          6.0.x
 
       - name: ${{ matrix.project }} Acceptance Tests
         uses: ./.github/actions/test
