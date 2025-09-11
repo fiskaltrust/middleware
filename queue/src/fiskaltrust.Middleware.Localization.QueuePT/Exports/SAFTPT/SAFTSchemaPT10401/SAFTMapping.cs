@@ -64,15 +64,14 @@ public class SaftExporter
         {
             CustomerID = middlewareCustomer.CustomerId,
             AccountID = "Desconhecido",
-            CustomerTaxID = middlewareCustomer.CustomerVATId ?? "999999990",
-            CompanyName = middlewareCustomer.CustomerName,
+            CompanyName = string.IsNullOrEmpty(middlewareCustomer.CustomerName) ? "Desconhecido" : middlewareCustomer.CustomerName,
+            CustomerTaxID = string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) ? "999999990" : middlewareCustomer.CustomerVATId,
             BillingAddress = new BillingAddress
             {
-                StreetName = middlewareCustomer.CustomerStreet,
-                AddressDetail = $"{middlewareCustomer.CustomerName} {middlewareCustomer.CustomerStreet}  {middlewareCustomer.CustomerZip} {middlewareCustomer.CustomerCity}",
-                City = middlewareCustomer.CustomerCity,
-                PostalCode = middlewareCustomer.CustomerZip,
-                Country = middlewareCustomer.CustomerCountry ?? "PT",
+                AddressDetail = string.IsNullOrEmpty(middlewareCustomer.CustomerStreet) ? "Desconhecido" : middlewareCustomer.CustomerStreet,
+                City = string.IsNullOrEmpty(middlewareCustomer.CustomerCity) ? "Desconhecido" : middlewareCustomer.CustomerCity,
+                PostalCode =  string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip,
+                Country = string.IsNullOrEmpty(middlewareCustomer.CustomerCountry) ? "Desconhecido" : middlewareCustomer.CustomerCountry
             }
         };
         return customer;

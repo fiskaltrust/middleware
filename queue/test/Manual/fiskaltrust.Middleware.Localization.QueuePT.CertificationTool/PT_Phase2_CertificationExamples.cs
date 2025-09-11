@@ -287,12 +287,12 @@ public static class PT_Phase2_CertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "On Credit",
+                    Description = "A crédito",
                     ftPayItemCase = ((PayItemCase) 0x5054_2000_0000_0000).WithCase(PayItemCase.AccountsReceivable),
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_1001
+            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2C0x1001),
         };
     }
 
@@ -307,7 +307,7 @@ public static class PT_Phase2_CertificationExamples
                 {
                     Position = 1,
                     Quantity = 1,
-                    Amount = 187.5m,
+                    Amount = 63.96m,
                     Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
@@ -393,7 +393,7 @@ public static class PT_Phase2_CertificationExamples
                     Quantity = 2000,
                     VATRate = PTVATRates.Normal,
                     ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
-                    Description = "Low price product - Unit price: €0.001"
+                    Description = "Low price product"
                 }
             ],
             cbUser = 1,
@@ -479,7 +479,7 @@ public static class PT_Phase2_CertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-            ftReceiptCaseData = new 
+            ftReceiptCaseData = new
             {
                 ManualDocumentSeries = "F",
                 ManualDocumentNumber = 23,
@@ -526,36 +526,7 @@ public static class PT_Phase2_CertificationExamples
 
     public static ReceiptRequest Case_T30() => throw new NotImplementedException("Including other systems is not supported");
 
-    public static ReceiptRequest Case_T31()
-    {
-        return new ReceiptRequest
-        {
-            cbReceiptMoment = ReferenceDate.AddMinutes(31),
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            cbChargeItems = [
-                new ChargeItem
-                {
-                    Amount = 20m,
-                    Quantity = 1,
-                    VATRate = PTVATRates.Normal,
-                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
-                    Description = "Line item 1"
-                }
-            ],
-            cbUser = 1,
-            cbPayItems =
-            [
-                new PayItem
-                {
-                    Amount = 20m,
-                    Description = "Numerario",
-                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
-                }
-            ],
-            ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten)
-        };
-    }
+    public static ReceiptRequest Case_T31() => throw new NotImplementedException("Not applicable, duplicate of another item");
 
     public static ReceiptRequest Case_T32() => throw new NotImplementedException("Withholding taxes are not supported.");
 
@@ -587,6 +558,56 @@ public static class PT_Phase2_CertificationExamples
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten)
+        };
+    }
+
+    public static ReceiptRequest Case_T33_CM()
+    {
+        return new ReceiptRequest
+        {
+            cbReceiptMoment = ReferenceDate.AddMinutes(34),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = [
+                new ChargeItem
+                {
+                    Amount = 100m,
+                    VATRate = PTVATRates.Normal,
+                    ftChargeItemCase =  (ChargeItemCase) 0x5054_2000_0000_0013,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems = [],
+            cbUser = 1,
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004,
+            ftReceiptCaseData = new
+            {
+                OrderType = "CM"
+            }
+        };
+    }
+
+    public static ReceiptRequest Case_T33_OR()
+    {
+        return new ReceiptRequest
+        {
+            cbReceiptMoment = ReferenceDate.AddMinutes(35),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = [
+                new ChargeItem
+                {
+                    Amount = 100m,
+                    VATRate = PTVATRates.Normal,
+                    ftChargeItemCase =  (ChargeItemCase) 0x5054_2000_0000_0013,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems = [],
+            cbUser = 1,
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004,
+            ftReceiptCaseData = new
+            {
+                OrderType = "OR"
+            }
         };
     }
 }

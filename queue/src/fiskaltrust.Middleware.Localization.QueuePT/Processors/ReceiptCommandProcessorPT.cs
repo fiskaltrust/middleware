@@ -77,6 +77,18 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
         }
+        
+        if (request.ReceiptRequest.cbCustomer is null)
+        {
+            response.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Caption = "",
+                Data = $"Consumidor final",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+            });
+        }
+
         series.LastHash = hash;
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
@@ -125,6 +137,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
             });
         }
+
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 

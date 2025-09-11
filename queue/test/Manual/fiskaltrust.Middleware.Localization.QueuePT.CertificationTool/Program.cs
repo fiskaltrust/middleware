@@ -182,7 +182,7 @@ async Task PTCertificationExamplesPhase1(TestRunner runner)
         ftJournalType = (JournalType) 0x5054_2000_0000_0001,
         From = timestamp
     });
-    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.UTF8.GetString(xmlData));
+    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.GetEncoding("windows-1252").GetString(xmlData));
 }
 
 
