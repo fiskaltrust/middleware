@@ -18,6 +18,9 @@ env:
 jobs:
   test-ef:
     runs-on: windows-latest
+    env: 
+     project: fiskaltrust.Middleware.Queue.ef
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
