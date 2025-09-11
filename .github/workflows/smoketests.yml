@@ -2,10 +2,6 @@
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - .github/workflows/smoketests.yml
-
    
 permissions:
   id-token: write
