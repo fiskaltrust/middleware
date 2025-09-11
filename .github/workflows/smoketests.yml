@@ -12,40 +12,6 @@ env:
   launcherpath: "./launcher"
 
 jobs:
-  test-ef:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - uses: ./.github/actions/build
-        with:
-          pattern: queue/src/${{ env.project }}/${{ env.project }}.csproj
-          configuration: Release
-
-      - name: create the NuGet package
-        uses: ./.github/actions/package
-        with:
-         path: queue/src
-         project: ${{ env.project }}     
-       
-      - name: Check package dependencies
-        shell: pwsh
-        run: |
-            $nupkgPath = "./publish/package-v1-${{ env.project }}/${{ env.project }}.0.0.0-ci.nupkg"
-
-            # Extract nuspec file from nupkg
-            $nuspecFile = Join-Path $env:RUNNER_TEMP "temp.nuspec"
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $zip = [System.IO.Compression.ZipFile]::OpenRead((Get-Item $nupkgPath).FullName)
-            $entry = $zip.Entries | Where-Object { $_.FullName -like "*.nuspec" }
-            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $nuspecFile, $true)
-            $zip.Dispose()
-
-            # Load nuspec
-            [xml]$nuspec = Get-Content $nuspecFile
-            $nuspec | Format-List * | Out-String | Write-Host
-
   test-middleware:
     runs-on: windows-latest
     strategy:

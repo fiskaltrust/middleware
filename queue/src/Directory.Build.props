@@ -11,7 +11,7 @@
             <NoWarn>NU1605</NoWarn>
             <NoWarn>NU5104</NoWarn>
         </PackageReference>
-        <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
     </ItemGroup>
  
 </Project>
