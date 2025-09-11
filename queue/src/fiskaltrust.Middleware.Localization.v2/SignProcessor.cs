@@ -101,11 +101,6 @@ public class SignProcessor : ISignProcessor
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
                 {
-                    receiptResponse.ftStateData = new MiddlewareStateData
-                    {
-                        PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(receiptRequest)
-                    };
-
                     (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
                     actionjournals.AddRange(countrySpecificActionJournals);
                 }
@@ -193,6 +188,15 @@ public class SignProcessor : ISignProcessor
         {
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
+
+        if (queue.CountryCode != "GR" && queue.CountryCode != "PT")
+        {
+            receiptResponse.ftStateData = new MiddlewareStateData
+            {
+                PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(request)
+            };
+        }
+
         return await _processRequest(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
     }
 
