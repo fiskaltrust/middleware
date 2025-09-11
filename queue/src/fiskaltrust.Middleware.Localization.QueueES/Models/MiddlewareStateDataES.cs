@@ -5,37 +5,34 @@ using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Models;
 
-public class MiddlewareState
+public class MiddlewareStateData : v2.Models.MiddlewareStateData
 {
+    public MiddlewareStateData() { }
+    private MiddlewareStateData(v2.Models.MiddlewareStateData middlewareStateData) : base(middlewareStateData)
+    {
+
+    }
+
     [JsonPropertyName("ES")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public MiddlewareQueueESState? ES { get; set; }
+    public MiddlewareStateDataES? ES { get; set; }
 
-    [JsonExtensionData]
-    public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
+    public new static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse)
+    {
+        return new MiddlewareStateData(v2.Models.MiddlewareStateData.FromReceiptResponse(receiptResponse)!);
+    }
+
 }
 
-
-public class MiddlewareQueueESState
+public class MiddlewareStateDataES
 {
     [JsonPropertyName("LastReceipt")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public LastReceipt? LastReceipt { get; set; } = null;
+    public v2.Models.Receipt? LastReceipt { get; set; } = null;
 
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;
-}
-
-public class LastReceipt
-{
-    [JsonPropertyName("Request")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptRequest Request { get; set; }
-
-    [JsonPropertyName("Response")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptResponse Response { get; set; }
 }
 
 public class GovernmentAPI

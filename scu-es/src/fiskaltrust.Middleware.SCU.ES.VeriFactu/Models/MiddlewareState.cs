@@ -1,41 +1,45 @@
-
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.SCU.ES.Models;
 
-public class MiddlewareState
+public class MiddlewareStateData
 {
     [JsonPropertyName("ES")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public MiddlewareQueueESState? ES { get; set; }
+    public MiddlewareStateDataES? ES { get; set; }
+
+    [JsonPropertyName("ftPreviousReceiptReference")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public List<Receipt>? PreviousReceiptReference { get; set; } = new();
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
+
+    public static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<MiddlewareStateData>(((JsonElement)receiptResponse.ftStateData!).GetRawText())!;
 }
 
+public class Receipt
+{
+    [JsonPropertyName("ReceiptRequest")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required ReceiptRequest Request { get; set; }
 
-public class MiddlewareQueueESState
+    [JsonPropertyName("ReceiptResponse")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required ReceiptResponse Response { get; set; }
+}
+
+public class MiddlewareStateDataES
 {
     [JsonPropertyName("LastReceipt")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public LastReceipt? LastReceipt { get; set; } = null;
+    public Receipt? LastReceipt { get; set; } = null;
 
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;
-}
-
-public class LastReceipt
-{
-    [JsonPropertyName("Request")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptRequest Request { get; set; }
-
-    [JsonPropertyName("Response")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptResponse Response { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
