@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -10,10 +11,10 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
 {
     public abstract class AbstractInMemoryRepository<TKey, T> : IMiddlewareRepository<T> where TKey : IEquatable<TKey>
     {
-        protected Dictionary<TKey, T> Data { get; }
+        protected ConcurrentDictionary<TKey, T> Data { get; }
         public AbstractInMemoryRepository() { }
 
-        public AbstractInMemoryRepository(IEnumerable<T> seed) => Data = seed?.ToDictionary(x => GetIdForEntity(x), x => x);
+        public AbstractInMemoryRepository(IEnumerable<T> seed) => Data = new ConcurrentDictionary<TKey, T>(seed?.ToDictionary(x => GetIdForEntity(x), x => x));
 
         protected abstract TKey GetIdForEntity(T entity);
 
@@ -30,12 +31,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public virtual async Task InsertAsync(T entity)
         {
             var entityId = GetIdForEntity(entity);
-            if (Data.ContainsKey(entityId))
+            EntityUpdated(entity);
+            if (!Data.TryAdd(entityId, entity))
             {
                 throw new Exception("The key already exists");
             }
-            EntityUpdated(entity);
-            Data.Add(entityId, entity);
+
             await Task.Yield();
         }
 
