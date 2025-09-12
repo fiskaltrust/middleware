@@ -3,7 +3,11 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 using FluentAssertions;
 
-var builder = new CashBoxBuilder("ES");
+var builder = new CashBoxBuilder("ES" switch
+{
+    "ES" => new CashBoxBuilderES(),
+    _ => throw new NotImplementedException()
+});
 
 var (echo, sign, journal) = builder.Build();
 
