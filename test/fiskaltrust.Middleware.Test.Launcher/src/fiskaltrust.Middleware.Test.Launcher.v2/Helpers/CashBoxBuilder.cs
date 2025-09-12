@@ -4,7 +4,9 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ES;
@@ -15,10 +17,20 @@ using static fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ChargeItemFactory;
 
 namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 
+interface ICashBoxBuilder
+{
+    string Market { get; }
+
+    void AddSCU(ref PackageConfiguration configuration, Guid scuId);
+    void AddMarketQueue(ref PackageConfiguration configuration, Guid queueId, Guid scuId);
+    IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration configuration, Guid queueId);
+}
+
 class CashBoxBuilder
 {
-    private PackageConfiguration _configuration { get; set; }
-    public string Market { get; private init; }
+    private readonly PackageConfiguration _configuration;
+    private readonly ICashBoxBuilder _cashBoxBuilder;
+    public string Market { get => _cashBoxBuilder.Market; }
     public Guid CashBoxId { get; private init; }
     public Guid QueueId { get; private init; }
     public Guid ScuId { get; private init; }
@@ -26,9 +38,10 @@ class CashBoxBuilder
     private readonly ChargeItemFactory _chargeItemFactory;
     public ChargeItemBuilder ChargeItem { get => _chargeItemFactory.Builder; }
 
-    public CashBoxBuilder(string market)
+    public CashBoxBuilder(ICashBoxBuilder cashBoxBuilder)
     {
-        Market = market;
+        _cashBoxBuilder = cashBoxBuilder;
+
         CashBoxId = Guid.NewGuid();
         QueueId = Guid.NewGuid();
         ScuId = Guid.NewGuid();
@@ -55,36 +68,11 @@ class CashBoxBuilder
                         CountryCode = Market
                     }
                 }
-            },
-            {
-                $"init_ftQueue{Market}",
-                Market switch
-                {
-                    "ES" => new List<ftQueueES> {
-                        new ftQueueES
-                        {
-                            ftQueueESId = QueueId,
-                            CashBoxIdentification = QueueId.ToString(),
-                            ftSignaturCreationUnitESId = ScuId
-                        }
-                    },
-                    _ => throw new NotImplementedException()
-                }
-            },
-            {
-                $"init_ftSignaturCreationUnit{Market}",
-                Market switch
-                {
-                    "ES" => new List<ftSignaturCreationUnitES> {
-                        new ftSignaturCreationUnitES
-                        {
-                            ftSignaturCreationUnitESId = ScuId,
-                        }
-                    },
-                    _ => throw new NotImplementedException()
-                }
             }
         };
+
+        _cashBoxBuilder.AddSCU(ref _configuration, ScuId);
+        _cashBoxBuilder.AddMarketQueue(ref _configuration, QueueId, ScuId);
 
         _chargeItemFactory = new ChargeItemFactory(Market switch
         {
@@ -102,35 +90,7 @@ class CashBoxBuilder
 
     public (Func<EchoRequest, Task<EchoResponse?>> echo, Func<ReceiptRequest, Task<ReceiptResponse?>> sign, Func<JournalRequest, Task<(ContentType contentType, Stream response)>> journal) Build()
     {
-        var loggerFactory = new LoggerFactory();
-
-        var configuration = new ftCashBoxConfiguration(CashBoxId)
-        {
-            ftQueues = [
-                _configuration
-            ]
-        }.NewtonsoftJsonWarp()!;
-
-        var clientFactory = Market switch
-        {
-            "ES" => new InMemoryClientFactory<IESSSCD>(new ESSSCDJsonWarper(new VeriFactuSCU(new VeriFactuInMemoryClient(), new VeriFactuSCUConfiguration
-            {
-                Nif = "M0123456Q",
-                NombreRazonEmisor = "In Memory"
-            }))),
-            _ => throw new NotImplementedException()
-        };
-
-        var bootstrapper = Market switch
-        {
-            "ES" => new Localization.QueueES.QueueESBootstrapper(
-                configuration.ftQueues![0].Id,
-                loggerFactory,
-                clientFactory,
-                configuration.ftQueues[0].Configuration!,
-                new InMemoryStorageProvider(loggerFactory, QueueId, configuration.ftQueues![0].Configuration!)),
-            _ => throw new NotImplementedException()
-        };
+        var bootstrapper = _cashBoxBuilder.CreateBootStrapper(_configuration, QueueId);
 
         return (
             bootstrapper.RegisterForEcho().JsonWarpingAsync<EchoRequest, EchoResponse>(),
