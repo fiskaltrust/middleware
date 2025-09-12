@@ -26,15 +26,15 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public Task Initialized => _initializedCompletionSource.Task;
 
     // Singleton repository instances
-    private readonly AsyncLazy<IConfigurationRepository> _configurationRepository;
-    private readonly AsyncLazy<IMiddlewareActionJournalRepository> _actionJournalRepository;
-    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
-    private readonly AsyncLazy<IMiddlewareReceiptJournalRepository> _receiptJournalRepository;
-    private readonly AsyncLazy<IMasterDataRepository<AccountMasterData>> _accountMasterDataRepository;
-    private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository;
-    private readonly AsyncLazy<IMasterDataRepository<OutletMasterData>> _outletMasterDataRepository;
-    private readonly AsyncLazy<IMasterDataRepository<PosSystemMasterData>> _posSystemMasterDataRepository;
-    private readonly AsyncLazy<IMasterDataRepository<AgencyMasterData>> _agencyMasterDataRepository;
+    private readonly IConfigurationRepository _configurationRepository;
+    private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
+    private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+    private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
+    private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;
+    private readonly IMiddlewareJournalESRepository _journalESRepository;
+    private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
+    private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
+    private readonly IMasterDataRepository<AgencyMasterData> _agencyMasterDataRepository;
 
     public InMemoryStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
@@ -42,78 +42,43 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
         _initializedCompletionSource = new TaskCompletionSource();
         _logger = loggerFactory.CreateLogger<IMiddlewareBootstrapper>();
 
-        _configurationRepository = new AsyncLazy<IConfigurationRepository>(async () =>
-        {
-            await Initialized;
-            return new InMemoryConfigurationRepository();
-        });
-        _actionJournalRepository = new AsyncLazy<IMiddlewareActionJournalRepository>(async () =>
-        {
-            await Initialized;
-            return new InMemoryActionJournalRepository();
-        });
-        _queueItemRepository = new AsyncLazy<IMiddlewareQueueItemRepository>(async () =>
-        {
-            await Initialized;
-            return new InMemoryQueueItemRepository();
-        });
-        _receiptJournalRepository = new AsyncLazy<IMiddlewareReceiptJournalRepository>(async () =>
-        {
-            await Initialized;
-            return new InMemoryReceiptJournalRepository();
-        });
-        _accountMasterDataRepository = new AsyncLazy<IMasterDataRepository<AccountMasterData>>(async () =>
-        {
-            await Initialized;
-            return new InMemoryAccountMasterDataRepository();
-        });
-        _journalESRepository = new AsyncLazy<IMiddlewareJournalESRepository>(async () =>
-        {
-            await Initialized;
-            return new InMemoryJournalESRepository();
-        });
-        _outletMasterDataRepository = new AsyncLazy<IMasterDataRepository<OutletMasterData>>(async () =>
-        {
-            await Initialized;
-            return new InMemoryOutletMasterDataRepository();
-        });
-        _posSystemMasterDataRepository = new AsyncLazy<IMasterDataRepository<PosSystemMasterData>>(async () =>
-        {
-            await Initialized;
-            return new InMemoryPosSystemMasterDataRepository();
-        });
-        _agencyMasterDataRepository = new AsyncLazy<IMasterDataRepository<AgencyMasterData>>(async () =>
-        {
-            await Initialized;
-            return new InMemoryAgencyMasterDataRepository();
-        });
+        _configurationRepository = new InMemoryConfigurationRepository();
+        _actionJournalRepository = new InMemoryActionJournalRepository();
+        _queueItemRepository = new InMemoryQueueItemRepository();
+        _receiptJournalRepository = new InMemoryReceiptJournalRepository();
+        _accountMasterDataRepository = new InMemoryAccountMasterDataRepository();
+        _journalESRepository = new InMemoryJournalESRepository();
+        _outletMasterDataRepository = new InMemoryOutletMasterDataRepository();
+        _posSystemMasterDataRepository = new InMemoryPosSystemMasterDataRepository();
+        _agencyMasterDataRepository = new InMemoryAgencyMasterDataRepository();
 
         Task.Run(() => InitAsync());
     }
 
-    public AsyncLazy<IConfigurationRepository> CreateConfigurationRepository() => _configurationRepository;
-    public AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository() => _actionJournalRepository;
-    public AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository() => _queueItemRepository;
-    public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => _receiptJournalRepository;
-    public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => _accountMasterDataRepository;
-    public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => _journalESRepository;
-    public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => _outletMasterDataRepository;
-    public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => _posSystemMasterDataRepository;
-    public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => _agencyMasterDataRepository;
+    private AsyncLazy<T> CreateAsyncLazy<T>(T from) => new AsyncLazy<T>(async () => { await Initialized; return from; });
+
+    public AsyncLazy<IConfigurationRepository> CreateConfigurationRepository() => CreateAsyncLazy(_configurationRepository);
+    public AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository() => CreateAsyncLazy(_actionJournalRepository);
+    public AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository() => CreateAsyncLazy(_queueItemRepository);
+    public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => CreateAsyncLazy(_receiptJournalRepository);
+    public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => CreateAsyncLazy(_accountMasterDataRepository);
+    public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => CreateAsyncLazy(_journalESRepository);
+    public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => CreateAsyncLazy(_outletMasterDataRepository);
+    public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => CreateAsyncLazy(_posSystemMasterDataRepository);
+    public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => CreateAsyncLazy(_agencyMasterDataRepository);
 
     public async Task InitAsync()
     {
         try
         {
-            var configurationRepository = new InMemoryConfigurationRepository();
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
-            var cashBoxes = (await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false)).ToList();
+            var cashBoxes = (await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false)).ToList();
             if (cashBoxes.Count == 0)
             {
-                await ForcePersistMasterDataAsync(baseStorageConfig, new InMemoryAccountMasterDataRepository(), new InMemoryOutletMasterDataRepository(), new InMemoryAgencyMasterDataRepository(), new InMemoryPosSystemMasterDataRepository()).ConfigureAwait(false);
+                await ForcePersistMasterDataAsync(baseStorageConfig, _accountMasterDataRepository, _outletMasterDataRepository, _agencyMasterDataRepository, _posSystemMasterDataRepository).ConfigureAwait(false);
             }
             var dbCashBox = cashBoxes.FirstOrDefault(x => x.ftCashBoxId == baseStorageConfig.CashBox.ftCashBoxId);
-            await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, configurationRepository, _logger).ConfigureAwait(false);
+            await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, _configurationRepository, _logger).ConfigureAwait(false);
             _initializedCompletionSource.SetResult();
         }
         catch (Exception e)
