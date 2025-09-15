@@ -14,11 +14,7 @@ on:
         description: "Queue package version"
         type: string
         default: latest
-  pull_request:
-    paths:
-      - .github/workflows/smoketests.yml
-
-   
+     
 permissions:
   id-token: write
   contents: read
