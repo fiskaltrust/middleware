@@ -26,7 +26,7 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  queuePackage: fiskaltrust.Middleware.Queue.ef
+  queuePackage: fiskaltrust.Middleware.Queue.EF
   queueVersion: latest
 
 jobs:
@@ -56,7 +56,7 @@ jobs:
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
             $body.ftQueues[0].Package = "${{ env.queuePackage }}"
             $body.ftQueues[0].Version = "${{ env.queueVersion }}"
-            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
+            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
@@ -110,6 +110,7 @@ jobs:
            Remove-Item -Path $extractPath -Recurse -Force
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+         Get-ChildItem -Path $extractPath -Recurse | ForEach-Object { Write-Host $_.FullName }
      
       - name: Run test.cmd, send request, and stop
         shell: pwsh
