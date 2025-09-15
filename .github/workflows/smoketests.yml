@@ -22,8 +22,8 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  queuePackage: fiskaltrust.Middleware.Queue.SQLite
-  queueVersion: latest
+  defaultQueuePackage: fiskaltrust.Middleware.Queue.SQLite
+  defaultQueueVersion: latest
 
 jobs:
   test-middleware:
@@ -34,8 +34,8 @@ jobs:
 
       - name: Resolve final values
         run: |
-          echo "queuePackage=${{ inputs.queuePackage || env.queuePackage }}" >> $GITHUB_ENV
-          echo "queueVersion=${{ inputs.queueVersion || env.queueVersion }}" >> $GITHUB_ENV
+          echo "queuePackage=${{ inputs.queuePackage || env.defaultQueuePackage }}" >> $GITHUB_ENV
+          echo "queueVersion=${{ inputs.queueVersion || env.defaultQueueVersion }}" >> $GITHUB_ENV
 
       - name: Create cashbox
         shell: pwsh
