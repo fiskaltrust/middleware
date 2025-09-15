@@ -131,12 +131,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 var tseResult = await tseResultTask;
                 var startedTransactions = await startedTransactionsTask;
 
-                var bytes = Encoding.ASCII.GetBytes(tseResult.CertificateChain);
-                var cert = new X509Certificate2(bytes);
-
-                var certPublicKey = BitConverter.ToString(cert.GetPublicKey());
-                var certPublicKeyBytes = Encoding.ASCII.GetBytes(certPublicKey);
-
                 var algorithm = tseResult.SignatureAlgorithm;
 
                 var tseInfo = new TseInfo
@@ -144,7 +138,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     CurrentNumberOfClients = tseResult.NumberOfRegisteredClients,
                     CurrentNumberOfStartedTransactions = tseResult.NumberOfStartedTransactions,
                     SerialNumberOctet = tseResult.SerialNumber,
-                    PublicKeyBase64 = Convert.ToBase64String(certPublicKeyBytes),
+                    PublicKeyBase64 = tseResult.PublicKey,
                     FirmwareIdentification = tseResult.SoftwareVersion,
                     CertificationIdentification = _configuration.CertificationId,
                     MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
