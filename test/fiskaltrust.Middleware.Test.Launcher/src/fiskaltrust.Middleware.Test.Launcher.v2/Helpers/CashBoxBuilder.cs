@@ -1,18 +1,11 @@
-using System.IO.Pipelines;
 using System.Net.Mime;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
-using fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ES;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
-using Microsoft.Extensions.Logging;
 using static fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ChargeItemFactory;
 
 namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
@@ -90,7 +83,11 @@ class CashBoxBuilder
 
     public (Func<EchoRequest, Task<EchoResponse?>> echo, Func<ReceiptRequest, Task<ReceiptResponse?>> sign, Func<JournalRequest, Task<(ContentType contentType, Stream response)>> journal) Build()
     {
-        var bootstrapper = _cashBoxBuilder.CreateBootStrapper(_configuration, QueueId);
+
+        var bootstrapper = _cashBoxBuilder.CreateBootStrapper(new ftCashBoxConfiguration
+        {
+            ftQueues = [_configuration]
+        }.NewtonsoftJsonWarp()!.ftQueues[0], QueueId);
 
         return (
             bootstrapper.RegisterForEcho().JsonWarpingAsync<EchoRequest, EchoResponse>(),
