@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             {
                 ftQueueId = configuration.QueueId,
                 Timeout = 300,
-                StartMoment = null,
+                StartMoment = DateTime.MinValue,
                 StopMoment = null
             });
 
