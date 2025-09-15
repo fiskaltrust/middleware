@@ -57,7 +57,7 @@ jobs:
             $body.ftQueues[0].Package = "${{ env.queuePackage }}"
             $body.ftQueues[0].Version = "${{ env.queueVersion }}"
             if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
-             $connectionString = Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;
+             $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
