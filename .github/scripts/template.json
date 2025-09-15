@@ -24,7 +24,6 @@
         ],
         "init_ftSignaturCreationUnitDE": [
           {
-            "ftSignaturCreationUnit": "|[scu0_id]|",
             "Url": "[\"grpc://localhost:18004\"]",
             "Mode": 0
           }

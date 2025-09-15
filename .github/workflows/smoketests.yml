@@ -110,8 +110,7 @@ jobs:
            Remove-Item -Path $extractPath -Recurse -Force
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-         Get-ChildItem -Path $extractPath -Recurse | ForEach-Object { Write-Host $_.FullName }
-     
+             
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
