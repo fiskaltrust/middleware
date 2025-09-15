@@ -26,6 +26,8 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
+  queuePackage: fiskaltrust.Middleware.Queue.ef
+  queueVersion: latest
 
 jobs:
   test-middleware:
@@ -33,6 +35,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Resolve final values
+        run: |
+          echo "queuePackage=${{ inputs.queuePackage || env.queuePackage }}" >> $GITHUB_ENV
+          echo "queueVersion=${{ inputs.queueVersion || env.queueVersion }}" >> $GITHUB_ENV
 
       - name: Create cashbox
         shell: pwsh
@@ -47,9 +54,9 @@ jobs:
             }
 
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
-            $body.ftQueues[0].Package = "${{ input.queuePackage }}"
-            $body.ftQueues[0].Version = "${{ input.queueVersion }}"
-            if ("${{ input.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
+            $body.ftQueues[0].Package = "${{ env.queuePackage }}"
+            $body.ftQueues[0].Version = "${{ env.queueVersion }}"
+            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.ef') {
              $connectionString = Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
@@ -68,7 +75,7 @@ jobs:
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Start LocalDB
-        if: ${{ input.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
+        if: ${{ env.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
         shell: pwsh
         run: |
           sqllocaldb create MSSQLLocalDB -s
@@ -144,7 +151,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ input.queuePackage }}
+          name: test-output-${{ env.queuePackage }}
           path: test-output.log
         continue-on-error: true
  
