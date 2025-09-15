@@ -26,7 +26,7 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  queuePackage: fiskaltrust.Middleware.Queue.EF
+  queuePackage: fiskaltrust.Middleware.Queue.SQLite
   queueVersion: latest
 
 jobs:
