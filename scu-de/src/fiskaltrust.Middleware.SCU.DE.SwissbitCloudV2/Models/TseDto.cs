@@ -16,6 +16,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
         [JsonProperty("creditClientId")]
         public string CreditClientId { get; set; }
 
+        [JsonProperty("publicKey")]
+        public string PublicKey { get; set; }
+
         [JsonProperty("healthState")]
         public string HealthState { get; set; }
 
