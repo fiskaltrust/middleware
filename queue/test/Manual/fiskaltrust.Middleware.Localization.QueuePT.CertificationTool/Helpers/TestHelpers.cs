@@ -82,6 +82,6 @@ public class TestHelpers
         File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.pdf", await pdfcopydata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.png", await pngcopydata.Content.ReadAsByteArrayAsync());
-        File.WriteAllText($"{base_path}/{casename}_saft.xml", Encoding.GetEncoding("windows-1252").GetString(journalData));
+        File.WriteAllText($"{base_path}/{casename}_saft.xml", Encoding.GetEncoding("windows-1252").GetString(journalData), Encoding.GetEncoding("windows-1252"));
     }
 }

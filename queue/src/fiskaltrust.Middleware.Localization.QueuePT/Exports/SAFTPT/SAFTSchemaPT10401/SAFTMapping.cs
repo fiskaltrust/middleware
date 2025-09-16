@@ -407,7 +407,7 @@ public class SaftExporter
                 WorkStatus = "N",
                 WorkStatusDate = receiptRequest.cbReceiptMoment,
                 SourceID = GetSourceID(receiptRequest),
-                SourceBilling = "P",
+                SourceBilling = GetSourceBilling(receiptRequest),
             },
             Hash = hashSignature.Data,
             HashControl = 1,
@@ -464,7 +464,7 @@ public class SaftExporter
                 PaymentStatus = "N",
                 PaymentStatusDate = receiptRequest.cbReceiptMoment,
                 SourceID = GetSourceID(receiptRequest),
-                SourcePayment = "P",
+                SourcePayment = GetSourcePayment(receiptRequest),
             },
             Period = receiptRequest.cbReceiptMoment.Month,
             TransactionDate = receiptRequest.cbReceiptMoment,
@@ -518,27 +518,33 @@ public class SaftExporter
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => (x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
-        atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
+        if (atcudSignature != null)
+        {
+            atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
+        }
         var netAmount = grossAmount - taxable;
         var invoiceType = PTMappings.GetInvoiceType(receiptRequest);
-        if (hashSignature == null || atcudSignature == null)
+        if ((hashSignature == null || atcudSignature == null))
         {
-            return null;
+            if (!receipt.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+            {
+                return null;
+            }
         }
         var customer = GetCustomerData(receiptRequest);
         var invoice = new Invoice
         {
             InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
-            ATCUD = atcudSignature.Data,
+            ATCUD = atcudSignature?.Data ?? "",
             DocumentStatus = new InvoiceDocumentStatus
             {
                 InvoiceStatus = "N",
                 InvoiceStatusDate = receiptRequest.cbReceiptMoment,
                 SourceID = GetSourceID(receiptRequest),
-                SourceBilling = "P",
+                SourceBilling = GetSourceBilling(receiptRequest),
             },
-            Hash = hashSignature.Data,
-            HashControl = 1,
+            Hash = hashSignature?.Data ?? "",
+            HashControl = "1",
             Period = receiptRequest.cbReceiptMoment.Month,
             InvoiceDate = receiptRequest.cbReceiptMoment,
             InvoiceType = PTMappings.GetInvoiceType(receiptRequest),
@@ -559,6 +565,11 @@ public class SaftExporter
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            invoice.HashControl = invoice.HashControl + "-" + invoice.InvoiceNo;
+        }
         //if (lines.Any(x => x.SettlementAmount.HasValue))
         //{
         //    invoice.DocumentTotals.Settlement = new Settlement
@@ -568,6 +579,24 @@ public class SaftExporter
         //}
         invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, x)).ToList();
         return invoice;
+    }
+
+    private static string GetSourcePayment(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            return "M";
+        }
+        return "P";
+    }
+
+    private static string GetSourceBilling(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            return "M";
+        }
+        return "P";
     }
 
     public Payment GetPayment(ReceiptRequest receiptRequest, PayItem payItem)

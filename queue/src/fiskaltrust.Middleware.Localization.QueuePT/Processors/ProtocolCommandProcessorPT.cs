@@ -30,7 +30,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var series = StaticNumeratorStorage.ProFormaSeries;
+        var series = GetSeriesForReceiptRequest(request.ReceiptRequest);
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
         receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
@@ -45,6 +45,19 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         series.LastHash = hash;
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
+
+    private NumberSeries GetSeriesForReceiptRequest(ReceiptRequest receiptRequest)
+    {
+        if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
+        {
+            return StaticNumeratorStorage.TableChecqueSeries;
+        }
+        else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
+        {
+            return StaticNumeratorStorage.BudgetSeries;
+        }
+        return StaticNumeratorStorage.ProFormaSeries;
+    }
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 

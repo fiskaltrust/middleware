@@ -32,6 +32,13 @@ public class StaticNumeratorStorage
         Identifier = "NC ft2025019d",
     };
 
+    public static NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "FSM",
+        ATCUD = "AAJFJ4VC3W",
+        Identifier = "FSM ft2025019d",
+    };
+
     public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries
     {
         TypeCode = "PF",
@@ -46,6 +53,21 @@ public class StaticNumeratorStorage
         Identifier = "RG ft2025019d",
     };
 
+    public static NumberSeries BudgetSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "OR",
+        ATCUD = "AAJFJKVC3P",
+        Identifier = "OR ft2025eb51",
+    };
+
+    public static NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "CM",
+        ATCUD = "AAJFJ2VC3R",
+        Identifier = "CM ft2025eb51",
+    };
+
+
     public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         var queueItems = (await middlewareQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow).ToList();
@@ -54,6 +76,9 @@ public class StaticNumeratorStorage
         ReloadSeries(InvoiceSeries, queueItems);
         ReloadSeries(ProFormaSeries, queueItems);
         ReloadSeries(PaymentSeries, queueItems);
+        ReloadSeries(BudgetSeries, queueItems);
+        ReloadSeries(TableChecqueSeries, queueItems);
+        ReloadSeries(HandWrittenFSSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)

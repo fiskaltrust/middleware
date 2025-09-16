@@ -65,7 +65,7 @@ public static class PT_Phase2_CertificationExamples
         CustomerName = "Christoph Kert"
     };
 
-    public static DateTime ReferenceDate = new DateTime(2025, 09, 03, 04, 15, 53);
+    public static DateTime ReferenceDate = new DateTime(2025, 09, 16, 04, 15, 53);
 
     public static ReceiptRequest Case_T6()
     {
@@ -471,7 +471,7 @@ public static class PT_Phase2_CertificationExamples
     {
         return new ReceiptRequest
         {
-            cbReceiptMoment = new DateTime(2022, 01, 14, 14, 30, 0, DateTimeKind.Utc), // Document date for series F #23
+            cbReceiptMoment = ReferenceDate.AddMinutes(28),
             cbReceiptReference = "F/23", // Manual document reference
             cbChargeItems = [
                 new ChargeItem
@@ -480,7 +480,7 @@ public static class PT_Phase2_CertificationExamples
                     Quantity = 1,
                     VATRate = PTVATRates.Normal,
                     ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
-                    Description = "Manual document F/23 from 14-01-2022 - Product item"
+                    Description = "Manual document - Product item"
                 }
             ],
             cbUser = User1ObjectId,
@@ -493,12 +493,6 @@ public static class PT_Phase2_CertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-            ftReceiptCaseData = new
-            {
-                ManualDocumentSeries = "F",
-                ManualDocumentNumber = 23,
-                ManualDocumentDate = new DateTime(2022, 01, 14)
-            },
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten)
         };
@@ -509,7 +503,7 @@ public static class PT_Phase2_CertificationExamples
     {
         return new ReceiptRequest
         {
-            cbReceiptMoment = new DateTime(2022, 01, 12, 16, 45, 0, DateTimeKind.Utc), // Document date for series D #3
+            cbReceiptMoment = ReferenceDate.AddMinutes(29), // Document date for series D #3
             cbReceiptReference = "D/3", // Manual document reference
             cbChargeItems = [
                 new ChargeItem
@@ -517,8 +511,8 @@ public static class PT_Phase2_CertificationExamples
                     Amount = 75m,
                     Quantity = 2,
                     VATRate = PTVATRates.Normal,
-                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
-                    Description = "Manual document D/3 from 12-01-2022 - Service item"
+                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0023,
+                    Description = "Manual document D/3 - Service item"
                 }
             ],
             cbUser = User1ObjectId,
@@ -592,7 +586,7 @@ public static class PT_Phase2_CertificationExamples
             ],
             cbPayItems = [],
             cbUser = User1ObjectId,
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004,
+            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0000).WithCase(ReceiptCase.Order0x3004) | (ReceiptCase) 0x5054_2001_0000_0000,
             ftReceiptCaseData = new
             {
                 OrderType = "CM"
@@ -617,7 +611,7 @@ public static class PT_Phase2_CertificationExamples
             ],
             cbPayItems = [],
             cbUser = User1ObjectId,
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004,
+            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0000).WithCase(ReceiptCase.Order0x3004) | (ReceiptCase) 0x5054_2002_0000_0000,
             ftReceiptCaseData = new
             {
                 OrderType = "OR"
