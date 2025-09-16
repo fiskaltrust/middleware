@@ -329,7 +329,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 uint[] openTransactions;
                 (lastResult, openTransactions) = await proxy.SeGetOpenTransactionsAsync();
                 lastResult.ThrowIfError();
-                tseInfo.CurrentStartedTransactionNumbers =  openTransactions.Select(t => (ulong) t);
+                tseInfo.CurrentStartedTransactionNumbers = openTransactions.Select(t => (ulong) t);
 
                 (lastResult, tseInfo.CurrentNumberOfSignatures) = await proxy.SeGetSignatureCounterAsync(tseSerialNumber);
                 lastResult.ThrowIfError();
