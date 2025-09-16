@@ -11,6 +11,20 @@ public static class PT_Phase2_CertificationExamples
 {
     public const string CUSOMTER_VATNUMBER = "199998132";
 
+    public static PTUserObject User1ObjectId => new PTUserObject
+    {
+        UserId = Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToString(),
+        UserDisplayName = "Stefan Kert",
+        UserEmail = "stefan.kert@fiskaltrust.eu"
+    };
+
+    public static PTUserObject User2ObjectId => new PTUserObject
+    {
+        UserId = Guid.Parse("ae289084-130c-4e37-806c-b6bf876c50b0").ToString(),
+        UserDisplayName = "Christina Kert",
+        UserEmail = "christina.kert@fiskaltrust.eu"
+    };
+
     public static MiddlewareCustomer VAT_ONLY_CUSTOMER => new MiddlewareCustomer
     {
         CustomerVATId = CUSOMTER_VATNUMBER
@@ -78,7 +92,7 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbCustomer = VAT_ONLY_CUSTOMER
         };
     }
@@ -101,7 +115,7 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             cbPayItems = [],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004
         };
     }
@@ -130,7 +144,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001
                 }],
-            cbUser = 2,
+            cbUser = User2ObjectId,
             ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001)
         };
     }
@@ -160,7 +174,7 @@ public static class PT_Phase2_CertificationExamples
                     Quantity = -1
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.Refund)
         };
     }
@@ -214,7 +228,7 @@ public static class PT_Phase2_CertificationExamples
             cbReceiptMoment = ReferenceDate.AddMinutes(13),
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems = chargeItems,
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -261,7 +275,7 @@ public static class PT_Phase2_CertificationExamples
                 Quantity = 1,
                 VATRate = PTVATRates.Normal,
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0013,
-                Description = "Line item 1"
+                Description = "Desconto"
             },
             new ChargeItem
             {
@@ -279,7 +293,7 @@ public static class PT_Phase2_CertificationExamples
             cbReceiptMoment = ReferenceDate.AddMinutes(16),
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems = chargeItems,
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -312,7 +326,7 @@ public static class PT_Phase2_CertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0002
     };
 
@@ -333,7 +347,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Line item 1"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -364,7 +378,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Line item 1"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -396,7 +410,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Low price product"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -427,7 +441,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Line item 1"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -469,7 +483,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Manual document F/23 from 14-01-2022 - Product item"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -507,7 +521,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Manual document D/3 from 12-01-2022 - Service item"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -546,7 +560,7 @@ public static class PT_Phase2_CertificationExamples
                     Description = "Line item 1"
                 }
             ],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             cbPayItems =
             [
                 new PayItem
@@ -577,7 +591,7 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             cbPayItems = [],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004,
             ftReceiptCaseData = new
             {
@@ -602,7 +616,7 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             cbPayItems = [],
-            cbUser = 1,
+            cbUser = User1ObjectId,
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004,
             ftReceiptCaseData = new
             {

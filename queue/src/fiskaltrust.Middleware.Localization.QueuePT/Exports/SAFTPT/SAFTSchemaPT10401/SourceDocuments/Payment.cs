@@ -15,7 +15,7 @@ public class Payment
     [XmlElement("PaymentAmount", IsNullable = false)]
     public string PaymentAmountProperty
     {
-        get => PaymentAmount.ToString("F6", CultureInfo.InvariantCulture);
+        get => PaymentAmount.ToString("F2", CultureInfo.InvariantCulture);
         set => PaymentAmount = decimal.Parse(value.ToString());
     }
 

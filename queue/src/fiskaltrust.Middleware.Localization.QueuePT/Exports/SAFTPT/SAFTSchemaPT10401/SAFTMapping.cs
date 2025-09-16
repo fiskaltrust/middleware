@@ -42,6 +42,16 @@ public class SaftExporter
 
     private Dictionary<string, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> InvoicedProformas { get; } = new Dictionary<string, (ReceiptRequest, ReceiptResponse)>();
 
+    public string GetSourceID(ReceiptRequest receiptRequest)
+    {
+        var userObject = JsonSerializer.Deserialize<PTUserObject>(JsonSerializer.Serialize(receiptRequest.cbUser))!;
+        if (userObject != null && !string.IsNullOrEmpty(userObject.UserId))
+        {
+            return userObject.UserId;
+        }
+        return JsonSerializer.Serialize(receiptRequest.cbUser);
+    }
+
     public Customer GetCustomerData(ReceiptRequest receiptRequest)
     {
         if (receiptRequest.cbCustomer == null)
@@ -70,7 +80,7 @@ public class SaftExporter
             {
                 AddressDetail = string.IsNullOrEmpty(middlewareCustomer.CustomerStreet) ? "Desconhecido" : middlewareCustomer.CustomerStreet,
                 City = string.IsNullOrEmpty(middlewareCustomer.CustomerCity) ? "Desconhecido" : middlewareCustomer.CustomerCity,
-                PostalCode =  string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip,
+                PostalCode = string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip,
                 Country = string.IsNullOrEmpty(middlewareCustomer.CustomerCountry) ? "Desconhecido" : middlewareCustomer.CustomerCountry
             }
         };
@@ -396,7 +406,7 @@ public class SaftExporter
             {
                 WorkStatus = "N",
                 WorkStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+                SourceID = GetSourceID(receiptRequest),
                 SourceBilling = "P",
             },
             Hash = hashSignature.Data,
@@ -404,7 +414,7 @@ public class SaftExporter
             Period = receiptRequest.cbReceiptMoment.Month,
             WorkDate = receiptRequest.cbReceiptMoment,
             WorkType = PTMappings.GetWorkType(receiptRequest),
-            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             Line = lines,
             CustomerID = customer.CustomerID,
@@ -418,9 +428,10 @@ public class SaftExporter
 
         if (InvoicedProformas.ContainsKey(receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()))
         {
+            var request = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest;
             workDocument.DocumentStatus.WorkStatus = "F";
-            workDocument.DocumentStatus.WorkStatusDate = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest.cbReceiptMoment;
-            workDocument.DocumentStatus.SourceID = JsonSerializer.Serialize(InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest.cbUser);
+            workDocument.DocumentStatus.WorkStatusDate = request.cbReceiptMoment;
+            workDocument.DocumentStatus.SourceID = GetSourceID(request);
             workDocument.DocumentStatus.Reason = "Faturado";
         }
 
@@ -452,7 +463,7 @@ public class SaftExporter
             {
                 PaymentStatus = "N",
                 PaymentStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+                SourceID = GetSourceID(receiptRequest),
                 SourcePayment = "P",
             },
             Period = receiptRequest.cbReceiptMoment.Month,
@@ -463,7 +474,7 @@ public class SaftExporter
                 PaymentAmount = payItem.Amount,
                 PaymentDate = receiptRequest.cbReceiptMoment
             },
-            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             Line = [
                 new PaymentLine
@@ -523,7 +534,7 @@ public class SaftExporter
             {
                 InvoiceStatus = "N",
                 InvoiceStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+                SourceID = GetSourceID(receiptRequest),
                 SourceBilling = "P",
             },
             Hash = hashSignature.Data,
@@ -537,7 +548,7 @@ public class SaftExporter
                 CashVATSchemeIndicator = 0,
                 ThirdPartiesBillingIndicator = 0,
             },
-            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             Line = lines,
             CustomerID = customer.CustomerID,
@@ -645,6 +656,21 @@ public class SaftExporter
         }
 
         if (PTMappings.GetInvoiceType(receiptRequest) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
+        {
+            var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
+            line.OrderReferences = new OrderReferences
+            {
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
+                OrderDate = referencedReceiptReference!.ftReceiptMoment
+            };
+            if (!InvoicedProformas.ContainsKey(referencedReceiptReference!.ftReceiptIdentification.Split("#").Last()))
+            {
+                InvoicedProformas.Add(referencedReceiptReference.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+            }
+        }
+
+
+        if (PTMappings.GetInvoiceType(receiptRequest) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
         {
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.OrderReferences = new OrderReferences

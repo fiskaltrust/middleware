@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 
@@ -15,6 +16,20 @@ public static class PTCertificationExamples
     public static ReceiptCase BaseCase = ((ReceiptCase) 0x2000_0000_0000).WithCountry("PT");
 
     public static DateTime ReferenceDate = new DateTime(2025, 09, 03, 04, 15, 53);
+
+    public static PTUserObject User1ObjectId => new PTUserObject
+    {
+        UserId = Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToString(),
+        UserDisplayName = "Stefan Kert",
+        UserEmail = "stefan.kert@fiskaltrust.eu"
+    };
+
+    public static PTUserObject User2ObjectId => new PTUserObject
+    {
+        UserId = Guid.Parse("ae289084-130c-4e37-806c-b6bf876c50b0").ToString(),
+        UserDisplayName = "Christina Kert",
+        UserEmail = "christina.kert@fiskaltrust.eu"
+    };
 
     public static MiddlewareCustomer VAT_INCLUDED_CUSTOMER_1 => new MiddlewareCustomer
     {
@@ -66,7 +81,7 @@ public static class PTCertificationExamples
                 }
             ],
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
-        cbUser = 1,
+        cbUser = User1ObjectId,
         cbCustomer = VAT_INCLUDED_CUSTOMER_1
     };
 
@@ -87,7 +102,7 @@ public static class PTCertificationExamples
                 }
             ],
         cbPayItems = [],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.Order0x3004)
     };
 
@@ -114,7 +129,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.InvoiceB2C0x1001),
         cbCustomer = VAT_INCLUDED_CUSTOMER_1
     };
@@ -144,7 +159,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.InvoiceB2C0x1001).WithFlag(ReceiptCaseFlags.Refund),
         cbCustomer = VAT_INCLUDED_CUSTOMER_1
     };
@@ -203,7 +218,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.InvoiceB2C0x1001),
         cbCustomer = VAT_INCLUDED_CUSTOMER_1
     };
@@ -253,7 +268,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
     };
 
@@ -282,7 +297,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
         cbCustomer = NO_VAT_GIVEN_CUSTOMER_1
     };
@@ -310,7 +325,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
         cbCustomer = NO_VAT_GIVEN_CUSTOMER_2
     };
@@ -331,7 +346,7 @@ public static class PTCertificationExamples
                 }
             ],
         cbPayItems = [],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.Order0x3004),
     };
 
@@ -360,7 +375,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = ((PayItemCase) 0x5054_2000_0000_0000).WithCase(PayItemCase.AccountsReceivable),
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = ((ReceiptCase)0x2000_0000_0000).WithCountry("PT").WithCase(ReceiptCase.InvoiceB2C0x1001),
         cbCustomer = VAT_INCLUDED_CUSTOMER_1
     };
@@ -381,7 +396,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
-        cbUser = 1,
+        cbUser = User1ObjectId,
         ftReceiptCase = BaseCase.WithCase(ReceiptCase.PaymentTransfer0x0002)
     };
 }

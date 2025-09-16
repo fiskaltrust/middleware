@@ -14,36 +14,36 @@ public class StaticNumeratorStorage
     public static NumberSeries InvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FT",
-        ATCUD = "G4QZMNKE",
-        Identifier = "FT ft2024"
+        ATCUD = "AAJFJGVC33",
+        Identifier = "FT ft2025019d",
     };
 
     public static NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FS",
-        ATCUD = "XBPRP1MS",
-        Identifier = "FS ft2024"
+        ATCUD = "AAJFJ4VC3W",
+        Identifier = "FSft2025019d",
     };
 
     public static NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
     {
         TypeCode = "NC",
-        ATCUD = "QRFQ68NC",
-        Identifier = "NC ft2024"
+        ATCUD = "AAJFJ3VC34",
+        Identifier = "NC ft2025019d",
     };
 
     public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries
     {
         TypeCode = "PF",
-        ATCUD = "GGRS68NF",
-        Identifier = "PF ft2024"
+        ATCUD = "AAJFJ9VC37",
+        Identifier = "PF ft2025019d",
     };
 
     public static NumberSeries PaymentSeries { get; set; } = new NumberSeries
     {
         TypeCode = "RG",
-        ATCUD = "FSSJ34SE",
-        Identifier = "RG ft2024"
+        ATCUD = "AAJFJMVC3G",
+        Identifier = "RG ft2025019d",
     };
 
     public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
