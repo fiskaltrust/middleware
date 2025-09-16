@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.DieboldNixdorf.Commands;
@@ -209,6 +210,23 @@ namespace fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
                 {
                     var clients = _authenticationTseCommandProvider.ExecuteAuthorized(_configuration.AdminUser, _configuration.AdminPin, () => _utilityTseCommandProvider.GetRegisteredClients());
                     var certificatesBase64 = _exportTseCommandsProvider.ExportCertificatesAsBase64();
+
+                    try
+                    {
+                        var certs = certificatesBase64
+                        .Select(x => new X509Certificate2(Convert.FromBase64String(x)))
+                        .OrderByDescending(cert => cert.NotAfter)
+                        .ToList();
+
+                        var cert = certs.FirstOrDefault();
+                        tseInfo.Info = new Dictionary<string, object>() { { "TseExpirationDate", cert.NotAfter.ToString("yyyy-MM-dd") } };
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to parse certificate NotAfter date");
+                    }
+
+
                     var numberOfTransactions = _utilityTseCommandProvider.GetNumberOfTransactions();
                     var numberOfClients = _utilityTseCommandProvider.GetNumberOfClients();
                     var startedTransactions = new List<long>();

@@ -1,20 +1,22 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.SCU.DE.Epson.Exceptions;
-using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs.Models;
-using Microsoft.Extensions.Logging;
-using System.IO;
-using fiskaltrust.Middleware.SCU.DE.Epson.Helpers;
-using System.Security.Cryptography;
 using fiskaltrust.Middleware.SCU.DE.Epson.Commands;
+using fiskaltrust.Middleware.SCU.DE.Epson.Exceptions;
+using fiskaltrust.Middleware.SCU.DE.Epson.Helpers;
 using fiskaltrust.Middleware.SCU.DE.Epson.Helpers.ExceptionHelper;
 using fiskaltrust.Middleware.SCU.DE.Epson.Models;
 using fiskaltrust.Middleware.SCU.DE.Epson.ResultModels;
-using System.Text;
+using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs.Models;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.Epson
@@ -503,6 +505,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                 var registeredClientIds = new List<string>();
                 var certificates = new List<string>();
                 var startedTransactions = new List<ulong>();
+                X509Certificate2 cert = null;
                 if (storageInfo.TseInformation.TseInitializationState == GetStorageInfoResult.TseInitializationStateInitialized)
                 {
                     await _authenticationCommandProvider.PerformAuthorizationForAdminAsync(_configuration.AdminUser, _configuration.AdminPin, _configuration.DefaultSharedSecret);
@@ -511,6 +514,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                     var logMessageCertificate = await _exportCommandProvider.GetLogMessageCertificateAsync();
                     certificates.Add(logMessageCertificate.LogMessageCertificateBase64);
                     startedTransactions = (await _transactionCommandProvider.GetStartedTransactionListAsync()).StartedTransactionNumberList;
+                    try
+                    {
+                        cert = new X509Certificate2(Convert.FromBase64String(logMessageCertificate.LogMessageCertificateBase64));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to parse certificate NotAfter date");
+                    }
                 }
 
                 return new TseInfo
@@ -532,7 +543,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                     CurrentClientIds = registeredClientIds,
                     CertificationIdentification = storageInfo.TseInformation.TseDescription,
                     CertificatesBase64 = certificates,
-                    CurrentStartedTransactionNumbers = startedTransactions
+                    CurrentStartedTransactionNumbers = startedTransactions,
+                    Info = cert != null ? new Dictionary<string, object>() { { "TseExpirationDate", cert.NotAfter.ToString("yyyy-MM-dd") } } : null
                 };
             }
             catch (Exception ex)

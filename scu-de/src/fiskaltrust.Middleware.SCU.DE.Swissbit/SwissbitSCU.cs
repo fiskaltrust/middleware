@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -352,6 +354,15 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private async Task InitializeExportedDataAsync(ISwissbitProxy proxy, TseInfo tseInfo)
         {
             tseInfo.CertificatesBase64 = await GetCertificateBase64ListAsync(proxy);
+
+            var certs = tseInfo.CertificatesBase64
+            .Select(x => new X509Certificate2(Convert.FromBase64String(x)))
+            .OrderByDescending(cert => cert.NotAfter)
+            .ToList();
+
+            var cert = certs.FirstOrDefault();
+            tseInfo.Info = new Dictionary<string, object>() { { "TseExpirationDate", cert.NotAfter.ToString("yyyy-MM-dd") } };
+
             tseInfo.CurrentClientIds = await proxy.TseGetRegisteredClientsAsync();
             tseInfo.CurrentStartedTransactionNumbers = await proxy.GetStartedTransactionsAsync(string.Empty);
         }

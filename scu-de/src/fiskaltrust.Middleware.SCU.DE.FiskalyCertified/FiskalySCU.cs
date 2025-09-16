@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
@@ -156,6 +157,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var startedTransactions = await startedTransactionsTask;
                 var serial = tssResult.SerialNumber;
 
+                var cert = new X509Certificate2(Convert.FromBase64String(tssResult.Certificate));
+
                 return new TseInfo
                 {
                     CurrentNumberOfClients = clientDto.Where(x => x.State.Equals("REGISTERED")).ToList().Count,
@@ -178,7 +181,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     MaxLogMemorySize = long.MaxValue,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.Number).ToList(),
-                    CurrentState = ((FiskalyTseState) Enum.Parse(typeof(FiskalyTseState), tssResult.State, true)).ToTseStateEnum()
+                    CurrentState = ((FiskalyTseState) Enum.Parse(typeof(FiskalyTseState), tssResult.State, true)).ToTseStateEnum(),
+                    Info = new Dictionary<string, object>() { { "TseExpirationDate", cert.NotAfter.ToString("yyyy-MM-dd") } }
                 };
             }
             catch (Exception ex)

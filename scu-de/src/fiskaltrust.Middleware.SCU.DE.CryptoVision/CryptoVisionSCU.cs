@@ -283,6 +283,8 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 var certificates = LogParser.GetCertificatesFromByteArray(certificateTarFile);
                 tseInfo.CertificatesBase64 = certificates.Select(x => Convert.ToBase64String(x.Item1)).ToList();
 
+                tseInfo.Info = new Dictionary<string, object>() { { "TseExpirationDate", new DateTime(638580206400000000).ToString("yyyy-MM-dd") } }; // 31. Juli 2024 
+
                 byte[] ersMappingsBytes;
                 (lastResult, ersMappingsBytes) = await proxy.SeGetERSMappingsAsync();
                 lastResult.ThrowIfError();
@@ -327,7 +329,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 uint[] openTransactions;
                 (lastResult, openTransactions) = await proxy.SeGetOpenTransactionsAsync();
                 lastResult.ThrowIfError();
-                tseInfo.CurrentStartedTransactionNumbers = openTransactions.Select(t => (ulong) t);
+                tseInfo.CurrentStartedTransactionNumbers =  openTransactions.Select(t => (ulong) t);
 
                 (lastResult, tseInfo.CurrentNumberOfSignatures) = await proxy.SeGetSignatureCounterAsync(tseSerialNumber);
                 lastResult.ThrowIfError();
