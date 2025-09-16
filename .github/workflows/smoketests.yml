@@ -1,0 +1,154 @@
+﻿name: smoketests
+
+on:
+  workflow_dispatch:
+    inputs:
+      queuePackage:
+        description: "Queue package"
+        required: true
+        type: choice
+        options:
+          - fiskaltrust.Middleware.Queue.SQLite
+          - fiskaltrust.Middleware.Queue.EF
+      queueVersion:
+        description: "Queue package version"
+        type: string
+        default: latest
+     
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  launcher: "fiskaltrust.service.launcher"
+  launcherpath: "./launcher"
+  defaultQueuePackage: fiskaltrust.Middleware.Queue.SQLite
+  defaultQueueVersion: latest
+
+jobs:
+  test-middleware:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve final values
+        run: |
+          echo "queuePackage=${{ inputs.queuePackage || env.defaultQueuePackage }}" >> $GITHUB_ENV
+          echo "queueVersion=${{ inputs.queueVersion || env.defaultQueueVersion }}" >> $GITHUB_ENV
+
+      - name: Create cashbox
+        shell: pwsh
+        run: |
+            $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
+            $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
+
+            $headers = @{
+              accountid   = "${{ secrets.FT_ACCOUNT_ID }}"
+              accesstoken = "${{ secrets.FT_ACCESS_TOKEN }}"
+              "Content-Type" = "application/json"
+            }
+
+            $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
+            $body.ftQueues[0].Package = "${{ env.queuePackage }}"
+            $body.ftQueues[0].Version = "${{ env.queueVersion }}"
+            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
+             $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
+             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+            }
+
+            $body = $body | ConvertTo-Json -Depth 10
+
+            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
+
+            # Extract values
+            $cashboxId  = $response.cashBoxId
+            $accessToken = $response.accessToken
+            $queueId = $response.configuration.ftQueues[0].Id
+
+            echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
+            echo "accessToken=$accessToken" >> $env:GITHUB_ENV
+            echo "queueId=$queueId"       >> $env:GITHUB_ENV
+
+      - name: Start LocalDB
+        if: ${{ env.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
+        shell: pwsh
+        run: |
+          sqllocaldb create MSSQLLocalDB -s
+          sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"    
+
+      - name: Download launcher package
+        shell: pwsh
+        run: |
+          $cashboxId = "${{ env.cashboxId }}"
+          $accessToken = "${{ env.accessToken }}"
+          $offline = "true"
+          $launcher = "${{ env.launcher }}"
+          $version = "latest"
+
+          $pair = "${cashboxId}:${accessToken}"
+          $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
+          $headers = @{ Authorization = "Basic $encoded" }
+
+          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          $output = "$launcher.$cashboxId.zip"
+          Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
+
+      - name: Extract launcher package
+        shell: pwsh
+        run: |
+         $cashboxId = "${{ env.cashboxId }}"
+         $launcher =  "${{ env.launcher }}"
+         $zipPath = "$launcher.$cashboxId.zip"
+         $extractPath = "${{ env.launcherpath }}"
+         
+         if (Test-Path $extractPath) {
+           Remove-Item -Path $extractPath -Recurse -Force
+         }
+         Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+             
+      - name: Run test.cmd, send request, and stop
+        shell: pwsh
+        run: |
+          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
+          Write-Host "Starting test.cmd..."
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+
+          # Wait a few seconds to let test.cmd start listening
+          Write-Host "Waiting for launcher to become ready (max 60s)"
+          Start-Sleep -Seconds 60
+
+          $maxAttempts = 10
+          $attempt = 0
+          $pollUrl = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
+          $pollBody = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
+          while ($attempt -lt $maxAttempts) {
+              try {
+                  $pollResponse = Invoke-RestMethod -Uri $pollUrl -Method Post -Body $pollBody -ContentType "application/json" -TimeoutSec 2
+                  Write-Host "Response: $($pollResponse | ConvertTo-Json)"
+                  break;
+              } catch {
+                  Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
+                  Start-Sleep -Seconds 5
+                  $attempt++
+              }
+          } 
+          if($attempt -eq $maxAttempts)
+          {
+            Write-Error "Request failed: $_"
+          }
+         
+
+          # Stop the launcher
+          Write-Host "Stopping test.cmd..."
+          Stop-Process -Id $process.Id -Force
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ env.queuePackage }}
+          path: test-output.log
+        continue-on-error: true
+ 
+  
