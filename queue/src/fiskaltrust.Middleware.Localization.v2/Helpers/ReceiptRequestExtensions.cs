@@ -36,7 +36,7 @@ public static class ReceiptRequestExtensions
         {            
             if(receiptChargeItem.Position == 0)
             {
-                receiptChargeItem.Position = 1;
+                receiptChargeItem.Position = currentPos;
             }
             if (receiptChargeItem.IsVoucherRedeem() || receiptChargeItem.IsDiscountOrExtra())
             {

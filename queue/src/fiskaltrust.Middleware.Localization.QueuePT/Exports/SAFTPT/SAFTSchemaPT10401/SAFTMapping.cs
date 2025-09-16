@@ -634,7 +634,7 @@ public class SaftExporter
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.References = new References
             {
-                Reference = referencedReceiptReference!.ftReceiptIdentification,
+                Reference = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
                 Reason = "Devolução"
             };
             line.DebitAmount = Helpers.CreateMonetaryValue(netLinePrice);
