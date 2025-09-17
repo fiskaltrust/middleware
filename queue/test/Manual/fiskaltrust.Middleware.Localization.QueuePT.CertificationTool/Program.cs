@@ -20,7 +20,7 @@ var accessToken = "";
 var testRunner = await TestRunner.InitializeDryTestRun(accountId, accessToken);
 
 Console.WriteLine("Starting Phase 1 Certification Tests...");
-await PTCertificationExamplesPhase1(testRunner);
+//await PTCertificationExamplesPhase1(testRunner);
 
 // Run Phase 1 certification tests
 Console.WriteLine("Starting Phase 2 Certification Tests...");
@@ -32,7 +32,6 @@ await PTCertificationExamplesPhase2(testRunner);
 
 Console.WriteLine("Done");
 Console.ReadLine();
-
 
 async Task SubmissionRound2(TestRunner runner)
 {
@@ -169,7 +168,7 @@ async Task PTCertificationExamplesPhase1(TestRunner runner)
         }
     }
 
-    var basePath = "C:\\GitHub\\market-pt\\phase1";
+    var basePath = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-09\\phase1";
     basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
     Directory.CreateDirectory(basePath);
     foreach (var cased in cases)
@@ -182,9 +181,8 @@ async Task PTCertificationExamplesPhase1(TestRunner runner)
         ftJournalType = (JournalType) 0x5054_2000_0000_0001,
         From = timestamp
     });
-    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.GetEncoding("windows-1252").GetString(xmlData));
+    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.GetEncoding("windows-1252").GetString(xmlData), Encoding.GetEncoding("windows-1252"));
 }
-
 
 async Task PTCertificationExamplesPhase2(TestRunner runner)
 {
@@ -228,7 +226,7 @@ async Task PTCertificationExamplesPhase2(TestRunner runner)
         }
     }
 
-    var basePath = "C:\\GitHub\\market-pt\\phase2";
+    var basePath = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-09\\phase2";
     basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
     Directory.CreateDirectory(basePath);
     foreach (var cased in cases)
@@ -241,6 +239,6 @@ async Task PTCertificationExamplesPhase2(TestRunner runner)
         ftJournalType = (JournalType) 0x5054_2000_0000_0001,
         From = timestamp
     });
-    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.UTF8.GetString(xmlData));
+    File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.GetEncoding("windows-1252").GetString(xmlData), Encoding.GetEncoding("windows-1252"));
 }
 
