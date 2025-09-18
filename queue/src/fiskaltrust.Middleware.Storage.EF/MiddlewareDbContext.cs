@@ -193,6 +193,8 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<PosSystemMasterData>().ToTable(nameof(PosSystemMasterData));
             modelBuilder.Entity<PosSystemMasterData>().HasKey(x => x.PosSystemId, x => x.IsClustered(false));
 
+            modelBuilder.Ignore<SSCDErrorException>();
+
             base.OnModelCreating(modelBuilder);
         }
     }
