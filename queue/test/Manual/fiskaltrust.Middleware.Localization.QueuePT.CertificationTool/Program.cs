@@ -17,14 +17,15 @@ using Org.BouncyCastle.Asn1.Ocsp;
 
 var accountId = Guid.Parse("");
 var accessToken = "";
+var baseFolder = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-09-20";
 var testRunner = await TestRunner.InitializeDryTestRun(accountId, accessToken);
-
 Console.WriteLine("Starting Phase 1 Certification Tests...");
-//await PTCertificationExamplesPhase1(testRunner);
+await PTCertificationExamplesPhase1(testRunner, false);
 
 // Run Phase 1 certification tests
+var testRunner2 = await TestRunner.InitializeDryTestRun(accountId, accessToken);
 Console.WriteLine("Starting Phase 2 Certification Tests...");
-await PTCertificationExamplesPhase2(testRunner);
+await PTCertificationExamplesPhase2(testRunner2, false);
 
 // Run Phase 2 certification tests
 //Console.WriteLine("Starting Phase 2 Certification Tests...");
@@ -33,100 +34,9 @@ await PTCertificationExamplesPhase2(testRunner);
 Console.WriteLine("Done");
 Console.ReadLine();
 
-async Task SubmissionRound2(TestRunner runner)
-{
-    //var timestamp = DateTime.UtcNow.Ticks;
-    //var targetFolder = "..\\20250729";
-    //if (Directory.Exists(targetFolder))
-    //    Directory.Delete(targetFolder, true);
-    //Directory.CreateDirectory(targetFolder);
 
-    //// T1 => Text
-    //// T2 => Text
-    //// T3 => Text
-    //// T4 => Text
-    //// T5 => Text
 
-    //var receiptRequest = PT_Phase2_CertificationExamples.Case_T6();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T6");
-    //// T7 void is not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T7();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T7");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T8();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T8");
-    //// T9 transport documents are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T9();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T9");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T10(receiptRequest.cbReceiptReference);
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T10");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T11(receiptRequest);
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T11");
-    //// T12 invoice receipts are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T12();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T12");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T13();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T13");
-    //// T14 Invoice receipts are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T14();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T14");
-    //// T15 partial refunds are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T15();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T15");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T16();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T16");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T17();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T17");
-    //// T18 Foreign currencies are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T18();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T18");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T19();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T19");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T20();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T20");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T21();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T21");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T22();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T22");
-    //// T23 The application does not support mulitple pages invoice. The height of the invoice changes with the content.
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T23();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T23");
-    //// T24 Credit memos are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T24();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T24");
-    //// T25 Serial numbers are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T25();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T25");
-    //// T26 toabcco / petrocl are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T26();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T26");
-    //// T27 IEC is not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T27();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T27");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T28();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T28");
-    //// T29 Not needed because our infra takes care
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T29();    
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T29");
-    //// T30 Other systems are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T30();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T30");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T31();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T31");
-    //// T32 Withholding taxes are not supported
-    //// receiptRequest = PT_Phase2_CertificationExamples.Case_T32();
-    //// await ExecuteMiddleware(receiptRequest, targetFolder, caller: "T32");
-    //receiptRequest = PT_Phase2_CertificationExamples.Case_T33();
-    //await runner.ExecuteMiddleware(receiptRequest, targetFolder, caller: "T33");
-
-    //var xmlData = await runner.ExecuteJournal(new JournalRequest
-    //{
-    //    ftJournalType = (JournalType) 0x5054_2000_0000_0001,
-    //    From = timestamp
-    //});
-    //File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", Encoding.UTF8.GetString(xmlData));
-}
-
-async Task PTCertificationExamplesPhase1(TestRunner runner)
+async Task PTCertificationExamplesPhase1(TestRunner runner, bool addTicks = false)
 {
     var timestamp = DateTime.UtcNow.Ticks;
     var cases = new Dictionary<string, (ReceiptRequest request, ReceiptResponse response, long ticks, byte[] journal)>();
@@ -168,8 +78,11 @@ async Task PTCertificationExamplesPhase1(TestRunner runner)
         }
     }
 
-    var basePath = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-09\\phase1";
-    basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
+    var basePath = Path.Combine(baseFolder, "phase1");
+    if (addTicks)
+    {
+        basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
+    }
     Directory.CreateDirectory(basePath);
     foreach (var cased in cases)
     {
@@ -184,7 +97,7 @@ async Task PTCertificationExamplesPhase1(TestRunner runner)
     File.WriteAllText(Path.Combine(basePath, "SAFT_journal.xml"), Encoding.GetEncoding("windows-1252").GetString(xmlData), Encoding.GetEncoding("windows-1252"));
 }
 
-async Task PTCertificationExamplesPhase2(TestRunner runner)
+async Task PTCertificationExamplesPhase2(TestRunner runner, bool addTicks = false)
 {
     var timestamp = DateTime.UtcNow.Ticks;
     var cases = new Dictionary<string, (ReceiptRequest request, ReceiptResponse response, long ticks, byte[] journal)>();
@@ -226,8 +139,11 @@ async Task PTCertificationExamplesPhase2(TestRunner runner)
         }
     }
 
-    var basePath = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-09\\phase2";
-    basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
+    var basePath = Path.Combine(baseFolder, "phase2");
+    if (addTicks)
+    {
+        basePath = Path.Combine(basePath, DateTime.UtcNow.Ticks.ToString());
+    }
     Directory.CreateDirectory(basePath);
     foreach (var cased in cases)
     {
