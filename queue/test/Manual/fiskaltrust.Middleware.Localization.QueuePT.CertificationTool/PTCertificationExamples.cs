@@ -19,14 +19,14 @@ public static class PTCertificationExamples
 
     public static PTUserObject User1ObjectId => new PTUserObject
     {
-        UserId = Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToString(),
+        UserId = Convert.ToBase64String(Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToByteArray()),
         UserDisplayName = "Stefan Kert",
         UserEmail = "stefan.kert@fiskaltrust.eu"
     };
 
     public static PTUserObject User2ObjectId => new PTUserObject
     {
-        UserId = Guid.Parse("ae289084-130c-4e37-806c-b6bf876c50b0").ToString(),
+        UserId = Convert.ToBase64String(Guid.Parse("ae289084-130c-4e37-806c-b6bf876c50b0").ToByteArray()),
         UserDisplayName = "Christina Kert",
         UserEmail = "christina.kert@fiskaltrust.eu"
     };

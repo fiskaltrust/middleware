@@ -22,7 +22,7 @@ public class StaticNumeratorStorage
     {
         TypeCode = "FS",
         ATCUD = "AAJFJ4VC3W",
-        Identifier = "FSft2025019d",
+        Identifier = "FS ft2025019d",
     };
 
     public static NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
@@ -34,9 +34,9 @@ public class StaticNumeratorStorage
 
     public static NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
     {
-        TypeCode = "FSM",
-        ATCUD = "AAJFJ4VC3W",
-        Identifier = "FSM ft2025019d",
+        TypeCode = "FS",
+        ATCUD = "AAJFJBKFZR",
+        Identifier = "FS ft2025771b",
     };
 
     public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries

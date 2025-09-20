@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.SAFT.CLI;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
@@ -13,14 +14,14 @@ public static class PT_Phase2_CertificationExamples
 
     public static PTUserObject User1ObjectId => new PTUserObject
     {
-        UserId = Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToString(),
+        UserId = Convert.ToBase64String(Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToByteArray()),
         UserDisplayName = "Stefan Kert",
         UserEmail = "stefan.kert@fiskaltrust.eu"
     };
 
     public static PTUserObject User2ObjectId => new PTUserObject
     {
-        UserId = Guid.Parse("ae289084-130c-4e37-806c-b6bf876c50b0").ToString(),
+        UserId = Convert.ToBase64String(Guid.Parse("ae289084-130c-4e37-806c-b6bf876c50b0").ToByteArray()),
         UserDisplayName = "Christina Kert",
         UserEmail = "christina.kert@fiskaltrust.eu"
     };
@@ -494,7 +495,15 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten)
+            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten),
+            ftReceiptCaseData = new ftReceiptCaseDataPayload
+            {
+                PT = new ftReceiptCaseDataPortugalPayload
+                {
+                    Series = "abcd",
+                    Number = 1
+                }
+            }
         };
     }
 
@@ -526,7 +535,15 @@ public static class PT_Phase2_CertificationExamples
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten)
+            ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0001).WithFlag(ReceiptCaseFlags.HandWritten),
+            ftReceiptCaseData = new ftReceiptCaseDataPayload
+            {
+                PT = new ftReceiptCaseDataPortugalPayload
+                {
+                    Series = "abcd",
+                    Number = 2
+                }
+            }
         };
     }
 

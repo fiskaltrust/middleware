@@ -12,6 +12,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
@@ -36,7 +37,7 @@ public class SaftExporter
             AddressDetail = "Desconhecido",
             City = "Desconhecido",
             PostalCode = "Desconhecido",
-            Country = "PT"
+            Country = "Desconhecido"
         }
     };
 
@@ -524,13 +525,6 @@ public class SaftExporter
         }
         var netAmount = grossAmount - taxable;
         var invoiceType = PTMappings.GetInvoiceType(receiptRequest);
-        if ((hashSignature == null || atcudSignature == null))
-        {
-            if (!receipt.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-            {
-                return null;
-            }
-        }
         var customer = GetCustomerData(receiptRequest);
         var invoice = new Invoice
         {
@@ -566,9 +560,9 @@ public class SaftExporter
             }
         };
 
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
         {
-            invoice.HashControl = invoice.HashControl + "-" + invoice.InvoiceNo;
+            invoice.HashControl = invoice.HashControl + "-" + PTMappings.GetInvoiceType(receiptRequest) + "M" + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
         }
         //if (lines.Any(x => x.SettlementAmount.HasValue))
         //{

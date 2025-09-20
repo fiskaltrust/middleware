@@ -54,11 +54,6 @@ public static class PTMappings
             ReceiptCase.InvoiceB2G0x1003 => "FT",
             _ => "FS"
         };
-
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            return type + "M";
-        }
         return type;
     }
 
