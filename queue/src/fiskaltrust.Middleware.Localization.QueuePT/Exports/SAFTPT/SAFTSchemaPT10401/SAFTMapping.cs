@@ -554,6 +554,7 @@ public class SaftExporter
     public Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
+        var receiptResponse = receipt.receiptResponse;
         var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
         if (lines.Count == 0)
         {

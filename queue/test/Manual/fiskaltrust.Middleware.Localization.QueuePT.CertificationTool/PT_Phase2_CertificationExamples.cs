@@ -472,7 +472,7 @@ public static class PT_Phase2_CertificationExamples
     {
         return new ReceiptRequest
         {
-            cbReceiptMoment = ReferenceDate.AddMinutes(28),
+            cbReceiptMoment = new DateTime(2022, 1, 14), // Manual document date from 14-01-2022
             cbReceiptReference = "F/23", // Manual document reference
             cbChargeItems = [
                 new ChargeItem
@@ -481,7 +481,7 @@ public static class PT_Phase2_CertificationExamples
                     Quantity = 1,
                     VATRate = PTVATRates.Normal,
                     ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
-                    Description = "Manual document - Product item"
+                    Description = "Manual document F/23 - Product item"
                 }
             ],
             cbUser = User1ObjectId,
@@ -500,8 +500,8 @@ public static class PT_Phase2_CertificationExamples
             {
                 PT = new ftReceiptCaseDataPortugalPayload
                 {
-                    Series = "abcd",
-                    Number = 1
+                    Series = "F",
+                    Number = 23
                 }
             }
         };
@@ -512,7 +512,7 @@ public static class PT_Phase2_CertificationExamples
     {
         return new ReceiptRequest
         {
-            cbReceiptMoment = ReferenceDate.AddMinutes(29), // Document date for series D #3
+            cbReceiptMoment = new DateTime(2022, 1, 12), // Manual document date from 12-01-2022
             cbReceiptReference = "D/3", // Manual document reference
             cbChargeItems = [
                 new ChargeItem
@@ -540,8 +540,8 @@ public static class PT_Phase2_CertificationExamples
             {
                 PT = new ftReceiptCaseDataPortugalPayload
                 {
-                    Series = "abcd",
-                    Number = 2
+                    Series = "D",
+                    Number = 3
                 }
             }
         };

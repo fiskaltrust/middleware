@@ -119,4 +119,15 @@ public static class SignatureItemFactoryPT
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };
     }
+
+    public static SignatureItem AddManualDocumentIdentification(string series, long number)
+    {
+        return new SignatureItem
+        {
+            Caption = "",
+            Data = $"Cópia do documento original - FSM {series}/{number:D4}",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+        };
+    }
 }

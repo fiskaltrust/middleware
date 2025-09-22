@@ -109,6 +109,15 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
         }
 
+        // Add manual document identification signature for handwritten receipts
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            if (request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) && data.PT is not null && data.PT.Series is not null && data.PT.Number.HasValue)
+            {
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddManualDocumentIdentification(data.PT.Series, data.PT.Number.Value));
+            }
+        }
+
         if (request.ReceiptRequest.cbCustomer is null)
         {
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
