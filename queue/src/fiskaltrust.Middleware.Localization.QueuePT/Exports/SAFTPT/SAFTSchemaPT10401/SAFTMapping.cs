@@ -43,8 +43,53 @@ public class SaftExporter
 
     private Dictionary<string, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> InvoicedProformas { get; } = new Dictionary<string, (ReceiptRequest, ReceiptResponse)>();
 
+    public static bool IsValidPortugueseTaxId(string taxId)
+    {
+        if (string.IsNullOrWhiteSpace(taxId))
+            return false;
+
+        taxId = taxId.Trim().ToUpper();
+        if (taxId.Length != 9 || !taxId.All(char.IsDigit))
+            return false;
+
+        var digits = taxId.Select(c => int.Parse(c.ToString())).ToArray();
+        var validFirstDigits = new[] { 1, 2, 3, 5, 6, 7, 8, 9 };
+        if (!validFirstDigits.Contains(digits[0]))
+            return false;
+
+        var sum = 0;
+        for (var i = 0; i < 8; i++)
+        {
+            sum += digits[i] * (9 - i);
+        }
+
+        var remainder = sum % 11;
+        var expectedCheckDigit = remainder < 2 ? 0 : 11 - remainder;
+
+        return digits[8] == expectedCheckDigit;
+    }
+
+    private static string GetCustomerCountry(MiddlewareCustomer middlewareCustomer)
+    {
+        if (!string.IsNullOrEmpty(middlewareCustomer.CustomerCountry))
+        {
+            return middlewareCustomer.CustomerCountry;
+        }
+
+        if (!string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) && IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
+        {
+            return "PT";
+        }
+        return "Desconhecido";
+    }
+
     public string GetSourceID(ReceiptRequest receiptRequest)
     {
+        if (string.IsNullOrEmpty(receiptRequest.cbUser as string))
+        {
+            return string.Empty;
+        }
+
         var userObject = JsonSerializer.Deserialize<PTUserObject>(JsonSerializer.Serialize(receiptRequest.cbUser))!;
         if (userObject != null && !string.IsNullOrEmpty(userObject.UserId))
         {
@@ -82,7 +127,7 @@ public class SaftExporter
                 AddressDetail = string.IsNullOrEmpty(middlewareCustomer.CustomerStreet) ? "Desconhecido" : middlewareCustomer.CustomerStreet,
                 City = string.IsNullOrEmpty(middlewareCustomer.CustomerCity) ? "Desconhecido" : middlewareCustomer.CustomerCity,
                 PostalCode = string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip,
-                Country = string.IsNullOrEmpty(middlewareCustomer.CustomerCountry) ? "Desconhecido" : middlewareCustomer.CustomerCountry
+                Country = GetCustomerCountry(middlewareCustomer)
             }
         };
         return customer;

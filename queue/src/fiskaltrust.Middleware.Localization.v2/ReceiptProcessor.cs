@@ -35,7 +35,7 @@ public class ReceiptProcessor : IReceiptProcessor
         ProcessCommandResponse? processCommandResponse = null;
         var receiptCase = request.ftReceiptCase.Case();
 
-        foreach (var chargeItem in request.cbChargeItems)
+        foreach (var chargeItem in request?.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
         {
             if (!chargeItem.VATAmount.HasValue)
             {
