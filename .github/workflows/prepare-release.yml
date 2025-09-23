@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - .github/workflows/prepare-release.yml
-      
+      - .github/workflows/**
 jobs:
   prepare-release:
     runs-on: ubuntu-latest
