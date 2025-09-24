@@ -19,21 +19,11 @@ jobs:
 
       - name: Get base version from version.json
         id: get_version
-        run: |
-          VERSION_JSON=$(nbgv get-version -f json)
-          echo "$VERSION_JSON"
-
-          # Extract SimpleVersion (like 1.3.76-ci)
-          SIMPLE_VERSION=$(echo "$VERSION_JSON" | jq -r '.Version')
-          echo "SIMPLE_VERSION=$SIMPLE_VERSION"
-          # Strip '-ci' suffix if present
-          BASE_VERSION=${SIMPLE_VERSION%-ci*}
-
-          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+        run: echo "base_version=$(nbgv get-version -f json | jq -r '.Version')" >> $GITHUB_OUTPUT
 
       - name: Prepare release branch with nbgv
         run: |
-          nbgv prepare-release rc --version ${{ steps.get_version.outputs.base_version }}
+          nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.base_version }}
 
       - name: Push changes
         run: |
