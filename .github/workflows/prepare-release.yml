@@ -24,8 +24,8 @@ jobs:
           echo "$VERSION_JSON"
 
           # Extract SimpleVersion (like 1.3.76-ci)
-          SIMPLE_VERSION=$(echo "$VERSION_JSON" | jq -r '.SimpleVersion')
-
+          SIMPLE_VERSION=$(echo "$VERSION_JSON" | jq -r '.Version')
+          echo "SIMPLE_VERSION=$SIMPLE_VERSION"
           # Strip '-ci' suffix if present
           BASE_VERSION=${SIMPLE_VERSION%-ci*}
 
