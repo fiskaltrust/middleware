@@ -6,6 +6,10 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using System.Linq;
+using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -17,12 +21,12 @@ public class SignProcessor : ISignProcessor
     private readonly Guid _queueId = Guid.Empty;
     private readonly Guid _cashBoxId = Guid.Empty;
     private readonly bool _isSandbox;
-    private readonly QueueStorageProvider _queueStorageProvider;
+    private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
-        QueueStorageProvider queueStorageProvider,
+        IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
         MiddlewareConfiguration configuration)
@@ -93,6 +97,7 @@ public class SignProcessor : ISignProcessor
                 queueItem.ftWorkMoment = DateTime.UtcNow;
                 var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
+
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
                 {
@@ -120,6 +125,8 @@ public class SignProcessor : ISignProcessor
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{receiptRequest.ftReceiptCase:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", _queueId);
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", receiptRequest.cbReceiptReference);
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference);
 
                 if (receiptResponse.ftState.IsState(State.Error))
                 {
@@ -183,6 +190,15 @@ public class SignProcessor : ISignProcessor
         {
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
+
+        if (queue.CountryCode != "GR" && queue.CountryCode != "PT")
+        {
+            receiptResponse.ftStateData = new MiddlewareStateData
+            {
+                PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(request)
+            };
+        }
+
         return await _processRequest(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
     }
 

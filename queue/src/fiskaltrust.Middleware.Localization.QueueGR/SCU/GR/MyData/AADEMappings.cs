@@ -200,6 +200,7 @@ public static class AADEMappings
         {
             ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_95,
             ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_1,
+            ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
         };
@@ -340,11 +341,11 @@ public static class AADEMappings
         {
             if (chargeItem.VATRate == 13m)
             {
-                return MyDataVatCategory.VatRate13_Category2; 
+                return MyDataVatCategory.VatRate13_Category2;
             }
             if (chargeItem.VATRate == 17m)
             {
-                return MyDataVatCategory.VatRate17_Category4; 
+                return MyDataVatCategory.VatRate17_Category4;
             }
             if (chargeItem.VATRate == 6m)
             {
@@ -402,22 +403,45 @@ public static class AADEMappings
     {
         PayItemCase.UnknownPaymentType => MyDataPaymentMethods.Cash,
         PayItemCase.CashPayment => MyDataPaymentMethods.Cash,
-        PayItemCase.NonCash => MyDataPaymentMethods.Cash,
+        PayItemCase.NonCash => -1,
         PayItemCase.CrossedCheque => MyDataPaymentMethods.Check,
         PayItemCase.DebitCardPayment => MyDataPaymentMethods.PosEPos,
         PayItemCase.CreditCardPayment => MyDataPaymentMethods.PosEPos,
         PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => MyDataPaymentMethods.Check,
-        PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
+        PayItemCase.OnlinePayment => -1,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
         PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
-        PayItemCase.SEPATransfer => payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
-        PayItemCase.OtherBankTransfer => -1,
+        PayItemCase.SEPATransfer => GetSEPATransferPaymentType(payItem.Description),
+        PayItemCase.OtherBankTransfer => MyDataPaymentMethods.ForeignPaymentsSpecialAccount,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
         PayItemCase.Grant => -1,
         PayItemCase.TicketRestaurant => -1,
         PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
+
+    private static int GetSEPATransferPaymentType(string description)
+    {
+        if (string.IsNullOrEmpty(description))
+            return MyDataPaymentMethods.DomesticPaymentAccount;
+
+        else if (description.ToUpper().Contains("IRIS"))
+        {
+            return MyDataPaymentMethods.IrisDirectPayments;
+        }
+        else if (description.ToUpper().Contains("RF CODE PAYMENT (WEB BANKING)"))
+        {
+            return MyDataPaymentMethods.WebBanking;
+        }
+        else if (description.ToUpper().Contains("FOREIGN") || description.ToUpper().Contains("INTERNATIONAL"))
+        {
+            return MyDataPaymentMethods.ForeignPaymentsSpecialAccount;
+        }
+        else
+        {
+            return MyDataPaymentMethods.DomesticPaymentAccount;
+        }
+    }
 
     public static bool RequiresCustomerInfo(InvoiceType invoiceType)
     {

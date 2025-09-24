@@ -84,6 +84,8 @@ namespace fiskaltrust.Middleware.Queue
                 }
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{request.ftReceiptCase:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", request.cbReceiptReference);
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", request.cbPreviousReceiptReference);
 #endif
 
                 return response;
@@ -98,7 +100,7 @@ namespace fiskaltrust.Middleware.Queue
         private async Task<ReceiptResponse> InternalSign(ftQueue queue, ReceiptRequest data)
         {
             _logger.LogTrace("SignProcessor.InternalSign called.");
-            if ((data.ftReceiptCase & 0x0000800000000000L) > 0) 
+            if ((data.ftReceiptCase & 0x0000800000000000L) > 0)
             {
                 try
                 {
@@ -116,7 +118,7 @@ namespace fiskaltrust.Middleware.Queue
                         else
                         {
                             return response;
-                        }                                
+                        }
                     }
                 }
                 catch (Exception x)
@@ -201,7 +203,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");

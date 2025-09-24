@@ -45,54 +45,33 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
             }
         }
 
-        ftQueueItem? referencedQueueItem = null;
-        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        var lastReceipt = lastQueueItem is null ? null : new v2.Models.Receipt
         {
-            if (request.ReceiptRequest.cbPreviousReceiptReference.IsGroup)
-            {
-                throw new Exception("cbPreviousReceiptReference cannot be a group reference are not supported.");
-            }
-
-            var referencedQueueItems = await queueItemRepository.GetByReceiptReferenceAsync(request.ReceiptRequest.cbPreviousReceiptReference.SingleValue).ToListAsync();
-            if (!referencedQueueItems.Any())
-            {
-                throw new Exception($"Referenced queue item with reference {request.ReceiptRequest.cbPreviousReceiptReference.SingleValue} not found.");
-            }
-            if (referencedQueueItems.Count > 1)
-            {
-                throw new Exception($"Multiple queue items found with reference {request.ReceiptRequest.cbPreviousReceiptReference.SingleValue}.");
-            }
-            referencedQueueItem = referencedQueueItems.Single();
-        }
-
-        if (request.ReceiptResponse.ftStateData is not null)
-        {
-            throw new Exception("ftStateData must be empty.");
-        }
-
-        request.ReceiptResponse.ftStateData = new MiddlewareState
-        {
-            ES = new MiddlewareQueueESState
-            {
-                LastReceipt = lastQueueItem is null ? null : new LastReceipt
-                {
-                    Request = JsonSerializer.Deserialize<ReceiptRequest>(lastQueueItem.request)!,
-                    Response = JsonSerializer.Deserialize<ReceiptResponse>(lastQueueItem.response)!,
-                }
-            }
+            Request = JsonSerializer.Deserialize<ReceiptRequest>(lastQueueItem.request)!,
+            Response = JsonSerializer.Deserialize<ReceiptResponse>(lastQueueItem.response)!,
         };
+        if (lastReceipt is not null)
+        {
+            lastReceipt.Response.ftStateData = null;
+        }
+
+        var responseStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+        responseStateData.ES = new MiddlewareStateDataES
+        {
+            LastReceipt = lastReceipt
+        };
+
+        request.ReceiptResponse.ftStateData = responseStateData;
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            ReferencedReceiptRequest = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(referencedQueueItem.request)!,
-            ReferencedReceiptResponse = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(referencedQueueItem.response)!,
+            ReceiptResponse = request.ReceiptResponse
         });
 
         try
         {
-            var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement)response.ReceiptResponse.ftStateData!).GetRawText())!;
+            responseStateData = JsonSerializer.Deserialize<MiddlewareStateData>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
             await (await _journalESRepository).InsertAsync(new ftJournalES
             {
                 ftJournalESId = Guid.NewGuid(),

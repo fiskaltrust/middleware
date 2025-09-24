@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using fiskaltrust.Middleware.Localization.QueueES.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 {

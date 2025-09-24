@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
 using Microsoft.Extensions.Logging;
@@ -12,8 +13,10 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         public SwissbitCloudV2SCUConfiguration Configuration { get; } = new SwissbitCloudV2SCUConfiguration()
         {
-            TseSerialNumber = "7eaf677c518fab79fe459bb9b95aac250ee0469905befa6a3a3e58ee49be9a20",
-            TseAccessToken = "c91e197069207f2c65b2048d7be9a5bf"
+            TseSerialNumber = "ce40a6b871ce58588f3003995ab10d64b394d47e62b6c254405d8080bb9ccfbd",
+            TseAccessToken = "eecd2ba410d40299d2a94cdb11d1c05b",
+            Sandbox = true
+
         };
 
         public string TestClientId { get; } = "TestClient";
