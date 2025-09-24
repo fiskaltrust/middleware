@@ -66,7 +66,7 @@ public static class PT_Phase2_CertificationExamples
         CustomerName = "Christoph Kert"
     };
 
-    public static DateTime ReferenceDate = new DateTime(2025, 09, 16, 04, 15, 53);
+    public static DateTime ReferenceDate = new DateTime(2025, 09, 22, 04, 15, 53);
 
     public static ReceiptRequest Case_T6()
     {

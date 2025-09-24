@@ -85,7 +85,7 @@ public class SaftExporter
 
     public string GetSourceID(ReceiptRequest receiptRequest)
     {
-        if (string.IsNullOrEmpty(receiptRequest.cbUser as string))
+        if (receiptRequest.cbUser is string && string.IsNullOrEmpty(receiptRequest.cbUser as string))
         {
             return string.Empty;
         }
@@ -605,6 +605,12 @@ public class SaftExporter
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            invoice.DocumentStatus.InvoiceStatusDate = receiptResponse.ftReceiptMoment;
+            invoice.SystemEntryDate = receiptResponse.ftReceiptMoment;
+        }
 
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
         {
