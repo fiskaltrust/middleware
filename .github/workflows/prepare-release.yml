@@ -23,6 +23,9 @@ jobs:
 
       - name: Prepare release branch with nbgv
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
           nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.base_version }}
 
       - name: Push changes
