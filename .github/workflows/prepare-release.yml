@@ -20,7 +20,11 @@ jobs:
 
       - name: Get base version from version.json
         id: get_version
-        run: echo "base_version=$(nbgv get-version -f json | jq -r '.Version')" >> $GITHUB_OUTPUT
+        run: |
+          BASE=$(nbgv get-version -f json | jq -r '.Version')
+          NEXT=$(echo $BASE | awk -F. -v OFS=. '{$NF++; print}')
+          echo "base_version=$BASE" >> $GITHUB_OUTPUT
+          echo "next_version=$NEXT" >> $GITHUB_OUTPUT
       
       - name: Configure git
         run: |
