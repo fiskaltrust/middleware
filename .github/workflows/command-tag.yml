@@ -1,4 +1,4 @@
-name: tag Package
+name: command tag 
 on:
   repository_dispatch:
     types: [tag-command]
