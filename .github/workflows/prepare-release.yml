@@ -12,6 +12,7 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0 # important for branch creation
 
       - name: Install nbgv
@@ -20,26 +21,24 @@ jobs:
       - name: Get base version from version.json
         id: get_version
         run: echo "base_version=$(nbgv get-version -f json | jq -r '.Version')" >> $GITHUB_OUTPUT
-
-      - name: Prepare release branch with nbgv
+      
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.base_version }}
+      - name: Prepare release branch with nbgv
+        run: nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.base_version }}
 
       - name: Push changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Push release branch changes (-rc version)
+          git checkout release/v${{ steps.get_version.outputs.base_version }}
+          git push origin release/v${{ steps.get_version.outputs.base_version }}
 
           # Push main branch changes (next -ci version)
           git checkout main
           git push origin main
-
-          # Push release branch changes (-rc version)
-          git checkout release/v${{ steps.get_version.outputs.base_version }}
-          git push origin release/v${{ steps.get_version.outputs.base_version }}
 
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
