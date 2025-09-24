@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0 # important for branch creation
 
       - name: Install nbgv
-        run: dotnet tool install -g nbgv
+        run: dotnet tool update -g nbgv
 
       - name: Get base version from version.json
         id: get_version
