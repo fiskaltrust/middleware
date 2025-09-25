@@ -32,7 +32,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"         
 
       - name: Prepare release branch with nbgv
-        run: nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.base_version }}
+        run: nbgv prepare-release rc --baseVersion ${{ steps.get_version.outputs.base_version }}
 
       - name: Push changes
         run: |
