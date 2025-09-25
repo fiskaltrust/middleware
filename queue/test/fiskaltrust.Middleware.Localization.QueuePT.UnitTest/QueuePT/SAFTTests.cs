@@ -91,7 +91,12 @@ public class SAFTTests
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = 1
+            cbUser = new PTUserObject
+            {
+                UserId = "1",
+                UserDisplayName = "Test User",
+                UserEmail = "Test"
+            }
         };
 
         var receiptResponse = new ReceiptResponse
@@ -208,7 +213,12 @@ public class SAFTTests
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = 1
+            cbUser = new PTUserObject
+            {
+                UserId = "1",
+                UserDisplayName = "Test User",
+                UserEmail = "Test"
+            }
         };
 
         var receiptResponse = new ReceiptResponse
