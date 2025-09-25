@@ -55,9 +55,7 @@ jobs:
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          nbgv prepare-release "" --nextVersion $(nbgv get-version -f json | jq -r '.Version')
-          nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite
+          git config user.email "github-actions[bot]@users.noreply.github.com"         
 
       - name: Prepare release branch with nbgv
         run: nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.next_version }} || echo "Version already set"
