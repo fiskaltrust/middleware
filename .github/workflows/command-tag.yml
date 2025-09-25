@@ -50,6 +50,40 @@ jobs:
           ref: ${{ github.event.client_payload.pull_request.head.sha }}
           fetch-depth: 0
 
+      - name: Get base version from version.json
+        id: get_version
+        run: |
+          FULL_VERSION=$(nbgv get-version -f json | jq -r '.NuGetPackageVersion')
+    
+          if [[ "$FULL_VERSION" =~ -rc- ]]; then
+           version=$(nbgv get-version -f json | jq -r '.NuGetPackageVersion' | sed -E 's/(-[a-z]+)-[0-9]+.*$/\1/')
+          else
+           VERSION=$(nbgv get-version -f json | jq -r '.Version')
+          fi
+
+          echo "version=$version" 
+          echo "base_version=$version" >> $GITHUB_OUTPUT
+          
+      - name: Find latest tag and increment
+        id: next_tag       
+        run: |
+            base="queue/SQLite/v${{ steps.get_version.outputs.base_version }}"
+            if [[ "${{ steps.get_version.outputs.base_version }}" != *rc ]]; then
+                next_tag="$base""
+            else
+                # find highest rc tag
+                last_tag=$(git tag --list "$base.*" | sort -V | tail -n 1)
+                if [ -z "$last_tag" ]; then
+                    next_tag="$base.1"
+                else
+                    last_number=$(echo "$last_tag" | sed -E 's/.*rc\.([0-9]+)$/\1/')
+                    next_number=$((last_number+1))
+                    next_tag="$base.$next_number"
+                fi
+            fi
+            echo "next_tag=$next_tag" 
+            echo "next_tag=$next_tag" >> $GITHUB_OUTPUT
+
       - name: Install nbgv
         run: dotnet tool update -g nbgv
 
@@ -60,8 +94,13 @@ jobs:
 
       - name: Create and push tag
         run: |
-          nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }}
-          git push --tags
+          git tag ${{ steps.next_tag.outputs.next_tag }}
+          git push origin ${{ steps.next_tag.outputs.next_tag }}
+
+      # - name: Create and push tag
+      #   run: |
+      #     nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }}
+      #     git push --tags
 
   success:
     needs:
