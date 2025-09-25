@@ -22,9 +22,9 @@ jobs:
         id: get_version
         run: |
           BASE=$(nbgv get-version -f json | jq -r '.Version')
-          version=$(nbgv get-version -f json | jq -r '.SimpleVersion' | sed -E 's/(\.rc)(\.[0-9]+)?$/\1/')
+          version=$(nbgv get-version -f json | jq -r '.SimpleVersion' | sed -E 's/(-[a-z]+)(\.[0-9]+)?$/\1/')
           echo "version=$version" 
-          echo "base_version=$BASE" >> $GITHUB_OUTPUT
+          echo "base_version=$version" >> $GITHUB_OUTPUT
           echo "base_version=$BASE"             
           echo "$(nbgv get-version -f json)"
       - name: Find latest tag and increment
