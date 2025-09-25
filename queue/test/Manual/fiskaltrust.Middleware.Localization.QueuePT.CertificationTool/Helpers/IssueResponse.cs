@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
+﻿namespace fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 
 public class IssueResponse
 {

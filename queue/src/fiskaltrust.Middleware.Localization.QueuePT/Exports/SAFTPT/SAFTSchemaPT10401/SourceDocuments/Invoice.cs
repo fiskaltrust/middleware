@@ -25,7 +25,7 @@ public class Invoice
     public required string Hash { get; set; }
 
     [XmlElement(ElementName = "HashControl")]
-    public required int HashControl { get; set; }
+    public required string HashControl { get; set; }
 
     [XmlElement(ElementName = "Period")]
     public int? Period { get; set; }

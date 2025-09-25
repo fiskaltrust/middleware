@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Constants;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -52,7 +53,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         {
             var series = StaticNumeratorStorage.CreditNoteSeries;
             series.Numerator++;
-            receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
             var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
@@ -62,6 +63,17 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
+
+            if (request.ReceiptRequest.cbCustomer is null)
+            {
+                response.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = "",
+                    Data = $"Consumidor final",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+                });
+            }
             series.LastHash = hash;
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
@@ -69,7 +81,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         {
             var series = StaticNumeratorStorage.InvoiceSeries;
             series.Numerator++;
-            receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
             var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
@@ -82,6 +94,18 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
             }
+
+            if (request.ReceiptRequest.cbCustomer is null)
+            {
+                response.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = "",
+                    Data = $"Consumidor final",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+                });
+            }
+
             series.LastHash = hash;
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }

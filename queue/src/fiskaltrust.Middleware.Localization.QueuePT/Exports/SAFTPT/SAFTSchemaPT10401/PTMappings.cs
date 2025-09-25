@@ -8,28 +8,39 @@ public static class PTMappings
 {
     public static string GetWorkType(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.ftReceiptCase.Case() switch
+        var type = receiptRequest.ftReceiptCase.Case() switch
         {
             _ => "PF"
         };
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            return type + "M";
+        }
+        return type;
     }
 
     public static string GetPaymentType(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.ftReceiptCase.Case() switch
+        var type = receiptRequest.ftReceiptCase.Case() switch
         {
             _ => "RG"
         };
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            return type + "M";
+        }
+        return type;
     }
 
     public static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
+            // Credit notes are not supported to be handwritten?
             return "NC";
         }
-
-        return receiptRequest.ftReceiptCase.Case() switch
+   
+        var type = receiptRequest.ftReceiptCase.Case() switch
         {
             ReceiptCase.UnknownReceipt0x0000 => "FS",
             ReceiptCase.PointOfSaleReceipt0x0001 => "FS",
@@ -43,6 +54,7 @@ public static class PTMappings
             ReceiptCase.InvoiceB2G0x1003 => "FT",
             _ => "FS"
         };
+        return type;
     }
 
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
@@ -62,12 +74,14 @@ public static class PTMappings
 
     public static string GetTaxExemptionCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
     {
+        ChargeItemCaseNatureOfVatPT.Group0x30 => "M06",
         _ => "M16",
     };
 
     public static string GetTaxExemptionReason(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
     {
-        _ => "Isento Artigo 14.  do RITI (ou similar)",
+        ChargeItemCaseNatureOfVatPT.Group0x30 => "Isento artigo 15.º do CIVA",
+        _ => "Isento artigo 14.º do RITI",
     };
 
     public static string GetPaymentMecahnism(PayItem payItem) => payItem.ftPayItemCase.Case() switch

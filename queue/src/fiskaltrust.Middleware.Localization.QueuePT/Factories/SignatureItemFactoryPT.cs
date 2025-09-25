@@ -69,8 +69,8 @@ public static class SignatureItemFactoryPT
     {
         return new SignatureItem
         {
-            Caption = $"{printHash} - Processado por programa certificado",
-            Data = $"No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
+            Caption = $"-----",
+            Data = $"{printHash} - Processado por programa certificado" + $" No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
         };
@@ -82,7 +82,7 @@ public static class SignatureItemFactoryPT
         {
             Caption = "Hash",
             Data = hash,
-            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.AfterHeader),
             ftSignatureType = SignatureTypePT.Hash.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize),
         };
     }
@@ -91,8 +91,8 @@ public static class SignatureItemFactoryPT
     {
         return new SignatureItem
         {
-            Caption = $"Referencia: Proforma {receiptReferences[0].Item2.ftReceiptIdentification}",
-            Data = $"",
+            Caption = $"",
+            Data = $"Referencia: Proforma {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };
@@ -102,8 +102,8 @@ public static class SignatureItemFactoryPT
     {
         return new SignatureItem
         {
-            Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification}",
-            Data = $"Rasão: Devolução",
+            Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
+            Data = $"Razão: Devolução",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };
@@ -115,6 +115,17 @@ public static class SignatureItemFactoryPT
         {
             Caption = "",
             Data = "Este documento não serve de fatura",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+        };
+    }
+
+    public static SignatureItem AddManualDocumentIdentification(string series, long number)
+    {
+        return new SignatureItem
+        {
+            Caption = "",
+            Data = $"Cópia do documento original - FSM {series}/{number:D4}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };

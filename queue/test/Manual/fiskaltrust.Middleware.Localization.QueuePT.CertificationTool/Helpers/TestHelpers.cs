@@ -1,11 +1,14 @@
 ﻿using System.IO.Pipelines;
 using System.Net.Http.Json;
 using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
+using FluentAssertions.Primitives;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
+namespace fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 
 public class TestHelpers
 {
@@ -37,12 +40,12 @@ public class TestHelpers
         }
     }
 
-    public static async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public static async Task<IssueResponse?> SendIssueAsync(Guid cashBoxId, string accessToken, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/issue");
-        request.Headers.Add("x-cashbox-id", Constants.CASHBOX_CERTIFICATION_ID);
-        request.Headers.Add("x-cashbox-accesstoken", Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN);
+        request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
+        request.Headers.Add("x-cashbox-accesstoken", accessToken);
         var data = JsonSerializer.Serialize(new
         {
             ReceiptRequest = receiptRequest,
@@ -55,23 +58,13 @@ public class TestHelpers
         return await response.Content.ReadFromJsonAsync<IssueResponse>();
     }
 
-    public static async Task StoreDataAsync(string folder, string casename, long ticks, Func<string, Task<(ContentType contentType, PipeReader reader)>> journalMethod, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public static async Task StoreDataAsync(Guid cashBoxId, string accessToken, string folder, string casename, long ticks, byte[] journalData, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
-        var result = await SendIssueAsync(receiptRequest, receiptResponse);
-
+        var result = await SendIssueAsync(cashBoxId, accessToken, receiptRequest, receiptResponse);
         var pdfdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf");
         var pdfcopydata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf&copy=true");
         var pngdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png");
         var pngcopydata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png&copy=true");
-
-        var xmlData = await journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
-        {
-            ftJournalType = 0x5054_2000_0000_0001,
-            From = ticks
-        }));
-        // read data from pipereader
-
-
         var base_path = Path.Combine(folder);
         if (!Directory.Exists(base_path))
         {
@@ -85,13 +78,10 @@ public class TestHelpers
         {
             WriteIndented = true
         }));
-
-
         File.WriteAllBytes($"{base_path}/{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.pdf", await pdfcopydata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.png", await pngcopydata.Content.ReadAsByteArrayAsync());
-        //File.WriteAllText($"{base_path}/{casename}_saft.xml", xmlData.reader.);
+        File.WriteAllText($"{base_path}/{casename}_saft.xml", Encoding.GetEncoding("windows-1252").GetString(journalData), Encoding.GetEncoding("windows-1252"));
     }
-
 }

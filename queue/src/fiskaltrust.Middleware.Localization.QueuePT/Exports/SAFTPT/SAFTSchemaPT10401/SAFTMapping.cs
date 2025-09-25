@@ -12,6 +12,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
@@ -36,11 +37,66 @@ public class SaftExporter
             AddressDetail = "Desconhecido",
             City = "Desconhecido",
             PostalCode = "Desconhecido",
-            Country = "PT"
+            Country = "Desconhecido"
         }
     };
 
     private Dictionary<string, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> InvoicedProformas { get; } = new Dictionary<string, (ReceiptRequest, ReceiptResponse)>();
+
+    public static bool IsValidPortugueseTaxId(string taxId)
+    {
+        if (string.IsNullOrWhiteSpace(taxId))
+            return false;
+
+        taxId = taxId.Trim().ToUpper();
+        if (taxId.Length != 9 || !taxId.All(char.IsDigit))
+            return false;
+
+        var digits = taxId.Select(c => int.Parse(c.ToString())).ToArray();
+        var validFirstDigits = new[] { 1, 2, 3, 5, 6, 7, 8, 9 };
+        if (!validFirstDigits.Contains(digits[0]))
+            return false;
+
+        var sum = 0;
+        for (var i = 0; i < 8; i++)
+        {
+            sum += digits[i] * (9 - i);
+        }
+
+        var remainder = sum % 11;
+        var expectedCheckDigit = remainder < 2 ? 0 : 11 - remainder;
+
+        return digits[8] == expectedCheckDigit;
+    }
+
+    private static string GetCustomerCountry(MiddlewareCustomer middlewareCustomer)
+    {
+        if (!string.IsNullOrEmpty(middlewareCustomer.CustomerCountry))
+        {
+            return middlewareCustomer.CustomerCountry;
+        }
+
+        if (!string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) && IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
+        {
+            return "PT";
+        }
+        return "Desconhecido";
+    }
+
+    public string GetSourceID(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbUser is string && string.IsNullOrEmpty(receiptRequest.cbUser as string))
+        {
+            return string.Empty;
+        }
+
+        var userObject = JsonSerializer.Deserialize<PTUserObject>(JsonSerializer.Serialize(receiptRequest.cbUser))!;
+        if (userObject != null && !string.IsNullOrEmpty(userObject.UserId))
+        {
+            return userObject.UserId;
+        }
+        return JsonSerializer.Serialize(receiptRequest.cbUser);
+    }
 
     public Customer GetCustomerData(ReceiptRequest receiptRequest)
     {
@@ -64,15 +120,14 @@ public class SaftExporter
         {
             CustomerID = middlewareCustomer.CustomerId,
             AccountID = "Desconhecido",
-            CustomerTaxID = middlewareCustomer.CustomerVATId ?? "999999990",
-            CompanyName = middlewareCustomer.CustomerName,
+            CompanyName = string.IsNullOrEmpty(middlewareCustomer.CustomerName) ? "Desconhecido" : middlewareCustomer.CustomerName,
+            CustomerTaxID = string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) ? "999999990" : middlewareCustomer.CustomerVATId,
             BillingAddress = new BillingAddress
             {
-                StreetName = middlewareCustomer.CustomerStreet,
-                AddressDetail = $"{middlewareCustomer.CustomerName} {middlewareCustomer.CustomerStreet}  {middlewareCustomer.CustomerZip} {middlewareCustomer.CustomerCity}",
-                City = middlewareCustomer.CustomerCity,
-                PostalCode = middlewareCustomer.CustomerZip,
-                Country = middlewareCustomer.CustomerCountry ?? "PT",
+                AddressDetail = string.IsNullOrEmpty(middlewareCustomer.CustomerStreet) ? "Desconhecido" : middlewareCustomer.CustomerStreet,
+                City = string.IsNullOrEmpty(middlewareCustomer.CustomerCity) ? "Desconhecido" : middlewareCustomer.CustomerCity,
+                PostalCode = string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip,
+                Country = GetCustomerCountry(middlewareCustomer)
             }
         };
         return customer;
@@ -92,7 +147,7 @@ public class SaftExporter
         using var writer = XmlWriter.Create(memoryStream, settings);
         serializer.Serialize(writer, data);
         memoryStream.Position = 0;
-        return Encoding.UTF8.GetString(memoryStream.ToArray());
+        return Encoding.GetEncoding("windows-1252").GetString(memoryStream.ToArray());
     }
 
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
@@ -327,7 +382,7 @@ public class SaftExporter
                     TaxPercentage = 5.000000m,
                 }
         };
-        var lines = receipt.SelectMany(x => x.receiptRequest.GetGroupedChargeItems().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
+        var lines = receipt.SelectMany(x => x.receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
         var taxTableEntries = lines.Select(x => staticTaxes.Single(t => t.TaxType == x.Tax.TaxType && t.TaxCountryRegion == x.Tax.TaxCountryRegion && t.TaxCode == x.Tax.TaxCode && t.TaxPercentage == x.Tax.TaxPercentage)).DistinctBy(x => x.TaxCode).ToList();
         return new TaxTable
         {
@@ -371,13 +426,13 @@ public class SaftExporter
     public WorkDocument? GetWorkDocumentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = receiptRequest.GetGroupedChargeItems().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
+        var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
         }
 
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
+        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
@@ -391,21 +446,21 @@ public class SaftExporter
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new WorkDocument
         {
-            DocumentNumber = receipt.receiptResponse.ftReceiptIdentification,
+            DocumentNumber = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
             DocumentStatus = new WorkDocumentStatus
             {
                 WorkStatus = "N",
                 WorkStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
-                SourceBilling = "P",
+                SourceID = GetSourceID(receiptRequest),
+                SourceBilling = GetSourceBilling(receiptRequest),
             },
             Hash = hashSignature.Data,
             HashControl = 1,
             Period = receiptRequest.cbReceiptMoment.Month,
             WorkDate = receiptRequest.cbReceiptMoment,
             WorkType = PTMappings.GetWorkType(receiptRequest),
-            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             Line = lines,
             CustomerID = customer.CustomerID,
@@ -417,11 +472,12 @@ public class SaftExporter
             }
         };
 
-        if (InvoicedProformas.ContainsKey(receipt.receiptResponse.ftReceiptIdentification))
+        if (InvoicedProformas.ContainsKey(receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()))
         {
+            var request = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest;
             workDocument.DocumentStatus.WorkStatus = "F";
-            workDocument.DocumentStatus.WorkStatusDate = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification].receiptRequest.cbReceiptMoment;
-            workDocument.DocumentStatus.SourceID = JsonSerializer.Serialize(InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification].receiptRequest.cbUser);
+            workDocument.DocumentStatus.WorkStatusDate = request.cbReceiptMoment;
+            workDocument.DocumentStatus.SourceID = GetSourceID(request);
             workDocument.DocumentStatus.Reason = "Faturado";
         }
 
@@ -432,7 +488,7 @@ public class SaftExporter
     {
         var receiptRequest = receipt.receiptRequest;
         var payItem = receiptRequest.cbPayItems.First();
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
+        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
@@ -447,14 +503,14 @@ public class SaftExporter
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new PaymentDocument
         {
-            PaymentRefNo = receipt.receiptResponse.ftReceiptIdentification,
+            PaymentRefNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
             DocumentStatus = new PaymentDocumentStatus
             {
                 PaymentStatus = "N",
                 PaymentStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
-                SourcePayment = "P",
+                SourceID = GetSourceID(receiptRequest),
+                SourcePayment = GetSourcePayment(receiptRequest),
             },
             Period = receiptRequest.cbReceiptMoment.Month,
             TransactionDate = receiptRequest.cbReceiptMoment,
@@ -464,7 +520,7 @@ public class SaftExporter
                 PaymentAmount = payItem.Amount,
                 PaymentDate = receiptRequest.cbReceiptMoment
             },
-            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             Line = [
                 new PaymentLine
@@ -487,7 +543,7 @@ public class SaftExporter
             var referencedReceiptReference = ((JsonElement) receipt.receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             workDocument.Line[0].SourceDocumentID = new SourceDocument
             {
-                OriginatingON = referencedReceiptReference!.ftReceiptIdentification,
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
                 InvoiceDate = receiptRequest.cbReceiptMoment
             };
         }
@@ -498,37 +554,37 @@ public class SaftExporter
     public Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = receiptRequest.GetGroupedChargeItems().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
+        var receiptResponse = receipt.receiptResponse;
+        var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
         }
 
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
-        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
+        var taxable = receiptRequest.cbChargeItems.Sum(x => (x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)) ? x.GetVATAmount() * -1 : x.GetVATAmount());
+        var grossAmount = receiptRequest.cbChargeItems.Sum(x => (x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
-        atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
+        if (atcudSignature != null)
+        {
+            atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
+        }
         var netAmount = grossAmount - taxable;
         var invoiceType = PTMappings.GetInvoiceType(receiptRequest);
-        if (hashSignature == null || atcudSignature == null)
-        {
-            return null;
-        }
         var customer = GetCustomerData(receiptRequest);
         var invoice = new Invoice
         {
-            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification,
-            ATCUD = atcudSignature.Data,
+            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            ATCUD = atcudSignature?.Data ?? "",
             DocumentStatus = new InvoiceDocumentStatus
             {
                 InvoiceStatus = "N",
                 InvoiceStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
-                SourceBilling = "P",
+                SourceID = GetSourceID(receiptRequest),
+                SourceBilling = GetSourceBilling(receiptRequest),
             },
-            Hash = hashSignature.Data,
-            HashControl = 1,
+            Hash = hashSignature?.Data ?? "",
+            HashControl = "1",
             Period = receiptRequest.cbReceiptMoment.Month,
             InvoiceDate = receiptRequest.cbReceiptMoment,
             InvoiceType = PTMappings.GetInvoiceType(receiptRequest),
@@ -538,7 +594,7 @@ public class SaftExporter
                 CashVATSchemeIndicator = 0,
                 ThirdPartiesBillingIndicator = 0,
             },
-            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             Line = lines,
             CustomerID = customer.CustomerID,
@@ -549,6 +605,17 @@ public class SaftExporter
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            invoice.DocumentStatus.InvoiceStatusDate = receiptResponse.ftReceiptMoment;
+            invoice.SystemEntryDate = receiptResponse.ftReceiptMoment;
+        }
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
+        {
+            invoice.HashControl = invoice.HashControl + "-" + PTMappings.GetInvoiceType(receiptRequest) + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
+        }
         //if (lines.Any(x => x.SettlementAmount.HasValue))
         //{
         //    invoice.DocumentTotals.Settlement = new Settlement
@@ -556,14 +623,32 @@ public class SaftExporter
         //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
         //    };
         //}
-        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => GetPayment(receiptRequest, x)).ToList();
+        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, x)).ToList();
         return invoice;
+    }
+
+    private static string GetSourcePayment(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            return "M";
+        }
+        return "P";
+    }
+
+    private static string GetSourceBilling(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            return "M";
+        }
+        return "P";
     }
 
     public Payment GetPayment(ReceiptRequest receiptRequest, PayItem payItem)
     {
         var amount = payItem.Amount;
-        if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund))
+        if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             amount *= -1;
         }
@@ -588,11 +673,11 @@ public class SaftExporter
 
 
         var grossAmount = chargeItemData.Amount;
-        var vatAmount = chargeItem.chargeItem.VATAmount ?? 0.0m;
+        var vatAmount = chargeItem.chargeItem.GetVATAmount();
         var netAmount = grossAmount - vatAmount;
 
         var grossAmountModifiers = chargeItem.modifiers.Sum(x => x.Amount);
-        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m);
+        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.GetVATAmount());
         var netAmountModifiers = grossAmountModifiers - vatAmountModifiers;
         if (netAmountModifiers < 0)
         {
@@ -600,7 +685,7 @@ public class SaftExporter
         }
         var netLinePrice = netAmount - netAmountModifiers;
         var quantity = chargeItemData.Quantity;
-        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund))
+        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             netLinePrice *= -1;
             quantity *= -1;
@@ -635,7 +720,7 @@ public class SaftExporter
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.References = new References
             {
-                Reference = referencedReceiptReference!.ftReceiptIdentification,
+                Reference = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
                 Reason = "Devolução"
             };
             line.DebitAmount = Helpers.CreateMonetaryValue(netLinePrice);
@@ -650,12 +735,27 @@ public class SaftExporter
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.OrderReferences = new OrderReferences
             {
-                OriginatingON = referencedReceiptReference!.ftReceiptIdentification,
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
                 OrderDate = referencedReceiptReference!.ftReceiptMoment
             };
-            if (!InvoicedProformas.ContainsKey(referencedReceiptReference!.ftReceiptIdentification))
+            if (!InvoicedProformas.ContainsKey(referencedReceiptReference!.ftReceiptIdentification.Split("#").Last()))
             {
-                InvoicedProformas.Add(referencedReceiptReference.ftReceiptIdentification, (receiptRequest, receiptResponse));
+                InvoicedProformas.Add(referencedReceiptReference.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+            }
+        }
+
+
+        if (PTMappings.GetInvoiceType(receiptRequest) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
+        {
+            var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
+            line.OrderReferences = new OrderReferences
+            {
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
+                OrderDate = referencedReceiptReference!.ftReceiptMoment
+            };
+            if (!InvoicedProformas.ContainsKey(referencedReceiptReference!.ftReceiptIdentification.Split("#").Last()))
+            {
+                InvoicedProformas.Add(referencedReceiptReference.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
             }
         }
 
