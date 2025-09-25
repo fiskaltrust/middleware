@@ -37,7 +37,7 @@ jobs:
         run: |
             base="queue/SQLite/v${{ steps.get_version.outputs.base_version }}"
             if [[ "${{ steps.get_version.outputs.base_version }}" != *rc ]]; then
-                next_tag="$base""
+                next_tag="$base"
             else
                 # find highest rc tag
                 last_tag=$(git tag --list "$base.*" | sort -V | tail -n 1)
