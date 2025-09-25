@@ -25,13 +25,32 @@ jobs:
           NEXT=$(echo $BASE | awk -F. -v OFS=. '{$NF++; print}')
           echo "base_version=$BASE" >> $GITHUB_OUTPUT
           echo "next_version=$NEXT" >> $GITHUB_OUTPUT
+      - name: Get base version from version.json
+        id: base_version
+        run: |
+         version=$(nbgv get-version -f json | jq -r '.SimpleVersion')
+         echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Find latest tag and increment
+        id: next_tag
+        run: |
+            base="queue/SQLite/v${{ steps.base_version.outputs.version }}"
+            # find highest rc tag
+            last_tag=$(git tag --list "$base.*" | sort -V | tail -n 1)
+            if [ -z "$last_tag" ]; then
+                next_tag="$base.1"
+            else
+                last_number=$(echo "$last_tag" | sed -E 's/.*rc\.([0-9]+)$/\1/')
+                next_number=$((last_number+1))
+                next_tag="$base.$next_number"
+            fi
+            echo "next_tag=$next_tag" 
 
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          echo "release_branch=$BRANCH" 
+          nbgv prepare-release "" --nextVersion $(nbgv get-version -f json | jq -r '.Version')
           nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite
 
       - name: Prepare release branch with nbgv
