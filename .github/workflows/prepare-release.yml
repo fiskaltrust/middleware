@@ -22,7 +22,7 @@ jobs:
         id: get_version
         run: |
           BASE=$(nbgv get-version -f json | jq -r '.Version')
-          version=$(nbgv get-version -f json | jq -r '.NuGetPackageVersion' | sed -E 's/(-[a-z]+)(\.[0-9]+)?$/\1/')
+          version=$(nbgv get-version -f json | jq -r '.NuGetPackageVersion' | sed -E 's/(-[a-z]+)-[0-9]+.*$/\1/')
           echo "version=$version" 
           echo "base_version=$version" >> $GITHUB_OUTPUT
           echo "base_version=$BASE"             
