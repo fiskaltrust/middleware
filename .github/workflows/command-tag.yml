@@ -43,6 +43,7 @@ jobs:
     
   tag:
     runs-on: ubuntu-latest
+    needs: [meta]
     steps:
       - uses: actions/checkout@v4
         with:
