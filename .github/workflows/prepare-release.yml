@@ -25,11 +25,14 @@ jobs:
           NEXT=$(echo $BASE | awk -F. -v OFS=. '{$NF++; print}')
           echo "base_version=$BASE" >> $GITHUB_OUTPUT
           echo "next_version=$NEXT" >> $GITHUB_OUTPUT
-      
+
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "release_branch=$BRANCH" 
+          nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite
 
       - name: Prepare release branch with nbgv
         run: nbgv prepare-release rc --nextVersion ${{ steps.get_version.outputs.next_version }} || echo "Version already set"
