@@ -22,13 +22,15 @@ jobs:
         id: get_version
         run: |
           BASE=$(nbgv get-version -f json | jq -r '.Version')
+          version=$(nbgv get-version -f json | jq -r '.SimpleVersion' | sed -E 's/(\.rc)(\.[0-9]+)?$/\1/')
+          echo "version=$version" 
           echo "base_version=$BASE" >> $GITHUB_OUTPUT
           echo "base_version=$BASE"             
           echo "$(nbgv get-version -f json)"
       - name: Find latest tag and increment
         id: next_tag
         run: |
-            base="queue/SQLite/v${{ steps.base_version.outputs.base_version }}-rc"
+            base="queue/SQLite/v${{ steps.get_version.outputs.base_version }}-rc"
             # find highest rc tag
             last_tag=$(git tag --list "$base.*" | sort -V | tail -n 1)
             if [ -z "$last_tag" ]; then
