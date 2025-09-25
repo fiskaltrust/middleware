@@ -107,26 +107,26 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 return Helpers.CreateResponse(await PerformDailyCosing(request.ReceiptResponse));
             }
-   
+
             if (request.ReceiptRequest.IsReprint())
             {
                 return await ProcessPerformReprint(request);
             }
 
-            if (receiptCase == (long)ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
+            if (receiptCase == (long) ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
             }
 
-            if (receiptCase == (long)ITReceiptCases.DeliveryNote0x0005)
+            if (receiptCase == (long) ITReceiptCases.DeliveryNote0x0005)
             {
                 return Helpers.CreateResponse(await PerformProtocolReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             }
 
             switch (receiptCase)
             {
-                case (long)ITReceiptCases.UnknownReceipt0x0000:
-                case (long)ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long) ITReceiptCases.UnknownReceipt0x0000:
+                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
                     return Helpers.CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             }
             request.ReceiptResponse.SetReceiptResponseErrored($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported by Epson RT Printer.");
@@ -451,23 +451,42 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     private async Task<ProcessResponse> ProcessRefundReceipt(ProcessRequest request)
     {
-        var referenceZNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
-        var referenceDocNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
-        if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
+        var referenceZNumberString = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
+        var referenceDocNumberString = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
+        var referenceDateTimeString = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
+        string referenceSerialnumber;
+        DateTime referenceDateTime;
+        if (string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
         {
-            request.ReceiptResponse.SetReceiptResponseErrored("Cannot refund receipt without references.");
-            return new ProcessResponse
+            // Use default values for unreferenced refunds
+            referenceZNumberString = "0000";
+            referenceDocNumberString = "0000";
+            referenceDateTime = request.ReceiptRequest.cbReceiptMoment;
+            referenceSerialnumber = "ND";
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString) || string.IsNullOrEmpty(referenceDateTimeString))
             {
-                ReceiptResponse = request.ReceiptResponse
-            };
+                request.ReceiptResponse.SetReceiptResponseErrored("Cannot refund receipt without references.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(_serialnr))
+                {
+                    _ = await GetRTInfoAsync();
+                }
+
+                referenceSerialnumber = _serialnr;
+                referenceDateTime = DateTime.Parse(referenceDateTimeString);
+            }
         }
 
-        if (string.IsNullOrEmpty(_serialnr))
-        {
-            _ = await GetRTInfoAsync();
-        }
-        var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr);
+        var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumberString), long.Parse(referenceZNumberString), referenceDateTime, referenceSerialnumber);
         try
         {
             var data = SoapSerializer.Serialize(content);
@@ -500,9 +519,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocType = "REFUND",
                 RTCodiceLotteria = "",
                 RTCustomerID = "", // Todo dread customerid from data
-                RTReferenceZNumber = long.Parse(referenceZNumber),
-                RTReferenceDocNumber = long.Parse(referenceDocNumber),
-                RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
+                RTReferenceZNumber = long.Parse(referenceZNumberString),
+                RTReferenceDocNumber = long.Parse(referenceDocNumberString),
+                RTReferenceDocMoment = referenceDateTime
             };
             request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
