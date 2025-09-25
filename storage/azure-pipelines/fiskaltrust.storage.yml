@@ -41,6 +41,12 @@ jobs:
           Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
         displayName: Set NuGet feed
 
+      - task: UseDotNet@2
+        displayName: "Use .NET 6 SDK"
+        inputs:
+          packageType: "sdk"
+          version: "6.x"
+
       - task: DotNetCoreCLI@2
         inputs:
           command: "restore"
@@ -73,7 +79,7 @@ jobs:
             storage/src/**/*.dll
 
       - script: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
+          dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.3.11
           reportgenerator -reports:$(Build.SourcesDirectory)/storage/test/**/coverage.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
         displayName: Create Code coverage report
         workingDirectory: "/"

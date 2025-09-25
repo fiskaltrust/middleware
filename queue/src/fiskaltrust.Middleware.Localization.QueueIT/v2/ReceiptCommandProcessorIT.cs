@@ -59,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
-            if (request.ReceiptRequest.IsVoid() || request.ReceiptRequest.IsRefund())
+            if ((request.ReceiptRequest.IsVoid() || request.ReceiptRequest.IsRefund()) && !string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
             {
                 receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, receiptRequest, queueItem, receiptResponse);
                 if (receiptResponse.HasFailed())
