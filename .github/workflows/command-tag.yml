@@ -58,7 +58,7 @@ jobs:
           if [[ "$FULL_VERSION" =~ -rc- ]]; then
            version=$(nbgv get-version -f json | jq -r '.NuGetPackageVersion' | sed -E 's/(-[a-z]+)-[0-9]+.*$/\1/')
           else
-           VERSION=$(nbgv get-version -f json | jq -r '.Version')
+           version=$(nbgv get-version -f json | jq -r '.Version')
           fi
 
           echo "version=$version" 
