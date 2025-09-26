@@ -32,9 +32,13 @@ jobs:
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
 
-            version=${release_branch#release/v}
+            version=${$BRANCH#release/v}
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
+
+            nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }}
+            CURRENT_VERSION=$(nbgv get-version -f json | jq -r '.Version')
+            nbgv prepare-release "" --nextVersion "$CURRENT_VERSION"
 
       - name: Push changes
         run: |
