@@ -32,7 +32,7 @@ jobs:
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
 
-            version=${$BRANCH#release/v}
+            version=${BRANCH#release/v}
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
 
