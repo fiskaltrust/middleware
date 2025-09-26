@@ -1,12 +1,58 @@
 name: Prepare Release
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
   pull_request:
-    paths:
+      paths:
        - .github/workflows/prepare-release.yml   
 jobs:
-  noop:
+  prepare-release:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Base workflow registered."
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0 
+
+      - name: Install nbgv
+        run: dotnet tool update -g nbgv             
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com" 
+
+      - name: Prepare release branch with nbgv
+        id: prepare-release
+        run: |
+            output=$(nbgv prepare-release rc)         
+            echo "$output"
+            BRANCH=$(echo "$output" | grep -oE 'release/[^ ]+')
+            echo "release_branch=$BRANCH"
+            echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
+
+            version=${BRANCH#release/v}
+            echo "release_version=$version"
+            echo "release_version=$version" >> $GITHUB_OUTPUT
+
+      - name: Push changes
+        run: |
+          # Push release branch changes (-rc version)
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          git push origin ${{ steps.prepare-release.outputs.release_branch }}
+
+          # Push main branch changes (next -ci version)
+          git checkout main
+          git push origin main
+
+      - name: Create Pull Request for release branch
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: ${{ steps.prepare-release.outputs.release_branch }}
+          base: main
+          title: "Prepare release v${{ steps.prepare-release.outputs.release_version }}"
+          body: |
+            This PR prepares the release branch for version `${{ steps.prepare-release.outputs.release_version }}`.
+            - Sets release branch version to `${{ steps.prepare-release.outputs.release_version }}-rc`
+            - Bumps main to next `-ci` version

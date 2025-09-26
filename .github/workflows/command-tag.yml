@@ -1,4 +1,4 @@
-name: command tag
+name: command tag 
 on:
   repository_dispatch:
     types: [tag-command]
@@ -43,11 +43,12 @@ jobs:
     
   tag:
     runs-on: ubuntu-latest
+    needs: [meta]
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.client_payload.pull_request.head.sha }}
-          fetch-depth: 0
+          fetch-depth: 0 
 
       - name: Install nbgv
         run: dotnet tool update -g nbgv
