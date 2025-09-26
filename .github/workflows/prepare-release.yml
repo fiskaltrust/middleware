@@ -23,7 +23,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com" 
           CURRENT_VERSION=$(nbgv get-version -f json | jq -r '.Version')
-            nbgv set-version "$CURRENT_VERSION"
+            output=$(nbgv set-version "$CURRENT_VERSION")
 
       - name: Prepare release branch with nbgv
         id: prepare-release
@@ -38,7 +38,7 @@ jobs:
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
 
-            nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }}
+            nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite
 
       - name: Push changes
         run: |
