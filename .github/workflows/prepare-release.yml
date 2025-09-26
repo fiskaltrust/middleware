@@ -22,6 +22,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com" 
+          CURRENT_VERSION=$(nbgv get-version -f json | jq -r '.Version')
+            nbgv prepare-release "" --nextVersion "$CURRENT_VERSION"
 
       - name: Prepare release branch with nbgv
         id: prepare-release
@@ -36,9 +38,7 @@ jobs:
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
 
-            
-            CURRENT_VERSION=$(nbgv get-version -f json | jq -r '.Version')
-            nbgv prepare-release "" --nextVersion "$CURRENT_VERSION"
+            nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }}
 
       - name: Push changes
         run: |
