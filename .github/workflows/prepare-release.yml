@@ -27,7 +27,7 @@ jobs:
         id: prepare-release
         run: |
             output = $(nbgv prepare-release rc)         
-            echo "output"
+            echo "$output"
             BRANCH=$(echo "output" | grep -oE 'release/[^ ]+')
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
