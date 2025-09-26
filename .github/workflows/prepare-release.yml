@@ -16,15 +16,15 @@ jobs:
           fetch-depth: 0 # important for branch creation
 
       - name: Install nbgv
-        run: dotnet tool update -g nbgv
-
-      - name: Prepare release branch with nbgv
-        run: nbgv prepare-release rc 
+        run: dotnet tool update -g nbgv             
 
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com" 
+
+      - name: Prepare release branch with nbgv
+        run: nbgv prepare-release rc
 
       - name: Push changes
         run: |
