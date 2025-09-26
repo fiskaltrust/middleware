@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-          fetch-depth: 0 # important for branch creation
+          fetch-depth: 0 
 
       - name: Install nbgv
         run: dotnet tool update -g nbgv             
@@ -24,13 +24,23 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com" 
 
       - name: Prepare release branch with nbgv
-        run: nbgv prepare-release rc
+        id: prepare-release
+        run: |
+            output = nbgv prepare-release rc            
+            echo "output"
+            BRANCH=$(echo "output" | grep -oE 'release/[^ ]+')
+            echo "release_branch=$BRANCH"
+            echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
+
+            version=$(echo "output" | grep -oE 'Version [0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9\.]+)?' | awk '{print $2}')
+            echo "release_version=$version"
+            echo "release_version=$version" >> $GITHUB_OUTPUT
 
       - name: Push changes
         run: |
           # Push release branch changes (-rc version)
-          git checkout release/v${{ steps.get_version.outputs.base_version }}
-          git push origin release/v${{ steps.get_version.outputs.base_version }}
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
           # Push main branch changes (next -ci version)
           git checkout main
@@ -39,10 +49,10 @@ jobs:
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: release/v${{ steps.get_version.outputs.base_version }}
+          branch: ${{ steps.prepare-release.outputs.release_branch }}
           base: main
-          title: "Prepare release v${{ steps.get_version.outputs.base_version }}"
+          title: "Prepare release v${{ steps.prepare-release.outputs.release_version }}"
           body: |
-            This PR prepares the release branch for version `${{ steps.get_version.outputs.base_version }}`.
-            - Sets release branch version to `${{ steps.get_version.outputs.base_version }}-rc`
+            This PR prepares the release branch for version `${{ steps.prepare-release.outputs.release_version }}`.
+            - Sets release branch version to `${{ steps.prepare-release.outputs.release_version }}-rc`
             - Bumps main to next `-ci` version
