@@ -1,4 +1,4 @@
-using System.Net.Mime;
+﻿using System.Net.Mime;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -25,6 +25,7 @@ class CashBoxBuilder
     private readonly ICashBoxBuilder _cashBoxBuilder;
     public string Market { get => _cashBoxBuilder.Market; }
     public Guid CashBoxId { get; private init; }
+    public Guid PosSystemId { get; private init; }
     public Guid QueueId { get; private init; }
     public Guid ScuId { get; private init; }
 
@@ -36,6 +37,7 @@ class CashBoxBuilder
         _cashBoxBuilder = cashBoxBuilder;
 
         CashBoxId = Guid.NewGuid();
+        PosSystemId = Guid.NewGuid();
         QueueId = Guid.NewGuid();
         ScuId = Guid.NewGuid();
 
@@ -81,7 +83,7 @@ class CashBoxBuilder
         });
     }
 
-    public (Func<EchoRequest, Task<EchoResponse?>> echo, Func<ReceiptRequest, Task<ReceiptResponse?>> sign, Func<JournalRequest, Task<(ContentType contentType, Stream response)>> journal) Build()
+    public MiddlewareMethods Build()
     {
 
         var bootstrapper = _cashBoxBuilder.CreateBootStrapper(new ftCashBoxConfiguration
@@ -89,14 +91,29 @@ class CashBoxBuilder
             ftQueues = [_configuration]
         }.NewtonsoftJsonWarp()!.ftQueues[0], QueueId);
 
-        return (
-            bootstrapper.RegisterForEcho().JsonWarpingAsync<EchoRequest, EchoResponse>(),
-            bootstrapper.RegisterForSign().JsonWarpingAsync<ReceiptRequest, ReceiptResponse>(),
-            async (JournalRequest request) =>
+        return new MiddlewareMethods {
+            Echo = bootstrapper.RegisterForEcho().JsonWarpingAsync<EchoRequest, EchoResponse>(),
+            Sign = bootstrapper.RegisterForSign().JsonWarpingAsync<ReceiptRequest, ReceiptResponse>(),
+            SignJson = async request =>
+            {
+                request = request
+                    .Replace("{{ ftCashBoxID }}", CashBoxId.ToString())
+                    .Replace("{{ ftPosSystemID }}", PosSystemId.ToString());
+                var sign = bootstrapper.RegisterForSign();
+                return JsonSerializer.Deserialize<ReceiptResponse>(await sign(request));
+            },
+            Journal = async (JournalRequest request) =>
             {
                 var (contentType, pipeReader) = await bootstrapper.RegisterForJournal()(JsonSerializer.Serialize(request));
                 return (contentType, pipeReader.AsStream());
             }
-        );
+        };
     }
+}
+
+public record MiddlewareMethods {
+    public Func<EchoRequest, Task<EchoResponse?>> Echo;
+    public Func<ReceiptRequest, Task<ReceiptResponse?>> Sign;
+    public Func<string, Task<ReceiptResponse?>> SignJson;
+    public Func<JournalRequest, Task<(ContentType contentType, Stream response)>> Journal;
 }
