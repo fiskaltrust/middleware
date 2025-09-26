@@ -1,7 +1,6 @@
 name: command version
 
 on:
-  workflow_dispatch:
   repository_dispatch:
     types: [version-command]
 
@@ -10,34 +9,17 @@ permissions:
   pull-requests: write
 
 jobs:
-  checkout:
+  version:
     runs-on: ubuntu-latest
-    outputs:
-      release_branch: ${{ steps.set_branch.outputs.release_branch }}
     steps:
-      - name: Checkout release branch
+      - name: Checkout target branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
-
-      - id: set_branch
-        run: |
-          # Detect current branch as release branch
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
+          ref: refs/heads/${{ github.event.client_payload.pull_request.head.ref }}
 
       - name: Install nbgv
         run: dotnet tool update -g nbgv
-
-  version:
-    needs: checkout
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.checkout.outputs.release_branch }}
 
       - name: Configure git
         run: |
@@ -46,11 +28,11 @@ jobs:
 
       - name: Update version (nbgv prepare-release)
         run: |
-          # This will update version.json to the full release version without rc
-          nbgv prepare-release "" --nextVersion $(nbgv get-version -f json | jq -r '.Version')
-      
+          CURRENT_VERSION=$(nbgv get-version -f json | jq -r '.Version')
+          nbgv prepare-release "" --nextVersion "$CURRENT_VERSION"
+
       - name: Push updated version
         run: |
           git add version.json
-          git commit -m "Update version to full release"
-          git push origin ${{ needs.checkout.outputs.release_branch }}
+          git commit -m "Update version to full release" || echo "No changes to commit"
+          git push origin HEAD
