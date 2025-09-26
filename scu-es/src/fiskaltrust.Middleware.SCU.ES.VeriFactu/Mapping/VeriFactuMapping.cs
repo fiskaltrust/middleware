@@ -153,7 +153,7 @@ public class VeriFactuMapping
                     _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
                 },
                 TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
-                CuotaRepercutida = (chargeItem.VATAmount ?? chargeItem.Amount * chargeItem.VATRate).ToVeriFactuNumber()
+                CuotaRepercutida = chargeItem.GetVATAmount().ToVeriFactuNumber()
             }).ToArray(),
             CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
