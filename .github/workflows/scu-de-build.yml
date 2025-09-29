@@ -50,6 +50,9 @@ jobs:
           - fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
   
       - uses: ./.github/actions/build
         with:
