@@ -53,7 +53,7 @@ jobs:
           projects: "storage/*.sln"
           vstsFeed: "$(NuGetFeed)"
           verbosityRestore: "minimal"
-          arguments: "--configuration Release"
+          arguments: "--configuration Release /nr:false"
         displayName: "Restore"
 
       - task: DotNetCoreCLI@2
