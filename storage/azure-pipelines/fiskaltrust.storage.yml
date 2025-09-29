@@ -32,10 +32,7 @@ jobs:
       - powershell: |
           $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
           Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
-        displayName: Set NuGet feed
-
-      - checkout: self
-        fetchDepth: 0
+        displayName: Set NuGet feed      
 
       - task: UseDotNet@2
         displayName: "Use .NET 6 SDK"
@@ -50,7 +47,6 @@ jobs:
           vstsFeed: "$(NuGetFeed)"
           verbosityRestore: "minimal"
           arguments: "--configuration Release"
-          version: "6.x"
         displayName: "Restore"
 
       - task: DotNetCoreCLI@2
@@ -58,7 +54,6 @@ jobs:
           command: "build"
           projects: "storage/*.sln"
           arguments: "--configuration Release"
-          version: "6.x"
         displayName: "Build"
 
       - task: DotNetCoreCLI@2
