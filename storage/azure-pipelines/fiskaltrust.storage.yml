@@ -50,6 +50,7 @@ jobs:
           vstsFeed: "$(NuGetFeed)"
           verbosityRestore: "minimal"
           arguments: "--configuration Release"
+          version: "6.x"
         displayName: "Restore"
 
       - task: DotNetCoreCLI@2
