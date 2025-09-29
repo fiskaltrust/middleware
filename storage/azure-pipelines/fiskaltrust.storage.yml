@@ -32,7 +32,10 @@ jobs:
       - powershell: |
           $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
           Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
-        displayName: Set NuGet feed      
+        displayName: Set NuGet feed
+
+      - checkout: self
+        fetchDepth: 0
 
       - task: UseDotNet@2
         displayName: "Use .NET 6 SDK"
