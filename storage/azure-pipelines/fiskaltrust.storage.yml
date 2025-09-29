@@ -56,13 +56,15 @@ jobs:
           arguments: "--configuration Release"
         displayName: "Restore"
 
-
-      - task: DotNetCoreCLI@2
-        inputs:
-          command: "build"
-          projects: "storage/*.sln"
-          arguments: "--configuration Release"
+      - script: |
+          dotnet build storage/*.sln --configuration Release
         displayName: "Build"
+      # - task: DotNetCoreCLI@2
+      #   inputs:
+      #     command: "build"
+      #     projects: "storage/*.sln"
+      #     arguments: "--configuration Release"
+      #   displayName: "Build"
 
       - task: DotNetCoreCLI@2
         inputs:
