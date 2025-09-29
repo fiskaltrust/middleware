@@ -22,7 +22,6 @@ jobs:
         with:
           ref: ${{ inputs.commit }}
           fetch-depth: 0
-          fetch-tags: true 
 
       - uses: ./.github/actions/build
         with:
