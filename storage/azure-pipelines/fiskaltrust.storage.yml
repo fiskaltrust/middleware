@@ -33,6 +33,9 @@ jobs:
           $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
           Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
         displayName: Set NuGet feed
+      
+      - checkout: self
+        fetchDepth: 0
 
       - task: DotNetCoreCLI@2
         inputs:
