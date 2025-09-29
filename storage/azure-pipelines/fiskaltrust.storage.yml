@@ -58,6 +58,7 @@ jobs:
           command: "build"
           projects: "storage/*.sln"
           arguments: "--configuration Release"
+          version: "6.x"
         displayName: "Build"
 
       - task: DotNetCoreCLI@2
