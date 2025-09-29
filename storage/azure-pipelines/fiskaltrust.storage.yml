@@ -33,6 +33,7 @@ jobs:
           $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
           Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
         displayName: Set NuGet feed
+
       - checkout: self
         fetchDepth: 0
 
@@ -42,18 +43,13 @@ jobs:
           packageType: "sdk"
           version: "6.x"
 
-      - script: |
-          echo "##vso[task.prependpath]C:\hostedtoolcache\windows\dotnet\6.0.x\x64"
-          dotnet --info
-        displayName: "Force .NET 6 SDK in PATH"
-
       - task: DotNetCoreCLI@2
         inputs:
           command: "restore"
           projects: "storage/*.sln"
           vstsFeed: "$(NuGetFeed)"
           verbosityRestore: "minimal"
-          arguments: "--configuration Release /nr:false"
+          arguments: "--configuration Release"
         displayName: "Restore"
 
       - task: DotNetCoreCLI@2
