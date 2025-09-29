@@ -46,10 +46,6 @@ jobs:
           echo "##vso[task.prependpath]C:\hostedtoolcache\windows\dotnet\6.0.x\x64"
           dotnet --info
         displayName: "Force .NET 6 SDK in PATH"
-      - powershell: |
-         Write-Host "##vso[task.prependpath]$Env:DOTNET_ROOT"
-         dotnet --info
-        displayName: "Verify .NET 6 SDK is in PATH"
 
       - task: DotNetCoreCLI@2
         inputs:
@@ -60,15 +56,12 @@ jobs:
           arguments: "--configuration Release"
         displayName: "Restore"
 
-      - script: |
-          dotnet build storage/*.sln --configuration Release
+      - task: DotNetCoreCLI@2
+        inputs:
+          command: "build"
+          projects: "storage/*.sln"
+          arguments: "--configuration Release"
         displayName: "Build"
-      # - task: DotNetCoreCLI@2
-      #   inputs:
-      #     command: "build"
-      #     projects: "storage/*.sln"
-      #     arguments: "--configuration Release"
-      #   displayName: "Build"
 
       - task: DotNetCoreCLI@2
         inputs:
