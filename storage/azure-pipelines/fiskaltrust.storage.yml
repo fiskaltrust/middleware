@@ -42,6 +42,11 @@ jobs:
           packageType: "sdk"
           version: "6.x"
 
+      - script: |
+          echo "##vso[task.prependpath]C:\hostedtoolcache\windows\dotnet\6.0.x\x64"
+          dotnet --info
+        displayName: "Force .NET 6 SDK in PATH"
+
       - task: DotNetCoreCLI@2
         inputs:
           command: "restore"
@@ -50,6 +55,7 @@ jobs:
           verbosityRestore: "minimal"
           arguments: "--configuration Release"
         displayName: "Restore"
+
 
       - task: DotNetCoreCLI@2
         inputs:
