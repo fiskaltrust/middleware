@@ -49,7 +49,7 @@ jobs:
           # git checkout ${{ steps.prepare-release.outputs.release_branch }}
           # git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
-          Push main branch changes (next -ci version)
+          #Push main branch changes (next -ci version)
           git checkout main
           git push origin main
 
