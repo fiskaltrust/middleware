@@ -1,26 +1,26 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace fiskaltrust.ifPOS.v1.errors
 {
-    // Fake replacement for the enum EF is choking on
-    public enum SSCDErrorType
+    // Mimic the original type structure
+    public class SSCDErrorException
     {
-        None = 0,
-        Unknown = 1
-        // Add other values if EF or your logic requires them
+        // Fake the backing property
+        public SSCDErrorType ErrorType { get; set; }
+
+        // Add other properties if needed
+        public string Message { get; set; }
     }
 
-    // Fake replacement for the exception
-    [Serializable]
-    public class SSCDErrorException : Exception
+    // Fake the type that EF complained about
+    public class SSCDErrorType
     {
-        public SSCDErrorType Type { get; private set; }
-
-        public SSCDErrorException() { }
-
-        public SSCDErrorException(SSCDErrorType type)
-        {
-            Type = type;
-        }
+        // You can leave it empty or add minimal fields
+        public int Code { get; set; }
+        public string Description { get; set; }
     }
 }
