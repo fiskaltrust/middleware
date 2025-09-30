@@ -70,7 +70,7 @@ jobs:
     
   deploy:
     if: (!always())
-    #test if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
+    if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
     needs:
       - meta
       - package
