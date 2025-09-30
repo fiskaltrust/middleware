@@ -16,12 +16,18 @@ jobs:
           fetch-depth: 0 
 
       - name: Install nbgv
-        run: dotnet tool update -g nbgv             
-
-      - name: Configure git
+        run: dotnet tool update -g nbgv  
+        
+      - name: Configure git for PAT
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com" 
+            git config user.name "Release Bot"
+            git config user.email "demo-portal-sandbox@fiskaltrust.de"
+            git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
+
+      # - name: Configure git
+      #   run: |
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com" 
 
       - name: Prepare release branch with nbgv
         id: prepare-release
@@ -43,8 +49,8 @@ jobs:
           git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
           # Push main branch changes (next -ci version)
-          git checkout main
-          git push origin main
+          # git checkout main
+          # git push origin main
 
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
