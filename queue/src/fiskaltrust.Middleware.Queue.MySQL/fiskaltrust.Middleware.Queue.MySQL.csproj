@@ -12,7 +12,7 @@
         <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
         <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.4" />
         <PackageReference Include="System.ValueTuple" Version="4.5.0" />
         <PackageReference Include="Dapper" Version="2.0.35" />
         <PackageReference Include="MySqlConnector" Version="2.1.10" />
@@ -51,6 +51,10 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage.MySQL\fiskaltrust.Middleware.Storage.MySQL.csproj" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Update="fiskaltrust.interface" Version="1.3.76-rc1" />
     </ItemGroup>
 
 
