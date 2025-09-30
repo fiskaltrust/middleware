@@ -43,11 +43,11 @@ jobs:
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
 
-      - name: Push changes
-        run: |
-          # Push release branch changes (-rc version)
-          git checkout ${{ steps.prepare-release.outputs.release_branch }}
-          git push origin ${{ steps.prepare-release.outputs.release_branch }}
+      # - name: Push changes
+      #   run: |
+      #     # Push release branch changes (-rc version)
+      #     git checkout ${{ steps.prepare-release.outputs.release_branch }}
+      #     git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
           # Push main branch changes (next -ci version)
           # git checkout main
