@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
@@ -8,6 +9,19 @@ public static class PTMappings
 {
     public static string GetWorkType(ReceiptRequest receiptRequest)
     {
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        {
+            if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
+            {
+                return "CM";
+            }
+            else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
+            {
+                return "OR";
+            }
+            return "PF";
+        }
+
         var type = receiptRequest.ftReceiptCase.Case() switch
         {
             _ => "PF"
@@ -39,7 +53,11 @@ public static class PTMappings
             // Credit notes are not supported to be handwritten?
             return "NC";
         }
-   
+
+
+
+
+
         var type = receiptRequest.ftReceiptCase.Case() switch
         {
             ReceiptCase.UnknownReceipt0x0000 => "FS",
