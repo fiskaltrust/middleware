@@ -16,7 +16,8 @@ jobs:
 
       - name: Install nbgv
         run: dotnet tool update -g nbgv  
-        
+      - name: Set branch name
+        run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
       - name: Configure git for PAT
         run: |
             git config user.name "Release Bot"
