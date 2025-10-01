@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using Org.BouncyCastle.Asn1.Ocsp;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
 
@@ -104,7 +105,7 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, NumberSeries series, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
@@ -120,7 +121,7 @@ public static class PortugalReceiptCalculations
             IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
-            DocumentType = InvoiceType.ProForma,
+            DocumentType = series.TypeCode,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification.Split("#").Last(),

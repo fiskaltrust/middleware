@@ -142,7 +142,7 @@ public static class PTCertificationExamples
             [
                 new ChargeItem
                 {
-                    Amount = -100,
+                    Amount = -150,
                     VATRate = PTVATRates.Normal,
                     ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                     Quantity = -1,
@@ -154,7 +154,7 @@ public static class PTCertificationExamples
                 new PayItem
                 {
                     Quantity = -1,
-                    Amount = -100,
+                    Amount = -150,
                     Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
