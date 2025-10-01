@@ -63,7 +63,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -100,7 +100,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -137,7 +137,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -175,7 +175,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -212,7 +212,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 }
