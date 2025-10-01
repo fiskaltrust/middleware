@@ -43,3 +43,40 @@ jobs:
           git add version.json
           git commit -m "Update version to full release" || echo "No changes to commit"
           git push origin HEAD
+
+  success:
+    needs:
+      - version
+    runs-on: ubuntu-latest
+    if: success('package') && !failure('deploy')
+    steps:
+      - name: Add reaction
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          reactions: hooray
+          reactions-edit-mode: replace
+          edit-mode: replace
+          body: |
+            /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
+            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    
+  failure:
+    needs:
+      - version
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Add reaction
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          reactions: confused
+          reactions-edit-mode: replace
+          edit-mode: replace
+          body: |
+            /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
+            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/failure/red)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
