@@ -146,6 +146,8 @@ public class AADEFactory
     private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         var invoiceDetails = GetInvoiceDetails(receiptRequest);
+        var documentLevelTaxes = GetDocumentLevelTaxes(receiptRequest);
+
         var incomeClassificationGroups = invoiceDetails.Where(x => x.incomeClassification != null).SelectMany(x => x.incomeClassification).Where(x => x.classificationTypeSpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
         {
             amount = x.Sum(y => y.amount),
@@ -200,15 +202,21 @@ public class AADEFactory
             {
                 totalNetValue = invoiceDetails.Sum(x => x.netValue),
                 totalVatAmount = invoiceDetails.Sum(x => x.vatAmount),
-                totalWithheldAmount = invoiceDetails.Sum(x => x.withheldAmount),
-                totalFeesAmount = invoiceDetails.Sum(x => x.feesAmount),
-                totalStampDutyAmount = invoiceDetails.Sum(x => x.stampDutyAmount),
-                totalOtherTaxesAmount = invoiceDetails.Sum(x => x.otherTaxesAmount),
-                totalDeductionsAmount = invoiceDetails.Sum(x => x.deductionsAmount),
+                totalWithheldAmount = documentLevelTaxes.Where(x => x.taxType == MyDataTaxCategories.WithHeldTaxes).Sum(x => x.taxAmount) + invoiceDetails.Sum(x => x.withheldAmount),
+                totalFeesAmount = documentLevelTaxes.Where(x => x.taxType == MyDataTaxCategories.Fees).Sum(x => x.taxAmount) + invoiceDetails.Sum(x => x.feesAmount),
+                totalStampDutyAmount = documentLevelTaxes.Where(x => x.taxType == MyDataTaxCategories.StampDuty).Sum(x => x.taxAmount) + invoiceDetails.Sum(x => x.stampDutyAmount),
+                totalOtherTaxesAmount = documentLevelTaxes.Where(x => x.taxType == MyDataTaxCategories.OtherTaxes).Sum(x => x.taxAmount) + invoiceDetails.Sum(x => x.otherTaxesAmount),
+                totalDeductionsAmount = documentLevelTaxes.Where(x => x.taxType == MyDataTaxCategories.Deduction).Sum(x => x.taxAmount) + invoiceDetails.Sum(x => x.deductionsAmount),
                 incomeClassification = [.. incomeClassificationGroups],
                 expensesClassification = [.. expensesClassificationGroups],
             }
         };
+
+        // Add withholding taxes to the invoice if any exist
+        if (documentLevelTaxes.Count > 0)
+        {
+            inv.taxesTotals = documentLevelTaxes.ToArray();
+        }
         if (paymentMethods?.Count > 0)
         {
             inv.paymentMethods = [.. paymentMethods];
@@ -292,9 +300,34 @@ public class AADEFactory
         return inv;
     }
 
+    private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
+    {
+        var withholdingTaxes = new List<TaxTotalsType>();
+        foreach (var item in receiptRequest.cbChargeItems.Where(x => WithholdingTaxMappings.IsSpecialTaxItem(x)))
+        {
+            var mapping = WithholdingTaxMappings.GetWithholdingTaxMapping(item.Description);
+            if (mapping == null)
+            {
+                throw new Exception($"No withholding tax mapping found for description: '{item.Description}'. " +
+                                  "Please use one of the supported Greek withholding tax descriptions or add a new mapping.");
+            }
+            var taxTotal = new TaxTotalsType
+            {
+                taxType = MyDataTaxCategories.WithHeldTaxes, 
+                taxCategory = mapping.Code,
+                taxCategorySpecified = true,
+                taxAmount = Math.Abs(item.Amount)
+            };
+            withholdingTaxes.Add(taxTotal);
+        }
+        return withholdingTaxes;
+    }
+
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        var chargeItems = receiptRequest.GetGroupedChargeItems();
+        var chargeItems = receiptRequest.GetGroupedChargeItems()
+            .Where(grouped => !WithholdingTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .ToList();
         var nextPosition = 1;
         return chargeItems.Select(grouped =>
         {
