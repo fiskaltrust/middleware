@@ -33,7 +33,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         var series = GetSeriesForReceiptRequest(request.ReceiptRequest);
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
-        receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,

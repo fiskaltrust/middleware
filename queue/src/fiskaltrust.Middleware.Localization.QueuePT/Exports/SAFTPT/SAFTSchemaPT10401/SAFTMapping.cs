@@ -517,6 +517,7 @@ public class SaftExporter
             PaymentType = PTMappings.GetPaymentType(receiptRequest),
             PaymentMethod = new PaymentMethod
             {
+                PaymentMechanism = PTMappings.GetPaymentMecahnism(payItem),
                 PaymentAmount = payItem.Amount,
                 PaymentDate = receiptRequest.cbReceiptMoment
             },
