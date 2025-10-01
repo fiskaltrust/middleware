@@ -161,7 +161,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
             
             error.Should().NotBeNull();
-            error.Exception.Message.Should().Contain("No withholding tax or fee mapping found");
+            error.Exception.Message.Should().Contain("No withholding tax, fee, or stamp duty mapping found");
             error.Exception.Message.Should().Contain("Unknown withholding tax");
         }
 
@@ -437,7 +437,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιβαλλοντικό Τέλος & πλαστικής σακούλας ν. 2339/2001 αρ. 6α – 0,07 ευρώ ανά τεμάχιο", // Fixed amount type
+                        Description = "Περιβαλλοντικό Τέλος & πλαστικής σακούλας ν. 2339/2001 αρ. 6α 0,07 ευρώ ανά τεμάχιο", // Fixed amount type
                         Amount = 7m, // 0.07 * 100 items = 7 EUR
                         VATRate = 0m,
                         Position = 2
@@ -664,6 +664,482 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             // Should only have one invoice detail (the regular item)
             invoice.invoiceDetails.Length.Should().Be(1);
             invoice.invoiceDetails[0].netValue.Should().Be(806.45m);
+        }
+
+        #endregion
+
+        #region Stamp Duty Tests
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldProcessPercentageStampDuty()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase)0x4752000000000001,
+                cbChargeItems = 
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Service",
+                        Amount = 100m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Συντελεστής 1,2 %",
+                        Amount = 0.97m, // 1.2% of net amount (80.65 * 0.012 ≈ 0.97)
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 100.97m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            
+            // Should have tax totals for stamp duty
+            invoice.taxesTotals.Should().NotBeNullOrEmpty();
+            invoice.taxesTotals.Length.Should().Be(1);
+            
+            var stampDuty = invoice.taxesTotals[0];
+            stampDuty.taxType.Should().Be(4); // Stamp duty tax type
+            stampDuty.taxCategory.Should().Be(1); // 1.2% stamp duty code
+            stampDuty.taxAmount.Should().Be(0.97m);
+
+            // Invoice summary should include stamp duty
+            invoice.invoiceSummary.totalStampDutyAmount.Should().Be(0.97m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(100.97m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(80.65m);
+
+            // Should only have one invoice detail (the regular item, not the stamp duty item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().BeApproximately(80.65m, 0.01m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleFixedAmountStampDuty()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase) 0x4752000000000001,
+                cbChargeItems =
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Service",
+                        Amount = 1000m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Λοιπές περιπτώσεις Χαρτοσήμου", // Fixed amount type
+                        Amount = 25m, // Fixed stamp duty amount
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = 
+                [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase) 0x4752000000000001,
+                        Amount = 1025m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            var stampDuty = invoice.taxesTotals[0];
+
+            stampDuty.taxType.Should().Be(4); // Stamp duty tax type
+            stampDuty.taxCategory.Should().Be(4); // Other stamp duty cases
+            stampDuty.taxAmount.Should().Be(25m);
+            stampDuty.underlyingValueSpecified.Should().BeFalse(); // No underlying value for fixed amount
+
+            invoice.invoiceSummary.totalStampDutyAmount.Should().Be(25m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(1025m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(806.45m);
+
+            // Should only have one invoice detail (the regular item, not the stamp duty item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(806.45m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleMultipleStampDuties()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase) 0x4752000000000001,
+                cbChargeItems =
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Service",
+                        Amount = 1000m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Συντελεστής 1,2 %",
+                        Amount = 9.68m, // 1.2% of net amount (806.45 * 0.012 ≈ 9.68)
+                        VATRate = 0m,
+                        Position = 2
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Λοιπές περιπτώσεις Χαρτοσήμου",
+                        Amount = 15m,
+                        VATRate = 0m,
+                        Position = 3
+                    }
+                ],
+                cbPayItems =
+                [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 1024.68m // 1000 + 9.68 + 15 = 1024.68
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            
+            // Should have multiple stamp duties
+            invoice.taxesTotals.Length.Should().Be(2);
+            
+            var percentageStampDuty = invoice.taxesTotals.FirstOrDefault(t => t.taxCategory == 1);
+            percentageStampDuty.Should().NotBeNull();
+            percentageStampDuty.taxAmount.Should().Be(9.68m);
+            
+            var fixedStampDuty = invoice.taxesTotals.FirstOrDefault(t => t.taxCategory == 4);
+            fixedStampDuty.Should().NotBeNull();
+            fixedStampDuty.taxAmount.Should().Be(15m);
+            
+            // Total stamp duty should be sum of both
+            invoice.invoiceSummary.totalStampDutyAmount.Should().Be(24.68m); // 9.68 + 15
+            invoice.invoiceSummary.totalGrossValue.Should().Be(1024.68m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(806.45m);
+
+            // Should only have one invoice detail (the regular item, not the stamp duty items)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(806.45m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleMixedWithholdingTaxFeesAndStampDuties()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase) 0x4752000000000001,
+                cbChargeItems =
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Service",
+                        Amount = 1000m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Περιπτ. β’- Τόκοι - 15%", // Withholding tax
+                        Amount = -121m,
+                        VATRate = 0m,
+                        Position = 2
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Τέλος στη συνδρομητική τηλεόραση 10%", // Fee
+                        Amount = 80m,
+                        VATRate = 0m,
+                        Position = 3
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Συντελεστής 1,2 %", // Stamp duty
+                        Amount = 9.68m,
+                        VATRate = 0m,
+                        Position = 4
+                    }
+                ],
+                cbPayItems =
+                [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 968.68m // 1000 - 121 + 80 + 9.68 = 968.68
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            
+            // Should have all three types: withholding tax, fee, and stamp duty
+            invoice.taxesTotals.Length.Should().Be(3);
+            
+            var withholdingTax = invoice.taxesTotals.FirstOrDefault(t => t.taxType == 1); // Withholding tax
+            withholdingTax.Should().NotBeNull();
+            withholdingTax.taxCategory.Should().Be(1); // Interest
+            withholdingTax.taxAmount.Should().Be(121m);
+            
+            var fee = invoice.taxesTotals.FirstOrDefault(t => t.taxType == 2); // Fee
+            fee.Should().NotBeNull();
+            fee.taxCategory.Should().Be(6); // Subscription TV fee
+            fee.taxAmount.Should().Be(80m);
+
+            var stampDuty = invoice.taxesTotals.FirstOrDefault(t => t.taxType == 4); // Stamp duty
+            stampDuty.Should().NotBeNull();
+            stampDuty.taxCategory.Should().Be(1); // 1.2% stamp duty
+            stampDuty.taxAmount.Should().Be(9.68m);
+
+            // Invoice summary should include all three
+            invoice.invoiceSummary.totalWithheldAmount.Should().Be(121m);
+            invoice.invoiceSummary.totalFeesAmount.Should().Be(80m);
+            invoice.invoiceSummary.totalStampDutyAmount.Should().Be(9.68m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(968.68m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(806.45m);
+
+            // Should only have one invoice detail (the regular item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(806.45m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldThrowException_WhenStampDutyDescriptionNotMapped()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase)0x4752000000000001,
+                cbChargeItems =
+                [                    
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Service",
+                        Amount = 100m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Unknown stamp duty",
+                        Amount = 10m,
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = 
+                [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 110m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act & Assert
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+            
+            error.Should().NotBeNull();
+            error.Exception.Message.Should().Contain("No withholding tax, fee, or stamp duty mapping found");
+            error.Exception.Message.Should().Contain("Unknown stamp duty");
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleStampDutyWithUnderlyingValue()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase)0x4752000000000001,
+                cbChargeItems = 
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Service",
+                        Amount = 500m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Συντελεστής 2,4 %",
+                        Amount = 9.68m, // 2.4% of net amount (403.23 * 0.024 ≈ 9.68)
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 509.68m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            var stampDuty = invoice.taxesTotals[0];
+
+            stampDuty.taxType.Should().Be(4); // Stamp duty tax type
+            stampDuty.taxCategory.Should().Be(2); // 2.4% stamp duty code
+            stampDuty.taxAmount.Should().Be(9.68m);
         }
 
         #endregion
