@@ -11,11 +11,11 @@ using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
 {
-    public class WithholdingTaxTests
+    public class SpecialTaxHandlingTests
     {
         private readonly MasterDataConfiguration _masterDataConfiguration;
 
-        public WithholdingTaxTests()
+        public SpecialTaxHandlingTests()
         {
             _masterDataConfiguration = new MasterDataConfiguration
             {
