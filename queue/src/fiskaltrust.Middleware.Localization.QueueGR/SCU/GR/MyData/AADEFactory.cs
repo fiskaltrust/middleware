@@ -302,31 +302,46 @@ public class AADEFactory
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
     {
-        var withholdingTaxes = new List<TaxTotalsType>();
-        foreach (var item in receiptRequest.cbChargeItems.Where(x => WithholdingTaxMappings.IsSpecialTaxItem(x)))
+        var documentTaxes = new List<TaxTotalsType>();
+        foreach (var item in receiptRequest.cbChargeItems.Where(x => SpecialTaxMappings.IsSpecialTaxItem(x)))
         {
-            var mapping = WithholdingTaxMappings.GetWithholdingTaxMapping(item.Description);
-            if (mapping == null)
+            var withholdingMapping = SpecialTaxMappings.GetWithholdingTaxMapping(item.Description);
+            if (withholdingMapping != null)
             {
-                throw new Exception($"No withholding tax mapping found for description: '{item.Description}'. " +
-                                  "Please use one of the supported Greek withholding tax descriptions or add a new mapping.");
+                documentTaxes.Add(new TaxTotalsType
+                {
+                    taxType = MyDataTaxCategories.WithHeldTaxes,
+                    taxCategory = withholdingMapping.Code,
+                    taxCategorySpecified = true,
+                    taxAmount = Math.Abs(item.Amount)
+                });
+                continue;
             }
-            var taxTotal = new TaxTotalsType
+
+            var feeMapping = SpecialTaxMappings.GetFeeMapping(item.Description);
+            if (feeMapping != null)
             {
-                taxType = MyDataTaxCategories.WithHeldTaxes, 
-                taxCategory = mapping.Code,
-                taxCategorySpecified = true,
-                taxAmount = Math.Abs(item.Amount)
-            };
-            withholdingTaxes.Add(taxTotal);
+                documentTaxes.Add(new TaxTotalsType
+                {
+                    taxType = MyDataTaxCategories.Fees,
+                    taxCategory = feeMapping.Code,
+                    taxCategorySpecified = true,
+                    taxAmount = Math.Abs(item.Amount)
+                });
+                continue;
+            }
+
+            // If neither mapping found, throw exception
+            throw new Exception($"No withholding tax or fee mapping found for description: '{item.Description}'. " +
+                              "Please use one of the supported Greek withholding tax or fee descriptions or add a new mapping.");
         }
-        return withholdingTaxes;
+        return documentTaxes;
     }
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
         var chargeItems = receiptRequest.GetGroupedChargeItems()
-            .Where(grouped => !WithholdingTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
             .ToList();
         var nextPosition = 1;
         return chargeItems.Select(grouped =>
