@@ -55,4 +55,3 @@ jobs:
             This PR prepares the release branch for version `${{ steps.prepare-release.outputs.release_version }}`.
             - Sets release branch version to `${{ steps.prepare-release.outputs.release_version }}-rc`
             - Bumps main to next `-ci` version
-          always-create-pr: true
