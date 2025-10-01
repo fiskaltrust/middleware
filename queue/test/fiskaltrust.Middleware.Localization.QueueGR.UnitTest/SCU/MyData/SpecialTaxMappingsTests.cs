@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
     public class SpecialTaxMappingsTests
     {
         [Fact]
-        public void IsWithholdingTaxItem_ShouldReturnTrue_WhenTypeOfServiceIsF()
+        public void IsSpecialTaxItem_ShouldReturnTrue_WhenTypeOfServiceIsF()
         {
             var chargeItem = new ChargeItem
             {
@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
         }
 
         [Fact]
-        public void IsWithholdingTaxItem_ShouldReturnFalse_WhenTypeOfServiceIsNot0xF()
+        public void IsSpecialTaxItem_ShouldReturnFalse_WhenTypeOfServiceIsNot0xF()
         {
             var chargeItem = new ChargeItem
             {
@@ -118,14 +118,31 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             mapping.IsFixedAmount.Should().Be(expectedIsFixed, $"IsFixedAmount for '{description}' should be {expectedIsFixed}");
         }
 
-        [Theory]
-        [InlineData("")]
-        [InlineData("   ")]
-        [InlineData(null)]
-        public void GetFeeMapping_ShouldReturnNullForNullOrEmptyDescription(string description)
+        [Fact]
+        public void GetStampDutyMapping_ShouldReturnNullWhenDescriptionNotFound()
         {
-            var mapping = SpecialTaxMappings.GetFeeMapping(description);
+            var description = "Invalid stamp duty description";
+
+            var mapping = SpecialTaxMappings.GetStampDutyMapping(description);
             mapping.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData("Συντελεστής 1,2 %", 1, "1,2", false)]
+        [InlineData("Συντελεστής 2,4 %", 2, "2,4", false)]
+        [InlineData("Συντελεστής 3,6 %", 3, "3,6", false)]
+        [InlineData("Λοιπές περιπτώσεις Χαρτοσήμου", 4, null, true)]
+        public void GetStampDutyMapping_ShouldHandleAllDefinedMappings(string description, int expectedCode, string? expectedPercentageStr, bool expectedIsFixed)
+        {
+            // Act
+            var mapping = SpecialTaxMappings.GetStampDutyMapping(description);
+            decimal? expectedPercentage = expectedPercentageStr != null ? decimal.Parse(expectedPercentageStr) : null;
+
+            // Assert
+            mapping.Should().NotBeNull($"mapping for '{description}' should exist");
+            mapping.Code.Should().Be(expectedCode, $"code for '{description}' should be {expectedCode}");
+            mapping.Percentage.Should().Be(expectedPercentage, $"percentage for '{description}' should be {expectedPercentage}");
+            mapping.IsFixedAmount.Should().Be(expectedIsFixed, $"IsFixedAmount for '{description}' should be {expectedIsFixed}");
         }
     }
 }

@@ -331,9 +331,23 @@ public class AADEFactory
                 continue;
             }
 
-            // If neither mapping found, throw exception
-            throw new Exception($"No withholding tax or fee mapping found for description: '{item.Description}'. " +
-                              "Please use one of the supported Greek withholding tax or fee descriptions or add a new mapping.");
+            // If no fee mapping found, try stamp duty mapping
+            var stampDutyMapping = SpecialTaxMappings.GetStampDutyMapping(item.Description);
+            if (stampDutyMapping != null)
+            {
+                documentTaxes.Add(new TaxTotalsType
+                {
+                    taxType = MyDataTaxCategories.StampDuty,
+                    taxCategory = stampDutyMapping.Code,
+                    taxCategorySpecified = true,
+                    taxAmount = Math.Abs(item.Amount)
+                });
+                continue;
+            }
+
+            // If no mapping found, throw exception
+            throw new Exception($"No withholding tax, fee, or stamp duty mapping found for description: '{item.Description}'. " +
+                              "Please use one of the supported Greek tax descriptions or add a new mapping.");
         }
         return documentTaxes;
     }

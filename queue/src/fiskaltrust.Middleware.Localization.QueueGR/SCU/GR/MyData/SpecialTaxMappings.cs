@@ -6,8 +6,8 @@ using fiskaltrust.ifPOS.v2;
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
 /// <summary>
-/// Provides mapping functionality for Greek withholding taxes and fees based on AADE requirements.
-/// Maps charge item descriptions to withholding tax categories, percentages, and fee categories.
+/// Provides mapping functionality for Greek withholding taxes, fees, and stamp duties based on AADE requirements.
+/// Maps charge item descriptions to withholding tax categories, percentages, fee categories, and stamp duty categories.
 /// </summary>
 public static class SpecialTaxMappings
 {
@@ -25,6 +25,16 @@ public static class SpecialTaxMappings
     /// Represents a fee mapping with code, description, and percentage.
     /// </summary>
     public record FeeMapping(
+        int Code,
+        string GreekDescription,
+        decimal? Percentage,
+        bool IsFixedAmount = false
+    );
+
+    /// <summary>
+    /// Represents a stamp duty mapping with code, description, and percentage.
+    /// </summary>
+    public record StampDutyMapping(
         int Code,
         string GreekDescription,
         decimal? Percentage,
@@ -128,6 +138,22 @@ public static class SpecialTaxMappings
     };
 
     /// <summary>
+    /// Dictionary mapping Greek descriptions to stamp duty information.
+    /// Based on the official AADE stamp duty table.
+    /// </summary>
+    private static readonly Dictionary<string, StampDutyMapping> _stampDutyMappings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Code 1: Συντελεστής 1,2 %
+        ["Συντελεστής 1,2 %"] = new(1, "Συντελεστής 1,2 %", 1.2m),
+        // Code 2: Συντελεστής 2,4 %
+        ["Συντελεστής 2,4 %"] = new(2, "Συντελεστής 2,4 %", 2.4m),
+        // Code 3: Συντελεστής 3,6 %
+        ["Συντελεστής 3,6 %"] = new(3, "Συντελεστής 3,6 %", 3.6m),
+        // Code 4: Λοιπές περιπτώσεις (fixed amount)
+        ["Λοιπές περιπτώσεις Χαρτοσήμου"] = new(4, "Λοιπές περιπτώσεις Χαρτοσήμου", null, true),
+    };
+
+    /// <summary>
     /// Gets withholding tax mapping for a given charge item description.
     /// </summary>
     /// <param name="description">The description of the charge item</param>
@@ -182,6 +208,41 @@ public static class SpecialTaxMappings
 
         // Try partial matching for more flexible description matching
         foreach (var kvp in _feeMappings)
+        {
+            var key = kvp.Key;
+            var mapping = kvp.Value;
+
+            // Check if the description contains the key or key contains the description
+            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
+                key.Contains(description, StringComparison.OrdinalIgnoreCase))
+            {
+                return mapping;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets stamp duty mapping for a given charge item description.
+    /// </summary>
+    /// <param name="description">The description of the charge item</param>
+    /// <returns>Stamp duty mapping if found, null otherwise</returns>
+    public static StampDutyMapping? GetStampDutyMapping(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return null;
+        }
+
+        // Try exact match first
+        if (_stampDutyMappings.TryGetValue(description.Trim(), out var exactMapping))
+        {
+            return exactMapping;
+        }
+
+        // Try partial matching for more flexible description matching
+        foreach (var kvp in _stampDutyMappings)
         {
             var key = kvp.Key;
             var mapping = kvp.Value;
