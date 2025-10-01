@@ -1,5 +1,6 @@
 ﻿namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
 
+
 public class DeactivateQueuePT
 {
     public Guid CashBoxId { get; set; }

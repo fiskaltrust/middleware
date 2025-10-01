@@ -1,4 +1,5 @@
-﻿using System.Xml.Serialization;
+﻿using System.Globalization;
+using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocuments.PaymentDocumentModels;
 
@@ -8,8 +9,15 @@ public class PaymentMethod
     [XmlElement(ElementName = "PaymentMechanism")]
     public string? PaymentMechanism { get; set; }
 
-    [XmlElement(ElementName = "PaymentAmount")]
+    [XmlIgnore]
     public required decimal PaymentAmount { get; set; }
+
+    [XmlElement("PaymentAmount", IsNullable = false)]
+    public string PaymentAmountProperty
+    {
+        get => PaymentAmount.ToString("F6", CultureInfo.InvariantCulture);
+        set => PaymentAmount = decimal.Parse(value.ToString());
+    }
 
     [XmlIgnore()]
     public required DateTime PaymentDate { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.Xml.Serialization;
+﻿using System.Globalization;
+using System.Xml.Serialization;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 #pragma warning disable
@@ -8,9 +9,16 @@ public class Payment
     [XmlElement(ElementName = "PaymentMechanism")]
     public string? PaymentMechanism { get; set; }
 
-    [XmlElement(ElementName = "PaymentAmount")]
-    public decimal? PaymentAmount { get; set; }
-  
+    [XmlIgnore]
+    public required decimal PaymentAmount { get; set; }
+
+    [XmlElement("PaymentAmount", IsNullable = false)]
+    public string PaymentAmountProperty
+    {
+        get => PaymentAmount.ToString("F2", CultureInfo.InvariantCulture);
+        set => PaymentAmount = decimal.Parse(value.ToString());
+    }
+
     [XmlIgnore]
     public DateTime? PaymentDate { get; set; }
 

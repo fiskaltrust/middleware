@@ -1,7 +1,8 @@
-﻿using System.Text.RegularExpressions;
-using System;
+﻿using System;
+using System.Text.RegularExpressions;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -35,7 +36,12 @@ public static class ReceiptExamples
         ftPosSystemId = Guid.Empty,
         cbTerminalID = "00010001",
         cbReceiptReference = "0001-0002",
-        cbUser = "user",
+        cbUser = new PTUserObject
+        {
+            UserId = "1",
+            UserDisplayName = "Test User",
+            UserEmail = "Test"
+        },
         cbReceiptMoment = DateTime.UtcNow,
         cbChargeItems =
         [

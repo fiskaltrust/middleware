@@ -14,37 +14,59 @@ public class StaticNumeratorStorage
     public static NumberSeries InvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FT",
-        ATCUD = "G4QZMNKE",
-        Identifier = "FT ft2024"
+        ATCUD = "AAJFJGVC33",
+        Identifier = "FT ft2025019d",
     };
 
     public static NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FS",
-        ATCUD = "XBPRP1MS",
-        Identifier = "FS ft2024"
+        ATCUD = "AAJFJ4VC3W",
+        Identifier = "FS ft2025019d",
     };
 
     public static NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
     {
         TypeCode = "NC",
-        ATCUD = "QRFQ68NC",
-        Identifier = "NC ft2024"
+        ATCUD = "AAJFJ3VC34",
+        Identifier = "NC ft2025019d",
+    };
+
+    public static NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "FS",
+        ATCUD = "AAJFJBKFZR",
+        Identifier = "FS ft2025771b",
     };
 
     public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries
     {
         TypeCode = "PF",
-        ATCUD = "GGRS68NF",
-        Identifier = "PF ft2024"
+        ATCUD = "AAJFJ9VC37",
+        Identifier = "PF ft2025019d",
     };
 
     public static NumberSeries PaymentSeries { get; set; } = new NumberSeries
     {
         TypeCode = "RG",
-        ATCUD = "FSSJ34SE",
-        Identifier = "RG ft2024"
+        ATCUD = "AAJFJMVC3G",
+        Identifier = "RG ft2025019d",
     };
+
+    public static NumberSeries BudgetSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "OR",
+        ATCUD = "AAJFJKVC3P",
+        Identifier = "OR ft2025eb51",
+    };
+
+    public static NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "CM",
+        ATCUD = "AAJFJ2VC3R",
+        Identifier = "CM ft2025eb51",
+    };
+
 
     public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
@@ -54,6 +76,9 @@ public class StaticNumeratorStorage
         ReloadSeries(InvoiceSeries, queueItems);
         ReloadSeries(ProFormaSeries, queueItems);
         ReloadSeries(PaymentSeries, queueItems);
+        ReloadSeries(BudgetSeries, queueItems);
+        ReloadSeries(TableChecqueSeries, queueItems);
+        ReloadSeries(HandWrittenFSSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
@@ -79,9 +104,9 @@ public class StaticNumeratorStorage
                 }
 
 
-                if (lastReceiptResponse.ftReceiptIdentification.StartsWith(series.Identifier))
+                if (lastReceiptResponse.ftReceiptIdentification.Split("#").Last().StartsWith(series.Identifier))
                 {
-                    series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("/")[1]);
+                    series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("#").Last().Split("/")[1]);
                     var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == SignatureTypePT.Hash.As<SignatureType>());
                     if (lastSignature != null)
                     {
