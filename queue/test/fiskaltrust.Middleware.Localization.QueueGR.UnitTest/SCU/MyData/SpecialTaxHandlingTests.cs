@@ -161,7 +161,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
             
             error.Should().NotBeNull();
-            error.Exception.Message.Should().Contain("No withholding tax, fee, or stamp duty mapping found");
+            error.Exception.Message.Should().Contain("No withholding tax, fee, stamp duty, or other tax mapping");
             error.Exception.Message.Should().Contain("Unknown withholding tax");
         }
 
@@ -512,15 +512,15 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιπτ. β’- Τόκοι - 15%", // Withholding tax
-                        Amount = -121m,
+                        Description = "Περιπτ. β’- Τόκοι - 15%",
+                        Amount = -121m, // 15% of net amount (806.45 * 0.15 ≈ 121)
                         VATRate = 0m,
                         Position = 2
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Τέλος στη συνδρομητική τηλεόραση 10%", // Fee
+                        Description = "Τέλος στη συνδρομητική τηλεόραση 10%",
                         Amount = 80m,
                         VATRate = 0m,
                         Position = 3
@@ -572,7 +572,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             invoice.invoiceSummary.totalGrossValue.Should().Be(959m);
             invoice.invoiceSummary.totalNetValue.Should().Be(806.45m);
 
-            // Should only have one invoice detail (the regular item)
+            // Should only have one invoice detail (the regular item, not the withholding tax item)
             invoice.invoiceDetails.Length.Should().Be(1);
             invoice.invoiceDetails[0].netValue.Should().Be(806.45m);
         }
@@ -939,15 +939,15 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιπτ. β’- Τόκοι - 15%", // Withholding tax
-                        Amount = -121m,
+                        Description = "Περιπτ. β’- Τόκοι - 15%",
+                        Amount = -121m, // 15% of net amount (806.45 * 0.15 ≈ 121)
                         VATRate = 0m,
                         Position = 2
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Τέλος στη συνδρομητική τηλεόραση 10%", // Fee
+                        Description = "Τέλος στη συνδρομητική τηλεόραση 10%",
                         Amount = 80m,
                         VATRate = 0m,
                         Position = 3
@@ -959,6 +959,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                         Amount = 9.68m,
                         VATRate = 0m,
                         Position = 4
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "β) ασφάλιστρα κλάδου ζωής 4%", // Other tax
+                        Amount = 32.26m, // 4% of net amount (806.45 * 0.04 ≈ 32.26)
+                        VATRate = 0m,
+                        Position = 5
                     }
                 ],
                 cbPayItems =
@@ -966,7 +974,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new PayItem
                     {
                         ftPayItemCase = (PayItemCase)0x4752000000000001,
-                        Amount = 968.68m // 1000 - 121 + 80 + 9.68 = 968.68
+                        Amount = 1000.94m // 1000 - 121 + 80 + 9.68 + 32.26 = 1000.94
                     }
                 ]
             };
@@ -988,8 +996,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             
             var invoice = invoiceDoc.invoice[0];
             
-            // Should have all three types: withholding tax, fee, and stamp duty
-            invoice.taxesTotals.Length.Should().Be(3);
+            // Should have all four types: withholding tax, fee, stamp duty, and other tax
+            invoice.taxesTotals.Length.Should().Be(4);
             
             var withholdingTax = invoice.taxesTotals.FirstOrDefault(t => t.taxType == 1); // Withholding tax
             withholdingTax.Should().NotBeNull();
@@ -1006,11 +1014,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             stampDuty.taxCategory.Should().Be(1); // 1.2% stamp duty
             stampDuty.taxAmount.Should().Be(9.68m);
 
-            // Invoice summary should include all three
+            var otherTax = invoice.taxesTotals.FirstOrDefault(t => t.taxType == 3); // Other tax
+            otherTax.Should().NotBeNull();
+            otherTax.taxCategory.Should().Be(3); // Life insurance premium
+            otherTax.taxAmount.Should().Be(32.26m);
+
+            // Invoice summary should include all four types
             invoice.invoiceSummary.totalWithheldAmount.Should().Be(121m);
             invoice.invoiceSummary.totalFeesAmount.Should().Be(80m);
             invoice.invoiceSummary.totalStampDutyAmount.Should().Be(9.68m);
-            invoice.invoiceSummary.totalGrossValue.Should().Be(968.68m);
+            invoice.invoiceSummary.totalOtherTaxesAmount.Should().Be(32.26m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(1000.94m);
             invoice.invoiceSummary.totalNetValue.Should().Be(806.45m);
 
             // Should only have one invoice detail (the regular item)
@@ -1019,7 +1033,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
         }
 
         [Fact]
-        public void MapToInvoicesDoc_ShouldThrowException_WhenStampDutyDescriptionNotMapped()
+        public void MapToInvoicesDoc_ShouldThrowException_WhenOtherTaxDescriptionNotMapped()
         {
             // Arrange
             var factory = new AADEFactory(_masterDataConfiguration);
@@ -1045,7 +1059,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Unknown stamp duty",
+                        Description = "Unknown other tax",
                         Amount = 10m,
                         VATRate = 0m,
                         Position = 2
@@ -1073,12 +1087,12 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
             
             error.Should().NotBeNull();
-            error.Exception.Message.Should().Contain("No withholding tax, fee, or stamp duty mapping found");
-            error.Exception.Message.Should().Contain("Unknown stamp duty");
+            error.Exception.Message.Should().Contain("No withholding tax, fee, stamp duty, or other tax mapping");
+            error.Exception.Message.Should().Contain("Unknown other tax");
         }
 
         [Fact]
-        public void MapToInvoicesDoc_ShouldHandleStampDutyWithUnderlyingValue()
+        public void MapToInvoicesDoc_ShouldHandleZeroPercentageOtherTax()
         {
             // Arrange
             var factory = new AADEFactory(_masterDataConfiguration);
@@ -1104,8 +1118,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Συντελεστής 2,4 %",
-                        Amount = 9.68m, // 2.4% of net amount (403.23 * 0.024 ≈ 9.68)
+                        Description = "δ) απαλλασσόμενα φόρου ασφαλίστρων 0%", // 0% insurance premium exemption
+                        Amount = 0m,
                         VATRate = 0m,
                         Position = 2
                     }
@@ -1114,7 +1128,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new PayItem
                     {
                         ftPayItemCase = (PayItemCase)0x4752000000000001,
-                        Amount = 509.68m
+                        Amount = 500m
                     }
                 ]
             };
@@ -1135,11 +1149,239 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             invoiceDoc.Should().NotBeNull();
             
             var invoice = invoiceDoc.invoice[0];
-            var stampDuty = invoice.taxesTotals[0];
+            var otherTax = invoice.taxesTotals[0];
 
-            stampDuty.taxType.Should().Be(4); // Stamp duty tax type
-            stampDuty.taxCategory.Should().Be(2); // 2.4% stamp duty code
-            stampDuty.taxAmount.Should().Be(9.68m);
+            otherTax.taxType.Should().Be(3); // Other tax type
+            otherTax.taxCategory.Should().Be(5); // Insurance premium exemption code
+            otherTax.taxAmount.Should().Be(0m);
+
+            invoice.invoiceSummary.totalOtherTaxesAmount.Should().Be(0m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(500m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(403.23m);
+
+            // Should only have one invoice detail (the regular item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(403.23m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleLuxuryTaxOtherTax()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase)0x4752000000000001,
+                cbChargeItems = 
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Luxury item",
+                        Amount = 1000m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "3.1 Φόρος πολυτελείας 10% επί της φορολογητέας αξίας για τα ενδοκοινοτικώς αποκτούμενα και εισαγόμενα από τρίτες χώρες", // Luxury tax 10%
+                        Amount = 80.65m, // 10% of net amount (806.45 * 0.10 ≈ 80.65)
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 1080.65m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            var otherTax = invoice.taxesTotals[0];
+
+            otherTax.taxType.Should().Be(3); // Other tax type
+            otherTax.taxCategory.Should().Be(12); // Luxury tax intra-community acquisition code
+            otherTax.taxAmount.Should().Be(80.65m);
+
+            invoice.invoiceSummary.totalOtherTaxesAmount.Should().Be(80.65m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(1080.65m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(806.45m);
+
+            // Should only have one invoice detail (the regular item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(806.45m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleCasinoTaxOtherTax()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase)0x4752000000000001,
+                cbChargeItems = 
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Casino ticket",
+                        Amount = 100m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Δικαίωμα του Δημοσίου στα εισιτήρια των καζίνο (80% επί του εισιτηρίου)", // Casino tax 80%
+                        Amount = 64.52m, // 80% of net amount (80.65 * 0.80 ≈ 64.52)
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 164.52m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            var otherTax = invoice.taxesTotals[0];
+
+            otherTax.taxType.Should().Be(3); // Other tax type
+            otherTax.taxCategory.Should().Be(14); // Casino ticket tax code
+            otherTax.taxAmount.Should().Be(64.52m);
+
+            invoice.invoiceSummary.totalOtherTaxesAmount.Should().Be(64.52m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(164.52m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(80.65m);
+
+            // Should only have one invoice detail (the regular item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(80.65m);
+        }
+
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleShortTermRentalTaxOtherTax()
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration);
+            
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "R001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase)0x4752000000000001,
+                cbChargeItems = 
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x4752000000000013,
+                        Description = "Accommodation",
+                        Amount = 200m,
+                        VATRate = 24m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
+                        Description = "Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 10,00€", // Short-term rental villa tax
+                        Amount = 10m, // Fixed amount
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems = [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase)0x4752000000000001,
+                        Amount = 210m
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State)0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+            
+            var invoice = invoiceDoc.invoice[0];
+            var otherTax = invoice.taxesTotals[0];
+
+            otherTax.taxType.Should().Be(3); // Other tax type
+            otherTax.taxCategory.Should().Be(26); // Short-term rental villa tax code
+            otherTax.taxAmount.Should().Be(10m);
+            otherTax.underlyingValueSpecified.Should().BeFalse(); // No underlying value for fixed amount
+
+            invoice.invoiceSummary.totalOtherTaxesAmount.Should().Be(10m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(210m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(161.29m); // 200 / 1.24 ≈ 161.29
+
+            // Should only have one invoice detail (the regular item, not the other tax item)
+            invoice.invoiceDetails.Length.Should().Be(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(161.29m);
         }
 
         #endregion

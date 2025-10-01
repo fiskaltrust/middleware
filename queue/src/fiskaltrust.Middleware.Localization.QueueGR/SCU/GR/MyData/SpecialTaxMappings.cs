@@ -6,8 +6,8 @@ using fiskaltrust.ifPOS.v2;
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
 /// <summary>
-/// Provides mapping functionality for Greek withholding taxes, fees, and stamp duties based on AADE requirements.
-/// Maps charge item descriptions to withholding tax categories, percentages, fee categories, and stamp duty categories.
+/// Provides mapping functionality for Greek withholding taxes, fees, stamp duties, and other taxes based on AADE requirements.
+/// Maps charge item descriptions to withholding tax categories, percentages, fee categories, stamp duty categories, and other tax categories.
 /// </summary>
 public static class SpecialTaxMappings
 {
@@ -35,6 +35,16 @@ public static class SpecialTaxMappings
     /// Represents a stamp duty mapping with code, description, and percentage.
     /// </summary>
     public record StampDutyMapping(
+        int Code,
+        string GreekDescription,
+        decimal? Percentage,
+        bool IsFixedAmount = false
+    );
+
+    /// <summary>
+    /// Represents an other tax mapping with code, description, and percentage.
+    /// </summary>
+    public record OtherTaxMapping(
         int Code,
         string GreekDescription,
         decimal? Percentage,
@@ -154,6 +164,74 @@ public static class SpecialTaxMappings
     };
 
     /// <summary>
+    /// Dictionary mapping Greek descriptions to other tax information.
+    /// Based on the official AADE other tax table.
+    /// </summary>
+    private static readonly Dictionary<string, OtherTaxMapping> _otherTaxMappings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Code 1: α1) ασφάλιστρα κλάδου πυρός 20% (15%)
+        ["α1) ασφάλιστρα κλάδου πυρός 20%"] = new(1, "α1) ασφάλιστρα κλάδου πυρός 20%", 15m),
+        // Code 2: α2) ασφάλιστρα κλάδου πυρός 20% (5%)
+        ["α2) ασφάλιστρα κλάδου πυρός 20%"] = new(2, "α2) ασφάλιστρα κλάδου πυρός 20%", 5m),
+        // Code 3: β) ασφάλιστρα κλάδου ζωής 4%
+        ["β) ασφάλιστρα κλάδου ζωής 4%"] = new(3, "β) ασφάλιστρα κλάδου ζωής 4%", 4m),
+        // Code 4: γ) ασφάλιστρα λοιπών κλάδων 15%
+        ["γ) ασφάλιστρα λοιπών κλάδων 15%"] = new(4, "γ) ασφάλιστρα λοιπών κλάδων 15%", 15m),
+        // Code 5: δ) απαλλασσόμενα φόρου ασφαλίστρων 0%
+        ["δ) απαλλασσόμενα φόρου ασφαλίστρων 0%"] = new(5, "δ) απαλλασσόμενα φόρου ασφαλίστρων 0%", 0m),
+        // Code 6: Ξενοδοχεία 1‑2 αστέρων 0,50 € (fixed amount)
+        ["Ξενοδοχεία 1-2 αστέρων 0,50 €"] = new(6, "Ξενοδοχεία 1-2 αστέρων 0,50 €", null, true),
+        // Code 7: Ξενοδοχεία 3 αστέρων 1,50 € (fixed amount)
+        ["Ξενοδοχεία 3 αστέρων 1,50 €"] = new(7, "Ξενοδοχεία 3 αστέρων 1,50 €", null, true),
+        // Code 8: Ξενοδοχεία 4 αστέρων 3,00 € (fixed amount)
+        ["Ξενοδοχεία 4 αστέρων 3,00 €"] = new(8, "Ξενοδοχεία 4 αστέρων 3,00 €", null, true),
+        // Code 9: Ξενοδοχεία 5 αστέρων 4,00 € (fixed amount)
+        ["Ξενοδοχεία 4 αστέρων 4,00 €"] = new(9, "Ξενοδοχεία 4 αστέρων 4, 00 €", null, true),
+        // Code 10: Ενοικιαζόμενα – επιπλωμένα δωμάτια – διαμερίσματα 0,50 € (fixed amount)
+        ["Ενοικιαζόμενα - επιπλωμένα δωμάτια - διαμερίσματα 0,50 €"] = new(10, "Ενοικιαζόμενα - επιπλωμένα δωμάτια - διαμερίσματα 0,50 €", null, true),
+        // Code 11: Ειδικός Φόρος στις διαφημίσεις που προβάλλονται από την τηλεόραση (ΕΦΤΔ) 5%
+        ["Ειδικός Φόρος στις διαφημίσεις που προβάλλονται από την τηλεόραση (ΕΦΤΔ) 5%"] = new(11, "Ειδικός Φόρος στις διαφημίσεις που προβάλλονται από την τηλεόραση (ΕΦΤΔ) 5%", 5m),
+        // Code 12: 3.1 Φόρος πολυτελείας 10% επί της φορολογητέας αξίας για τα ενδοκοινοτικώς αποκτώμενα και εισαγόμενα από τρίτες χώρες
+        ["3.1 Φόρος πολυτελείας 10% επί της φορολογητέας αξίας για τα ενδοκοινοτικώς αποκτούμενα και εισαγόμενα από τρίτες χώρες 10%"] = new(12, "3.1 Φόρος πολυτελείας 10% επί της φορολογητέας αξίας για τα ενδοκοινοτικώς αποκτούμενα και εισαγόμενα από τρίτες χώρες 10%", 10m),
+        // Code 13: 3.2 Φόρος πολυτελείας 10% επί της τιμής πώλησης προ Φ.Π.Α. για τα εγχωρίως παραγόμενα είδη
+        ["3.2 Φόρος πολυτελείας 10% επί της τιμής πώλησης προ Φ.Π.Α. για τα εγχωρίως παραγόμενα είδη 10%"] = new(13, "3.2 Φόρος πολυτελείας 10% επί της τιμής πώλησης προ Φ.Π.Α. για τα εγχωρίως παραγόμενα είδη 10%", 10m),
+        // Code 14: Δικαίωμα του Δημοσίου στα εισιτήρια των καζίνο (80% επί του εισιτηρίου)
+        ["Δικαίωμα του Δημοσίου στα εισιτήρια των καζίνο (80% επί του εισιτηρίου)"] = new(14, "Δικαίωμα του Δημοσίου στα εισιτήρια των καζίνο (80% επί του εισιτηρίου)", 80m),
+        // Code 15: ασφάλιστρα κλάδου πυρός 20%
+        ["ασφάλιστρα κλάδου πυρός 20%"] = new(15, "ασφάλιστρα κλάδου πυρός 20%", 20m),
+        // Code 16: Λοιποί Τελωνειακοί Δασμοί‑Φόροι (fixed amount)
+        ["Λοιποί Τελωνειακοί Δασμοί-Φόροι"] = new(16, "Λοιποί Τελωνειακοί Δασμοί-Φόροι", null, true),
+        // Code 17: Λοιποί Φόροι (fixed amount)
+        ["Λοιποί Φόροι"] = new(17, "Λοιποί Φόροι", null, true),
+        // Code 18: Επιβαρύνσεις Λοιπών Φόρων (fixed amount)
+        ["Επιβαρύνσεις Λοιπών Φόρων"] = new(18, "Επιβαρύνσεις Λοιπών Φόρων", null, true),
+        // Code 19: ΕΦΚ (fixed amount)
+        ["ΕΦΚ"] = new(19, "ΕΦΚ", null, true),
+        // Code 20: Ξενοδοχεία 1‑2 αστέρων 1,50€ (ανά Δωμ./Διαμ.) (fixed amount)
+        ["Ξενοδοχεία 1-2 αστέρων 1,50€ (ανά Δωμ./Διαμ.)"] = new(20, "Ξενοδοχεία 1-2 αστέρων 1,50€ (ανά Δωμ./Διαμ.)", null, true),
+        // Code 21: Ξενοδοχεία 3 αστέρων 3,00€ (ανά Δωμ./Διαμ.) (fixed amount)
+        ["Ξενοδοχεία 3 αστέρων 3,00€ (ανά Δωμ./Διαμ.)"] = new(21, "Ξενοδοχεία 3 αστέρων 3,00€ (ανά Δωμ./Διαμ.)", null, true),
+        // Code 22: Ξενοδοχεία 4 αστέρων 7,00€ (ανά Δωμ./Διαμ.) (fixed amount)
+        ["Ξενοδοχεία 4 αστέρων 7,00€ (ανά Δωμ./Διαμ.)"] = new(22, "Ξενοδοχεία 4 αστέρων 7,00€ (ανά Δωμ./Διαμ.)", null, true),
+        // Code 23: Ξενοδοχεία 5 αστέρων 10,00€ (ανά Δωμ./Διαμ.) (fixed amount)
+        ["Ξενοδοχεία 5 αστέρων 10,00€ (ανά Δωμ./Διαμ.)"] = new(23, "Ξενοδοχεία 5 αστέρων 10,00€ (ανά Δωμ./Διαμ.)", null, true),
+        // Code 24: Ενοικιαζόμενα επιπλωμένα δωμάτια – διαμερίσματα 1,50€ (ανά Δωμ./Διαμ.) (fixed amount)
+        ["Ενοικιαζόμενα επιπλωμένα δωμάτια – διαμερίσματα 1,50€ (ανά Δωμ./Διαμ.)"] = new(24, "Ενοικιαζόμενα επιπλωμένα δωμάτια – διαμερίσματα 1,50€ (ανά Δωμ./Διαμ.)", null, true),
+        // Code 25: Ακίνητα βραχυχρόνιας μίσθωσης 1,50€ (fixed amount)
+        ["Ακίνητα βραχυχρόνιας μίσθωσης 1,50€"] = new(25, "Ακίνητα βραχυχρόνιας μίσθωσης 1,50€", null, true),
+        // Code 26: Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 10,00€ (fixed amount)
+        ["Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 10,00€"] = new(26, "Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 10,00€", null, true),
+        // Code 27: Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 10,00€ (fixed amount)
+        ["Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 10,00€"] = new(27, "Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 10,00€", null, true),
+        // Code 28: Ακίνητα βραχυχρόνιας μίσθωσης 0,50€ (fixed amount)
+        ["Ακίνητα βραχυχρόνιας μίσθωσης 0,50€"] = new(28, "Ακίνητα βραχυχρόνιας μίσθωσης 0,50€", null, true),
+        // Code 29: Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 4,00€ (fixed amount)
+        ["Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 4,00€"] = new(29, "Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 4,00€", null, true),
+        // Code 30: Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 4,00€ (fixed amount)
+        ["Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 4,00€"] = new(30, "Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 4,00€", null, true),
+    };
+
+    /// <summary>
     /// Gets withholding tax mapping for a given charge item description.
     /// </summary>
     /// <param name="description">The description of the charge item</param>
@@ -243,6 +321,41 @@ public static class SpecialTaxMappings
 
         // Try partial matching for more flexible description matching
         foreach (var kvp in _stampDutyMappings)
+        {
+            var key = kvp.Key;
+            var mapping = kvp.Value;
+
+            // Check if the description contains the key or key contains the description
+            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
+                key.Contains(description, StringComparison.OrdinalIgnoreCase))
+            {
+                return mapping;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets other tax mapping for a given charge item description.
+    /// </summary>
+    /// <param name="description">The description of the charge item</param>
+    /// <returns>Other tax mapping if found, null otherwise</returns>
+    public static OtherTaxMapping? GetOtherTaxMapping(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return null;
+        }
+
+        // Try exact match first
+        if (_otherTaxMappings.TryGetValue(description.Trim(), out var exactMapping))
+        {
+            return exactMapping;
+        }
+
+        // Try partial matching for more flexible description matching
+        foreach (var kvp in _otherTaxMappings)
         {
             var key = kvp.Key;
             var mapping = kvp.Value;

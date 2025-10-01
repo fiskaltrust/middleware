@@ -144,5 +144,57 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             mapping.Percentage.Should().Be(expectedPercentage, $"percentage for '{description}' should be {expectedPercentage}");
             mapping.IsFixedAmount.Should().Be(expectedIsFixed, $"IsFixedAmount for '{description}' should be {expectedIsFixed}");
         }
+
+        [Fact]
+        public void GetOtherTaxMapping_ShouldReturnNullWhenDescriptionNotFound()
+        {
+            var description = "Invalid other tax description";
+
+            var mapping = SpecialTaxMappings.GetOtherTaxMapping(description);
+            mapping.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData("α1) ασφάλιστρα κλάδου πυρός 20%", 1, 15, false)]
+        [InlineData("α2) ασφάλιστρα κλάδου πυρός 20%", 2, 5, false)]
+        [InlineData("β) ασφάλιστρα κλάδου ζωής 4%", 3, 4, false)]
+        [InlineData("γ) ασφάλιστρα λοιπών κλάδων 15%.", 4, 15, false)]
+        [InlineData("δ) απαλλασσόμενα φόρου ασφαλίστρων 0%.", 5, 0, false)]
+        [InlineData("Ξενοδοχεία 1-2 αστέρων 0,50 €", 6, null, true)]
+        [InlineData("Ξενοδοχεία 3 αστέρων 1,50 €", 7, null, true)]
+        [InlineData("Ξενοδοχεία 4 αστέρων 3,00 €", 8, null, true)]
+        [InlineData("Ξενοδοχεία 4 αστέρων 4,00 €", 9, null, true)]
+        [InlineData("Ενοικιαζόμενα - επιπλωμένα δωμάτια - διαμερίσματα 0,50 €", 10, null, true)]
+        [InlineData("Ειδικός Φόρος στις διαφημίσεις που προβάλλονται από την τηλεόραση (ΕΦΤΔ) 5%", 11, 5, false)]
+        [InlineData("3.1 Φόρος πολυτελείας 10% επί της φορολογητέας αξίας για τα ενδοκοινοτικώς αποκτούμενα και εισαγόμενα από τρίτες χώρες 10%", 12, 10, false)]
+        [InlineData("3.2 Φόρος πολυτελείας 10% επί της τιμής πώλησης προ Φ.Π.Α. για τα εγχωρίως παραγόμενα είδη 10%", 13, 10, false)]
+        [InlineData("Δικαίωμα του Δημοσίου στα εισιτήρια των καζίνο (80% επί του εισιτηρίου)", 14, 80, false)]
+        [InlineData("ασφάλιστρα κλάδου πυρός 20%", 15, 20, false)]
+        [InlineData("Λοιποί Τελωνειακοί Δασμοί-Φόροι", 16, null, true)]
+        [InlineData("Λοιποί Φόροι", 17, null, true)]
+        [InlineData("Επιβαρύνσεις Λοιπών Φόρων", 18, null, true)]
+        [InlineData("ΕΦΚ", 19, null, true)]
+        [InlineData("Ξενοδοχεία 1-2 αστέρων 1,50€ (ανά Δωμ./Διαμ.)", 20, null, true)]
+        [InlineData("Ξενοδοχεία 3 αστέρων 3,00€ (ανά Δωμ./Διαμ.)", 21, null, true)]
+        [InlineData("Ξενοδοχεία 4 αστέρων 7,00€ (ανά Δωμ./Διαμ.)", 22, null, true)]
+        [InlineData("Ξενοδοχεία 5 αστέρων 10,00€ (ανά Δωμ./Διαμ.)", 23, null, true)]
+        [InlineData("Ενοικιαζόμενα επιπλωμένα δωμάτια – διαμερίσματα 1,50€ (ανά Δωμ./Διαμ.)", 24, null, true)]
+        [InlineData("Ακίνητα βραχυχρόνιας μίσθωσης 1,50€", 25, null, true)]
+        [InlineData("Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 10,00€", 26, null, true)]
+        [InlineData("Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 10,00€", 27, null, true)]
+        [InlineData("Ακίνητα βραχυχρόνιας μίσθωσης 0,50€", 28, null, true)]
+        [InlineData("Ακίνητα βραχυχρόνιας μίσθωσης μονοκατοικίες άνω των 80 τ.μ. 4,00€", 29, null, true)]
+        [InlineData("Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 4,00€", 30, null, true)]
+        public void GetOtherTaxMapping_ShouldHandleAllDefinedMappings(string description, int expectedCode, int? expectedPercentage, bool expectedIsFixed)
+        {
+            // Act
+            var mapping = SpecialTaxMappings.GetOtherTaxMapping(description);
+
+            // Assert
+            mapping.Should().NotBeNull($"mapping for '{description}' should exist");
+            mapping.Code.Should().Be(expectedCode, $"code for '{description}' should be {expectedCode}");
+            mapping.Percentage.Should().Be(expectedPercentage, $"percentage for '{description}' should be {expectedPercentage}");
+            mapping.IsFixedAmount.Should().Be(expectedIsFixed, $"IsFixedAmount for '{description}' should be {expectedIsFixed}");
+        }
     }
 }
