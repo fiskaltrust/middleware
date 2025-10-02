@@ -31,7 +31,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(await _readOnlyQueueItemRepository);
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
 
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
         {
@@ -137,7 +137,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(await _readOnlyQueueItemRepository);
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
 
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];

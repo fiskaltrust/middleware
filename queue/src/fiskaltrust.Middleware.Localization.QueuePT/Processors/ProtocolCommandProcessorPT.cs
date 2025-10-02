@@ -30,7 +30,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(await _readOnlyQueueItemRepository);
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository); 
         var series = GetSeriesForReceiptRequest(staticNumberStorage, request.ReceiptRequest);
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
@@ -41,13 +41,13 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
             ReceiptResponse = receiptResponse,
         }, series.LastHash);
         var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-        var qrCode = PortugalReceiptCalculations.CreateProFormaQRCode(printHash, _queuePT.IssuerTIN, series, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+        var qrCode = PortugalReceiptCalculations.CreateProFormaQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
-    private NumberSeries GetSeriesForReceiptRequest(StaticNumeratorStorage staticNumberStorage, ReceiptRequest receiptRequest)
+    private NumberSeries GetSeriesForReceiptRequest(NumeratorStorage staticNumberStorage, ReceiptRequest receiptRequest)
     {
         if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
         {

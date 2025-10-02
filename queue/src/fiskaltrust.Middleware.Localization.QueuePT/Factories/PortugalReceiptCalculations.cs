@@ -112,7 +112,7 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, NumberSeries series, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
