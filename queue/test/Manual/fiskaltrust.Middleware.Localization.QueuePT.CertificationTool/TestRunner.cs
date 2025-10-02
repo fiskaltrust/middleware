@@ -120,6 +120,50 @@ public class TestRunner
             PrivateKey = File.ReadAllText("C:\\secure\\PrivateKey.pem"),
             SoftwareCertificateNumber = "9999"
         });
+        queue.Configuration.Add("NumeratorStorage", """
+            {
+              "InvoiceSeries": {
+                "TypeCode": "FT",
+                "ATCUD": "AAJFJGVC33",
+                "Series": "ft2025019d"
+              },
+              "SimplifiedInvoiceSeries": {
+                "TypeCode": "FS",
+                "ATCUD": "AAJFJ4VC3W",
+                "Series": "ft2025019d"
+              },
+              "CreditNoteSeries": {
+                "TypeCode": "NC",
+                "ATCUD": "AAJFJ3VC34",
+                "Series": "ft2025019d"
+              },
+              "HandWrittenFSSeries": {
+                "TypeCode": "FS",
+                "ATCUD": "AAJFJBKFZR",
+                "Series": "ft2025771b"
+              },
+              "ProFormaSeries": {
+                "TypeCode": "PF",
+                "ATCUD": "AAJFJ9VC37",
+                "Series": "ft2025019d"
+              },
+              "PaymentSeries": {
+                "TypeCode": "RG",
+                "ATCUD": "AAJFJMVC3G",
+                "Series": "ft2025019d"
+              },
+              "BudgetSeries": {
+                "TypeCode": "OR",
+                "ATCUD": "AAJFJKVC3P",
+                "Series": "ft2025eb51"
+              },
+              "TableChecqueSeries": {
+                "TypeCode": "CM",
+                "ATCUD": "AAJFJ2VC3R",
+                "Series": "ft2025eb51"
+              }
+            }
+            """);
         var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);
         return bootstrapper;
     }

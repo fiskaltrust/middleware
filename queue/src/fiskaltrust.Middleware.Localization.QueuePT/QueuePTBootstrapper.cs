@@ -17,14 +17,21 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD) : this(id, loggerFactory, configuration, ptSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }    
+    public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD) : this(id, loggerFactory, configuration, ptSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
     public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var queuePT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
         queuePT.IssuerTIN = "980833310";
-        queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>("""
+
+        if (configuration.ContainsKey("NumeratorStorage"))
+        {
+            queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>(configuration["NumeratorStorage"]!.ToString()!);
+        }
+        else
+        {
+            queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>("""
             {
               "InvoiceSeries": {
                 "TypeCode": "FT",
@@ -68,6 +75,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
               }
             }
             """);
+        }
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()));
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration);
