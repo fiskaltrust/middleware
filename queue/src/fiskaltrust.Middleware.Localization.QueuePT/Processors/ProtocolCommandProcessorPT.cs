@@ -30,7 +30,8 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var series = GetSeriesForReceiptRequest(request.ReceiptRequest);
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(await _readOnlyQueueItemRepository);
+        var series = GetSeriesForReceiptRequest(staticNumberStorage, request.ReceiptRequest);
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
         ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
@@ -46,17 +47,17 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
-    private NumberSeries GetSeriesForReceiptRequest(ReceiptRequest receiptRequest)
+    private NumberSeries GetSeriesForReceiptRequest(StaticNumeratorStorage staticNumberStorage, ReceiptRequest receiptRequest)
     {
         if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
         {
-            return StaticNumeratorStorage.TableChecqueSeries;
+            return staticNumberStorage.TableChecqueSeries;
         }
         else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
         {
-            return StaticNumeratorStorage.BudgetSeries;
+            return staticNumberStorage.BudgetSeries;
         }
-        return StaticNumeratorStorage.ProFormaSeries;
+        return staticNumberStorage.ProFormaSeries;
     }
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);

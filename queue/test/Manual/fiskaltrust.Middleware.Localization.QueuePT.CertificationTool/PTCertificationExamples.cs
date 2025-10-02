@@ -15,8 +15,7 @@ public static class PTCertificationExamples
 
     public static ReceiptCase BaseCase = ((ReceiptCase) 0x2000_0000_0000).WithCountry("PT");
 
-    public static DateTime ReferenceDate = new DateTime(2025, 09, 22, 04, 15, 53);
-
+    public static DateTime ReferenceDate = new DateTime(2025, 10, 02, 04, 15, 53);
     public static PTUserObject User1ObjectId => new PTUserObject
     {
         UserId = Convert.ToBase64String(Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToByteArray()),

@@ -11,56 +11,56 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 public class StaticNumeratorStorage
 {
-    public static NumberSeries InvoiceSeries { get; set; } = new NumberSeries
+    public NumberSeries InvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FT",
         ATCUD = "AAJFJGVC33",
         Identifier = "FT ft2025019d",
     };
 
-    public static NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
+    public NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FS",
         ATCUD = "AAJFJ4VC3W",
         Identifier = "FS ft2025019d",
     };
 
-    public static NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
+    public NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
     {
         TypeCode = "NC",
         ATCUD = "AAJFJ3VC34",
         Identifier = "NC ft2025019d",
     };
 
-    public static NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
+    public NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FS",
         ATCUD = "AAJFJBKFZR",
         Identifier = "FS ft2025771b",
     };
 
-    public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries
+    public NumberSeries ProFormaSeries { get; set; } = new NumberSeries
     {
         TypeCode = "PF",
         ATCUD = "AAJFJ9VC37",
         Identifier = "PF ft2025019d",
     };
 
-    public static NumberSeries PaymentSeries { get; set; } = new NumberSeries
+    public NumberSeries PaymentSeries { get; set; } = new NumberSeries
     {
         TypeCode = "RG",
         ATCUD = "AAJFJMVC3G",
         Identifier = "RG ft2025019d",
     };
 
-    public static NumberSeries BudgetSeries { get; set; } = new NumberSeries
+    public NumberSeries BudgetSeries { get; set; } = new NumberSeries
     {
         TypeCode = "OR",
         ATCUD = "AAJFJKVC3P",
         Identifier = "OR ft2025eb51",
     };
 
-    public static NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
+    public NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
     {
         TypeCode = "CM",
         ATCUD = "AAJFJ2VC3R",
@@ -68,7 +68,14 @@ public class StaticNumeratorStorage
     };
 
 
-    public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+    public static async Task<StaticNumeratorStorage> GetStaticNumeratorStorageAsync(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+    {
+        var storage = new StaticNumeratorStorage();
+        await storage.LoadStorageNumbers(middlewareQueueItemRepository);
+        return storage;
+    }
+
+    public async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         var queueItems = (await middlewareQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow).ToList();
         ReloadSeries(SimplifiedInvoiceSeries, queueItems);
@@ -81,7 +88,7 @@ public class StaticNumeratorStorage
         ReloadSeries(HandWrittenFSSeries, queueItems);
     }
 
-    private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
+    private void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
     {
         if (series.Numerator == null)
         {
@@ -107,7 +114,7 @@ public class StaticNumeratorStorage
                 if (lastReceiptResponse.ftReceiptIdentification.Split("#").Last().StartsWith(series.Identifier))
                 {
                     series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("#").Last().Split("/")[1]);
-                    var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == SignatureTypePT.Hash.As<SignatureType>());
+                    var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.Hash));
                     if (lastSignature != null)
                     {
                         series.LastHash = lastSignature.Data;

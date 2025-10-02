@@ -510,7 +510,7 @@ public class SaftExporter
                 PaymentStatus = "N",
                 PaymentStatusDate = receiptRequest.cbReceiptMoment,
                 SourceID = GetSourceID(receiptRequest),
-                SourcePayment = GetSourcePayment(receiptRequest),
+                SourcePayment = GetSourcePayment(receiptRequest)
             },
             Period = receiptRequest.cbReceiptMoment.Month,
             TransactionDate = receiptRequest.cbReceiptMoment,
