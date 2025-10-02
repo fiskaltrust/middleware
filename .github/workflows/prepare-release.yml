@@ -35,12 +35,23 @@ jobs:
             version=${BRANCH#release/v}
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
+        
+      - name: Debug branches
+        run: |
+          git branch -a
+          git log --oneline --decorate --graph -5
+          echo "Main version.json:"
+          git checkout main
+          head -20 version.json
+          echo "Release branch version.json:"
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          head -20 version.json
 
       - name: Push changes
         run: |
           #Push main branch changes (next -ci version)
           git checkout main
-          git push origin main --force
+          git push origin main
 
           # Push release branch bump (1.x -rc version)
           git checkout ${{ steps.prepare-release.outputs.release_branch }}
