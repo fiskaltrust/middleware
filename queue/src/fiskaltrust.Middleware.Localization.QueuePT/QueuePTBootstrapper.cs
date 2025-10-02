@@ -35,43 +35,43 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
             {
               "InvoiceSeries": {
                 "TypeCode": "FT",
-                "ATCUD": "AAJFJGVC33",
-                "Series": "ft2025019d"
+                "ATCUD": "AAJFJ2K6JF",
+                "Series": "ft2025b814"
               },
               "SimplifiedInvoiceSeries": {
                 "TypeCode": "FS",
-                "ATCUD": "AAJFJ4VC3W",
-                "Series": "ft2025019d"
+                "ATCUD": "AAJFJNK6JJ",
+                "Series": "ft20257d14"
               },
               "CreditNoteSeries": {
                 "TypeCode": "NC",
-                "ATCUD": "AAJFJ3VC34",
-                "Series": "ft2025019d"
+                "ATCUD": "AAJFJ6K6J5",
+                "Series": "ft2025128b"
               },
               "HandWrittenFSSeries": {
                 "TypeCode": "FS",
-                "ATCUD": "AAJFJBKFZR",
-                "Series": "ft2025771b"
+                "ATCUD": "AAJFJHK6J6",
+                "Series": "ft20250a62"
               },
               "ProFormaSeries": {
                 "TypeCode": "PF",
-                "ATCUD": "AAJFJ9VC37",
-                "Series": "ft2025019d"
+                "ATCUD": "AAJFJFK6JH",
+                "Series": "ft20253a3b"
               },
               "PaymentSeries": {
                 "TypeCode": "RG",
-                "ATCUD": "AAJFJMVC3G",
-                "Series": "ft2025019d"
+                "ATCUD": "AAJFJ8K6JT",
+                "Series": "ft2025a4fa"
               },
               "BudgetSeries": {
                 "TypeCode": "OR",
-                "ATCUD": "AAJFJKVC3P",
-                "Series": "ft2025eb51"
+                "ATCUD": "AAJFJYK6JN",
+                "Series": "ft20255389"
               },
               "TableChecqueSeries": {
                 "TypeCode": "CM",
-                "ATCUD": "AAJFJ2VC3R",
-                "Series": "ft2025eb51"
+                "ATCUD": "AAJFJPK6JZ",
+                "Series": "ft20259c2f"
               }
             }
             """);
