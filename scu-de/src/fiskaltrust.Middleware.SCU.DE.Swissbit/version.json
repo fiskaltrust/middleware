@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "pathFilters": [
+    "/scu-de/src/fiskaltrust.Middleware.SCU.DE.Swissbit"
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/tags/scu-de/swissbit/v.+"
+  ],
+  "release": {
+    "tagName": "scu-de/swissbit/v{version}"
+  },
+  "inherit": true
+}

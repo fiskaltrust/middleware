@@ -1,40 +1,29 @@
-name: 'Build'
+name: "Build"
 inputs:
   path:
     required: true
     type: string
   project:
     required: true
-    type: string  
+    type: string
 
 runs:
   using: "composite"
   steps:
-    - name: Install MinVer
-      run: dotnet tool install --global minver-cli --version 6.0.0
+    - name: Install Nerdbank.GitVersioning
+      run: dotnet tool install -g nbgv
       shell: pwsh
 
     - name: Publish v1 Nuget packages
       shell: pwsh
       run: |
-        $version = ""
+        $projectDirectory = "${{ inputs.path }}/${{ inputs.project }}"
+        $csprojFile = "$projectDirectory/${{ inputs.project }}.csproj"
+        $nuspecFile = "$projectDirectory/.nuspec"
 
-        $csprojFile = "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj"
-        $nuspecFile = "${{ inputs.path }}/${{ inputs.project }}/.nuspec"
-
-        [xml]$csprojContent = Get-Content -Path $csprojFile
-        foreach ($propertyGroup in $csprojContent.Project.PropertyGroup) {
-          if ($propertyGroup.MinVerTagPrefix) {
-            $version = minver --verbosity error -t $($propertyGroup.MinVerTagPrefix) -p ci
-            break
-          }
-        }
+        $version = nbgv get-version --variable NuGetPackageVersion --project $projectDirectory
 
         Write-Host "Version: $version"
-        if($version -eq "") {
-          Write-Error "Version not found"
-          exit 1
-        }
 
         $args = ""
         if(Test-Path $nuspecFile) {
@@ -48,7 +37,7 @@ runs:
         }
 
         dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
-      
+
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4
       with:
@@ -58,18 +47,12 @@ runs:
     - name: Publish v2 zip packages
       shell: pwsh
       run: |
-        $version = ""
-
         New-Item -ItemType Directory -Force -Path ./publish/package-v2-${{ inputs.project }}
-        $csprojFile = "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj"
 
-        [xml]$csprojContent = Get-Content -Path $csprojFile
-        foreach ($propertyGroup in $csprojContent.Project.PropertyGroup) {
-          if ($propertyGroup.MinVerTagPrefix) {
-            $version = minver --verbosity error -t $($propertyGroup.MinVerTagPrefix) -p ci
-            break
-          }
-        }
+        $projectDirectory = "${{ inputs.path }}/${{ inputs.project }}"
+        $csprojFile = "$projectDirectory/${{ inputs.project }}.csproj"
+
+        $version = nbgv get-version --variable NuGetPackageVersion --project $projectDirectory
 
         Write-Host "Version: $version"
         if($version -eq "") {

@@ -6,7 +6,6 @@
         <TargetsForTfmSpecificBuildOutput>
             $(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
-        <MinVerTagPrefix>scu-it/epsonrtprinter/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,10 +15,6 @@
             Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
