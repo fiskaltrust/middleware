@@ -42,6 +42,10 @@ jobs:
           git checkout main
           git push origin main --force
 
+          # Push release branch bump (1.x -rc version)
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          git push origin ${{ steps.prepare-release.outputs.release_branch }}
+
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
         with:
