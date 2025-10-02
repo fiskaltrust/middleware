@@ -40,7 +40,7 @@ jobs:
         run: |
           #Push main branch changes (next -ci version)
           git checkout main
-          git push origin main
+          git push origin main --force
 
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
