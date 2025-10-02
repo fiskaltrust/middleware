@@ -133,7 +133,7 @@ public class SaftExporter
         return customer;
     }
 
-    public string SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
+    public byte[] SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var data = CreateAuditFile(accountMasterData, queueItems, to);
@@ -147,7 +147,7 @@ public class SaftExporter
         using var writer = XmlWriter.Create(memoryStream, settings);
         serializer.Serialize(writer, data);
         memoryStream.Position = 0;
-        return Encoding.GetEncoding("windows-1252").GetString(memoryStream.ToArray());
+        return memoryStream.ToArray();
     }
 
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)

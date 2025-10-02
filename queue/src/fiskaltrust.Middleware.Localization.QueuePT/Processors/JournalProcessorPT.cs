@@ -26,6 +26,7 @@ public class JournalProcessorPT : IJournalProcessor
 
     public async IAsyncEnumerable<byte[]> ProcessSAFTAsync(JournalRequest request)
     {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var masterData = new AccountMasterData
         {
             AccountId = Guid.NewGuid(),
@@ -47,6 +48,6 @@ public class JournalProcessorPT : IJournalProcessor
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
         var data = new SaftExporter().SerializeAuditFile(masterData, queueItems, (int) request.To);
-        yield return Encoding.UTF8.GetBytes(data);
+        yield return data;
     }
 }
