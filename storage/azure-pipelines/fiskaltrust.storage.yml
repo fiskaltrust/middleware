@@ -72,7 +72,7 @@ jobs:
       - task: DownloadSecureFile@1
         displayName: "Download client certificate"
         inputs:
-          secureFile: "codesigning_client_cert.pfx"
+          secureFile: "codesigning_client_cert.p12"
 
       - pwsh: smctl certificate download --keypair-alias=$(KEYPAIR_ALIAS) --name=KeyCert.pem --out=<Agent.TempDirectory>
         env:
