@@ -32,7 +32,7 @@ jobs:
             output=$(nbgv prepare-release rc)         
             echo "$output"
             BRANCH=$(echo "$output" | grep -oE 'release/[^ ]+')
-            testbranch=$(it rev-parse --abbrev-ref HEAD)
+            testbranch=$(git rev-parse --abbrev-ref HEAD)
             echo "testbranch=$testbranch"
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
