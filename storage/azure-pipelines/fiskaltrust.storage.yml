@@ -104,16 +104,19 @@ jobs:
       - pwsh: |
           try {
             Write-Host $(Get-Content -Path "$(USERPROFILE)\.signingmanager\logs\smksp.log")
-          }
+          } catch {}
           try {
             Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
-          }
+          } catch {}
           try {
             Write-Host $(Get-Content -Path ".signingmanager\logs\smksp.log")
-          }
+          } catch {}
           try {
             Write-Host $(Get-Content -Path "$(Agent.HomeDirectory)\.signingmanager\logs\smksp.log")
-          }
+          } catch {}
+          try {
+            Write-Host $(Get-Content -Path "$(Agent.TempDirectory)\.signingmanager\logs\smksp.log")
+          } catch {}
           throw
 
       - script: |
