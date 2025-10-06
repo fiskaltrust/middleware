@@ -70,6 +70,7 @@ jobs:
       - task: SSMSigningToolsSetup@1
 
       - task: DownloadSecureFile@1
+        name: clientCertificate
         displayName: "Download client certificate"
         inputs:
           secureFile: "codesigning_client_cert.p12"
@@ -79,7 +80,7 @@ jobs:
           SM_HOST: "$(SM_HOST)"
           SM_API_KEY: "$(SM_API_KEY)"
           SM_CLIENT_CERT_PASSWORD: "$(SM_CLIENT_CERT_PASSWORD)"
-          SM_CLIENT_CERT_FILE: "codesigning_client_cert.p12"
+          SM_CLIENT_CERT_FILE: "$(clientCertificate.secureFilePath)"
           SM_TLS_SKIP_VERIFY: false
 
       - pwsh: |
@@ -97,24 +98,29 @@ jobs:
           SM_HOST: "$(SM_HOST)"
           SM_API_KEY: "$(SM_API_KEY)"
           SM_CLIENT_CERT_PASSWORD: "$(SM_CLIENT_CERT_PASSWORD)"
-          SM_CLIENT_CERT_FILE: "codesigning_client_cert.p12"
+          SM_CLIENT_CERT_FILE: "$(clientCertificate.secureFilePath)"
           SM_TLS_SKIP_VERIFY: false
         continueOnError: true
 
       - pwsh: |
           try {
+          Write-Host "1"
             Write-Host $(Get-Content -Path "$(USERPROFILE)\.signingmanager\logs\smksp.log")
           } catch {}
           try {
+          Write-Host "2"
             Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
           } catch {}
           try {
+          Write-Host "3"
             Write-Host $(Get-Content -Path ".signingmanager\logs\smksp.log")
           } catch {}
           try {
+          Write-Host "4"
             Write-Host $(Get-Content -Path "$(Agent.HomeDirectory)\.signingmanager\logs\smksp.log")
           } catch {}
           try {
+          Write-Host "5"
             Write-Host $(Get-Content -Path "$(Agent.TempDirectory)\.signingmanager\logs\smksp.log")
           } catch {}
           throw
