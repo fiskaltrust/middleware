@@ -22,6 +22,9 @@ jobs:
             git config user.name "Release Bot"
             git config user.email "dev-portal-poscreator@fiskaltrust.de"
             git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
+     
+      - name: Ensure we're on main before preparing
+        run: git checkout main
 
       - name: Prepare release branch with nbgv
         id: prepare-release
