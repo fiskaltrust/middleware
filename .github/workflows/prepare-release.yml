@@ -53,7 +53,7 @@ jobs:
           git checkout ${{ steps.prepare-release.outputs.release_branch }}
           git status
           git log --oneline --decorate --graph -3
-          git push origin  HEAD:${{ steps.prepare-release.outputs.release_branch }}
+          git push origin  HEAD:${{ steps.prepare-release.outputs.release_branch }} --force
 
           # Push main branch changes (next -ci version)
           # git checkout main
