@@ -51,6 +51,8 @@ jobs:
         run: |
           # Push release branch bump (1.x -rc version)
           git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          git add version.json
+          git commit -m "Set release branch version to ${{ steps.prepare-release.outputs.release_version }}-rc" || echo "No changes to commit"    
           git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
           #Push main branch changes (next -ci version)
