@@ -85,7 +85,7 @@ jobs:
       - pwsh: |
           Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
             signtool sign `
-              /tr http://timestamp.digicert.com `
+              /tr http://timestamp.sectigo.com/?td=sha256 `
               /td SHA256 `
               /fd SHA256 `
               /csp "DigiCert Signing Manager KSP" `
