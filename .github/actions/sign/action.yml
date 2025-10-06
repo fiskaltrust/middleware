@@ -1,39 +1,62 @@
-name: 'Sign'
+name: "Sign"
 inputs:
   path:
     required: true
     type: string
-  certificate:
-    required: true
-    type: string
-  password:
-    required: true
-    type: string
   filter:
+    required: true
+    type: string
+  clientCertificate:
+    required: true
+    type: string
+  clientCertificatePassword:
+    required: true
+    type: string
+  smHost:
+    required: true
+    type: string
+  smApiKey:
+    required: true
+    type: string
+  keypairAlias:
     required: true
     type: string
 
 runs:
   using: "composite"
   steps:
-    - name: Filter files for codesigning
-      id: filter_files_for_codesigning
-      shell: pwsh
+    - name: Set up client certificate
       run: |
-        $files = Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | Select-Object -ExpandProperty FullName
-        
-        # Multiline outputs required a unique delimiter
-        $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})
-        "FILTERED_FILES<<$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        foreach ($file in $files) {
-          $file | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        Set-Content -AsByteStream -Value $([System.Convert]::FromBase64String("${{ inputs.clientCertificate }}")) -Path "${{ runner.temp }}/codesigning_client_cert.p12"
+      shell: pwsh
+
+    - name: Install DigiCert Client tools
+      uses: digicert/ssm-code-signing@v1
+
+    - run: smctl certificate download --keypair-alias=${{ inputs.keypairAlias }} --name=KeyCert.pem --out="${{ runner.temp }}"
+      name: Download signing certificate
+      env:
+        SM_HOST: "${{ inputs.smHost }}"
+        SM_API_KEY: "${{ inputs.smApiKey }}"
+        SM_CLIENT_CERT_PASSWORD: "${{ inputs.clientCertificatePassword}}"
+        SM_CLIENT_CERT_FILE: "${{ runner.temp }}/codesigning_client_cert.p12"
+        SM_TLS_SKIP_VERIFY: false
+
+    - pwsh: |
+        Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | ForEach-Object {
+          signtool sign `
+            /tr http://timestamp.sectigo.com/?td=sha256 `
+            /td SHA256 `
+            /fd SHA256 `
+            /csp "DigiCert Signing Manager KSP" `
+            /kc "${{ inputs.keypairAlias }}" `
+            /f "${{ runner.temp }}\KeyCert.pem" `
+            $_.FullName
         }
-        "$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-  
-    - name: Sign binaries
-      uses: dlemstra/code-sign-action@v1
-      with:
-        certificate: '${{ inputs.certificate }}'
-        password: '${{ inputs.password }}'
-        files: |-
-          ${{ steps.filter_files_for_codesigning.outputs.FILTERED_FILES }}
+      name: Sign files
+      env:
+        SM_HOST: "${{ inputs.smHost }}"
+        SM_API_KEY: "${{ inputs.smApiKey }}"
+        SM_CLIENT_CERT_PASSWORD: "${{ inputs.clientCertificatePassword}}"
+        SM_CLIENT_CERT_FILE: "${{ runner.temp }}/codesigning_client_cert.p12"
+        SM_TLS_SKIP_VERIFY: false

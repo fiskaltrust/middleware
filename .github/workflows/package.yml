@@ -19,7 +19,7 @@ on:
 jobs:
   package:
     name: Package
-    runs-on:  windows-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -36,9 +36,12 @@ jobs:
       - uses: ./.github/actions/sign
         with:
           path: ${{ inputs.directory }}
-          certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
-          password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
-          filter: 'fiskaltrust.*.dll'
+          filter: "fiskaltrust.*.dll"
+          clientCertificate: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
+          clientCertificatePassword: "${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
+          smHost: ${{ secrets.SM_HOST }}
+          smApiKey: ${{ secrets.SM_API_KEY }}
+          keypairAlias: ${{ secrets.KEYPAIR_ALIAS }}
 
       - run: |
           dotnet publish --configuration Release --no-restore -f net461
@@ -52,7 +55,7 @@ jobs:
         with:
           path: ${{ inputs.directory }}
           project: ${{ inputs.pattern }}
-  
+
   deploy:
     if: inputs.deploySandbox
     needs: [package]
