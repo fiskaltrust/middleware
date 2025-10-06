@@ -43,7 +43,7 @@ runs:
         SM_CLIENT_CERT_FILE: "${{ runner.temp }}/codesigning_client_cert.p12"
         SM_TLS_SKIP_VERIFY: false
 
-    - pwsh: |
+    - run: |
         Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | ForEach-Object {
           signtool sign `
             /tr http://timestamp.sectigo.com/?td=sha256 `
