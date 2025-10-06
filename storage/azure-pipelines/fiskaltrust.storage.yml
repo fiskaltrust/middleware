@@ -99,6 +99,22 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: "$(SM_CLIENT_CERT_PASSWORD)"
           SM_CLIENT_CERT_FILE: "codesigning_client_cert.p12"
           SM_TLS_SKIP_VERIFY: false
+        continueOnError: true
+
+      - pwsh: |
+          try {
+            Write-Host $(Get-Content -Path "$(USERPROFILE)\.signingmanager\logs\smksp.log")
+          }
+          try {
+            Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
+          }
+          try {
+            Write-Host $(Get-Content -Path ".signingmanager\logs\smksp.log")
+          }
+          try {
+            Write-Host $(Get-Content -Path "$(Agent.HomeDirectory)\.signingmanager\logs\smksp.log")
+          }
+          throw
 
       - script: |
           dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.3.11
