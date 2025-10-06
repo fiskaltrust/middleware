@@ -35,6 +35,7 @@ runs:
 
     - run: smctl certificate download --keypair-alias=${{ inputs.keypairAlias }} --name=KeyCert.pem --out="${{ runner.temp }}"
       name: Download signing certificate
+      shell: pwsh
       env:
         SM_HOST: "${{ inputs.smHost }}"
         SM_API_KEY: "${{ inputs.smApiKey }}"
@@ -54,6 +55,7 @@ runs:
             $_.FullName
         }
       name: Sign files
+      shell: pwsh
       env:
         SM_HOST: "${{ inputs.smHost }}"
         SM_API_KEY: "${{ inputs.smApiKey }}"
