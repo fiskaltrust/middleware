@@ -31,7 +31,7 @@ runs:
       shell: pwsh
 
     - name: Install DigiCert Client tools
-      uses: digicert/ssm-code-signing@v1
+      uses: digicert/ssm-code-signing@v1.1.1
 
     - run: smctl certificate download --keypair-alias=${{ inputs.keypairAlias }} --name=KeyCert.pem --out="${{ runner.temp }}"
       name: Download signing certificate
