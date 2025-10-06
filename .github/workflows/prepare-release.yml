@@ -55,9 +55,9 @@ jobs:
           git log --oneline --decorate --graph -3
           git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
-          #Push main branch changes (next -ci version)
-          git checkout main
-          git push origin main   
+          # Push main branch changes (next -ci version)
+          # git checkout main
+          # git push origin main   
 
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
