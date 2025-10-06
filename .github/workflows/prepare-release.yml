@@ -53,8 +53,6 @@ jobs:
           git checkout ${{ steps.prepare-release.outputs.release_branch }}
           git status
           git log --oneline --decorate --graph -3
-          git add version.json
-          git commit -m "Set RC version"
           git push origin  HEAD:${{ steps.prepare-release.outputs.release_branch }} --force
 
           # Push main branch changes (next -ci version)
