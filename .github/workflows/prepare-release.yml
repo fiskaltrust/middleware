@@ -23,9 +23,6 @@ jobs:
             git config user.email "dev-portal-poscreator@fiskaltrust.de"
             git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
      
-      - name: Ensure we're on main before preparing
-        run: git checkout main
-
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
@@ -56,15 +53,11 @@ jobs:
           git checkout ${{ steps.prepare-release.outputs.release_branch }}
           git status
           git log --oneline --decorate --graph -3
-          git push --set-upstream origin ${{ steps.prepare-release.outputs.release_branch }}
+          git push origin ${{ steps.prepare-release.outputs.release_branch }}
 
           #Push main branch changes (next -ci version)
           git checkout main
-          git push origin main 
-
-         
-
-                  
+          git push origin main   
 
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
