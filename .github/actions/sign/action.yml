@@ -44,15 +44,21 @@ runs:
         SM_TLS_SKIP_VERIFY: false
 
     - run: |
-        Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | ForEach-Object {
-          signtool sign `
-            /tr http://timestamp.sectigo.com/?td=sha256 `
-            /td SHA256 `
-            /fd SHA256 `
-            /csp "DigiCert Signing Manager KSP" `
-            /kc "${{ inputs.keypairAlias }}" `
-            /f "${{ runner.temp }}\KeyCert.pem" `
-            $_.FullName
+        try {
+          Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | ForEach-Object {
+            signtool sign `
+              /tr http://timestamp.sectigo.com/?td=sha256 `
+              /td SHA256 `
+              /fd SHA256 `
+              /csp "DigiCert Signing Manager KSP" `
+              /kc "${{ inputs.keypairAlias }}" `
+              /f "${{ runner.temp }}\KeyCert.pem" `
+              $_.FullName
+          }
+        }
+        catch { 
+          Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
+          throw
         }
       name: Sign files
       shell: pwsh
