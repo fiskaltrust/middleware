@@ -32,6 +32,14 @@ jobs:
           pattern: ${{ inputs.directory }}/${{ inputs.pattern }}/${{ inputs.pattern }}.csproj
           configuration: Release
 
+      - run: |
+          dotnet publish --configuration Release --no-restore -f net461
+          dotnet publish --configuration Release --no-restore -f netstandard2.0
+          dotnet publish --configuration Release --no-restore -f netstandard2.1
+        if: inputs.pattern == 'fiskaltrust.Middleware.Queue.SQLite'
+        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
+        name: Publish SQLite for nuget
+
       - uses: ./.github/actions/sign
         with:
           path: ${{ inputs.directory }}/${{ inputs.pattern }}
@@ -41,14 +49,6 @@ jobs:
           smHost: ${{ secrets.SM_HOST }}
           smApiKey: ${{ secrets.SM_API_KEY }}
           keypairAlias: ${{ secrets.KEYPAIR_ALIAS }}
-
-      - run: |
-          dotnet publish --configuration Release --no-restore -f net461
-          dotnet publish --configuration Release --no-restore -f netstandard2.0
-          dotnet publish --configuration Release --no-restore -f netstandard2.1
-        if: inputs.pattern == 'fiskaltrust.Middleware.Queue.SQLite'
-        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
-        name: Publish SQLite for nuget
 
       - uses: ./.github/actions/package
         with:
