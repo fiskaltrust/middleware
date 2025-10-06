@@ -84,15 +84,21 @@ jobs:
           SM_TLS_SKIP_VERIFY: false
 
       - pwsh: |
-          Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
-            signtool sign `
-              /tr http://timestamp.sectigo.com/?td=sha256 `
-              /td SHA256 `
-              /fd SHA256 `
-              /csp "DigiCert Signing Manager KSP" `
-              /kc "$(KEYPAIR_ALIAS)" `
-              /f $(Agent.TempDirectory)\KeyCert.pem `
-              $_.FullName
+          try {
+            Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
+              signtool sign `
+                /tr http://timestamp.sectigo.com/?td=sha256 `
+                /td SHA256 `
+                /fd SHA256 `
+                /csp "DigiCert Signing Manager KSP" `
+                /kc "$(KEYPAIR_ALIAS)" `
+                /f $(Agent.TempDirectory)\KeyCert.pem `
+                $_.FullName
+            }
+          }
+          catch { 
+            Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
+            throw
           }
         env:
           SM_HOST: "$(SM_HOST)"
@@ -100,30 +106,6 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: "$(SM_CLIENT_CERT_PASSWORD)"
           SM_CLIENT_CERT_FILE: "$(clientCertificate.secureFilePath)"
           SM_TLS_SKIP_VERIFY: false
-        continueOnError: true
-
-      - pwsh: |
-          try {
-          Write-Host "1"
-            Write-Host $(Get-Content -Path "$(USERPROFILE)\.signingmanager\logs\smksp.log")
-          } catch {}
-          try {
-          Write-Host "2"
-            Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
-          } catch {}
-          try {
-          Write-Host "3"
-            Write-Host $(Get-Content -Path ".signingmanager\logs\smksp.log")
-          } catch {}
-          try {
-          Write-Host "4"
-            Write-Host $(Get-Content -Path "$(Agent.HomeDirectory)\.signingmanager\logs\smksp.log")
-          } catch {}
-          try {
-          Write-Host "5"
-            Write-Host $(Get-Content -Path "$(Agent.TempDirectory)\.signingmanager\logs\smksp.log")
-          } catch {}
-          throw
 
       - script: |
           dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.3.11
