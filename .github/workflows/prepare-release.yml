@@ -23,17 +23,12 @@ jobs:
             git config user.email "dev-portal-poscreator@fiskaltrust.de"
             git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
       
-      - name: Ensure we're on main before preparing
-        run: git checkout main
-
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
             output=$(nbgv prepare-release rc)         
             echo "$output"
             BRANCH=$(echo "$output" | grep -oE 'release/[^ ]+')
-            testbranch=$(git rev-parse --abbrev-ref HEAD)
-            echo "testbranch=$testbranch"
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
 
