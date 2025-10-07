@@ -43,19 +43,32 @@ jobs:
            git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}           
                              
            # Push main branch changes (next -ci version)
-           git checkout main
-           git push origin main --force 
+           #git checkout main
+           #git push origin main --force 
            
       - name: Create Pull Request via gh CLI
         run: |
           gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"
-          git fetch origin main
-          git fetch origin ${{ steps.prepare-release.outputs.release_branch }}
-          git checkout main
-          git reset --hard origin/main
+          #git fetch origin main
+          #git fetch origin ${{ steps.prepare-release.outputs.release_branch }}
+          #git checkout main
+          #git reset --hard origin/main
           git checkout ${{ steps.prepare-release.outputs.release_branch }}  
           gh pr create \
             --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
             --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`." \
             --base main \
             --head ${{ steps.prepare-release.outputs.release_branch }}
+            
+      - name: Push only version.json change to main
+        run: |
+          git fetch origin main
+          git checkout main
+          git reset --soft origin/main
+          git add version.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Set version to next -ci version"
+            git push origin main
+          else
+            echo "No changes in version.json to push."
+          fi
