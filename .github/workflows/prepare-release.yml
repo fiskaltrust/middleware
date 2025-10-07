@@ -54,10 +54,9 @@ jobs:
     
       - name: Push only version.json change to main
         run: |
-          git fetch origin main
           git checkout main
           git reset --soft origin/main
           git add version.json
-          git commit -m "Set version to v${{ steps.prepare-release.outputs.release_version }}"
+          git commit -m "Set version to the next ci version"
           git push origin main
           
