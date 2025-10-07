@@ -51,6 +51,8 @@ jobs:
           gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"
           git fetch origin main
           git fetch origin ${{ steps.prepare-release.outputs.release_branch }}
+          git checkout main
+          git reset --hard origin/main
           git checkout ${{ steps.prepare-release.outputs.release_branch }}  
           gh pr create \
             --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
