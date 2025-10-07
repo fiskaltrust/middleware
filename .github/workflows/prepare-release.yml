@@ -40,7 +40,7 @@ jobs:
         run: |
            # Push release branch bump (1.x -rc version)
            git checkout ${{ steps.prepare-release.outputs.release_branch }}
-           git push origin ${{ steps.prepare-release.outputs.release_branch }} 
+           git push origin Head:${{ steps.prepare-release.outputs.release_branch }} 
            
            # Push main branch changes (next -ci version)
            git checkout main
