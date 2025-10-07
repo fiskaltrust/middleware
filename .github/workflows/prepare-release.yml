@@ -10,7 +10,7 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: main
           fetch-depth: 0 
           token: ${{ secrets.REPOSITORY_WRITE_PAT }}
 
@@ -22,7 +22,9 @@ jobs:
             git config user.name "Release Bot"
             git config user.email "dev-portal-poscreator@fiskaltrust.de"
             git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
-
+      - name: Ensure local branch tracking
+        run: |
+            git checkout -B main origin/main
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
@@ -38,13 +40,15 @@ jobs:
 
       - name: Push changes
         run: |
-          #Push main branch changes (next -ci version)
-          git checkout main
-          git push origin main --force
-
-          # Push release branch bump (1.x -rc version)
-          git checkout ${{ steps.prepare-release.outputs.release_branch }}
-          git push origin ${{ steps.prepare-release.outputs.release_branch }}
+           # Push release branch bump (1.x -rc version)
+           git checkout ${{ steps.prepare-release.outputs.release_branch }}
+           git status
+           git log --oneline --decorate --graph -3
+           git push origin ${{ steps.prepare-release.outputs.release_branch }} 
+          
+           # Push main branch changes (next -ci version)
+           git checkout main
+           git push origin main   
 
       - name: Create Pull Request for release branch
         uses: peter-evans/create-pull-request@v6
