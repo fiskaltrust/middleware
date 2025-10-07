@@ -25,6 +25,7 @@ jobs:
       - name: Ensure local branch tracking
         run: |
             git checkout -B main origin/main
+            git remote show origin
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
