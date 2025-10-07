@@ -75,7 +75,7 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-latest
-    if: success('package') && !failure('deploy')
+    if: success('tag')
     steps:
       - name: Add reaction
         uses: peter-evans/create-or-update-comment@v4
