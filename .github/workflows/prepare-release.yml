@@ -59,7 +59,7 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.REPOSITORY_WRITE_PAT }}
-          branch: ${{ steps.prepare-release.outputs.release_branch }}
+          branch: origin/${{ steps.prepare-release.outputs.release_branch }}
           base: main
           title: "Prepare release v${{ steps.prepare-release.outputs.release_version }}"
           body: |
