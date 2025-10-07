@@ -26,7 +26,7 @@ jobs:
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
-            output=(nbgv prepare-release rc)       
+            output=$(nbgv prepare-release rc)       
             #echo "$output"
             BRANCH=$(echo "$output" | grep -oE 'release/[^ ]+')
             echo "release_branch=$BRANCH"
@@ -40,8 +40,6 @@ jobs:
         run: |
            # Push release branch bump (1.x -rc version)
            git checkout ${{ steps.prepare-release.outputs.release_branch }}
-           git status
-           git log --oneline --decorate --graph -3
            git push origin ${{ steps.prepare-release.outputs.release_branch }} 
            
            # Push main branch changes (next -ci version)
