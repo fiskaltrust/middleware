@@ -56,8 +56,8 @@ jobs:
 
       - name: Set branch name
         run: |
-           echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}"
-           echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+           echo "BRANCH_NAME=${{ github.event.client_payload.pull_request.head.ref }}"
+           run: echo "BRANCH_NAME=${{ github.event.client_payload.pull_request.head.ref }}" >> $GITHUB_ENV
 
       - name: Configure git for PAT
         run: |
