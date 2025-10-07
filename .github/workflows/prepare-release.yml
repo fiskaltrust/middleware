@@ -40,19 +40,11 @@ jobs:
         run: |          
            # Push release branch bump (1.x -rc version)
            git checkout ${{ steps.prepare-release.outputs.release_branch }}
-           git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}           
-                             
-           # Push main branch changes (next -ci version)
-           #git checkout main
-           #git push origin main --force 
+           git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}  
            
       - name: Create Pull Request via gh CLI
         run: |
-          gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"
-          #git fetch origin main
-          #git fetch origin ${{ steps.prepare-release.outputs.release_branch }}
-          #git checkout main
-          #git reset --hard origin/main
+          gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"         
           git checkout ${{ steps.prepare-release.outputs.release_branch }}  
           gh pr create \
             --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
@@ -66,9 +58,6 @@ jobs:
           git checkout main
           git reset --soft origin/main
           git add version.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Set version to next -ci version"
-            git push origin main
-          else
-            echo "No changes in version.json to push."
-          fi
+          git commit -m "Set version to next -ci version"
+          git push origin main
+          
