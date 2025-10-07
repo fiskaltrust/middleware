@@ -53,6 +53,15 @@ jobs:
           
            # Push main branch changes (next -ci version)
            #git checkout main
-           #git push origin main   
+           #git push origin main  
+           
+      - name: Create Pull Request via gh CLI
+        run: |
+          gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"
+          gh pr create \
+            --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
+            --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.\n- Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`\n- Bumps main to next \`-ci\` version" \
+            --base main \
+            --head ${{ steps.prepare-release.outputs.release_branch }}
 
      
