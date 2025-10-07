@@ -79,7 +79,7 @@ jobs:
           secureFile: "codesigning_client_cert.p12"
 
       - pwsh: smctl certificate download --keypair-alias=$(KEYPAIR_ALIAS) --name=KeyCert.pem --out=$(Agent.TempDirectory)
-        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
         env:
           SM_HOST: "$(SM_HOST)"
           SM_API_KEY: "$(SM_API_KEY)"
@@ -88,7 +88,7 @@ jobs:
           SM_TLS_SKIP_VERIFY: false
 
       - pwsh: |
-          Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
+          Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Include fiskaltrust*.dll, fiskaltrust*.exe -Recurse | ForEach-Object {
             signtool sign `
               /tr http://timestamp.sectigo.com/?td=sha256 `
               /td SHA256 `
