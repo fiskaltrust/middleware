@@ -69,7 +69,6 @@ jobs:
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/approve/yellow)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
     
   deploy:
-    if: (!always())
     if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
     needs:
       - meta
