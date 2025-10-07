@@ -28,9 +28,10 @@ jobs:
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
-            output=$(nbgv prepare-release rc)         
-            echo "$output"
-            BRANCH=$(echo "$output" | grep -oE 'release/[^ ]+')
+            nbgv prepare-release rc        
+            #echo "$output"
+            BRANCH="release/v1.3.77"
+            #$(echo "$output" | grep -oE 'release/[^ ]+')
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
 
@@ -45,6 +46,9 @@ jobs:
            git status
            git log --oneline --decorate --graph -3
            git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }} 
+           git checkout origin/${{ steps.prepare-release.outputs.release_branch }}
+           echo "Release branch version.json after push:"
+           head -10 version.json
           
            # Push main branch changes (next -ci version)
            #git checkout main
