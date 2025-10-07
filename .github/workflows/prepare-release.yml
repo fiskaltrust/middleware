@@ -41,23 +41,25 @@ jobs:
            # Push release branch bump (1.x -rc version)
            git checkout ${{ steps.prepare-release.outputs.release_branch }}
            git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}  
+           git checkout ${{ steps.prepare-release.outputs.release_branch }}
            
-      - name: Create Pull Request via gh CLI
-        run: |
-          gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"         
-          git checkout ${{ steps.prepare-release.outputs.release_branch }}  
-          gh pr create \
-            --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
-            --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`." \
-            --base main \
-            --head ${{ steps.prepare-release.outputs.release_branch }}
-            
+      - name: Create Pull Request for release branch
+        uses: peter-evans/create-pull-request@v6
+        with:
+           token: ${{ secrets.REPOSITORY_WRITE_PAT }}
+           branch: ${{ steps.prepare-release.outputs.release_branch }}
+           base: main
+           title: "Prepare release v${{ steps.prepare-release.outputs.release_version }}"
+           body: |
+             This PR prepares the release branch for version `${{ steps.prepare-release.outputs.release_version }}`.
+             - Sets release branch version to `${{ steps.prepare-release.outputs.release_version }}-rc` 
+    
       - name: Push only version.json change to main
         run: |
           git fetch origin main
           git checkout main
           git reset --soft origin/main
           git add version.json
-          git commit -m "Set version to next -ci version"
+          git commit -m "Set version to v${{ steps.prepare-release.outputs.release_version }}"
           git push origin main
           
