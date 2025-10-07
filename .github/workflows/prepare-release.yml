@@ -51,7 +51,7 @@ jobs:
           gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"
           gh pr create \
             --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
-            --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`."
+            --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`." \
             --base main \
             --head ${{ steps.prepare-release.outputs.release_branch }}
 
