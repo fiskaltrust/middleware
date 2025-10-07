@@ -88,22 +88,17 @@ jobs:
           SM_TLS_SKIP_VERIFY: false
 
       - pwsh: |
-          try {
-            Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
-              signtool sign `
-                /tr http://timestamp.sectigo.com/?td=sha256 `
-                /td SHA256 `
-                /fd SHA256 `
-                /csp "DigiCert Signing Manager KSP" `
-                /kc "$(KEYPAIR_ALIAS)" `
-                /f $(Agent.TempDirectory)\KeyCert.pem `
-                $_.FullName
-            }
+          Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
+            signtool sign `
+              /tr http://timestamp.sectigo.com/?td=sha256 `
+              /td SHA256 `
+              /fd SHA256 `
+              /csp "DigiCert Signing Manager KSP" `
+              /kc "$(KEYPAIR_ALIAS)" `
+              /f $(Agent.TempDirectory)\KeyCert.pem `
+              $_.FullName
           }
-          catch { 
-            Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
-            throw
-          }
+          Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
         condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
         env:
           SM_HOST: "$(SM_HOST)"
