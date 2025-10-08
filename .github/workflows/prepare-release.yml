@@ -26,13 +26,14 @@ jobs:
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
-            output=$(nbgv prepare-release rc)       
+            output=$(nbgv prepare-release rc -f json)       
             #echo "$output"
-            BRANCH=$(echo "$output" | grep -oE 'release/[^ ]+')
+            BRANCH=$(echo "$output" | jq -r '.NewBranch.Name')
+            
             echo "release_branch=$BRANCH"
             echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
 
-            version=${BRANCH#release/v}
+            version=$(nbgv get-version -f json | jq -r '.Version'
             echo "release_version=$version"
             echo "release_version=$version" >> $GITHUB_OUTPUT
 
