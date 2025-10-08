@@ -22,15 +22,25 @@ public static class PortugalReceiptCalculations
 {
     private static (string documentType, string uniqueIdentification) ExtractDocumentTypeAndUniqueIdentification(string ftReceiptIdentification)
     {
+        if (string.IsNullOrEmpty(ftReceiptIdentification))
+        {
+            return (string.Empty, string.Empty);
+        }
+
         var localPart = ftReceiptIdentification.Split("#").Last();
         var spaceIndex = localPart.IndexOf(' ');
-        if (spaceIndex >= 0 && spaceIndex < localPart.Length - 1)
+        
+        // The unique identification is always everything after the hash (the localPart)
+        var uniqueIdentification = localPart;
+        
+        // Document type is only extracted if there's a proper space separation and content after the space
+        if (spaceIndex > 0 && spaceIndex < localPart.Length - 1)
         {
             var documentType = localPart.Substring(0, spaceIndex);
-            var uniqueIdentification = localPart.Substring(spaceIndex + 1);
             return (documentType, uniqueIdentification);
         }
-        return (string.Empty, localPart);
+        
+        return (string.Empty, uniqueIdentification);
     }
 
     public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)

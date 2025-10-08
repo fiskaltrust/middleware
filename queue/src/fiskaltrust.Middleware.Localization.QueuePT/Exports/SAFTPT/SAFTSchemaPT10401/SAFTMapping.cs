@@ -159,9 +159,9 @@ public class SaftExporter
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
         actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptRequest.cbReceiptMoment).ToList();
-        var invoices = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).ToList();
-        var workingDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).ToList();
-        var paymentDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).ToList();
+        var invoices = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
+        var workingDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
+        var paymentDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
