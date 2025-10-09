@@ -29,7 +29,7 @@ public class ftReceiptCaseDataGreekPayload
     public string? HashPayload { get; set; }
 }
 
-public class MyDataSCU
+public class MyDataSCU : IGRSSCD
 {
     private readonly HttpClient _httpClient;
     private readonly string _receiptBaseAddress;
@@ -58,7 +58,10 @@ public class MyDataSCU
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
-
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
+    {
+        return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
+    }
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)

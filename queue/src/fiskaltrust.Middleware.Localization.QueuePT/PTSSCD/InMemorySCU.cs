@@ -10,9 +10,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 
-public class InMemorySCUConfiguration { }
-
-public class InMemorySCU
+public class InMemorySCU : IPTSSCD
 {
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT;
 
@@ -20,7 +18,14 @@ public class InMemorySCU
     {
         _signaturCreationUnitPT = signaturCreationUnitPT;
     }
-
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
+    {
+        return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
+    }
+    public async Task<PTSSCDInfo> GetInfoAsync()
+    {
+        return await Task.FromResult(new PTSSCDInfo());
+    }
     public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
         return new PTInvoiceElement
