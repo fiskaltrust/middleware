@@ -49,7 +49,7 @@ jobs:
       pattern: ${{ needs.meta.outputs.project }}
       directory: ${{ needs.meta.outputs.directory }}
       commit: ${{ github.event.client_payload.pull_request.head.sha }}
-       
+
   add-approval-link:
     needs:
       - package
@@ -61,13 +61,13 @@ jobs:
         with:
           repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
           comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
-          reactions: confused
+          reactions: eyes
           reactions-edit-mode: replace
           edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/approve/yellow)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-    
+
   deploy:
     if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
     needs:
@@ -100,7 +100,7 @@ jobs:
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-    
+
   failure:
     needs:
       - package
