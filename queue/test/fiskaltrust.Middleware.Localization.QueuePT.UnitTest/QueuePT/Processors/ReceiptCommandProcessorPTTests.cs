@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;
@@ -84,18 +84,11 @@ public class ReceiptCommandProcessorPTTests
         {
             IssuerTIN = "123456789",
         };
-        var signaturCreationUnitPT = new ftSignaturCreationUnitPT
-        {
-            PrivateKey = File.ReadAllText("PrivateKey.pem"),
-            SoftwareCertificateNumber = "9999",
-        };
 
         var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
 
         var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
-
-        var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, new(() => Task.FromResult(queueItemRepository.Object)));
 
         var receiptRequest = new ReceiptRequest
         {
@@ -152,6 +145,19 @@ public class ReceiptCommandProcessorPTTests
             ftReceiptMoment = DateTime.UtcNow,
         };
 
+        var ptSSCDMock = new Mock<IPTSSCD>();
+        ptSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<string>()))
+            .ReturnsAsync((new ProcessResponse 
+            { 
+                ReceiptResponse = receiptResponse 
+            }, "mockHashSignature"));
+
+        var sut = new ReceiptCommandProcessorPT(
+            ptSSCDMock.Object, 
+            queuePT, 
+            new(() => Task.FromResult(queueItemRepository.Object))
+        );
+
         var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
         var result = await sut.PointOfSaleReceipt0x0001Async(request);
 
@@ -159,7 +165,6 @@ public class ReceiptCommandProcessorPTTests
         result.receiptResponse.Should().Be(receiptResponse);
         result.actionJournals.Should().BeEmpty();
         result.receiptResponse.ftSignatures.Should().NotBeEmpty();
-
 
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000, because: $"ftState {result.receiptResponse.ftState.ToString("X")} is different than expected.");
         var expectedSignaturItem = new SignatureItem

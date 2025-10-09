@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.ifPOS.v2.pt;
 using Moq;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
