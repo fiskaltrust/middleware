@@ -60,7 +60,7 @@ runs:
           exit 1
         }
 
-        dotnet publish $csprojFile --configuration Release -f net6 --no-restore --no-build --output ./publish/raw/package-v2-${{ inputs.project }} --no-build /p:DebugType=None /p:DebugSymbols=false
+        dotnet publish $csprojFile --configuration Release -f net6 --no-restore --no-build --output ./publish/raw/package-v2-${{ inputs.project }} /p:DebugType=None /p:DebugSymbols=false
         Compress-Archive -Path ./publish/raw/package-v2-${{ inputs.project }}/* -DestinationPath ./publish/package-v2-${{ inputs.project }}/$version.zip
 
         $hash = Get-FileHash ./publish/package-v2-${{ inputs.project }}/$version.zip -Algorithm SHA256
