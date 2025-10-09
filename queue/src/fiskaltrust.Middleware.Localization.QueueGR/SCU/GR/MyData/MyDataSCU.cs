@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -11,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using System.Security.Cryptography;
+using fiskaltrust.ifPOS.v2.gr;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
@@ -29,7 +29,7 @@ public class ftReceiptCaseDataGreekPayload
     public string? HashPayload { get; set; }
 }
 
-public class MyDataSCU : IGRSSCD
+public class MyDataSCU
 {
     private readonly HttpClient _httpClient;
     private readonly string _receiptBaseAddress;
