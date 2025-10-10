@@ -3,7 +3,6 @@
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an SQLite storage provider.</Description>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net461;net6</TargetFrameworks>
-        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
@@ -15,7 +14,7 @@
         <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
         <PackageReference Include="Dapper" Version="2.0.123" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.9" />
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.10-rc-2" />
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.2" />
         <PackageReference Include="System.Linq.Async" Version="4.1.1" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
