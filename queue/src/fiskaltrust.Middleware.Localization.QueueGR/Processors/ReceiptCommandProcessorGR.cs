@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using System.Text;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
+using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;

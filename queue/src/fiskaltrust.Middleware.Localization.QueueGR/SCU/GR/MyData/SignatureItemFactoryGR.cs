@@ -1,8 +1,8 @@
 ﻿using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.gr;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
