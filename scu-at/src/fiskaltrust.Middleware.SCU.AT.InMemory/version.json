@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "pathFilters": [
+    "/scu-at/src/fiskaltrust.Middleware.SCU.AT.InMemory"
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/tags/scu-at/inmemory/v.+"
+  ],
+  "release": {
+    "tagName": "scu-at/inmemory/v{version}"
+  },
+  "inherit": true
+}

@@ -4,7 +4,6 @@
         <Description>The fiskaltrust Middleware Queue with an in-memory storage provider.e. Data is not persisted - for testing purposes only.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
-        <MinVerTagPrefix>queue/inmemory/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,10 +21,6 @@
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.2" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
         <PackageReference Include="CsvHelper" Version="15.0.5" />
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">

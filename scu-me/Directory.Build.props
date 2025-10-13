@@ -16,4 +16,10 @@
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU5104</WarningsNotAsErrors>
   </PropertyGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Nerdbank.GitVersioning" Condition="Exists('version.json')">
+            <PrivateAssets>all</PrivateAssets>
+            <Version>3.7.115</Version>
+        </PackageReference>
+    </ItemGroup>
 </Project>
