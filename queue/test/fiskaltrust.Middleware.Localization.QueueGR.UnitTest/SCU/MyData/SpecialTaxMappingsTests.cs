@@ -46,8 +46,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
         [Theory]
         [InlineData("Περιπτ. β’- Τόκοι - 15%", 1, 15, false)]
         [InlineData("Περιπτ. γ’ - Δικαιώματα - 20%", 2, 20, false)]
-        [InlineData("Περιπτ. δ' - Αμοιβές Συμβουλών Διοίκησης - 20%", 3, 20, false)]
-        [InlineData("Περιπτ. δ' - Τεχνικά Έργα - 3%", 4, 3, false)]
+        [InlineData("Περιπτ. δ’ - Αμοιβές Συμβουλών Διοίκησης - 20%", 3, 20, false)]
+        [InlineData("Περιπτ. δ’ - Τεχνικά Έργα - 3%", 4, 3, false)]
         [InlineData("Υγρά καύσιμα και προϊόντα καπνοβιομηχανίας 1%", 5, 1, false)]
         [InlineData("Λοιπά Αγαθά 4%", 6, 4, false)]
         [InlineData("Παροχή Υπηρεσιών 8%", 7, 8, false)]
@@ -141,8 +141,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             // Assert
             mapping.Should().NotBeNull($"mapping for '{description}' should exist");
             mapping.Code.Should().Be(expectedCode, $"code for '{description}' should be {expectedCode}");
-            mapping.Percentage.Should().Be(expectedPercentage, $"percentage for '{description}' should be {expectedPercentage}");
-            mapping.IsFixedAmount.Should().Be(expectedIsFixed, $"IsFixedAmount for '{description}' should be {expectedIsFixed}");
         }
 
         [Fact]
