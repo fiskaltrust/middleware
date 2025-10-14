@@ -66,6 +66,12 @@ jobs:
           arguments: "--configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*"
         displayName: "Run unit tests"
 
+      - task: UseDotNet@2
+        displayName: "Use .NET 6 SDK"
+        inputs:
+          packageType: "sdk"
+          version: "8.x"
+
       - pwsh: dotnet tool install --global AzureSignTool
         # condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
         displayName: Install AzureSignTool
