@@ -67,13 +67,13 @@ jobs:
         displayName: "Run unit tests"
 
       - task: UseDotNet@2
-        displayName: "Use .NET 6 SDK"
+        displayName: "Use .NET 8 SDK"
         inputs:
           packageType: "sdk"
           version: "8.x"
 
       - pwsh: dotnet tool install --global AzureSignTool
-        # condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
         displayName: Install AzureSignTool
 
       - pwsh: |
@@ -88,7 +88,7 @@ jobs:
           }
         env:
           AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
-        # condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
 
       - script: |
           dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.3.11
