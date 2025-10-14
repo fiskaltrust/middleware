@@ -73,17 +73,15 @@ jobs:
       - pwsh: |
           Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
             azuresigntool sign `
-            --azure-key-vault-url "$(CODESIGNING_AZURE_KEY_VAULT_URL)" `
-            --azure-key-vault-certificate "$(CODESIGNING_AZURE_KEY_VAULT_CERTIFICATE)" `
-            --azure-key-vault-client-id "$env:CODESIGNING_AZURE_KEY_VAULT_CLIENT_ID" `
-            --azure-key-vault-tenant-id "$env:CODESIGNING_AZURE_KEY_VAULT_TENANT_ID" `
-            --azure-key-vault-client-secret "$env:CODESIGNING_AZURE_KEY_VAULT_SECRET" `
+            --azure-key-vault-url "$(AZURE_KEY_VAULT_URL)" `
+            --azure-key-vault-certificate "$(AZURE_KEY_VAULT_CERTIFICATE)" `
+            --azure-key-vault-client-id "$(AZURE_CLIENT_ID)" `
+            --azure-key-vault-tenant-id "$(AZURE_TENANT_ID)" `
+            --azure-key-vault-client-secret "$env:AZURE_CLIENT_SECRET" `
             $_.FullName
           }
         env:
-          CODESIGNING_AZURE_KEY_VAULT_CLIENT_ID: $(CODESIGNING_AZURE_KEY_VAULT_CLIENT_ID)
-          CODESIGNING_AZURE_KEY_VAULT_TENANT_ID: $(CODESIGNING_AZURE_KEY_VAULT_TENANT_ID)
-          CODESIGNING_AZURE_KEY_VAULT_SECRET: $(CODESIGNING_AZURE_KEY_VAULT_SECRET)
+          AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
         condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
 
       - script: |
