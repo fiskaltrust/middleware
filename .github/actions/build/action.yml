@@ -1,4 +1,4 @@
-name: 'Build'
+name: "Build"
 inputs:
   pattern:
     required: true
@@ -19,9 +19,7 @@ runs:
     - name: Restore
       run: dotnet restore "${{ inputs.pattern }}"
       shell: pwsh
-      
+
     - name: Build
       run: dotnet build "${{ inputs.pattern }}" --configuration ${{ inputs.configuration }} --no-restore
       shell: pwsh
-
-      
