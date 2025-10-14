@@ -23,6 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
         private List<(ftSignaturCreationUnitAT scu, IATSSCD client)> _instances;
+        private readonly Task<List<(ftSignaturCreationUnitAT scu, IATSSCD client)>> _instanceTask;
         private int _currentlyActiveInstance = 0;
 
         public ATSSCDProvider(ILogger<ATSSCDProvider> logger, IClientFactory<IATSSCD> clientFactory, IConfigurationRepository configurationRepository, QueueATConfiguration queueATConfiguration)
@@ -31,6 +32,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
             _clientFactory = clientFactory;
             _configurationRepository = configurationRepository;
             _queueATConfiguration = queueATConfiguration;
+            _instanceTask = Task.Run(async () =>
+            {
+                return await GetScusFromConfigurationAsync().ToListAsync();
+            });
+
         }
 
         public async Task<int> GetCurrentlyActiveInstanceIndexAsync()
@@ -40,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                 _semaphoreInstance.Wait();
                 if (_instances == null)
                 {
-                    _instances = await GetScusFromConfigurationAsync().ToListAsync();
+                    _instances = await _instanceTask;
                 }
 
                 return _currentlyActiveInstance;
@@ -58,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                 _semaphoreInstance.Wait();
                 if (_instances == null)
                 {
-                    _instances = await GetScusFromConfigurationAsync().ToListAsync();
+                    _instances = await _instanceTask;
                 }
 
                 return _instances.ToList();
