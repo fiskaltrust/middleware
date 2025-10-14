@@ -82,7 +82,7 @@ jobs:
           }
         env:
           AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
-        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
+        # condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
 
       - script: |
           dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.3.11
