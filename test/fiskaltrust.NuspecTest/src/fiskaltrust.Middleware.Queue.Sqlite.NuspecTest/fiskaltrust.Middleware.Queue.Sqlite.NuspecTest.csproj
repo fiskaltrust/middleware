@@ -103,7 +103,7 @@
       <Version>15.0.5</Version>
     </PackageReference>
     <PackageReference Include="fiskaltrust.Exports.DSFinVK">
-      <Version>1.6.10-rc1</Version>
+      <Version>1.6.10</Version>
     </PackageReference>
     <PackageReference Include="fiskaltrust.interface">
       <Version>1.3.55-rc2</Version>
