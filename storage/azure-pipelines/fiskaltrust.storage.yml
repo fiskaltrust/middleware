@@ -67,7 +67,7 @@ jobs:
         displayName: "Run unit tests"
 
       - pwsh: dotnet tool install --global AzureSignTool
-        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
+        # condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
         displayName: Install AzureSignTool
 
       - pwsh: |
