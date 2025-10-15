@@ -96,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 
         public void SwitchToFirstScu() => _currentlyActiveInstance = 0;
 
-        private async IAsyncEnumerable<(ftSignaturCreationUnitAT scu, IATSSCD client)> GetScusFromConfigurationAsync()
+        private async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD client)>> GetScusFromConfigurationAsync()
         {
             var scus = (await _configurationRepository.GetSignaturCreationUnitATListAsync()).ToList();
 
@@ -121,10 +121,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                     return (scu, client);
                 });
 
-            foreach (var task in await Task.WhenAll(tasks))
-            {
-                yield return task;
-            }
+            var results = await Task.WhenAll(tasks);
+            return results.ToList();
         }
 
 
