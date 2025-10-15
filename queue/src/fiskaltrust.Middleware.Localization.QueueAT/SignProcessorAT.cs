@@ -25,7 +25,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
 
         public SignProcessorAT(IATSSCDProvider atSSCDProvider, IConfigurationRepository configurationRepository, IJournalATRepository journalATRepository, IRequestCommandFactory requestCommandFactory)
         {
-             _atSSCDProvider = atSSCDProvider;
+            //Creating atSSCDProvider on the first step (Running Processor)
+            _atSSCDProvider = atSSCDProvider;
             _configurationRepository = configurationRepository;
             _journalATRepository = journalATRepository;
             _requestCommandFactory = requestCommandFactory;
