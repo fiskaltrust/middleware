@@ -34,7 +34,17 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
             _queueATConfiguration = queueATConfiguration;
             _instanceTask = Task.Run(async () =>
             {
-                return await GetScusFromConfigurationAsync().ToListAsync();
+                try
+                {
+                    var scus = await GetScusFromConfigurationAsync();
+                    _logger.LogInformation("Initialized {Count} AT SCUs successfully .", scus.Count);
+                    return scus;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize SCUs in ATSSCDProvider constructor.");                   
+                }
+                return null;               
             });
 
         }
@@ -67,7 +77,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                     _instances = await _instanceTask;
                 }
 
-                return _instances.ToList();
+                return await _instanceTask;
             }
             finally
             {
