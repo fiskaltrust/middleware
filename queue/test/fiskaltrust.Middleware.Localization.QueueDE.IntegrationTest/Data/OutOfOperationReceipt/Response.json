@@ -107,5 +107,5 @@
     }
   ],
   "ftState": 4919338167972134912,
-  "ftStateData": "{\"TseInfo\":{\"MaxNumberOfClients\":0,\"CurrentNumberOfClients\":0,\"CurrentClientIds\":null,\"MaxNumberOfStartedTransactions\":0,\"CurrentNumberOfStartedTransactions\":0,\"CurrentStartedTransactionNumbers\":null,\"MaxNumberOfSignatures\":0,\"CurrentNumberOfSignatures\":0,\"MaxLogMemorySize\":0,\"CurrentLogMemorySize\":0,\"CurrentState\":0,\"FirmwareIdentification\":null,\"CertificationIdentification\":\"BSI-TK-0000-0000\",\"SignatureAlgorithm\":null,\"LogTimeFormat\":null,\"SerialNumberOctet\":null,\"PublicKeyBase64\":null,\"CertificatesBase64\":null,\"Info\":null}}"
+  "ftStateData": "{\"TseInfo\":{\"MaxNumberOfClients\":0,\"CurrentNumberOfClients\":0,\"CurrentClientIds\":null,\"MaxNumberOfStartedTransactions\":0,\"CurrentNumberOfStartedTransactions\":0,\"CurrentStartedTransactionNumbers\":[],\"MaxNumberOfSignatures\":0,\"CurrentNumberOfSignatures\":0,\"MaxLogMemorySize\":0,\"CurrentLogMemorySize\":0,\"CurrentState\":0,\"FirmwareIdentification\":null,\"CertificationIdentification\":\"BSI-TK-0000-0000\",\"SignatureAlgorithm\":null,\"LogTimeFormat\":null,\"SerialNumberOctet\":null,\"PublicKeyBase64\":null,\"CertificatesBase64\":null,\"Info\":null}}"
 }
