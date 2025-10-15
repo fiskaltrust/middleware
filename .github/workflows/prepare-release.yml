@@ -2,7 +2,7 @@ name: Prepare Release
 
 on:
   workflow_dispatch:
-  
+
 jobs:
   prepare-release:
     runs-on: ubuntu-latest
@@ -11,38 +11,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0 
+          fetch-depth: 0
           token: ${{ secrets.REPOSITORY_WRITE_PAT }}
 
       - name: Install nbgv
-        run: dotnet tool update -g nbgv  
-    
+        run: dotnet tool update -g nbgv
+
       - name: Configure git for PAT
         run: |
-            git config user.name "Release Bot"
-            git config user.email "dev-portal-poscreator@fiskaltrust.de"
-            git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
-     
+          git config user.name "Release Bot"
+          git config user.email "dev-portal-poscreator@fiskaltrust.de"
+          git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
+
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
-            output=$(nbgv prepare-release rc -f json)       
-            #echo "$output"
-            BRANCH=$(echo "$output" | jq -r '.NewBranch.Name')
-            
-            echo "release_branch=$BRANCH"
-            echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
+          output=$(nbgv prepare-release rc -f json)
+          #echo "$output"
+          BRANCH=$(echo "$output" | jq -r '.NewBranch.Name')
 
-            version=$(nbgv get-version -f json | jq -r '.Version'
-            echo "release_version=$version"
-            echo "release_version=$version" >> $GITHUB_OUTPUT
+          echo "release_branch=$BRANCH"
+          echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
+
+          version=$(nbgv get-version -f json | jq -r '.Version')
+          echo "release_version=$version"
+          echo "release_version=$version" >> $GITHUB_OUTPUT
 
       - name: Push changes
-        run: |          
-           # Push release branch bump (1.x -rc version)
-           git checkout ${{ steps.prepare-release.outputs.release_branch }}
-           git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }} 
-           
+        run: |
+          # Push release branch bump (1.x -rc version)
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}
+
       - name: Create Pull Request via gh CLI
         run: |
           gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"         
@@ -52,7 +52,7 @@ jobs:
             --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`." \
             --base main \
             --head ${{ steps.prepare-release.outputs.release_branch }}
-    
+
       - name: Push only version.json change to main
         run: |
           git checkout main
@@ -60,4 +60,3 @@ jobs:
           git add version.json
           git commit -m "Set version to the next ci version"
           git push origin main
-          
