@@ -6,60 +6,38 @@ inputs:
   filter:
     required: true
     type: string
-  clientCertificate:
+  azureKeyVaultUrl:
     required: true
     type: string
-  clientCertificatePassword:
+  azureKeyVaultCertificate:
     required: true
     type: string
-  smHost:
+  azureKeyVaultClientId:
     required: true
     type: string
-  smApiKey:
+  azureKeyVaultTenantId:
     required: true
     type: string
-  keypairAlias:
+  azureKeyVaultClientSecret:
     required: true
     type: string
 
 runs:
   using: "composite"
   steps:
-    - name: Set up client certificate
-      run: |
-        Set-Content -AsByteStream -Value $([System.Convert]::FromBase64String("${{ inputs.clientCertificate }}")) -Path "${{ runner.temp }}/codesigning_client_cert.p12"
+    - run: dotnet tool install --global AzureSignTool
+      name: Install AzureSignTool
       shell: pwsh
-
-    - name: Install DigiCert Client tools
-      uses: digicert/ssm-code-signing@v1.1.1
-
-    - run: smctl certificate download --keypair-alias=${{ inputs.keypairAlias }} --name=KeyCert.pem --out="${{ runner.temp }}"
-      name: Download signing certificate
-      shell: pwsh
-      env:
-        SM_HOST: "${{ inputs.smHost }}"
-        SM_API_KEY: "${{ inputs.smApiKey }}"
-        SM_CLIENT_CERT_PASSWORD: "${{ inputs.clientCertificatePassword}}"
-        SM_CLIENT_CERT_FILE: "${{ runner.temp }}/codesigning_client_cert.p12"
-        SM_TLS_SKIP_VERIFY: false
 
     - run: |
         Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | ForEach-Object {
-          signtool sign `
-            /tr http://timestamp.sectigo.com/?td=sha256 `
-            /td SHA256 `
-            /fd SHA256 `
-            /csp "DigiCert Signing Manager KSP" `
-            /kc "${{ inputs.keypairAlias }}" `
-            /f "${{ runner.temp }}\KeyCert.pem" `
-            $_.FullName
+          azuresigntool sign `
+          --azure-key-vault-url "${{ inputs.azureKeyVaultUrl }}" `
+          --azure-key-vault-certificate "${{ inputs.azureKeyVaultCertificate }}" `
+          --azure-key-vault-client-id "${{ inputs.azureKeyVaultClientId }}" `
+          --azure-key-vault-tenant-id "${{ inputs.azureKeyVaultTenantId }}" `
+          --azure-key-vault-client-secret "${{ inputs.azureKeyVaultClientSecret }}" `
+          $_.FullName
         }
-        Write-Host $(Get-Content -Path "~\.signingmanager\logs\smksp.log")
       name: Sign files
       shell: pwsh
-      env:
-        SM_HOST: "${{ inputs.smHost }}"
-        SM_API_KEY: "${{ inputs.smApiKey }}"
-        SM_CLIENT_CERT_PASSWORD: "${{ inputs.clientCertificatePassword}}"
-        SM_CLIENT_CERT_FILE: "${{ runner.temp }}/codesigning_client_cert.p12"
-        SM_TLS_SKIP_VERIFY: false
