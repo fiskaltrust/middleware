@@ -96,39 +96,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 
         public void SwitchToFirstScu() => _currentlyActiveInstance = 0;
 
-        //private async IAsyncEnumerable<(ftSignaturCreationUnitAT scu, IATSSCD client)> GetScusFromConfigurationAsync()
-        //{
-        //    var scus = (await _configurationRepository.GetSignaturCreationUnitATListAsync()).ToList();
-        //    foreach (var scu in scus.OrderBy(x => x.Mode & 0xff))
-        //    {
-        //        // SCU is disabled
-        //        if ((scu.Mode & 0xFF) >= 99)
-        //        {
-        //            continue;
-        //        }
-
-        //        var timeoutSec = DEFAULT_TIMEOUT_SEC;
-        //        if ((scu.Mode & 0xFF00) > 0)
-        //        {
-        //            // Timeouts are encoded in the third and fourth byte of the Mode property :)
-        //            timeoutSec = (scu.Mode & 0xFF00) >> 8;
-        //        }
-
-        //        var uri = GetUriForSignaturCreationUnit(scu);
-
-        //        var client = _clientFactory.CreateClient(new ClientConfiguration
-        //        {
-        //            Timeout = TimeSpan.FromSeconds(timeoutSec),
-        //            RetryCount = _queueATConfiguration.ScuMaxRetries,
-        //            Url = uri.ToString(),
-        //            UrlType = uri.Scheme
-        //        });
-
-        //        await UpdateConfigurationAsync(scu, client);
-
-        //        yield return (scu, client);
-        //    }
-        //}
         private async IAsyncEnumerable<(ftSignaturCreationUnitAT scu, IATSSCD client)> GetScusFromConfigurationAsync()
         {
             var scus = (await _configurationRepository.GetSignaturCreationUnitATListAsync()).ToList();
