@@ -523,7 +523,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     var scus = await _sscdProvider.GetAllInstances();
                     var retry = 0;
 
-                    var currentIndex = await _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
+                    var currentIndex =  _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
                     do
                     {
                         var startIndex = currentIndex;

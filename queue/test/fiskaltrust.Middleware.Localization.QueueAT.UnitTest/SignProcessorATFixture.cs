@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
                 sscd.Setup(x => x.Sign(It.IsAny<byte[]>())).Returns(new byte[] { 0x01, 0x02, 0x03 });
                 sscd.Setup(x => x.Certificate()).Returns(_certificate);
                 var sscdProvider = new Mock<IATSSCDProvider>();
-                sscdProvider.Setup(x => x.GetCurrentlyActiveInstanceIndexAsync()).ReturnsAsync(0);
+                sscdProvider.Setup(x => x.GetCurrentlyActiveInstanceIndexAsync()).Returns(0);
                 var scus = new List<ftSignaturCreationUnitAT>
                 {
                     _signaturCreationUnitAT
