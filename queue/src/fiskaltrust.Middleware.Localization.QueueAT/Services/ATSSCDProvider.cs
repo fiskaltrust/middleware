@@ -22,8 +22,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
         private readonly QueueATConfiguration _queueATConfiguration;
 
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
-        private List<(ftSignaturCreationUnitAT scu, IATSSCD client)> _instances;
-        private readonly Task<List<(ftSignaturCreationUnitAT scu, IATSSCD client)>> _instanceTask;
+        //private List<(ftSignaturCreationUnitAT scu, IATSSCD client)> _instances;
+        private readonly Task<List<(ftSignaturCreationUnitAT scu, IATSSCD client)>> _instances;
         private int _currentlyActiveInstance = 0;
 
         public ATSSCDProvider(ILogger<ATSSCDProvider> logger, IClientFactory<IATSSCD> clientFactory, IConfigurationRepository configurationRepository, QueueATConfiguration queueATConfiguration)
@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
             _clientFactory = clientFactory;
             _configurationRepository = configurationRepository;
             _queueATConfiguration = queueATConfiguration;
-            _instanceTask = Task.Run(async () =>
+            _instances = Task.Run(async () =>
             {
                 try
                 {
@@ -49,59 +49,48 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 
         }
 
-        public async Task<int> GetCurrentlyActiveInstanceIndexAsync()
+        public async Task<int> GetCurrentlyActiveInstanceIndexAsync() => _currentlyActiveInstance;
+        
+        public async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances()
         {
             try
             {
                 _semaphoreInstance.Wait();
-                if (_instances == null)
+                 return await _instances;
+            }
+            finally
+            {
+                _semaphoreInstance.Release();
+            }
+        }
+
+        public async Task<int> SwitchToNextScu()
+        {
+            _semaphoreInstance.Wait();
+            try
+            {
+                var instances = await _instances;
+
+                if (instances == null || !instances.Any())
                 {
-                    _instances = await _instanceTask;
+                    _currentlyActiveInstance = 0;
                 }
 
+                if (_currentlyActiveInstance < instances.Count - 1)
+                {
+                    _currentlyActiveInstance++;
+                }
+                else
+                {
+                    _currentlyActiveInstance = 0;
+                }
                 return _currentlyActiveInstance;
             }
             finally
             {
                 _semaphoreInstance.Release();
             }
-        }
-
-        public async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances()
-        {
-            try
-            {
-                _semaphoreInstance.Wait();
-                if (_instances == null)
-                {
-                    _instances = await _instanceTask;
-                }
-
-                return await _instanceTask;
-            }
-            finally
-            {
-                _semaphoreInstance.Release();
-            }
-        }
-
-        public int SwitchToNextScu()
-        {
-            if (_instances == null || !_instances.Any())
-            {
-                _currentlyActiveInstance = 0;
-            }
-
-            if (_currentlyActiveInstance < _instances.Count - 1)
-            {
-                _currentlyActiveInstance++;
-            }
-            else
-            {
-                _currentlyActiveInstance = 0;
-            }
-
-            return _currentlyActiveInstance;
+            
         }
 
         public void SwitchToFirstScu() => _currentlyActiveInstance = 0;

@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
     {
         Task<int> GetCurrentlyActiveInstanceIndexAsync();
         Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances();
-        int SwitchToNextScu();
+        Task<int> SwitchToNextScu();
         void SwitchToFirstScu();
     }
 }
