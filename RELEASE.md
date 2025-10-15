@@ -14,24 +14,33 @@ This can lead to gaps in the versions for some components that don't have change
 All packages of a certain Middleware version shall be compatible with one another. 
 If a package is not released a Middleware new version the latest released version of said package shall be compatible with the Middleware new version.
 
-Releases are tracked in github [Milestones](https://github.com/fiskaltrust/middleware/milestones). 
-All PRs and issues in a Milestone have the relevant `queue-*` and `scu-*` labels set to have an overview of which packages shall be released in a new Middleware version.
+All PRs shall have the relevant `queue-*` and `scu-*` labels set to have an overview of which packages and features will be released in a new Middleware version. 
+Releases are tracked in github [Milestones](https://github.com/fiskaltrust/middleware/milestones).
+All labeled PRs since the last release will be added to the release milestone.
 
 #### Pre Release Versions
 
-The SemVer v1 suffixes `-ciX` and `-rcX` are allowed (E.g. `-ci1`, `-rc2`, ...).
+The SemVer v1 suffixes `-ci.X` and `-rc.X` are allowed (E.g. `-ci.1`, `-rc.2`, ...).
 
-- `-ciX` is used for internal sandbox releases. E.g. to test a specific branch or feature.
-- `-rcX` is for Release Candidates used for testing new Middleware versions.
+- `-ci.X` is used for internal sandbox releases. E.g. to test a specific branch or feature.
+- `-rc.X` is for Release Candidates used for testing new Middleware versions.
   Before a full release an RC version is published to the sandbox and used for End2End testing this new Middleware version.
   An RC version can be released to give to a customer to test out fixes or features.
 
+For untagged commits the commit hash is appended to the prerelease identifier of the version like this `<major>.<minor>.<patch>-ci.<commit-height>.<commit-hash>` (e.g. `1.3.68-ci.2.a1b2c3`).
+
+> ***Note:** A note on SemVer v1 and v2. The release process only deals with SemVer v2 versions.*
+> *That means `<version>-<prerelase>.<number>` with the `-` separating the version and the prerelease identifiers and the prerelease identifiers separated by `.`.*
+> *In SemVer v1 this was not supported and would have been multiple `-` like `<version>-<prerelase>-<number>`.*
+> *Since the nuget packages need SemVer v1 versions the package artifacts are versioned like that.*
+> *So a release `1.3.68-rc.1` will be packaged as `1.3.68-rc-1`.*
+
 ### Tags
 
-All released versions shall have a corresponding tag. 
+All versions released to production shall have a corresponding tag. 
 Tags are prefixed with a path specifying the package that is being released (E.g. `queue/sqlite/v1.3.71`, `scu-de/swissbitcloudv2/v1.3.71`, `scu-it/epsonrtprinter/v1.3.71`, ...).
 
-Tags can be created via github releases or created locally in the git repo and then pushed (E.g. using the `git` cli or your favourite IDE). 
+Tags should be created through the release process specified below but can also be created via github releases or created locally in the git repo and then pushed. 
 
 ### Production
 
@@ -40,32 +49,44 @@ In production only `-rcX` and full versions shall be released and both shall be 
 
 ---
 
-## Regular Releases 
+## Releasing a ci version to sandbox
 
-This section describes how a regular new Middleware (E.g. `v1.3.71`) release is done.
+When working on a PR it's possible to quickly create a sandbox release of the PR. 
+
+Just comment `/deploy <compoment> <package>`.
+So to release the SQLite queue that's `/deploy queue SQLite` or for the german SwissbitCloudV2 `/deploy scu-de SwissbitCloudV2`. 
+This will build the middleware with a `ci` prerelease label.
+
+Once ready the comment will be updated with an approval link where you can approve the sandbox deployment.
+
+## Releasing the middleware 
+
+This section describes how a new Middleware release is done.
 
 ### Fill Github Milestone
+
 > Done by the Middleware Lead Engineer
 
 First the relevant github Milestone is maintained. 
-All relevant issues and all PRs since the last release are added to the milestone and they are given the needed `queue-*` and `scu-*` labels. 
-PRs or issues that have a customer facing impact get the `meta-needs-release-notes` and if needed the `meta-needs-migration-guide` label.
+All relevant PRs since the last release are added to the milestone and they are given the needed `queue-*` and `scu-*` labels. 
+PRs that have a customer facing impact get the `meta-needs-release-notes` and if needed the `meta-needs-migration-guide` label.
+Relevant issues should be linked to the PRs.
 
 ### Call for Release Notes
 
-A call for release notes comments goes out to the developers.
-Every developer creates a comment with the release notes for it on the relevant PRs or issues that are tagged with `meta-needs-release-notes` they implemented.
+A relese notes PR is created and a call for release notes comments goes out to the developers of PRs marked with the `meta-needs-release-notes` label.
+
+### Create the Release PR
+
+Manually run the [Prepare Release](https://github.com/fiskaltrust/middleware/actions/workflows/prepare-release.yml) action on the main branch.
+
+This will create a `/release/vX` branch where the middleware version prerelease identifier is changed from `ci` to `rc`. 
+Tis also updates the version in the main branch to the next middleware version with the `-ci` identifier.
 
 ### Deploy Pre Release Versions to Sandbox
 
-`-rcX` tags for the new version are created (The `Set as a pre-release` Checkbox is checked if created through github releases). 
-This triggers the release pipeline where the Sandbox deployment is approved and deployed.
-
-### Write Release Notes
-
-A PR with the release notes for the new version is created in the [release-notes](https://github.com/fiskaltrust/release-notes) repo. 
-All items in the release Milestone with the `meta-needs-release-notes` label have a related a section in the release notes and the relevant issue or PR is linked. 
-The release notes PR is compiled from the release notes comments from the developers.
+The `/deploy <compoment> <package>` command now deploys `rc` versions from the Release PR so commenting `/deploy queue SQLite` deploys the sqlite queue with an `rc` version.
+This is used to deploy all packages that need to be released to sandbox.
 
 ### Internal Release Notes Review
 
@@ -79,39 +100,32 @@ The feature or bugfix is tested for functionality using a relevant configuration
 
 ### Launcher End2End Tests
 
-All Packages are End2End tested on all relevant launchers.
+All Packages are End2End tested on all relevant launchers. Relevant Smoketests can be used for that.
 The released packages are tested to start and sign on all launcher and OS combinations.
 The specific features/bugfixes are already tested in the Feature Tests and don't need to be tested on all combinations again only the basic functionality of the packages is tested here.
 
 ### Fix Issues
 
-Issues found during the testing phase these are fixed and a new `-rcX` version for these packages is released and tested again.
+Issues found during the testing phase these are fixed in the release branch and a new `-rc` version for these packages is released with the `/deploy` command and tested again.
+
+### Deploy a Release Canditate to production
+
+If a Release Candidate needs to be released to production this can be done with the `/tag <component> <package>` command.
+It works similariy to the `/deploy` command but creates a new `rc` version tag so the release can also be released to production.
 
 ### Deploy Full Versions to Sandbox
 
-The full version tag is created and the sandbox is deployed.
-Github releases are created for these versions where the relevant PRs are listed for each package (This is partly done by githubs "Generate release notes" but the output needs to be filtered for relevance to the package).
+Once everything is tested and ready for the full release version the `/version` command is used to remove the `rc` identifier.
 
-### Deploy Full Versions to Production
+By commenting `/version` in the release branch the version file is updated to the full (non prerelease) version.
 
-If no issues are reported production is also deployed.
+After that the `/tag` command is used to create tags for the full versions.
+Github releases should be created for these tags where the relevant PRs are listed for each package (This is partly done by githubs "Generate release notes" but the output needs to be filtered for relevance to the package).
+
+After that the release PR is merged.
+For that the merge conflict in the `version.json` file needs to be resolved in favour of the main branch. 
+(E.g. The version in the release branch is `1.3.68` and the version in the main branch is `1.3.69-ci`. after the merge it should still be `1.3.69-ci`)
 
 ### Publish Release Notes
 
 The release notes are published as soon as the version is available in production.
-
-## Hotfix Releases
-
-If a hotfix needs to be released for a package the process is simplified.
-
-### Deploy Pre Release Version to Sandbox
-
-First an `-rcX` version tag is created and released to sandbox.
-
-### Feature Tests
-
-The `-rcX` version is tested in the relevant Queue, SCU, Launcher and OS configurations.
-
-### Deploy Pre Release Version to Production
-
-The tested package is then released as an RC version to production.

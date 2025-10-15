@@ -28,6 +28,8 @@
 
 ## Version
 
+- from `/version` comment
+
 ## Release (`release.yml`)
 
 - on push
