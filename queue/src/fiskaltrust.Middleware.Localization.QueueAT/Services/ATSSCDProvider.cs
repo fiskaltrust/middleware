@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 
         }
 
-        public async Task<int> GetCurrentlyActiveInstanceIndexAsync() => _currentlyActiveInstance;
+        public int GetCurrentlyActiveInstanceIndexAsync() => _currentlyActiveInstance;
         
         public async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances()
         {
