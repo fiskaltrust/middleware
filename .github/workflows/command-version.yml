@@ -24,14 +24,14 @@ jobs:
 
       - name: Set branch name
         run: |
-           echo "BRANCH_NAME=${{ github.event.client_payload.pull_request.head.ref }}"
-           echo "BRANCH_NAME=${{ github.event.client_payload.pull_request.head.ref }}" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${{ github.event.client_payload.pull_request.head.ref }}"
+          echo "BRANCH_NAME=${{ github.event.client_payload.pull_request.head.ref }}" >> $GITHUB_ENV
 
       - name: Configure git for PAT
         run: |
-            git config user.name "Release Bot"
-            git config user.email "dev-portal-poscreator@fiskaltrust.de"
-            git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
+          git config user.name "ReleaseBot"
+          git config user.email "dev-portal-poscreator@fiskaltrust.de"
+          git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
 
       - name: Update version (nbgv prepare-release)
         if: startsWith(env.BRANCH_NAME, 'release/')
@@ -63,7 +63,7 @@ jobs:
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-    
+
   failure:
     needs:
       - version
@@ -81,4 +81,3 @@ jobs:
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/failure/red)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-

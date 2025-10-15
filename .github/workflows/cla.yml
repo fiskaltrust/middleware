@@ -25,6 +25,7 @@ jobs:
         with:
           remote-organization-name: fiskaltrust
           remote-repository-name: cla-signatures
-          path-to-signatures: 'cla-signatures.json'
-          path-to-document: 'https://github.com/fiskaltrust/.github/blob/main/CLA.md'
-          branch: 'main'
+          path-to-signatures: "cla-signatures.json"
+          path-to-document: "https://github.com/fiskaltrust/.github/blob/main/CLA.md"
+          branch: "main"
+          allowlist: ReleaseBot

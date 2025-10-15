@@ -19,7 +19,7 @@ jobs:
 
       - name: Configure git for PAT
         run: |
-          git config user.name "Release Bot"
+          git config user.name "ReleaseBot"
           git config user.email "dev-portal-poscreator@fiskaltrust.de"
           git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
 
