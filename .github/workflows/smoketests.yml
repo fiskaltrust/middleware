@@ -9,7 +9,7 @@ on:
         type: choice
         options:
           # - fiskaltrust.Middleware.Queue.SQLite
-          - fiskaltrust.Middleware.Queue.MYSQL
+          - fiskaltrust.Middleware.Queue.MySQL
           # - fiskaltrust.Middleware.Queue.EF
       queueVersion:
         description: "Queue package version"
@@ -57,7 +57,7 @@ jobs:
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
-            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MYSQL') {
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
              $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
@@ -76,7 +76,7 @@ jobs:
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Install MySQL and run service
-        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MYSQL' }}
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
         run: |
           choco install mysql --params "'/port:3306 /password:root'" -y
 
