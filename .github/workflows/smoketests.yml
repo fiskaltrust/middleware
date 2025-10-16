@@ -75,7 +75,6 @@ jobs:
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MYSQL' }}
         run: |
           choco install mysql --params "'/port:3306 /password:root'" -y
-          net start mysql    
 
       - name: Start LocalDB
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
