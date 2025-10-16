@@ -1,15 +1,6 @@
 {
   "ftCashBoxId": "|[cashbox_id]|",
   "ftSignaturCreationDevices": [],
-  //  {
-  //    "Id": "|[scu0_id]|",
-  //    "Package": "fiskaltrust.Middleware.SCU.DE.InMemory",
-  //    "Configuration": {},
-  //    "Url": [
-  //      "rest://localhost:1501/|[scu0_id]|"
-  //    ]
-  //  }
-  //],
   "ftQueues": [
     {
       "Id": "|[queue0_id]|",
