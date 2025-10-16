@@ -23,8 +23,8 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  queuePackage: fiskaltrust.Middleware.Queue.SQLite
-  queueVersion: latest
+  # queuePackage: fiskaltrust.Middleware.Queue.SQLite
+  # queueVersion: latest
 
 jobs:
   test-middleware:
@@ -33,10 +33,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Resolve final values
-        run: |
-          echo "queuePackage=${{ inputs.queuePackage || env.queuePackage }}" >> $GITHUB_ENV
-          echo "queueVersion=${{ inputs.queueVersion || env.queueVersion }}" >> $GITHUB_ENV
+      # - name: Resolve final values
+      #   run: |
+      #     echo "queuePackage=${{ inputs.queuePackage }}" >> $GITHUB_ENV
+      #     echo "queueVersion=${{ inputs.queueVersion }}" >> $GITHUB_ENV
 
       - name: Create cashbox
         shell: pwsh
@@ -51,9 +51,9 @@ jobs:
             }
 
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
-            $body.ftQueues[0].Package = "${{ env.queuePackage }}"
-            $body.ftQueues[0].Version = "${{ env.queueVersion }}"
-            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
+            $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
+            $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
@@ -72,13 +72,13 @@ jobs:
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Install MySQL and run service
-        if: ${{ env.queuePackage == 'fiskaltrust.Middleware.Queue.MYSQL' }}
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MYSQL' }}
         run: |
           choco install mysql --params "'/port:3306 /password:root'" -y
           net start mysql    
 
       - name: Start LocalDB
-        if: ${{ env.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
         shell: pwsh
         run: |
           sqllocaldb create MSSQLLocalDB -s
@@ -154,7 +154,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ env.queuePackage }}
+          name: test-output-${{ inputs.queuePackage }}
           path: test-output.log
         continue-on-error: true
  
