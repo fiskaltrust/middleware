@@ -57,6 +57,10 @@ jobs:
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MYSQL') {
+             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
+             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+            }
 
             $body = $body | ConvertTo-Json -Depth 10
 
