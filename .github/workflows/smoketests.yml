@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          # - fiskaltrust.Middleware.Queue.SQLite
+          - fiskaltrust.Middleware.Queue.SQLite
           - fiskaltrust.Middleware.Queue.MySQL
-          # - fiskaltrust.Middleware.Queue.EF
+          - fiskaltrust.Middleware.Queue.EF
       queueVersion:
         description: "Queue package version"
         type: string
@@ -23,20 +23,13 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  # queuePackage: fiskaltrust.Middleware.Queue.SQLite
-  # queueVersion: latest
-
+ 
 jobs:
   test-middleware:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # - name: Resolve final values
-      #   run: |
-      #     echo "queuePackage=${{ inputs.queuePackage }}" >> $GITHUB_ENV
-      #     echo "queueVersion=${{ inputs.queueVersion }}" >> $GITHUB_ENV
+        uses: actions/checkout@v4      
 
       - name: Create cashbox
         shell: pwsh
