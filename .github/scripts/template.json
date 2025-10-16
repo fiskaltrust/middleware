@@ -34,8 +34,7 @@
         "init_ftSignaturCreationUnitDE": [
           {
             "ftSignaturCreationUnitDEId": "|[scu0_id]|",
-            "Url": "[\"rest://localhost:1501/|[scu0_id]|\"]",
-            "Mode": 0
+            "Url": "[\"rest://localhost:1501/|[scu0_id]|\"]"
           }
         ]
       },
