@@ -1,6 +1,6 @@
 {
   "ftCashBoxId": "|[cashbox_id]|",
-  "ftSignaturCreationDevices": []
+  "ftSignaturCreationDevices": [],
   //  {
   //    "Id": "|[scu0_id]|",
   //    "Package": "fiskaltrust.Middleware.SCU.DE.InMemory",
