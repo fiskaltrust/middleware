@@ -84,6 +84,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
                     TimeStamp = actionJournal2_mom,
                     Type = "4445000800000007",
                     DataJson = "{\"closingNumber\": 2, \"ftReceiptNumerator\": 2}"
+
                 },
                 new() {
                     ftQueueId = queueId,
@@ -118,42 +119,48 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
                     ftQueueRow = 1,
                     ftQueueId = queueId,
                     TimeStamp = queueItem1_timestamp,
-                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft1#" })
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft1#" }),
+                    request = JsonConvert.SerializeObject(new ReceiptRequest{ ftReceiptCase = 4919338172267102215 })
                 },
                 new() {
                     ftQueueItemId = queueItemId2,
                     ftQueueRow = 2,
                     ftQueueId = queueId,
                     TimeStamp = queueItem2_timestamp,
-                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft2#" })
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft2#" }),
+                    request = JsonConvert.SerializeObject(new ReceiptRequest{ ftReceiptCase = 4919338172267102215 })
                 },
                 new() {
                     ftQueueItemId = Guid.NewGuid(),
                     ftQueueRow = 3,
                     ftQueueId = queueId,
                     TimeStamp = queueItem3_timestamp,
-                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft3#" })
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft3#" }),
+                    request = JsonConvert.SerializeObject(new ReceiptRequest{ ftReceiptCase = 4919338172267102215 })
                 },
                 new() {
                     ftQueueItemId = Guid.NewGuid(),
                     ftQueueRow = 4,
                     ftQueueId = queueId,
                     TimeStamp = queueItem4_timestamp,
-                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft4#" })
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft4#" }),
+                    request = JsonConvert.SerializeObject(new ReceiptRequest{ ftReceiptCase = 4919338172267102215 })
                 },
                 new() {
                     ftQueueItemId = Guid.NewGuid(),
                     ftQueueRow = 5,
                     ftQueueId = queueId,
                     TimeStamp = queueItem5_timestamp,
-                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft5#" })
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft5#" }),
+                    request = JsonConvert.SerializeObject(new ReceiptRequest{ ftReceiptCase = 4919338172267102215 })
                 },
                 new() {
                     ftQueueItemId = Guid.NewGuid(),
                     ftQueueRow = 6,
                     ftQueueId = queueId,
                     TimeStamp = queueItem6_timestamp,
-                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft6#", ftStateData="{\"DailyClosingNumber\":5}" })
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft6#", ftStateData="{\"DailyClosingNumber\":5}" }),
+                    request = JsonConvert.SerializeObject(new ReceiptRequest{ ftReceiptCase = 4919338172267102215 })
                 },
             };
 

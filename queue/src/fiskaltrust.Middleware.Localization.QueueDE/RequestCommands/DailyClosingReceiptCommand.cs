@@ -87,15 +87,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
 
                 //remove all transactions on the tse to enable full tar deletion
-                if (request.HasCloseOpenTransactionsOnTseFlag())
+                var tseinfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                foreach (var openTransactionNumber in tseinfo.CurrentStartedTransactionNumbers)
                 {
-                    var tseinfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
-                    foreach (var openTransactionNumber in tseinfo.CurrentStartedTransactionNumbers)
-                    {
-                        (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
-                        var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionNumber).ConfigureAwait(false);
-                        openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
-                    }
+                    (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
+                    var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionNumber).ConfigureAwait(false);
+                    openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
                 }
 
                 var processReceiptResponse = await ProcessReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE).ConfigureAwait(false);

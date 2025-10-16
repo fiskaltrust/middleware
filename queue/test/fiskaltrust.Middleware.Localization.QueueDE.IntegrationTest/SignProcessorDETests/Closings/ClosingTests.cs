@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var condfiguration = new Dictionary<string, object>() { { "init_masterData", JsonConvert.SerializeObject(masterdata) } };
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", receiptFolder));
             receiptRequest.ftReceiptCase = receiptCase;
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, condfiguration, true);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, condfiguration, true, Array.Empty<ulong>());
             var receiptResponse = await signProcessor.ProcessAsync(receiptRequest).ConfigureAwait(false);
             await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, actionJournalMessage);
             await ReceiptTestResults.IsMasterDataValid(_fixture, masterdata);

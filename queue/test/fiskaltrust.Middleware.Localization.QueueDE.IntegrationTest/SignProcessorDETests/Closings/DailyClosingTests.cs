@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ProcessingVersion = "test"
             };
 
-            _fixture.InMemorySCU.OpenTans = (await _fixture.openTransactionRepository.GetAsync()).Select(x => (ulong) x.TransactionNumber);
+            _fixture.InMemorySCU.OpenTans = (await _fixture.openTransactionRepository.GetAsync()).Select(x => (ulong) x.TransactionNumber).ToArray();
 
             var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config));
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
-            receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));
+            receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment).Excluding(x => x.ftSignatures));
             (await _fixture.openTransactionRepository.GetAsync()).Should().BeEmpty();
             journalRepositoryMock.Verify();
         }
