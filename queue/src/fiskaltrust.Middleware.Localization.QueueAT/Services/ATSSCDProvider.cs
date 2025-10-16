@@ -22,7 +22,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
         private readonly QueueATConfiguration _queueATConfiguration;
 
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
-        private List<(ftSignaturCreationUnitAT scu, IATSSCD client)> _instances;
+        //private List<(ftSignaturCreationUnitAT scu, IATSSCD client)> _instances;
+        private readonly Task<List<(ftSignaturCreationUnitAT scu, IATSSCD client)>> _instances;
         private int _currentlyActiveInstance = 0;
 
         public ATSSCDProvider(ILogger<ATSSCDProvider> logger, IClientFactory<IATSSCD> clientFactory, IConfigurationRepository configurationRepository, QueueATConfiguration queueATConfiguration)
@@ -31,98 +32,98 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
             _clientFactory = clientFactory;
             _configurationRepository = configurationRepository;
             _queueATConfiguration = queueATConfiguration;
+            _instances = Task.Run(async () =>
+            {
+                try
+                {
+                    var scus = await GetScusFromConfigurationAsync();
+                    _logger.LogInformation("Initialized {Count} AT SCUs successfully .", scus.Count);
+                    return scus;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize SCUs in ATSSCDProvider constructor.");                   
+                }
+                return null;               
+            });
+
         }
 
-        public async Task<int> GetCurrentlyActiveInstanceIndexAsync()
+        public int GetCurrentlyActiveInstanceIndexAsync() => _currentlyActiveInstance;
+        
+        public async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances()
         {
             try
             {
                 _semaphoreInstance.Wait();
-                if (_instances == null)
+                 return await _instances;
+            }
+            finally
+            {
+                _semaphoreInstance.Release();
+            }
+        }
+
+        public async Task<int> SwitchToNextScu()
+        {
+            _semaphoreInstance.Wait();
+            try
+            {
+                var instances = await _instances;
+
+                if (instances == null || !instances.Any())
                 {
-                    _instances = await GetScusFromConfigurationAsync().ToListAsync();
+                    _currentlyActiveInstance = 0;
                 }
 
+                if (_currentlyActiveInstance < instances.Count - 1)
+                {
+                    _currentlyActiveInstance++;
+                }
+                else
+                {
+                    _currentlyActiveInstance = 0;
+                }
                 return _currentlyActiveInstance;
             }
             finally
             {
                 _semaphoreInstance.Release();
             }
-        }
-
-        public async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances()
-        {
-            try
-            {
-                _semaphoreInstance.Wait();
-                if (_instances == null)
-                {
-                    _instances = await GetScusFromConfigurationAsync().ToListAsync();
-                }
-
-                return _instances.ToList();
-            }
-            finally
-            {
-                _semaphoreInstance.Release();
-            }
-        }
-
-        public int SwitchToNextScu()
-        {
-            if (_instances == null || !_instances.Any())
-            {
-                _currentlyActiveInstance = 0;
-            }
-
-            if (_currentlyActiveInstance < _instances.Count - 1)
-            {
-                _currentlyActiveInstance++;
-            }
-            else
-            {
-                _currentlyActiveInstance = 0;
-            }
-
-            return _currentlyActiveInstance;
+            
         }
 
         public void SwitchToFirstScu() => _currentlyActiveInstance = 0;
 
-        private async IAsyncEnumerable<(ftSignaturCreationUnitAT scu, IATSSCD client)> GetScusFromConfigurationAsync()
+        private async Task<List<(ftSignaturCreationUnitAT scu, IATSSCD client)>> GetScusFromConfigurationAsync()
         {
             var scus = (await _configurationRepository.GetSignaturCreationUnitATListAsync()).ToList();
-            foreach (var scu in scus.OrderBy(x => x.Mode & 0xff))
-            {
-                // SCU is disabled
-                if ((scu.Mode & 0xFF) >= 99)
-                {
-                    continue;
-                }
 
-                var timeoutSec = DEFAULT_TIMEOUT_SEC;
-                if ((scu.Mode & 0xFF00) > 0)
+            var tasks = scus
+                .OrderBy(x => x.Mode & 0xff)
+                .Where(scu => (scu.Mode & 0xFF) < 99)
+                .Select(async scu =>
                 {
                     // Timeouts are encoded in the third and fourth byte of the Mode property :)
-                    timeoutSec = (scu.Mode & 0xFF00) >> 8;
-                }
+                    var timeoutSec = ((scu.Mode & 0xFF00) > 0) ? (scu.Mode & 0xFF00) >> 8 : DEFAULT_TIMEOUT_SEC;
 
-                var uri = GetUriForSignaturCreationUnit(scu);
+                    var uri = GetUriForSignaturCreationUnit(scu);
+                    var client = _clientFactory.CreateClient(new ClientConfiguration
+                    {
+                        Timeout = TimeSpan.FromSeconds(timeoutSec),
+                        RetryCount = _queueATConfiguration.ScuMaxRetries,
+                        Url = uri.ToString(),
+                        UrlType = uri.Scheme
+                    });
 
-                var client = _clientFactory.CreateClient(new ClientConfiguration
-                {
-                    Timeout = TimeSpan.FromSeconds(timeoutSec),
-                    RetryCount = _queueATConfiguration.ScuMaxRetries,
-                    Url = uri.ToString(),
-                    UrlType = uri.Scheme
+                    await UpdateConfigurationAsync(scu, client);
+                    return (scu, client);
                 });
 
-                await UpdateConfigurationAsync(scu, client);
-
-                yield return (scu, client);
-            }
+            var results = await Task.WhenAll(tasks);
+            return results.ToList();
         }
+
 
         private async Task UpdateConfigurationAsync(ftSignaturCreationUnitAT scu, IATSSCD client)
         {

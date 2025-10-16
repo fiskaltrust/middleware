@@ -7,9 +7,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 {
     public interface IATSSCDProvider
     {
-        Task<int> GetCurrentlyActiveInstanceIndexAsync();
+        int GetCurrentlyActiveInstanceIndexAsync();
         Task<List<(ftSignaturCreationUnitAT scu, IATSSCD sscd)>> GetAllInstances();
-        int SwitchToNextScu();
+        Task<int> SwitchToNextScu();
         void SwitchToFirstScu();
     }
 }

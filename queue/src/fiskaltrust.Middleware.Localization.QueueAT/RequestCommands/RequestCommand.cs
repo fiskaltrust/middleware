@@ -523,7 +523,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     var scus = await _sscdProvider.GetAllInstances();
                     var retry = 0;
 
-                    var currentIndex = await _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
+                    var currentIndex =  _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
                     do
                     {
                         var startIndex = currentIndex;
@@ -540,7 +540,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                             // Explanation: on the first run if we start with a normal scu skip all backup scus.
                             if (scus.Any(x => !x.scu.IsBackup()) && retry == 0 && scus[currentIndex].scu.IsBackup() && !scus[startIndex].scu.IsBackup())
                             {
-                                currentIndex = _sscdProvider.SwitchToNextScu();
+                                currentIndex = await _sscdProvider.SwitchToNextScu();
                                 continue;
                             }
 
@@ -600,7 +600,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 _logger.LogError(ex, "An error occured while trying to sign a receipt with the SCU {ScuId}.", scus[currentIndex].scu.ftSignaturCreationUnitATId);
                             }
 
-                            currentIndex = _sscdProvider.SwitchToNextScu();
+                            currentIndex = await _sscdProvider.SwitchToNextScu();
                         } while (currentIndex != startIndex);
                     } while (retry++ < (_queueATConfiguration?.ScuMaxRetries ?? 3));
                 }
