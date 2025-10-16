@@ -78,7 +78,27 @@ jobs:
       - name: Install MySQL and run service
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
         run: |
-          choco install mysql --params "'/port:3306 /password:root'" -y
+            choco install mysql --params "'/port:3306'" -y
+
+            # Start MySQL service if not already running
+            $service = Get-Service -Name mysql -ErrorAction SilentlyContinue
+            if ($service.Status -ne 'Running') {
+              Start-Service mysql
+            }
+
+            # Wait for MySQL to be ready
+            Write-Host "Waiting for MySQL to be ready..."
+            Start-Sleep -Seconds 10
+
+            # Set a known root password
+            $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
+            & $mysqladmin -u root password "my-secret-pw"
+
+            # Verify connection
+            $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
+            & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
+
+            Write-Host "✅ MySQL root password successfully set and verified."
 
       - name: Start LocalDB
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
