@@ -163,7 +163,7 @@ jobs:
           else
           {
            $requests = @(
-            @{ Name = "Zeroreceipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = "requests/Zeroreceipt.json" }            
+            @{ Name = "Zeroreceipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Zeroreceipt.json" }            
            )
 
            foreach ($req in $requests) {
