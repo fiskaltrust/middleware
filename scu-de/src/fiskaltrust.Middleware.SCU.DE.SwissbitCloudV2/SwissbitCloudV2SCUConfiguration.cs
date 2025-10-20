@@ -32,5 +32,6 @@
         public int DelayOnRetriesInMs { get; set; } = 1000;
         public int ExportTimeoutMs { get; set; } = 18000 * 1000;
         public bool Sandbox { get; set; }
+        public bool RemoveFullStorage { get; set; } = false;
     }
 }
