@@ -165,6 +165,8 @@ jobs:
            $requests = @(
             @{ Name = "Zeroreceipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Zeroreceipt.json" } 
             @{ Name = "Initial-operation-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Initial-operation-receipt.json" } 
+            @{ Name = "Pos-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Pos-receipt.json" } 
+            @{ Name = "Daily-closing-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Daily-closing-receipt.json" } 
             
            )
 
@@ -179,7 +181,7 @@ jobs:
                 -replace "{{current_moment}}", (Get-Date).ToString("o")
 
             try {
-                $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -TimeoutSec 5
+                $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -TimeoutSec 10
                 Write-Host "$($req.Name) response: $($response | ConvertTo-Json -Depth 10)"
             } catch {
                 Write-Error "$($req.Name) request failed: $_"
