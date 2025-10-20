@@ -173,7 +173,7 @@ jobs:
 
             # Replace placeholders
             $body = $bodyTemplate `
-                -replace "{{cashbox_id}}", ${{ env.cashboxId }} `
+                -replace "{{cashbox_id}}", "${{ env.cashboxId }}" `
                 -replace "{{current_moment}}", (Get-Date).ToString("o")
 
             try {
