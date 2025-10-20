@@ -1,0 +1,35 @@
+{
+  "ftCashBoxID": "{{cashbox_id}}",
+  "ftPosSystemId": "{{possystem_id}}",
+  "cbTerminalID": "T2",
+  "cbReceiptReference": "pos-action-identification-02",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [
+    {
+      "Quantity": 2.0,
+      "Description": "Coffee to Go",
+      "Amount": 2,
+      "VATRate": 19.00,
+      "ftChargeItemCase": 4919338167972134929,
+      "Moment": "2020-06-29T17:45:40.505Z"
+    },
+    {
+      "Quantity": 1.0,
+      "Description": "Brötchen",
+      "Amount": 2.50,
+      "VATRate": 7.00,
+      "ftChargeItemCase": 4919338167972200466,
+      "Moment": "2020-06-29T17:45:40.505Z"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1.0,
+      "Description": "Cash",
+      "Amount": 4.50,
+      "ftPayItemCase": 4919338167972134913,
+      "Moment": "2020-06-29T18:05:33.912Z"
+    }
+  ],
+  "ftReceiptCase": 4919338172267102209
+}
