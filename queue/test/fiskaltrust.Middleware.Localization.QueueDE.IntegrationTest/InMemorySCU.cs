@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
         private HashSet<string> _registeredClients { get; set; } = new HashSet<string>();
         private TseState _tseState = new TseState() { CurrentState = TseStates.Uninitialized };
         public bool ShouldFail { get; set; } = false;
-        public IEnumerable<ulong> OpenTans { get; set; } = null;
+        public ulong[] OpenTans { get; set; } = new ulong[0];
         public DateTime? LastSelfTest { get; private set; }
         public DateTime? LastErase { get; private set; }
 
@@ -18,16 +18,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
         {
             SignatureData = new TseSignatureData { },
             ProcessDataBase64 = "MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA==",
-            ProcessType = request.ProcessType
+            ProcessType = request.ProcessType,
+            TransactionNumber = 0
         });
 
-        public async Task<StartTransactionResponse> StartTransactionAsync(StartTransactionRequest request) => ShouldFail ? throw new Exception("ShouldFail") : await Task.FromResult(new StartTransactionResponse
-        {
+        public async Task<StartTransactionResponse> StartTransactionAsync(StartTransactionRequest request) => ShouldFail ? throw new Exception("ShouldFail") : await Task.FromResult(new StartTransactionResponse { 
+        
+            TransactionNumber = 0,
             SignatureData = new TseSignatureData { },
         });
 
         public Task<UpdateTransactionResponse> UpdateTransactionAsync(UpdateTransactionRequest request) => Task.FromResult(new UpdateTransactionResponse
         {
+            TransactionNumber = 0,
             SignatureData = new TseSignatureData { },
         });
 
@@ -36,6 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
             CertificationIdentification = "BSI-TK-0000-0000",
             CurrentState = _tseState.CurrentState,
             CurrentStartedTransactionNumbers = OpenTans
+
         });
 
         public async Task<TseState> SetTseStateAsync(TseState state)
