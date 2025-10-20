@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - fiskaltrust.Middleware.Queue.SQLite
+          - fiskaltrust.Middleware.Queue.MySQL
           - fiskaltrust.Middleware.Queue.EF
       queueVersion:
         description: "Queue package version"
@@ -22,20 +23,13 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  queuePackage: fiskaltrust.Middleware.Queue.SQLite
-  queueVersion: latest
-
+ 
 jobs:
   test-middleware:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Resolve final values
-        run: |
-          echo "queuePackage=${{ inputs.queuePackage || env.queuePackage }}" >> $GITHUB_ENV
-          echo "queueVersion=${{ inputs.queueVersion || env.queueVersion }}" >> $GITHUB_ENV
+        uses: actions/checkout@v4      
 
       - name: Create cashbox
         shell: pwsh
@@ -50,10 +44,14 @@ jobs:
             }
 
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
-            $body.ftQueues[0].Package = "${{ env.queuePackage }}"
-            $body.ftQueues[0].Version = "${{ env.queueVersion }}"
-            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
+            $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
+            $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
+             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+            }
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
+             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
@@ -70,8 +68,33 @@ jobs:
             echo "accessToken=$accessToken" >> $env:GITHUB_ENV
             echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
+      - name: Install MySQL and run service
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
+        run: |
+            choco install mysql --params "'/port:3306'" -y
+
+            # Start MySQL service if not already running
+            $service = Get-Service -Name mysql -ErrorAction SilentlyContinue
+            if ($service.Status -ne 'Running') {
+              Start-Service mysql
+            }
+
+            # Wait for MySQL to be ready
+            Write-Host "Waiting for MySQL to be ready..."
+            Start-Sleep -Seconds 10
+
+            # Set a known root password
+            $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
+            & $mysqladmin -u root password "my-secret-pw"
+
+            # Verify connection
+            $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
+            & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
+
+            Write-Host "✅ MySQL root password successfully set and verified."
+
       - name: Start LocalDB
-        if: ${{ env.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
         shell: pwsh
         run: |
           sqllocaldb create MSSQLLocalDB -s
@@ -171,7 +194,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ env.queuePackage }}
+          name: test-output-${{ inputs.queuePackage }}
           path: test-output.log
         continue-on-error: true
  
