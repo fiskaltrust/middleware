@@ -28,6 +28,7 @@
         "init_ftQueueDE": [
           {
             "ftQueueDEId": "|[queue0_id]|",
+            "ftSignaturCreationUnitDEId": "|[scu0_id]|",
             "CashBoxIdentification": "gdfhgd"
           }
         ],
