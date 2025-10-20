@@ -1,6 +1,6 @@
 {
   "ftCashBoxId": "|[cashbox_id]|",
-  "ftSignaturCreationDevices": [],
+  "ftSignaturCreationDevices": [
   {
     "Id": "93771342-ced0-4d5a-84b5-e87c8200336a",
     "Package": "fiskaltrust.Middleware.SCU.DE.InMemory",
