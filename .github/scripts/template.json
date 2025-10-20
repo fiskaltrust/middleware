@@ -1,6 +1,15 @@
 {
   "ftCashBoxId": "|[cashbox_id]|",
-  "ftSignaturCreationDevices": [],
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "|[scu0_id]|",
+      "Package": "fiskaltrust.Middleware.SCU.DE.InMemory",
+      "Configuration": {},
+      "Url": [
+        "rest://localhost:1501/|[scu0_id]|"
+      ]
+    }
+  ],
   "ftQueues": [
     {
       "Id": "|[queue0_id]|",
@@ -24,8 +33,8 @@
         ],
         "init_ftSignaturCreationUnitDE": [
           {
-            "ftSignaturCreationUnitDEId": "93771342-ced0-4d5a-84b5-e87c8200336a",
-            "Url": "[\"rest://localhost:1501/93771342-ced0-4d5a-84b5-e87c8200336a\"]"
+            "ftSignaturCreationUnitDEId": "|[scu0_id]|",
+            "Url": "[\"rest://localhost:1501/|[scu0_id]|\"]"
           }
         ]
       },
