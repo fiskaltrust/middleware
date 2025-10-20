@@ -28,10 +28,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         private readonly ISwissbitCloudV2ApiProvider _swissbitCloudV2Provider;
         private const string _noExport = "noexport-";
         private TseInfo LastTseInfo;
-        private bool _storageFull = false;
-        private Guid _queueItemIdStorageFull;
-        private const string _textStorageFull = "The storage of the TSE is full, please execute a zero-receipt followed by daily-closing with tar-export, to move the data to the middleware.";
-
         public SwissbitCloudV2SCU(ILogger<SwissbitCloudV2SCU> logger, ISwissbitCloudV2ApiProvider apiProvider, ClientCache clientCache, SwissbitCloudV2SCUConfiguration configuration)
         {
             _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
@@ -50,24 +46,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
-                if (_configuration.RemoveFullStorage && _storageFull && !_queueItemIdStorageFull.Equals(request.QueueItemId) )
-                {
-                    _logger.LogCritical(_textStorageFull);
-                    return new StartTransactionResponse
-                    {
-                        TseSerialNumberOctet = _configuration.TseSerialNumber,
-                        ClientId = request.ClientId,
-                        SignatureData =  new TseSignatureData()
-                        {
-                            SignatureBase64 = "",
-                            SignatureCounter = 0,
-                            SignatureAlgorithm = LastTseInfo?.SignatureAlgorithm,
-                            PublicKeyBase64 = LastTseInfo?.PublicKeyBase64
-                        },
-                        TransactionNumber = 0
-                    };
-                }
-
                 var startTransactionRequest = new TransactionRequestDto()
                 {
                     ClientId = request.ClientId,
@@ -80,12 +58,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
             catch (Exception ex)
             {
-                if (!_storageFull && ex.Message.Contains("E_STORAGE_FULL"))
-                {
-                    _storageFull = true;
-                    _queueItemIdStorageFull = request.QueueItemId;
-                    _logger.LogCritical(_textStorageFull);
-                }
                 _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(StartTransactionAsync), JsonConvert.SerializeObject(request));
                 throw;
             }
@@ -105,7 +77,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int)request.TransactionNumber,
+                    Number = (int) request.TransactionNumber,
                 };
                 var updateTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, updateTransactionRequest);
 
@@ -113,11 +85,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
             catch (Exception ex)
             {
-                if (!_storageFull && ex.Message.Contains("E_STORAGE_FULL"))
-                {
-                    _storageFull = true;
-                    _logger.LogCritical(_textStorageFull);
-                }
                 _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(UpdateTransactionAsync), JsonConvert.SerializeObject(request));
                 throw;
             }
@@ -131,24 +98,13 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
-                if (_configuration.RemoveFullStorage && _storageFull && !_queueItemIdStorageFull.Equals(request.QueueItemId))
-                {
-                    _logger.LogCritical("The storage of the TSE is full, please execute a daily-closing with tar-export to move the data to the middleware.");
-                    return new FinishTransactionResponse
-                    {
-                        TseSerialNumberOctet = _configuration.TseSerialNumber,
-                        ClientId = request.ClientId,
-                        TransactionNumber = request.TransactionNumber,
-                        SignatureData = new TseSignatureData(),
-                        ProcessDataBase64 = Convert.ToBase64String(Encoding.ASCII.GetBytes("ZeroReceipt"))
-                    };
-                }
+
                 var finishTransactionRequest = new TransactionRequestDto()
                 {
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int)request.TransactionNumber
+                    Number = (int) request.TransactionNumber,
                 };
                 var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.FinishTransaction, finishTransactionRequest);
 
@@ -156,12 +112,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
             catch (Exception ex)
             {
-                if (!_storageFull && ex.Message.Contains("E_STORAGE_FULL"))
-                {
-                    _storageFull = true;
-                    _queueItemIdStorageFull = request.QueueItemId;
-                    _logger.LogCritical(_textStorageFull);
-                }
                 _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(FinishTransactionAsync), JsonConvert.SerializeObject(request));
                 throw;
             }
@@ -204,8 +154,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     LogTimeFormat = tseResult.LogTimeFormat,
                     MaxLogMemorySize = tseResult.StorageCapacity,
                     MaxNumberOfSignatures = long.MaxValue,
-                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong)x).ToList(),
-                    CurrentState = ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
+                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
+                    CurrentState = ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
                 };
                 LastTseInfo = tseInfo;
 
@@ -238,7 +188,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                 var tseResult = await _swissbitCloudV2Provider.DisableTseAsync();
 
-                return ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
+                return ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
             }
             catch (Exception ex)
             {
@@ -379,7 +329,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                         if (tempStream.Length - exportStateData.ReadPointer < chunkSize)
                         {
-                            chunkSize = (int)tempStream.Length - exportStateData.ReadPointer;
+                            chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
                         }
                         var buffer = new byte[chunkSize];
                         var len = await tempStream.ReadAsync(buffer, 0, buffer.Length);
@@ -428,7 +378,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                             if (request.Erase)
                             {
                                 var openTransaction = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
-                                if (openTransaction.Any() && !_storageFull)
+                                if (openTransaction.Any())
                                 {
                                     var list = string.Join(",", openTransaction);
                                     _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were open: {OpenTransactions}. " +
@@ -450,7 +400,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                                     {
                                         _logger.LogWarning($"Could not delete log files from TSE after successfully exporting, as it was already deleted.");
                                     }
-                                    _storageFull = false;
                                 }
                             }
                             sessionResponse.IsValid = true;
@@ -467,6 +416,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
             finally
             {
+
                 try
                 {
                     if (File.Exists(tempFileName))
@@ -540,7 +490,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new StartTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
@@ -558,7 +508,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new UpdateTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,
@@ -577,7 +527,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new FinishTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,
