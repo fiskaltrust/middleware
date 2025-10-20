@@ -137,6 +137,30 @@ jobs:
           {
             Write-Error "Request failed: $_"
           }
+          else
+          {
+           $requests = @(
+            @{ Name = "Zeroreceipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = "requests/Zeroreceipt.json" }            
+           )
+
+           foreach ($req in $requests) {
+            Write-Host "`n--- Sending $($req.Name) request ---"
+
+            $bodyTemplate = Get-Content $req.File -Raw
+
+            # Replace placeholders
+            $body = $bodyTemplate `
+                -replace "{{cashbox_id}}", ${{ env.cashboxId }} `
+                -replace "{{current_moment}}", (Get-Date).ToString("o")
+
+            try {
+                $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -TimeoutSec 5
+                Write-Host "$($req.Name) response: $($response | ConvertTo-Json -Depth 10)"
+            } catch {
+                Write-Error "$($req.Name) request failed: $_"
+            }
+           }
+          }
          
 
           # Stop the launcher
