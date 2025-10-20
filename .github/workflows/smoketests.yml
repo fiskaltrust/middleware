@@ -167,26 +167,38 @@ jobs:
             @{ Name = "Initial-operation-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Initial-operation-receipt.json" } 
             @{ Name = "Pos-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Pos-receipt.json" } 
             @{ Name = "Daily-closing-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Daily-closing-receipt.json" } 
+            @{ Name = "DSFinVK-Export"; Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=4919338167972134914"; File = "" } 
+            @{ Name = "Tar-Export-from-middleware"; Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=4919338167972134915"; File = "" } 
+            @{ Name = "Action-Journal-Export"; Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=1"; File = "" } 
+            @{ Name = "Receipt-Journal-Export"; Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=2"; File = "" } 
+            @{ Name = "QueueItem-Export"; Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=3"; File = "" } 
+           
+            )
+
+            foreach ($req in $requests) {
+                Write-Host "`n--- Sending $($req.Name) request ---"
             
-           )
+                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {
+       
+                 $bodyTemplate = Get-Content $req.File -Raw 
+                 $body = $bodyTemplate `
+                    -replace "{{cashbox_id}}", "${{ env.cashboxId }}" `
+                    -replace "{{current_moment}}", (Get-Date).ToString("o")
+                }
 
-           foreach ($req in $requests) {
-            Write-Host "`n--- Sending $($req.Name) request ---"
+                try {
 
-            $bodyTemplate = Get-Content $req.File -Raw
-
-            # Replace placeholders
-            $body = $bodyTemplate `
-                -replace "{{cashbox_id}}", "${{ env.cashboxId }}" `
-                -replace "{{current_moment}}", (Get-Date).ToString("o")
-
-            try {
-                $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -TimeoutSec 10
-                Write-Host "$($req.Name) response: $($response | ConvertTo-Json -Depth 10)"
-            } catch {
-                Write-Error "$($req.Name) request failed: $_"
-            }
-           }
+                  if ($null -ne $body) {
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" 
+                  } else {
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post 
+                  }
+           
+                } 
+                catch {
+                    Write-Error "$($req.Name) request failed: $_"
+                }
+             }
           }
          
 
