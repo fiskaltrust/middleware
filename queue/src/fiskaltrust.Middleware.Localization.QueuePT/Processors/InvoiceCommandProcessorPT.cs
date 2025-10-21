@@ -5,7 +5,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Factories;
 using System.Text;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;

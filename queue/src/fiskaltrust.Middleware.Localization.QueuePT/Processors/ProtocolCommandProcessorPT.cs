@@ -7,10 +7,10 @@ using fiskaltrust.Middleware.Localization.QueuePT.Factories;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using System.Text;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.ifPOS.v2.pt;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 

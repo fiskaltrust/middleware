@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -11,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using System.Security.Cryptography;
+using fiskaltrust.ifPOS.v2.gr;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
@@ -58,7 +58,10 @@ public class MyDataSCU : IGRSSCD
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
-
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
+    {
+        return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
+    }
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)

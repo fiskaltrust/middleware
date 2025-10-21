@@ -6,7 +6,7 @@ using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Moq;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
+using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 

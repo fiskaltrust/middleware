@@ -13,5 +13,5 @@
         </PackageReference>
         <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" PrivateAssets="all" />
     </ItemGroup>
- 
+
 </Project>

@@ -3,7 +3,7 @@ using System.Net.Mime;
 using System.Security.Cryptography;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;

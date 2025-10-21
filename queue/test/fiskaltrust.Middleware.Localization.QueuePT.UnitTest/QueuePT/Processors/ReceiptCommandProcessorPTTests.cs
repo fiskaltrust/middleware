@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;

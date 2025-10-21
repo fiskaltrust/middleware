@@ -3,14 +3,12 @@ using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
-
-public class PTSSCDInfo { }
-public class InMemorySCUConfiguration { }
 
 public class InMemorySCU : IPTSSCD
 {
@@ -20,7 +18,14 @@ public class InMemorySCU : IPTSSCD
     {
         _signaturCreationUnitPT = signaturCreationUnitPT;
     }
-
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
+    {
+        return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
+    }
+    public async Task<PTSSCDInfo> GetInfoAsync()
+    {
+        return await Task.FromResult(new PTSSCDInfo());
+    }
     public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
         var element = new PTInvoiceElement
@@ -67,6 +72,4 @@ public class InMemorySCU : IPTSSCD
         var signature1 = rsa.SignData(Encoding.ASCII.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
         return Convert.ToBase64String(signature1);
     }
-
-    public Task<PTSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
 }

@@ -29,17 +29,13 @@ jobs:
     pool:
       vmImage: $(vmImageName)
     steps:
-      - task: yavt@1
-        displayName: "Update version"
-        inputs:
-          mode: "Multi"
-          updateBuildNumber: true
-          semverVersion: "v1"
-
       - powershell: |
           $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
           Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
         displayName: Set NuGet feed
+
+      - checkout: self
+        fetchDepth: 0
 
       - task: UseDotNet@2
         displayName: "Use .NET 6 SDK"
@@ -70,13 +66,29 @@ jobs:
           arguments: "--configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*"
         displayName: "Run unit tests"
 
-      - task: codesigning@2
-        displayName: "Code Signing "
+      - task: UseDotNet@2
+        displayName: "Use .NET 8 SDK"
         inputs:
-          secureFileId: "codesigning.pfx"
-          signCertPassword: "$(Code_Signing_Password)"
-          filePaths: |
-            storage/src/**/*.dll
+          packageType: "sdk"
+          version: "8.x"
+
+      - pwsh: dotnet tool install --global AzureSignTool
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
+        displayName: Install AzureSignTool
+
+      - pwsh: |
+          Get-ChildItem -Path "$(Build.SourcesDirectory)\storage\src" -Filter *.dll -Recurse | ForEach-Object {
+            azuresigntool sign `
+            --azure-key-vault-url "$(AZURE_KEY_VAULT_URL)" `
+            --azure-key-vault-certificate "$(AZURE_KEY_VAULT_CERTIFICATE)" `
+            --azure-key-vault-client-id "$(AZURE_CLIENT_ID)" `
+            --azure-key-vault-tenant-id "$(AZURE_TENANT_ID)" `
+            --azure-key-vault-client-secret "$env:AZURE_CLIENT_SECRET" `
+            $_.FullName
+          }
+        env:
+          AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
 
       - script: |
           dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.3.11

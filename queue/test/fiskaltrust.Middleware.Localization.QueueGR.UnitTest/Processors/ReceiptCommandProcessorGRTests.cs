@@ -1,5 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
+using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
