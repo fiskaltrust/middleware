@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueAT.Services;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {
@@ -19,10 +20,13 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IJournalATRepository _journalATRepository;
         private readonly IRequestCommandFactory _requestCommandFactory;
+        private readonly IATSSCDProvider _atSSCDProvider;
 
 
-        public SignProcessorAT(IConfigurationRepository configurationRepository, IJournalATRepository journalATRepository, IRequestCommandFactory requestCommandFactory)
+        public SignProcessorAT(IATSSCDProvider atSSCDProvider, IConfigurationRepository configurationRepository, IJournalATRepository journalATRepository, IRequestCommandFactory requestCommandFactory)
         {
+            //Creating atSSCDProvider on the first step (Running Processor)
+            _atSSCDProvider = atSSCDProvider;
             _configurationRepository = configurationRepository;
             _journalATRepository = journalATRepository;
             _requestCommandFactory = requestCommandFactory;
