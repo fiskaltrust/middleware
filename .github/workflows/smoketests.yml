@@ -121,7 +121,7 @@ jobs:
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
-          $platform = (${{ inputs.platform }} -eq "ubuntu-latest") ? "linux" : "windows"
+          $platform = ("${{ inputs.platform }}" -eq "ubuntu-latest") ? "linux" : "windows"
           $offline = "false"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
