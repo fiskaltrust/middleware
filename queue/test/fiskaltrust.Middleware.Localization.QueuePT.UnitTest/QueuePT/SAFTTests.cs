@@ -6,12 +6,12 @@ using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
-using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
+using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -57,7 +57,6 @@ public class SAFTTests
                     Position = 1,
                     Amount = 100,
                     VATRate = PTVATRates.Normal,
-                    VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Normal),
                     ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                     Quantity = 1,
                     Description = "Line item 1"
@@ -67,7 +66,6 @@ public class SAFTTests
                     Position = 1,
                     Amount = 50,
                     VATRate = PTVATRates.Discounted1,
-                    VATAmount = VATHelpers.CalculateVAT(50, PTVATRates.Discounted1),
                     ftChargeItemCase = (ChargeItemCase) PTVATRates.Discounted1Case,
                     Quantity = 1,
                     Description = "Line item 1"
@@ -93,7 +91,12 @@ public class SAFTTests
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = 1
+            cbUser = new PTUserObject
+            {
+                UserId = "1",
+                UserDisplayName = "Test User",
+                UserEmail = "Test"
+            }
         };
 
         var receiptResponse = new ReceiptResponse
@@ -176,7 +179,6 @@ public class SAFTTests
                     Position = 1,
                     Amount = 100,
                     VATRate = PTVATRates.Normal,
-                    VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Normal),
                     ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                     Quantity = 1,
                     Description = "Line item 1"
@@ -186,7 +188,6 @@ public class SAFTTests
                     Position = 1,
                     Amount = 50,
                     VATRate = PTVATRates.Discounted1,
-                    VATAmount = VATHelpers.CalculateVAT(50, PTVATRates.Discounted1),
                     ftChargeItemCase = (ChargeItemCase) PTVATRates.Discounted1Case,
                     Quantity = 1,
                     Description = "Line item 1"
@@ -212,7 +213,12 @@ public class SAFTTests
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = 1
+            cbUser = new PTUserObject
+            {
+                UserId = "1",
+                UserDisplayName = "Test User",
+                UserEmail = "Test"
+            }
         };
 
         var receiptResponse = new ReceiptResponse

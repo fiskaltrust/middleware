@@ -148,6 +148,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Loca
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueBE.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueBE.UnitTest\fiskaltrust.Middleware.Localization.QueueBE.UnitTest.csproj", "{05278E6D-1E14-7BE6-C514-E4478F99BA1A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueuePT.CertificationTool", "test\Manual\fiskaltrust.Middleware.Localization.QueuePT.CertificationTool\fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.csproj", "{676BBAC6-6842-4027-9EB9-D06BDDB236DA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

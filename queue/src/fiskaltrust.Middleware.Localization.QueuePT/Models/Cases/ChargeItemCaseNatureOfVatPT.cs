@@ -5,6 +5,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 public enum ChargeItemCaseNatureOfVatPT
 {
     UsualVatApplies = 0x0000,
+    Group0x30 = 0x3000,
+    Group0x40 = 0x4000,
 }
 
 public static class ChargeItemCaseNatureOfVatPTExt

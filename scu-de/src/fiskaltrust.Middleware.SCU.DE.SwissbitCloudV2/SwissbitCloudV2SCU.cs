@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int)request.TransactionNumber,
+                    Number = (int) request.TransactionNumber,
                 };
                 var updateTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, updateTransactionRequest);
 
@@ -104,7 +104,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int)request.TransactionNumber,
+                    Number = (int) request.TransactionNumber,
                 };
                 var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.FinishTransaction, finishTransactionRequest);
 
@@ -154,8 +154,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     LogTimeFormat = tseResult.LogTimeFormat,
                     MaxLogMemorySize = tseResult.StorageCapacity,
                     MaxNumberOfSignatures = long.MaxValue,
-                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong)x).ToList(),
-                    CurrentState = ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
+                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
+                    CurrentState = ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
                 };
                 LastTseInfo = tseInfo;
 
@@ -188,7 +188,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                 var tseResult = await _swissbitCloudV2Provider.DisableTseAsync();
 
-                return ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
+                return ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
             }
             catch (Exception ex)
             {
@@ -329,7 +329,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                         if (tempStream.Length - exportStateData.ReadPointer < chunkSize)
                         {
-                            chunkSize = (int)tempStream.Length - exportStateData.ReadPointer;
+                            chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
                         }
                         var buffer = new byte[chunkSize];
                         var len = await tempStream.ReadAsync(buffer, 0, buffer.Length);
@@ -490,7 +490,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new StartTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
@@ -508,7 +508,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new UpdateTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,
@@ -527,7 +527,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new FinishTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,

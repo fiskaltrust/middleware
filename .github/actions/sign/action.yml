@@ -1,39 +1,43 @@
-name: 'Sign'
+name: "Sign"
 inputs:
   path:
     required: true
     type: string
-  certificate:
-    required: true
-    type: string
-  password:
-    required: true
-    type: string
   filter:
+    required: true
+    type: string
+  azureKeyVaultUrl:
+    required: true
+    type: string
+  azureKeyVaultCertificate:
+    required: true
+    type: string
+  azureKeyVaultClientId:
+    required: true
+    type: string
+  azureKeyVaultTenantId:
+    required: true
+    type: string
+  azureKeyVaultClientSecret:
     required: true
     type: string
 
 runs:
   using: "composite"
   steps:
-    - name: Filter files for codesigning
-      id: filter_files_for_codesigning
+    - run: dotnet tool install --global AzureSignTool
+      name: Install AzureSignTool
       shell: pwsh
-      run: |
-        $files = Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | Select-Object -ExpandProperty FullName
-        
-        # Multiline outputs required a unique delimiter
-        $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})
-        "FILTERED_FILES<<$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        foreach ($file in $files) {
-          $file | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - run: |
+        Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | ForEach-Object {
+          azuresigntool sign `
+          --azure-key-vault-url "${{ inputs.azureKeyVaultUrl }}" `
+          --azure-key-vault-certificate "${{ inputs.azureKeyVaultCertificate }}" `
+          --azure-key-vault-client-id "${{ inputs.azureKeyVaultClientId }}" `
+          --azure-key-vault-tenant-id "${{ inputs.azureKeyVaultTenantId }}" `
+          --azure-key-vault-client-secret "${{ inputs.azureKeyVaultClientSecret }}" `
+          $_.FullName
         }
-        "$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-  
-    - name: Sign binaries
-      uses: dlemstra/code-sign-action@v1
-      with:
-        certificate: '${{ inputs.certificate }}'
-        password: '${{ inputs.password }}'
-        files: |-
-          ${{ steps.filter_files_for_codesigning.outputs.FILTERED_FILES }}
+      name: Sign files
+      shell: pwsh

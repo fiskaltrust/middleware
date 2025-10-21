@@ -1,3 +1,7 @@
+## Prepare Release (`prepare-relese.yml`)
+
+- manually
+
 ## CI (`<queue|scu-at|scu-de|scu-es|scu-it>-build.yml`)
 
 - on push
@@ -17,6 +21,14 @@
   - tags-ignore: `queue/**/v*`
 - manually
 - from `/run queue acceptance-tests` comment
+
+## Tag
+
+
+
+## Version
+
+
 
 ## Release (`release.yml`)
 

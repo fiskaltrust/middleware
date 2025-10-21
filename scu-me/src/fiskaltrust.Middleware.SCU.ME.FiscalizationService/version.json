@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "pathFilters": [
+    "/scu-me/src/fiskaltrust.Middleware.SCU.ME.FiscalizationService"
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/tags/scu-me/fiscalizationservice/v.+"
+  ],
+  "release": {
+    "tagName": "scu-me/fiscalizationservice/v{version}"
+  },
+  "inherit": true
+}

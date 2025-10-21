@@ -4,7 +4,6 @@
         <Description>The fiskaltrust Middleware Queue with an SQLite storage provider.</Description>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
-        <MinVerTagPrefix>queue/sqlite/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,15 +15,11 @@
         <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
         <PackageReference Include="Dapper" Version="2.0.123" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.8" />
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.10" />
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.2" />
         <PackageReference Include="System.Linq.Async" Version="4.1.1" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
         <PackageReference Include="CsvHelper" Version="15.0.5" />
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">

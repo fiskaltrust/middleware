@@ -2,14 +2,13 @@
 using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
-
-public class PTSSCDInfo { }
-public class InMemorySCUConfiguration { }
 
 public class InMemorySCU : IPTSSCD
 {
@@ -19,15 +18,22 @@ public class InMemorySCU : IPTSSCD
     {
         _signaturCreationUnitPT = signaturCreationUnitPT;
     }
-
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
+    {
+        return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
+    }
+    public async Task<PTSSCDInfo> GetInfoAsync()
+    {
+        return await Task.FromResult(new PTSSCDInfo());
+    }
     public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
         return new PTInvoiceElement
         {
             InvoiceDate = receipt.cbReceiptMoment,
             SystemEntryDate = receipt.cbReceiptMoment,
-            InvoiceNo = receiptResponse.ftReceiptIdentification, 
-            GrossTotal = receipt.cbChargeItems.Sum(x => x.Amount),
+            InvoiceNo = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            GrossTotal = receipt.cbChargeItems.Sum(x => receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? -x.Amount : x.Amount),
             Hash = lastHash ?? ""
         };
     }
@@ -41,7 +47,7 @@ public class InMemorySCU : IPTSSCD
                $"{element.Hash}";
     }
 
-    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request,string? lastHash)
+    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
     {
         var rsa = RSA.Create();
         rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
@@ -60,6 +66,4 @@ public class InMemorySCU : IPTSSCD
         var signature1 = rsa.SignData(Encoding.ASCII.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
         return Convert.ToBase64String(signature1);
     }
-
-    public Task<PTSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
 }
