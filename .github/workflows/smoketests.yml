@@ -46,10 +46,12 @@ jobs:
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
             $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
             $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
+
             if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
+
             if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
              $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
