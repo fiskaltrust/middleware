@@ -54,9 +54,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         public SignProcessorDependenciesFixture()
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            InMemorySCU = new InMemorySCU();
+            InMemorySCU = new InMemorySCU() { OpenTans = new ulong[0] };
             var deSSCDProviderMock = new Mock<IDESSCDProvider>();
-            deSSCDProviderMock.SetupGet(x => x.Instance).Returns(InMemorySCU);
+            deSSCDProviderMock.Setup(x => x.Instance).Returns(InMemorySCU);
             DeSSCDProvider = deSSCDProviderMock.Object;
         }
 
@@ -102,9 +102,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 return repo;
             }).Result;
         }
-        public SignProcessor CreateSignProcessorForSignProcessorDE(bool queueInFailedMode, DateTime? startMoment = null, DateTime? stopMoment = null, Dictionary<string, object> configs = null,
-            bool masterdataUpdate = false, IEnumerable<ulong> openTrans = null, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
+        public SignProcessor CreateSignProcessorForSignProcessorDE(
+            bool queueInFailedMode,
+            DateTime? startMoment = null,
+            DateTime? stopMoment = null,
+            Dictionary<string, object> configs = null,
+            bool masterdataUpdate = false,
+            ulong[] openTrans = null,
+            bool sourceIsScuSwitch = false,
+            bool targetIsScuSwitch = false,
+            bool queueDECreationUnitIsNull = false)
         {
+            openTrans = openTrans ?? Array.Empty<ulong>();
             InMemorySCU.OpenTans = openTrans;
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var configuration = configs ?? new Dictionary<string, object>();

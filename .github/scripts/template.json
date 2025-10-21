@@ -24,8 +24,8 @@
         ],
         "init_ftSignaturCreationUnitDE": [
           {
-            "Url": "[\"grpc://localhost:18004\"]",
-            "Mode": 0
+            "ftSignaturCreationUnitDEId": "93771342-ced0-4d5a-84b5-e87c8200336a",
+            "Url": "[\"rest://localhost:1501/93771342-ced0-4d5a-84b5-e87c8200336a\"]"
           }
         ]
       },
