@@ -3,6 +3,20 @@
 on:
   workflow_dispatch:
     inputs:
+      platform:
+        description: "platform"
+        required: true
+        type: choice
+        options:
+          - windows-latest
+          - ubuntu-latest
+      launcherVersion:
+        description: "launcherVersion"
+        required: true
+        type: choice
+        options:
+          - Version-1.3
+          - Version-2.0
       queuePackage:
         description: "Queue package"
         required: true
@@ -26,7 +40,7 @@ env:
  
 jobs:
   test-middleware:
-    runs-on: windows-latest
+    runs-on: ${{ inputs.platform }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4      
@@ -107,6 +121,7 @@ jobs:
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
+          $platform = (${{ inputs.platform }} -eq "ubuntu-latest") ? "linux" : "windows"
           $offline = "false"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
@@ -115,7 +130,7 @@ jobs:
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
           $headers = @{ Authorization = "Basic $encoded" }
 
-          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline&platform=$platform"
           $output = "$launcher.$cashboxId.zip"
           Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
 
@@ -131,7 +146,15 @@ jobs:
            Remove-Item -Path $extractPath -Recurse -Force
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-             
+
+      - name: Install Mono if platform is Ubuntu
+        if: ${{ inputs.platform == 'ubuntu-latest' }}
+        shell: pwsh
+        run: |
+          Write-Host "Installing Mono on Linux..."
+          sudo apt-get update -y
+          sudo apt-get install -y mono-complete
+            
       - name: Run test.cmd, send request, and stop
         shell: pwsh
         run: |
