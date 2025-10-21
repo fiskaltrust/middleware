@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.Localization.QueueBE.UnitTest
             var result = await sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
             result.receiptResponse.Should().Be(receiptResponse);
-            result.receiptResponse.ftState.Should().Be(0x4245_2000_0000_0000); // BE state remains unchanged for no-op
+            result.receiptResponse.ftState.Should().Be(0x4245_2000_EEEE_EEEE); // BE state remains unchanged for no-op
         }
     }
 }

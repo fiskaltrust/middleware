@@ -1,4 +1,4 @@
-using fiskaltrust.Middleware.Localization.v2;
+﻿using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using fiskaltrust.ifPOS.v2;
@@ -16,20 +16,11 @@ public class InvoiceCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
     private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
 #pragma warning restore
 
-    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
-    {
-        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        }, receiptReferences);
-        return new ProcessCommandResponse(response.ReceiptResponse, []);
-    }
+    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => await InvoiceUnknown0x1000Async(request);
+    public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await InvoiceUnknown0x1000Async(request);
+    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await InvoiceUnknown0x1000Async(request);
+    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 }

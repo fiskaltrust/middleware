@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 
