@@ -41,6 +41,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
+
+                if (request.IsTseTarDownloadRequest())
+                {
+                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
+                }
                 var processReceiptResponse = await ProcessReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE).ConfigureAwait(false);
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, processReceiptResponse.TransactionNumber);
 
@@ -173,11 +178,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsTseSelftestRequest [enter].");
                     await _deSSCDProvider.Instance.ExecuteSelfTestAsync().ConfigureAwait(false);
                     _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsTseSelftestRequest [exit].");
-                }
-
-                if (request.IsTseTarDownloadRequest())
-                {
-                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
                 }
 
                 if (request.IsTraining())
