@@ -146,6 +146,7 @@ jobs:
           $attempt = 0
           while (-not (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded -and ($attempt -lt $maxAttempts)) {
             Start-Sleep -Seconds 5
+            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
             $attempt++
           }
           # $maxAttempts = 10
@@ -165,12 +166,12 @@ jobs:
           # } 
           if($attempt -eq $maxAttempts)
           {
-            Write-Error "Request failed: $_"
+            Write-Error "Launcher failed: $_"
           }
           else
           {
            $requests = @(
-                @{ Name = "Echo";                      Url = "http://localhost:1500/${{ env.queueId }}/Echo"; File = ".github/scripts/requests/Echo.json" }
+                @{ Name = "Echo";                      Url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"; File = ".github/scripts/requests/Echo.json" }
                 @{ Name = "ZeroReceipt";               Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Zeroreceipt.json" }
                 @{ Name = "Initial-operation-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Initial-operation-receipt.json" }
                 @{ Name = "Pos-receipt";               Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Pos-receipt.json" }
