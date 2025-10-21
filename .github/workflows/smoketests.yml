@@ -142,6 +142,7 @@ jobs:
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
+
           $maxAttempts = 10
           $attempt = 0
           while (-not (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded -and ($attempt -lt $maxAttempts)) {
@@ -149,38 +150,26 @@ jobs:
             Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
             $attempt++
           }
-          # $maxAttempts = 10
-          # $attempt = 0
-          # $pollUrl = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
-          # $pollBody = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
-          # while ($attempt -lt $maxAttempts) {
-          #     try {
-          #         $pollResponse = Invoke-RestMethod -Uri $pollUrl -Method Post -Body $pollBody -ContentType "application/json" -TimeoutSec 2
-          #         Write-Host "Response: $($pollResponse | ConvertTo-Json)"
-          #         break;
-          #     } catch {
-          #         Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
-          #         Start-Sleep -Seconds 5
-          #         $attempt++
-          #     }
-          # } 
+         
           if($attempt -eq $maxAttempts)
           {
             Write-Error "Launcher failed: $_"
           }
           else
           {
+           $baseUrl = "http://localhost:1500/${{ env.queueId }}"
+           $baseFile = ".github/scripts/requests"
            $requests = @(
-                @{ Name = "Echo";                      Url = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"; File = ".github/scripts/requests/Echo.json" }
-                @{ Name = "ZeroReceipt";               Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Zeroreceipt.json" }
-                @{ Name = "Initial-operation-receipt"; Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Initial-operation-receipt.json" }
-                @{ Name = "Pos-receipt";               Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Pos-receipt.json" }
-                @{ Name = "Daily-closing-receipt";     Url = "http://localhost:1500/${{ env.queueId }}/json/v1/sign"; File = ".github/scripts/requests/Daily-closing-receipt.json" }
-                @{ Name = "DSFinVK-Export";            Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=4919338167972134914"; File = "" }
-                @{ Name = "Tar-Export-from-middleware";Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=4919338167972134915"; File = "" }
-                @{ Name = "Action-Journal-Export";     Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=1"; File = "" }
-                @{ Name = "Receipt-Journal-Export";    Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=2"; File = "" }
-                @{ Name = "QueueItem-Export";          Url = "http://localhost:1500/${{ env.queueId }}/json/v0/Journal?type=3"; File = "" }
+                @{ Name = "Echo";                      Url = "$baseUrl/json/v1/Echo"; File = "$baseFile/Echo.json" }
+                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Zeroreceipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Pos-receipt.json" }
+                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Daily-closing-receipt.json" }
+                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914"; File = "" }
+                @{ Name = "Tar-Export-from-middleware";Url = "$baseUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
+                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1"; File = "" }
+                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2"; File = "" }
+                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3"; File = "" }
             )
             
             foreach ($req in $requests) {
