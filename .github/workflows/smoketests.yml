@@ -105,7 +105,7 @@ jobs:
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
-          $offline = "true"
+          $offline = "false"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
 
@@ -190,8 +190,10 @@ jobs:
 
                   if ($null -ne $body) {
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" 
+                         Write-Host "Response: $($response | ConvertTo-Json)"
                   } else {
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post 
+                         Write-Host "Response: $($response | ConvertTo-Json)"
                   }
            
                 } 
