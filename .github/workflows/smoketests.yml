@@ -200,8 +200,67 @@ jobs:
       #         echo "Launcher not ready yet, waiting 5s... (Attempt $i/12)"
       #         sleep 5
       #       done
-         
+      - name: Run Mono launcher in Docker, send requests
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: |
+            # Paths
+            LAUNCHER_PATH="$PWD/launcher"
+            REQUESTS_PATH="$PWD/.github/scripts/requests"
+            QUEUE_ID="${{ env.queueId }}"
+            CASHBOX_ID="${{ env.cashboxId }}"
+
+            # Use official Mono image
+            IMAGE="mono:latest"
+
+            # Run launcher in detached container
+            CONTAINER_ID=$(docker run -d -v "$LAUNCHER_PATH:/launcher" -w /launcher $IMAGE bash -c "chmod +x ./test.sh && ./test.sh > test-output.log 2> test-output-error.log")
+            echo "Launcher container ID: $CONTAINER_ID"
+
+            # Wait for launcher to become ready (TCP 1500)
+            MAX_ATTEMPTS=12
+            for i in $(seq 1 $MAX_ATTEMPTS); do
+              if docker exec $CONTAINER_ID bash -c "nc -z localhost 1500"; then
+                echo "Launcher is ready!"
+                break
+              fi
+              echo "Launcher not ready yet, waiting 5s... (Attempt $i/$MAX_ATTEMPTS)"
+              sleep 5
+            done
+
+            # Send requests
+            BASE_URL="http://localhost:1500/$QUEUE_ID"
+            requests=(
+              "Echo|$BASE_URL/json/v1/Echo|$REQUESTS_PATH/Echo.json"
+              "ZeroReceipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Zeroreceipt.json"
+              "Initial-operation-receipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Initial-operation-receipt.json"
+              "Pos-receipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Pos-receipt.json"
+              "Daily-closing-receipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Daily-closing-receipt.json"
+              "DSFinVK-Export|$BASE_URL/json/v0/Journal?type=4919338167972134914|"
+              "Tar-Export-from-middleware|$BASE_URL/json/v0/Journal?type=4919338167972134915|"
+              "Action-Journal-Export|$BASE_URL/json/v0/Journal?type=1|"
+              "Receipt-Journal-Export|$BASE_URL/json/v0/Journal?type=2|"
+              "QueueItem-Export|$BASE_URL/json/v0/Journal?type=3|"
+            )
+
+            for req in "${requests[@]}"; do
+              IFS="|" read -r NAME URL FILE <<< "$req"
+              echo "--- Sending $NAME request ---"
+
+              if [[ -n "$FILE" && -f "$FILE" ]]; then
+                BODY=$(cat "$FILE" | sed "s/{{cashbox_id}}/$CASHBOX_ID/" | sed "s/{{current_moment}}/$(date -Iseconds)/")
+                curl -s -X POST "$URL" -H "Content-Type: application/json" -d "$BODY"
+              else
+                curl -s -X POST "$URL"
+              fi
+            done
+
+            echo "Requests sent. Launcher container is still running if needed."
+            echo "Container logs (partial):"
+            docker logs --tail 20 $CONTAINER_ID
+ 
       - name:  Run launcher,send requests, and stop
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           #....Run launcher....
