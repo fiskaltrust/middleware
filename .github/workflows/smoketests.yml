@@ -218,11 +218,13 @@ jobs:
               # Build the bash command safely
               $processId = bash -c "cd '$launcherPath' && nohup ./test.sh > test-output.log 2> test-output-error.log & echo $!"
               
-              if (Test-Path "test-output.log") {
+              $logOut = Join-Path $launcherPath "test-output.log"
+              $logErr = Join-Path $launcherPath "test-output-error.log"
+              if (Test-Path $logOut) {
                 Write-Host "=== test-output.log ==="
                 Get-Content test-output.log
               }
-              if (Test-Path "test-output-error.log") {
+              if (Test-Path $logErr) {
                 Write-Host "=== test-output-error.log ==="
                 Get-Content test-output-error.log
               }
