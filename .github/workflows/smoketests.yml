@@ -206,6 +206,7 @@ jobs:
         run: |
           #....Run launcher....
           Write-Host "Starting launcher..."
+          $launcherPath = Resolve-Path "${{ env.launcherpath }}"
           if ($isWindows) {
              $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
@@ -215,14 +216,8 @@ jobs:
               $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
               bash -c "chmod +x '$scriptPath'"
               # Build the bash command safely
-              $bashCommand = "cd $(pwd);nohup bash '$scriptPath' > test-output.log 2> test-output-error.log & echo $!"
-
-              # Run the command and capture the PID
-              $pid2 = bash -c "$bashCommand"
-              $processId = $pid2.Trim()
-              $processInfo = bash -c "ps -p $processId -o pid,cmd"
-              Write-Host "Process info: $processInfo"
-
+              $processId = bash -c "cd '$launcherPath' && nohup ./test.sh > test-output.log 2> test-output-error.log & echo $!"
+              
               if (Test-Path "test-output.log") {
                 Write-Host "=== test-output.log ==="
                 Get-Content test-output.log
