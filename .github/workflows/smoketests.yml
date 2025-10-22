@@ -218,14 +218,14 @@ jobs:
             echo "Launcher container ID: $CONTAINER_ID"
 
             # Wait for launcher to become ready (TCP 1500)
-            MAX_ATTEMPTS=12
+            MAX_ATTEMPTS=10
             for i in $(seq 1 $MAX_ATTEMPTS); do
-              if docker exec $CONTAINER_ID bash -c "nc -z localhost 1500"; then
+              if docker exec $CONTAINER_ID bash -c "curl -s http://localhost:1500/ >/dev/null 2>&1"; then
                 echo "Launcher is ready!"
                 break
               fi
               echo "Launcher not ready yet, waiting 5s... (Attempt $i/$MAX_ATTEMPTS)"
-              sleep 5
+              sleep 10
             done
 
             # Send requests
