@@ -204,7 +204,6 @@ jobs:
       - name:  Run launcher,send requests, and stop
         shell: pwsh
         run: |
-          $isWindows = $env:RUNNER_OS -eq 'Windows'
           $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
           Write-Host "Starting test..."
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
