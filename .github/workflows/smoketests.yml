@@ -225,7 +225,7 @@ jobs:
 
               if (Test-Path "test-output.log") {
                 Write-Host "=== test-output.log ==="
-                Get-Contenttest-output.log
+                Get-Content test-output.log
               }
               if (Test-Path "test-output-error.log") {
                 Write-Host "=== test-output-error.log ==="
