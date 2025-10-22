@@ -278,18 +278,7 @@ jobs:
             }
 
             Write-Host "Stopping launcher process..."
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-
-      - name: Stop launcher        
-        shell: pwsh
-        run: |
-            Write-Host "Stopping launcher process..."
-            if ($env:RUNNER_OS -eq "Windows") {
-              Stop-Process -Id $env:processId -Force -ErrorAction SilentlyContinue
-            } else {
-              Write-Host "Stopping Linux process ID: $env:processId"
-              try { bash -c "kill -9 $env:processId" } catch { Write-Host "Failed to stop process." }
-            }
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue      
 
       - name: Upload test output
         if: always()
