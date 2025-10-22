@@ -205,13 +205,13 @@ jobs:
         shell: pwsh
         run: |
           #....Run launcher....
-          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
-          Write-Host "Starting test..."
+          Write-Host "Starting launcher..."
           if ($isWindows) {
+             $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
            } else {
-              $linuxScriptPath = $scriptPath -replace "cmd", "sh"
-              $process = Start-Process -FilePath "pwsh" -ArgumentList @($linuxScriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+              $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
+              $process = Start-Process -FilePath "pwsh" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
 
           # Wait a few seconds to let test.cmd start listening
