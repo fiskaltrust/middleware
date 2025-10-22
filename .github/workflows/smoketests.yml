@@ -222,11 +222,11 @@ jobs:
               $logErr = Join-Path $launcherPath "test-output-error.log"
               if (Test-Path $logOut) {
                 Write-Host "=== test-output.log ==="
-                Get-Content test-output.log
+                Get-Content $logOut
               }
               if (Test-Path $logErr) {
                 Write-Host "=== test-output-error.log ==="
-                Get-Content test-output-error.log
+                Get-Content $logErr
               }
                #$processId = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
               echo "pid=$processId" 
