@@ -204,16 +204,16 @@ jobs:
       - name:  Run launcher,send requests, and stop
         shell: pwsh
         run: |
+          #....Run launcher....
           $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
           Write-Host "Starting test..."
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
-          echo "processId=$process.Id"   >> $env:GITHUB_ENV
           if ($isWindows) {
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
            } else {
               $linuxScriptPath = $scriptPath -replace "cmd", "sh"
               $process = Start-Process -FilePath "pwsh" -ArgumentList @($linuxScriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
+
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
@@ -234,6 +234,8 @@ jobs:
             Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
             Start-Sleep -Seconds 5
           } 
+
+          #....Send requests....
           if ($tcpReady) {
            $baseUrl = "http://localhost:1500/${{ env.queueId }}"
            $baseFile = ".github/scripts/requests"
@@ -277,6 +279,7 @@ jobs:
               Write-Error "Launcher failed to start within the expected time."
             }
 
+            #....Stop launcher....
             Write-Host "Stopping launcher process..."
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue      
 
