@@ -212,9 +212,10 @@ jobs:
 
             # Use official Mono image
             IMAGE="mono:latest"
-
+            docker run -d -v $PWD/launcher:/launcher -w /launcher mono bash -c \
             # Run launcher in detached container
-            CONTAINER_ID=$(docker run -d -v "$LAUNCHER_PATH:/launcher" -w /launcher $IMAGE bash -c "chmod +x ./test.sh && ./test.sh > test-output.log 2> test-output-error.log")
+            CONTAINER_ID=$(docker run -d -v "$LAUNCHER_PATH:/launcher" -w /launcher $IMAGE \
+            bash -c "chmod +x ./test.sh && ./test.sh > test-output.log 2> test-output-error.log & tail -f test-output.log")
             echo "Launcher container ID: $CONTAINER_ID"
 
             # Wait for launcher to become ready (TCP 1500)
