@@ -211,9 +211,10 @@ jobs:
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
            } else {
               $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
-              bash $scriptPath > test-output.log 2> test-output-error.log &
-              $process.Id = $!
-           }
+              # bash $scriptPath > test-output.log 2> test-output-error.log &
+              # $process.Id = $!
+              $process = Start-Process -FilePath "/bin/bash" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          }
 
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
