@@ -212,9 +212,9 @@ jobs:
            } else {
               echo "Starting launcher on Linux..."
               $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
-              $pid = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
-              echo "pid=$pid" 
-              $process.Id = $pid
+              $pid2 = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
+              echo "pid=$pid2" 
+              $process.Id = $pid2
               #$process = Start-Process -FilePath "/bin/bash" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
 
