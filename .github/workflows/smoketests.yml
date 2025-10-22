@@ -180,52 +180,61 @@ jobs:
       #       Start-Sleep -Seconds 5
       #     }
 
-      - name: Run launcher on Linux
-        if: ${{ inputs.platform == 'ubuntu-latest' }}
-        shell: bash
-        run: |
-            SCRIPT_PATH="${{ env.launcherpath }}/test.sh"
-            echo "Starting test.sh..."
-            bash "$SCRIPT_PATH" > test-output.log 2> test-output-error.log &
-            PROCESS_ID=$!
-            echo "processId=$PROCESS_ID" >> $GITHUB_ENV
+      # - name: Run launcher on Linux
+      #   if: ${{ inputs.platform == 'ubuntu-latest' }}
+      #   shell: bash
+      #   run: |
+      #       SCRIPT_PATH="${{ env.launcherpath }}/test.sh"
+      #       echo "Starting test.sh..."
+      #       bash "$SCRIPT_PATH" > test-output.log 2> test-output-error.log &
+      #       PROCESS_ID=$!
+      #       echo "processId=$PROCESS_ID" >> $GITHUB_ENV
 
-            echo "Waiting for launcher to become ready (max 60s)"
-            for i in {1..12}; do
-              if nc -z localhost 1500; then
-                echo "Launcher is ready!"
-                echo "launcherhealthcheck=ready" >> $GITHUB_ENV
-                break
-              fi
-              echo "Launcher not ready yet, waiting 5s... (Attempt $i/12)"
-              sleep 5
-            done
+      #       echo "Waiting for launcher to become ready (max 60s)"
+      #       for i in {1..12}; do
+      #         if nc -z localhost 1500; then
+      #           echo "Launcher is ready!"
+      #           echo "launcherhealthcheck=ready" >> $GITHUB_ENV
+      #           break
+      #         fi
+      #         echo "Launcher not ready yet, waiting 5s... (Attempt $i/12)"
+      #         sleep 5
+      #       done
          
-      - name: Send requests, and stop
-        #if: ${{ env.launcherhealthcheck == 'ready' }}
+      - name:  Run launcher,send requests, and stop
         shell: pwsh
         run: |
           $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
-          Write-Host "Starting test.cmd..."
+          Write-Host "Starting test..."
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           echo "processId=$process.Id"   >> $env:GITHUB_ENV
-
+          if (${{ inputs.platform == 'windows-latest' }}) {
+             $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+           } else {
+              $scriptPath = $scriptPath -replace "cmd", "sh"
+              $process = Start-Process -FilePath "pwsh" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          }
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
-          Start-Sleep -Seconds 120
+          Start-Sleep -Seconds 60
 
           $maxAttempts = 10
           for ($i = 1; $i -le $maxAttempts; $i++) {
-            if ((Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded) {
+            if (${{ inputs.platform == 'windows-latest' }}) {
+                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+            } else {
+                $tcpReady = (bash -c "nc -z localhost 1500") -eq 0
+            }
+
+            if ($tcpReady) {
                 Write-Host "Launcher is ready!"
-                echo "launcherhealthcheck=ready" >> $env:GITHUB_ENV
                 break
             }
 
             Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
             Start-Sleep -Seconds 5
           } 
-
+          if ($tcpReady) {
            $baseUrl = "http://localhost:1500/${{ env.queueId }}"
            $baseFile = ".github/scripts/requests"
            $requests = @(
@@ -263,6 +272,13 @@ jobs:
                     Write-Error "$($req.Name) request failed: $_"
                 }
              }
+            }
+            else {
+              Write-Error "Launcher failed to start within the expected time."
+            }
+
+            Write-Host "Stopping launcher process..."
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
 
       - name: Stop launcher        
         shell: pwsh
