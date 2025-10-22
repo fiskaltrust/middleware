@@ -154,32 +154,58 @@ jobs:
           Write-Host "Installing Mono on Linux..."
           sudo apt-get update -y
           sudo apt-get install -y mono-complete
-            
-      - name: Run test.cmd, send request, and stop
+
+      - name: Run launcher on windows
+        if: ${{ inputs.platform == 'windows-latest' }}
         shell: pwsh
         run: |
           $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
           Write-Host "Starting test.cmd..."
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          echo "processId=$process.Id"   >> $env:GITHUB_ENV
 
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
           $maxAttempts = 10
-          $attempt = 0
-          while (-not (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded -and ($attempt -lt $maxAttempts)) {
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            if ((Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded) {
+                Write-Host "Launcher is ready!"
+                echo "launcherhealthcheck=ready" >> $env:GITHUB_ENV
+                break
+            }
+
+            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
             Start-Sleep -Seconds 5
-            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
-            $attempt++
           }
+
+      - name: Run launcher on Linux
+        if: ${{ inputs.platform == 'ubuntu-latest' }}
+        shell: bash
+        run: |
+            SCRIPT_PATH="${{ env.launcherpath }}/test.sh"
+            echo "Starting test.sh..."
+            bash "$SCRIPT_PATH" > test-output.log 2> test-output-error.log &
+            PROCESS_ID=$!
+            echo "processId=$PROCESS_ID" >> $GITHUB_ENV
+
+            echo "Waiting for launcher to become ready (max 60s)"
+            for i in {1..12}; do
+              if nc -z localhost 1500; then
+                echo "Launcher is ready!"
+                echo "launcherhealthcheck=ready" >> $GITHUB_ENV
+                break
+              fi
+              echo "Launcher not ready yet, waiting 5s... (Attempt $i/12)"
+              sleep 5
+            done
          
-          if($attempt -eq $maxAttempts)
-          {
-            Write-Error "Launcher failed: $_"
-          }
-          else
-          {
+      - name: Send requests, and stop
+        if: ${{ env.launcherhealthcheck == 'ready' }}
+        shell: pwsh
+        run: |
+         
            $baseUrl = "http://localhost:1500/${{ env.queueId }}"
            $baseFile = ".github/scripts/requests"
            $requests = @(
@@ -217,12 +243,17 @@ jobs:
                     Write-Error "$($req.Name) request failed: $_"
                 }
              }
-          }
-         
 
-          # Stop the launcher
-          Write-Host "Stopping test.cmd..."
-          Stop-Process -Id $process.Id -Force
+      - name: Stop launcher        
+        shell: pwsh
+        run: |
+            Write-Host "Stopping launcher process..."
+            if ($env:RUNNER_OS -eq "Windows") {
+              Stop-Process -Id $env:processId -Force -ErrorAction SilentlyContinue
+            } else {
+              Write-Host "Stopping Linux process ID: $env:processId"
+              try { bash -c "kill -9 $env:processId" } catch { Write-Host "Failed to stop process." }
+            }
 
       - name: Upload test output
         if: always()
