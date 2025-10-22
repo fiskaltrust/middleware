@@ -217,8 +217,8 @@ jobs:
               $bashCommand = "nohup bash '$scriptPath' > test-output.log 2> test-output-error.log & echo $!"
 
               # Run the command and capture the PID
-              $pid = bash -c "$bashCommand"
-              $processId = $pid.Trim()
+              $pid2 = bash -c "$bashCommand"
+              $processId = $pid2.Trim()
 
               #$processId = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
               echo "pid=$processId" 
