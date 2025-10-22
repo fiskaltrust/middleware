@@ -212,8 +212,8 @@ jobs:
           if ($isWindows) {
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
            } else {
-              $scriptPath = $scriptPath -replace "cmd", "sh"
-              $process = Start-Process -FilePath "pwsh" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+              $linuxScriptPath = $scriptPath -replace "cmd", "sh"
+              $process = Start-Process -FilePath "pwsh" -ArgumentList @($linuxScriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
