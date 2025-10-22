@@ -213,7 +213,14 @@ jobs:
            } else {
               echo "Starting launcher on Linux..."
               $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
-              $processId = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
+              # Build the bash command safely
+              $bashCommand = "nohup bash '$scriptPath' > test-output.log 2> test-output-error.log & echo $!"
+
+              # Run the command and capture the PID
+              $pid = bash -c "$bashCommand"
+              $processId = $pid.Trim()
+
+              #$processId = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
               echo "pid=$processId" 
               $processId = $processId
               #$process = Start-Process -FilePath "/bin/bash" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
