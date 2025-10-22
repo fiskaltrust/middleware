@@ -216,7 +216,8 @@ jobs:
               $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
               bash -c "chmod +x '$scriptPath'"
               # Build the bash command safely
-              $processId = bash -c "cd '$launcherPath' && setsid ./test.sh > test-output.log 2> test-output-error.log & echo $!"
+              $processId = bash -c "cd '$launcherPath' && script -q -c './test.sh' /dev/null > test-output.log 2> test-output-error.log & echo \$!"
+
               
               $logOut = Join-Path $launcherPath "test-output.log"
               $logErr = Join-Path $launcherPath "test-output-error.log"
