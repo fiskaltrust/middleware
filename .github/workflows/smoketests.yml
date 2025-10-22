@@ -210,9 +210,11 @@ jobs:
              $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
            } else {
+              echo "Starting launcher on Linux..."
               $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
-              $process = bash -c "$scriptPath > test-output.log 2> test-output-error.log & echo $!"
-              # $process.Id = $!
+              $pid = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
+              echo "pid=$pid" 
+              $process.Id = $pid
               #$process = Start-Process -FilePath "/bin/bash" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
 
