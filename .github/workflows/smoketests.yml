@@ -155,30 +155,30 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y mono-complete
 
-      - name: Run launcher on windows
-        if: ${{ inputs.platform == 'windows-latest' }}
-        shell: pwsh
-        run: |
-          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
-          Write-Host "Starting test.cmd..."
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
-          echo "processId=$process.Id"   >> $env:GITHUB_ENV
+      # - name: Run launcher on windows
+      #   if: ${{ inputs.platform == 'windows-latest' }}
+      #   shell: pwsh
+      #   run: |
+      #     $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
+      #     Write-Host "Starting test.cmd..."
+      #     $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+      #     echo "processId=$process.Id"   >> $env:GITHUB_ENV
 
-          # Wait a few seconds to let test.cmd start listening
-          Write-Host "Waiting for launcher to become ready (max 60s)"
-          Start-Sleep -Seconds 120
+      #     # Wait a few seconds to let test.cmd start listening
+      #     Write-Host "Waiting for launcher to become ready (max 60s)"
+      #     Start-Sleep -Seconds 120
 
-          $maxAttempts = 10
-          for ($i = 1; $i -le $maxAttempts; $i++) {
-            if ((Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded) {
-                Write-Host "Launcher is ready!"
-                echo "launcherhealthcheck=ready" >> $env:GITHUB_ENV
-                break
-            }
+      #     $maxAttempts = 10
+      #     for ($i = 1; $i -le $maxAttempts; $i++) {
+      #       if ((Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded) {
+      #           Write-Host "Launcher is ready!"
+      #           echo "launcherhealthcheck=ready" >> $env:GITHUB_ENV
+      #           break
+      #       }
 
-            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
-            Start-Sleep -Seconds 5
-          }
+      #       Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
+      #       Start-Sleep -Seconds 5
+      #     }
 
       - name: Run launcher on Linux
         if: ${{ inputs.platform == 'ubuntu-latest' }}
@@ -202,10 +202,30 @@ jobs:
             done
          
       - name: Send requests, and stop
-        if: ${{ env.launcherhealthcheck == 'ready' }}
+        #if: ${{ env.launcherhealthcheck == 'ready' }}
         shell: pwsh
         run: |
-         
+          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
+          Write-Host "Starting test.cmd..."
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          echo "processId=$process.Id"   >> $env:GITHUB_ENV
+
+          # Wait a few seconds to let test.cmd start listening
+          Write-Host "Waiting for launcher to become ready (max 60s)"
+          Start-Sleep -Seconds 120
+
+          $maxAttempts = 10
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            if ((Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded) {
+                Write-Host "Launcher is ready!"
+                echo "launcherhealthcheck=ready" >> $env:GITHUB_ENV
+                break
+            }
+
+            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
+            Start-Sleep -Seconds 5
+          } 
+
            $baseUrl = "http://localhost:1500/${{ env.queueId }}"
            $baseFile = ".github/scripts/requests"
            $requests = @(
