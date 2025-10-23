@@ -248,7 +248,11 @@ jobs:
           Write-Host "Starting launcher..."
           $launcherPath = Resolve-Path "${{ env.launcherpath }}"
           if ($isWindows) {
-             $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
+             exeFileName = test.cmd
+             if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
+                exeFileName = launcher-test.cmd
+                 }
+             $scriptPath = (Resolve-Path '${{ env.launcherpath }}/$exeFileName').Path
              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
              $processId = $process.Id
            } else {
