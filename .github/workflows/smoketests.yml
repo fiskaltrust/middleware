@@ -128,7 +128,8 @@ jobs:
 
           $pair = "${cashboxId}:${accessToken}"
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
-          $headers = @{ Authorization = "Basic $encoded" }
+          #$headers = @{ Authorization = "Basic $encoded" }
+          $headers = @{ accessToken = $accessToken }
           $url = "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download-launcher?cashboxId=$cashboxId&version=$version&offline=$offline&platform=$platform"
           #$url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline&platform=$platform"
           $output = "$launcher.$cashboxId.zip"
