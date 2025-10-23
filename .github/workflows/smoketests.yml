@@ -219,7 +219,7 @@ jobs:
             echo "Launcher container ID: $CONTAINER_ID"
 
             # Wait for launcher to become ready (TCP 1500)
-            MAX_ATTEMPTS=10
+            MAX_ATTEMPTS=15
             for i in $(seq 1 $MAX_ATTEMPTS); do
               if docker exec $CONTAINER_ID bash -c "curl -s http://localhost:1500/ >/dev/null 2>&1"; then
                 echo "Launcher is ready!"
