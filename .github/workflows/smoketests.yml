@@ -248,7 +248,7 @@ jobs:
           Write-Host "Starting launcher..."
           $launcherPath = Resolve-Path "${{ env.launcherpath }}"
           if ($isWindows) {
-             exeFileName = test.cmd
+             $exeFileName = test.cmd
              if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
                 exeFileName = launcher-test.cmd
                  }
