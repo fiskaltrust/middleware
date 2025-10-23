@@ -152,7 +152,6 @@ jobs:
         run: |
           #....Run launcher....
           Write-Host "Starting launcher..."
-          $launcherPath = Resolve-Path "${{ env.launcherpath }}"
           $exeFileName = "test.cmd"
           if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $exeFileName = "launcher-test.cmd" }
           $scriptPath = (Resolve-Path "${{ env.launcherpath }}/$exeFileName").Path
@@ -202,15 +201,16 @@ jobs:
                 try {
 
                   if ($null -ne $body) {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" 
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post 
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ErrorAction Stop
                   }
                   Write-Host "Response: $($response | ConvertTo-Json)"
 
                 } 
                 catch {
                     Write-Error "$($req.Name) request failed: $_"
+                    Write-Host "Error details: $($_.Exception.Message)"
                 }
              }
             }
