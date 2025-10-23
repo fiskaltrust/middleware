@@ -147,150 +147,24 @@ jobs:
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
-      # - name: Install Mono if platform is Ubuntu
-      #   if: ${{ inputs.platform == 'ubuntu-latest' }}
-      #   shell: pwsh
-      #   run: |
-      #     Write-Host "Installing Mono on Linux..."
-      #     sudo apt-get update -y
-      #     sudo apt-get install -y mono-complete
-     
-      # - name: Run Mono launcher in Docker, send requests
-      #   if: ${{ runner.os != 'Windows' }}
-      #   shell: bash
-      #   run: |
-      #       # Paths
-      #       LAUNCHER_PATH="$PWD/launcher"
-      #       REQUESTS_PATH="$PWD/.github/scripts/requests"
-      #       QUEUE_ID="${{ env.queueId }}"
-      #       CASHBOX_ID="${{ env.cashboxId }}"
-
-      #       # Use official Mono image
-      #       IMAGE="mono:latest"
-      #       # Run launcher in detached container
-      #       CONTAINER_ID=$(docker run -d -v "$LAUNCHER_PATH:/launcher" -w /launcher $IMAGE \
-      #       bash -c "chmod +x ./test.sh && exec ./test.sh")
-
-      #       echo "Launcher container ID: $CONTAINER_ID"
-
-      #       # Wait for launcher to become ready (TCP 1500)
-      #       MAX_ATTEMPTS=15
-      #       for i in $(seq 1 $MAX_ATTEMPTS); do
-      #         if docker exec $CONTAINER_ID bash -c "curl -s http://localhost:1500/ >/dev/null 2>&1"; then
-      #           echo "Launcher is ready!"
-      #           break
-      #         fi
-      #         echo "Launcher not ready yet, waiting 5s... (Attempt $i/$MAX_ATTEMPTS)"
-      #         sleep 10
-      #       done
-      #        docker logs --tail 20 $CONTAINER_ID
-      #       # Send requests
-                     
-
-      #       BASE_URL="http://localhost:1500/$QUEUE_ID"
-      #       REQUESTS_PATH=".github/scripts/requests"
-
-      #       requests=(
-      #         "Echo|$BASE_URL/json/v1/Echo|$REQUESTS_PATH/Echo.json"
-      #         "ZeroReceipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Zeroreceipt.json"
-      #         "Initial-operation-receipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Initial-operation-receipt.json"
-      #         "Pos-receipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Pos-receipt.json"
-      #         "Daily-closing-receipt|$BASE_URL/json/v1/sign|$REQUESTS_PATH/Daily-closing-receipt.json"
-      #         "DSFinVK-Export|$BASE_URL/json/v0/Journal?type=4919338167972134914|"
-      #         "Tar-Export-from-middleware|$BASE_URL/json/v0/Journal?type=4919338167972134915|"
-      #         "Action-Journal-Export|$BASE_URL/json/v0/Journal?type=1|"
-      #         "Receipt-Journal-Export|$BASE_URL/json/v0/Journal?type=2|"
-      #         "QueueItem-Export|$BASE_URL/json/v0/Journal?type=3|"
-      #       )
-
-      #       for req in "${requests[@]}"; do
-      #         IFS="|" read -r NAME URL FILE <<< "$req"
-      #         echo -e "\n--- Sending $NAME request ---"
-
-      #         if [[ -n "$FILE" && -f "$FILE" ]]; then
-      #           BODY=$(<"$FILE")
-      #           BODY="${BODY//\{\{cashbox_id\}\}/$CASHBOX_ID}"
-      #           BODY="${BODY//\{\{current_moment\}\}/$(date -Iseconds)}"
-
-      #           echo "POST $URL"
-      #           echo "Body:"
-      #           echo "$BODY" | jq . || echo "$BODY"  # pretty print if jq available
-
-      #           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$URL" \
-      #             -H "Content-Type: application/json" -d "$BODY" || true)
-      #         else
-      #           echo "POST $URL (no body)"
-      #           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "$URL" || true)
-      #         fi
-
-      #         HTTP_BODY=$(echo "$RESPONSE" | sed -e 's/HTTP_STATUS\:.*//g')
-      #         HTTP_STATUS=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTP_STATUS://')
-
-      #         echo "Response Code: $HTTP_STATUS"
-      #         echo "Response Body: $HTTP_BODY"
-
-      #         if [[ "$HTTP_STATUS" -lt 200 || "$HTTP_STATUS" -ge 300 ]]; then
-      #           echo "❌ $NAME failed with HTTP $HTTP_STATUS"
-      #         else
-      #           echo "✅ $NAME succeeded"
-      #         fi
-      #       done
-
-
-      #       echo "Requests sent. Launcher container is still running if needed."
-      #       echo "Container logs (partial):"
-      #       docker logs --tail 20 $CONTAINER_ID
- 
       - name:  Run launcher,send requests, and stop
         shell: pwsh
         run: |
           #....Run launcher....
           Write-Host "Starting launcher..."
           $launcherPath = Resolve-Path "${{ env.launcherpath }}"
-          if ($isWindows) {
-             $exeFileName = "test.cmd"
-             if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
-                $exeFileName = "launcher-test.cmd"
-                 }
-             $scriptPath = (Resolve-Path '${{ env.launcherpath }}/$exeFileName').Path
-             $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
-             $processId = $process.Id
-           } else {
-              echo "Starting launcher on Linux..."
-              $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.sh').Path
-              bash -c "chmod +x '$scriptPath'"
-              # Build the bash command safely
-              $processId = bash -c "cd '$launcherPath' && script -q -c './test.sh' /dev/null > test-output.log 2> test-output-error.log & echo \$!"
-
-              
-              $logOut = Join-Path $launcherPath "test-output.log"
-              $logErr = Join-Path $launcherPath "test-output-error.log"
-              if (Test-Path $logOut) {
-                Write-Host "=== test-output.log ==="
-                Get-Content $logOut
-              }
-              if (Test-Path $logErr) {
-                Write-Host "=== test-output-error.log ==="
-                Get-Content $logErr
-              }
-               #$processId = bash -c "& '$scriptPath' > test-output.log 2> test-output-error.log & echo \$!"
-              echo "pid=$processId" 
-              $processId = $processId
-              #$process = Start-Process -FilePath "/bin/bash" -ArgumentList @($scriptPath) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
-          }
-
+          $exeFileName = "test.cmd"
+          if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $exeFileName = "launcher-test.cmd" }
+          $scriptPath = (Resolve-Path "${{ env.launcherpath }}/$exeFileName").Path
+          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
           $maxAttempts = 10
           for ($i = 1; $i -le $maxAttempts; $i++) {
-            if ($isWindows) {
-                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
-            } else {
-                $tcpReady = (bash -c "nc -z localhost 1500") -eq 0
-            }
-
+            $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
             if ($tcpReady) {
                 Write-Host "Launcher is ready!"
                 break
