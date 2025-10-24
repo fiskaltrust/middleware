@@ -189,10 +189,11 @@ jobs:
                 @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2"; File = "" }
                 @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3"; File = "" }
             )
-            
+
+            $ErrorActionPreference = "Stop"
             foreach ($req in $requests) {
                 Write-Host "`n--- Sending $($req.Name) request ---"
-            
+                $body = $null
                 if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {       
                  $bodyTemplate = Get-Content $req.File -Raw 
                  $body = $bodyTemplate -replace "{{cashbox_id}}", "${{ env.cashboxId }}" -replace "{{current_moment}}", (Get-Date).ToString("o")
