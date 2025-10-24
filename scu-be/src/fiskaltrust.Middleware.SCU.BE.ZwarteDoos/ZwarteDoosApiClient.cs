@@ -6,7 +6,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.GraphQL;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Sale;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
@@ -28,9 +30,15 @@ public class ZwarteDoosApiClient
 
     public async Task<DeviceInfo> GetDeviceIdAsync(CancellationToken cancellationToken = default)
     {
-        const string query = "{\"query\":\"{device{id}}\"}";
-        
-        var response = await ExecuteGraphQLRequestAsync<DeviceResponse>(query, cancellationToken);
+        var request = new
+        {
+            query = "{device{id}}",
+        };
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        var response = await ExecuteGraphQLRequestAsync<DeviceResponse>(requestBody, cancellationToken);
         return response.Device;
     }
 
@@ -51,7 +59,6 @@ public class ZwarteDoosApiClient
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-
         var response = await ExecuteGraphQLRequestAsync<SignOrderResponse>(requestBody, cancellationToken);
         return response.SignOrder;
     }
@@ -254,7 +261,7 @@ public class ZwarteDoosApiClient
         return response.SignPreBill;
     }
 
-    public async Task<SignSaleData> SaleAsync(object saleData, bool isTraining = false, CancellationToken cancellationToken = default)
+    public async Task<SignSaleData> SaleAsync(SaleInput saleData, bool isTraining = false, CancellationToken cancellationToken = default)
     {
         var request = new
         {
@@ -347,6 +354,7 @@ public class ZwarteDoosApiClient
         var url = $"{_configuration.BaseUrl}/{_configuration.DeviceId}/graphql";
         
         _logger.LogDebug("Making GraphQL request to {Url}", url);
+        _logger.LogDebug("Request body: {RequestBody}", requestBody);
 
         // Generate FDM authentication
         var dateTime = DateTime.Now;

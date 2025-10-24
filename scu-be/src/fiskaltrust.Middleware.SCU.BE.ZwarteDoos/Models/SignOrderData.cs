@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Sale;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 
@@ -10,7 +11,7 @@ public class SignOrderData
     public string TerminalId { get; set; } = null!;
     public string DeviceId { get; set; } = null!;
     public string EventOperation { get; set; } = null!;
-    public FdmRef FdmRef { get; set; } = null!;
+    public FdmReferenceInput FdmRef { get; set; } = null!;
     public string FdmSwVersion { get; set; } = null!;
     public string DigitalSignature { get; set; } = null!;
     public decimal BufferCapacityUsed { get; set; }

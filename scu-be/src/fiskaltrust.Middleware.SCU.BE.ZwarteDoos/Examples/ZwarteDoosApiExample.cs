@@ -4,6 +4,10 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Sale;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Report;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Shared;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.ProForma;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Examples;
 
@@ -217,35 +221,39 @@ public class ZwarteDoosApiExample
                         ReceiptTotal = 37.36m
                     }
                 },
-                Transaction = new Transaction
+                Transaction = new TransactionInput
                 {
-                    TransactionLines = new List<TransactionLine>
+                    TransactionLines = new List<TransactionLineInput>
                     {
-                        new TransactionLine
+                        new TransactionLineInput
                         {
-                            MainProduct = new MainProduct
+                            LineType = "PRODUCT",
+                            MainProduct = new ProductInput
                             {
+                                QuantityType = "UNIT",
                                 ProductId = "10006",
                                 ProductName = "Dry Martini",
                                 DepartmentId = "10",
                                 DepartmentName = "Aperitifs",
                                 Quantity = 2,
                                 UnitPrice = 12,
-                                Vats = new List<VatInfo> { new VatInfo { Label = "A", Price = 24 } }
+                                Vats = new List<VatInput> { new VatInput { Label = "A", Price = 24 } }
                             },
                             LineTotal = 24
                         },
-                        new TransactionLine
+                        new TransactionLineInput
                         {
-                            MainProduct = new MainProduct
+                            LineType = "PRODUCT",
+                            MainProduct = new ProductInput
                             {
+                                QuantityType = "UNIT",
                                 ProductId = "28007",
                                 ProductName = "Tapas variation",
                                 DepartmentId = "28",
                                 DepartmentName = "Tapas",
                                 Quantity = 4,
                                 UnitPrice = 3.34m,
-                                Vats = new List<VatInfo> { new VatInfo { Label = "B", Price = 13.36m } }
+                                Vats = new List<VatInput> { new VatInput { Label = "B", Price = 13.36m } }
                             },
                             LineTotal = 13.36m
                         }

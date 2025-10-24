@@ -14,6 +14,10 @@ using Xunit;
 using Xunit.Abstractions;
 using System.Text.Json;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Sale;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Report;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Enums;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Shared;
 
 namespace fiskaltrust.Middleware.SCU.BE.IntegrationTest;
 
@@ -86,26 +90,26 @@ public class ZwarteDoosScuBeIntegrationTests
         using (var httpClient = new HttpClient())
         {
             httpClient.Timeout = TimeSpan.FromMilliseconds(8000);
-            
+
             var httpContent = new StringContent(requestBody, Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = httpContent
             };
-            
+
             request.Headers.Add("Date", gmt);
             request.Headers.Add("Authorization", $"FDM {base64EncodedHash}");
-            
+
             HttpResponseMessage response = await httpClient.SendAsync(request);
             string responseBody = await response.Content.ReadAsStringAsync();
-            
+
             _output.WriteLine($"   Request: {requestBody}");
             _output.WriteLine($"   Reply: {responseBody}");
 
             // Assert - Verify the request was processed (even if authentication fails, we should get a response)
             response.Should().NotBeNull();
             responseBody.Should().NotBeNull();
-            
+
             // The response should be either successful or contain an authentication error
             // We don't assert on success since this might be a test environment
             response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
@@ -125,28 +129,18 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
-        // Act & Assert
-        try
-        {
-            var deviceInfo = await apiClient.GetDeviceIdAsync();
-            
-            // Assert
-            deviceInfo.Should().NotBeNull();
-            deviceInfo.Id.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully retrieved device info: {deviceInfo.Id}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"API call failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var deviceInfo = await apiClient.GetDeviceIdAsync();
+
+        // Assert
+        deviceInfo.Should().NotBeNull();
+        deviceInfo.Id.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully retrieved device info: {deviceInfo.Id}");
     }
 
     [Fact]
@@ -162,7 +156,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -201,30 +195,19 @@ public class ZwarteDoosScuBeIntegrationTests
             )
             .Build();
 
-        // Act & Assert
-        try
-        {
-            var signedOrder = await apiClient.OrderAsync(orderData, isTraining: false);
-            
-            // Assert
-            signedOrder.Should().NotBeNull();
-            signedOrder.PosId.Should().Be("CPOS0031234567");
-            signedOrder.PosFiscalTicketNo.Should().Be(1003);
-            signedOrder.DigitalSignature.Should().NotBeNullOrEmpty();
-            signedOrder.FdmRef.Should().NotBeNull();
-            signedOrder.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully signed order: {signedOrder.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {signedOrder.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Order signing failed (this may be expected in test environment): {ex.Message}");
-            _output.WriteLine($"Request JSON: {JsonSerializer.Serialize(orderData)}");
+        // Act
+        var signedOrder = await apiClient.OrderAsync(orderData, isTraining: false);
 
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Assert
+        signedOrder.Should().NotBeNull();
+        signedOrder.PosId.Should().Be("CPOS0031234567");
+        signedOrder.PosFiscalTicketNo.Should().Be(1003);
+        signedOrder.DigitalSignature.Should().NotBeNullOrEmpty();
+        signedOrder.FdmRef.Should().NotBeNull();
+        signedOrder.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully signed order: {signedOrder.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {signedOrder.DigitalSignature}");
     }
 
     [Fact]
@@ -240,7 +223,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -254,28 +237,18 @@ public class ZwarteDoosScuBeIntegrationTests
             EmployeeId = "75061189702"
         };
 
-        // Act & Assert
-        try
-        {
-            var reportResult = await apiClient.ReportTurnoverXAsync(reportData, isTraining: false);
-            
-            // Assert
-            reportResult.Should().NotBeNull();
-            reportResult.EventOperation.Should().NotBeNullOrEmpty();
-            reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            reportResult.FdmRef.Should().NotBeNull();
-            reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created TurnoverX report: {reportResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"TurnoverX report failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var reportResult = await apiClient.ReportTurnoverXAsync(reportData, isTraining: false);
+
+        // Assert
+        reportResult.Should().NotBeNull();
+        reportResult.EventOperation.Should().NotBeNullOrEmpty();
+        reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        reportResult.FdmRef.Should().NotBeNull();
+        reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created TurnoverX report: {reportResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
     }
 
     [Fact]
@@ -291,7 +264,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -305,28 +278,18 @@ public class ZwarteDoosScuBeIntegrationTests
             EmployeeId = "75061189702"
         };
 
-        // Act & Assert
-        try
-        {
-            var reportResult = await apiClient.ReportTurnoverZAsync(reportData, isTraining: false);
-            
-            // Assert
-            reportResult.Should().NotBeNull();
-            reportResult.EventOperation.Should().NotBeNullOrEmpty();
-            reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            reportResult.FdmRef.Should().NotBeNull();
-            reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created TurnoverZ report: {reportResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"TurnoverZ report failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var reportResult = await apiClient.ReportTurnoverZAsync(reportData, isTraining: false);
+
+        // Assert
+        reportResult.Should().NotBeNull();
+        reportResult.EventOperation.Should().NotBeNullOrEmpty();
+        reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        reportResult.FdmRef.Should().NotBeNull();
+        reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created TurnoverZ report: {reportResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
     }
 
     [Fact]
@@ -342,7 +305,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -356,28 +319,18 @@ public class ZwarteDoosScuBeIntegrationTests
             EmployeeId = "75061189702"
         };
 
-        // Act & Assert
-        try
-        {
-            var reportResult = await apiClient.ReportUserXAsync(reportData, isTraining: false);
-            
-            // Assert
-            reportResult.Should().NotBeNull();
-            reportResult.EventOperation.Should().NotBeNullOrEmpty();
-            reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            reportResult.FdmRef.Should().NotBeNull();
-            reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created UserX report: {reportResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"UserX report failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var reportResult = await apiClient.ReportUserXAsync(reportData, isTraining: false);
+
+        // Assert
+        reportResult.Should().NotBeNull();
+        reportResult.EventOperation.Should().NotBeNullOrEmpty();
+        reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        reportResult.FdmRef.Should().NotBeNull();
+        reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created UserX report: {reportResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
     }
 
     [Fact]
@@ -393,7 +346,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -407,28 +360,18 @@ public class ZwarteDoosScuBeIntegrationTests
             EmployeeId = "75061189702"
         };
 
-        // Act & Assert
-        try
-        {
-            var reportResult = await apiClient.ReportUserZAsync(reportData, isTraining: false);
-            
-            // Assert
-            reportResult.Should().NotBeNull();
-            reportResult.EventOperation.Should().NotBeNullOrEmpty();
-            reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            reportResult.FdmRef.Should().NotBeNull();
-            reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created UserZ report: {reportResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"UserZ report failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var reportResult = await apiClient.ReportUserZAsync(reportData, isTraining: false);
+
+        // Assert
+        reportResult.Should().NotBeNull();
+        reportResult.EventOperation.Should().NotBeNullOrEmpty();
+        reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        reportResult.FdmRef.Should().NotBeNull();
+        reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created UserZ report: {reportResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
     }
 
     [Fact]
@@ -444,7 +387,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -460,28 +403,18 @@ public class ZwarteDoosScuBeIntegrationTests
             WorkType = "WORK_IN"
         };
 
-        // Act & Assert
-        try
-        {
-            var workResult = await apiClient.WorkInAsync(workData, isTraining: false);
-            
-            // Assert
-            workResult.Should().NotBeNull();
-            workResult.EventOperation.Should().NotBeNullOrEmpty();
-            workResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            workResult.FdmRef.Should().NotBeNull();
-            workResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created WorkIn: {workResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {workResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"WorkIn failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var workResult = await apiClient.WorkInAsync(workData, isTraining: false);
+
+        // Assert
+        workResult.Should().NotBeNull();
+        workResult.EventOperation.Should().NotBeNullOrEmpty();
+        workResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        workResult.FdmRef.Should().NotBeNull();
+        workResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created WorkIn: {workResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {workResult.DigitalSignature}");
     }
 
     [Fact]
@@ -497,7 +430,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -513,28 +446,18 @@ public class ZwarteDoosScuBeIntegrationTests
             WorkType = "WORK_OUT"
         };
 
-        // Act & Assert
-        try
-        {
-            var workResult = await apiClient.WorkOutAsync(workData, isTraining: false);
-            
-            // Assert
-            workResult.Should().NotBeNull();
-            workResult.EventOperation.Should().NotBeNullOrEmpty();
-            workResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            workResult.FdmRef.Should().NotBeNull();
-            workResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created WorkOut: {workResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {workResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"WorkOut failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var workResult = await apiClient.WorkOutAsync(workData, isTraining: false);
+
+        // Assert
+        workResult.Should().NotBeNull();
+        workResult.EventOperation.Should().NotBeNullOrEmpty();
+        workResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        workResult.FdmRef.Should().NotBeNull();
+        workResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created WorkOut: {workResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {workResult.DigitalSignature}");
     }
 
     [Fact]
@@ -550,7 +473,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -583,35 +506,39 @@ public class ZwarteDoosScuBeIntegrationTests
                     ReceiptTotal = 37.36m
                 }
             },
-            Transaction = new Transaction
+            Transaction = new TransactionInput
             {
-                TransactionLines = new List<TransactionLine>
+                TransactionLines = new List<TransactionLineInput>
                 {
-                    new TransactionLine
+                    new TransactionLineInput
                     {
-                        MainProduct = new MainProduct
+                        LineType = "PRODUCT",
+                        MainProduct = new ProductInput
                         {
+                            QuantityType = "PCS",
                             ProductId = "10006",
                             ProductName = "Dry Martini",
                             DepartmentId = "10",
                             DepartmentName = "Aperitifs",
                             Quantity = 2,
                             UnitPrice = 12,
-                            Vats = new List<VatInfo> { new VatInfo { Label = "A", Price = 24 } }
+                            Vats = new List<VatInput> { new VatInput { Label = "A", Price = 24 } }
                         },
                         LineTotal = 24
                     },
-                    new TransactionLine
+                    new TransactionLineInput
                     {
-                        MainProduct = new MainProduct
+                        LineType = "PRODUCT",
+                        MainProduct = new ProductInput
                         {
+                            QuantityType = "PCS",
                             ProductId = "28007",
                             ProductName = "Tapas variation",
                             DepartmentId = "28",
                             DepartmentName = "Tapas",
                             Quantity = 4,
                             UnitPrice = 3.34m,
-                            Vats = new List<VatInfo> { new VatInfo { Label = "B", Price = 13.36m } }
+                            Vats = new List<VatInput> { new VatInput { Label = "B", Price = 13.36m } }
                         },
                         LineTotal = 13.36m
                     }
@@ -620,28 +547,18 @@ public class ZwarteDoosScuBeIntegrationTests
             }
         };
 
-        // Act & Assert
-        try
-        {
-            var invoiceResult = await apiClient.InvoiceAsync(invoiceData, isTraining: false);
-            
-            // Assert
-            invoiceResult.Should().NotBeNull();
-            invoiceResult.EventOperation.Should().NotBeNullOrEmpty();
-            invoiceResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            invoiceResult.FdmRef.Should().NotBeNull();
-            invoiceResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created invoice: {invoiceResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {invoiceResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Invoice creation failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var invoiceResult = await apiClient.InvoiceAsync(invoiceData, isTraining: false);
+
+        // Assert
+        invoiceResult.Should().NotBeNull();
+        invoiceResult.EventOperation.Should().NotBeNullOrEmpty();
+        invoiceResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        invoiceResult.FdmRef.Should().NotBeNull();
+        invoiceResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created invoice: {invoiceResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {invoiceResult.DigitalSignature}");
     }
 
     [Fact]
@@ -657,7 +574,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -671,7 +588,7 @@ public class ZwarteDoosScuBeIntegrationTests
             EmployeeId = "75061189702",
             OriginalOrderRef = "ORDER-REF-001",
             ChangeDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
-            NewCostCenter = new CostCenter
+            NewCostCenter = new CostCenterInput
             {
                 Id = "T2",
                 Type = "TABLE",
@@ -679,28 +596,18 @@ public class ZwarteDoosScuBeIntegrationTests
             }
         };
 
-        // Act & Assert
-        try
-        {
-            var changeResult = await apiClient.CostCenterChangeAsync(changeData, isTraining: false);
-            
-            // Assert
-            changeResult.Should().NotBeNull();
-            changeResult.EventOperation.Should().NotBeNullOrEmpty();
-            changeResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            changeResult.FdmRef.Should().NotBeNull();
-            changeResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created cost center change: {changeResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {changeResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Cost center change failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var changeResult = await apiClient.CostCenterChangeAsync(changeData, isTraining: false);
+
+        // Assert
+        changeResult.Should().NotBeNull();
+        changeResult.EventOperation.Should().NotBeNullOrEmpty();
+        changeResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        changeResult.FdmRef.Should().NotBeNull();
+        changeResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created cost center change: {changeResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {changeResult.DigitalSignature}");
     }
 
     [Fact]
@@ -716,7 +623,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -731,27 +638,29 @@ public class ZwarteDoosScuBeIntegrationTests
             EmployeeId = "75061189702",
             PosDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
             BillDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
-            CostCenter = new CostCenter
+            CostCenter = new CostCenterInput
             {
                 Id = "T1",
                 Type = "TABLE",
                 Reference = "O158"
             },
-            Transaction = new Transaction
+            Transaction = new TransactionInput
             {
-                TransactionLines = new List<TransactionLine>
+                TransactionLines = new List<TransactionLineInput>
                 {
-                    new TransactionLine
+                    new TransactionLineInput
                     {
-                        MainProduct = new MainProduct
+                        LineType = "SINGLE_PRODUCT",
+                        MainProduct = new ProductInput
                         {
+                            QuantityType = "PCS",
                             ProductId = "10006",
                             ProductName = "Dry Martini",
                             DepartmentId = "10",
                             DepartmentName = "Aperitifs",
                             Quantity = 1,
                             UnitPrice = 12,
-                            Vats = new List<VatInfo> { new VatInfo { Label = "A", Price = 12 } }
+                            Vats = new List<VatInput> { new VatInput { Label = "A", Price = 12 } }
                         },
                         LineTotal = 12
                     }
@@ -760,28 +669,18 @@ public class ZwarteDoosScuBeIntegrationTests
             }
         };
 
-        // Act & Assert
-        try
-        {
-            var billResult = await apiClient.PreBillAsync(billData, isTraining: false);
-            
-            // Assert
-            billResult.Should().NotBeNull();
-            billResult.EventOperation.Should().NotBeNullOrEmpty();
-            billResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            billResult.FdmRef.Should().NotBeNull();
-            billResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created preliminary bill: {billResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {billResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Preliminary bill failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var billResult = await apiClient.PreBillAsync(billData, isTraining: false);
+
+        // Assert
+        billResult.Should().NotBeNull();
+        billResult.EventOperation.Should().NotBeNullOrEmpty();
+        billResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        billResult.FdmRef.Should().NotBeNull();
+        billResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created preliminary bill: {billResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {billResult.DigitalSignature}");
     }
 
     [Fact]
@@ -797,79 +696,95 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
         var saleData = new SaleInput
         {
+            Language = Language.EN,
             VatNo = "BE0000000097",
             EstNo = "2000000042",
             PosId = "CPOS0031234567",
-            PosFiscalTicketNo = 1006,
-            DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
-            TerminalId = "TER-1-BAR",
-            EmployeeId = "75061189702",
-            PosDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
-            BookingDate = DateTime.Now.ToString("yyyy-MM-dd"),
+            PosFiscalTicketNo = 1000,
+            PosDateTime = DateTime.UtcNow,
             PosSwVersion = "1.8.3",
-            CostCenter = new CostCenter
+            DeviceId = Guid.NewGuid().ToString(),
+            TerminalId = "TER-1-BAR",
+            BookingPeriodId = Guid.NewGuid(),
+            BookingDate = DateOnly.FromDateTime(DateTime.Today),
+            TicketMedium = "PAPER",
+            EmployeeId = "75061189702",
+            Transaction = new TransactionInput
             {
-                Id = "T1",
-                Type = "TABLE",
-                Reference = "O158"
-            },
-            Transaction = new Transaction
-            {
-                TransactionLines = new List<TransactionLine>
-                {
-                    new TransactionLine
+                TransactionLines =
+                [
+                    new TransactionLineInput
                     {
-                        MainProduct = new MainProduct
+                        LineType = "SINGLE_PRODUCT",
+                        MainProduct = new ProductInput 
                         {
                             ProductId = "10006",
                             ProductName = "Dry Martini",
                             DepartmentId = "10",
                             DepartmentName = "Aperitifs",
                             Quantity = 2,
-                            UnitPrice = 12,
-                            Vats = new List<VatInfo> { new VatInfo { Label = "A", Price = 24 } }
+                            QuantityType = "PIECE",
+                            UnitPrice = 12m,
+                            Vats = [ new VatInput { Label = "A", Price = 24m } ]
                         },
-                        LineTotal = 24
+                        LineTotal = 24m
+                    },
+                    new TransactionLineInput
+                    {
+                        LineType = "SINGLE_PRODUCT",
+                        MainProduct = new ProductInput
+                        {
+                            ProductId = "22001",
+                            ProductName = "Burger of the Chef",
+                            DepartmentId = "22",
+                            DepartmentName = "Main Dishes",
+                            Quantity = 1,
+                            QuantityType = "PIECE",
+                            UnitPrice = 28m,
+                            Vats = [ new VatInput { Label = "B", Price = 28m } ]
+                        },
+                        LineTotal = 28m
                     }
-                },
-                TransactionTotal = 24
+                ],
+                TransactionTotal = 52m
             },
-            RelatedOrders = new List<string> { "ORDER-REF-001" }
+            Financials =
+            [
+                new PaymentLineInput
+                {
+                    Id = "1",
+                    Name = "CONTANT",
+                    Type = PaymentType.CASH,
+                    InputMethod = InputMethod.MANUAL,
+                    Amount = 52m,
+                    AmountType = PaymentLineType.PAYMENT,
+                }
+            ]
         };
 
-        // Act & Assert
-        try
-        {
-            var saleResult = await apiClient.SaleAsync(saleData, isTraining: false);
-            
-            // Assert
-            saleResult.Should().NotBeNull();
-            saleResult.EventOperation.Should().NotBeNullOrEmpty();
-            saleResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            saleResult.ShortSignature.Should().NotBeNullOrEmpty();
-            saleResult.VerificationUrl.Should().NotBeNullOrEmpty();
-            saleResult.VatCalc.Should().NotBeNull();
-            saleResult.FdmRef.Should().NotBeNull();
-            saleResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created sale: {saleResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {saleResult.DigitalSignature}");
-            _output.WriteLine($"Short Signature: {saleResult.ShortSignature}");
-            _output.WriteLine($"Verification URL: {saleResult.VerificationUrl}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Sale creation failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var saleResult = await apiClient.SaleAsync(saleData, isTraining: false);
+
+        // Assert
+        saleResult.Should().NotBeNull();
+        saleResult.EventOperation.Should().NotBeNullOrEmpty();
+        saleResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        saleResult.ShortSignature.Should().NotBeNullOrEmpty();
+        saleResult.VerificationUrl.Should().NotBeNullOrEmpty();
+        saleResult.VatCalc.Should().NotBeNull();
+        saleResult.FdmRef.Should().NotBeNull();
+        saleResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created sale: {saleResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {saleResult.DigitalSignature}");
+        _output.WriteLine($"Short Signature: {saleResult.ShortSignature}");
+        _output.WriteLine($"Verification URL: {saleResult.VerificationUrl}");
     }
 
     [Fact]
@@ -885,7 +800,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -911,28 +826,18 @@ public class ZwarteDoosScuBeIntegrationTests
             }
         };
 
-        // Act & Assert
-        try
-        {
-            var correctionResult = await apiClient.PaymentCorrectionAsync(correctionData, isTraining: false);
-            
-            // Assert
-            correctionResult.Should().NotBeNull();
-            correctionResult.EventOperation.Should().NotBeNullOrEmpty();
-            correctionResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            correctionResult.FdmRef.Should().NotBeNull();
-            correctionResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created payment correction: {correctionResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {correctionResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Payment correction failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var correctionResult = await apiClient.PaymentCorrectionAsync(correctionData, isTraining: false);
+
+        // Assert
+        correctionResult.Should().NotBeNull();
+        correctionResult.EventOperation.Should().NotBeNullOrEmpty();
+        correctionResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        correctionResult.FdmRef.Should().NotBeNull();
+        correctionResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created payment correction: {correctionResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {correctionResult.DigitalSignature}");
     }
 
     [Fact]
@@ -948,7 +853,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -966,28 +871,18 @@ public class ZwarteDoosScuBeIntegrationTests
             Description = "Cash register float replenishment"
         };
 
-        // Act & Assert
-        try
-        {
-            var moneyResult = await apiClient.MoneyInOutAsync(moneyData, isTraining: false);
-            
-            // Assert
-            moneyResult.Should().NotBeNull();
-            moneyResult.EventOperation.Should().NotBeNullOrEmpty();
-            moneyResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            moneyResult.FdmRef.Should().NotBeNull();
-            moneyResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created money in/out: {moneyResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {moneyResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Money in/out failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var moneyResult = await apiClient.MoneyInOutAsync(moneyData, isTraining: false);
+
+        // Assert
+        moneyResult.Should().NotBeNull();
+        moneyResult.EventOperation.Should().NotBeNullOrEmpty();
+        moneyResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        moneyResult.FdmRef.Should().NotBeNull();
+        moneyResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created money in/out: {moneyResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {moneyResult.DigitalSignature}");
     }
 
     [Fact]
@@ -1003,7 +898,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-        
+
         using var httpClient = new HttpClient();
         var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
 
@@ -1019,28 +914,18 @@ public class ZwarteDoosScuBeIntegrationTests
             Reason = "Change required for customer"
         };
 
-        // Act & Assert
-        try
-        {
-            var drawerResult = await apiClient.DrawerOpenAsync(drawerData, isTraining: false);
-            
-            // Assert
-            drawerResult.Should().NotBeNull();
-            drawerResult.EventOperation.Should().NotBeNullOrEmpty();
-            drawerResult.DigitalSignature.Should().NotBeNullOrEmpty();
-            drawerResult.FdmRef.Should().NotBeNull();
-            drawerResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-            
-            _output.WriteLine($"Successfully created drawer open: {drawerResult.FdmRef.FdmId}");
-            _output.WriteLine($"Digital Signature: {drawerResult.DigitalSignature}");
-        }
-        catch (Exception ex)
-        {
-            _output.WriteLine($"Drawer open failed (this may be expected in test environment): {ex.Message}");
-            
-            // We allow certain failures in test environments
-            (ex is HttpRequestException || ex is InvalidOperationException).Should().BeTrue($"Expected HttpRequestException or InvalidOperationException, but got {ex.GetType().Name}");
-        }
+        // Act
+        var drawerResult = await apiClient.DrawerOpenAsync(drawerData, isTraining: false);
+
+        // Assert
+        drawerResult.Should().NotBeNull();
+        drawerResult.EventOperation.Should().NotBeNullOrEmpty();
+        drawerResult.DigitalSignature.Should().NotBeNullOrEmpty();
+        drawerResult.FdmRef.Should().NotBeNull();
+        drawerResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+
+        _output.WriteLine($"Successfully created drawer open: {drawerResult.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {drawerResult.DigitalSignature}");
     }
 }
 
