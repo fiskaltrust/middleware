@@ -26,16 +26,16 @@ jobs:
       - name: Prepare release branch with nbgv
         id: prepare-release
         run: |
+          version=$(nbgv get-version -f json | jq -r '.Version')
+          echo "release_version=$version"
+          echo "release_version=$version" >> $GITHUB_OUTPUT
+
           output=$(nbgv prepare-release rc -f json)
           #echo "$output"
           BRANCH=$(echo "$output" | jq -r '.NewBranch.Name')
 
           echo "release_branch=$BRANCH"
           echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
-
-          version=$(nbgv get-version -f json | jq -r '.Version')
-          echo "release_version=$version"
-          echo "release_version=$version" >> $GITHUB_OUTPUT
 
       - name: Push changes
         run: |
