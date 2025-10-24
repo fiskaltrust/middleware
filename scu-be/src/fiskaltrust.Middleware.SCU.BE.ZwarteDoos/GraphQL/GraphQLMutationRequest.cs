@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.GraphQL;
 
-public class GraphQLRequest<T>
+public class GraphQLMutationRequest<T>
 {
     [JsonPropertyName("query")]
     public required string Query { get; set; }

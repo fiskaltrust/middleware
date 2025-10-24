@@ -11,7 +11,7 @@ public class ReportTurnoverZInput : BaseInputData
     public required int ReportNo { get; set; }
 
     [JsonPropertyName("reportBookingDate")]
-    public required string ReportBookingDate { get; set; }
+    public required DateTime ReportBookingDate { get; set; }
 
     [JsonPropertyName("posDevices")]
     public required List<PosDeviceInput> PosDevices { get; set; }

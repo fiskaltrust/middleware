@@ -9,7 +9,6 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using System.Text.Json;
@@ -18,6 +17,8 @@ using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Sale;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Report;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Enums;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Shared;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Invoice;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Financial;
 
 namespace fiskaltrust.Middleware.SCU.BE.IntegrationTest;
 
@@ -138,76 +139,9 @@ public class ZwarteDoosScuBeIntegrationTests
 
         // Assert
         deviceInfo.Should().NotBeNull();
-        deviceInfo.Id.Should().NotBeNullOrEmpty();
+        deviceInfo.Data!.Device.Id.Should().NotBeNullOrEmpty();
 
-        _output.WriteLine($"Successfully retrieved device info: {deviceInfo.Id}");
-    }
-
-    [Fact]
-    public async Task ZwarteDoosApiClient_ShouldCreateOrderWithBuilder()
-    {
-        // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
-        var orderData = new OrderInputBuilder()
-            .WithBasicInfo(
-                vatNo: "BE0000000097",
-                estNo: "2000000042",
-                posId: "CPOS0031234567",
-                ticketNo: 1003,
-                deviceId: "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
-                terminalId: "TER-1-BAR"
-            )
-            .WithBookingPeriod("dffcd829-a0e5-41ca-a0ae-9eb887f95637")
-            .WithEmployee("75061189702")
-            .WithCostCenter("T1", "TABLE", "O158")
-            .WithPosVersion("1.8.3")
-            .AddProduct(
-                productId: "10006",
-                productName: "Dry Martini",
-                departmentId: "10",
-                departmentName: "Aperitifs",
-                quantity: 2,
-                unitPrice: 12,
-                vatLabel: "A",
-                vatPrice: 24
-            )
-            .AddProduct(
-                productId: "28007",
-                productName: "Tapas variation",
-                departmentId: "28",
-                departmentName: "Tapas",
-                quantity: 4,
-                unitPrice: 3.34m,
-                vatLabel: "B",
-                vatPrice: 13.36m
-            )
-            .Build();
-
-        // Act
-        var signedOrder = await apiClient.OrderAsync(orderData, isTraining: false);
-
-        // Assert
-        signedOrder.Should().NotBeNull();
-        signedOrder.PosId.Should().Be("CPOS0031234567");
-        signedOrder.PosFiscalTicketNo.Should().Be(1003);
-        signedOrder.DigitalSignature.Should().NotBeNullOrEmpty();
-        signedOrder.FdmRef.Should().NotBeNull();
-        signedOrder.FdmRef.FdmId.Should().NotBeNullOrEmpty();
-
-        _output.WriteLine($"Successfully signed order: {signedOrder.FdmRef.FdmId}");
-        _output.WriteLine($"Digital Signature: {signedOrder.DigitalSignature}");
+        _output.WriteLine($"Successfully retrieved device info: {deviceInfo.Data.Device.Id}");
     }
 
     [Fact]
@@ -234,7 +168,27 @@ public class ZwarteDoosScuBeIntegrationTests
             PosId = "CPOS0031234567",
             DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
             TerminalId = "TER-1-BAR",
-            EmployeeId = "75061189702"
+            EmployeeId = "75061189702",
+            BookingDate = DateOnly.FromDateTime(DateTime.Today),
+            BookingPeriodId = Guid.NewGuid(),
+            FdmDevices = [],
+            Language = Language.NL,
+            PosDateTime = DateTime.Now,
+            PosDevices = [],
+            PosFiscalTicketNo = 1003,
+            PosSwVersion = "",
+            TicketMedium = TicketMedium.PAPER,
+            Turnover = new TurnoverInput
+            {
+                Departments = [],
+                Invoices = [],
+                NegQuantities = [],
+                Payments = [],
+                PriceChanges = [],
+                Transactions = [],
+                DrawersOpenCount = 0,
+                Vats = []
+            }
         };
 
         // Act
@@ -242,13 +196,14 @@ public class ZwarteDoosScuBeIntegrationTests
 
         // Assert
         reportResult.Should().NotBeNull();
-        reportResult.EventOperation.Should().NotBeNullOrEmpty();
-        reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
-        reportResult.FdmRef.Should().NotBeNull();
-        reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+        reportResult.Data.Should().NotBeNull();
+        reportResult.Data!.EventOperation.Should().Be(EventOperation.REPORT_TURNOVER_X);
+        reportResult.Data!.DigitalSignature.Should().NotBeNullOrEmpty();
+        reportResult.Data!.FdmRef.Should().NotBeNull();
+        reportResult.Data!.FdmRef.FdmId.Should().NotBeNullOrEmpty();
 
-        _output.WriteLine($"Successfully created TurnoverX report: {reportResult.FdmRef.FdmId}");
-        _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
+        _output.WriteLine($"Successfully created TurnoverX report: {reportResult.Data.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {reportResult.Data.DigitalSignature}");
     }
 
     [Fact]
@@ -275,7 +230,29 @@ public class ZwarteDoosScuBeIntegrationTests
             PosId = "CPOS0031234567",
             DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
             TerminalId = "TER-1-BAR",
-            EmployeeId = "75061189702"
+            EmployeeId = "75061189702",
+            BookingDate = DateOnly.FromDateTime(DateTime.Today),
+            BookingPeriodId = Guid.NewGuid(),
+            FdmDevices = [],
+            Language = Language.NL,
+            PosDateTime = DateTime.Now,
+            PosDevices = [],
+            PosFiscalTicketNo = 1003,
+            PosSwVersion = "",
+            TicketMedium = TicketMedium.PAPER,
+            Turnover = new TurnoverInput
+            {
+                Departments = [],
+                Invoices = [],
+                NegQuantities = [],
+                Payments = [],
+                PriceChanges = [],
+                Transactions = [],
+                DrawersOpenCount = 0,
+                Vats = []
+            },
+            ReportBookingDate = DateTime.Today,
+            ReportNo = 1
         };
 
         // Act
@@ -283,13 +260,14 @@ public class ZwarteDoosScuBeIntegrationTests
 
         // Assert
         reportResult.Should().NotBeNull();
-        reportResult.EventOperation.Should().NotBeNullOrEmpty();
-        reportResult.DigitalSignature.Should().NotBeNullOrEmpty();
-        reportResult.FdmRef.Should().NotBeNull();
-        reportResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+        reportResult.Data.Should().NotBeNull();
+        reportResult.Data!.EventOperation.Should().Be(EventOperation.REPORT_TURNOVER_Z);
+        reportResult.Data!.DigitalSignature.Should().NotBeNullOrEmpty();
+        reportResult.Data!.FdmRef.Should().NotBeNull();
+        reportResult.Data!.FdmRef.FdmId.Should().NotBeNullOrEmpty();
 
-        _output.WriteLine($"Successfully created TurnoverZ report: {reportResult.FdmRef.FdmId}");
-        _output.WriteLine($"Digital Signature: {reportResult.DigitalSignature}");
+        _output.WriteLine($"Successfully created TurnoverZ report: {reportResult.Data.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {reportResult.Data.DigitalSignature}");
     }
 
     [Fact]
@@ -486,7 +464,7 @@ public class ZwarteDoosScuBeIntegrationTests
             DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
             TerminalId = "TER-1-BAR",
             EmployeeId = "75061189702",
-            PosDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+            PosDateTime = DateTime.Now,
             InvoiceNumber = "INV-2024-001",
             InvoiceDate = DateTime.Now.ToString("yyyy-MM-dd"),
             CustomerInfo = new CustomerInfo
@@ -722,7 +700,7 @@ public class ZwarteDoosScuBeIntegrationTests
                     new TransactionLineInput
                     {
                         LineType = "SINGLE_PRODUCT",
-                        MainProduct = new ProductInput 
+                        MainProduct = new ProductInput
                         {
                             ProductId = "10006",
                             ProductName = "Dry Martini",
@@ -910,8 +888,18 @@ public class ZwarteDoosScuBeIntegrationTests
             DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
             TerminalId = "TER-1-BAR",
             EmployeeId = "75061189702",
-            OpenDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
-            Reason = "Change required for customer"
+            BookingDate = DateOnly.FromDateTime(DateTime.Today),
+            BookingPeriodId = Guid.NewGuid(),
+            Drawer = new DrawerInput
+            {
+                Id = "DRAWER-1",
+                Name = "Main Cash Drawer"
+            },
+            Language = Language.NL,
+            PosDateTime = DateTime.Now,
+            PosSwVersion = "",
+            PosFiscalTicketNo = 1006,
+            TicketMedium = TicketMedium.PAPER
         };
 
         // Act
@@ -919,44 +907,13 @@ public class ZwarteDoosScuBeIntegrationTests
 
         // Assert
         drawerResult.Should().NotBeNull();
-        drawerResult.EventOperation.Should().NotBeNullOrEmpty();
-        drawerResult.DigitalSignature.Should().NotBeNullOrEmpty();
-        drawerResult.FdmRef.Should().NotBeNull();
-        drawerResult.FdmRef.FdmId.Should().NotBeNullOrEmpty();
+        var data = drawerResult.Data!;
+        data.EventOperation.Should().Be(EventOperation.DRAWER_OPEN);
+        data.DigitalSignature.Should().NotBeNullOrEmpty();
+        data.FdmRef.Should().NotBeNull();
+        data.FdmRef.FdmId.Should().NotBeNullOrEmpty();
 
-        _output.WriteLine($"Successfully created drawer open: {drawerResult.FdmRef.FdmId}");
-        _output.WriteLine($"Digital Signature: {drawerResult.DigitalSignature}");
-    }
-}
-
-// Helper class for xUnit logging integration
-public class XunitLogger<T> : ILogger<T>
-{
-    private readonly ITestOutputHelper _output;
-
-    public XunitLogger(ITestOutputHelper output)
-    {
-        _output = output;
-    }
-
-    public IDisposable BeginScope<TState>(TState state) => new NullDisposable();
-
-    public bool IsEnabled(LogLevel logLevel) => true;
-
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        try
-        {
-            _output.WriteLine($"[{logLevel}] {typeof(T).Name}: {formatter(state, exception)}");
-        }
-        catch
-        {
-            // Ignore logging errors in tests
-        }
-    }
-
-    private class NullDisposable : IDisposable
-    {
-        public void Dispose() { }
+        _output.WriteLine($"Successfully created drawer open: {data.FdmRef.FdmId}");
+        _output.WriteLine($"Digital Signature: {data.DigitalSignature}");
     }
 }

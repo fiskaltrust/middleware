@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Copy;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Financial;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Invoice;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.ProForma;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Report;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Sale;
@@ -10,9 +11,21 @@ namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.GraphQL;
 
 public class GraphQLRequestFactory
 {
-    public static GraphQLRequest<OrderInput> CreateSignOrderRequest(OrderInput data, bool isTraining)
+    public static GraphQLQueryRequest CreateQueryDeviceRequest()
     {
-        return new GraphQLRequest<OrderInput>
+        return new GraphQLQueryRequest
+        {
+            Query = @"{
+  device {
+    id
+  }
+}",
+        };
+    }
+
+    public static GraphQLMutationRequest<OrderInput> CreateSignOrderRequest(OrderInput data, bool isTraining)
+    {
+        return new GraphQLMutationRequest<OrderInput>
         {
             Query = @"mutation SignOrder($data: OrderInput!, $isTraining: Boolean!) {
   signOrder(data: $data, isTraining: $isTraining) {
@@ -76,9 +89,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<CostCenterChangeInput> CreateSignCostCenterChangeRequest(CostCenterChangeInput data, bool isTraining)
+    public static GraphQLMutationRequest<CostCenterChangeInput> CreateSignCostCenterChangeRequest(CostCenterChangeInput data, bool isTraining)
     {
-        return new GraphQLRequest<CostCenterChangeInput>
+        return new GraphQLMutationRequest<CostCenterChangeInput>
         {
             Query = @"mutation SignCostCenterChange(
   $data: CostCenterChangeInput!
@@ -145,9 +158,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<PreBillInput> CreateSignPreliminaryBillRequest(PreBillInput data, bool isTraining)
+    public static GraphQLMutationRequest<PreBillInput> CreateSignPreBillRequest(PreBillInput data, bool isTraining)
     {
-        return new GraphQLRequest<PreBillInput>
+        return new GraphQLMutationRequest<PreBillInput>
         {
             Query = @"mutation SignPreBill($data: PreBillInput!, $isTraining: Boolean!) {
   signPreBill(data: $data, isTraining: $isTraining) {
@@ -211,9 +224,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<SaleInput> CreateSignSaleInputRequest(SaleInput data, bool isTraining)
+    public static GraphQLMutationRequest<SaleInput> CreateSignSaleRequest(SaleInput data, bool isTraining)
     {
-        return new GraphQLRequest<SaleInput>
+        return new GraphQLMutationRequest<SaleInput>
         {
             Query = @"mutation SignSale($data: SaleInput!, $isTraining: Boolean!) {
   signSale(data: $data, isTraining: $isTraining) {
@@ -287,9 +300,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<PaymentCorrectionInput> CreateSignPaymentCorrectionRequest(PaymentCorrectionInput data, bool isTraining)
+    public static GraphQLMutationRequest<PaymentCorrectionInput> CreateSignPaymentCorrectionRequest(PaymentCorrectionInput data, bool isTraining)
     {
-        return new GraphQLRequest<PaymentCorrectionInput>
+        return new GraphQLMutationRequest<PaymentCorrectionInput>
         {
             Query = @"mutation SignPaymentCorrection(
   $data: PaymentCorrectionInput!
@@ -356,9 +369,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<MoneyInOutInput> CreateSignMoneyInOutRequest(MoneyInOutInput data, bool isTraining)
+    public static GraphQLMutationRequest<MoneyInOutInput> CreateSignMoneyInOutRequest(MoneyInOutInput data, bool isTraining)
     {
-        return new GraphQLRequest<MoneyInOutInput>
+        return new GraphQLMutationRequest<MoneyInOutInput>
         {
             Query = @"mutation SignMoneyInOut($data: MoneyInOutInput!, $isTraining: Boolean!) {
   signMoneyInOut(data: $data, isTraining: $isTraining) {
@@ -422,9 +435,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<DrawerOpenInput> CreateSignDrawerOpenRequest(DrawerOpenInput data, bool isTraining)
+    public static GraphQLMutationRequest<DrawerOpenInput> CreateSignDrawerOpenRequest(DrawerOpenInput data, bool isTraining)
     {
-        return new GraphQLRequest<DrawerOpenInput>
+        return new GraphQLMutationRequest<DrawerOpenInput>
         {
             Query = @"mutation SignDrawerOpen($data: DrawerOpenInput!, $isTraining: Boolean!) {
   signDrawerOpen(data: $data, isTraining: $isTraining) {
@@ -488,9 +501,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<InvoiceInput> CreateSignInvoiceRequest(InvoiceInput data, bool isTraining)
+    public static GraphQLMutationRequest<InvoiceInput> CreateSignInvoiceRequest(InvoiceInput data, bool isTraining)
     {
-        return new GraphQLRequest<InvoiceInput>
+        return new GraphQLMutationRequest<InvoiceInput>
         {
             Query = @"mutation SignInvoice($data: InvoiceInput!, $isTraining: Boolean!) {
   signInvoice(data: $data, isTraining: $isTraining) {
@@ -554,9 +567,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<WorkInOutInput> CreateSignWorkInRequest(WorkInOutInput data, bool isTraining)
+    public static GraphQLMutationRequest<WorkInOutInput> CreateSignWorkInRequest(WorkInOutInput data, bool isTraining)
     {
-        return new GraphQLRequest<WorkInOutInput>
+        return new GraphQLMutationRequest<WorkInOutInput>
         {
             Query = @"mutation SignWorkIn($data: WorkInOutInput!, $isTraining: Boolean!) {
   signWorkIn(data: $data, isTraining: $isTraining) {
@@ -620,9 +633,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<WorkInOutInput> CreateSignWorkOutRequest(WorkInOutInput data, bool isTraining)
+    public static GraphQLMutationRequest<WorkInOutInput> CreateSignWorkOutRequest(WorkInOutInput data, bool isTraining)
     {
-        return new GraphQLRequest<WorkInOutInput>
+        return new GraphQLMutationRequest<WorkInOutInput>
         {
             Query = @"mutation SignWorkOut($data: WorkInOutInput!, $isTraining: Boolean!) {
   signWorkOut(data: $data, isTraining: $isTraining) {
@@ -686,9 +699,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<ReportTurnoverXInput> CreateSignReportTurnoverXRequest(ReportTurnoverXInput data, bool isTraining)
+    public static GraphQLMutationRequest<ReportTurnoverXInput> CreateSignReportTurnoverXRequest(ReportTurnoverXInput data, bool isTraining)
     {
-        return new GraphQLRequest<ReportTurnoverXInput>
+        return new GraphQLMutationRequest<ReportTurnoverXInput>
         {
             Query = @"mutation SignReportTurnoverX(
   $data: ReportTurnoverXInput!
@@ -755,9 +768,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<ReportTurnoverZInput> CreateSignReportTurnoverZRequest(ReportTurnoverZInput data, bool isTraining)
+    public static GraphQLMutationRequest<ReportTurnoverZInput> CreateSignReportTurnoverZRequest(ReportTurnoverZInput data, bool isTraining)
     {
-        return new GraphQLRequest<ReportTurnoverZInput>
+        return new GraphQLMutationRequest<ReportTurnoverZInput>
         {
             Query = @"mutation SignReportTurnoverZ(
   $data: ReportTurnoverZInput!
@@ -824,9 +837,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<ReportUserXInput> CreateSignReportUserXRequest(ReportUserXInput data, bool isTraining)
+    public static GraphQLMutationRequest<ReportUserXInput> CreateSignReportUserXRequest(ReportUserXInput data, bool isTraining)
     {
-        return new GraphQLRequest<ReportUserXInput>
+        return new GraphQLMutationRequest<ReportUserXInput>
         {
             Query = @"mutation SignReportUserX($data: ReportUserXInput!, $isTraining: Boolean!) {
   signReportUserX(data: $data, isTraining: $isTraining) {
@@ -890,9 +903,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<ReportUserZInput> CreateSignReportUserZRequest(ReportUserZInput data, bool isTraining)
+    public static GraphQLMutationRequest<ReportUserZInput> CreateSignReportUserZRequest(ReportUserZInput data, bool isTraining)
     {
-        return new GraphQLRequest<ReportUserZInput>
+        return new GraphQLMutationRequest<ReportUserZInput>
         {
             Query = @"mutation SignReportUserZ($data: ReportUserZInput!, $isTraining: Boolean!) {
   signReportUserZ(data: $data, isTraining: $isTraining) {
@@ -956,9 +969,9 @@ public class GraphQLRequestFactory
         };
     }
 
-    public static GraphQLRequest<CopyInput> CreateSignCopyRequest(CopyInput data, bool isTraining)
+    public static GraphQLMutationRequest<CopyInput> CreateSignCopyRequest(CopyInput data, bool isTraining)
     {
-        return new GraphQLRequest<CopyInput>
+        return new GraphQLMutationRequest<CopyInput>
         {
             Query = @"mutation SignCopy($data: CopyInput!, $isTraining: Boolean!) {
   signCopy(data: $data, isTraining: $isTraining) {

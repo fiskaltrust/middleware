@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
+﻿namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Device;
 
 public class DeviceResponse
 {
