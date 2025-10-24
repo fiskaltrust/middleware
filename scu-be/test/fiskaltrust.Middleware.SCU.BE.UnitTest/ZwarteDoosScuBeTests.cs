@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoFixture;
@@ -37,7 +37,7 @@ public class ZwarteDoosScuBeTests
     public async Task SubmitInvoiceAsync_WithValidRequest_ShouldReturnSuccessResponse()
     {
         // Arrange
-        var scu = new ZwarteDoosScuBe(_loggerMock.Object, _configuration);
+        var scu = new ZwarteDoosScuBe(_loggerMock.Object, Mock.Of<ILoggerFactory>(), _configuration);
         var request = CreateValidSubmitInvoiceRequest();
 
         // Act & Assert
@@ -54,7 +54,7 @@ public class ZwarteDoosScuBeTests
     public async Task SubmitInvoiceAsync_WithEmptyInvoiceNumber_ShouldReturnError()
     {
         // Arrange
-        var scu = new ZwarteDoosScuBe(_loggerMock.Object, _configuration);
+        var scu = new ZwarteDoosScuBe(_loggerMock.Object, Mock.Of<ILoggerFactory>(), _configuration);
         var request = CreateValidSubmitInvoiceRequest();
         request.InvoiceNumber = string.Empty;
 
@@ -71,7 +71,7 @@ public class ZwarteDoosScuBeTests
     public async Task SubmitInvoiceAsync_WithEmptyCashBoxId_ShouldReturnError()
     {
         // Arrange
-        var scu = new ZwarteDoosScuBe(_loggerMock.Object, _configuration);
+        var scu = new ZwarteDoosScuBe(_loggerMock.Object, Mock.Of<ILoggerFactory>(), _configuration);
         var request = CreateValidSubmitInvoiceRequest();
         request.ftCashBoxIdentification = string.Empty;
 
@@ -92,7 +92,7 @@ public class ZwarteDoosScuBeTests
         decimal amount, decimal vatAmount, decimal expectedTotal)
     {
         // Arrange
-        var scu = new ZwarteDoosScuBe(_loggerMock.Object, _configuration);
+        var scu = new ZwarteDoosScuBe(_loggerMock.Object, Mock.Of<ILoggerFactory>(), _configuration);
         var request = CreateValidSubmitInvoiceRequest();
         request.InvoiceLine = new List<InvoiceLine>
         {
@@ -111,6 +111,7 @@ public class ZwarteDoosScuBeTests
 
         // Assert
         response.Should().NotBeNull();
+        expectedTotal.Should().Be(amount + vatAmount);
         // Additional assertions would verify the calculated amounts in the request
     }
 
@@ -118,7 +119,7 @@ public class ZwarteDoosScuBeTests
     public async Task ProcessReceiptAsync_WithValidRequest_ShouldReturnProcessResponse()
     {
         // Arrange
-        var scu = new ZwarteDoosScuBe(_loggerMock.Object, _configuration);
+        var scu = new ZwarteDoosScuBe(_loggerMock.Object, Mock.Of<ILoggerFactory>(), _configuration);
         var processRequest = CreateValidProcessRequest();
 
         // Act
@@ -133,7 +134,7 @@ public class ZwarteDoosScuBeTests
     public async Task GetInfoAsync_ShouldReturnBESSCDInfo()
     {
         // Arrange
-        var scu = new ZwarteDoosScuBe(_loggerMock.Object, _configuration);
+        var scu = new ZwarteDoosScuBe(_loggerMock.Object, Mock.Of<ILoggerFactory>(), _configuration);
 
         // Act
         var info = await scu.GetInfoAsync();
@@ -168,16 +169,16 @@ public class ZwarteDoosScuBeTests
     private ProcessRequest CreateValidProcessRequest()
     {
         var receiptRequest = _fixture.Build<ReceiptRequest>()
-            .With(r => r.ftCashBoxID, "TEST-CASHBOX-001")
+            .With(r => r.ftCashBoxID, Guid.NewGuid())
             .With(r => r.cbReceiptReference, "TEST-RECEIPT-001")
             .With(r => r.cbChargeItems, new List<ChargeItem>
             {
                 new ChargeItem
                 {
                     Description = "Test Item",
-                    Quantity = 1.0,
-                    Amount = 100.0,
-                    VATRate = 21.0
+                    Quantity = 1.0m,
+                    Amount = 100.0m,
+                    VATRate = 21.0m
                 }
             })
             .Create();

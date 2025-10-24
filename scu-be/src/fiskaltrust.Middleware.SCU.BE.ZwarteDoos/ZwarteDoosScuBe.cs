@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -19,7 +19,7 @@ public class ZwarteDoosScuBe : IBESSCD, IZwarteDoosScuBe
     private readonly ZwarteDoosFactory _zwarteDoosFactory;
     private readonly ILogger<ZwarteDoosScuBe> _logger;
 
-    public ZwarteDoosScuBe(ILogger<ZwarteDoosScuBe> logger, ZwarteDoosScuConfiguration configuration)
+    public ZwarteDoosScuBe(ILogger<ZwarteDoosScuBe> logger, ILoggerFactory loggerFactory, ZwarteDoosScuConfiguration configuration)
     {
         _logger = logger;
         _configuration = configuration;
@@ -27,7 +27,7 @@ public class ZwarteDoosScuBe : IBESSCD, IZwarteDoosScuBe
         var handler = new HttpClientHandler();
         _httpClient = new HttpClient(handler);
         _zwarteDoosFactory = new ZwarteDoosFactory(
-            logger.CreateLogger<ZwarteDoosFactory>(), 
+            loggerFactory.CreateLogger<ZwarteDoosFactory>(), 
             _httpClient, 
             _configuration);
     }
@@ -172,7 +172,7 @@ public class ZwarteDoosScuBe : IBESSCD, IZwarteDoosScuBe
         // This is a simplified conversion - real implementation would need more detailed mapping
         return new SubmitInvoiceRequest
         {
-            ftCashBoxIdentification = receiptRequest.ftCashBoxID,
+            ftCashBoxIdentification = receiptRequest.ftCashBoxID?.ToString() ?? "",
             InvoiceMoment = DateTime.UtcNow, // TODO: Extract from receipt
             Series = "REC", // TODO: Extract from receipt
             InvoiceNumber = receiptRequest.cbReceiptReference ?? Guid.NewGuid().ToString(),

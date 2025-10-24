@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
@@ -17,7 +17,7 @@ public class ZwarteDoosDemo
     private readonly ZwarteDoosScuBe _scu;
     private readonly ILogger<ZwarteDoosDemo> _logger;
 
-    public ZwarteDoosDemo(ILogger<ZwarteDoosDemo> logger)
+    public ZwarteDoosDemo(ILogger<ZwarteDoosDemo> logger, ILoggerFactory loggerFactory)
     {
         _logger = logger;
         
@@ -31,8 +31,8 @@ public class ZwarteDoosDemo
             EnableLogging = true
         };
 
-        var scuLogger = logger.CreateLogger<ZwarteDoosScuBe>();
-        _scu = new ZwarteDoosScuBe(scuLogger, configuration);
+        var scuLogger = loggerFactory.CreateLogger<ZwarteDoosScuBe>();
+        _scu = new ZwarteDoosScuBe(scuLogger, loggerFactory, configuration);
     }
 
     public async Task<SubmitResponse> DemoInvoiceSubmission()
@@ -123,16 +123,16 @@ public class ZwarteDoosDemo
             // Create a demo receipt request (simplified for demo purposes)
             var receiptRequest = new ReceiptRequest
             {
-                ftCashBoxID = "DEMO-CASHBOX-BE-001",
+                ftCashBoxID = Guid.NewGuid(),
                 cbReceiptReference = $"DEMO-RECEIPT-{DateTime.UtcNow:yyyyMMddHHmmss}",
                 cbChargeItems = new List<ChargeItem>
                 {
                     new ChargeItem
                     {
                         Description = "Belgian Waffle",
-                        Quantity = 2.0,
-                        Amount = 10.0,
-                        VATRate = 21.0
+                        Quantity = 2.0m,
+                        Amount = 10.0m,
+                        VATRate = 21.0m
                     }
                 }
             };

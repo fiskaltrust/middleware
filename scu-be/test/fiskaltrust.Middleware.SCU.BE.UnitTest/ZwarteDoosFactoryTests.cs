@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.BE.UnitTest;
 
