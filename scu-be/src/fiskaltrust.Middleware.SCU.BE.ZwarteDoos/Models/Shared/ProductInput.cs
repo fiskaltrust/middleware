@@ -26,7 +26,7 @@ public class ProductInput
     public required decimal Quantity { get; set; }
 
     [JsonPropertyName("quantityType")]
-    public required string QuantityType { get; set; }
+    public required QuantityType QuantityType { get; set; }
 
     [JsonPropertyName("negQuantityReason")]
     public string? NegQuantityReason { get; set; }

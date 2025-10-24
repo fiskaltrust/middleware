@@ -96,11 +96,8 @@ public class ZwarteDoosApiClient
         {
             throw new HttpRequestException($"ZwarteDoos API request failed with status {response.StatusCode}: {responseBody}");
         }
-        var graphQLResponse = JsonSerializer.Deserialize<GraphQLResponse<T>>(responseBody, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-        if (graphQLResponse == null || graphQLResponse.Data == null)
+        var graphQLResponse = JsonSerializer.Deserialize<GraphQLResponse<T>>(responseBody);
+        if (graphQLResponse == null)
         {
             throw new InvalidOperationException("GraphQL response contains no data");
         }

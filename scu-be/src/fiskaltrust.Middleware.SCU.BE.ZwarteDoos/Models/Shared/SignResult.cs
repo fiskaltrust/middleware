@@ -20,7 +20,7 @@ public class SignResult
     public required DateTime PosDateTime { get; set; }
 
     [JsonPropertyName("posSwVersion")]
-    public required string PosSwVersion { get; set; }
+    public string? PosSwVersion { get; set; }
 
     [JsonPropertyName("terminalId")]
     public required string TerminalId { get; set; }

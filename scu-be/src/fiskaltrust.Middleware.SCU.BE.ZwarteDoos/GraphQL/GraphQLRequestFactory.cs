@@ -28,7 +28,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<OrderInput>
         {
             Query = @"mutation SignOrder($data: OrderInput!, $isTraining: Boolean!) {
-  signOrder(data: $data, isTraining: $isTraining) {
+  signResult: signOrder(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -97,7 +97,7 @@ public class GraphQLRequestFactory
   $data: CostCenterChangeInput!
   $isTraining: Boolean!
 ) {
-  signCostCenterChange(data: $data, isTraining: $isTraining) {
+signResult: signCostCenterChange(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -163,7 +163,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<PreBillInput>
         {
             Query = @"mutation SignPreBill($data: PreBillInput!, $isTraining: Boolean!) {
-  signPreBill(data: $data, isTraining: $isTraining) {
+ signResult: signPreBill(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -229,7 +229,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<SaleInput>
         {
             Query = @"mutation SignSale($data: SaleInput!, $isTraining: Boolean!) {
-  signSale(data: $data, isTraining: $isTraining) {
+  signResult: signSale(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -308,7 +308,7 @@ public class GraphQLRequestFactory
   $data: PaymentCorrectionInput!
   $isTraining: Boolean!
 ) {
-  signPaymentCorrection(data: $data, isTraining: $isTraining) {
+  signResult: signPaymentCorrection(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -374,7 +374,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<MoneyInOutInput>
         {
             Query = @"mutation SignMoneyInOut($data: MoneyInOutInput!, $isTraining: Boolean!) {
-  signMoneyInOut(data: $data, isTraining: $isTraining) {
+  signResult: signMoneyInOut(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -440,7 +440,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<DrawerOpenInput>
         {
             Query = @"mutation SignDrawerOpen($data: DrawerOpenInput!, $isTraining: Boolean!) {
-  signDrawerOpen(data: $data, isTraining: $isTraining) {
+  signResult: signDrawerOpen(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -506,7 +506,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<InvoiceInput>
         {
             Query = @"mutation SignInvoice($data: InvoiceInput!, $isTraining: Boolean!) {
-  signInvoice(data: $data, isTraining: $isTraining) {
+  signResult: signInvoice(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -572,7 +572,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<WorkInOutInput>
         {
             Query = @"mutation SignWorkIn($data: WorkInOutInput!, $isTraining: Boolean!) {
-  signWorkIn(data: $data, isTraining: $isTraining) {
+  signResult: signWorkIn(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -638,7 +638,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<WorkInOutInput>
         {
             Query = @"mutation SignWorkOut($data: WorkInOutInput!, $isTraining: Boolean!) {
-  signWorkOut(data: $data, isTraining: $isTraining) {
+  signResult: signWorkOut(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -707,7 +707,7 @@ public class GraphQLRequestFactory
   $data: ReportTurnoverXInput!
   $isTraining: Boolean!
 ) {
-  signReportTurnoverX(data: $data, isTraining: $isTraining) {
+  signResult: signReportTurnoverX(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -776,7 +776,7 @@ public class GraphQLRequestFactory
   $data: ReportTurnoverZInput!
   $isTraining: Boolean!
 ) {
-  signReportTurnoverZ(data: $data, isTraining: $isTraining) {
+  signResult: signReportTurnoverZ(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -842,7 +842,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<ReportUserXInput>
         {
             Query = @"mutation SignReportUserX($data: ReportUserXInput!, $isTraining: Boolean!) {
-  signReportUserX(data: $data, isTraining: $isTraining) {
+  signResult: signReportUserX(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -908,7 +908,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<ReportUserZInput>
         {
             Query = @"mutation SignReportUserZ($data: ReportUserZInput!, $isTraining: Boolean!) {
-  signReportUserZ(data: $data, isTraining: $isTraining) {
+  signResult: signReportUserZ(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime
@@ -974,7 +974,7 @@ public class GraphQLRequestFactory
         return new GraphQLMutationRequest<CopyInput>
         {
             Query = @"mutation SignCopy($data: CopyInput!, $isTraining: Boolean!) {
-  signCopy(data: $data, isTraining: $isTraining) {
+  signResult: signCopy(data: $data, isTraining: $isTraining) {
     posId
     posFiscalTicketNo
     posDateTime

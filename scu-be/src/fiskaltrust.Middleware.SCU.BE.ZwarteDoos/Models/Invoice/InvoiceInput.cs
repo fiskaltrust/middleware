@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Invoice;
 
 public class InvoiceInput : BaseInputData
 {
-    [JsonPropertyName("InvoiceNo")]
+    [JsonPropertyName("invoiceNo")]
     public required string InvoiceNo { get; set; }
 
     [JsonPropertyName("customerVatNo")]
@@ -18,6 +18,6 @@ public class InvoiceInput : BaseInputData
     [JsonPropertyName("costCenter")]
     public CostCenterInput? CostCenter { get; set; }
 
-    [JsonPropertyName("fdmRef")]
-    public required List<FdmReferenceInput> FdmRef { get; set; }
+    [JsonPropertyName("fdmRefs")]
+    public required List<FdmReferenceInput> FdmRefs { get; set; }
 }
