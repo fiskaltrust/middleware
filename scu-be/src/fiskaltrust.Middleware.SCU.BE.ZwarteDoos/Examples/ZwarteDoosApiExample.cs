@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Examples;
 
@@ -150,6 +151,113 @@ public class ZwarteDoosApiExample
 
             var userZReport = await apiClient.ReportUserZAsync(userZData, isTraining: false);
             Console.WriteLine($"UserZ report generated. FDM ID: {userZReport.FdmRef.FdmId}");
+
+            // Example 7: Employee Work In (clocking in)
+            Console.WriteLine("\nEmployee clocking in...");
+            var workInData = new WorkInOutInput
+            {
+                VatNo = "BE0000000097",
+                EstNo = "2000000042",
+                PosId = "CPOS0031234567",
+                DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
+                TerminalId = "TER-1-BAR",
+                EmployeeId = "75061189702",
+                WorkDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+                WorkType = "WORK_IN"
+            };
+
+            var workInResult = await apiClient.WorkInAsync(workInData, isTraining: false);
+            Console.WriteLine($"Employee clocked in successfully. FDM ID: {workInResult.FdmRef.FdmId}");
+
+            // Example 8: Employee Work Out (clocking out)
+            Console.WriteLine("\nEmployee clocking out...");
+            var workOutData = new WorkInOutInput
+            {
+                VatNo = "BE0000000097",
+                EstNo = "2000000042",
+                PosId = "CPOS0031234567",
+                DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
+                TerminalId = "TER-1-BAR",
+                EmployeeId = "75061189702",
+                WorkDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+                WorkType = "WORK_OUT"
+            };
+
+            var workOutResult = await apiClient.WorkOutAsync(workOutData, isTraining: false);
+            Console.WriteLine($"Employee clocked out successfully. FDM ID: {workOutResult.FdmRef.FdmId}");
+
+            // Example 9: Create Invoice (delivery based on earlier VAT receipts)
+            Console.WriteLine("\nCreating invoice...");
+            var invoiceData = new InvoiceInput
+            {
+                VatNo = "BE0000000097",
+                EstNo = "2000000042",
+                PosId = "CPOS0031234567",
+                PosFiscalTicketNo = 1004,
+                DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
+                TerminalId = "TER-1-BAR",
+                EmployeeId = "75061189702",
+                PosDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+                InvoiceNumber = "INV-2024-001",
+                InvoiceDate = DateTime.Now.ToString("yyyy-MM-dd"),
+                CustomerInfo = new CustomerInfo
+                {
+                    Name = "Test Customer BVBA",
+                    Address = "Test Street 123, 1000 Brussels",
+                    VatNumber = "BE0123456789",
+                    Email = "customer@test.be",
+                    Phone = "+32 2 123 45 67"
+                },
+                RelatedReceipts = new List<RelatedReceipt>
+                {
+                    new RelatedReceipt
+                    {
+                        FdmId = signedOrder.FdmRef.FdmId, // Reference to the order we just created
+                        ReceiptDateTime = signedOrder.PosDateTime,
+                        ReceiptTotal = 37.36m
+                    }
+                },
+                Transaction = new Transaction
+                {
+                    TransactionLines = new List<TransactionLine>
+                    {
+                        new TransactionLine
+                        {
+                            MainProduct = new MainProduct
+                            {
+                                ProductId = "10006",
+                                ProductName = "Dry Martini",
+                                DepartmentId = "10",
+                                DepartmentName = "Aperitifs",
+                                Quantity = 2,
+                                UnitPrice = 12,
+                                Vats = new List<VatInfo> { new VatInfo { Label = "A", Price = 24 } }
+                            },
+                            LineTotal = 24
+                        },
+                        new TransactionLine
+                        {
+                            MainProduct = new MainProduct
+                            {
+                                ProductId = "28007",
+                                ProductName = "Tapas variation",
+                                DepartmentId = "28",
+                                DepartmentName = "Tapas",
+                                Quantity = 4,
+                                UnitPrice = 3.34m,
+                                Vats = new List<VatInfo> { new VatInfo { Label = "B", Price = 13.36m } }
+                            },
+                            LineTotal = 13.36m
+                        }
+                    },
+                    TransactionTotal = 37.36m
+                }
+            };
+
+            var invoiceResult = await apiClient.InvoiceAsync(invoiceData, isTraining: false);
+            Console.WriteLine($"Invoice created successfully. FDM ID: {invoiceResult.FdmRef.FdmId}");
+            Console.WriteLine($"Invoice Number: {invoiceData.InvoiceNumber}");
+            Console.WriteLine($"Customer: {invoiceData.CustomerInfo.Name}");
         }
         catch (Exception ex)
         {
@@ -278,6 +386,91 @@ public class ZwarteDoosApiExample
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to generate user report");
+                throw;
+            }
+        }
+
+        public async Task<string> ClockEmployeeInAsync(string employeeId, bool isTraining = false)
+        {
+            try
+            {
+                _logger.LogInformation("Clocking in employee: {EmployeeId}", employeeId);
+                
+                var workInData = new WorkInOutInput
+                {
+                    VatNo = "BE0000000097",
+                    EstNo = "2000000042",
+                    PosId = "CPOS0031234567",
+                    DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
+                    TerminalId = "TER-1-BAR",
+                    EmployeeId = employeeId,
+                    WorkDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+                    WorkType = "WORK_IN"
+                };
+
+                var result = await _apiClient.WorkInAsync(workInData, isTraining);
+                
+                _logger.LogInformation("Employee clocked in successfully. Employee: {EmployeeId}, FDM ID: {FdmId}", 
+                    employeeId, result.FdmRef.FdmId);
+                
+                return result.DigitalSignature;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to clock in employee: {EmployeeId}", employeeId);
+                throw;
+            }
+        }
+
+        public async Task<string> ClockEmployeeOutAsync(string employeeId, bool isTraining = false)
+        {
+            try
+            {
+                _logger.LogInformation("Clocking out employee: {EmployeeId}", employeeId);
+                
+                var workOutData = new WorkInOutInput
+                {
+                    VatNo = "BE0000000097",
+                    EstNo = "2000000042",
+                    PosId = "CPOS0031234567",
+                    DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
+                    TerminalId = "TER-1-BAR",
+                    EmployeeId = employeeId,
+                    WorkDateTime = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+                    WorkType = "WORK_OUT"
+                };
+
+                var result = await _apiClient.WorkOutAsync(workOutData, isTraining);
+                
+                _logger.LogInformation("Employee clocked out successfully. Employee: {EmployeeId}, FDM ID: {FdmId}", 
+                    employeeId, result.FdmRef.FdmId);
+                
+                return result.DigitalSignature;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to clock out employee: {EmployeeId}", employeeId);
+                throw;
+            }
+        }
+
+        public async Task<string> CreateInvoiceAsync(InvoiceInput invoiceData, bool isTraining = false)
+        {
+            try
+            {
+                _logger.LogInformation("Creating invoice: {InvoiceNumber} for customer: {CustomerName}", 
+                    invoiceData.InvoiceNumber, invoiceData.CustomerInfo?.Name);
+                
+                var result = await _apiClient.InvoiceAsync(invoiceData, isTraining);
+                
+                _logger.LogInformation("Invoice created successfully. Invoice: {InvoiceNumber}, FDM ID: {FdmId}", 
+                    invoiceData.InvoiceNumber, result.FdmRef.FdmId);
+                
+                return result.DigitalSignature;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create invoice: {InvoiceNumber}", invoiceData.InvoiceNumber);
                 throw;
             }
         }

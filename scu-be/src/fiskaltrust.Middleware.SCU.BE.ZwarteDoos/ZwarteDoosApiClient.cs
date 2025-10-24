@@ -1,112 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
-
-public class ZwarteDoosApiClientConfiguration
-{
-    public string DeviceId { get; set; } = null!;
-    public string SharedSecret { get; set; } = null!;
-    public string BaseUrl { get; set; } = "https://sdk.zwartedoos.be";
-    public int TimeoutSeconds { get; set; } = 30;
-}
-
-public class DeviceInfo
-{
-    public string Id { get; set; } = null!;
-}
-
-public class DeviceResponse
-{
-    public DeviceInfo Device { get; set; } = null!;
-}
-
-public class SignOrderResponse
-{
-    public SignOrderData SignOrder { get; set; } = null!;
-}
-
-public class SignReportTurnoverXResponse
-{
-    public SignOrderData SignReportTurnoverX { get; set; } = null!;
-}
-
-public class SignReportTurnoverZResponse
-{
-    public SignOrderData SignReportTurnoverZ { get; set; } = null!;
-}
-
-public class SignReportUserXResponse
-{
-    public SignOrderData SignReportUserX { get; set; } = null!;
-}
-
-public class SignReportUserZResponse
-{
-    public SignOrderData SignReportUserZ { get; set; } = null!;
-}
-
-public class SignOrderData
-{
-    public string PosId { get; set; } = null!;
-    public int PosFiscalTicketNo { get; set; }
-    public string PosDateTime { get; set; } = null!;
-    public string TerminalId { get; set; } = null!;
-    public string DeviceId { get; set; } = null!;
-    public string EventOperation { get; set; } = null!;
-    public FdmRef FdmRef { get; set; } = null!;
-    public string FdmSwVersion { get; set; } = null!;
-    public string DigitalSignature { get; set; } = null!;
-    public decimal BufferCapacityUsed { get; set; }
-    public List<ApiMessage> Warnings { get; set; } = [];
-    public List<ApiMessage> Informations { get; set; } = [];
-    public List<string> Footer { get; set; } = null!;
-}
-
-public class FdmRef
-{
-    public string FdmId { get; set; } = null!;
-    public string FdmDateTime { get; set; } = null!;
-    public string EventLabel { get; set; } = null!;
-    public int EventCounter { get; set; }
-    public int TotalCounter { get; set; }
-}
-
-public class ApiMessage
-{
-    public string Message { get; set; } = null!;
-    public Location[] Locations { get; set; } = Array.Empty<Location>();
-    public Extensions Extensions { get; set; } = null!;
-}
-
-public class Location
-{
-    public int Line { get; set; }
-    public int Column { get; set; }
-}
-
-public class Extensions
-{
-    public string Category { get; set; } = null!;
-    public string Code { get; set; } = null!;
-    public ExtensionData[] Data { get; set; } = Array.Empty<ExtensionData>();
-    public bool ShowPos { get; set; }
-}
-
-public class ExtensionData
-{
-    public string Name { get; set; } = null!;
-    public string Value { get; set; } = null!;
-}
 
 public class ZwarteDoosApiClient
 {
@@ -241,6 +144,204 @@ public class ZwarteDoosApiClient
         return response.SignReportUserZ;
     }
 
+    public async Task<SignOrderData> WorkInAsync(object workData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignWorkIn($data:WorkInOutInput! $isTraining:Boolean!) {signWorkIn(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignWorkIn",
+            variables = new
+            {
+                data = workData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignWorkInResponse>(requestBody, cancellationToken);
+        return response.SignWorkIn;
+    }
+
+    public async Task<SignOrderData> WorkOutAsync(object workData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignWorkOut($data:WorkInOutInput! $isTraining:Boolean!) {signWorkOut(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignWorkOut",
+            variables = new
+            {
+                data = workData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignWorkOutResponse>(requestBody, cancellationToken);
+        return response.SignWorkOut;
+    }
+
+    public async Task<SignOrderData> InvoiceAsync(object invoiceData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignInvoice($data:InvoiceInput! $isTraining:Boolean!) {signInvoice(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignInvoice",
+            variables = new
+            {
+                data = invoiceData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignInvoiceResponse>(requestBody, cancellationToken);
+        return response.SignInvoice;
+    }
+
+    public async Task<SignOrderData> CostCenterChangeAsync(object changeData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignCostCenterChange($data:CostCenterChangeInput! $isTraining:Boolean!) {signCostCenterChange(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignCostCenterChange",
+            variables = new
+            {
+                data = changeData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignCostCenterChangeResponse>(requestBody, cancellationToken);
+        return response.SignCostCenterChange;
+    }
+
+    public async Task<SignOrderData> PreBillAsync(object billData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignPreBill($data:PreBillInput! $isTraining:Boolean!) {signPreBill(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignPreBill",
+            variables = new
+            {
+                data = billData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignPreBillResponse>(requestBody, cancellationToken);
+        return response.SignPreBill;
+    }
+
+    public async Task<SignSaleData> SaleAsync(object saleData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignSale($data:SaleInput! $isTraining:Boolean!) {signSale(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature shortSignature verificationUrl vatCalc {label rate taxableAmount vatAmount totalAmount outOfScope} bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignSale",
+            variables = new
+            {
+                data = saleData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignSaleResponse>(requestBody, cancellationToken);
+        return response.SignSale;
+    }
+
+    public async Task<SignOrderData> PaymentCorrectionAsync(object correctionData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignPaymentCorrection($data:PaymentCorrectionInput! $isTraining:Boolean!) {signPaymentCorrection(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignPaymentCorrection",
+            variables = new
+            {
+                data = correctionData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignPaymentCorrectionResponse>(requestBody, cancellationToken);
+        return response.SignPaymentCorrection;
+    }
+
+    public async Task<SignOrderData> MoneyInOutAsync(object moneyData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignMoneyInOut($data:MoneyInOutInput! $isTraining:Boolean!) {signMoneyInOut(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignMoneyInOut",
+            variables = new
+            {
+                data = moneyData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignMoneyInOutResponse>(requestBody, cancellationToken);
+        return response.SignMoneyInOut;
+    }
+
+    public async Task<SignOrderData> DrawerOpenAsync(object drawerData, bool isTraining = false, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            query = "mutation SignDrawerOpen($data:DrawerOpenInput! $isTraining:Boolean!) {signDrawerOpen(data: $data isTraining: $isTraining) {posId posFiscalTicketNo posDateTime terminalId deviceId eventOperation fdmRef {fdmId fdmDateTime eventLabel eventCounter totalCounter} fdmSwVersion digitalSignature bufferCapacityUsed warnings {message locations {line column} extensions {category code data {name value} showPos}} informations {message locations {line column} extensions {category code data {name value} showPos}} footer }}",
+            operationName = "SignDrawerOpen",
+            variables = new
+            {
+                data = drawerData,
+                isTraining = isTraining
+            }
+        };
+
+        var requestBody = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        var response = await ExecuteGraphQLRequestAsync<SignDrawerOpenResponse>(requestBody, cancellationToken);
+        return response.SignDrawerOpen;
+    }
+
     private async Task<T> ExecuteGraphQLRequestAsync<T>(string requestBody, CancellationToken cancellationToken)
     {
         var url = $"{_configuration.BaseUrl}/{_configuration.DeviceId}/graphql";
@@ -313,17 +414,4 @@ public class ZwarteDoosApiClient
     {
         _httpClient?.Dispose();
     }
-}
-
-internal class GraphQLResponse<T>
-{
-    public T? Data { get; set; }
-    public GraphQLError[]? Errors { get; set; }
-}
-
-internal class GraphQLError
-{
-    public string Message { get; set; } = null!;
-    public Location[]? Locations { get; set; }
-    public string[]? Path { get; set; }
 }
