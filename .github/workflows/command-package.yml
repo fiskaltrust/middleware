@@ -66,7 +66,7 @@ jobs:
           edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
-            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/approve/yellow)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ needs.package.outputs.version }}/approve/yellow)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
   deploy:
     if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
@@ -99,7 +99,7 @@ jobs:
           edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
-            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ needs.package.outputs.version }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
   failure:
     needs:

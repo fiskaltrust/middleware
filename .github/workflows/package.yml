@@ -15,11 +15,17 @@ on:
       deploySandbox:
         type: boolean
         default: false
+    outputs:
+      version:
+        description: "The version of the package"
+        value: ${{ jobs.package.outputs.version }}
 
 jobs:
   package:
     name: Package
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.package.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,10 +66,14 @@ jobs:
           azureKeyVaultTenantId: "${{ secrets.CODESIGNING_AZURE_KEY_VAULT_TENANT_ID }}"
           azureKeyVaultClientSecret: "${{ secrets.CODESIGNING_AZURE_KEY_VAULT_SECRET }}"
 
-      - uses: ./.github/actions/package
+      - id: package
+        uses: ./.github/actions/package
         with:
           path: ${{ inputs.directory }}
           project: ${{ inputs.pattern }}
+
+      - name: Set run title
+        run: echo "::notice title=Package Version::${{ steps.package.outputs.version }}"
 
   deploy:
     if: inputs.deploySandbox
