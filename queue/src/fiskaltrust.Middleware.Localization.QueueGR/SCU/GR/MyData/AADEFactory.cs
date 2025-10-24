@@ -359,7 +359,7 @@ public class AADEFactory
                 continue;
             }
 
-            // If no mapping found, throw exception
+            // If no mapping found, throw exception. To add new mappings based on the category in the official mydata repo. At this stage we do a 1:1 mapping from description in the given original table (e.g. withholding) to the mydata category.
             throw new Exception($"No withholding tax, fee, stamp duty, or other tax mapping found for description: '{item.Description}'. " +
                               "Please use one of the supported Greek tax descriptions or add a new mapping.");
         }
