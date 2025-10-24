@@ -373,7 +373,6 @@ public static class SpecialTaxMappings
 
     public static bool IsSpecialTaxItem(ChargeItem chargeItem)
     {
-        var typeOfService = ((long)chargeItem.ftChargeItemCase >> 4) & 0xF;
-        return typeOfService == 0xF;
+        return chargeItem.ftChargeItemCase.IsTypeOfService((ChargeItemCaseTypeOfService) 0xF0);
     }
 }
