@@ -149,7 +149,6 @@ jobs:
 
       - name:  Run launcher,send requests, and stop
         shell: pwsh
-        continue-on-error: true
         run: |
           #....Run launcher....
           Write-Host "Starting launcher..."
