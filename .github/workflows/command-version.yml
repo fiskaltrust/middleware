@@ -12,7 +12,7 @@ jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
-      new-version: ${{ steps.capture-version.outputs.version }}
+      new-version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout target branch
         uses: actions/checkout@v4
@@ -20,6 +20,12 @@ jobs:
           fetch-depth: 0
           ref: refs/heads/${{ github.event.client_payload.pull_request.head.ref }}
           token: ${{ secrets.REPOSITORY_WRITE_PAT }}
+
+      - name: Fail if not on release branch
+        if: (!startsWith(github.event.client_payload.pull_request.head.ref, 'release/'))
+        run: |
+          echo "This command can only be run on release branches."
+          exit 1
 
       - name: Install nbgv
         run: dotnet tool update -g nbgv
@@ -32,9 +38,11 @@ jobs:
 
       - name: Update version (nbgv prepare-release)
         if: startsWith(github.event.client_payload.pull_request.head.ref, 'release/')
+        id: version
         run: |
           CURRENT_VERSION=$(nbgv get-version -f json | jq -r '.Version')
           nbgv set-version "$CURRENT_VERSION"
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Push updated version
         if: startsWith(github.event.client_payload.pull_request.head.ref, 'release/')
@@ -42,12 +50,6 @@ jobs:
           git add version.json
           git commit -m "Update version to full release" || echo "No changes to commit"
           git push origin HEAD
-
-      - name: Capture version
-        id: capture-version
-        run: |
-          NEW_VERSION=$(nbgv get-version -f json | jq -r '.Version')
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
   success:
     needs:
