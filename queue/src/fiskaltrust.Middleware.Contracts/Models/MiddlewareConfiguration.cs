@@ -14,9 +14,9 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public bool IsSandbox { get; set; }
         public string ServiceFolder { get; set; }
 // Looks like this can cause troubles on android
-#if !ANDROID
-        public Action<string> OnMessage { get; set; }
-#endif
+//#if !ANDROID
+//        public Action<string> OnMessage { get; set; }
+//#endif
         public string ProcessingVersion { get; set; }
         public string AssemblyName { get; set; }
         public Version AssemblyVersion { get; set; }
