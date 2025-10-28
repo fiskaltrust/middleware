@@ -1,8 +1,12 @@
-﻿using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa;
 
-public class Gipuzkoa : ITicketBaiTerritory
+public class TicketBaiGipuzkoaTerritory : ITicketBaiTerritory
 {
     public string PolicyIdentifier => "https://www.gipuzkoa.eus/ticketbai/sinadura/";
 
@@ -25,4 +29,7 @@ public class Gipuzkoa : ITicketBaiTerritory
     public string SubmitZuzendu => "/sarrerak/zuzendu-alta";
 
     public string CancelZuzendu => "/sarrerak/zuzendu-baja";
+
+    public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers) { }
+    public ByteArrayContent GetContent(TicketBaiRequest request, string content) => new StringContent(content, Encoding.UTF8, "application/xml");
 }

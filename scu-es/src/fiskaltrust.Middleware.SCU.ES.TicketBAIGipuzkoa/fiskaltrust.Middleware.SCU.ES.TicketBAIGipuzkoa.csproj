@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>The fiskaltrust Middleware implementation of the Ticket BAI SCU for Spain (Basque).</Description>
+        <TargetFrameworks>net6;net8</TargetFrameworks>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.76-rc1" />
+        <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../fiskaltrust.Middleware.SCU.ES.TicketBAI.Common/fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.csproj" />
+    </ItemGroup>
+
+    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+        </ItemGroup>
+    </Target>
+</Project>

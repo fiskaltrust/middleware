@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa;
 
 public class ScuBootstrapper : IMiddlewareBootstrapper
 {

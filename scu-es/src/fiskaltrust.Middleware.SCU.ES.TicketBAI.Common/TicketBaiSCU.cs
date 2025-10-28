@@ -10,15 +10,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Text.Json;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using Microsoft.Extensions.Logging;
 using System.Xml;
 
 #pragma warning disable IDE0052
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
 public class TicketBaiSCU : IESSSCD
 {
@@ -31,17 +31,11 @@ public class TicketBaiSCU : IESSSCD
     private readonly Uri _baseAddress;
     private readonly Uri _qrCodeBaseAddress;
 
-    public TicketBaiSCU(ILogger<TicketBaiSCU> logger, TicketBaiSCUConfiguration configuration)
+    public TicketBaiSCU(ILogger<TicketBaiSCU> logger, TicketBaiSCUConfiguration configuration, ITicketBaiTerritory ticketBaiTerritory)
     {
         _logger = logger;
         _configuration = configuration;
-        _ticketBaiTerritory = configuration.TicketBaiTerritory switch
-        {
-            TicketBaiTerritory.Araba => new Araba(),
-            TicketBaiTerritory.Bizkaia => new Bizkaia(),
-            TicketBaiTerritory.Gipuzkoa => new Gipuzkoa(),
-            _ => throw new Exception("Not supported"),
-        };
+        _ticketBaiTerritory = ticketBaiTerritory;
         _baseAddress = new Uri(_ticketBaiTerritory.SandboxEndpoint);
         _qrCodeBaseAddress = new Uri(_ticketBaiTerritory.QrCodeSandboxValidationEndpoint);
 
@@ -60,83 +54,23 @@ public class TicketBaiSCU : IESSSCD
     public async Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request)
     {
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
-        if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
-        {
-            ticketBaiRequest.Sujetos.Emisor.NIF = "A99807000";
-            ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = "yDhFHBTxpf6J3eD79i9eawNbaLRb22";
-        }
+        ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
+        ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
+
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-        if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
-        {
-            var rawContent = $"""
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<lrpjfecsgap:LROEPJ240FacturasEmitidasConSGAltaPeticion
-	xmlns:lrpjfecsgap="https://www.batuz.eus/fitxategiak/batuz/LROE/esquemas/LROE_PJ_240_1_1_FacturasEmitidas_ConSG_AltaPeticion_V1_0_2.xsd">
-	<Cabecera>
-		<Modelo>240</Modelo>
-		<Capitulo>1</Capitulo>
-		<Subcapitulo>1.1</Subcapitulo>
-		<Operacion>A00</Operacion>
-		<Version>1.0</Version>
-		<Ejercicio>{DateTime.UtcNow.Year.ToString()}</Ejercicio>
-		<ObligadoTributario>
-	        <NIF>{ticketBaiRequest.Sujetos.Emisor.NIF}</NIF>
-            <ApellidosNombreRazonSocial>{ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial}</ApellidosNombreRazonSocial>
-		</ObligadoTributario>
-	</Cabecera>
-	<FacturasEmitidas>
-		<FacturaEmitida>
-			<TicketBai>{Convert.ToBase64String(Encoding.UTF8.GetBytes(content))}</TicketBai>
-		</FacturaEmitida>
-	</FacturasEmitidas>
-</lrpjfecsgap:LROEPJ240FacturasEmitidasConSGAltaPeticion>
-""";
-            var requestContent = new ByteArrayContent(Compress(rawContent));
-            requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            requestContent.Headers.Add("Content-Encoding", "gzip");
 
-            var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
-            {
-                Content = requestContent
-            };
-            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-version", "1.0");
-            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
-            // TODO which year needs to be transmitted?
-            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data",
-                    JsonSerializer.Serialize(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
-            var response = await _httpClient.SendAsync(httpRequestHeaders);
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var result = GetResponseFromContent(responseContent, ticketBaiRequest);
-            result.RequestContent = content;
-            return result;
-        }
-        else
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
         {
-            var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
-            {
-                Content = new StringContent(content, Encoding.UTF8, "application/xml")
-            };
-            var response = await _httpClient.SendAsync(httpRequestHeaders);
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var result = GetResponseFromContent(responseContent, ticketBaiRequest);
-            result.RequestContent = content;
-            return result;
-        }
-    }
+            Content = _ticketBaiTerritory.GetContent(ticketBaiRequest, content)
+        };
+        _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
 
-    public byte[] Compress(string data)
-    {
-        var bytes = Encoding.UTF8.GetBytes(data);
-        using (var compressedStream = new MemoryStream())
-        {
-            using (var zipStream = new GZipStream(compressedStream, CompressionMode.Compress))
-            {
-                zipStream.Write(bytes, 0, bytes.Length);
-                zipStream.Close();
-                return compressedStream.ToArray();
-            }
-        }
+        var response = await _httpClient.SendAsync(httpRequestMessage);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var result = GetResponseFromContent(responseContent, ticketBaiRequest);
+        result.RequestContent = content;
+        return result;
     }
 
     public async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
