@@ -14,6 +14,6 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(TicketBaiSCUConfiguration.FromConfiguration(Configuration));
-        services.AddScoped<IESSSCD, TicketBaiSCU>();
+        services.AddScoped<IESSSCD, TicketBaiBizkaiaSCU>();
     }
 }
