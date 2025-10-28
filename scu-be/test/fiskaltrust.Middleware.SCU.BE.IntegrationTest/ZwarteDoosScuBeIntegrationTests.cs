@@ -24,105 +24,16 @@ using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Social;
 
 namespace fiskaltrust.Middleware.SCU.BE.IntegrationTest;
 
-public class ZwarteDoosScuBeIntegrationTests
+public class ZwarteDoosScuBeIntegrationTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
+    private readonly HttpClient _httpClient;
+    private readonly ZwarteDoosApiClient _sut; // System Under Test
 
     public ZwarteDoosScuBeIntegrationTests(ITestOutputHelper output)
     {
         _output = output;
-    }
-
-    private static string FormatByteArray(byte[] bytes)
-    {
-        StringBuilder sb = new StringBuilder();
-        string sep = string.Empty;
-        foreach (byte b in bytes)
-        {
-            sb.Append(sep);
-            sb.Append(b.ToString("x2"));
-            sep = ":";
-        }
-        return sb.ToString();
-    }
-
-    [Fact]
-    public async Task FdmAuthentication_ShouldGenerateValidAuthorizationHeader()
-    {
-        // Arrange
-        string url = "https://sdk.zwartedoos.be/FDM02030462/graphql";
-        string sharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b";
-        string requestBody = "{\"query\":\"{device{id}}\"}";
-
-        // Get the current time
-        DateTime dt = DateTime.Now;
-        string gmt = dt.ToUniversalTime().ToString("ddd, dd MMM yyyy HH:mm:ss", CultureInfo.InvariantCulture) + " GMT";
-
-        _output.WriteLine("Making a request using FDM Authentication");
-
-        // Act
-        _output.WriteLine("Step 1: build the string");
-        string stringToHash = "POST" + gmt + sharedSecret + requestBody;
-        _output.WriteLine($"   {stringToHash}");
-
-        _output.WriteLine("Step 2: calculate the SHA hash on the string");
-        byte[] hash;
-        using (SHA1 sha = SHA1.Create())
-            hash = sha.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
-        _output.WriteLine($"   {FormatByteArray(hash)}");
-
-        _output.WriteLine("Step 3: base64 encode the hash bytes");
-        string base64EncodedHash = Convert.ToBase64String(hash);
-        _output.WriteLine($"   {base64EncodedHash}");
-
-        _output.WriteLine("Step 4: (option 1) complete the authorization header and make sure to add the date header");
-        _output.WriteLine($"   Date: {gmt}");
-        _output.WriteLine($"   Authorization: FDM {base64EncodedHash}");
-
-        _output.WriteLine("Step 4: (option 2) if you can't access the date header, combine the date and hash in the authorization header");
-        _output.WriteLine($"   Authorization: FDM {dt.ToUniversalTime():yyyyMMddHHmmss}.{base64EncodedHash}");
-
-        // Assert - Verify that the authentication components are properly generated
-        stringToHash.Should().NotBeNullOrEmpty();
-        hash.Should().NotBeNull().And.HaveCount(20); // SHA1 produces 20 bytes
-        base64EncodedHash.Should().NotBeNullOrEmpty();
-        base64EncodedHash.Should().MatchRegex(@"^[A-Za-z0-9+/]*={0,2}$"); // Valid base64 pattern
-
-        // Make the actual HTTP request
-        _output.WriteLine("Make the request");
-        using (var httpClient = new HttpClient())
-        {
-            httpClient.Timeout = TimeSpan.FromMilliseconds(8000);
-
-            var httpContent = new StringContent(requestBody, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = httpContent
-            };
-
-            request.Headers.Add("Date", gmt);
-            request.Headers.Add("Authorization", $"FDM {base64EncodedHash}");
-
-            HttpResponseMessage response = await httpClient.SendAsync(request);
-            string responseBody = await response.Content.ReadAsStringAsync();
-
-            _output.WriteLine($"   Request: {requestBody}");
-            _output.WriteLine($"   Reply: {responseBody}");
-
-            // Assert - Verify the request was processed (even if authentication fails, we should get a response)
-            response.Should().NotBeNull();
-            responseBody.Should().NotBeNull();
-
-            // The response should be either successful or contain an authentication error
-            // We don't assert on success since this might be a test environment
-            response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
-        }
-    }
-
-    [Fact]
-    public async Task ZwarteDoosApiClient_ShouldGetDeviceInfo()
-    {
-        // Arrange
+        
         var configuration = new ZwarteDoosApiClientConfiguration
         {
             DeviceId = "FDM02030462",
@@ -132,12 +43,21 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
+        
+        _httpClient = new HttpClient();
+        _sut = new ZwarteDoosApiClient(configuration, _httpClient, logger);
+    }
 
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+    }
 
+    [Fact]
+    public async Task ZwarteDoosApiClient_ShouldGetDeviceInfo()
+    {
         // Act
-        var deviceInfo = await apiClient.GetDeviceIdAsync();
+        var deviceInfo = await _sut.GetDeviceIdAsync();
 
         // Assert
         deviceInfo.Should().NotBeNull();
@@ -150,36 +70,23 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateReportTurnoverX()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var reportData = new ReportTurnoverXInput
         {
+            Language = Language.NL,
             VatNo = "BE0000000097",
             EstNo = "2000000042",
             PosId = "CPOS0031234567",
-            DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
-            TerminalId = "TER-1-BAR",
-            EmployeeId = "75061189702",
-            BookingDate = DateOnly.FromDateTime(DateTime.Today),
-            BookingPeriodId = Guid.NewGuid(),
-            FdmDevices = [],
-            Language = Language.NL,
-            PosDateTime = DateTime.Now,
-            PosDevices = [],
             PosFiscalTicketNo = 1001233,
+            PosDateTime = DateTime.Now,
             PosSwVersion = "123",
+            TerminalId = "TER-1-BAR",
+            DeviceId = "b54a614f-39cc-4a7b-bd9f-aa6b693d769c",
+            BookingPeriodId = Guid.NewGuid(),
+            BookingDate = DateOnly.FromDateTime(DateTime.Today),
             TicketMedium = TicketMedium.PAPER,
+            EmployeeId = "75061189702",
+            FdmDevices = [],
+            PosDevices = [],
             Turnover = new TurnoverInput
             {
                 Departments = [],
@@ -194,7 +101,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var reportResult = await apiClient.ReportTurnoverXAsync(reportData, isTraining: false);
+        var reportResult = await _sut.ReportTurnoverXAsync(reportData, isTraining: false);
         reportResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -213,19 +120,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateReportTurnoverZ()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var reportData = new ReportTurnoverZInput
         {
             VatNo = "BE0000000097",
@@ -259,7 +153,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var reportResult = await apiClient.ReportTurnoverZAsync(reportData, isTraining: false);
+        var reportResult = await _sut.ReportTurnoverZAsync(reportData, isTraining: false);
         reportResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -278,19 +172,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateReportUserX()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var reportData = new ReportUserXInput
         {
             VatNo = "BE0000000097",
@@ -312,8 +193,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var reportResult = await apiClient.ReportUserXAsync(reportData, isTraining: false);
-
+        var reportResult = await _sut.ReportUserXAsync(reportData, isTraining: false);
         reportResult.Errors.Should().BeNullOrEmpty(because: JsonSerializer.Serialize(reportResult.Errors, new JsonSerializerOptions
         {
             WriteIndented = true
@@ -335,19 +215,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateReportUserZ()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var reportData = new ReportUserZInput
         {
             VatNo = "BE0000000097",
@@ -371,8 +238,9 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var reportResult = await apiClient.ReportUserZAsync(reportData, isTraining: false);
+        var reportResult = await _sut.ReportUserZAsync(reportData, isTraining: false);
         reportResult.Errors.Should().BeNullOrEmpty();
+
         // Assert
         reportResult.Should().NotBeNull();
         reportResult.Data.Should().NotBeNull();
@@ -389,19 +257,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateWorkIn()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var workData = new WorkInOutInput
         {
             VatNo = "BE0000000097",
@@ -420,7 +275,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var workResult = await apiClient.WorkInAsync(workData, isTraining: false);
+        var workResult = await _sut.WorkInAsync(workData, isTraining: false);
         workResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -439,19 +294,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateWorkOut()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var workData = new WorkInOutInput
         {
             VatNo = "BE0000000097",
@@ -470,7 +312,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var workResult = await apiClient.WorkOutAsync(workData, isTraining: false);
+        var workResult = await _sut.WorkOutAsync(workData, isTraining: false);
 
         // Assert
         workResult.Should().NotBeNull();
@@ -488,19 +330,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateInvoice()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var invoiceData = new InvoiceInput
         {
             VatNo = "BE0000000097",
@@ -538,7 +367,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var invoiceResult = await apiClient.InvoiceAsync(invoiceData, isTraining: false);
+        var invoiceResult = await _sut.InvoiceAsync(invoiceData, isTraining: false);
         invoiceResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -557,19 +386,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateCostCenterChange()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var changeData = new CostCenterChangeInput
         {
             VatNo = "BE0000000097",
@@ -661,7 +477,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var changeResult = await apiClient.CostCenterChangeAsync(changeData, isTraining: false);
+        var changeResult = await _sut.CostCenterChangeAsync(changeData, isTraining: false);
         changeResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -680,19 +496,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreatePreBill()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var billData = new PreBillInput
         {
             VatNo = "BE0000000097",
@@ -740,7 +543,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var billResult = await apiClient.PreBillAsync(billData, isTraining: false);
+        var billResult = await _sut.PreBillAsync(billData, isTraining: false);
         billResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -759,19 +562,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateSale()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var saleData = new SaleInput
         {
             Language = Language.NL,
@@ -841,7 +631,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var saleResult = await apiClient.SaleAsync(saleData, isTraining: false);
+        var saleResult = await _sut.SaleAsync(saleData, isTraining: false);
 
         // Assert
         saleResult.Should().NotBeNull();
@@ -864,19 +654,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreatePaymentCorrection()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var correctionData = new PaymentCorrectionInput
         {
             VatNo = "BE0000000097",
@@ -904,7 +681,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var correctionResult = await apiClient.PaymentCorrectionAsync(correctionData, isTraining: false);
+        var correctionResult = await _sut.PaymentCorrectionAsync(correctionData, isTraining: false);
         correctionResult.Errors.Should().BeNullOrEmpty();
 
         // Assert
@@ -923,19 +700,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateMoneyInOut()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var moneyData = new MoneyInOutInput
         {
             VatNo = "BE0000000097",
@@ -955,7 +719,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var moneyResult = await apiClient.MoneyInOutAsync(moneyData, isTraining: false);
+        var moneyResult = await _sut.MoneyInOutAsync(moneyData, isTraining: false);
 
         // Assert
         moneyResult.Should().NotBeNull();
@@ -973,19 +737,6 @@ public class ZwarteDoosScuBeIntegrationTests
     public async Task ZwarteDoosApiClient_ShouldCreateDrawerOpen()
     {
         // Arrange
-        var configuration = new ZwarteDoosApiClientConfiguration
-        {
-            DeviceId = "FDM02030462",
-            SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
-            BaseUrl = "https://sdk.zwartedoos.be",
-            TimeoutSeconds = 8
-        };
-
-        var logger = new XunitLogger<ZwarteDoosApiClient>(_output);
-
-        using var httpClient = new HttpClient();
-        var apiClient = new ZwarteDoosApiClient(configuration, httpClient, logger);
-
         var drawerData = new DrawerOpenInput
         {
             VatNo = "BE0000000097",
@@ -1009,7 +760,7 @@ public class ZwarteDoosScuBeIntegrationTests
         };
 
         // Act
-        var drawerResult = await apiClient.DrawerOpenAsync(drawerData, isTraining: false);
+        var drawerResult = await _sut.DrawerOpenAsync(drawerData, isTraining: false);
 
         // Assert
         drawerResult.Should().NotBeNull();
