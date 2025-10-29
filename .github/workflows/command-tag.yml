@@ -72,7 +72,7 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     needs: [tag]
-    if: success() && needs.tag.outputs.tag != ''
+    if: needs.tag.result == 'success' && needs.tag.outputs.tag != ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,15 +86,20 @@ jobs:
           echo "tag=$tag"
 
           # Extract version from tag (e.g., queue/sqlite/v1.3.78 -> 1.3.78)
+          # Validate tag format contains /v
+          if [[ "$tag" != */v* ]]; then
+            echo "Error: Tag format does not contain '/v': $tag"
+            exit 1
+          fi
           version="${tag##*/v}"
           echo "version=$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-          # Determine if it's a prerelease (contains -rc)
-          if [[ "$version" == *"-rc"* ]]; then
+          # Determine if it's a prerelease (contains -rc, -alpha, -beta, or -preview)
+          if [[ "$version" =~ -(rc|alpha|beta|preview) ]]; then
             echo "prerelease=true"
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
-            release_body="This is a release candidate version."
+            release_body="This is a prerelease version."
           else
             echo "prerelease=false"
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
