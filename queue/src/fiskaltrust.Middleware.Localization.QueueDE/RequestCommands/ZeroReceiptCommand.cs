@@ -175,11 +175,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsTseSelftestRequest [exit].");
                 }
 
-                if (request.IsTseTarDownloadRequest())
-                {
-                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
-                }
-
                 if (request.IsTraining())
                 {
                     processReceiptResponse.Signatures.Add(_signatureFactory.GetSignatureForTraining());
@@ -206,7 +201,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
             finally
             {
+                await PerformTarFileExportasync(queue, queueDE, request, queueItem);
                 _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync [exit].");
+            }
+        }
+
+        private async Task PerformTarFileExportasync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            try
+            {
+                if (request.IsTseTarDownloadRequest())
+                {
+                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "An exception occured while performing the tar export.");
             }
         }
 

@@ -377,30 +377,21 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                         {
                             if (request.Erase)
                             {
-                                var openTransaction = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
-                                if (openTransaction.Any())
+                                var openExports = await _swissbitCloudV2Provider.GetExportsAsync();
+                                var exportDto = openExports.FirstOrDefault(x => x.Id == request.TokenId);
+                                if (exportDto != null)
                                 {
-                                    var list = string.Join(",", openTransaction);
-                                    _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were open: {OpenTransactions}. " +
-                                        "If these transactions are not used anymore and could not be closed automatically by a daily closing receipt, please consider sending a fail-transaction-receipt to cancel them.", list);
+                                    exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
+                                    if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
+                                    {
+                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
+                                    }
                                 }
                                 else
                                 {
-                                    var openExports = await _swissbitCloudV2Provider.GetExportsAsync();
-                                    var exportDto = openExports.FirstOrDefault(x => x.Id == request.TokenId);
-                                    if (exportDto != null)
-                                    {
-                                        exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
-                                        if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
-                                        {
-                                            _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting, as it was already deleted.");
-                                    }
+                                    _logger.LogWarning($"Could not delete log files from TSE after successfully exporting, as it was already deleted.");
                                 }
+                                
                             }
                             sessionResponse.IsValid = true;
                             return sessionResponse;
