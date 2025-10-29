@@ -88,7 +88,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section openTransactions [exit].");
 
 
-                if (request.HasCloseOpenTransactionsOnTseFlag() || _queueDEConfiguration.CloseOpenTSETransactionsOnDailyClosing)
+                if (_queueDEConfiguration.CloseOpenTSETransactionsOnDailyClosing)
                 {
                     //remove all transactions on the tse to enable full tar deletion
                     var tseinfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
