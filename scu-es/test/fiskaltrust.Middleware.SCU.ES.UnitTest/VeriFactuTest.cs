@@ -2,7 +2,6 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
-using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Moq;

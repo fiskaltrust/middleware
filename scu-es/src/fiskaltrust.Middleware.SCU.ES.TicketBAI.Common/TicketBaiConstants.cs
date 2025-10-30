@@ -1,6 +1,6 @@
 ﻿#pragma warning disable IDE0052
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
 public static class TicketBaiConstants
 {

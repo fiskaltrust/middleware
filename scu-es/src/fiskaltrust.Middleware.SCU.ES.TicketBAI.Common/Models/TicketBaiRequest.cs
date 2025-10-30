@@ -5,7 +5,7 @@ using System.Xml.Serialization;
 
 #nullable disable
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Models
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models
 {
     [Serializable]
     [XmlType("TicketBai", AnonymousType = true, Namespace = "urn:ticketbai:emision")]

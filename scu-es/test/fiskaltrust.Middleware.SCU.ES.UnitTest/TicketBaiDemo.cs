@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.UnitTest;
 

@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using System.Globalization;
 
 #pragma warning disable IDE0052
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
 public class TicketBaiFactory
 {

@@ -7,7 +7,7 @@ using FirmaXadesNetCore.Signature.Parameters;
 using FirmaXadesNetCore;
 using System.Security.Cryptography.X509Certificates;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers
 {
     public static class XmlHelpers
     {
