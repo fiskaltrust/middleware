@@ -26,12 +26,12 @@ public class TicketBaiSCU : IESSSCD
 
     private readonly HttpClient _httpClient;
     private readonly TicketBaiFactory _ticketBaiFactory;
-    private readonly ILogger<TicketBaiSCU> _logger;
+    private readonly ILogger _logger;
     private readonly ITicketBaiTerritory _ticketBaiTerritory;
     private readonly Uri _baseAddress;
     private readonly Uri _qrCodeBaseAddress;
 
-    public TicketBaiSCU(ILogger<TicketBaiSCU> logger, TicketBaiSCUConfiguration configuration, ITicketBaiTerritory ticketBaiTerritory)
+    public TicketBaiSCU(ILogger logger, TicketBaiSCUConfiguration configuration, ITicketBaiTerritory ticketBaiTerritory)
     {
         _logger = logger;
         _configuration = configuration;

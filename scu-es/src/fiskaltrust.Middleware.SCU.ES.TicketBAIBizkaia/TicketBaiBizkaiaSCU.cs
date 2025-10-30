@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
 
 public class TicketBaiBizkaiaSCU : TicketBaiSCU
 {
-    public TicketBaiBizkaiaSCU(ILogger<TicketBaiSCU> logger, TicketBaiSCUConfiguration configuration) : base(logger, configuration, new TicketBaiBizkaiaTerritory())
+    public TicketBaiBizkaiaSCU(ILogger<TicketBaiBizkaiaSCU> logger, TicketBaiSCUConfiguration configuration) : base(logger, configuration, new TicketBaiBizkaiaTerritory())
     {
     }
 }
