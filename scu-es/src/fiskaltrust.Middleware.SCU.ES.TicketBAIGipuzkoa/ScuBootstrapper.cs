@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 using Microsoft.Extensions.DependencyInjection;

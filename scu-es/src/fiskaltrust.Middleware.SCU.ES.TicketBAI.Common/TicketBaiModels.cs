@@ -6,11 +6,6 @@ using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
-public interface IESSSCD
-{
-    public Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request);
-}
-
 public class SubmitInvoiceRequest
 {
     public string ftCashBoxIdentification { get; set; } = null!;
