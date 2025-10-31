@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιπτ. β’- Τόκοι - 15%",
+                        Description = "Περιπτ. β'- Τόκοι - 15%",
                         Amount = -15m, // 15% of net amount (80.65 * 0.15 ≈ 12.10, but let's use exact amount)
                         VATRate = 0m,
                         Position = 2
@@ -268,7 +268,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιπτ. β’- Τόκοι - 15%",
+                        Description = "Περιπτ. β'- Τόκοι - 15%",
                         Amount = -121m, // 15% of net amount (806.45 * 0.15 ≈ 121)
                         VATRate = 0m,
                         Position = 2
@@ -512,7 +512,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιπτ. β’- Τόκοι - 15%",
+                        Description = "Περιπτ. β'- Τόκοι - 15%",
                         Amount = -121m, // 15% of net amount (806.45 * 0.15 ≈ 121)
                         VATRate = 0m,
                         Position = 2
@@ -939,7 +939,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
                     new ChargeItem
                     {
                         ftChargeItemCase = (ChargeItemCase)0x47520000000000F0, // TypeOfService = 0xF
-                        Description = "Περιπτ. β’- Τόκοι - 15%",
+                        Description = "Περιπτ. β'- Τόκοι - 15%",
                         Amount = -121m, // 15% of net amount (806.45 * 0.15 ≈ 121)
                         VATRate = 0m,
                         Position = 2
