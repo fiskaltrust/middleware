@@ -14,8 +14,9 @@ on:
 
 jobs:
   test:
+    concurrency: queue-tests
     name: Test
-    runs-on:  windows-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
         with:
           directory: queue/test
           pattern: "UnitTest"
-          args: '--no-build --filter only!=local'
+          args: "--no-build --filter only!=local"
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
@@ -43,7 +44,7 @@ jobs:
         with:
           directory: queue/test
           pattern: "IntegrationTest"
-          args: '--no-build --filter only!=local'
+          args: "--no-build --filter only!=local"
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
