@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
