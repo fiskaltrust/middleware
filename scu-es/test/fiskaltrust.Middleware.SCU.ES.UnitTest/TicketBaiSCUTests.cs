@@ -59,11 +59,11 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                     }
                 }
             };
-            var response = await sut.SubmitInvoiceAsync(request);
+            var response = await sut.SendAsync(request, territory.SubmitInvoices);
             _output.WriteLine(FormatXml(response.ResponseContent));
             response.Succeeded.Should().BeTrue(because: response.ResponseContent);
 
-            var response2 = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            var response2 = await sut.SendAsync(new SubmitInvoiceRequest
             {
                 InvoiceMoment = DateTime.UtcNow,
                 Series = series,
@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                         Quantity = 1
                     }
                 }
-            });
+            }, territory.SubmitInvoices);
 
             _output.WriteLine(FormatXml(response2.ResponseContent));
             response2.Succeeded.Should().BeTrue(because: response2.ResponseContent);

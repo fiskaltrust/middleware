@@ -51,7 +51,7 @@ public class TicketBaiSCU : IESSSCD
         _ticketBaiFactory = new TicketBaiFactory(configuration);
     }
 
-    public async Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request)
+    public async Task<SubmitResponse> SendAsync(SubmitInvoiceRequest request, string endpoint)
     {
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
@@ -60,29 +60,13 @@ public class TicketBaiSCU : IESSSCD
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
 
-        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
         {
             Content = _ticketBaiTerritory.GetContent(ticketBaiRequest, content)
         };
         _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
 
         var response = await _httpClient.SendAsync(httpRequestMessage);
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var result = GetResponseFromContent(responseContent, ticketBaiRequest);
-        result.RequestContent = content;
-        return result;
-    }
-
-    private async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
-    {
-        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
-        var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
-        var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-        var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.CancelInvoices))
-        {
-            Content = new StringContent(content, Encoding.UTF8, "application/xml")
-        };
-        var response = await _httpClient.SendAsync(httpRequestHeaders);
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = GetResponseFromContent(responseContent, ticketBaiRequest);
         result.RequestContent = content;
@@ -161,9 +145,11 @@ public class TicketBaiSCU : IESSSCD
             }).ToList()
         };
 
-        var submitResponse = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
-            ? await CancelInvoiceAsync(submitInvoiceRequest)
-            : await SubmitInvoiceAsync(submitInvoiceRequest);
+        var submitResponse = await SendAsync(
+            submitInvoiceRequest,
+            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                ? _ticketBaiTerritory.SubmitInvoices
+                : _ticketBaiTerritory.CancelInvoices);
 
         if (!submitResponse.Succeeded)
         {
