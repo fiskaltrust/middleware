@@ -1,0 +1,20 @@
+name: Remove meta-no-issue label
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  remove-label:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    name: Remove meta-no-issue label
+    steps:
+      - name: Remove meta-no-issue label from merged PR
+        if: contains(github.event.pull_request.labels.*.name, 'meta-no-issue')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --remove-label "meta-no-issue"
