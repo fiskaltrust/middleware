@@ -109,94 +109,94 @@ queue-sqlite:
 
 queue:
   - changed-files:
-      - any-glob-to-any-files: "queue/**/*"
+      - any-glob-to-any-file: "queue/**/*"
 
 scu-at-atrustsmartcard:
   - changed-files:
-      - any-glob-to-any-files: "scu-at/src/fiskaltrust.Middleware.SCU.AT.ATrustSmartcard/**/*"
+      - any-glob-to-any-file: "scu-at/src/fiskaltrust.Middleware.SCU.AT.ATrustSmartcard/**/*"
 
 scu-at-inmemory:
   - changed-files:
-      - any-glob-to-any-files: "scu-at/src/fiskaltrust.Middleware.SCU.AT.InMemory/**/*"
+      - any-glob-to-any-file: "scu-at/src/fiskaltrust.Middleware.SCU.AT.InMemory/**/*"
 
 scu-at-primesignhsm:
   - changed-files:
-      - any-glob-to-any-files: "scu-at/src/fiskaltrust.Middleware.SCU.AT.PrimeSignHSM/**/*"
+      - any-glob-to-any-file: "scu-at/src/fiskaltrust.Middleware.SCU.AT.PrimeSignHSM/**/*"
 
 scu-de-cryptovision:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.CryptoVision/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.CryptoVision/**/*"
 
 scu-de-deutschefiskal:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal/**/*"
 
 scu-de-dieboldnixdorf:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf/**/*"
 
 scu-de-epson:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.Epson/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.Epson/**/*"
 
 scu-de-fiskalycertified:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified/**/*"
 
 scu-de-inmemory:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.InMemory/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.InMemory/**/*"
 
 scu-de-swissbit:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.Swissbit/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.Swissbit/**/*"
 
 scu-de-swissbitcloud:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-de/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud/**/*"
           - "scu-de/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal/**/*"
 
 scu-de-swissbitcloudv2:
   - changed-files:
-      - any-glob-to-any-files: "scu-de/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2/**/*"
+      - any-glob-to-any-file: "scu-de/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2/**/*"
 
 scu-es-verifactu:
   - changed-files:
-      - any-glob-to-any-files: "scu-es/src/fiskaltrust.Middleware.SCU.ES.VeriFactu/**/*"
+      - any-glob-to-any-file: "scu-es/src/fiskaltrust.Middleware.SCU.ES.VeriFactu/**/*"
 
 scu-es-ticketbaiaraba:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAI.Common/**/*"
           - "scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAIAraba/**/*"
 
 scu-es-ticketbaibizkaia:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAI.Common/**/*"
           - "scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia/**/*"
 
 scu-es-ticketbaigipuzkoa:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAI.Common/**/*"
           - "scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa/**/*"
 
 scu-it-customrtprinter:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.Abstraction/**/*"
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.CustomRTPrinter/**/*"
 
 scu-it-customrtserver:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.Abstraction/**/*"
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.CustomRTServer/**/*"
 
 scu-it-epsonrtprinter:
   - changed-files:
-      - any-glob-to-any-files:
+      - any-glob-to-any-file:
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.Abstraction/**/*"
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter/**/*"
