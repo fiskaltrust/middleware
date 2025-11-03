@@ -27,13 +27,4 @@
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.BE.ZwarteDoos\fiskaltrust.Middleware.SCU.BE.ZwarteDoos.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <None Update="TestCertificates\**">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="TestData\**">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
-
 </Project>

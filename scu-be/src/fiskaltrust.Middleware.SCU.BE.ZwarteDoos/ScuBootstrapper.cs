@@ -4,6 +4,8 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using System;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.ZwartedoosApi;
+using System.Text.Json;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
 
@@ -14,10 +16,8 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<ZwarteDoosScuConfiguration>();
-        services.AddSingleton<ZwarteDoosFactory>();
-        
-        // Register the SCU implementation
+        var scuConfig = JsonSerializer.Deserialize<ZwarteDoosScuConfiguration>(JsonSerializer.Serialize(Configuration));
+        services.AddSingleton(scuConfig);
         services.AddTransient<IBESSCD, ZwarteDoosScuBe>();
     }
 }

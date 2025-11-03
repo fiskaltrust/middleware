@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.ZwartedoosApi;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,32 +29,29 @@ public class ZwarteDoosScuAcceptanceTests : IBESSCDAcceptanceTests
     protected override IBESSCD GetSystemUnderTest(Dictionary<string, object>? configuration = null)
     {
         // Set up the default configuration for ZwarteDoos SCU
-        var config = new ZwarteDoosScuConfiguration
+        var config = new Dictionary<string, object> 
         {
             // Use the correct property names from the actual configuration class
-            ServiceUrl = configuration?.GetValueOrDefault("ServiceUrl", "https://api.zwartedoos.test") as string ?? "https://api.zwartedoos.test",
-            ApiKey = configuration?.GetValueOrDefault("ApiKey", "test-api-key") as string ?? "test-api-key",
-            CompanyId = configuration?.GetValueOrDefault("CompanyId", "test-company") as string ?? "test-company",
-            SandboxMode = true,
-            TimeoutSeconds = 30,
-            EnableLogging = true
+            ["BaseUrl"] = "https://sdk.zwartedoos.be",
+            ["SharedSecret"] = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
+            ["DeviceId"] = "FDM02030462",
+            ["CompanyId"] = configuration?.GetValueOrDefault("CompanyId", "test-company") as string ?? "test-company",
+            ["TimeoutSeconds"] = 30
         };
 
-        // Set up dependency injection
         var serviceCollection = new ServiceCollection();
-        serviceCollection.AddLogging(builder => 
+        serviceCollection.AddLogging(builder =>
         {
             builder.AddConsole();
             builder.SetMinimumLevel(LogLevel.Debug);
         });
-        
-        // Register the ZwarteDoos SCU and its dependencies
-        serviceCollection.AddSingleton(config);
-        serviceCollection.AddSingleton<ZwarteDoosFactory>();
-        serviceCollection.AddSingleton<IBESSCD, ZwarteDoosScuBe>();
-        
-        var serviceProvider = serviceCollection.BuildServiceProvider();
-        
+        var bootStrapper = new ScuBootstrapper
+        {
+            Id = Guid.NewGuid(),
+            Configuration = config
+        };
+        bootStrapper.ConfigureServices(serviceCollection);
+        var serviceProvider = serviceCollection.BuildServiceProvider();     
         return serviceProvider.GetRequiredService<IBESSCD>();
     }
 

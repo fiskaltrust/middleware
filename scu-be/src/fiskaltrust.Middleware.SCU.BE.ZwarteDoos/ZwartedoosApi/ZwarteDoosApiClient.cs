@@ -19,21 +19,21 @@ using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Shared;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Social;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
+namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.ZwartedoosApi;
 
 public class ZwarteDoosApiClient
 {
-    private readonly ZwarteDoosApiClientConfiguration _configuration;
+    private readonly ZwarteDoosScuConfiguration _configuration;
     private readonly HttpClient _httpClient;
 
-    public ZwarteDoosApiClient(ZwarteDoosApiClientConfiguration configuration, HttpClient httpClient, ILogger<ZwarteDoosApiClient> logger)
+    public ZwarteDoosApiClient(ZwarteDoosScuConfiguration configuration, HttpClient httpClient, ILogger<ZwarteDoosApiClient> logger)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _httpClient.Timeout = TimeSpan.FromSeconds(_configuration.TimeoutSeconds);
     }
 
-    public async Task<GraphQLResponse<DeviceResponse>> GetDeviceIdAsync(CancellationToken cancellationToken = default) => await ExecuteGraphQLQueryRequestAsync<DeviceResponse>(GraphQLRequestFactory.CreateQueryDeviceRequest(), cancellationToken);
+    public async Task<GraphQLQueryResponse<DeviceResponse>> GetDeviceIdAsync(CancellationToken cancellationToken = default) => await ExecuteGraphQLQueryRequestAsync<DeviceResponse>(GraphQLRequestFactory.CreateQueryDeviceRequest(), cancellationToken);
 
     public async Task<GraphQLResponse<SignResult>> OrderAsync(OrderInput orderData, bool isTraining = false, CancellationToken cancellationToken = default) => await ExecuteGraphQLMutationRequestAsync(GraphQLRequestFactory.CreateSignOrderRequest(orderData, isTraining), cancellationToken);
 
@@ -66,16 +66,16 @@ public class ZwarteDoosApiClient
     private async Task<GraphQLResponse<SignResult>> ExecuteGraphQLMutationRequestAsync<T>(GraphQLMutationRequest<T> graphQLMutationRequest, CancellationToken cancellationToken)
     {
         var requestBody = JsonSerializer.Serialize(graphQLMutationRequest);
-        return await CallGraphQL<SignResult>(requestBody, cancellationToken);
+        return await CallGraphQL<GraphQLResponse<SignResult>>(requestBody, cancellationToken);
     }
 
-    private async Task<GraphQLResponse<T>> ExecuteGraphQLQueryRequestAsync<T>(GraphQLQueryRequest graphQLQueryRequest, CancellationToken cancellationToken)
+    private async Task<GraphQLQueryResponse<T>> ExecuteGraphQLQueryRequestAsync<T>(GraphQLQueryRequest graphQLQueryRequest, CancellationToken cancellationToken)
     {
         var requestBody = JsonSerializer.Serialize(graphQLQueryRequest);
-        return await CallGraphQL<T>(requestBody, cancellationToken);
+        return await CallGraphQL<GraphQLQueryResponse<T>>(requestBody, cancellationToken);
     }
 
-    private async Task<GraphQLResponse<T>> CallGraphQL<T>(string requestBody, CancellationToken cancellationToken)
+    private async Task<T> CallGraphQL<T>(string requestBody, CancellationToken cancellationToken)
     {
         var url = $"{_configuration.BaseUrl}/{_configuration.DeviceId}/graphql";
         var dateTime = DateTime.Now;
@@ -96,7 +96,7 @@ public class ZwarteDoosApiClient
         {
             throw new HttpRequestException($"ZwarteDoos API request failed with status {response.StatusCode}: {responseBody}");
         }
-        var graphQLResponse = JsonSerializer.Deserialize<GraphQLResponse<T>>(responseBody);
+        var graphQLResponse = JsonSerializer.Deserialize<T>(responseBody);
         if (graphQLResponse == null)
         {
             throw new InvalidOperationException("GraphQL response contains no data");

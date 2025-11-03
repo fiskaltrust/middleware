@@ -13,6 +13,7 @@ public interface IBESSCD
 
 public class BESSCDInfo
 {
+    public string? InfoData { get; set; } 
 }
 
 public class ProcessRequest

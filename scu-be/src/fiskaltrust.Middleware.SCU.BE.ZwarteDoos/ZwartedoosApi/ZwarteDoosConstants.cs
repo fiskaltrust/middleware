@@ -1,4 +1,4 @@
-namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
+﻿namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.ZwartedoosApi;
 
 public static class ZwarteDoosConstants
 {

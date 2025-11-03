@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Report;
 public class ReportTurnoverZInput : BaseInputData
 {
     [JsonPropertyName("reportNo")]
-    public required int ReportNo { get; set; }
+    public required long ReportNo { get; set; }
 
     [JsonPropertyName("reportBookingDate")]
     [JsonConverter(typeof(DateOnlyJsonConverter))]

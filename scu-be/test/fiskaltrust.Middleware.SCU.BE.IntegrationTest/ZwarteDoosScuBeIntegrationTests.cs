@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models;
 using FluentAssertions;
 using Xunit;
@@ -21,6 +20,8 @@ using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Invoice;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Financial;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.ProForma;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Social;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.ZwartedoosApi;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
 
 namespace fiskaltrust.Middleware.SCU.BE.IntegrationTest;
 
@@ -34,7 +35,7 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
     {
         _output = output;
         
-        var configuration = new ZwarteDoosApiClientConfiguration
+        var configuration = new ZwarteDoosScuConfiguration
         {
             DeviceId = "FDM02030462",
             SharedSecret = "6fab7067-bc9e-45fa-bd76-93ed1d1fde3b",
@@ -61,9 +62,9 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
 
         // Assert
         deviceInfo.Should().NotBeNull();
-        deviceInfo.Data!.SignResult!.Device.Id.Should().NotBeNullOrEmpty();
+        deviceInfo.Data!.Device.Id.Should().NotBeNullOrEmpty();
 
-        _output.WriteLine($"Successfully retrieved device info: {deviceInfo.Data.SignResult!.Device.Id}");
+        _output.WriteLine($"Successfully retrieved device info: {deviceInfo.Data!.Device.Id}");
     }
 
     [Fact]

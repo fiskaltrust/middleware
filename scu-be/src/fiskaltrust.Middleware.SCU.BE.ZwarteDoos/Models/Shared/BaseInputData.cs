@@ -21,7 +21,7 @@ public class BaseInputData
     public required string PosId { get; set; }
 
     [JsonPropertyName("posFiscalTicketNo")]
-    public required int PosFiscalTicketNo { get; set; }
+    public required long PosFiscalTicketNo { get; set; }
 
     [JsonPropertyName("posDateTime")]
     [JsonConverter(typeof(Iso8601DateTimeConverter))]
