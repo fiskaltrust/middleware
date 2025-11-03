@@ -1,12 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Enums;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Shared;
 
 public class TransactionLineInput
 {
     [JsonPropertyName("lineType")]
-    public required string LineType { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public required TransactionLineType LineType { get; set; }
 
     [JsonPropertyName("mainProduct")]
     public required ProductInput MainProduct { get; set; }

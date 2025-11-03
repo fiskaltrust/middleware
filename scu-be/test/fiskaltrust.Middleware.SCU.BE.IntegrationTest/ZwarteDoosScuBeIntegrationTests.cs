@@ -420,7 +420,7 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
                             {
                                 new TransactionLineInput
                                 {
-                                    LineType = "SINGLE_PRODUCT",
+                                    LineType = TransactionLineType.SINGLE_PRODUCT,
                                     MainProduct = new ProductInput
                                     {
                                         QuantityType = QuantityType.METER,
@@ -455,7 +455,7 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
                             {
                                 new TransactionLineInput
                                 {
-                                    LineType = "SINGLE_PRODUCT",
+                                    LineType = TransactionLineType.SINGLE_PRODUCT,
                                     MainProduct = new ProductInput
                                     {
                                         QuantityType = QuantityType.METER,
@@ -524,7 +524,7 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
                 {
                     new TransactionLineInput
                     {
-                        LineType = "SINGLE_PRODUCT",
+                        LineType = TransactionLineType.SINGLE_PRODUCT,
                         MainProduct = new ProductInput
                         {
                             QuantityType = QuantityType.METER,
@@ -584,7 +584,7 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
                 [
                     new TransactionLineInput
                     {
-                        LineType = "SINGLE_PRODUCT",
+                        LineType = TransactionLineType.SINGLE_PRODUCT,
                         MainProduct = new ProductInput
                         {
                             ProductId = "10006",
@@ -600,7 +600,7 @@ public class ZwarteDoosScuBeIntegrationTests : IDisposable
                     },
                     new TransactionLineInput
                     {
-                        LineType = "SINGLE_PRODUCT",
+                        LineType = TransactionLineType.SINGLE_PRODUCT,
                         MainProduct = new ProductInput
                         {
                             ProductId = "22001",

@@ -8,8 +8,14 @@ namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum VatLabel
 {
-    A, // 21%
-    B, // 12%
-    C, // 6%
-    D  // 0%
+    // The high VAT rate. This is currently 21%.
+    A,
+    // The middle VAT rate. This is currently 12%.
+    B,
+    // The low VAT rate. This is currently 6%.
+    C,
+    // The zero VAT rate. This should remain at 0%.
+    D,
+    // Indicates out of scope of VAT.
+    X
 }
