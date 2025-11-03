@@ -7,7 +7,7 @@ on:
 jobs:
   check-linked-issues:
     runs-on: ubuntu-latest
-    name: Check Linked Issues
+    name: Issue needs to be linked
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
