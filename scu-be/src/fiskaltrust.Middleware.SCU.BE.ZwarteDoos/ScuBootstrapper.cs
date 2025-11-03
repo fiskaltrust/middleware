@@ -15,11 +15,9 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<ZwarteDoosScuConfiguration>();
+        services.AddSingleton<ZwarteDoosFactory>();
         
-        // Register both interfaces for the same implementation
+        // Register the SCU implementation
         services.AddTransient<IBESSCD, ZwarteDoosScuBe>();
-        services.AddTransient<IZwarteDoosScuBe, ZwarteDoosScuBe>();
-        
-        //services.AddHttpClient<ZwarteDoosFactory>();
     }
 }

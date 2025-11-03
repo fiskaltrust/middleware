@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 
 public interface IBESSCD
 {
-    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)> receiptReferences);
+    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
 
     public Task<BESSCDInfo> GetInfoAsync();
 }
@@ -25,22 +25,4 @@ public class ProcessRequest
 public class ProcessResponse
 {
     public required ReceiptResponse ReceiptResponse { get; set; }
-}
-
-// Dummy implementation for Belgium
-public class DummyBESSCD : IBESSCD
-{
-    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)> receiptReferences)
-    {
-        // Dummy implementation - simply return the receipt response as is
-        return Task.FromResult(new ProcessResponse
-        {
-            ReceiptResponse = request.ReceiptResponse
-        });
-    }
-
-    public Task<BESSCDInfo> GetInfoAsync()
-    {
-        return Task.FromResult(new BESSCDInfo());
-    }
 }
