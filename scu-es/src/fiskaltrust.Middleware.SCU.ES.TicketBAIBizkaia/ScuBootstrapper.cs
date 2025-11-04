@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
 
 public class ScuBootstrapper : IMiddlewareBootstrapper
 {
@@ -13,6 +15,6 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(TicketBaiSCUConfiguration.FromConfiguration(Configuration));
-        services.AddScoped<IESSSCD, TicketBaiSCU>();
+        services.AddScoped<IESSSCD, TicketBaiBizkaiaSCU>();
     }
 }

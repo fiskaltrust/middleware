@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Models
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models
 {
 #nullable disable
 

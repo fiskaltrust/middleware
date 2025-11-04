@@ -2,14 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
-
-public interface IESSSCD
-{
-    public Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request);
-}
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
 public class SubmitInvoiceRequest
 {
