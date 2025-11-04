@@ -15,7 +15,9 @@ jobs:
           token: ${{ secrets.REPOSITORY_WRITE_PAT }}
 
       - name: Install nbgv
-        run: dotnet tool update -g nbgv
+        run: |
+            dotnet tool update -g nbgv
+            nbgv --version
 
       - name: Configure git for PAT
         run: |
