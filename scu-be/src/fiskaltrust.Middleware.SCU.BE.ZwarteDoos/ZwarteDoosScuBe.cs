@@ -306,4 +306,13 @@ public class ZwarteDoosScuBe : IBESSCD
         };
         return info;
     }
+
+    public async Task<EchoResponse> EchoAsync(EchoRequest request)
+    {
+        var response = new EchoResponse
+        {
+            Message = request.Message
+        };
+        return await Task.FromResult(response);
+    }
 }
