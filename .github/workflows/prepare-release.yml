@@ -25,7 +25,7 @@ jobs:
       
       - name: Create and push tag
         run: |
-          tag=(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
+          tag=$(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
           echo "tag=$tag"
 
       # - name: Prepare release branch with nbgv
