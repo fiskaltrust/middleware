@@ -27,7 +27,8 @@ jobs:
       
       - name: Create tag
         run: |
-          tag=$(nbgv tag --what-if --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
+          output=$(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
+          tag=$(echo "$output" | head -n1 | awk '{print $1}')
           echo "tag=$tag"
           echo "tag1=$tag" >> $GITHUB_ENV
           version="${tag##*/v}"
@@ -47,12 +48,7 @@ jobs:
           echo "preRelease=$preRelease" >> $GITHUB_ENV
           echo "releaseBody=$releaseBody"
           echo "releaseBody=$releaseBody" >> $GITHUB_ENV
-
-      - name: Create tag
-        run: |
-          tag=$(nbgv tag --what-if --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
-          echo "tag=$tag"
-
+          
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
