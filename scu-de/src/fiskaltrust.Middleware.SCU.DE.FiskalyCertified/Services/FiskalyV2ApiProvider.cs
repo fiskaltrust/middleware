@@ -96,7 +96,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             {
                 return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
             }
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            if (response.StatusCode == (System.Net.HttpStatusCode) 429 /* System.Net.HttpStatusCode.TooManyRequests */)
             {
                 return null;
             }
