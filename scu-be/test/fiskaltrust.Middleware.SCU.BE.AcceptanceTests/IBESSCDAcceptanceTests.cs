@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;

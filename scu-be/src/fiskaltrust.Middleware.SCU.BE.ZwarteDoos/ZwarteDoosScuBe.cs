@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Helpers;

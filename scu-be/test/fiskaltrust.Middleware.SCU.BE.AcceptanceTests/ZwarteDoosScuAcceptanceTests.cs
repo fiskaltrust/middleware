@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Models.Enums;
