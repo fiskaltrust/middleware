@@ -23,10 +23,26 @@ jobs:
           git config user.email "dev-portal-poscreator@fiskaltrust.de"
           git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
       
-      - name: Create and push tag
+      - name: Create tag
         run: |
           tag=$(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
           echo "tag=$tag"
+          echo "tag1=$tag" >> $GITHUB_OUTPUT
+
+      - name: Create tag
+        run: |
+          tag=$(nbgv tag --what-if --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
+          echo "tag=$tag"
+
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     tag_name: ${{ needs.tag.outputs.tag_name }}
+      #     name: Release ${{ needs.tag.outputs.tag_name }}
+      #     draft: false
+      #     prerelease: false
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.REPOSITORY_WRITE_PAT }}
 
       # - name: Prepare release branch with nbgv
       #   id: prepare-release
