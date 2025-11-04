@@ -163,6 +163,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 using (var stream = new FileStream(exportSession.TokenId + "mw.temp", FileMode.Create, FileAccess.ReadWrite))
                 {
                     ExportDataResponse export;
+                    var backoff = TimeSpan.FromMilliseconds(100);
                     do
                     {
                         export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
@@ -172,7 +173,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                         }).ConfigureAwait(false);
                         if (!export.TotalTarFileSizeAvailable)
                         {
-                            await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                            await Task.Delay(backoff).ConfigureAwait(false);
+                            backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 2, TimeSpan.FromSeconds(30).TotalMilliseconds));
                         }
                         else
                         {
