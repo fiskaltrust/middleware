@@ -27,22 +27,39 @@ jobs:
         run: |
           tag=$(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
           echo "tag=$tag"
-          echo "tag1=$tag" >> $GITHUB_OUTPUT
+          echo "tag1=$tag" >> $GITHUB_ENV
+          version="${tag##*/v}"
+          echo "version=$version"
+          echo "version=$version" >> $GITHUB_ENV
+          releaseName="Queue.SQLite $version"
+          echo "releaseName=$releaseName"
+          echo "releaseName=$releaseName" >> $GITHUB_ENV
+          if [[ "$version" == *rc* ]]; then
+            preRelease=true
+            releaseBody=""
+          else
+            preRelease=false
+            releaseBody="Release notes: https://docs.fiskaltrust.cloud/changelog/middleware/$version"
+          fi
+          echo "preRelease=$preRelease"
+          echo "preRelease=$preRelease" >> $GITHUB_ENV
+          echo "releaseBody=$releaseBody"
+          echo "releaseBody=$releaseBody" >> $GITHUB_ENV
 
       - name: Create tag
         run: |
           tag=$(nbgv tag --what-if --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
           echo "tag=$tag"
 
-      # - name: Create GitHub Release
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     tag_name: ${{ needs.tag.outputs.tag_name }}
-      #     name: Release ${{ needs.tag.outputs.tag_name }}
-      #     draft: false
-      #     prerelease: false
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.REPOSITORY_WRITE_PAT }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.tag1 }}
+          name: ${{ env.releaseName }}
+          body: ${{ env.releaseBody }}
+          prerelease: $ {{env.preRelease}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPOSITORY_WRITE_PAT }}
 
       # - name: Prepare release branch with nbgv
       #   id: prepare-release
