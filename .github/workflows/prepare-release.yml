@@ -23,76 +23,42 @@ jobs:
         run: |
           git config user.name "ReleaseBot"
           git config user.email "dev-portal-poscreator@fiskaltrust.de"
-          git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git
-      
-      - name: Create tag
+          git remote set-url origin https://x-access-token:${{ secrets.REPOSITORY_WRITE_PAT }}@github.com/${{ github.repository }}.git  
+     
+      - name: Prepare release branch with nbgv
+        id: prepare-release
         run: |
-          output=$(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
-          tag=$(echo "$output" | head -n1 | awk '{print $1}')
-          echo "tag=$tag"
-          echo "tag1=$tag" >> $GITHUB_ENV
-          version="${tag##*/v}"
-          echo "version=$version"
-          echo "version=$version" >> $GITHUB_ENV
-          releaseName="Queue.SQLite $version"
-          echo "releaseName=$releaseName"
-          echo "releaseName=$releaseName" >> $GITHUB_ENV
-          if [[ "$version" == *rc* ]]; then
-            preRelease=true
-            releaseBody=""
-          else
-            preRelease=false
-            releaseBody="Release notes: https://docs.fiskaltrust.cloud/changelog/middleware/$version"
-          fi
-          echo "preRelease=$preRelease"
-          echo "preRelease=$preRelease" >> $GITHUB_ENV
-          echo "releaseBody=$releaseBody"
-          echo "releaseBody=$releaseBody" >> $GITHUB_ENV
-          
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.tag1 }}
-          name: ${{ env.releaseName }}
-          body: ${{ env.releaseBody }}
-          prerelease: $ {{env.preRelease}}
-        env:
-          GITHUB_TOKEN: ${{ secrets.REPOSITORY_WRITE_PAT }}
+          version=$(nbgv get-version -f json | jq -r '.Version')
+          echo "release_version=$version"
+          echo "release_version=$version" >> $GITHUB_OUTPUT
 
-      # - name: Prepare release branch with nbgv
-      #   id: prepare-release
-      #   run: |
-      #     version=$(nbgv get-version -f json | jq -r '.Version')
-      #     echo "release_version=$version"
-      #     echo "release_version=$version" >> $GITHUB_OUTPUT
+          output=$(nbgv prepare-release rc -f json)
+          #echo "$output"
+          BRANCH=$(echo "$output" | jq -r '.NewBranch.Name')
 
-      #     output=$(nbgv prepare-release rc -f json)
-      #     #echo "$output"
-      #     BRANCH=$(echo "$output" | jq -r '.NewBranch.Name')
+          echo "release_branch=$BRANCH"
+          echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
 
-      #     echo "release_branch=$BRANCH"
-      #     echo "release_branch=$BRANCH" >> $GITHUB_OUTPUT
+      - name: Push changes
+        run: |
+          # Push release branch bump (1.x -rc version)
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}
+          git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}
 
-      # - name: Push changes
-      #   run: |
-      #     # Push release branch bump (1.x -rc version)
-      #     git checkout ${{ steps.prepare-release.outputs.release_branch }}
-      #     git push origin HEAD:${{ steps.prepare-release.outputs.release_branch }}
+      - name: Create Pull Request via gh CLI
+        run: |
+          gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"         
+          git checkout ${{ steps.prepare-release.outputs.release_branch }}  
+          gh pr create \
+            --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
+            --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`." \
+            --base main \
+            --head ${{ steps.prepare-release.outputs.release_branch }}
 
-      # - name: Create Pull Request via gh CLI
-      #   run: |
-      #     gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"         
-      #     git checkout ${{ steps.prepare-release.outputs.release_branch }}  
-      #     gh pr create \
-      #       --title "Prepare release v${{ steps.prepare-release.outputs.release_version }}" \
-      #       --body "This PR prepares the release branch for version \`${{ steps.prepare-release.outputs.release_version }}\`.Sets release branch version to \`${{ steps.prepare-release.outputs.release_version }}-rc\`." \
-      #       --base main \
-      #       --head ${{ steps.prepare-release.outputs.release_branch }}
-
-      # - name: Push only version.json change to main
-      #   run: |
-      #     git checkout main
-      #     git reset --soft origin/main
-      #     git add version.json
-      #     git commit -m "Set version to the next ci version"
-      #     git push origin main
+      - name: Push only version.json change to main
+        run: |
+          git checkout main
+          git reset --soft origin/main
+          git add version.json
+          git commit -m "Set version to the next ci version"
+          git push origin main
