@@ -25,7 +25,7 @@ jobs:
       
       - name: Create tag
         run: |
-          tag=$(nbgv tag --what-if --project queue/src/fiskaltrust.Middleware.Queue.SQLite)
+          tag=$(nbgv tag --project queue/src/fiskaltrust.Middleware.Queue.SQLite --what-if)
           echo "tag=$tag"
           echo "tag1=$tag" >> $GITHUB_ENV
           version="${tag##*/v}"
