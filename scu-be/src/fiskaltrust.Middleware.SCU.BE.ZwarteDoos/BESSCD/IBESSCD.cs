@@ -9,6 +9,8 @@ public interface IBESSCD
     public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
 
     public Task<BESSCDInfo> GetInfoAsync();
+
+    public Task<EchoResponse> EchoAsync(EchoRequest request);
 }
 
 public class BESSCDInfo
