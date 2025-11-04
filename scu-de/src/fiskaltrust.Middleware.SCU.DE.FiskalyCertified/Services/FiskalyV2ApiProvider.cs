@@ -233,7 +233,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 {
                     throw;
                 }
-                backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 2, TimeSpan.FromSeconds(30).TotalMilliseconds));
+                backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 1.5, TimeSpan.FromSeconds(30).TotalMilliseconds));
             } while (sw.ElapsedMilliseconds < EXPORT_TIMEOUT_MS);
 
             throw new TimeoutException($"Timeout of {EXPORT_TIMEOUT_MS}ms was reached while exporting the backup {exportId}.");

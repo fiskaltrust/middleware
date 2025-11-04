@@ -174,7 +174,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                         if (!export.TotalTarFileSizeAvailable)
                         {
                             await Task.Delay(backoff).ConfigureAwait(false);
-                            backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 2, TimeSpan.FromSeconds(30).TotalMilliseconds));
+                            backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 1.5, TimeSpan.FromSeconds(30).TotalMilliseconds));
                         }
                         else
                         {
