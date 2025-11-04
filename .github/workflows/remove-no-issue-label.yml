@@ -9,6 +9,9 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     name: Remove meta-no-issue label
+    permissions:
+      pull-requests: write
+      issues: write
     steps:
       - name: Remove meta-no-issue label from merged PR
         if: contains(github.event.pull_request.labels.*.name, 'meta-no-issue')
