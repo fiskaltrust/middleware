@@ -1,7 +1,7 @@
 name: command tag
 on:
   repository_dispatch:
-    types: [tag-command]
+    types: [release-command]
 
 permissions:
   pull-requests: write
@@ -41,7 +41,7 @@ jobs:
           Write-Output "project=$project"
           Write-Output "project=$project" >> $env:GITHUB_OUTPUT
 
-  tag:
+  release:
     runs-on: ubuntu-latest
     needs: [meta]
     steps:
