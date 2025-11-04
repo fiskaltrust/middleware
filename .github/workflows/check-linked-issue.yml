@@ -1,0 +1,50 @@
+name: Check linked issue
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check-linked-issues:
+    runs-on: ubuntu-latest
+    name: Issue needs to be linked
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for linked fiskaltrust issues
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'meta-no-issue') }}
+        id: check_issues
+        env:
+          GH_TOKEN: ${{ secrets.READ_ISSUES_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+
+          echo "Checking linked issues for PR #${PR_NUMBER}"
+
+          # Get linked issues from the PR
+          LINKED_ISSUES=$(gh pr -R "${REPO}" view "${PR_NUMBER}" --json closingIssuesReferences -q '.closingIssuesReferences')
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to fetch linked issues using GitHub CLI. Please check authentication and network connectivity."
+            exit 1
+          fi
+
+          # Check if any linked issue is from fiskaltrust organization
+          if [[ "${LINKED_ISSUES}" == "[]" || "${LINKED_ISSUES}" == "null" ]]; then
+            echo "No linked issues found"
+            echo "has_fiskaltrust_issue=false" >> $GITHUB_OUTPUT
+          else
+            HAS_FISKALTRUST_ISSUE=$(echo "${LINKED_ISSUES}" | jq -r 'map(select(.repository.owner.login == "fiskaltrust")) | length > 0')
+            echo "has_fiskaltrust_issue=${HAS_FISKALTRUST_ISSUE}" >> $GITHUB_OUTPUT
+            echo "Found fiskaltrust issue: ${HAS_FISKALTRUST_ISSUE}"
+          fi
+
+      - name: Fail if no fiskaltrust issue is linked
+        if: |
+          steps.check_issues.outputs.has_fiskaltrust_issue == 'false' && 
+          !contains(github.event.pull_request.labels.*.name, 'meta-no-issue')
+        run: |
+          echo "::error::No linked issue from fiskaltrust organization found"
+          echo "::warning::Please link an issue from a fiskaltrust repository to this pull request or add the 'meta-no-issue' label if no issue is needed."
+          exit 1
