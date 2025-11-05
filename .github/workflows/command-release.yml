@@ -1,4 +1,4 @@
-name: command tag
+name: command release
 on:
   repository_dispatch:
     types: [release-command]
