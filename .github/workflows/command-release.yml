@@ -67,7 +67,7 @@ jobs:
           tag=$(echo "$output" | head -n1 | awk '{print $1}')
          
           version="${tag##*/v}"
-          releaseName=$(echo "${{ needs.meta.outputs.project }}" | awk -F. '{print $(NF-1)"."$NF}') v$version"
+          releaseName="$(echo "${{ needs.meta.outputs.project }}" | awk -F. '{print $(NF-1)"."$NF}') v$version"
           
           if [[ "$version" == *-* ]]; then
             preRelease=true
