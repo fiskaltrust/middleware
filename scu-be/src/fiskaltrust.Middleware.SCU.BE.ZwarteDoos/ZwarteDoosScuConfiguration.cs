@@ -14,9 +14,6 @@ public class ZwarteDoosScuConfiguration
     [Required]
     public string SharedSecret { get; set; } = null!;
 
-    [Required]
-    public string CompanyId { get; set; } = null!;
-
     public Language Language { get; set; } = Language.NL;
 
     public int TimeoutSeconds { get; set; } = 30;

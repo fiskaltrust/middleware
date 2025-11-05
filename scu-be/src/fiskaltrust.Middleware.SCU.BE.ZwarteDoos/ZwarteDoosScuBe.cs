@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.be;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
@@ -302,8 +304,20 @@ public class ZwarteDoosScuBe : IBESSCD
         var deviceInfo = await _zwarteDoosApiClient.GetDeviceIdAsync();
         var info = new BESSCDInfo
         {
-            InfoData = JsonSerializer.Serialize(deviceInfo)
+            ExtraData = new Dictionary<string, object>
+            {
+                {  "DeviceId", deviceInfo.Data!.Device.Id }
+            }
         };
         return info;
+    }
+
+    public async Task<EchoResponse> EchoAsync(EchoRequest request)
+    {
+        var response = new EchoResponse
+        {
+            Message = request.Message
+        };
+        return await Task.FromResult(response);
     }
 }
