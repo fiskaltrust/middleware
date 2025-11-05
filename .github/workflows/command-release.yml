@@ -17,6 +17,7 @@ jobs:
       project: ${{ steps.meta.outputs.project }}
       package: ${{ steps.meta.outputs.package }}
       directory: ${{ steps.meta.outputs.directory }}
+      releaseNamePrefix: ${{ steps.meta.outputs.releaseNamePrefix }}
     steps:
       - uses: actions/checkout@v4
         with:
