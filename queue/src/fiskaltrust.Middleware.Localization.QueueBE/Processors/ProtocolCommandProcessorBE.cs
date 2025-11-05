@@ -17,6 +17,7 @@ public class ProtocolCommandProcessorBE(IBESSCD sscd) : IProtocolCommandProcesso
     public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 
     public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
