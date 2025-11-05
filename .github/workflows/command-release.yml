@@ -99,7 +99,7 @@ jobs:
 
   success:
     needs:
-      - tag
+      - release
     runs-on: ubuntu-latest
     if: success('tag')
     steps:
@@ -113,7 +113,7 @@ jobs:
 
   failure:
     needs:
-      - tag
+      - release
     runs-on: ubuntu-latest
     if: failure()
     steps:
