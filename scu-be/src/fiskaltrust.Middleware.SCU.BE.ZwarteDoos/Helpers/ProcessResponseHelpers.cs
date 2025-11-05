@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.ifPOS.v2.be;
 using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos.Helpers;

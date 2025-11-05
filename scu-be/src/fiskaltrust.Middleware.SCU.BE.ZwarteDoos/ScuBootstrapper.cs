@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.SCU.BE.ZwarteDoos.ZwartedoosApi;
 using System.Text.Json;
+using fiskaltrust.ifPOS.v2.be;
 
 namespace fiskaltrust.Middleware.SCU.BE.ZwarteDoos;
 
