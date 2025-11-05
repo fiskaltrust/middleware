@@ -63,7 +63,7 @@ jobs:
       - name: Get Release Data
         if: startsWith(github.event.client_payload.pull_request.head.ref, 'release/')
         run: |
-          output=(nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }})
+          output=$(nbgv tag --project ${{ needs.meta.outputs.directory }}/${{ needs.meta.outputs.project }})
           tag=$(echo "$output" | head -n1 | awk '{print $1}')
          
           version="${tag##*/v}"
