@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         Task<List<ClientDto>> GetClientsAsync(Guid tssId);
         Task<Stream> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation);
         Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId);
-        Task<ExportStateInformationDto> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId);
+        Task<ExportStateInformationDto?> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId);
         Task<IEnumerable<TransactionDto>> GetStartedTransactionsAsync(Guid tssId);
         Task<TransactionDto> GetTransactionDtoAsync(Guid tssId, ulong transactionNumber);
         Task<TssDto> GetTseByIdAsync(Guid tssId);
