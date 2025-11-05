@@ -24,11 +24,11 @@
 
 ## Tag
 
-
+- from `/tag queue <PACKAGE>` comment
 
 ## Version
 
-
+- from `/version` comment
 
 ## Release (`release.yml`)
 
