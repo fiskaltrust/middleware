@@ -124,6 +124,7 @@ jobs:
           comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
           reactions: hooray
           reactions-edit-mode: replace
+          edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
             ![](https://badgen.net/static/release%20${{ steps.create-release.outputs.version }}/success/green)
