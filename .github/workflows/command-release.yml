@@ -84,9 +84,9 @@ jobs:
 
 
           if [ "$preRelease" = "false" ]; then
-            releaseNotes="You can find the full release notes on our docs platform https://docs.fiskaltrust.cloud/changelog/middleware/$version"
+            releaseNotes="You can find the full release notes on our docs platform https://docs.fiskaltrust.cloud/changelog/middleware/$version."
           else
-            releaseNotes=""
+            releaseNotes="This is a prerelease for the next middleware version."
           fi
 
           echo "tag=$tag"
