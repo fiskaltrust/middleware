@@ -1,5 +1,5 @@
-using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
+﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.be;
 using FluentAssertions;
 using Xunit;
 
@@ -32,7 +32,7 @@ public class DummyBESSCDTests
         };
 
         // Act
-        var result = await sut.ProcessReceiptAsync(request, new List<(ReceiptRequest, ReceiptResponse)>());
+        var result = await sut.ProcessReceiptAsync(request);
 
         // Assert
         result.ReceiptResponse.Should().Be(receiptResponse);

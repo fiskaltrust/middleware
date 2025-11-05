@@ -1,7 +1,7 @@
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Net.Mime;
 using System.Text.Json;
-using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
+using fiskaltrust.ifPOS.v2.be;
 using fiskaltrust.Middleware.Localization.QueueBE.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;

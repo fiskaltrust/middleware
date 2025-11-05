@@ -1,6 +1,6 @@
-﻿using fiskaltrust.Middleware.Localization.v2;
+﻿using fiskaltrust.ifPOS.v2.be;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 
 namespace fiskaltrust.Middleware.Localization.QueueBE.Processors;
 
