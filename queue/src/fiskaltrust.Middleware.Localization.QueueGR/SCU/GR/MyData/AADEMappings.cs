@@ -136,22 +136,34 @@ public static class AADEMappings
             }
             else
             {
+                if (chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a))
+                {
+                    return IncomeClassificationValueType.E3_561_002;
+                }
+
                 return chargeItem.ftChargeItemCase.TypeOfService() switch
                 {
                     ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_001,
                     ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_001,
                     ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationValueType.E3_561_001,
                     _ => IncomeClassificationValueType.E3_561_007,
                 };
             }
         }
         else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
         {
+            if(chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a))
+            {
+                return IncomeClassificationValueType.E3_561_004;
+            }
+
             return chargeItem.ftChargeItemCase.TypeOfService() switch
             {
                 ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_003,
                 ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_003,
                 ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_003,
+                ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationValueType.E3_561_003,
                 _ => IncomeClassificationValueType.E3_561_007,
             };
         }

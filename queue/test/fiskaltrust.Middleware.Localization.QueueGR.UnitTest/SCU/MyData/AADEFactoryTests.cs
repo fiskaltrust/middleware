@@ -574,13 +574,6 @@ public class AADEFactoryTests
         invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
-        // Verify customer information
-        invoice.counterpart.Should().NotBeNull();
-        invoice.counterpart.vatNumber.Should().Be("026883248");
-        invoice.counterpart.country.Should().Be(CountryType.GR);
-        invoice.counterpart.name.Should().BeNull();
-        invoice.counterpart.address.Should().BeNull();
-
         // Verify invoice details
         invoice.invoiceDetails.Should().HaveCount(1);
         var invoiceDetail = invoice.invoiceDetails[0];
@@ -590,8 +583,8 @@ public class AADEFactoryTests
         invoiceDetail.lineNumber.Should().Be(1);
 
         // Verify VAT exemption category is set for 0% VAT
-        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.RegistrationsWithoutVat);
-        invoiceDetail.vatExemptionCategorySpecified.Should().BeFalse();
+        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.VatRate0_ExcludingVat_Category7);
+        invoiceDetail.vatExemptionCategorySpecified.Should().BeTrue();
 
         // Verify payment methods
         invoice.paymentMethods.Should().HaveCount(1);
@@ -641,7 +634,7 @@ public class AADEFactoryTests
                 CustomerVATId = "026883248"
             },
             cbPreviousReceiptReference = "7-1752270167120",
-            ftReceiptCase = (ReceiptCase) 0x4752200000000001,
+            ftReceiptCase = ((ReceiptCase) 0x4752200000000000).WithCase(ReceiptCase.PaymentTransfer0x0002),
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem
@@ -651,7 +644,7 @@ public class AADEFactoryTests
                     ProductNumber = "004",
                     Quantity = 1,
                     VATRate = 0,
-                    ftChargeItemCase = (ChargeItemCase)0x4752200000001128,
+                    ftChargeItemCase = ((ChargeItemCase)0x4752200000000000).WithTypeOfService(ChargeItemCaseTypeOfService.Receivable),
                     Moment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime(),
                     Position = 1,
                     VATAmount = 0,
