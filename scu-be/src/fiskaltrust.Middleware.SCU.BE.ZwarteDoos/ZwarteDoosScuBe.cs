@@ -146,9 +146,9 @@ public class ZwarteDoosScuBe : IBESSCD
                     },
                     new SignatureItem
                     {
-                        Caption = "ShortSignature",
+                        Caption = "VerificationUrl",
                         Data = apiResponse!.Data!.SignResult!.VerificationUrl ?? "",
-                        ftSignatureFormat = SignatureFormat.Link,
+                        ftSignatureFormat = SignatureFormat.QRCode,
                         ftSignatureType = SignatureType.Unknown
                     }
                 };
