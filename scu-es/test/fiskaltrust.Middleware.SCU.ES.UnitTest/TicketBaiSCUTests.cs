@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -27,17 +31,16 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Gipuzkoa,
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
-            await PerformTicketBaiRequestChain(config);
+            await PerformTicketBaiRequestChain(config, new TicketBaiGipuzkoaTerritory());
 
         }
 
-        private async Task PerformTicketBaiRequestChain(TicketBaiSCUConfiguration config)
+        private async Task PerformTicketBaiRequestChain(TicketBaiSCUConfiguration config, ITicketBaiTerritory territory)
         {
-            var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
+            var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config, territory);
             var series = $"T-{DateTime.UtcNow.Ticks}";
             var request = new SubmitInvoiceRequest
             {
@@ -56,11 +59,11 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                     }
                 }
             };
-            var response = await sut.SubmitInvoiceAsync(request);
+            var response = await sut.SendAsync(request, territory.SubmitInvoices);
             _output.WriteLine(FormatXml(response.ResponseContent));
             response.Succeeded.Should().BeTrue(because: response.ResponseContent);
 
-            var response2 = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            var response2 = await sut.SendAsync(new SubmitInvoiceRequest
             {
                 InvoiceMoment = DateTime.UtcNow,
                 Series = series,
@@ -79,7 +82,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                         Quantity = 1
                     }
                 }
-            });
+            }, territory.SubmitInvoices);
 
             _output.WriteLine(FormatXml(response2.ResponseContent));
             response2.Succeeded.Should().BeTrue(because: response2.ResponseContent);
@@ -92,11 +95,10 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Araba,
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
-            await PerformTicketBaiRequestChain(config);
+            await PerformTicketBaiRequestChain(config, new TicketBaiArabaTerritory());
         }
 
         [Fact(Skip = "Bizkaia certificate is not working")]
@@ -106,11 +108,10 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Bizkaia,
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
-            await PerformTicketBaiRequestChain(config);
+            await PerformTicketBaiRequestChain(config, new TicketBaiBizkaiaTerritory());
         }
 
         private string FormatXml(string xml)

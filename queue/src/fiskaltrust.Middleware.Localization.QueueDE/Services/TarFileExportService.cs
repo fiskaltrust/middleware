@@ -27,6 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             using (var fileStream = File.Create(filePath))
             {
                 ExportDataResponse export;
+                var backoff = TimeSpan.FromMilliseconds(100);
                 do
                 {
                     export = await client.ExportDataAsync(new ExportDataRequest
@@ -36,7 +37,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     }).ConfigureAwait(false);
                     if (!export.TotalTarFileSizeAvailable)
                     {
-                        await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                        await Task.Delay(backoff).ConfigureAwait(false);
+                        backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 1.5, TimeSpan.FromSeconds(30).TotalMilliseconds));
                     }
                     else
                     {
@@ -66,7 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             {
                 return (null, false, null, false);
             }
-            
+
             logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync [exit].");
             return (filePath, true, sha256CheckSum, endExportSessionResult.IsErased);
         }

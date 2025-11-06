@@ -34,6 +34,45 @@ public static class ReceiptRequestExtensions
         receiptRequest.cbChargeItems.Count(receiptRequest => receiptRequest.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)) > 0 &&
         receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService) || x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.UnknownService));
 
+    /// <summary>
+    /// Checks if all charge items are service items, excluding special taxes from the evaluation.
+    /// Special taxes are ignored when determining if an invoice is a service invoice.
+    /// </summary>
+    /// <param name="receiptRequest">The receipt request to evaluate</param>
+    /// <returns>True if all non-special-tax items are service items</returns>
+    public static bool HasOnlyServiceItemsExcludingSpecialTaxes(this ReceiptRequest receiptRequest)
+    {
+        var nonSpecialTaxItems = receiptRequest.cbChargeItems.Where(x => !SpecialTaxMappings.IsSpecialTaxItem(x));
+        
+        // If there are no non-special-tax items, we consider this as not being a service invoice
+        if (!nonSpecialTaxItems.Any())
+        {
+            return false;
+        }
+        
+        return nonSpecialTaxItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService));
+    }
+
+    /// <summary>
+    /// Checks if there is at least one service item and only unknowns among the rest, excluding special taxes from the evaluation.
+    /// Special taxes are ignored when determining if an invoice is a service invoice.
+    /// </summary>
+    /// <param name="receiptRequest">The receipt request to evaluate</param>
+    /// <returns>True if there's at least one service item and the rest are unknowns (excluding special taxes)</returns>
+    public static bool HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes(this ReceiptRequest receiptRequest)
+    {
+        var nonSpecialTaxItems = receiptRequest.cbChargeItems.Where(x => !SpecialTaxMappings.IsSpecialTaxItem(x));
+        
+        // If there are no non-special-tax items, we consider this as not being a service invoice
+        if (!nonSpecialTaxItems.Any())
+        {
+            return false;
+        }
+        
+        return nonSpecialTaxItems.Count(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)) > 0 &&
+               nonSpecialTaxItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService) || 
+                                          x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.UnknownService));
+    }
 
     /// <summary>
     /// Gets the customer's country category based on their country code

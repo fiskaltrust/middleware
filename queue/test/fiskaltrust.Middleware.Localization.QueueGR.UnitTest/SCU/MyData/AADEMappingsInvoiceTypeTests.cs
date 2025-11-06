@@ -222,6 +222,33 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
+    public void Item_2_2_GetInvoiceType_B2BInvoice_WithOtherServiceItems_AndSpecialTaxes_WithEUCustomer_ReturnsItem22()
+    {
+        var receiptRequest = CreateB2BInvoice("DE", ChargeItemCaseTypeOfService.OtherService);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 30, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item22);
+    }
+
+    [Theory]
+    [InlineData("US")]
+    [InlineData("GB")]
+    [InlineData("CH")]
+    [InlineData("JP")]
+    [InlineData("CN")]
+    public void Item_2_3_GetInvoiceType_B2BInvoice_WithOtherServiceItems_AndSpecialTaxes_WithNonEUCustomer_ReturnsItem23(string country)
+    {
+        var receiptRequest = CreateB2BInvoice(country, ChargeItemCaseTypeOfService.OtherService);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 30, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item23);
+    }
+
+    [Fact]
     public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithPreviousReceipt_ReturnsItem51()
     {
         var receiptRequest = CreateB2BInvoice("GR", isRefund: true, hasPreviousReceipt: true);
@@ -317,5 +344,98 @@ public class AADEMappingsInvoiceTypeTests
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
         result.Should().Be(InvoiceType.Item114);
+    }
+
+    [Fact]
+    public void Item_11_2_GetInvoiceType_RetailReceipt_WithOnlyServiceItems_AndSpecialTaxes_ReturnsItem112()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Service Item", ChargeItemCaseTypeOfService.OtherService),
+            CreateChargeItem(2, 20, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item112);
+    }
+
+    [Fact]
+    public void Item_11_2_GetInvoiceType_RetailReceipt_WithMixedServiceAndSpecialTaxes_ReturnsItem112()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Service Item", ChargeItemCaseTypeOfService.OtherService),
+            CreateChargeItem(2, 50, 24, "Unknown Service Item", ChargeItemCaseTypeOfService.UnknownService),
+            CreateChargeItem(3, 30, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item112);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithDeliveryAndSpecialTaxes_ReturnsItem111()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Delivery Item", ChargeItemCaseTypeOfService.Delivery),
+            CreateChargeItem(2, 20, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithOnlySpecialTaxes_ReturnsItem111()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 20, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0),
+            CreateChargeItem(2, 30, 24, "Another Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithMixedDeliveryServiceAndSpecialTaxes_ReturnsItem111()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Delivery Item", ChargeItemCaseTypeOfService.Delivery),
+            CreateChargeItem(2, 50, 24, "Service Item", ChargeItemCaseTypeOfService.OtherService),
+            CreateChargeItem(3, 20, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void Item_11_2_GetInvoiceType_RetailReceipt_WithServiceUnknownAndSpecialTaxes_ReturnsItem112()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Service Item", ChargeItemCaseTypeOfService.OtherService),
+            CreateChargeItem(2, 50, 24, "Unknown Item", ChargeItemCaseTypeOfService.UnknownService),
+            CreateChargeItem(3, 30, 24, "Special Tax Item", (ChargeItemCaseTypeOfService) 0xF0)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item112);
     }
 }
