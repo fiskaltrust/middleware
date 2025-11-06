@@ -152,6 +152,7 @@ public class ZwarteDoosScuBe : IBESSCD
                         ftSignatureType = SignatureType.Unknown
                     }
                 };
+                receiptResponse.ftSignatures.AddRange(signatures);
             }
             return receiptResponse;
         }
