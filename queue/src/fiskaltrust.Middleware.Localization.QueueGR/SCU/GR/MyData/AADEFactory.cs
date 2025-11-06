@@ -416,6 +416,7 @@ public class AADEFactory
                 {
                     invoiceRow.vatExemptionCategorySpecified = true;
                     invoiceRow.vatExemptionCategory = exemptionCategory.Value;
+                    invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
                 }
                 else
                 {
