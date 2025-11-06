@@ -236,7 +236,7 @@ public static class AADEMappings
             {
                 return InvoiceType.Item115;
             }
-            else if (receiptRequest.HasOnlyServiceItems() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknowns())
+            else if (receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes())
             {
                 return InvoiceType.Item112;
             }
@@ -261,7 +261,7 @@ public static class AADEMappings
             //{
             //    return InvoiceType.Item14;
             //}
-            else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
+            else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes())
             {
                 //if (receiptRequest.cbPreviousReceiptReference is not null)
                 //{
