@@ -236,10 +236,52 @@ public class ZwarteDoosScuBe : IBESSCD
             DeviceId = _configuration.DeviceId,
             BookingDate = DateOnly.FromDateTime(receiptRequest.cbReceiptMoment),
             BookingPeriodId = receiptResponse.ftQueueItemID,
-            EmployeeId = receiptRequest.cbUser is string userString ? userString : "undefined",
+            EmployeeId = GetEmployeeIdFromCbUser(receiptRequest.cbUser),
             TicketMedium = Models.Enums.TicketMedium.PAPER,
         };
         return baseData;
+    }
+
+    private string GetEmployeeIdFromCbUser(object? cbUser)
+    {
+        if (cbUser == null)
+        {
+            return "undefined";
+        }
+
+        // If it's already a string, return it
+        if (cbUser is string userString)
+        {
+            return userString;
+        }
+
+        // Try to handle JsonElement or other object types that might contain a string value
+        try
+        {
+            // Convert to string and try to parse as JSON first
+            var userJson = cbUser.ToString();
+            if (!string.IsNullOrEmpty(userJson))
+            {
+                // If it looks like JSON (starts with { or [), try to deserialize
+                if (userJson.TrimStart().StartsWith("{") || userJson.TrimStart().StartsWith("["))
+                {
+                    // For now, just return the JSON string as-is
+                    // In the future, you might want to parse and extract specific fields
+                    return userJson;
+                }
+                else
+                {
+                    // It's a simple string value
+                    return userJson;
+                }
+            }
+        }
+        catch
+        {
+            // If anything fails, fall back to undefined
+        }
+
+        return "undefined";
     }
 
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)

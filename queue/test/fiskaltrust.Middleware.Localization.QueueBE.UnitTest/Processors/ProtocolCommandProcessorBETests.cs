@@ -1,12 +1,12 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueBE.Processors;
-using fiskaltrust.Middleware.Localization.QueueBE.BESSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Moq;
+using fiskaltrust.ifPOS.v2.be;
 
 namespace fiskaltrust.Middleware.Localization.QueueBE.UnitTest.Processors;
 
@@ -17,7 +17,7 @@ public class ProtocolCommandProcessorBETests
 
     public ProtocolCommandProcessorBETests()
     {
-        _mockBESSCD.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+        _mockBESSCD.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
                    .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> refs) => 
                        new ProcessResponse { ReceiptResponse = req.ReceiptResponse });
 
