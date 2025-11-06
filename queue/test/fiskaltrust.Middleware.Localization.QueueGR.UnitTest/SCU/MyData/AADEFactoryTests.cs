@@ -890,4 +890,248 @@ public class AADEFactoryTests
         invoice.issuer.vatNumber.Should().Be("999123456");
         invoice.issuer.country.Should().Be(CountryType.GR);
     }
+
+    [Fact]
+    public void MapToInvoicesDoc_ForReceiptWithVATNature_0014_ShouldIncludeIncomeClassifications()
+    {
+        var cbReceiptReference = "TEST-001";
+        var receiptMoment = DateTime.Parse("2025-01-15T10:30:00.000Z").ToUniversalTime();
+        var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
+        var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
+
+        var receiptRequest = new ReceiptRequest
+        {
+            ftCashBoxID = ftCashBoxID,
+            cbTerminalID = "POS001",
+            Currency = Currency.EUR,
+            cbReceiptMoment = receiptMoment,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = ftPosSystemId,
+            cbArea = "Main",
+            cbUser = "Cashier01",
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerName = "Test Customer Ltd.",
+                CustomerId = "CUST001",
+                CustomerStreet = "Test Street 123",
+                CustomerCity = "Athens",
+                CustomerCountry = "GR",
+                CustomerVATId = "123456789"
+            },
+            ftReceiptCase = (ReceiptCase) 0x4752200000000001, // Point of sale receipt
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Amount = 124,
+                    Description = "Standard Product with Normal VAT",
+                    ProductNumber = "PROD001",
+                    Quantity = 1,
+                    VATRate = 0,
+                    ftChargeItemCase = (ChargeItemCase)0x4752200000001417,
+                    Moment = receiptMoment,
+                    Position = 1,
+                    VATAmount = 0,
+                    Unit = "pcs"
+                }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem
+                {
+                    Position = 1,
+                    Quantity = 1,
+                    Moment = receiptMoment,
+                    Description = "Cash Payment",
+                    Amount = 124,
+                    ftPayItemCase = (PayItemCase)0x4752200000000001
+                }
+            },
+            cbReceiptAmount = 124
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB001"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "999123456"
+            },
+        });
+
+        // Act
+        (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        action.Should().NotBeNull();
+        action!.invoice.Should().HaveCount(1);
+
+        var invoice = action.invoice[0];
+
+        // Verify basic invoice structure
+        invoice.invoiceHeader.Should().NotBeNull();
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111); // Invoice type
+
+        invoice.invoiceDetails.Should().HaveCount(1);
+
+        // Verify first charge item has income classification
+        var firstDetail = invoice.invoiceDetails[0];
+        firstDetail.lineNumber.Should().Be(1);
+        firstDetail.netValue.Should().Be(124);
+        firstDetail.vatAmount.Should().Be(0);
+
+        // Verify income classifications are present for normal VAT items
+        firstDetail.incomeClassification.Should().NotBeNull();
+        firstDetail.incomeClassification.Should().HaveCount(1);
+        var incomeClassification1 = firstDetail.incomeClassification[0];
+        incomeClassification1.amount.Should().Be(124);
+        // Based on the actual mapping behavior - for unknown service types only category is set
+        incomeClassification1.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_1);
+        
+        incomeClassification1.classificationTypeSpecified.Should().BeTrue(); // For unknown services
+        incomeClassification1.classificationType.Should().Be(IncomeClassificationValueType.E3_561_004);
+
+        // Verify invoice summary includes income classifications
+        invoice.invoiceSummary.Should().NotBeNull();
+        invoice.invoiceSummary.incomeClassification.Should().NotBeNull();
+        invoice.invoiceSummary.incomeClassification.Should().HaveCount(1); // Should be grouped by classification category
+
+        // Verify counterpart is null for receipt type invoices (InvoiceType.Item111 doesn't support counterpart)
+        invoice.counterpart.Should().BeNull();
+
+        // Verify issuer information
+        invoice.issuer.Should().NotBeNull();
+        invoice.issuer.vatNumber.Should().Be("999123456");
+        invoice.issuer.country.Should().Be(CountryType.GR);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ForInvoiceWithVATNature_0014_ShouldIncludeIncomeClassifications()
+    {
+        var cbReceiptReference = "TEST-001";
+        var receiptMoment = DateTime.Parse("2025-01-15T10:30:00.000Z").ToUniversalTime();
+        var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
+        var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
+
+        var receiptRequest = new ReceiptRequest
+        {
+            ftCashBoxID = ftCashBoxID,
+            cbTerminalID = "POS001",
+            Currency = Currency.EUR,
+            cbReceiptMoment = receiptMoment,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = ftPosSystemId,
+            cbArea = "Main",
+            cbUser = "Cashier01",
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerName = "Test Customer Ltd.",
+                CustomerId = "CUST001",
+                CustomerStreet = "Test Street 123",
+                CustomerCity = "Athens",
+                CustomerCountry = "GR",
+                CustomerVATId = "123456789"
+            },
+            ftReceiptCase = (ReceiptCase) 0x4752200000001002, // Point of sale receipt
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Amount = 124,
+                    Description = "Standard Product with Normal VAT",
+                    ProductNumber = "PROD001",
+                    Quantity = 1,
+                    VATRate = 0,
+                    ftChargeItemCase = (ChargeItemCase)0x4752200000001417,
+                    Moment = receiptMoment,
+                    Position = 1,
+                    VATAmount = 0,
+                    Unit = "pcs"
+                }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem
+                {
+                    Position = 1,
+                    Quantity = 1,
+                    Moment = receiptMoment,
+                    Description = "Cash Payment",
+                    Amount = 124,
+                    ftPayItemCase = (PayItemCase)0x4752200000000001
+                }
+            },
+            cbReceiptAmount = 124
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB001"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "999123456"
+            },
+        });
+
+        // Act
+        (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        action.Should().NotBeNull();
+        action!.invoice.Should().HaveCount(1);
+
+        var invoice = action.invoice[0];
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item11); // Invoice type
+
+        // Verify basic invoice structure
+        invoice.invoiceHeader.Should().NotBeNull();
+        invoice.invoiceDetails.Should().HaveCount(1);
+
+        // Verify first charge item has income classification
+        var firstDetail = invoice.invoiceDetails[0];
+        firstDetail.lineNumber.Should().Be(1);
+        firstDetail.netValue.Should().Be(124);
+        firstDetail.vatAmount.Should().Be(0);
+
+        // Verify income classifications are present for normal VAT items
+        firstDetail.incomeClassification.Should().NotBeNull();
+        firstDetail.incomeClassification.Should().HaveCount(1);
+        var incomeClassification1 = firstDetail.incomeClassification[0];
+        incomeClassification1.amount.Should().Be(124);
+        // Based on the actual mapping behavior - for unknown service types only category is set
+        incomeClassification1.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_1);
+
+        incomeClassification1.classificationTypeSpecified.Should().BeTrue(); // For unknown services
+        incomeClassification1.classificationType.Should().Be(IncomeClassificationValueType.E3_561_002);
+
+        invoice.counterpart.Should().NotBeNull();
+        invoice.counterpart.vatNumber.Should().Be("123456789");
+        invoice.counterpart.country.Should().Be(CountryType.GR);
+        invoice.counterpart.name.Should().BeNull();
+        invoice.counterpart.address.Should().BeNull();
+
+        // Verify invoice summary includes income classifications
+        invoice.invoiceSummary.Should().NotBeNull();
+        invoice.invoiceSummary.incomeClassification.Should().NotBeNull();
+        invoice.invoiceSummary.incomeClassification.Should().HaveCount(1); // Should be grouped by classification category
+
+        // Verify issuer information
+        invoice.issuer.Should().NotBeNull();
+        invoice.issuer.vatNumber.Should().Be("999123456");
+        invoice.issuer.country.Should().Be(CountryType.GR);
+    }
 }
