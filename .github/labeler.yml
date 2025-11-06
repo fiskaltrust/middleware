@@ -5,6 +5,9 @@ category-ci:
 category-release:
   - head-branch: "^release/v"
 
+meta-no-issue:
+  - head-branch: "^release/v"
+
 market-at:
   - changed-files:
       - any-glob-to-any-file:
