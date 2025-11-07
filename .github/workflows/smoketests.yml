@@ -2,7 +2,14 @@
 
 on:
   workflow_dispatch:
-    inputs:
+    inputs:      
+      launcherVersion:
+        description: "launcherVersion"
+        required: true
+        type: choice
+        options:
+          - v1.3
+          - v2.0
       queuePackage:
         description: "Queue package"
         required: true
@@ -46,10 +53,12 @@ jobs:
             $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
             $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
             $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
+
             if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
              $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
+
             if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
              $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
@@ -105,15 +114,23 @@ jobs:
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
-          $offline = "true"
+          $platform ="win-x64"
+          $offline = "false"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
 
           $pair = "${cashboxId}:${accessToken}"
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
-          $headers = @{ Authorization = "Basic $encoded" }
-
-          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          if ("${{ inputs.launcherVersion }}" -eq "v1.3") {
+           $headers = @{ Authorization = "Basic $encoded" }
+           $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+          } 
+          else
+          {
+           $headers = @{ accessToken = $accessToken }
+           $url = "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download-launcher?cashboxId=$cashboxId&offline=$offline&platform=$platform"
+          }
+         
           $output = "$launcher.$cashboxId.zip"
           Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
 
@@ -129,48 +146,88 @@ jobs:
            Remove-Item -Path $extractPath -Recurse -Force
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-             
-      - name: Run test.cmd, send request, and stop
+
+      - name:  Run launcher,send requests, and stop
         shell: pwsh
         run: |
-          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
-          Write-Host "Starting test.cmd..."
+          #....Run launcher....
+          Write-Host "Starting launcher..."
+          $exeFileName = "test.cmd"
+          if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $exeFileName = "launcher-test.cmd" }
+          $scriptPath = (Resolve-Path "${{ env.launcherpath }}/$exeFileName").Path
           $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
-
+          
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
-          $maxAttempts = 10
-          $attempt = 0
-          $pollUrl = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
-          $pollBody = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
-          while ($attempt -lt $maxAttempts) {
-              try {
-                  $pollResponse = Invoke-RestMethod -Uri $pollUrl -Method Post -Body $pollBody -ContentType "application/json" -TimeoutSec 2
-                  Write-Host "Response: $($pollResponse | ConvertTo-Json)"
-                  break;
-              } catch {
-                  Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
-                  Start-Sleep -Seconds 5
-                  $attempt++
-              }
-          } 
-          if($attempt -eq $maxAttempts)
-          {
-            Write-Error "Request failed: $_"
-          }
-         
+          $maxAttempts = 30
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+            if ($tcpReady) {
+                Write-Host "Launcher is ready!"
+                break
+            }
 
-          # Stop the launcher
-          Write-Host "Stopping test.cmd..."
-          Stop-Process -Id $process.Id -Force
+            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
+            Start-Sleep -Seconds 5
+          } 
+
+          #....Send requests....
+          if ($tcpReady) {
+           $baseUrl = "http://localhost:1500/${{ env.queueId }}"
+           $baseFile = ".github/scripts/requests"
+           $requests = @(
+                @{ Name = "Echo";                      Url = "$baseUrl/json/v1/Echo"; File = "$baseFile/Echo.json" }
+                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Zeroreceipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Pos-receipt.json" }
+                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Daily-closing-receipt.json" }
+                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914"; File = "" }
+                # @{ Name = "Tar-Export-from-middleware";Url = "$baseUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
+                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1"; File = "" }
+                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2"; File = "" }
+                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3"; File = "" }
+            )
+
+            $ErrorActionPreference = "Stop"
+            foreach ($req in $requests) {
+                Write-Host "`n--- Sending $($req.Name) request ---"
+                $body = $null
+                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {       
+                 $bodyTemplate = Get-Content $req.File -Raw 
+                 $body = $bodyTemplate -replace "{{cashbox_id}}", "${{ env.cashboxId }}" -replace "{{current_moment}}", (Get-Date).ToString("o")
+                }
+
+                try {
+
+                  if ($null -ne $body) {
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+                  } else {
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ErrorAction Stop
+                  }
+                  Write-Host "Response: $($response | ConvertTo-Json)"
+
+                } 
+                catch {
+                    Write-Error "$($req.Name) request failed: $_"
+                    Write-Host "Error details: $($_.Exception.Message)"
+                }
+             }
+            }
+            else {
+              Write-Error "Launcher failed to start within the expected time."
+            }
+
+            #....Stop launcher....
+            Write-Host "Stopping launcher process..."
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue      
 
       - name: Upload test output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ inputs.queuePackage }}
+          name: test-output-${{ inputs.queuePackage }}-Launcher-${{ inputs.launcherVersion }}
           path: test-output.log
         continue-on-error: true
  

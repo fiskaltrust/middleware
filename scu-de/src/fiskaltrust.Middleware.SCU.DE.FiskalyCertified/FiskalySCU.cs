@@ -602,9 +602,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 }
                 else
                 {
-
+#nullable enable
                     var exportStateInformation = await _fiskalyApiProvider.GetExportStateInformationByIdAsync(_configuration.TssId, Guid.Parse(request.TokenId));
-                    if (exportStateInformation.State == "ERROR")
+                    if (exportStateInformation?.State == "ERROR")
                     {
                         throw new FiskalyException($"The export failed with a fiskaly internal error: {exportStateInformation.Exception}");
                     }
@@ -613,7 +613,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                         throw exportStateDat.Error;
                     }
 
-                    if (exportStateInformation.State != "COMPLETED" || !File.Exists(tempFileName))
+                    if (exportStateInformation?.State != "COMPLETED" || !File.Exists(tempFileName))
                     {
                         return new ExportDataResponse
                         {
@@ -623,6 +623,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                             TotalTarFileSizeAvailable = false
                         };
                     }
+#nullable restore
                 }
                 _readStreamPointer.TryGetValue(request.TokenId, out var exportStateData);
                 if (exportStateData.State != ExportState.Succeeded || !File.Exists(tempFileName))
