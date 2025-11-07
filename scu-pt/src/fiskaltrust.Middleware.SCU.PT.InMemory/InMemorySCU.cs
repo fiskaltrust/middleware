@@ -66,12 +66,4 @@ public class InMemorySCU : IPTSSCD
             ReceiptResponse = request.ReceiptResponse,
         }, Convert.ToBase64String(signature1)));
     }
-
-    public string SignData(string hash1)
-    {
-        var rsa = RSA.Create();
-        rsa.ImportFromPem(_privateKey);
-        var signature1 = rsa.SignData(Encoding.ASCII.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
-        return Convert.ToBase64String(signature1);
-    }
 }
