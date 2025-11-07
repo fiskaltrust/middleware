@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.Middleware.SCU.PT.InMemory;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;

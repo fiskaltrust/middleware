@@ -2,7 +2,6 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;

@@ -1,6 +1,7 @@
-﻿using fiskaltrust.ifPOS.v2.Cases;
+using System;
+using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+namespace fiskaltrust.Middleware.SCU.PT.Abstraction;
 
 // _CCCC_vlll_gggg_tsss 
 public enum SignatureTypePT : long
@@ -15,7 +16,6 @@ public enum SignatureTypePT : long
     CertificationNo = 0x5054_2000_0000_0014,
     ReferenceForCreditNote = 0x5054_2000_0000_0015,
     PTAdditional = 0x5054_2000_0000_0016
-    // TBD define signaturetypes => interface ??
 }
 
 public static class SignatureTypePTExt

@@ -5,7 +5,6 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Microsoft.Win32.SafeHandles;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 

@@ -1,10 +1,10 @@
 ﻿using AutoFixture;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueueGR;
+using fiskaltrust.Middleware.Localization.QueuePT;
 
 namespace fiskaltrust.Middleware.Localization.v2.Models.Cases.Tests;
 

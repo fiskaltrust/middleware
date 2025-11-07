@@ -8,7 +8,6 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 using fiskaltrust.storage.V0;
 using FluentAssertions.Execution;

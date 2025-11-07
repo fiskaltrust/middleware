@@ -18,6 +18,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueuePT\fiskaltrust.Middleware.Localization.QueuePT.csproj" />
+      <ProjectReference Include="..\..\..\scu-pt\src\fiskaltrust.Middleware.SCU.PT.Abstraction\fiskaltrust.Middleware.SCU.PT.Abstraction.csproj" />
+      <ProjectReference Include="..\..\..\scu-pt\src\fiskaltrust.Middleware.SCU.PT.InMemory\fiskaltrust.Middleware.SCU.PT.InMemory.csproj" />
     </ItemGroup>
 
     <ItemGroup>

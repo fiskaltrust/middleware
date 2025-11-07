@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 

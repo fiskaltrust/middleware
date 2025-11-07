@@ -6,13 +6,13 @@ using System.Xml;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocuments.PaymentDocumentModels;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 

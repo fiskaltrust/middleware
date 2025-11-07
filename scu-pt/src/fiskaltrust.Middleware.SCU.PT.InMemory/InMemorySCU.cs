@@ -1,14 +1,17 @@
-﻿using System.Globalization;
+using System;
+using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
-using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.SCU.PT.Abstraction;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+namespace fiskaltrust.Middleware.SCU.PT.InMemory;
 
 public class InMemorySCU : IPTSSCD
 {
