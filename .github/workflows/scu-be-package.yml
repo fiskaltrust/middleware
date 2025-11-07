@@ -1,0 +1,28 @@
+name: SCU.BE Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to build'
+        type: choice
+        required: true
+        options:
+          - fiskaltrust.Middleware.SCU.BE.ZwarteDoos
+      deploySandbox:
+        description: 'Deploy to sandbox environment'
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  package:
+    secrets: inherit
+    uses: ./.github/workflows/package.yml
+    with:
+      pattern: ${{ inputs.package }}
+      directory: scu-be/src
+      deploySandbox: ${{ inputs.deploySandbox}}
