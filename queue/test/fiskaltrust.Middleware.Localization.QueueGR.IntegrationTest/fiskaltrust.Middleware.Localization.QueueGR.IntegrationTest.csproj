@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net8</TargetFrameworks>
@@ -24,15 +24,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueGR\fiskaltrust.Middleware.Localization.QueueGR.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Update="Examples\MutliChargeItems.json">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Examples\MultiAfterCommaDigits.json">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
     </ItemGroup>
 
 </Project>
