@@ -28,6 +28,8 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
+
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
         {
             if (!request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) || data.PT is null || data.PT.Series is null || !data.PT.Number.HasValue)
@@ -68,22 +70,22 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
             else
             {
-                series = StaticNumeratorStorage.CreditNoteSeries;
+                series = staticNumberStorage.CreditNoteSeries;
             }
         }
         else
         {
             if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
             {
-                series = StaticNumeratorStorage.HandWrittenFSSeries;
+                series = staticNumberStorage.HandWrittenFSSeries;
             }
             else
             {
-                series = StaticNumeratorStorage.SimplifiedInvoiceSeries;
+                series = staticNumberStorage.SimplifiedInvoiceSeries;
             }
         }
         series.Numerator++;
-        receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -132,6 +134,8 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
+
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
@@ -151,9 +155,9 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             };
         }
 
-        var series = StaticNumeratorStorage.PaymentSeries;
+        var series = staticNumberStorage.PaymentSeries;
         series.Numerator++;
-        receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -162,7 +166,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
         var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
         var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-        AddSignatures(series, response, hash, printHash, qrCode);
+        AddPaymentTransferSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
@@ -191,5 +195,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());
+    }
+
+    private static void AddPaymentTransferSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
+    {
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
     }
 }

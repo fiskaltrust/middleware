@@ -13,4 +13,19 @@ public static class ErrorMessagesPT
     public const string MultipleReceiptReferencesNotSupported = "Multiple receipt references are currently not supported.";
     
     public const string VoidNotSupported = "Void is not supported";
+
+    // Validation error messages with EEEE_ prefix
+    public const string EEEE_BottleLessThanOneLiterNotAllowed = "EEEE_Articles classified as 'Garrafão < 1 litro' are not allowed in this receipt type.";
+    
+    public const string EEEE_ChargeItemDescriptionTooShort = "EEEE_Charge item description must be longer than 3 characters.";
+    
+    public const string EEEE_ChargeItemDescriptionMissing = "EEEE_Charge item description is mandatory and cannot be null or empty.";
+    
+    public const string EEEE_ChargeItemVATRateMissing = "EEEE_Charge item VAT rate is mandatory and must be set.";
+    
+    public const string EEEE_ChargeItemAmountMissing = "EEEE_Charge item amount (price) is mandatory and must be set.";
+    
+    public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
+
+    public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 }

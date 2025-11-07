@@ -5,19 +5,9 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Org.BouncyCastle.Asn1.Ocsp;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
-
-public static class InvoiceType
-{
-    public const string Invoice = "FT";
-    public const string SimplifiedInvoice = "FS";
-    public const string Receipt = "FR";
-    public const string Payment = "RG";
-    public const string DebitNote = "ND";
-    public const string CreditNote = "NC";
-    public const string ProForma = "PF";
-}
 
 public static class InvoiceStatus
 {
@@ -30,6 +20,29 @@ public static class InvoiceStatus
 
 public static class PortugalReceiptCalculations
 {
+    private static (string documentType, string uniqueIdentification) ExtractDocumentTypeAndUniqueIdentification(string ftReceiptIdentification)
+    {
+        if (string.IsNullOrEmpty(ftReceiptIdentification))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var localPart = ftReceiptIdentification.Split("#").Last();
+        var spaceIndex = localPart.IndexOf(' ');
+        
+        // The unique identification is always everything after the hash (the localPart)
+        var uniqueIdentification = localPart;
+        
+        // Document type is only extracted if there's a proper space separation and content after the space
+        if (spaceIndex > 0 && spaceIndex < localPart.Length - 1)
+        {
+            var documentType = localPart.Substring(0, spaceIndex);
+            return (documentType, uniqueIdentification);
+        }
+        
+        return (string.Empty, uniqueIdentification);
+    }
+
     public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
@@ -41,15 +54,18 @@ public static class PortugalReceiptCalculations
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
+        
+        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
-            DocumentType = InvoiceType.CreditNote,
+            DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
-            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => Math.Abs(x.Amount)),
@@ -63,7 +79,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -78,15 +94,17 @@ public static class PortugalReceiptCalculations
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
+        
+        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
-            DocumentType = InvoiceType.Invoice,
+            DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
-            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
@@ -100,7 +118,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -115,15 +133,17 @@ public static class PortugalReceiptCalculations
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
+        
+        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
-            DocumentType = InvoiceType.ProForma,
+            DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
-            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
@@ -137,7 +157,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -152,15 +172,17 @@ public static class PortugalReceiptCalculations
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
+        
+        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
-            DocumentType = InvoiceType.Payment,
+            DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
-            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             // Fill according to the technical notes of the TaxCountryRegion field of SAF-T (PT).In case of a document without an indication of the VAT rate, which must be shown in table 4.2, 4.3 or 4.4 of the SAF - T(PT), fill in with «0» (I1: 0).
             TaxCountryRegion = "0",
@@ -175,7 +197,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
@@ -190,15 +212,17 @@ public static class PortugalReceiptCalculations
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
+        
+        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
-            DocumentType = InvoiceType.SimplifiedInvoice,
+            DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
-            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification.Split("#").Last(),
+            UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
@@ -212,7 +236,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 }

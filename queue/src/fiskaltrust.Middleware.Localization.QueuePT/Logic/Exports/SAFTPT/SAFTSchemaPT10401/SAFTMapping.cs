@@ -133,7 +133,7 @@ public class SaftExporter
         return customer;
     }
 
-    public string SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
+    public byte[] SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var data = CreateAuditFile(accountMasterData, queueItems, to);
@@ -147,7 +147,7 @@ public class SaftExporter
         using var writer = XmlWriter.Create(memoryStream, settings);
         serializer.Serialize(writer, data);
         memoryStream.Position = 0;
-        return Encoding.GetEncoding("windows-1252").GetString(memoryStream.ToArray());
+        return memoryStream.ToArray();
     }
 
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
@@ -159,9 +159,9 @@ public class SaftExporter
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
         actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptRequest.cbReceiptMoment).ToList();
-        var invoices = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).ToList();
-        var workingDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).ToList();
-        var paymentDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).ToList();
+        var invoices = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
+        var workingDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
+        var paymentDocuments = actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
@@ -510,13 +510,14 @@ public class SaftExporter
                 PaymentStatus = "N",
                 PaymentStatusDate = receiptRequest.cbReceiptMoment,
                 SourceID = GetSourceID(receiptRequest),
-                SourcePayment = GetSourcePayment(receiptRequest),
+                SourcePayment = GetSourcePayment(receiptRequest)
             },
             Period = receiptRequest.cbReceiptMoment.Month,
             TransactionDate = receiptRequest.cbReceiptMoment,
             PaymentType = PTMappings.GetPaymentType(receiptRequest),
             PaymentMethod = new PaymentMethod
             {
+                PaymentMechanism = PTMappings.GetPaymentMecahnism(payItem),
                 PaymentAmount = payItem.Amount,
                 PaymentDate = receiptRequest.cbReceiptMoment
             },

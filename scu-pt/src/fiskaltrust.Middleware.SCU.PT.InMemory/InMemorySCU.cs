@@ -31,7 +31,7 @@ public class InMemorySCU : IPTSSCD
     }
     public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
-        return new PTInvoiceElement
+        var element = new PTInvoiceElement
         {
             InvoiceDate = receipt.cbReceiptMoment,
             SystemEntryDate = receipt.cbReceiptMoment,
@@ -39,6 +39,12 @@ public class InMemorySCU : IPTSSCD
             GrossTotal = receipt.cbChargeItems.Sum(x => receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? -x.Amount : x.Amount),
             Hash = lastHash ?? ""
         };
+        // Todo this is just a workoaurnd while we are going through the certification
+        if (receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            element.SystemEntryDate = receiptResponse.ftReceiptMoment;
+        }
+        return element;
     }
 
     public string GetHashForItem(PTInvoiceElement element)

@@ -11,74 +11,80 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 public class StaticNumeratorStorage
 {
-    public static NumberSeries InvoiceSeries { get; set; } = new NumberSeries
+    //public NumberSeries InvoiceSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "FT",
+    //    ATCUD = "AAJFJGVC33",
+    //    Series = "ft2025019d"
+    //};
+
+    //public NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "FS",
+    //    ATCUD = "AAJFJ4VC3W",
+    //    Series = "ft2025019d"
+    //};
+
+    //public NumberSeries CreditNoteSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "NC",
+    //    ATCUD = "AAJFJ3VC34",
+    //    Series = "ft2025019d"
+    //};
+
+    //public NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "FS",
+    //    ATCUD = "AAJFJBKFZR",
+    //    Series = "ft2025771b"
+    //};
+
+    //public NumberSeries ProFormaSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "PF",
+    //    ATCUD = "AAJFJ9VC37",
+    //    Series = "ft2025019d"
+    //};
+
+    //public NumberSeries PaymentSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "RG",
+    //    ATCUD = "AAJFJMVC3G",
+    //    Series = "ft2025019d"
+    //};
+
+    //public NumberSeries BudgetSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "OR",
+    //    ATCUD = "AAJFJKVC3P",
+    //    Series = "ft2025eb51"
+    //};
+
+    //public NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
+    //{
+    //    TypeCode = "CM",
+    //    ATCUD = "AAJFJ2VC3R",
+    //    Series = "ft2025eb51"
+    //};
+
+
+    public static async Task<NumeratorStorage> GetStaticNumeratorStorageAsync(ftQueuePT queuePT, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
-        TypeCode = "FT",
-        ATCUD = "AAJFJGVC33",
-        Identifier = "FT ft2025019d",
-    };
+        await LoadStorageNumbers(queuePT.NumeratorStorage, middlewareQueueItemRepository);
+        return queuePT.NumeratorStorage;
+    }
 
-    public static NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
-    {
-        TypeCode = "FS",
-        ATCUD = "AAJFJ4VC3W",
-        Identifier = "FS ft2025019d",
-    };
-
-    public static NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
-    {
-        TypeCode = "NC",
-        ATCUD = "AAJFJ3VC34",
-        Identifier = "NC ft2025019d",
-    };
-
-    public static NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
-    {
-        TypeCode = "FS",
-        ATCUD = "AAJFJBKFZR",
-        Identifier = "FS ft2025771b",
-    };
-
-    public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries
-    {
-        TypeCode = "PF",
-        ATCUD = "AAJFJ9VC37",
-        Identifier = "PF ft2025019d",
-    };
-
-    public static NumberSeries PaymentSeries { get; set; } = new NumberSeries
-    {
-        TypeCode = "RG",
-        ATCUD = "AAJFJMVC3G",
-        Identifier = "RG ft2025019d",
-    };
-
-    public static NumberSeries BudgetSeries { get; set; } = new NumberSeries
-    {
-        TypeCode = "OR",
-        ATCUD = "AAJFJKVC3P",
-        Identifier = "OR ft2025eb51",
-    };
-
-    public static NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
-    {
-        TypeCode = "CM",
-        ATCUD = "AAJFJ2VC3R",
-        Identifier = "CM ft2025eb51",
-    };
-
-
-    public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+    public static async Task LoadStorageNumbers(NumeratorStorage numeratorStorage, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         var queueItems = (await middlewareQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow).ToList();
-        ReloadSeries(SimplifiedInvoiceSeries, queueItems);
-        ReloadSeries(CreditNoteSeries, queueItems);
-        ReloadSeries(InvoiceSeries, queueItems);
-        ReloadSeries(ProFormaSeries, queueItems);
-        ReloadSeries(PaymentSeries, queueItems);
-        ReloadSeries(BudgetSeries, queueItems);
-        ReloadSeries(TableChecqueSeries, queueItems);
-        ReloadSeries(HandWrittenFSSeries, queueItems);
+        ReloadSeries(numeratorStorage.SimplifiedInvoiceSeries, queueItems);
+        ReloadSeries(numeratorStorage.CreditNoteSeries, queueItems);
+        ReloadSeries(numeratorStorage.InvoiceSeries, queueItems);
+        ReloadSeries(numeratorStorage.ProFormaSeries, queueItems);
+        ReloadSeries(numeratorStorage.PaymentSeries, queueItems);
+        ReloadSeries(numeratorStorage.BudgetSeries, queueItems);
+        ReloadSeries(numeratorStorage.TableChecqueSeries, queueItems);
+        ReloadSeries(numeratorStorage.HandWrittenFSSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
@@ -107,7 +113,7 @@ public class StaticNumeratorStorage
                 if (lastReceiptResponse.ftReceiptIdentification.Split("#").Last().StartsWith(series.Identifier))
                 {
                     series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("#").Last().Split("/")[1]);
-                    var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == SignatureTypePT.Hash.As<SignatureType>());
+                    var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.Hash));
                     if (lastSignature != null)
                     {
                         series.LastHash = lastSignature.Data;
@@ -115,7 +121,7 @@ public class StaticNumeratorStorage
                     break;
                 }
 
-      
+
             }
             if (series.Numerator == null)
             {
@@ -123,14 +129,4 @@ public class StaticNumeratorStorage
             }
         }
     }
-}
-
-
-public class NumberSeries
-{
-    public required string TypeCode { get; set; }
-    public required string ATCUD { get; set; }
-    public required string Identifier { get; set; }
-    public long? Numerator { get; set; }
-    public string? LastHash { get; set; }
 }

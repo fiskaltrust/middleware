@@ -14,8 +14,7 @@ public static class PTCertificationExamples
 
     public static ReceiptCase BaseCase = ((ReceiptCase) 0x2000_0000_0000).WithCountry("PT");
 
-    public static DateTime ReferenceDate = new DateTime(2025, 09, 22, 04, 15, 53);
-
+    public static DateTime ReferenceDate = new DateTime(2025, 10, 02, 04, 15, 53);
     public static PTUserObject User1ObjectId => new PTUserObject
     {
         UserId = Convert.ToBase64String(Guid.Parse("2e794dff-3123-4281-8810-4716d717cda5").ToByteArray()),
@@ -141,7 +140,7 @@ public static class PTCertificationExamples
             [
                 new ChargeItem
                 {
-                    Amount = -100,
+                    Amount = -150,
                     VATRate = PTVATRates.Normal,
                     ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                     Quantity = -1,
@@ -153,7 +152,7 @@ public static class PTCertificationExamples
                 new PayItem
                 {
                     Quantity = -1,
-                    Amount = -100,
+                    Amount = -150,
                     Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }

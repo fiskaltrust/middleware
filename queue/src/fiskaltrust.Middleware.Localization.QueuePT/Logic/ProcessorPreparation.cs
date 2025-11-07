@@ -23,8 +23,6 @@ public abstract class ProcessorPreparation
                 chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
             }
         }
-
-        await StaticNumeratorStorage.LoadStorageNumbers(await _readOnlyQueueItemRepository);
         ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
         return await process();
     }

@@ -34,5 +34,29 @@ namespace fiskaltrust.storage.V0
          * The following fields should probably be moved to a different config
          */
         public string IssuerTIN { get; set; }
+
+        public NumeratorStorage NumeratorStorage { get; set; }
+    }
+
+    public class NumeratorStorage
+    {
+        public NumberSeries InvoiceSeries { get; set; }
+        public NumberSeries SimplifiedInvoiceSeries { get; set; }
+        public NumberSeries CreditNoteSeries { get; set; }
+        public NumberSeries HandWrittenFSSeries { get; set; }
+        public NumberSeries ProFormaSeries { get; set; }
+        public NumberSeries PaymentSeries { get; set; }
+        public NumberSeries BudgetSeries { get; set; }
+        public NumberSeries TableChecqueSeries { get; set; }
+    }
+
+    public class NumberSeries
+    {
+        public string TypeCode { get; set; }
+        public string ATCUD { get; set; }
+        public string Series { get; set; }
+        public string Identifier => $"{TypeCode} {Series}";
+        public long Numerator { get; set; }
+        public string LastHash { get; set; }
     }
 }

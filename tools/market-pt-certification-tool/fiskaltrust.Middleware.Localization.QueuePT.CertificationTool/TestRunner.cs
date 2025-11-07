@@ -26,11 +26,11 @@ public class TestRunner
     public readonly Guid _cashboxid;
     public readonly string _accessToken;
 
-    private TestRunner(Guid cashBoxId, string accessToken)
+    private TestRunner(Guid cashBoxId, string accessToken, string numeratorStorage)
     {
         _cashboxid = cashBoxId;
         _accessToken = accessToken;
-        var bootstrapper = Task.Run(() => InitializeQueueGRBootstrapperAsync()).Result;
+        var bootstrapper = Task.Run(() => InitializeQueueGRBootstrapperAsync(numeratorStorage)).Result;
         _signMethod = bootstrapper.RegisterForSign();
         _journalMethod = bootstrapper.RegisterForJournal();
     }
@@ -75,7 +75,7 @@ public class TestRunner
         return (ticks, receiptResponse);
     }
 
-    public static async Task<TestRunner> InitializeDryTestRun(Guid accountId, string accessToken)
+    public static async Task<TestRunner> InitializeDryTestRun(Guid accountId, string accessToken, string numeratorStorage)
     {
         var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Post, "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=SKE-Certification202506");
@@ -88,7 +88,7 @@ public class TestRunner
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<NewCashBox>(responseContent);
         await UpdateReceiptSettigns(Guid.Parse(result.cashBoxId), result.accessToken, result.configuration.ftQueues!.First().Id);
-        var testRunner = new TestRunner(Guid.Parse(result!.cashBoxId), result.accessToken);
+        var testRunner = new TestRunner(Guid.Parse(result!.cashBoxId), result.accessToken, numeratorStorage);
         await testRunner.PrepareCashBox();
         return testRunner;
     }
@@ -106,12 +106,12 @@ public class TestRunner
         Console.WriteLine(await response.Content.ReadAsStringAsync());
     }
 
-    public static async Task<TestRunner> InitializeWithCashBox(Guid cashBoxId, string accessToken)
+    public static async Task<TestRunner> InitializeWithCashBox(Guid cashBoxId, string accessToken, string numeratorStorage)
     {
-        return new TestRunner(cashBoxId, accessToken);
+        return new TestRunner(cashBoxId, accessToken, numeratorStorage);
     }
 
-    private async Task<QueuePTBootstrapper> InitializeQueueGRBootstrapperAsync()
+    private async Task<QueuePTBootstrapper> InitializeQueueGRBootstrapperAsync(string numeratorStorage)
     {
         var configuration = await TestHelpers.GetConfigurationAsync(_cashboxid, _accessToken);
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {_cashboxid} is empty and therefore not valid.");
@@ -120,6 +120,7 @@ public class TestRunner
             PrivateKey = File.ReadAllText("C:\\secure\\PrivateKey.pem"),
             SoftwareCertificateNumber = "9999"
         });
+        queue.Configuration.Add("NumeratorStorage", numeratorStorage);
         var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);
         return bootstrapper;
     }
