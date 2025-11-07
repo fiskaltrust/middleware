@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,18 +8,17 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.SCU.PT.Abstraction;
-using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.PT.InMemory;
 
 public class InMemorySCU : IPTSSCD
 {
-    private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT;
+    private string _privateKey;
 
-    public InMemorySCU(ftSignaturCreationUnitPT signaturCreationUnitPT)
+    public InMemorySCU(string privateKey)
     {
-        _signaturCreationUnitPT = signaturCreationUnitPT;
+        _privateKey = privateKey;
     }
     public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
     {
@@ -59,7 +58,7 @@ public class InMemorySCU : IPTSSCD
     public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
     {
         var rsa = RSA.Create();
-        rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
+        rsa.ImportFromPem(_privateKey);
         var hash1 = GetHashForItem(GetPTInvoiceElementFromReceiptRequest(request.ReceiptRequest, request.ReceiptResponse, lastHash ?? ""));
         var signature1 = rsa.SignData(Encoding.UTF8.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
         return await Task.FromResult((new ProcessResponse
@@ -71,7 +70,7 @@ public class InMemorySCU : IPTSSCD
     public string SignData(string hash1)
     {
         var rsa = RSA.Create();
-        rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
+        rsa.ImportFromPem(_privateKey);
         var signature1 = rsa.SignData(Encoding.ASCII.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
         return Convert.ToBase64String(signature1);
     }

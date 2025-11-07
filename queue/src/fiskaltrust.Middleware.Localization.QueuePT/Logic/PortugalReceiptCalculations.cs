@@ -5,7 +5,6 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Org.BouncyCastle.Asn1.Ocsp;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
-using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 

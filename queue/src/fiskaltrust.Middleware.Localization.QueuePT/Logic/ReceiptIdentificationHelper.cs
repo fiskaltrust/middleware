@@ -2,7 +2,7 @@
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 public static class ReceiptIdentificationHelper
 {

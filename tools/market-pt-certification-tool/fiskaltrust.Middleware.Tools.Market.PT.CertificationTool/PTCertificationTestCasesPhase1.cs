@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
+﻿namespace fiskaltrust.Middleware.Tools.Market.PT.CertificationTool;
 
 public static class PTCertificationTestCasesPhase1
 {

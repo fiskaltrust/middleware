@@ -1,10 +1,10 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Tools.Market.PT.CertificationTool.Helpers;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
+namespace fiskaltrust.Middleware.Tools.Market.PT.CertificationTool;
 
 public record BusinessCase(string title, string description, bool supported, ReceiptRequest? receiptRequest, string? referencedCase = null) { }
 

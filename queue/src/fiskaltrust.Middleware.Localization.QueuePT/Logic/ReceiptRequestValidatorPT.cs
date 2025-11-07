@@ -1,6 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Constants;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using System;
 using System.Linq;

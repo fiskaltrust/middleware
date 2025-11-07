@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
@@ -6,7 +6,6 @@ using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.PT.InMemory;
 using fiskaltrust.Middleware.SCU.PT.Abstraction;
-using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
 
@@ -17,12 +16,7 @@ public class InMemorySCUTests
     [Fact]
     public async Task EchoAsync_ShouldReturnMessage()
     {
-        var scuPT = new ftSignaturCreationUnitPT
-        {
-            PrivateKey = File.ReadAllText("PrivateKey.pem"),
-            SoftwareCertificateNumber = "9999"
-        };
-        var sut = new InMemorySCU(scuPT);
+        var sut = new InMemorySCU(File.ReadAllText("PrivateKey.pem"));
         var echoRequest = new EchoRequest { Message = "Test" };
         
         var result = await sut.EchoAsync(echoRequest);
@@ -33,13 +27,8 @@ public class InMemorySCUTests
     [Fact]
     public async Task GetInfoAsync_ShouldReturnInfo()
     {
-        var scuPT = new ftSignaturCreationUnitPT
-        {
-            PrivateKey = File.ReadAllText("PrivateKey.pem"),
-            SoftwareCertificateNumber = "9999"
-        };
-        var sut = new InMemorySCU(scuPT);
-        
+        var sut = new InMemorySCU(File.ReadAllText("PrivateKey.pem"));
+
         var result = await sut.GetInfoAsync();
         
         result.Should().NotBeNull();
@@ -48,13 +37,8 @@ public class InMemorySCUTests
     [Fact]
     public async Task ProcessReceiptAsync_ShouldReturnSignedResponse()
     {
-        var scuPT = new ftSignaturCreationUnitPT
-        {
-            PrivateKey = File.ReadAllText("PrivateKey.pem"),
-            SoftwareCertificateNumber = "9999"
-        };
-        var sut = new InMemorySCU(scuPT);
-        
+        var sut = new InMemorySCU(File.ReadAllText("PrivateKey.pem"));
+
         var receiptRequest = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
@@ -94,13 +78,8 @@ public class InMemorySCUTests
     [Fact]
     public void GetHashForItem_ShouldReturnCorrectFormat()
     {
-        var scuPT = new ftSignaturCreationUnitPT
-        {
-            PrivateKey = File.ReadAllText("PrivateKey.pem"),
-            SoftwareCertificateNumber = "9999"
-        };
-        var sut = new InMemorySCU(scuPT);
-        
+        var sut = new InMemorySCU(File.ReadAllText("PrivateKey.pem"));
+
         var element = new PTInvoiceElement
         {
             InvoiceDate = new DateTime(2024, 1, 1),

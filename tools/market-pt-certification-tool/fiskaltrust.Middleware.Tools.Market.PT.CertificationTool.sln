@@ -2,16 +2,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{75332D56-BFA3-47C5-B2B0-C0376C78190E}"
-	ProjectSection(SolutionItems) = preProject
-		..\Directory.Build.props = ..\Directory.Build.props
-		Directory.Build.props = Directory.Build.props
-		..\..\version.json = ..\..\version.json
-	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueuePT.CertificationTool", "fiskaltrust.Middleware.Localization.QueuePT.CertificationTool\fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.csproj", "{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Tools.Market.PT.CertificationTool", "fiskaltrust.Middleware.Tools.Market.PT.CertificationTool\fiskaltrust.Middleware.Tools.Market.PT.CertificationTool.csproj", "{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "queue", "queue", "{5F3D719F-3CF1-CEC8-8D1A-FAC986D80D45}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueuePT", "..\..\queue\src\fiskaltrust.Middleware.Localization.QueuePT\fiskaltrust.Middleware.Localization.QueuePT.csproj", "{7BE3C73F-1A99-EBD8-251D-0392DAB162FA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scu-pt", "scu-pt", "{F0992D68-59D6-4CAE-5A63-DBC8354429AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.PT.InMemory", "..\..\scu-pt\src\fiskaltrust.Middleware.SCU.PT.InMemory\fiskaltrust.Middleware.SCU.PT.InMemory.csproj", "{9F52C277-7F7B-ACB1-B55B-26054D8C9827}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.v2", "..\..\queue\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj", "{6B1DAC00-F4F4-2527-15CF-4B5433E5B4A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,12 +26,27 @@ Global
 		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BE3C73F-1A99-EBD8-251D-0392DAB162FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BE3C73F-1A99-EBD8-251D-0392DAB162FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BE3C73F-1A99-EBD8-251D-0392DAB162FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BE3C73F-1A99-EBD8-251D-0392DAB162FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F52C277-7F7B-ACB1-B55B-26054D8C9827}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F52C277-7F7B-ACB1-B55B-26054D8C9827}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F52C277-7F7B-ACB1-B55B-26054D8C9827}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F52C277-7F7B-ACB1-B55B-26054D8C9827}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B1DAC00-F4F4-2527-15CF-4B5433E5B4A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B1DAC00-F4F4-2527-15CF-4B5433E5B4A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B1DAC00-F4F4-2527-15CF-4B5433E5B4A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B1DAC00-F4F4-2527-15CF-4B5433E5B4A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{7BE3C73F-1A99-EBD8-251D-0392DAB162FA} = {5F3D719F-3CF1-CEC8-8D1A-FAC986D80D45}
+		{9F52C277-7F7B-ACB1-B55B-26054D8C9827} = {F0992D68-59D6-4CAE-5A63-DBC8354429AB}
+		{6B1DAC00-F4F4-2527-15CF-4B5433E5B4A1} = {5F3D719F-3CF1-CEC8-8D1A-FAC986D80D45}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F1234567-89AB-CDEF-0123-456789ABCDEF}

@@ -7,6 +7,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTests.Factories;
 

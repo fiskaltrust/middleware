@@ -4,11 +4,10 @@ using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using FluentAssertions.Primitives;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
+namespace fiskaltrust.Middleware.Tools.Market.PT.CertificationTool.Helpers;
 
 public class TestHelpers
 {

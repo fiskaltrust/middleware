@@ -9,16 +9,15 @@ using Azure.Core;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT;
-using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
-using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Tools.Market.PT.CertificationTool;
+using fiskaltrust.Middleware.Tools.Market.PT.CertificationTool.Helpers;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Asn1.Ocsp;
 
 var accountId = Guid.Parse("");
 var accessToken = "";
-var baseFolder = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-10-01";
+var baseFolder = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-07";
 var testRunner = await TestRunner.InitializeDryTestRun(accountId, accessToken, """
             {
               "InvoiceSeries": {

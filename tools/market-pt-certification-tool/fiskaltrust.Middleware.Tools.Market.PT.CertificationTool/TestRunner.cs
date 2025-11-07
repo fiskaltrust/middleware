@@ -3,14 +3,14 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.SCU.PT.InMemory;
-using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Tools.Market.PT.CertificationTool.Helpers;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
+namespace fiskaltrust.Middleware.Tools.Market.PT.CertificationTool;
 
 public class NewCashBox
 {
@@ -115,11 +115,7 @@ public class TestRunner
     {
         var configuration = await TestHelpers.GetConfigurationAsync(_cashboxid, _accessToken);
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {_cashboxid} is empty and therefore not valid.");
-        var ptSSCD = new InMemorySCU(new ftSignaturCreationUnitPT
-        {
-            PrivateKey = File.ReadAllText("C:\\secure\\PrivateKey.pem"),
-            SoftwareCertificateNumber = "9999"
-        });
+        var ptSSCD = new InMemorySCU(File.ReadAllText("C:\\secure\\PrivateKey.pem"));
         queue.Configuration.Add("NumeratorStorage", numeratorStorage);
         var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);
         return bootstrapper;
