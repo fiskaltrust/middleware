@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Constants;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 

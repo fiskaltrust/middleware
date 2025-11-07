@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Constants;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 public static class ErrorMessagesPT
 {

@@ -1,7 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 

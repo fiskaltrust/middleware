@@ -1,5 +1,4 @@
 ﻿using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
@@ -11,7 +10,6 @@ using System.Text;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Constants;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;

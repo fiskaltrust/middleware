@@ -9,8 +9,8 @@ using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Constants;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
