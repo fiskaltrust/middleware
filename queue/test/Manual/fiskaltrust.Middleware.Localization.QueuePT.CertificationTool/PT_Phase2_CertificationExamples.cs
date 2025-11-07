@@ -1,10 +1,10 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.SAFT.CLI;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 
