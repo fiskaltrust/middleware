@@ -16,10 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference
-            Include="..\..\src\fiskaltrust.Middleware.SCU.GR.Abstraction\fiskaltrust.Middleware.SCU.GR.Abstraction.csproj" />
-        <ProjectReference
-            Include="..\..\src\fiskaltrust.Middleware.SCU.GR.MyData\fiskaltrust.Middleware.SCU.GR.MyData.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.GR.MyData\fiskaltrust.Middleware.SCU.GR.MyData.csproj" />
     </ItemGroup>
 
 </Project>

@@ -9,8 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D3735F43-830
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D46180D0-C3B0-4544-8571-46FCF7783EE0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.Abstraction", "src\fiskaltrust.Middleware.SCU.GR.Abstraction\fiskaltrust.Middleware.SCU.GR.Abstraction.csproj", "{5198570C-6420-4ACC-A8CD-EC86987810A5}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.MyData", "src\fiskaltrust.Middleware.SCU.GR.MyData\fiskaltrust.Middleware.SCU.GR.MyData.csproj", "{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.UnitTest", "test\fiskaltrust.Middleware.SCU.GR.UnitTest\fiskaltrust.Middleware.SCU.GR.UnitTest.csproj", "{94946668-08ED-4AF7-B331-1774A2E94C99}"
@@ -25,10 +23,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -50,7 +44,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{5198570C-6420-4ACC-A8CD-EC86987810A5} = {D3735F43-830E-4992-8663-7182B6970DA2}
 		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50} = {D3735F43-830E-4992-8663-7182B6970DA2}
 		{94946668-08ED-4AF7-B331-1774A2E94C99} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{B530EACC-2000-45E9-BE23-DFF022FA5883} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
