@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.MasterFiles;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
 [XmlRoot(ElementName = "MasterFiles")]
 public class MasterFiles

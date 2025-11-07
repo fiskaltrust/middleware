@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.Header;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
 public enum TaxAccountingBasis
 {

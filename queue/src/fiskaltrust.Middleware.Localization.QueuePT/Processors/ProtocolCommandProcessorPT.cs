@@ -4,7 +4,6 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using System.Text;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
