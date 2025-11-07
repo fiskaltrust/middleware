@@ -1,4 +1,4 @@
-namespace fiskaltrust.Middleware.Localization.QueueBE;
+﻿namespace fiskaltrust.Middleware.Localization.QueueBE.Models;
 
 public class QueueBEConfiguration
 {
