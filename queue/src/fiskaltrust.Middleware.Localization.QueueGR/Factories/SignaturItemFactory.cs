@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.QueueGR.Models.NewFolder;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Factories;
 

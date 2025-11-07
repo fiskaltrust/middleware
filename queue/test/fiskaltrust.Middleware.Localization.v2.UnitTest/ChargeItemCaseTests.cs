@@ -3,8 +3,8 @@ using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using Xunit;
-using fiskaltrust.Middleware.SCU.GR.Abstraction;
-using fiskaltrust.Middleware.Localization.QueuePT;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueueGR.Models.NewFolder;
 
 namespace fiskaltrust.Middleware.Localization.v2.Models.Cases.Tests;
 

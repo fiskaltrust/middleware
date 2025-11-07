@@ -1,7 +1,7 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 // _CCCC_vlll_gggg_tsss 
 public enum SignatureTypePT : long

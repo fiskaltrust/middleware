@@ -1,7 +1,7 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR;
+namespace fiskaltrust.Middleware.Localization.QueueGR.Models.NewFolder;
 
 public enum SignatureTypeGR : long
 {

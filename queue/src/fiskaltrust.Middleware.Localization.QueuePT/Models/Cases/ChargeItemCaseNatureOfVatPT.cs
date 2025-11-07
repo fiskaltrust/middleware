@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 public enum ChargeItemCaseNatureOfVatPT
 {

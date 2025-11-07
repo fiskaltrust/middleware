@@ -12,7 +12,7 @@ using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
-using fiskaltrust.Middleware.Localization.QueuePT;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
