@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.gr;
+using fiskaltrust.Middleware.Localization.QueueGR.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 

@@ -4,7 +4,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 public class ReceiptReferenceProvider
 {

@@ -7,6 +7,7 @@ using fiskaltrust.storage.V0;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueGR.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
