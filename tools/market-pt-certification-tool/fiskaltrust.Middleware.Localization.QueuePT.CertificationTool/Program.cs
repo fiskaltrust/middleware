@@ -16,7 +16,7 @@ using Org.BouncyCastle.Asn1.Ocsp;
 
 var accountId = Guid.Parse("");
 var accessToken = "";
-var baseFolder = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-09-20";
+var baseFolder = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-07";
 var testRunner = await TestRunner.InitializeDryTestRun(accountId, accessToken);
 Console.WriteLine("Starting Phase 1 Certification Tests...");
 await PTCertificationExamplesPhase1(testRunner, false);
