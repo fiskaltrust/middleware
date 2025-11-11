@@ -17,6 +17,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
 {
@@ -49,7 +50,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 // Key handling is based on this condition to ensure that we are handling it case insensitive
-                LauncherEnvironment =  _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
+                LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
             };
 
@@ -83,6 +84,109 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "OSDescription", RuntimeInformation.OSDescription.ToString() },
                 { "...", "redacted"}
             };
+
+            try
+            {
+                if (middlewareConfiguration.Configuration.TryGetValue("init_ftQueue", out var rawQueueJson)
+                    && rawQueueJson is string queueJson
+                    && !string.IsNullOrWhiteSpace(queueJson))
+                {
+                    var queueList = JArray.Parse(queueJson);
+                    var currentQueue = queueList.FirstOrDefault(item =>
+                        Guid.TryParse(item?["ftQueueId"]?.ToString(), out var id) && id == middlewareConfiguration.QueueId);
+
+                    string queueVersion = currentQueue?["Version"]?.ToString() ?? currentQueue?["version"]?.ToString() ?? currentQueue?["AssemblyVersion"]?.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(queueVersion))
+                        configuration["QueueVersion"] = queueVersion;
+
+                    string queueUrl = currentQueue?["Url"]?.ToString() ?? currentQueue?["url"]?.ToString() ?? currentQueue?["Endpoint"]?.ToString() ?? currentQueue?["endpoint"]?.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(queueUrl))
+                        configuration["QueueUrl"] = queueUrl;
+                }
+            }
+            catch { }
+
+            try
+            {
+                var scuVersions = new List<object>();
+                var scuUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var entry in middlewareConfiguration.Configuration)
+                {
+                    if (!entry.Key.StartsWith("init_ftSignaturCreationUnit", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (entry.Value is not string scuJson || string.IsNullOrWhiteSpace(scuJson))
+                        continue;
+
+                    var scuList = JArray.Parse(scuJson);
+                    foreach (var scu in scuList)
+                    {
+                        var id = scu?["ftSignaturCreationUnitId"]?.ToString() ?? scu?["Id"]?.ToString() ?? scu?["id"]?.ToString();
+
+                        var version = scu?["Version"]?.ToString() ?? scu?["version"]?.ToString() ?? scu?["AssemblyVersion"]?.ToString() ?? scu?["DriverVersion"]?.ToString();
+
+                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(version))
+                            scuVersions.Add(new { Id = id, Version = version });
+
+                        var url = scu?["Url"]?.ToString() ?? scu?["url"]?.ToString() ?? scu?["Endpoint"]?.ToString() ?? scu?["endpoint"]?.ToString();
+
+                        if (!string.IsNullOrWhiteSpace(url))
+                            scuUrls.Add(url);
+                    }
+                }
+
+                if (scuVersions.Count > 0)
+                    configuration["ScuVersions"] = scuVersions;
+
+                if (scuUrls.Count > 0)
+                    configuration["ScuUrls"] = scuUrls.ToList();
+            }
+            catch { }
+
+            try
+            {
+                configuration["AssemblyInformation"] = new
+                {
+                    Assembly = middlewareConfiguration.AssemblyName,
+                    Version = middlewareConfiguration.AssemblyVersion,
+                    ProcessingVersion = middlewareConfiguration.ProcessingVersion
+                };
+            }
+            catch { }
+
+            try
+            {
+                JToken? cashboxToken = null;
+                var possibleKeys = new[] { "init_ftCashBox", "init_ftCashBoxList" };
+
+                foreach (var key in possibleKeys)
+                {
+                    if (middlewareConfiguration.Configuration.TryGetValue(key, out var cbRaw)
+                        && cbRaw is string cbJson
+                        && !string.IsNullOrWhiteSpace(cbJson))
+                    {
+                        var cbArray = JArray.Parse(cbJson);
+                        cashboxToken = cbArray.FirstOrDefault(t =>
+                            Guid.TryParse(t?["ftCashBoxId"]?.ToString(), out var id) && id == middlewareConfiguration.CashBoxId);
+                        if (cashboxToken != null)
+                            break;
+                    }
+                }
+
+                string? timestampStr = cashboxToken?["Timestamp"]?.ToString() ?? cashboxToken?["TimeStamp"]?.ToString() ?? cashboxToken?["UpdatedAt"]?.ToString();
+
+                if (!string.IsNullOrWhiteSpace(timestampStr))
+                {
+                    if (DateTime.TryParse(timestampStr, out var dt))
+                        configuration["CashboxConfigurationTimestamp"] = dt.ToUniversalTime().Ticks;
+                    else
+                        configuration["CashboxConfigurationTimestamp"] = timestampStr;
+                }
+            }
+            catch { }
 
             var actionJournal = new ftActionJournal
             {
@@ -152,4 +256,3 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
         }
     }
 }
-
