@@ -1005,4 +1005,202 @@ public class ReceiptRequestValidatorPTTests
     }
 
     #endregion
+
+    #region Charge Item Mandatory Fields Validation Tests
+
+    [Fact]
+    public void ValidateReceiptOrThrow_ShouldValidateAllMandatoryFields_Description_Amount_VATRate()
+    {
+        // This test documents that Description, Amount, and VAT Rate are all mandatory fields
+        // for ChargeItems in Portugal
+        
+        // Test 1: Missing Description
+        var requestWithoutDescription = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = null, // Missing
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+        var exception1 = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(requestWithoutDescription));
+        exception1.Message.Should().Contain("description is missing");
+
+        // Test 2: Invalid VAT Rate
+        var requestWithNegativeVAT = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Valid Product",
+                    VATRate = -1m, // Invalid (negative)
+                    Amount = 10m
+                }
+            }
+        };
+        var exception2 = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(requestWithNegativeVAT));
+        exception2.Message.Should().Contain("VAT rate is missing or invalid");
+
+        // Test 3: Missing Amount (zero)
+        var requestWithZeroAmount = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Valid Product",
+                    VATRate = 23m,
+                    Amount = 0m // Zero amount
+                }
+            }
+        };
+        var exception3 = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(requestWithZeroAmount));
+        exception3.Message.Should().Contain("amount (price) is missing or zero");
+
+        // Test 4: All mandatory fields provided - should pass
+        var validRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Valid Product",
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(validRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    [InlineData(13)]
+    [InlineData(23)]
+    public void ValidateReceiptOrThrow_ShouldAcceptValidVATRates(decimal vatRate)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Valid Product",
+                    VATRate = vatRate,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData(0.01)]
+    [InlineData(5.50)]
+    [InlineData(100)]
+    [InlineData(1000.99)]
+    public void ValidateReceiptOrThrow_ShouldAcceptValidAmounts(decimal amount)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Valid Product",
+                    VATRate = 23m,
+                    Amount = amount
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData(-10)]
+    [InlineData(-0.01)]
+    [InlineData(-100.50)]
+    public void ValidateReceiptOrThrow_ShouldAcceptNegativeAmounts_ForRefunds(decimal amount)
+    {
+        // Arrange - Negative amounts are valid for refunds/returns
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Refund Product",
+                    VATRate = 23m,
+                    Amount = amount
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Fact]
+    public void ValidateReceiptOrThrow_ShouldValidateEachChargeItem_Independently()
+    {
+        // Arrange - Multiple items, second one is invalid
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Valid Product 1",
+                    VATRate = 23m,
+                    Amount = 10m
+                },
+                new ChargeItem
+                {
+                    Description = "Invalid Product",
+                    VATRate = 23m,
+                    Amount = 0m // Invalid - zero amount
+                },
+                new ChargeItem
+                {
+                    Description = "Valid Product 3",
+                    VATRate = 13m,
+                    Amount = 5m
+                }
+            }
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(2, "amount (price) is missing or zero"));
+    }
+
+    #endregion
 }
