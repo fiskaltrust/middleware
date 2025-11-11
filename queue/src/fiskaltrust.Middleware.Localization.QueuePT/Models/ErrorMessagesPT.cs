@@ -17,7 +17,7 @@ public static class ErrorMessagesPT
     // Validation error messages with EEEE_ prefix
     public const string EEEE_BottleLessThanOneLiterNotAllowed = "EEEE_Articles classified as 'Garrafão < 1 litro' are not allowed in this receipt type.";
     
-    public const string EEEE_ChargeItemDescriptionTooShort = "EEEE_Charge item description must be longer than 3 characters.";
+    public const string EEEE_ChargeItemDescriptionTooShort = "EEEE_Charge item description must be at least 3 characters long.";
     
     public const string EEEE_ChargeItemDescriptionMissing = "EEEE_Charge item description is mandatory and cannot be null or empty.";
     

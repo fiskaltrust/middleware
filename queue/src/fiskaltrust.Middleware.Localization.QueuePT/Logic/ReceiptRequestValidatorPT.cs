@@ -205,9 +205,9 @@ public class ReceiptRequestValidatorPT
 
     private static void ValidateChargeItemDescription(ChargeItem chargeItem, int position)
     {
-        if (!string.IsNullOrWhiteSpace(chargeItem.Description) && chargeItem.Description.Length <= 3)
+        if (!string.IsNullOrWhiteSpace(chargeItem.Description) && chargeItem.Description.Length < 3)
         {
-            throw new Exception(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(position, "description must be longer than 3 characters"));
+            throw new Exception(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(position, "description must be at least 3 characters long"));
         }
     }
 

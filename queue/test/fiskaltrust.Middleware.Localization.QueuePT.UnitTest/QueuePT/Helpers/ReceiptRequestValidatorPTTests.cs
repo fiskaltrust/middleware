@@ -92,7 +92,6 @@ public class ReceiptRequestValidatorPTTests
     [Theory]
     [InlineData("a")]
     [InlineData("ab")]
-    [InlineData("abc")]
     public void ValidateReceiptOrThrow_ShouldThrowException_WhenChargeItemDescriptionIsTooShort(string description)
     {
         // Arrange
@@ -113,7 +112,67 @@ public class ReceiptRequestValidatorPTTests
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
-        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must be longer than 3 characters"));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must be at least 3 characters long"));
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("abcd")]
+    [InlineData("abcde")]
+    [InlineData("This is a long description")]
+    [InlineData("123")]
+    [InlineData("1234")]
+    [InlineData("AB")]
+    [InlineData("Product")]
+    [InlineData("Line item 1")]
+    public void ValidateReceiptOrThrow_ShouldNotThrowException_WhenChargeItemDescriptionIsValidLength(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData("abcd")]
+    [InlineData("abcde")]
+    [InlineData("This is a long description")]
+    [InlineData("1234")]
+    public void ValidateReceiptOrThrow_ShouldThrowException_WhenChargeItemDescriptionIsTooLong(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must not be longer than 3 characters"));
     }
 
     [Fact]
@@ -294,13 +353,13 @@ public class ReceiptRequestValidatorPTTests
             {
                 new ChargeItem
                 {
-                    Description = "Valid Product Description",
+                    Description = "Valid Product",
                     VATRate = 23m,
                     Amount = 10.50m
                 },
                 new ChargeItem
                 {
-                    Description = "Bad", // Too short
+                    Description = "ab", // Too short
                     VATRate = 13m,
                     Amount = 5.25m
                 }
@@ -309,7 +368,7 @@ public class ReceiptRequestValidatorPTTests
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
-        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(2, "description must be longer than 3 characters"));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(2, "description must be at least 3 characters long"));
     }
 
     #region Portuguese Tax ID Validation Tests
@@ -682,6 +741,267 @@ public class ReceiptRequestValidatorPTTests
 
         // Assert
         result.Should().BeTrue("the check digit calculation matches the Wikipedia algorithm");
+    }
+
+    #endregion
+
+    #region Charge Item Description Length Validation Tests
+
+    [Fact]
+    public void ValidateReceiptOrThrow_ShouldAcceptExactly3Characters()
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "ABC",
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData("A")]
+    [InlineData("AB")]
+    public void ValidateReceiptOrThrow_ShouldReject1Or2Characters(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must be at least 3 characters long"));
+    }
+
+    [Theory]
+    [InlineData("ABC")]
+    [InlineData("ABCD")]
+    [InlineData("123")]
+    [InlineData("1234")]
+    [InlineData("Product")]
+    [InlineData("XYZ")]
+    public void ValidateReceiptOrThrow_ShouldAcceptDescriptions_With3OrMoreCharacters(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData("A")]
+    [InlineData("AB")]
+    [InlineData("1")]
+    [InlineData("12")]
+    [InlineData("X")]
+    public void ValidateReceiptOrThrow_ShouldRejectDescriptions_ShorterThan3Characters(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must be at least 3 characters long"));
+    }
+
+    [Fact]
+    public void ValidateReceiptOrThrow_ShouldAcceptMultipleChargeItems_WithValidDescriptions()
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Product A",
+                    VATRate = 23m,
+                    Amount = 10m
+                },
+                new ChargeItem
+                {
+                    Description = "Product BB",
+                    VATRate = 13m,
+                    Amount = 5m
+                },
+                new ChargeItem
+                {
+                    Description = "CCC",
+                    VATRate = 6m,
+                    Amount = 3m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Fact]
+    public void ValidateReceiptOrThrow_ShouldRejectFirstInvalidItem_InMultipleChargeItems()
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = "Product A",
+                    VATRate = 23m,
+                    Amount = 10m
+                },
+                new ChargeItem
+                {
+                    Description = "AB", // Too short
+                    VATRate = 13m,
+                    Amount = 5m
+                },
+                new ChargeItem
+                {
+                    Description = "CCC",
+                    VATRate = 6m,
+                    Amount = 3m
+                }
+            }
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(2, "description must be at least 3 characters long"));
+    }
+
+    [Theory]
+    [InlineData("A B")] // 3 characters with space
+    [InlineData("1-2")] // 3 characters with hyphen
+    [InlineData("X.Y")] // 3 characters with dot
+    public void ValidateReceiptOrThrow_ShouldAcceptDescriptions_WithSpecialCharacters_IfLength3OrMore(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData("€99")] // 3 characters with euro symbol
+    [InlineData("10%")] // 3 characters with percentage
+    [InlineData("@#$")] // 3 special characters
+    public void ValidateReceiptOrThrow_ShouldAcceptDescriptions_WithUnicodeCharacters_IfLength3OrMore(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
+    }
+
+    [Theory]
+    [InlineData("€9")]  // 2 characters - too short
+    [InlineData("1%")]  // 2 characters - too short
+    [InlineData("@#")]  // 2 characters - too short
+    public void ValidateReceiptOrThrow_ShouldRejectDescriptions_WithUnicodeCharacters_IfShorterThan3(string description)
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
+            cbUser = "user123",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Description = description,
+                    VATRate = 23m,
+                    Amount = 10m
+                }
+            }
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
+        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must be at least 3 characters long"));
     }
 
     #endregion
