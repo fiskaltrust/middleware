@@ -28,4 +28,12 @@ public static class ErrorMessagesPT
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
+
+    /// <summary>
+    /// Error message for invalid Portuguese Tax Identification Number (NIF)
+    /// </summary>
+    /// <param name="taxId">The invalid tax ID that was provided</param>
+    /// <returns>A descriptive error message</returns>
+    public static string EEEE_InvalidPortugueseTaxId(string taxId) => 
+        $"EEEE_Invalid Portuguese Tax Identification Number (NIF): '{taxId}'. The NIF must be a 9-digit number with a valid check digit according to the Portuguese tax authority validation algorithm.";
 }

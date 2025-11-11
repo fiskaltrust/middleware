@@ -4,6 +4,8 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using System;
 using System.Linq;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using System.Text.Json;
+using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -18,6 +20,7 @@ public class ReceiptRequestValidatorPT
 
         ValidateUserRequirement(receiptRequest);
         ValidateChargeItems(receiptRequest);
+        ValidateCustomerTaxId(receiptRequest);
         ValidateReceiptCaseSpecificRules(receiptRequest);
     }
 
@@ -29,6 +32,93 @@ public class ReceiptRequestValidatorPT
         {
             throw new Exception(ErrorMessagesPT.EEEE_UserMissing);
         }
+    }
+
+    private static void ValidateCustomerTaxId(ReceiptRequest receiptRequest)
+    {
+        // Skip validation if no customer data is provided
+        if (receiptRequest.cbCustomer == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var middlewareCustomer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer));
+            if (middlewareCustomer == null)
+            {
+                return;
+            }
+
+            // If customer tax ID is provided, validate it
+            if (!string.IsNullOrWhiteSpace(middlewareCustomer.CustomerVATId))
+            {
+                if (!IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
+                {
+                    throw new Exception(ErrorMessagesPT.EEEE_InvalidPortugueseTaxId(middlewareCustomer.CustomerVATId));
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // If deserialization fails, skip customer validation
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Validates a Portuguese Tax Identification Number (NIF - Número de Identificação Fiscal).
+    /// Based on the algorithm described at: https://pt.wikipedia.org/wiki/N%C3%BAmero_de_identifica%C3%A7%C3%A3o_fiscal
+    /// </summary>
+    /// <param name="taxId">The tax ID to validate</param>
+    /// <returns>True if the tax ID is valid, false otherwise</returns>
+    public static bool IsValidPortugueseTaxId(string taxId)
+    {
+        if (string.IsNullOrWhiteSpace(taxId))
+        {
+            return false;
+        }
+
+        // Clean the input: remove spaces and convert to uppercase
+        taxId = taxId.Trim().ToUpper();
+
+        // Must be exactly 9 digits
+        if (taxId.Length != 9 || !taxId.All(char.IsDigit))
+        {
+            return false;
+        }
+
+        var digits = taxId.Select(c => int.Parse(c.ToString())).ToArray();
+
+        // First digit must be valid (1, 2, 3, 5, 6, 7, 8, or 9)
+        // 1 - Pessoa singular (natural person)
+        // 2 - Pessoa singular (natural person)
+        // 3 - Pessoa singular (natural person)
+        // 5 - Pessoa coletiva (legal entity)
+        // 6 - Administração pública (public administration)
+        // 7 - Herança indivisa (undivided inheritance)
+        // 8 - Empresário em nome individual (sole proprietor)
+        // 9 - Pessoa coletiva (legal entity)
+        var validFirstDigits = new[] { 1, 2, 3, 5, 6, 7, 8, 9 };
+        if (!validFirstDigits.Contains(digits[0]))
+        {
+            return false;
+        }
+
+        // Calculate check digit using the Luhn-like algorithm
+        // Multiply each of the first 8 digits by (9 - position)
+        var sum = 0;
+        for (var i = 0; i < 8; i++)
+        {
+            sum += digits[i] * (9 - i);
+        }
+
+        // Calculate the check digit
+        var remainder = sum % 11;
+        var expectedCheckDigit = remainder < 2 ? 0 : 11 - remainder;
+
+        // Verify the 9th digit matches the calculated check digit
+        return digits[8] == expectedCheckDigit;
     }
 
     private static void ValidateChargeItems(ReceiptRequest receiptRequest)

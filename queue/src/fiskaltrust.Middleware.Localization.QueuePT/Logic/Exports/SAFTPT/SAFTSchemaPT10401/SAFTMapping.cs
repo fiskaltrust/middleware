@@ -13,6 +13,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PaymentDocumentModels;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
@@ -43,30 +44,15 @@ public class SaftExporter
 
     private Dictionary<string, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> InvoicedProformas { get; } = new Dictionary<string, (ReceiptRequest, ReceiptResponse)>();
 
+    /// <summary>
+    /// Validates a Portuguese Tax Identification Number (NIF - Número de Identificação Fiscal).
+    /// This method delegates to the centralized validation in ReceiptRequestValidatorPT.
+    /// </summary>
+    /// <param name="taxId">The tax ID to validate</param>
+    /// <returns>True if the tax ID is valid, false otherwise</returns>
     public static bool IsValidPortugueseTaxId(string taxId)
     {
-        if (string.IsNullOrWhiteSpace(taxId))
-            return false;
-
-        taxId = taxId.Trim().ToUpper();
-        if (taxId.Length != 9 || !taxId.All(char.IsDigit))
-            return false;
-
-        var digits = taxId.Select(c => int.Parse(c.ToString())).ToArray();
-        var validFirstDigits = new[] { 1, 2, 3, 5, 6, 7, 8, 9 };
-        if (!validFirstDigits.Contains(digits[0]))
-            return false;
-
-        var sum = 0;
-        for (var i = 0; i < 8; i++)
-        {
-            sum += digits[i] * (9 - i);
-        }
-
-        var remainder = sum % 11;
-        var expectedCheckDigit = remainder < 2 ? 0 : 11 - remainder;
-
-        return digits[8] == expectedCheckDigit;
+        return ReceiptRequestValidatorPT.IsValidPortugueseTaxId(taxId);
     }
 
     private static string GetCustomerCountry(MiddlewareCustomer middlewareCustomer)

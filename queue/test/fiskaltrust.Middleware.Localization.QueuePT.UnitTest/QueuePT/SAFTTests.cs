@@ -23,7 +23,7 @@ public class SAFTTests
         {
             TaxId = "999"
         }, [], 0);
-        data.Should().StartWith("<?xml version=\"1.0\" encoding=\"windows-1252\"?>");
+        Encoding.UTF8.GetString(data).Should().StartWith("<?xml version=\"1.0\" encoding=\"windows-1252\"?>");
     }
 
     [Fact]
