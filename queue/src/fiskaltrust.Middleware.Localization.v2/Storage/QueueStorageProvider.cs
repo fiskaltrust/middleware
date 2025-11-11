@@ -1,13 +1,14 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.storage.V0;
-using System.Runtime.CompilerServices;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using System.Reflection.Metadata.Ecma335;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2.Storage;
 
@@ -16,6 +17,7 @@ public class QueueStorageProvider : IQueueStorageProvider
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
     private readonly CryptoHelper _cryptoHelper;
+    private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
     public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
@@ -23,6 +25,19 @@ public class QueueStorageProvider : IQueueStorageProvider
         _queueId = queueId;
         _storageProvider = storageProvider;
         _cryptoHelper = new CryptoHelper();
+        _processingVersion = GetVersion(typeof(QueueStorageProvider)).processingVersion;
+    }
+
+    private (string name, Version version, string processingVersion) GetVersion(Type assemblyType)
+    {
+        var assemblyName = assemblyType.Assembly.GetName();
+        var fileAttribute = assemblyType.Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>().Version;
+        var processingVersion = assemblyType.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+        var version = Version.TryParse(fileAttribute, out var result)
+            ? new Version(result.Major, result.Minor, result.Build, 0)
+            : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
+        assemblyName.Version = version;
+        return (assemblyName.FullName, version, processingVersion);
     }
 
     public async Task ActivateQueueAsync()
@@ -58,7 +73,8 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbTerminalID = receiptRequest.cbTerminalID,
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
-            country = receiptRequest.ftReceiptCase.Country(),
+            country = _cachedQueue.CountryCode,
+            ProcessingVersion = _processingVersion,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
