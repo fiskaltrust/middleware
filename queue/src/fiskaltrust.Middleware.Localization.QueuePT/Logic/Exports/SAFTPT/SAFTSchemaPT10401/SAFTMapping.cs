@@ -210,10 +210,12 @@ public class SaftExporter
 
     private static string GenerateUniqueProductIdentifier(ChargeItem x)
     {
-        var grossAmount = Math.Abs(x.Amount);
-        var quantity = Math.Abs(x.Quantity);
-        var singleItemPrice = x.Amount == 0 || quantity == 0 ? 0m : grossAmount / quantity;
-        return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description + singleItemPrice + x.VATRate)));
+        if(x.ProductNumber != null && x.ProductNumber.Length >=3)
+        {
+            return x.ProductNumber;
+        }
+
+        return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description)));
     }
 
     private TaxTable GetTaxTable(List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipt)
