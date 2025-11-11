@@ -122,8 +122,11 @@ public class ReceiptRequestValidatorPTTests
     [InlineData("This is a long description")]
     [InlineData("123")]
     [InlineData("1234")]
-    [InlineData("AB")]
     [InlineData("Product")]
+    [InlineData("abcd")]
+    [InlineData("abcde")]
+    [InlineData("This is a long description")]
+    [InlineData("1234")]
     [InlineData("Line item 1")]
     public void ValidateReceiptOrThrow_ShouldNotThrowException_WhenChargeItemDescriptionIsValidLength(string description)
     {
@@ -145,34 +148,6 @@ public class ReceiptRequestValidatorPTTests
 
         // Act & Assert
         ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest); // Should not throw
-    }
-
-    [Theory]
-    [InlineData("abcd")]
-    [InlineData("abcde")]
-    [InlineData("This is a long description")]
-    [InlineData("1234")]
-    public void ValidateReceiptOrThrow_ShouldThrowException_WhenChargeItemDescriptionIsTooLong(string description)
-    {
-        // Arrange
-        var receiptRequest = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
-            cbUser = "user123",
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem
-                {
-                    Description = description,
-                    VATRate = 23m,
-                    Amount = 10m
-                }
-            }
-        };
-
-        // Act & Assert
-        var exception = Assert.Throws<Exception>(() => ReceiptRequestValidatorPT.ValidateReceiptOrThrow(receiptRequest));
-        exception.Message.Should().Be(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(1, "description must not be longer than 3 characters"));
     }
 
     [Fact]
