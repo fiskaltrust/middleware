@@ -11,10 +11,8 @@ using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 
 #pragma warning disable IDE0052
 

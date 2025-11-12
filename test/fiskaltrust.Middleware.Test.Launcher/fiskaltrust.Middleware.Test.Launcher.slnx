@@ -1,7 +1,18 @@
 <Solution>
   <Project Path="src/fiskaltrust.Middleware.Test.Launcher.v2/fiskaltrust.Middleware.Test.Launcher.v2.csproj" />
   <Project Path="src/fiskaltrust.Middleware.Test.Launcher/fiskaltrust.Middleware.Test.Launcher.csproj" />
+  
+  <Project Path="..\..\queue\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+
   <Project Path="..\..\queue\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
   <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.VeriFactu\fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj" />
+  <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAI.Common\fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.csproj" />
+  <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAIAraba\fiskaltrust.Middleware.SCU.ES.TicketBAIAraba.csproj" />
+  <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia\fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia.csproj" />
+  <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa\fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa.csproj" />
+
+  <Project Path="..\..\queue\src\fiskaltrust.Middleware.Queue.InMemory\fiskaltrust.Middleware.Queue.InMemory.csproj" />
+
+  <Project Path="..\..\scu-it\src\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj" />
   <Project Path="..\..\scu-it\src\fiskaltrust.Middleware.SCU.IT.CustomRTServer\fiskaltrust.Middleware.SCU.IT.CustomRTServer.csproj" />
 </Solution>

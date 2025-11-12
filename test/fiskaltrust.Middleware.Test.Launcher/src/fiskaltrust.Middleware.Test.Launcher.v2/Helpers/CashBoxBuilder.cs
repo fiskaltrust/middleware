@@ -16,12 +16,13 @@ interface ICashBoxBuilder
 
     void AddSCU(ref PackageConfiguration configuration, Guid scuId);
     void AddMarketQueue(ref PackageConfiguration configuration, Guid queueId, Guid scuId);
-    IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration configuration, Guid queueId);
+    IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid queueId);
 }
 
 class CashBoxBuilder
 {
-    private readonly PackageConfiguration _configuration;
+    private readonly PackageConfiguration _queueConfiguration;
+    private readonly PackageConfiguration _scuConfiguration;
     private readonly ICashBoxBuilder _cashBoxBuilder;
     public string Market { get => _cashBoxBuilder.Market; }
     public Guid CashBoxId { get; private init; }
@@ -32,7 +33,7 @@ class CashBoxBuilder
     private readonly ChargeItemFactory _chargeItemFactory;
     public ChargeItemBuilder ChargeItem { get => _chargeItemFactory.Builder; }
 
-    public CashBoxBuilder(ICashBoxBuilder cashBoxBuilder)
+    public CashBoxBuilder(ICashBoxBuilder cashBoxBuilder, PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration)
     {
         _cashBoxBuilder = cashBoxBuilder;
 
@@ -41,33 +42,32 @@ class CashBoxBuilder
         QueueId = Guid.NewGuid();
         ScuId = Guid.NewGuid();
 
-        _configuration = new();
-        _configuration.Id = QueueId;
-        _configuration.Configuration = new()
-        {
+        queueConfiguration.Id = QueueId;
+        queueConfiguration.Configuration.Add(
+            "init_ftCashBox",
+            new ftCashBox
             {
-                "init_ftCashBox",
-                new ftCashBox
+                ftCashBoxId = CashBoxId
+            }
+        );
+        queueConfiguration.Configuration.Add(
+            "init_ftQueue",
+            new List<ftQueue> {
+                new ftQueue
                 {
-                    ftCashBoxId = CashBoxId
-                }
-            },
-            {
-                "init_ftQueue",
-                new List<ftQueue> {
-                    new ftQueue
-                    {
-                        ftCashBoxId = CashBoxId,
-                        ftQueueId = QueueId,
-                        Timeout = 15_000,
-                        CountryCode = Market
-                    }
+                    ftCashBoxId = CashBoxId,
+                    ftQueueId = QueueId,
+                    Timeout = 15_000,
+                    CountryCode = Market
                 }
             }
-        };
+        );
 
-        _cashBoxBuilder.AddSCU(ref _configuration, ScuId);
-        _cashBoxBuilder.AddMarketQueue(ref _configuration, QueueId, ScuId);
+        _cashBoxBuilder.AddSCU(ref scuConfiguration, ScuId);
+        _cashBoxBuilder.AddMarketQueue(ref queueConfiguration, QueueId, ScuId);
+
+        _queueConfiguration = queueConfiguration;
+        _scuConfiguration = scuConfiguration;
 
         _chargeItemFactory = new ChargeItemFactory(Market switch
         {
@@ -88,10 +88,11 @@ class CashBoxBuilder
 
         var bootstrapper = _cashBoxBuilder.CreateBootStrapper(new ftCashBoxConfiguration
         {
-            ftQueues = [_configuration]
-        }.NewtonsoftJsonWarp()!.ftQueues[0], QueueId);
+            ftQueues = [_queueConfiguration]
+        }.NewtonsoftJsonWarp()!.ftQueues[0], _scuConfiguration, QueueId);
 
-        return new MiddlewareMethods {
+        return new MiddlewareMethods
+        {
             Echo = bootstrapper.RegisterForEcho().JsonWarpingAsync<EchoRequest, EchoResponse>(),
             Sign = bootstrapper.RegisterForSign().JsonWarpingAsync<ReceiptRequest, ReceiptResponse>(),
             SignJson = async request =>
@@ -111,7 +112,8 @@ class CashBoxBuilder
     }
 }
 
-public record MiddlewareMethods {
+public record MiddlewareMethods
+{
     public Func<EchoRequest, Task<EchoResponse?>> Echo;
     public Func<ReceiptRequest, Task<ReceiptResponse?>> Sign;
     public Func<string, Task<ReceiptResponse?>> SignJson;

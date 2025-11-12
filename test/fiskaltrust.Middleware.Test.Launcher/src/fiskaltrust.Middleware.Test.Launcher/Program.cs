@@ -5,11 +5,12 @@ using fiskaltrust.storage.serialization.V0;
 using FluentAssertions;
 using Newtonsoft.Json;
 
-var builder = new CashBoxBuilder("IT" switch
-{
-    "IT" => new CashBoxBuilderIT(),
-    _ => throw new NotImplementedException()
-},
+var builder = new CashBoxBuilder(
+    "IT" switch
+    {
+        "IT" => new CashBoxBuilderIT(),
+        _ => throw new NotImplementedException()
+    },
     JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "queue-configuration.json"))),
     JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "scu-configuration.json")))
 );

@@ -1,7 +1,12 @@
 
+using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ES;
 using fiskaltrust.storage.serialization.V0;
@@ -10,9 +15,25 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 
+enum SCUTypesES
+{
+    VeriFactu,
+    TicketBAIAraba,
+    TicketBAIBizkaia,
+    TicketBAIGipuzkoa
+}
+
 class CashBoxBuilderES : ICashBoxBuilder
 {
+    public CashBoxBuilderES(SCUTypesES scuType)
+    {
+        SCUType = scuType;
+    }
+
     public string Market { get => "ES"; }
+
+    public SCUTypesES SCUType { get; init; }
+
     public void AddSCU(ref PackageConfiguration configuration, Guid scuId)
     {
         configuration.Configuration.Add(
@@ -40,21 +61,29 @@ class CashBoxBuilderES : ICashBoxBuilder
         );
     }
 
-    public IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration configuration, Guid queueId)
+    public IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid queueId)
     {
         var loggerFactory = new LoggerFactory();
 
-        var clientFactory = new InMemoryClientFactory<IESSSCD>(new ESSSCDJsonWarper(new VeriFactuSCU(new VeriFactuInMemoryClient(), new VeriFactuSCUConfiguration
+        IESSSCD scu = SCUType switch
         {
-            Nif = "M0123456Q",
-            NombreRazonEmisor = "In Memory"
-        })));
+            SCUTypesES.VeriFactu => new VeriFactuSCU(new VeriFactuInMemoryClient(), new VeriFactuSCUConfiguration
+            {
+                Nif = "M0123456Q",
+                NombreRazonEmisor = "In Memory"
+            }),
+            SCUTypesES.TicketBAIAraba => new TicketBaiArabaSCU(loggerFactory.CreateLogger<TicketBaiArabaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
+            SCUTypesES.TicketBAIBizkaia => new TicketBaiBizkaiaSCU(loggerFactory.CreateLogger<TicketBaiBizkaiaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
+            SCUTypesES.TicketBAIGipuzkoa => new TicketBaiGipuzkoaSCU(loggerFactory.CreateLogger<TicketBaiGipuzkoaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration))
+        };
+
+        var clientFactory = new InMemoryClientFactory<IESSSCD>(new ESSSCDJsonWarper(scu));
 
         return new Localization.QueueES.QueueESBootstrapper(
             queueId,
             loggerFactory,
             clientFactory,
-            configuration.Configuration,
-            new InMemoryStorageProvider(loggerFactory, queueId, configuration.Configuration));
+            queueConfiguration.Configuration,
+            new InMemoryStorageProvider(loggerFactory, queueId, queueConfiguration.Configuration));
     }
 }

@@ -1,13 +1,19 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
+using fiskaltrust.storage.serialization.V0;
 using FluentAssertions;
+using Newtonsoft.Json;
 
-var builder = new CashBoxBuilder("ES" switch
-{
-    "ES" => new CashBoxBuilderES(),
-    _ => throw new NotImplementedException()
-});
+var builder = new CashBoxBuilder(
+    "ES" switch
+    {
+        "ES" => new CashBoxBuilderES(SCUTypesES.TicketBAIAraba),
+        _ => throw new NotImplementedException(),
+    },
+    JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "queue-configuration.json"))),
+    JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "scu-configuration.json")))
+);
 
 var middleware = builder.Build();
 

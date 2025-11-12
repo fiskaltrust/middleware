@@ -1,8 +1,7 @@
-using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 
 namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ES;
 
