@@ -84,6 +84,137 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "...", "redacted"}
             };
 
+            static List<Dictionary<string, object>> DeserializeListOfDictionaries(string json)
+                => JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json) ?? new List<Dictionary<string, object>>();
+
+            static string GetStr(IDictionary<string, object> map, params string[] names)
+            {
+                foreach (var n in names)
+                {
+                    if (map.TryGetValue(n, out var v))
+                    {
+                        var s = v?.ToString();
+                        if (!string.IsNullOrWhiteSpace(s)) return s;
+                    }
+                }
+                return null;
+            }
+
+            static Guid? GetGuid(IDictionary<string, object> map, params string[] names)
+            {
+                foreach (var n in names)
+                {
+                    if (map.TryGetValue(n, out var v) && Guid.TryParse(v?.ToString(), out var g)) return g;
+                }
+                return null;
+            }
+
+            try
+            {
+                if (middlewareConfiguration.Configuration.TryGetValue("init_ftQueue", out var rawQueueJson)
+                    && rawQueueJson is string queueJson
+                    && !string.IsNullOrWhiteSpace(queueJson))
+                {
+                    var queues = DeserializeListOfDictionaries(queueJson);
+                    var current = queues.FirstOrDefault(m =>
+                    {
+                        var id = GetGuid(m, "ftQueueId");
+                        return id.HasValue && id.Value == middlewareConfiguration.QueueId;
+                    });
+
+                    if (current != null)
+                    {
+                        var queueVersion = GetStr(current, "Version", "version", "AssemblyVersion");
+                        if (!string.IsNullOrWhiteSpace(queueVersion))
+                            configuration["QueueVersion"] = queueVersion;
+
+                        var queueUrl = GetStr(current, "Url", "url", "Endpoint", "endpoint");
+                        if (!string.IsNullOrWhiteSpace(queueUrl))
+                            configuration["QueueUrl"] = queueUrl;
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                var scuVersions = new List<object>();
+                var scuUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var entry in middlewareConfiguration.Configuration)
+                {
+                    if (!entry.Key.StartsWith("init_ftSignaturCreationUnit", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (entry.Value is not string scuJson || string.IsNullOrWhiteSpace(scuJson))
+                        continue;
+
+                    var items = DeserializeListOfDictionaries(scuJson);
+                    foreach (var m in items)
+                    {
+                        var id = GetStr(m, "ftSignaturCreationUnitId", "Id", "id");
+                        var version = GetStr(m, "Version", "version", "AssemblyVersion", "DriverVersion");
+
+                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(version))
+                            scuVersions.Add(new { Id = id, Version = version });
+
+                        var url = GetStr(m, "Url", "url", "Endpoint", "endpoint");
+                        if (!string.IsNullOrWhiteSpace(url))
+                            scuUrls.Add(url);
+                    }
+                }
+
+                if (scuVersions.Count > 0)
+                    configuration["ScuVersions"] = scuVersions;
+
+                if (scuUrls.Count > 0)
+                    configuration["ScuUrls"] = scuUrls.ToList();
+            }
+            catch { }
+
+            try
+            {
+                configuration["AssemblyInformation"] = new
+                {
+                    Assembly = middlewareConfiguration.AssemblyName,
+                    Version = middlewareConfiguration.AssemblyVersion,
+                    ProcessingVersion = middlewareConfiguration.ProcessingVersion
+                };
+            }
+            catch { }
+
+            try
+            {
+                foreach (var key in new[] { "init_ftCashBox", "init_ftCashBoxList" })
+                {
+                    if (middlewareConfiguration.Configuration.TryGetValue(key, out var cbRaw)
+                        && cbRaw is string cbJson
+                        && !string.IsNullOrWhiteSpace(cbJson))
+                    {
+                        var list = DeserializeListOfDictionaries(cbJson);
+                        var current = list.FirstOrDefault(m =>
+                        {
+                            var id = GetGuid(m, "ftCashBoxId");
+                            return id.HasValue && id.Value == middlewareConfiguration.CashBoxId;
+                        });
+
+                        if (current != null)
+                        {
+                            var tsStr = GetStr(current, "Timestamp", "TimeStamp", "UpdatedAt");
+                            if (!string.IsNullOrWhiteSpace(tsStr))
+                            {
+                                if (DateTime.TryParse(tsStr, out var dt))
+                                    configuration["CashboxConfigurationTimestamp"] = dt.ToUniversalTime().Ticks;
+                                else
+                                    configuration["CashboxConfigurationTimestamp"] = tsStr;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            catch { }
+
             var actionJournal = new ftActionJournal
             {
                 ftActionJournalId = Guid.NewGuid(),
@@ -152,4 +283,3 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
         }
     }
 }
-
