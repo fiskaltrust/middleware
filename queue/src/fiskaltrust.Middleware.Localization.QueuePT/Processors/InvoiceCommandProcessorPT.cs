@@ -1,16 +1,17 @@
-﻿using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.storage.V0;
-using fiskaltrust.ifPOS.v2.Cases;
+﻿using System.Text;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using System.Text;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Factories;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -30,6 +31,13 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
+        if (cashPaymentError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(cashPaymentError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
         var receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];

@@ -40,7 +40,7 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for cash payment exceeding 3000€ limit
     /// </summary>
-    public const string EEEE_CashPaymentExceedsLimit = "EEEE_Cash payment exceeds the legal limit of 3000€. Cash payments above this amount are not allowed in Portugal.";
+    public const string EEEE_CashPaymentExceedsLimit = "EEEE_Individual cash payment exceeds the legal limit of 3000€. No single cash payment can exceed this amount in Portugal.";
 
     /// <summary>
     /// Error message for POS receipt exceeding 1000€ net amount limit
