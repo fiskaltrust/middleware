@@ -152,7 +152,7 @@ jobs:
               sqllocaldb create MSSQLLocalDB -s
               sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
           }
-          elseoif($isLinux){
+          elseif($isLinux){
             docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=pass678!" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
           }
 
