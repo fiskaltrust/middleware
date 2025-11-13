@@ -188,7 +188,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: launcher
-          path: "${{ env.launcher }}.$cashboxId.zip"
+          path: "fiskaltrust.service.launcher.${{ env.cashboxId }}.zip"
         continue-on-error: true
  
       - name: Extract launcher package
