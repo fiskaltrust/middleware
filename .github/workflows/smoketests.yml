@@ -161,7 +161,6 @@ jobs:
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
-          $isLinuxArm64 = $isLinux -and ($arch -eq "Arm64")
           $platformV2 = if ($isMacos) { "osx-x64" } elseif ($isLinux) { "linux-x64" } else { "win-x64" }
           $offline = "false"
           $launcher = "${{ env.launcher }}"
