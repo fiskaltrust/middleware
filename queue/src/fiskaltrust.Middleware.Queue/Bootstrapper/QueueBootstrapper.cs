@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -13,6 +12,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
+using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -81,139 +81,23 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString() },
                 { "OSArchitecture", RuntimeInformation.OSArchitecture.ToString() },
                 { "OSDescription", RuntimeInformation.OSDescription.ToString() },
-                { "...", "redacted"}
+                { "...", "redacted" }
             };
 
-            static List<Dictionary<string, object>> DeserializeListOfDictionaries(string json)
-                => JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json) ?? new List<Dictionary<string, object>>();
+            var cashboxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(middlewareConfiguration.Configuration["configuration"].ToString());
 
-            static string GetStr(IDictionary<string, object> map, params string[] names)
-            {
-                foreach (var n in names)
-                {
-                    if (map.TryGetValue(n, out var v))
-                    {
-                        var s = v?.ToString();
-                        if (!string.IsNullOrWhiteSpace(s)) return s;
-                    }
-                }
-                return null;
-            }
+            var activeQueue = cashboxConfiguration.ftQueues.First(x => x.Id == middlewareConfiguration.QueueId);
+            
+            configuration["QueueVersion"] = activeQueue.Version;
+            configuration["QueueUrl"] = activeQueue.Url;
 
-            static Guid? GetGuid(IDictionary<string, object> map, params string[] names)
-            {
-                foreach (var n in names)
-                {
-                    if (map.TryGetValue(n, out var v) && Guid.TryParse(v?.ToString(), out var g)) return g;
-                }
-                return null;
-            }
+            configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
+            configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
 
-            try
-            {
-                if (middlewareConfiguration.Configuration.TryGetValue("init_ftQueue", out var rawQueueJson)
-                    && rawQueueJson is string queueJson
-                    && !string.IsNullOrWhiteSpace(queueJson))
-                {
-                    var queues = DeserializeListOfDictionaries(queueJson);
-                    var current = queues.FirstOrDefault(m =>
-                    {
-                        var id = GetGuid(m, "ftQueueId");
-                        return id.HasValue && id.Value == middlewareConfiguration.QueueId;
-                    });
 
-                    if (current != null)
-                    {
-                        var queueVersion = GetStr(current, "Version", "version", "AssemblyVersion");
-                        if (!string.IsNullOrWhiteSpace(queueVersion))
-                            configuration["QueueVersion"] = queueVersion;
+            configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
 
-                        var queueUrl = GetStr(current, "Url", "url", "Endpoint", "endpoint");
-                        if (!string.IsNullOrWhiteSpace(queueUrl))
-                            configuration["QueueUrl"] = queueUrl;
-                    }
-                }
-            }
-            catch { }
-
-            try
-            {
-                var scuVersions = new List<object>();
-                var scuUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var entry in middlewareConfiguration.Configuration)
-                {
-                    if (!entry.Key.StartsWith("init_ftSignaturCreationUnit", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    if (entry.Value is not string scuJson || string.IsNullOrWhiteSpace(scuJson))
-                        continue;
-
-                    var items = DeserializeListOfDictionaries(scuJson);
-                    foreach (var m in items)
-                    {
-                        var id = GetStr(m, "ftSignaturCreationUnitId", "Id", "id");
-                        var version = GetStr(m, "Version", "version", "AssemblyVersion", "DriverVersion");
-
-                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(version))
-                            scuVersions.Add(new { Id = id, Version = version });
-
-                        var url = GetStr(m, "Url", "url", "Endpoint", "endpoint");
-                        if (!string.IsNullOrWhiteSpace(url))
-                            scuUrls.Add(url);
-                    }
-                }
-
-                if (scuVersions.Count > 0)
-                    configuration["ScuVersions"] = scuVersions;
-
-                if (scuUrls.Count > 0)
-                    configuration["ScuUrls"] = scuUrls.ToList();
-            }
-            catch { }
-
-            try
-            {
-                configuration["AssemblyInformation"] = new
-                {
-                    Assembly = middlewareConfiguration.AssemblyName,
-                    Version = middlewareConfiguration.AssemblyVersion,
-                    ProcessingVersion = middlewareConfiguration.ProcessingVersion
-                };
-            }
-            catch { }
-
-            try
-            {
-                foreach (var key in new[] { "init_ftCashBox", "init_ftCashBoxList" })
-                {
-                    if (middlewareConfiguration.Configuration.TryGetValue(key, out var cbRaw)
-                        && cbRaw is string cbJson
-                        && !string.IsNullOrWhiteSpace(cbJson))
-                    {
-                        var list = DeserializeListOfDictionaries(cbJson);
-                        var current = list.FirstOrDefault(m =>
-                        {
-                            var id = GetGuid(m, "ftCashBoxId");
-                            return id.HasValue && id.Value == middlewareConfiguration.CashBoxId;
-                        });
-
-                        if (current != null)
-                        {
-                            var tsStr = GetStr(current, "Timestamp", "TimeStamp", "UpdatedAt");
-                            if (!string.IsNullOrWhiteSpace(tsStr))
-                            {
-                                if (DateTime.TryParse(tsStr, out var dt))
-                                    configuration["CashboxConfigurationTimestamp"] = dt.ToUniversalTime().Ticks;
-                                else
-                                    configuration["CashboxConfigurationTimestamp"] = tsStr;
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            catch { }
+            configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
 
             var actionJournal = new ftActionJournal
             {
@@ -231,7 +115,10 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                     IsSandbox = middlewareConfiguration.IsSandbox,
                     ServiceFolder = middlewareConfiguration.ServiceFolder,
                     Configuration = configuration,
-                    PreviewFeatures = middlewareConfiguration.PreviewFeatures,
+                    AssemblyName = middlewareConfiguration.AssemblyName,
+                    AssemblyVersion = middlewareConfiguration.AssemblyVersion,
+                    LauncherEnvironment = middlewareConfiguration.LauncherEnvironment,
+                    PreviewFeatures = middlewareConfiguration.PreviewFeatures
                 }),
                 TimeStamp = DateTime.UtcNow.Ticks
             };
