@@ -36,4 +36,19 @@ public static class ErrorMessagesPT
     /// <returns>A descriptive error message</returns>
     public static string EEEE_InvalidPortugueseTaxId(string taxId) => 
         $"EEEE_Invalid Portuguese Tax Identification Number (NIF): '{taxId}'. The NIF must be a 9-digit number with a valid check digit according to the Portuguese tax authority validation algorithm.";
+
+    /// <summary>
+    /// Error message for cash payment exceeding 3000€ limit
+    /// </summary>
+    public const string EEEE_CashPaymentExceedsLimit = "EEEE_Cash payment exceeds the legal limit of 3000€. Cash payments above this amount are not allowed in Portugal.";
+
+    /// <summary>
+    /// Error message for POS receipt exceeding 1000€ net amount limit
+    /// </summary>
+    public const string EEEE_PosReceiptNetAmountExceedsLimit = "EEEE_Point of Sale receipt net amount exceeds the legal limit of 1000€. Receipts with net amounts above this limit require a different document type.";
+
+    /// <summary>
+    /// Error message for OtherService charge items exceeding 100€ net amount limit
+    /// </summary>
+    public const string EEEE_OtherServiceNetAmountExceedsLimit = "EEEE_The sum of OtherService charge items exceeds the legal limit of 100€ net amount. Services must not exceed this limit on a Point of Sale receipt.";
 }

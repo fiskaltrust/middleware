@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -39,6 +40,32 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
         }
 
+        // Validate cash payment limit (>3000€)
+        var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
+        if (cashPaymentError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(cashPaymentError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        // Validate POS receipt net amount limit (>1000€)
+        if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        {
+            var netAmountError = PortugalReceiptValidation.ValidatePosReceiptNetAmountLimit(request.ReceiptRequest);
+            if (netAmountError != null)
+            {
+                request.ReceiptResponse.SetReceiptResponseError(netAmountError);
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
+            }
+
+            // Validate OtherService net amount limit (>100€)
+            var otherServiceError = PortugalReceiptValidation.ValidateOtherServiceNetAmountLimit(request.ReceiptRequest);
+            if (otherServiceError != null)
+            {
+                request.ReceiptResponse.SetReceiptResponseError(otherServiceError);
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
+            }
+        }
 
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];

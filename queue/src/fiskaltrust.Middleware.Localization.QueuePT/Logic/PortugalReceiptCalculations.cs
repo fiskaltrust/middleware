@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Org.BouncyCastle.Asn1.Ocsp;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -56,6 +57,9 @@ public static class PortugalReceiptCalculations
         
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
@@ -63,7 +67,7 @@ public static class PortugalReceiptCalculations
             CustomerCountry = customerCountry,
             DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
-            DocumentDate = request.cbReceiptMoment,
+            DocumentDate = portugalTime,
             UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
@@ -95,6 +99,10 @@ public static class PortugalReceiptCalculations
         var customerCountry = customer.BillingAddress.Country;
         
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
@@ -102,7 +110,7 @@ public static class PortugalReceiptCalculations
             CustomerCountry = customerCountry,
             DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
-            DocumentDate = request.cbReceiptMoment,
+            DocumentDate = portugalTime,
             UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
@@ -134,6 +142,10 @@ public static class PortugalReceiptCalculations
         var customerCountry = customer.BillingAddress.Country;
         
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
@@ -141,7 +153,7 @@ public static class PortugalReceiptCalculations
             CustomerCountry = customerCountry,
             DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
-            DocumentDate = request.cbReceiptMoment,
+            DocumentDate = portugalTime,
             UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",
@@ -173,6 +185,10 @@ public static class PortugalReceiptCalculations
         var customerCountry = customer.BillingAddress.Country;
         
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
@@ -180,7 +196,7 @@ public static class PortugalReceiptCalculations
             CustomerCountry = customerCountry,
             DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
-            DocumentDate = request.cbReceiptMoment,
+            DocumentDate = portugalTime,
             UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             // Fill according to the technical notes of the TaxCountryRegion field of SAF-T (PT).In case of a document without an indication of the VAT rate, which must be shown in table 4.2, 4.3 or 4.4 of the SAF - T(PT), fill in with «0» (I1: 0).
@@ -213,6 +229,10 @@ public static class PortugalReceiptCalculations
         var customerCountry = customer.BillingAddress.Country;
         
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+
         return new PTQrCode
         {
             IssuerTIN = issuerTIN,
@@ -220,7 +240,7 @@ public static class PortugalReceiptCalculations
             CustomerCountry = customerCountry,
             DocumentType = extractedDocumentType,
             DocumentStatus = InvoiceStatus.Normal,
-            DocumentDate = request.cbReceiptMoment,
+            DocumentDate = portugalTime,
             UniqueIdentificationOfTheDocument = uniqueIdentification,
             ATCUD = atcud,
             TaxCountryRegion = "PT",

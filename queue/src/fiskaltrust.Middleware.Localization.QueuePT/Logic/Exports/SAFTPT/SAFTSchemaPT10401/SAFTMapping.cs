@@ -1,19 +1,20 @@
-﻿using System.Security.Cryptography;
+﻿using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Xml.Serialization;
 using System.Xml;
+using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PaymentDocumentModels;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT;
-using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PaymentDocumentModels;
-using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
@@ -431,6 +432,10 @@ public class SaftExporter
         {
             return null;
         }
+        
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+        
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new WorkDocument
         {
@@ -439,17 +444,17 @@ public class SaftExporter
             DocumentStatus = new WorkDocumentStatus
             {
                 WorkStatus = "N",
-                WorkStatusDate = receiptRequest.cbReceiptMoment,
+                WorkStatusDate = portugalTime,
                 SourceID = GetSourceID(receiptRequest),
                 SourceBilling = GetSourceBilling(receiptRequest),
             },
             Hash = hashSignature.Data,
             HashControl = 1,
-            Period = receiptRequest.cbReceiptMoment.Month,
-            WorkDate = receiptRequest.cbReceiptMoment,
+            Period = portugalTime.Month,
+            WorkDate = portugalTime,
             WorkType = PTMappings.GetWorkType(receiptRequest),
             SourceID = GetSourceID(receiptRequest),
-            SystemEntryDate = receiptRequest.cbReceiptMoment,
+            SystemEntryDate = portugalTime,
             Line = lines,
             CustomerID = customer.CustomerID,
             DocumentTotals = new WorkDocumentTotals
@@ -463,8 +468,9 @@ public class SaftExporter
         if (InvoicedProformas.ContainsKey(receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()))
         {
             var request = InvoicedProformas[receipt.receiptResponse.ftReceiptIdentification.Split("#").Last()].receiptRequest;
+            var referencedPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
             workDocument.DocumentStatus.WorkStatus = "F";
-            workDocument.DocumentStatus.WorkStatusDate = request.cbReceiptMoment;
+            workDocument.DocumentStatus.WorkStatusDate = referencedPortugalTime;
             workDocument.DocumentStatus.SourceID = GetSourceID(request);
             workDocument.DocumentStatus.Reason = "Faturado";
         }
@@ -488,6 +494,9 @@ public class SaftExporter
             return null;
         }
 
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new PaymentDocument
         {
@@ -496,21 +505,21 @@ public class SaftExporter
             DocumentStatus = new PaymentDocumentStatus
             {
                 PaymentStatus = "N",
-                PaymentStatusDate = receiptRequest.cbReceiptMoment,
+                PaymentStatusDate = portugalTime,
                 SourceID = GetSourceID(receiptRequest),
                 SourcePayment = GetSourcePayment(receiptRequest)
             },
-            Period = receiptRequest.cbReceiptMoment.Month,
-            TransactionDate = receiptRequest.cbReceiptMoment,
+            Period = portugalTime.Month,
+            TransactionDate = portugalTime,
             PaymentType = PTMappings.GetPaymentType(receiptRequest),
             PaymentMethod = new PaymentMethod
             {
                 PaymentMechanism = PTMappings.GetPaymentMecahnism(payItem),
                 PaymentAmount = payItem.Amount,
-                PaymentDate = receiptRequest.cbReceiptMoment
+                PaymentDate = portugalTime
             },
             SourceID = GetSourceID(receiptRequest),
-            SystemEntryDate = receiptRequest.cbReceiptMoment,
+            SystemEntryDate = portugalTime,
             Line = [
                 new PaymentLine
                 {
@@ -561,6 +570,10 @@ public class SaftExporter
         var netAmount = grossAmount - taxable;
         var invoiceType = PTMappings.GetInvoiceType(receiptRequest);
         var customer = GetCustomerData(receiptRequest);
+        
+        // Convert UTC time to Portugal local time
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+        
         var invoice = new Invoice
         {
             InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
@@ -568,14 +581,14 @@ public class SaftExporter
             DocumentStatus = new InvoiceDocumentStatus
             {
                 InvoiceStatus = "N",
-                InvoiceStatusDate = receiptRequest.cbReceiptMoment,
+                InvoiceStatusDate = portugalTime,
                 SourceID = GetSourceID(receiptRequest),
                 SourceBilling = GetSourceBilling(receiptRequest),
             },
             Hash = hashSignature?.Data ?? "",
             HashControl = "1",
-            Period = receiptRequest.cbReceiptMoment.Month,
-            InvoiceDate = receiptRequest.cbReceiptMoment,
+            Period = portugalTime.Month,
+            InvoiceDate = portugalTime,
             InvoiceType = PTMappings.GetInvoiceType(receiptRequest),
             SpecialRegimes = new SpecialRegimes
             {
@@ -584,7 +597,7 @@ public class SaftExporter
                 ThirdPartiesBillingIndicator = 0,
             },
             SourceID = GetSourceID(receiptRequest),
-            SystemEntryDate = receiptRequest.cbReceiptMoment,
+            SystemEntryDate = portugalTime,
             Line = lines,
             CustomerID = customer.CustomerID,
             DocumentTotals = new DocumentTotals
@@ -597,8 +610,9 @@ public class SaftExporter
 
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
         {
-            invoice.DocumentStatus.InvoiceStatusDate = receiptResponse.ftReceiptMoment;
-            invoice.SystemEntryDate = receiptResponse.ftReceiptMoment;
+            var handwrittenPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+            invoice.DocumentStatus.InvoiceStatusDate = handwrittenPortugalTime;
+            invoice.SystemEntryDate = handwrittenPortugalTime;
         }
 
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
