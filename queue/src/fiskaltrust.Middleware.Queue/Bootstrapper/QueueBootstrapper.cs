@@ -94,7 +94,6 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
             configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
 
-
             configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
 
             configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
