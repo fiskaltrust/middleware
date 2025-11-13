@@ -2,9 +2,9 @@
   "ftCashBoxID": "{{cashbox_id}}",
   "ftPosSystemID": "{{possystem_id}}",
   "cbTerminalID": "1",
-  "cbReceiptReference": null,
+  "cbReceiptReference": "3",
   "cbReceiptMoment": "{{current_moment}}",
   "cbChargeItems": [],
   "cbPayItems": [],
-  "ftReceiptCase": 4919338172267102210
+  "ftReceiptCase": 4707387510509010946
 }
