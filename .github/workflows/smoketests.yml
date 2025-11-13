@@ -183,7 +183,14 @@ jobs:
          
           $output = "$launcher.$cashboxId.zip"
           Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
-
+      - name: Upload launcher
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher
+          path: "${{ env.launcher }}.$cashboxId.zip"
+        continue-on-error: true
+ 
       - name: Extract launcher package
         shell: pwsh
         run: |
@@ -345,12 +352,5 @@ jobs:
           name: output-${{ inputs.platform }}-${{ inputs.queuePackage }}-${{ inputs.queueVersion }}-Launcher-${{ inputs.launcherVersion }}
           path: test-output.log
         continue-on-error: true
-      - name: Upload launcher
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: launcher
-          path: "${{ env.launcher }}.$cashboxId.zip"
-        continue-on-error: true
- 
+     
   
