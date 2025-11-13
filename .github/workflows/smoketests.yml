@@ -55,7 +55,7 @@ jobs:
               exit 1
             fi
 
-            if [[ "${{ inputs.platform }}" == "macos-latest" && ( "${{ inputs.queuePackage }}" != *SQLite* || "${{ inputs.launcherVersion }}" != "v2.0" ) ]]; then
+            if [[ "${{ inputs.platform }}" == "macos-latest" && ( "${{ inputs.queuePackage }}" != *SQLite* ) ]]; then
               echo "Only SQLite supported on macOS!"
               exit 1
             fi
@@ -171,6 +171,9 @@ jobs:
            if ($isLinux) {
            $url=$url + "&platform=linux"
            } 
+           elseif ($isMacos) {
+           $url=$url + "&platform=macos"
+           } 
           } 
           else
           {
@@ -195,7 +198,7 @@ jobs:
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
       - name: Install Mono if platform is Ubuntu
-        if: ${{ inputs.platform == 'ubuntu-latest' }}
+        if: ${{ inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest' }}
         shell: pwsh
         run: |
           Write-Host "Installing Mono on Linux..."
@@ -219,8 +222,13 @@ jobs:
               $scriptPath = (Resolve-Path "$launcherPath/$exeFileName").Path
               $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
-          elseif ($isLinux -and "${{ inputs.launcherVersion }}" -eq "v1.3")
+          elseif ("${{ inputs.launcherVersion }}" -eq "v1.3")
           {
+             $expectPath = "/usr/bin/expect"
+             if (-not (Test-Path $expectPath)) {
+                $expectPath = "/usr/local/bin/expect"
+             }
+
              $exeFileName = "test.sh"
              $cmd = @"    
              set timeout -1
@@ -234,7 +242,7 @@ jobs:
              Set-Content -Path $expectScript -Value $cmd
              bash -c "chmod +x $expectScript"
 
-             $process = Start-Process -FilePath "/usr/bin/expect" -ArgumentList $expectScript -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
+             $process = Start-Process -FilePath $expectPath -ArgumentList $expectScript -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
             
           }
           else
