@@ -142,14 +142,14 @@ jobs:
               sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
           }
           else{
-              $dockerPath = "/usr/local/bin/docker"
-             $dockerPath = (bash -c "which docker").Trim()
-             if (-not $dockerPath) {
-                    Write-Error "Docker CLI not found. Please install Docker Desktop and make sure it is running."
-                    exit 1
-             }
-             Write-Host "Found Docker at $dockerPath"
-              & $dockerPath run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=pass678!" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+             #  $dockerPath = "/usr/local/bin/docker"
+             # $dockerPath = (bash -c "which docker").Trim()
+             # if (-not $dockerPath) {
+             #        Write-Error "Docker CLI not found. Please install Docker Desktop and make sure it is running."
+             #        exit 1
+             # }
+             # Write-Host "Found Docker at $dockerPath"
+              docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=pass678!" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
           }
 
       - name: Download launcher package for ${{inputs.platform}}--launcherVersion=${{inputs.launcherVersion}}--package=${{inputs.queuePackage}}-${{inputs.queueVersion}}
