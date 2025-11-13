@@ -198,7 +198,7 @@ jobs:
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
       - name: Install Mono if platform is Ubuntu
-        if: ${{ inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest' }}
+        if: ${{ inputs.platform == 'ubuntu-latest' }}
         shell: pwsh
         run: |
           Write-Host "Installing Mono on Linux..."
@@ -206,7 +206,7 @@ jobs:
           sudo apt-get install -y mono-complete
 
       - name: Install expect
-        if: ${{ inputs.platform == 'ubuntu-latest' && inputs.launcherVersion == 'v1.3' }}
+        if: ${{ (inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest') && inputs.launcherVersion == 'v1.3' }}
         run: sudo apt-get update && sudo apt-get install -y expect
 
       - name:  Run launcher,send requests, and stop
