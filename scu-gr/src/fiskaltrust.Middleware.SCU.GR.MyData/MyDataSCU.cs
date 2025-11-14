@@ -236,7 +236,9 @@ public class MyDataSCU : IGRSSCD
             ProtocolRequest = payload,
             ProtocolResponse = content
         };
-        if (request.ReceiptResponse.ftStateData == null && request.ReceiptRequest.ftCashBoxID == Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4"))
+
+        // We currently only return this in sandbox
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
         {
             request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
             {
