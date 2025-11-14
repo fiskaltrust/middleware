@@ -14,8 +14,8 @@ interface ICashBoxBuilder
 {
     string Market { get; }
 
-    void AddSCU(ref PackageConfiguration configuration, Guid scuId);
-    void AddMarketQueue(ref PackageConfiguration configuration, Guid queueId, Guid scuId);
+    void AddSCU(ref PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid scuId);
+    void AddMarketQueue(ref PackageConfiguration queueConfiguration, Guid queueId, Guid scuId);
     IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid queueId);
 }
 
@@ -63,7 +63,7 @@ class CashBoxBuilder
             }
         );
 
-        _cashBoxBuilder.AddSCU(ref queueConfiguration, ScuId);
+        _cashBoxBuilder.AddSCU(ref queueConfiguration, scuConfiguration, ScuId);
         _cashBoxBuilder.AddMarketQueue(ref queueConfiguration, QueueId, ScuId);
 
         _queueConfiguration = queueConfiguration;

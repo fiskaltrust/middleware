@@ -15,28 +15,16 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 
-enum SCUTypesES
-{
-    VeriFactu,
-    TicketBAIAraba,
-    TicketBAIBizkaia,
-    TicketBAIGipuzkoa
-}
 
 class CashBoxBuilderES : ICashBoxBuilder
 {
-    public CashBoxBuilderES(SCUTypesES scuType)
-    {
-        SCUType = scuType;
-    }
-
     public string Market { get => "ES"; }
 
-    public SCUTypesES SCUType { get; init; }
+    public PackageConfiguration? _scuConfiguration { get; set; }
 
-    public void AddSCU(ref PackageConfiguration configuration, Guid scuId)
+    public void AddSCU(ref PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid scuId)
     {
-        configuration.Configuration.Add(
+        queueConfiguration.Configuration.Add(
                 $"init_ftSignaturCreationUnitES",
                 new List<ftSignaturCreationUnitES> {
                     new ftSignaturCreationUnitES
@@ -45,10 +33,11 @@ class CashBoxBuilderES : ICashBoxBuilder
                     }
                 }
         );
+        _scuConfiguration = scuConfiguration;
     }
-    public void AddMarketQueue(ref PackageConfiguration configuration, Guid queueId, Guid scuId)
+    public void AddMarketQueue(ref PackageConfiguration queueConfiguration, Guid queueId, Guid scuId)
     {
-        configuration.Configuration.Add(
+        queueConfiguration.Configuration.Add(
                 $"init_ftQueueES",
                 new List<ftQueueES> {
                     new ftQueueES
@@ -68,16 +57,16 @@ class CashBoxBuilderES : ICashBoxBuilder
             builder.AddConsole();
         });
 
-        IESSSCD scu = SCUType switch
+        IESSSCD scu = _scuConfiguration.Package switch
         {
-            SCUTypesES.VeriFactu => new VeriFactuSCU(new VeriFactuInMemoryClient(), new VeriFactuSCUConfiguration
+            "fiskaltrust.Middleware.SCU.ES.VeriFactu" => new VeriFactuSCU(new VeriFactuInMemoryClient(), new VeriFactuSCUConfiguration
             {
                 Nif = "M0123456Q",
                 NombreRazonEmisor = "In Memory"
             }),
-            SCUTypesES.TicketBAIAraba => new TicketBaiArabaSCU(loggerFactory.CreateLogger<TicketBaiArabaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
-            SCUTypesES.TicketBAIBizkaia => new TicketBaiBizkaiaSCU(loggerFactory.CreateLogger<TicketBaiBizkaiaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
-            SCUTypesES.TicketBAIGipuzkoa => new TicketBaiGipuzkoaSCU(loggerFactory.CreateLogger<TicketBaiGipuzkoaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
+            "fiskaltrust.Middleware.SCU.ES.TicketBaiAraba" => new TicketBaiArabaSCU(loggerFactory.CreateLogger<TicketBaiArabaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
+            "fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia" => new TicketBaiBizkaiaSCU(loggerFactory.CreateLogger<TicketBaiBizkaiaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
+            "fiskaltrust.Middleware.SCU.ES.TicketBaiGipuzkoa" => new TicketBaiGipuzkoaSCU(loggerFactory.CreateLogger<TicketBaiGipuzkoaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
             _ => throw new NotImplementedException("SCU Type not implemented")
         };
 

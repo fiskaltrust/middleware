@@ -10,7 +10,7 @@ using Org.BouncyCastle.Ocsp;
 var builder = new CashBoxBuilder(
     "ES" switch
     {
-        "ES" => new CashBoxBuilderES(SCUTypesES.TicketBAIAraba),
+        "ES" => new CashBoxBuilderES(),
         _ => throw new NotImplementedException(),
     },
     Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "queue-configuration.json"))),
