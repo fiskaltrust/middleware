@@ -317,6 +317,52 @@ public class AADEFactory
 
         var headerOverride = overrideData.Invoice.InvoiceHeader;
 
+        // Apply invoice type override with validation
+        if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
+        {
+            // Define allowed invoice types for override
+            var allowedInvoiceTypes = new HashSet<string> { "3.1", "3.2", "6.1", "6.2", "8.1", "8.2", "9.3" };
+            
+            if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
+            {
+                throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
+            }
+
+            // Map string to InvoiceType enum
+            invoice.invoiceHeader.invoiceType = headerOverride.InvoiceType switch
+            {
+                "3.1" => InvoiceType.Item31,
+                "3.2" => InvoiceType.Item32,
+                "6.1" => InvoiceType.Item61,
+                "6.2" => InvoiceType.Item62,
+                "8.1" => InvoiceType.Item81,
+                "8.2" => InvoiceType.Item82,
+                "9.3" => InvoiceType.Item93,
+                _ => throw new Exception($"Unmapped invoice type '{headerOverride.InvoiceType}'")
+            };
+        }
+
+        // Apply VAT payment suspension
+        if (headerOverride.VatPaymentSuspension.HasValue)
+        {
+            invoice.invoiceHeader.vatPaymentSuspension = headerOverride.VatPaymentSuspension.Value;
+            invoice.invoiceHeader.vatPaymentSuspensionSpecified = true;
+        }
+
+        // Apply exchange rate
+        if (headerOverride.ExchangeRate.HasValue)
+        {
+            invoice.invoiceHeader.exchangeRate = headerOverride.ExchangeRate.Value;
+            invoice.invoiceHeader.exchangeRateSpecified = true;
+        }
+
+        // Apply self-pricing
+        if (headerOverride.SelfPricing.HasValue)
+        {
+            invoice.invoiceHeader.selfPricing = headerOverride.SelfPricing.Value;
+            invoice.invoiceHeader.selfPricingSpecified = true;
+        }
+
         // Apply dispatch date
         if (headerOverride.DispatchDate.HasValue)
         {
@@ -331,6 +377,12 @@ public class AADEFactory
             invoice.invoiceHeader.dispatchTimeSpecified = true;
         }
 
+        // Apply vehicle number
+        if (!string.IsNullOrEmpty(headerOverride.VehicleNumber))
+        {
+            invoice.invoiceHeader.vehicleNumber = headerOverride.VehicleNumber;
+        }
+
         // Apply move purpose
         if (headerOverride.MovePurpose.HasValue)
         {
@@ -338,6 +390,39 @@ public class AADEFactory
             invoice.invoiceHeader.movePurposeSpecified = true;
         }
 
+        // Apply fuel invoice
+        if (headerOverride.FuelInvoice.HasValue)
+        {
+            invoice.invoiceHeader.fuelInvoice = headerOverride.FuelInvoice.Value;
+            invoice.invoiceHeader.fuelInvoiceSpecified = true;
+        }
+
+        // Apply special invoice category
+        if (headerOverride.SpecialInvoiceCategory.HasValue)
+        {
+            invoice.invoiceHeader.specialInvoiceCategory = headerOverride.SpecialInvoiceCategory.Value;
+            invoice.invoiceHeader.specialInvoiceCategorySpecified = true;
+        }
+
+        // Apply invoice variation type
+        if (headerOverride.InvoiceVariationType.HasValue)
+        {
+            invoice.invoiceHeader.invoiceVariationType = headerOverride.InvoiceVariationType.Value;
+            invoice.invoiceHeader.invoiceVariationTypeSpecified = true;
+        }
+
+        // Apply is delivery note
+        if (headerOverride.IsDeliveryNote.HasValue)
+        {
+            invoice.invoiceHeader.isDeliveryNote = headerOverride.IsDeliveryNote.Value;
+            invoice.invoiceHeader.isDeliveryNoteSpecified = true;
+        }
+
+        // Apply other move purpose title
+        if (!string.IsNullOrEmpty(headerOverride.OtherMovePurposeTitle))
+        {
+            invoice.invoiceHeader.otherMovePurposeTitle = headerOverride.OtherMovePurposeTitle;
+        }
 
         // Apply other delivery note header
         if (headerOverride.OtherDeliveryNoteHeader != null)
@@ -374,10 +459,6 @@ public class AADEFactory
             // Apply start shipping branch
             if (headerOverride.OtherDeliveryNoteHeader.StartShippingBranch.HasValue)
             {
-                if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
-                {
-                    invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
-                }
                 invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranch = headerOverride.OtherDeliveryNoteHeader.StartShippingBranch.Value;
                 invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranchSpecified = true;
             }
@@ -385,14 +466,9 @@ public class AADEFactory
             // Apply complete shipping branch
             if (headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.HasValue)
             {
-                if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
-                {
-                    invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
-                }
                 invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranch = headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.Value;
                 invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranchSpecified = true;
             }
-
         }
     }
 

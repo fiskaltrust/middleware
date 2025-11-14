@@ -61,6 +61,13 @@ public class InvoiceOverride
 public class InvoiceHeaderOverride
 {
     /// <summary>
+    /// Invoice type override. Only allowed values: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3
+    /// Can only be set when the automatically determined invoice type would result in an error.
+    /// </summary>
+    [JsonPropertyName("invoiceType")]
+    public string? InvoiceType { get; set; }
+
+    /// <summary>
     /// VAT payment suspension indicator
     /// </summary>
     [JsonPropertyName("vatPaymentSuspension")]
