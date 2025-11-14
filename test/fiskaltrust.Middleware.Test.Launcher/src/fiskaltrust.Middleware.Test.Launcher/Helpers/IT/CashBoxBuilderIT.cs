@@ -13,8 +13,8 @@ namespace fiskaltrust.Middleware.Test.Launcher.Helpers.IT;
 class CashBoxBuilderIT : ICashBoxBuilder
 {
     public string Market { get => "IT"; }
-    public PackageConfiguration _queueConfiguration;
-    private IITSSCD _itsscd;
+    public PackageConfiguration? _queueConfiguration;
+    private IITSSCD? _itsscd;
 
     public void AddSCU(ref PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid scuId)
     {
@@ -63,6 +63,14 @@ class CashBoxBuilderIT : ICashBoxBuilder
 
     public IPOS CreateIPOS()
     {
+        if (_queueConfiguration is null)
+        {
+            throw new InvalidOperationException("Queue configuration is not set. Call AddMarketQueue first.");
+        }
+        if (_itsscd is null)
+        {
+            throw new InvalidOperationException("SCU is not set. Call AddSCU first.");
+        }
         var bootstrapper = new Queue.InMemory.PosBootstrapper();
         bootstrapper.Id = _queueConfiguration.Id;
         bootstrapper.Configuration = _queueConfiguration.Configuration.NewtonsoftJsonWarp();

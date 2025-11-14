@@ -16,5 +16,5 @@ public class ESSSCDJsonWarper : IESSSCD
 
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => _essscd.EchoAsync(echoRequest.JsonWarp());
     public Task<ESSSCDInfo> GetInfoAsync() => _essscd.GetInfoAsync();
-    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => _essscd.ProcessReceiptAsync(request.JsonWarp());
+    public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => (await _essscd.ProcessReceiptAsync(request.JsonWarp())).JsonWarp()!;
 }

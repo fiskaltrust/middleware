@@ -54,7 +54,7 @@ class CashBoxBuilderES : ICashBoxBuilder
                     new ftQueueES
                     {
                         ftQueueESId = queueId,
-                        CashBoxIdentification = queueId.ToString(),
+                        CashBoxIdentification = queueId.ToString().Substring(0, 20),
                         ftSignaturCreationUnitESId = scuId
                     }
                 }
@@ -63,7 +63,10 @@ class CashBoxBuilderES : ICashBoxBuilder
 
     public IV2QueueBootstrapper CreateBootStrapper(PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid queueId)
     {
-        var loggerFactory = new LoggerFactory();
+        var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.AddConsole();
+        });
 
         IESSSCD scu = SCUType switch
         {
@@ -74,7 +77,8 @@ class CashBoxBuilderES : ICashBoxBuilder
             }),
             SCUTypesES.TicketBAIAraba => new TicketBaiArabaSCU(loggerFactory.CreateLogger<TicketBaiArabaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
             SCUTypesES.TicketBAIBizkaia => new TicketBaiBizkaiaSCU(loggerFactory.CreateLogger<TicketBaiBizkaiaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
-            SCUTypesES.TicketBAIGipuzkoa => new TicketBaiGipuzkoaSCU(loggerFactory.CreateLogger<TicketBaiGipuzkoaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration))
+            SCUTypesES.TicketBAIGipuzkoa => new TicketBaiGipuzkoaSCU(loggerFactory.CreateLogger<TicketBaiGipuzkoaSCU>(), TicketBaiSCUConfiguration.FromConfiguration(scuConfiguration.Configuration)),
+            _ => throw new NotImplementedException("SCU Type not implemented")
         };
 
         var clientFactory = new InMemoryClientFactory<IESSSCD>(new ESSSCDJsonWarper(scu));

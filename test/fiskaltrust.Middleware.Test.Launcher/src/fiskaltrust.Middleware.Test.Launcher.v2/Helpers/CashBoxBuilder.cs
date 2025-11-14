@@ -63,7 +63,7 @@ class CashBoxBuilder
             }
         );
 
-        _cashBoxBuilder.AddSCU(ref scuConfiguration, ScuId);
+        _cashBoxBuilder.AddSCU(ref queueConfiguration, ScuId);
         _cashBoxBuilder.AddMarketQueue(ref queueConfiguration, QueueId, ScuId);
 
         _queueConfiguration = queueConfiguration;
@@ -95,14 +95,6 @@ class CashBoxBuilder
         {
             Echo = bootstrapper.RegisterForEcho().JsonWarpingAsync<EchoRequest, EchoResponse>(),
             Sign = bootstrapper.RegisterForSign().JsonWarpingAsync<ReceiptRequest, ReceiptResponse>(),
-            SignJson = async request =>
-            {
-                request = request
-                    .Replace("{{ ftCashBoxID }}", CashBoxId.ToString())
-                    .Replace("{{ ftPosSystemID }}", PosSystemId.ToString());
-                var sign = bootstrapper.RegisterForSign();
-                return JsonSerializer.Deserialize<ReceiptResponse>(await sign(request));
-            },
             Journal = async (JournalRequest request) =>
             {
                 var (contentType, pipeReader) = await bootstrapper.RegisterForJournal()(JsonSerializer.Serialize(request));
@@ -114,8 +106,7 @@ class CashBoxBuilder
 
 public record MiddlewareMethods
 {
-    public Func<EchoRequest, Task<EchoResponse?>> Echo;
-    public Func<ReceiptRequest, Task<ReceiptResponse?>> Sign;
-    public Func<string, Task<ReceiptResponse?>> SignJson;
-    public Func<JournalRequest, Task<(ContentType contentType, Stream response)>> Journal;
+    public required Func<EchoRequest, Task<EchoResponse?>> Echo;
+    public required Func<ReceiptRequest, Task<ReceiptResponse?>> Sign;
+    public required Func<JournalRequest, Task<(ContentType contentType, Stream response)>> Journal;
 }

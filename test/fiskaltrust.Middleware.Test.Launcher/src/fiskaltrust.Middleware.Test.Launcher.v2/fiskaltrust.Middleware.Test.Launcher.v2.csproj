@@ -8,25 +8,28 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="7.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
+    <ProjectReference Include="../../../../storage/src/fiskaltrust.storage/fiskaltrust.storage.csproj" />
 
-    <ProjectReference Include="..\..\..\..\queue\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+    <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Queue.InMemory/fiskaltrust.Middleware.Queue.InMemory.csproj" />
 
-    <ProjectReference Include="..\..\..\..\queue\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
-    <ProjectReference Include="..\..\..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.VeriFactu\fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj" />
-    <ProjectReference Include="..\..\..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBaiAraba\fiskaltrust.Middleware.SCU.ES.TicketBaiAraba.csproj" />
-    <ProjectReference Include="..\..\..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia\fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia.csproj" />
-    <ProjectReference Include="..\..\..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBaiGipuzkoa\fiskaltrust.Middleware.SCU.ES.TicketBaiGipuzkoa.csproj" />
+    <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.v2/fiskaltrust.Middleware.Localization.v2.csproj" />
+
+    <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.QueueES/fiskaltrust.Middleware.Localization.QueueES.csproj" />
+    <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.VeriFactu/fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj" />
+    <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBaiAraba/fiskaltrust.Middleware.SCU.ES.TicketBaiAraba.csproj" />
+    <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia/fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia.csproj" />
+    <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBaiGipuzkoa/fiskaltrust.Middleware.SCU.ES.TicketBaiGipuzkoa.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="json-requests\**">
+    <None Update="json-requests/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="TestCertificates\**">
+    <None Update="TestCertificates/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="queue-configuration.json">
