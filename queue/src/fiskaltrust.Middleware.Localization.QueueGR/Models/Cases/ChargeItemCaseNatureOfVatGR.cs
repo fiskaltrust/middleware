@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
+namespace fiskaltrust.Middleware.Localization.QueueGR.Models.NewFolder;
 
 public enum ChargeItemCaseNatureOfVatGR
 {
@@ -10,7 +10,7 @@ public enum ChargeItemCaseNatureOfVatGR
     // 10 - Not Taxable
     NotTaxableIntraCommunitySupplies = 0x1100,           // [11] (mydata:14) Article 33. non-tax-able - intra-com-munity sup-plies Χωρίς ΦΠΑ - άρθρο 33 του Κώδικα ΦΠΑ
     NotTaxableExportOutsideEU = 0x1200,                  // [12] (mydata:8) Article 29-Export of goods outside of EU Χωρίς ΦΠΑ - άρθρο 29 του Κώδικα ΦΠΑ
-    NotTaxableTaxFreeRetail = 0x1300,                    // [13] (mydata:28) TAXFREE retail to non eu citi-zens Χωρίς ΦΠΑ – άρθρο 29 περ. β’ παρ.1 του Κώδικα ΦΠΑ
+    NotTaxableTaxFreeRetail = 0x1300,                    // [13] (mydata:28) TAXFREE retail to non eu citi-zens Χωρίς ΦΠΑ – άρθρο 29 περ. β' παρ.1 του Κώδικα ΦΠΑ
     NotTaxableArticle39a = 0x1400,                       // [14] (my-data:16) Article 45 Includes the special regime of payment of tax from the receiver of goods and ser-vices NOT THE IS-SUER Χωρίς ΦΠΑ - άρθρο 45 του Κώδικα ΦΠΑ
     NotTaxableArticle19 = 0x1500,                        // [15] (mydata:6) Ar-ticle 24 Bottle package recycling, sales of tickets, sales of newspa-pers and maga-zines Χωρίς ΦΠΑ - άρθρο 24 του Κώδικα ΦΠΑ
     NotTaxableArticle22 = 0x1600,                        // [16] (mydata:7) ar-ticle 27 Services in Greece for medical services, services provided from doc-tors, dentists, in-surance services, bank services, sale of 1st residence Χωρίς ΦΠΑ - άρθρο 27 του Κώδικα ΦΠΑ
@@ -38,6 +38,6 @@ public enum ChargeItemCaseNatureOfVatGR
 public static class ChargeItemCaseNatureOfVatGRExt
 {
     public static bool IsNatureOfVat(this ChargeItemCase self, ChargeItemCaseNatureOfVatGR natureOfVatGR) => ((long) self & 0xFF00) == (long) natureOfVatGR;
-    public static ChargeItemCase WithNatureOfVat(this ChargeItemCase self, ChargeItemCaseNatureOfVatGR natureOfVatGR) => (ChargeItemCase) (((ulong) self & 0xFFFF_FFFF_FFFF_00FF) | (ulong) natureOfVatGR);
+    public static ChargeItemCase WithNatureOfVat(this ChargeItemCase self, ChargeItemCaseNatureOfVatGR natureOfVatGR) => (ChargeItemCase) ((ulong) self & 0xFFFF_FFFF_FFFF_00FF | (ulong) natureOfVatGR);
     public static ChargeItemCaseNatureOfVatGR NatureOfVat(this ChargeItemCase self) => (ChargeItemCaseNatureOfVatGR) ((long) self & 0xFF00);
 }

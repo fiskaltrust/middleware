@@ -4,13 +4,11 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using System.Text;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.ifPOS.v2.pt;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -20,20 +18,57 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
     private readonly ftQueuePT _queuePT = queuePT;
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
-    public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request)
+    {
+        foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
+        {
+            if (!chargeItem.VATAmount.HasValue)
+            {
+                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
+            }
+        }
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
+        await Task.CompletedTask;
+        return new ProcessCommandResponse(request.ReceiptResponse, []);
+    }
 
-    public async Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request)
+    {
+        foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
+        {
+            if (!chargeItem.VATAmount.HasValue)
+            {
+                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
+            }
+        }
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
+        await Task.CompletedTask;
+        return new ProcessCommandResponse(request.ReceiptResponse, []);
+    }
 
-    public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request)
+    {
+        foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
+        {
+            if (!chargeItem.VATAmount.HasValue)
+            {
+                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
+            }
+        }
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
+        await Task.CompletedTask;
+        return new ProcessCommandResponse(request.ReceiptResponse, []);
+    }
 
     public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var series = GetSeriesForReceiptRequest(request.ReceiptRequest);
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
+        var series = GetSeriesForReceiptRequest(staticNumberStorage, request.ReceiptRequest);
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
-        receiptResponse.ftReceiptIdentification += series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -46,17 +81,17 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
-    private NumberSeries GetSeriesForReceiptRequest(ReceiptRequest receiptRequest)
+    private NumberSeries GetSeriesForReceiptRequest(NumeratorStorage staticNumberStorage, ReceiptRequest receiptRequest)
     {
         if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
         {
-            return StaticNumeratorStorage.TableChecqueSeries;
+            return staticNumberStorage.TableChecqueSeries;
         }
         else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
         {
-            return StaticNumeratorStorage.BudgetSeries;
+            return staticNumberStorage.BudgetSeries;
         }
-        return StaticNumeratorStorage.ProFormaSeries;
+        return staticNumberStorage.ProFormaSeries;
     }
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
