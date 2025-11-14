@@ -147,7 +147,7 @@ public class MyDataOverrideTests
                     {
                         invoiceHeader = new
                         {
-                            dispatchTime = "10:44:19"
+                            dispatchTime = new DateTime(1, 1, 1, 10, 44, 19).ToString("o")
                         }
                     }
                 }
@@ -359,8 +359,8 @@ public class MyDataOverrideTests
                     {
                         invoiceHeader = new
                         {
-                            dispatchDate = "2025-06-18",
-                            dispatchTime = "10:44:19",
+                            dispatchDate = new DateTime(2025, 06, 18, 10, 44, 19).ToString("o"),
+                            dispatchTime = new DateTime(2025,06,18, 10, 44, 19).ToString("o"),
                             movePurpose = 1,
                             otherDeliveryNoteHeader = new
                             {
@@ -544,8 +544,8 @@ public class MyDataOverrideTests
                     {
                         invoiceHeader = new
                         {
-                            dispatchDate = "2025-06-18",
-                            dispatchTime = "10:44:19",
+                            dispatchDate = new DateTime(2025, 06, 18, 10, 44, 19).ToString("o"),
+                            dispatchTime = new DateTime(2025, 06, 18, 10, 44, 19).ToString("o"),
                             movePurpose = 1,
                             otherDeliveryNoteHeader = new
                             {

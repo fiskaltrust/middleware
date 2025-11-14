@@ -1,4 +1,4 @@
-#pragma warning disable
+﻿#pragma warning disable
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.Models;
 
@@ -58,6 +58,16 @@ public static class MyDataVatExemptionCategory
     /// Article 27 - Diplomatic, consular, NATO exemptions.
     /// </summary>
     public const int DiplomaticConsularNATO = 11;
+
+    /// <summary>
+    /// Article 32 - Open seas ships.
+    /// </summary>
+    public const int OpenSeasShips = 12;
+
+    /// <summary>
+    /// Article 32.1 - Open seas ships (specific case).
+    /// </summary>
+    public const int OpenSeasShipsArticle32_1 = 13;
     
     /// <summary>
     /// Article 14 - Intra-community supplies.
@@ -75,6 +85,11 @@ public static class MyDataVatExemptionCategory
     public const int Article39aSpecialRegime = 16;
 
     /// <summary>
+    /// Special regime for farmers (article 41).
+    /// </summary>
+    public const int SpecialRegimeFarmers = 18;
+
+    /// <summary>
     /// Article54 The delivery, intra-Community acquisition and im-port of investment gold, including in-vestment gold for which there are certificates, by type or by type or which is the sub-ject of a transac-tion between gold accounts, includ-ing, in particular, gold loans and swaps, with a right of ownership or claim to invest-ment gold, as well as investment gold transactions with futures and for-ward contracts, which cause a change of owner-ship or claim to in-vestment gold,
     /// </summary>
     public const int Article54InterCommunityDeliveryReverseCharge = 19;
@@ -90,9 +105,24 @@ public static class MyDataVatExemptionCategory
     public const int MarginScheme = 22;
 
     /// <summary>
+    /// Special case where you don't pay VAT as long as the goods or services are intended for another EU state or 3rd party country.
+    /// </summary>
+    public const int GoodsServicesForEUOrThirdCountry = 26;
+
+    /// <summary>
+    /// Other exemption cases not covered by specific categories.
+    /// </summary>
+    public const int OtherExemptionCases = 27;
+
+    /// <summary>
     /// TAXFREE retail to non EU citizens.
     /// </summary>
     public const int TaxFreeRetailNonEU = 28;
+
+    /// <summary>
+    /// ΠΟΛ.1029/1995 - Specific tax regulation exemption.
+    /// </summary>
+    public const int POL_1029_1995 = 87;
     
     // Additional exemption categories can be added here as needed
     // based on Greek tax law and AADE requirements

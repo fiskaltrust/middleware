@@ -61,6 +61,24 @@ public class InvoiceOverride
 public class InvoiceHeaderOverride
 {
     /// <summary>
+    /// VAT payment suspension indicator
+    /// </summary>
+    [JsonPropertyName("vatPaymentSuspension")]
+    public bool? VatPaymentSuspension { get; set; }
+
+    /// <summary>
+    /// Exchange rate for non-EUR currencies
+    /// </summary>
+    [JsonPropertyName("exchangeRate")]
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>
+    /// Self-pricing indicator
+    /// </summary>
+    [JsonPropertyName("selfPricing")]
+    public bool? SelfPricing { get; set; }
+
+    /// <summary>
     /// Dispatch date (format: yyyy-MM-dd)
     /// </summary>
     [JsonPropertyName("dispatchDate")]
@@ -73,10 +91,34 @@ public class InvoiceHeaderOverride
     public DateTime? DispatchTime { get; set; }
 
     /// <summary>
+    /// Vehicle number for transport documents
+    /// </summary>
+    [JsonPropertyName("vehicleNumber")]
+    public string? VehicleNumber { get; set; }
+
+    /// <summary>
     /// Move purpose code
     /// </summary>
     [JsonPropertyName("movePurpose")]
     public int? MovePurpose { get; set; }
+
+    /// <summary>
+    /// Fuel invoice indicator
+    /// </summary>
+    [JsonPropertyName("fuelInvoice")]
+    public bool? FuelInvoice { get; set; }
+
+    /// <summary>
+    /// Special invoice category code
+    /// </summary>
+    [JsonPropertyName("specialInvoiceCategory")]
+    public int? SpecialInvoiceCategory { get; set; }
+
+    /// <summary>
+    /// Invoice variation type code
+    /// </summary>
+    [JsonPropertyName("invoiceVariationType")]
+    public int? InvoiceVariationType { get; set; }
 
     /// <summary>
     /// Other delivery note header information
@@ -85,16 +127,28 @@ public class InvoiceHeaderOverride
     public OtherDeliveryNoteHeaderOverride? OtherDeliveryNoteHeader { get; set; }
 
     /// <summary>
-    /// Start shipping branch
+    /// Delivery note indicator
     /// </summary>
-    [JsonPropertyName("startShippingBranch")]
-    public int? StartShippingBranch { get; set; }
+    [JsonPropertyName("isDeliveryNote")]
+    public bool? IsDeliveryNote { get; set; }
 
     /// <summary>
-    /// Complete shipping branch
+    /// Other move purpose title (free text)
     /// </summary>
-    [JsonPropertyName("completeShippingBranch")]
-    public int? CompleteShippingBranch { get; set; }
+    [JsonPropertyName("otherMovePurposeTitle")]
+    public string? OtherMovePurposeTitle { get; set; }
+
+    /// <summary>
+    /// Third party collection indicator
+    /// </summary>
+    [JsonPropertyName("thirdPartyCollection")]
+    public bool? ThirdPartyCollection { get; set; }
+
+    /// <summary>
+    /// Total cancel delivery orders indicator
+    /// </summary>
+    [JsonPropertyName("totalCancelDeliveryOrders")]
+    public bool? TotalCancelDeliveryOrders { get; set; }
 }
 
 public class OtherDeliveryNoteHeaderOverride
@@ -110,6 +164,18 @@ public class OtherDeliveryNoteHeaderOverride
     /// </summary>
     [JsonPropertyName("deliveryAddress")]
     public AddressOverride? DeliveryAddress { get; set; }
+
+    /// <summary>
+    /// Start shipping branch
+    /// </summary>
+    [JsonPropertyName("startShippingBranch")]
+    public int? StartShippingBranch { get; set; }
+
+    /// <summary>
+    /// Complete shipping branch
+    /// </summary>
+    [JsonPropertyName("completeShippingBranch")]
+    public int? CompleteShippingBranch { get; set; }
 }
 
 public class AddressOverride

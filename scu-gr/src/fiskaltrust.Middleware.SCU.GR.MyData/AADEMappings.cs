@@ -503,6 +503,8 @@ public static class AADEMappings
             ChargeItemCaseNatureOfVatGR.ExemptArticle43TravelAgencies => MyDataVatExemptionCategory.TravelAgencies,
             ChargeItemCaseNatureOfVatGR.ExemptArticle25CustomsRegimes => MyDataVatExemptionCategory.SpecialCustomsRegimes,
             ChargeItemCaseNatureOfVatGR.ExemptArticle39SmallBusinesses => MyDataVatExemptionCategory.SmallBusinesses,
+            ChargeItemCaseNatureOfVatGR.ExemptArticle41Farmers => MyDataVatExemptionCategory.SpecialRegimeFarmers,
+            ChargeItemCaseNatureOfVatGR.ExemptOtherCases => MyDataVatExemptionCategory.OtherExemptionCases,
 
             // Margin Scheme (40)
             ChargeItemCaseNatureOfVatGR.MarginSChemeTaxableResellers => MyDataVatExemptionCategory.MarginScheme,
@@ -513,12 +515,16 @@ public static class AADEMappings
             // VAT paid in other EU country (60)
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle13 => MyDataVatExemptionCategory.GoodsOutsideGreece,
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle14 => MyDataVatExemptionCategory.ServicesOutsideGreece,
+            ChargeItemCaseNatureOfVatGR.VatPaidGoodsServicesForEUOrThirdCountry => MyDataVatExemptionCategory.GoodsServicesForEUOrThirdCountry,
 
             // Excluded (80)
             ChargeItemCaseNatureOfVatGR.ExcludedArticle2And3 => MyDataVatExemptionCategory.GeneralExemption,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle5BusinessTransfer => MyDataVatExemptionCategory.BusinessAssetsTransfer,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle26TaxWarehouses => MyDataVatExemptionCategory.TaxWarehouses,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle27Diplomatic => MyDataVatExemptionCategory.DiplomaticConsularNATO,
+            ChargeItemCaseNatureOfVatGR.ExcludedArticle32OpenSeasShips => MyDataVatExemptionCategory.OpenSeasShips,
+            ChargeItemCaseNatureOfVatGR.ExcludedArticle32_1OpenSeasShips => MyDataVatExemptionCategory.OpenSeasShipsArticle32_1,
+            ChargeItemCaseNatureOfVatGR.ExcludedPOL_1029_1995 => MyDataVatExemptionCategory.POL_1029_1995,
             ChargeItemCaseNatureOfVatGR.UsualVatApplies => null,
             _ => throw new NotSupportedException($"The ChargeItemCase 0x{chargeItem.ftChargeItemCase:x} contains a not supported Nature NN.") // Unknown nature, no exemption category
         };

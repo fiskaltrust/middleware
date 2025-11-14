@@ -35,4 +35,4 @@
       <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
     </ItemGroup>
 
-</Project>
+    </Project>

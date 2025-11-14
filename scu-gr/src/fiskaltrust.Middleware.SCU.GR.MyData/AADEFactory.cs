@@ -338,27 +338,6 @@ public class AADEFactory
             invoice.invoiceHeader.movePurposeSpecified = true;
         }
 
-        // Apply start shipping branch
-        if (headerOverride.StartShippingBranch.HasValue)
-        {
-            if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
-            {
-                invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
-            }
-            invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranch = headerOverride.StartShippingBranch.Value;
-            invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranchSpecified = true;
-        }
-
-        // Apply complete shipping branch
-        if (headerOverride.CompleteShippingBranch.HasValue)
-        {
-            if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
-            {
-                invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
-            }
-            invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranch = headerOverride.CompleteShippingBranch.Value;
-            invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranchSpecified = true;
-        }
 
         // Apply other delivery note header
         if (headerOverride.OtherDeliveryNoteHeader != null)
@@ -391,6 +370,29 @@ public class AADEFactory
                     city = headerOverride.OtherDeliveryNoteHeader.DeliveryAddress.City
                 };
             }
+
+            // Apply start shipping branch
+            if (headerOverride.OtherDeliveryNoteHeader.StartShippingBranch.HasValue)
+            {
+                if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
+                {
+                    invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
+                }
+                invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranch = headerOverride.OtherDeliveryNoteHeader.StartShippingBranch.Value;
+                invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranchSpecified = true;
+            }
+
+            // Apply complete shipping branch
+            if (headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.HasValue)
+            {
+                if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
+                {
+                    invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
+                }
+                invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranch = headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.Value;
+                invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranchSpecified = true;
+            }
+
         }
     }
 
