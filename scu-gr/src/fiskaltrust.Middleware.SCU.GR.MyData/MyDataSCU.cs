@@ -67,12 +67,6 @@ public class InvoiceHeaderOverride
     public bool? VatPaymentSuspension { get; set; }
 
     /// <summary>
-    /// Exchange rate for non-EUR currencies
-    /// </summary>
-    [JsonPropertyName("exchangeRate")]
-    public decimal? ExchangeRate { get; set; }
-
-    /// <summary>
     /// Self-pricing indicator
     /// </summary>
     [JsonPropertyName("selfPricing")]
@@ -137,18 +131,6 @@ public class InvoiceHeaderOverride
     /// </summary>
     [JsonPropertyName("otherMovePurposeTitle")]
     public string? OtherMovePurposeTitle { get; set; }
-
-    /// <summary>
-    /// Third party collection indicator
-    /// </summary>
-    [JsonPropertyName("thirdPartyCollection")]
-    public bool? ThirdPartyCollection { get; set; }
-
-    /// <summary>
-    /// Total cancel delivery orders indicator
-    /// </summary>
-    [JsonPropertyName("totalCancelDeliveryOrders")]
-    public bool? TotalCancelDeliveryOrders { get; set; }
 }
 
 public class OtherDeliveryNoteHeaderOverride
