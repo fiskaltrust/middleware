@@ -65,7 +65,7 @@ public class TicketBaiSCU : IESSSCD
         _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
 
         var response = await _httpClient.SendAsync(httpRequestMessage);
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await _ticketBaiTerritory.GetResponse(response);
         var result = GetResponseFromContent(responseContent, ticketBaiRequest);
         result.RequestContent = content;
         return result;

@@ -1,10 +1,14 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 
@@ -109,6 +113,19 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
                 return compressedStream.ToArray();
             }
         }
+    }
+
+    public async Task<string> GetResponse(HttpResponseMessage response)
+    {
+        if (response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-tipo-respuesta", out HeaderStringValues type) && type.ToString() == "Incorrecto")
+        {
+            response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-codigo-respuesta", out HeaderStringValues code);
+            response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-mensaje-respuesta", out HeaderStringValues messages);
+
+            throw new Exception($"{code}: {messages}");
+        }
+
+        return await response.Content.ReadAsStringAsync();
     }
 }
 

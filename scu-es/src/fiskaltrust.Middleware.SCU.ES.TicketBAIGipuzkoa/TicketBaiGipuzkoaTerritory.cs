@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 
@@ -32,4 +33,5 @@ public class TicketBaiGipuzkoaTerritory : ITicketBaiTerritory
 
     public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers) { }
     public ByteArrayContent GetContent(TicketBaiRequest request, string content) => new StringContent(content, Encoding.UTF8, "application/xml");
+    public Task<string> GetResponse(HttpResponseMessage response) => response.Content.ReadAsStringAsync();
 }
