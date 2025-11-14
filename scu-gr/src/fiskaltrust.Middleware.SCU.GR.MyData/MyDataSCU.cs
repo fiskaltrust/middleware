@@ -70,7 +70,7 @@ public class InvoiceHeaderOverride
     /// Dispatch time (format: HH:mm:ss)
     /// </summary>
     [JsonPropertyName("dispatchTime")]
-    public TimeSpan? DispatchTime { get; set; }
+    public DateTime? DispatchTime { get; set; }
 
     /// <summary>
     /// Move purpose code

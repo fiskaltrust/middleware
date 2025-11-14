@@ -327,8 +327,7 @@ public class AADEFactory
         // Apply dispatch time
         if (headerOverride.DispatchTime.HasValue)
         {
-            var timeSpan = headerOverride.DispatchTime.Value;
-            invoice.invoiceHeader.dispatchTime = new DateTime(1, 1, 1, timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds);
+            invoice.invoiceHeader.dispatchTime = headerOverride.DispatchTime.Value;
             invoice.invoiceHeader.dispatchTimeSpecified = true;
         }
 
