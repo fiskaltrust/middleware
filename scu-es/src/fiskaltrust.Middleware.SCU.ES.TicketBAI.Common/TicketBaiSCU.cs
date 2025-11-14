@@ -145,7 +145,7 @@ public class TicketBaiSCU : IESSSCD
 
         var submitResponse = await SendAsync(
             submitInvoiceRequest,
-            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+            !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                 ? _ticketBaiTerritory.SubmitInvoices
                 : _ticketBaiTerritory.CancelInvoices);
 
