@@ -32,6 +32,111 @@ public class ftReceiptCaseDataGreekPayload
     public long? AA { get; set; }
     public string? HashAlg { get; set; }
     public string? HashPayload { get; set; }
+    
+    /// <summary>
+    /// MyData override configuration allowing direct control of invoice properties
+    /// </summary>
+    [JsonPropertyName("mydataoverride")]
+    public MyDataOverride? MyDataOverride { get; set; }
+}
+
+public class MyDataOverride
+{
+    /// <summary>
+    /// Invoice-level overrides
+    /// </summary>
+    [JsonPropertyName("invoice")]
+    public InvoiceOverride? Invoice { get; set; }
+}
+
+public class InvoiceOverride
+{
+    /// <summary>
+    /// Invoice header overrides
+    /// </summary>
+    [JsonPropertyName("invoiceHeader")]
+    public InvoiceHeaderOverride? InvoiceHeader { get; set; }
+}
+
+public class InvoiceHeaderOverride
+{
+    /// <summary>
+    /// Dispatch date (format: yyyy-MM-dd)
+    /// </summary>
+    [JsonPropertyName("dispatchDate")]
+    public DateTime? DispatchDate { get; set; }
+
+    /// <summary>
+    /// Dispatch time (format: HH:mm:ss)
+    /// </summary>
+    [JsonPropertyName("dispatchTime")]
+    public TimeSpan? DispatchTime { get; set; }
+
+    /// <summary>
+    /// Move purpose code
+    /// </summary>
+    [JsonPropertyName("movePurpose")]
+    public int? MovePurpose { get; set; }
+
+    /// <summary>
+    /// Other delivery note header information
+    /// </summary>
+    [JsonPropertyName("otherDeliveryNoteHeader")]
+    public OtherDeliveryNoteHeaderOverride? OtherDeliveryNoteHeader { get; set; }
+
+    /// <summary>
+    /// Start shipping branch
+    /// </summary>
+    [JsonPropertyName("startShippingBranch")]
+    public int? StartShippingBranch { get; set; }
+
+    /// <summary>
+    /// Complete shipping branch
+    /// </summary>
+    [JsonPropertyName("completeShippingBranch")]
+    public int? CompleteShippingBranch { get; set; }
+}
+
+public class OtherDeliveryNoteHeaderOverride
+{
+    /// <summary>
+    /// Loading address
+    /// </summary>
+    [JsonPropertyName("loadingAddress")]
+    public AddressOverride? LoadingAddress { get; set; }
+
+    /// <summary>
+    /// Delivery address
+    /// </summary>
+    [JsonPropertyName("deliveryAddress")]
+    public AddressOverride? DeliveryAddress { get; set; }
+}
+
+public class AddressOverride
+{
+    /// <summary>
+    /// Street name
+    /// </summary>
+    [JsonPropertyName("street")]
+    public string? Street { get; set; }
+
+    /// <summary>
+    /// Street number
+    /// </summary>
+    [JsonPropertyName("number")]
+    public string? Number { get; set; }
+
+    /// <summary>
+    /// Postal code
+    /// </summary>
+    [JsonPropertyName("postalCode")]
+    public string? PostalCode { get; set; }
+
+    /// <summary>
+    /// City name
+    /// </summary>
+    [JsonPropertyName("city")]
+    public string? City { get; set; }
 }
 
 public class MyDataSCU : IGRSSCD

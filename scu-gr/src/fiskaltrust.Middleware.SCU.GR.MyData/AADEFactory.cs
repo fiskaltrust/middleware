@@ -298,7 +298,101 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
+        
+        // Apply mydataoverride if present
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData) && overrideData?.GR?.MyDataOverride != null)
+        {
+            ApplyMyDataOverride(inv, overrideData.GR.MyDataOverride);
+        }
+
         return inv;
+    }
+
+    private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, MyDataOverride overrideData)
+    {
+        if (overrideData?.Invoice?.InvoiceHeader == null)
+        {
+            return;
+        }
+
+        var headerOverride = overrideData.Invoice.InvoiceHeader;
+
+        // Apply dispatch date
+        if (headerOverride.DispatchDate.HasValue)
+        {
+            invoice.invoiceHeader.dispatchDate = headerOverride.DispatchDate.Value;
+            invoice.invoiceHeader.dispatchDateSpecified = true;
+        }
+
+        // Apply dispatch time
+        if (headerOverride.DispatchTime.HasValue)
+        {
+            var timeSpan = headerOverride.DispatchTime.Value;
+            invoice.invoiceHeader.dispatchTime = new DateTime(1, 1, 1, timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds);
+            invoice.invoiceHeader.dispatchTimeSpecified = true;
+        }
+
+        // Apply move purpose
+        if (headerOverride.MovePurpose.HasValue)
+        {
+            invoice.invoiceHeader.movePurpose = headerOverride.MovePurpose.Value;
+            invoice.invoiceHeader.movePurposeSpecified = true;
+        }
+
+        // Apply start shipping branch
+        if (headerOverride.StartShippingBranch.HasValue)
+        {
+            if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
+            {
+                invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
+            }
+            invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranch = headerOverride.StartShippingBranch.Value;
+            invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranchSpecified = true;
+        }
+
+        // Apply complete shipping branch
+        if (headerOverride.CompleteShippingBranch.HasValue)
+        {
+            if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
+            {
+                invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
+            }
+            invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranch = headerOverride.CompleteShippingBranch.Value;
+            invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranchSpecified = true;
+        }
+
+        // Apply other delivery note header
+        if (headerOverride.OtherDeliveryNoteHeader != null)
+        {
+            if (invoice.invoiceHeader.otherDeliveryNoteHeader == null)
+            {
+                invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
+            }
+
+            // Apply loading address
+            if (headerOverride.OtherDeliveryNoteHeader.LoadingAddress != null)
+            {
+                invoice.invoiceHeader.otherDeliveryNoteHeader.loadingAddress = new AddressType
+                {
+                    street = headerOverride.OtherDeliveryNoteHeader.LoadingAddress.Street,
+                    number = headerOverride.OtherDeliveryNoteHeader.LoadingAddress.Number ?? "0",
+                    postalCode = headerOverride.OtherDeliveryNoteHeader.LoadingAddress.PostalCode,
+                    city = headerOverride.OtherDeliveryNoteHeader.LoadingAddress.City
+                };
+            }
+
+            // Apply delivery address
+            if (headerOverride.OtherDeliveryNoteHeader.DeliveryAddress != null)
+            {
+                invoice.invoiceHeader.otherDeliveryNoteHeader.deliveryAddress = new AddressType
+                {
+                    street = headerOverride.OtherDeliveryNoteHeader.DeliveryAddress.Street,
+                    number = headerOverride.OtherDeliveryNoteHeader.DeliveryAddress.Number ?? "0",
+                    postalCode = headerOverride.OtherDeliveryNoteHeader.DeliveryAddress.PostalCode,
+                    city = headerOverride.OtherDeliveryNoteHeader.DeliveryAddress.City
+                };
+            }
+        }
     }
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
