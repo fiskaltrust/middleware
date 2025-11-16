@@ -69,7 +69,7 @@ jobs:
             echo "| ubuntu-latest  | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
             echo "| ubuntu-latest  | any              | MySQL                              | ❌ No      |"
             echo "| ubuntu-latest  | v2.0             | EF                                 | ✅ Yes     |"
-            echo "| macos-latest   | v2.0             | SQLite                             | ✅ Yes     |"
+            echo "| macos-latest   | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
             echo "| macos-latest   | any              | MySQL, EF                          | ❌ No      |"
             echo ""
 
@@ -171,7 +171,8 @@ jobs:
           if ("${{ inputs.launcherVersion }}" -eq "v1.3") {
            $headers = @{ Authorization = "Basic $encoded" }
            $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
-           if ($isLinux) {
+           if ($isLinux -or isMacos) {
+           #for both platform, the same package will be downloaded
            $url=$url + "&platform=linux"
            } 
           } 
@@ -198,16 +199,26 @@ jobs:
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
       - name: Install Mono if platform is Ubuntu
-        if: ${{ inputs.platform == 'ubuntu-latest' }}
-        shell: pwsh
+        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest'  && inputs.launcherVersion == 'v1.3') }}
         run: |
-          Write-Host "Installing Mono on Linux..."
-          sudo apt-get update -y
-          sudo apt-get install -y mono-complete
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
+             
+              sudo apt-get update -y
+              sudo apt-get install -y mono-complete
+          else
+             
+              brew update
+              brew install mono
+          fi
 
       - name: Install expect
-        if: ${{ inputs.platform == 'ubuntu-latest' && inputs.launcherVersion == 'v1.3' }}
-        run: sudo apt-get update && sudo apt-get install -y expect
+        if: ${{ (inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest') && inputs.launcherVersion == 'v1.3' }}
+        run: |
+           if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
+              sudo apt-get update && sudo apt-get install -y expect
+           else
+              brew install expect
+            fi
 
       - name:  Run launcher,send requests, and stop
         shell: pwsh
