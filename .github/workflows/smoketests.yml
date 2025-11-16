@@ -55,7 +55,7 @@ jobs:
               exit 1
             fi
 
-            if [[ "${{ inputs.platform }}" == "macos-latest" && ( "${{ inputs.queuePackage }}" != *SQLite* || "${{ inputs.launcherVersion }}" != "v2.0" ) ]]; then
+            if [[ "${{ inputs.platform }}" == "macos-latest" &&  "${{ inputs.queuePackage }}" != *SQLite* ]]; then
               echo "❌ Only SQLite supported on macOS!"
               exit 1
             fi
