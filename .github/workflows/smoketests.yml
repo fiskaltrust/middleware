@@ -233,7 +233,7 @@ jobs:
               $scriptPath = (Resolve-Path "$launcherPath/$exeFileName").Path
               $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
           }
-          elseif ($isLinux -and "${{ inputs.launcherVersion }}" -eq "v1.3")
+          elseif ("${{ inputs.launcherVersion }}" -eq "v1.3")
           {
              $exeFileName = "test.sh"
              $cmd = @"    
