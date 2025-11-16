@@ -171,7 +171,7 @@ jobs:
           if ("${{ inputs.launcherVersion }}" -eq "v1.3") {
            $headers = @{ Authorization = "Basic $encoded" }
            $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
-           if ($isLinux -or isMacos) {
+           if ($isLinux -or $isMacos) {
            #for both platform, the same package will be downloaded
            $url=$url + "&platform=linux"
            } 
