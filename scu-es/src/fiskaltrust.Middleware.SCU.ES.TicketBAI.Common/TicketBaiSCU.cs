@@ -146,7 +146,7 @@ public class TicketBaiSCU : IESSSCD
                 Amount = c.Amount,
                 Description = c.Description,
                 Quantity = c.Quantity,
-                VATAmount = c.VATAmount ?? (c.Amount * c.VATRate),
+                VATAmount = c.VATAmount ?? (c.Amount * c.VATRate / 100.0m),
                 VATRate = c.VATRate
             }).ToList()
         };
