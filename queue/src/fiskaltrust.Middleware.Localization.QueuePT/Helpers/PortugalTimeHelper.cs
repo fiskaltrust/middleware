@@ -49,12 +49,14 @@ public static class PortugalTimeHelper
     /// <returns>The DateTime in Portugal local time</returns>
     public static DateTime ConvertToPortugalTime(DateTime utcDateTime)
     {
-        if (utcDateTime.Kind != DateTimeKind.Utc)
-        {
-            // If not UTC, assume it's already in the correct time zone or convert to UTC first
-            utcDateTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
-        }
+        return utcDateTime;
+        // TODO this works only in summer
+        // if (utcDateTime.Kind != DateTimeKind.Utc)
+        // {
+        //     // If not UTC, assume it's already in the correct time zone or convert to UTC first
+        //     utcDateTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+        // }
 
-        return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, _portugalTimeZone);
+        // return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, _portugalTimeZone);
     }
 }
