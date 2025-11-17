@@ -89,7 +89,7 @@ public class StaticNumeratorStorage
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
     {
-        if (series.Numerator == null)
+        if (series.Numerator == 0)
         {
             foreach (var queueItem in queueItems)
             {
@@ -121,12 +121,6 @@ public class StaticNumeratorStorage
                     }
                     break;
                 }
-
-
-            }
-            if (series.Numerator == null)
-            {
-                series.Numerator = 0;
             }
         }
     }
