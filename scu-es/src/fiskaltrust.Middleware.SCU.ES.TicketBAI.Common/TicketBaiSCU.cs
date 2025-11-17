@@ -66,7 +66,15 @@ public class TicketBaiSCU : IESSSCD
 
         var response = await _httpClient.SendAsync(httpRequestMessage);
         var responseContent = await _ticketBaiTerritory.GetResponse(response);
-        var result = GetResponseFromContent(responseContent, ticketBaiRequest);
+        if (responseContent.IsErr)
+        {
+            var errorResponse = responseContent.ErrValue!.Match(
+                ok => GetResponseFromContent(ok, ticketBaiRequest),
+                err => throw err
+            );
+            throw new AggregateException(errorResponse.ResultMessages.Select(x => new Exception($"{x.code}: {x.message}")));
+        }
+        var result = GetResponseFromContent(responseContent.OkValue!, ticketBaiRequest);
         result.RequestContent = content;
         return result;
     }

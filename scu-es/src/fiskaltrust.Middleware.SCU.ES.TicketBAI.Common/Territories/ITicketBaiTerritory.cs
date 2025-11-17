@@ -1,7 +1,10 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Linq.Expressions;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 
@@ -23,5 +26,5 @@ public interface ITicketBaiTerritory
 
     public ByteArrayContent GetContent(TicketBaiRequest request, string content);
 
-    public Task<string> GetResponse(HttpResponseMessage response);
+    public Task<Result<string, Result<string, Exception>>> GetResponse(HttpResponseMessage response);
 }
