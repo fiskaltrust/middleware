@@ -187,7 +187,7 @@ public class SaftExporter
 
     public static bool IsProductChargeItem(ChargeItem chargeItem)
     {
-        if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))
+        if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount) || chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
         {
             return false;
         }
