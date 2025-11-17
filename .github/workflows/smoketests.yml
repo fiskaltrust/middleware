@@ -96,13 +96,14 @@ jobs:
             $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
             $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
-            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
-             $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=pass678!;TrustServerCertificate=True;"
+            $pass="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
+             $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
             if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
-             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
+             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
@@ -136,7 +137,7 @@ jobs:
 
             # Set a known root password
             $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
-            & $mysqladmin -u root password "my-secret-pw"
+            & $mysqladmin -u root password "${{ secrets.FT_SMOKETESTS_PASSWORD }}"
 
             # Verify connection
             $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
@@ -153,7 +154,7 @@ jobs:
               sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
           }
           elseif($isLinux){
-            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=pass678!" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=${{ secrets.FT_SMOKETESTS_PASSWORD }}" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
           }
 
       - name: Download launcher package for ${{inputs.platform}}--launcherVersion=${{inputs.launcherVersion}}--package=${{inputs.queuePackage}}-${{inputs.queueVersion}}
