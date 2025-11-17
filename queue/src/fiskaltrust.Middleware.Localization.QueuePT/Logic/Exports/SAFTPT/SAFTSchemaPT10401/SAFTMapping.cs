@@ -140,7 +140,12 @@ public class SaftExporter
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
         var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
-        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00 && 
+            !x.receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Lifecycle)
+            && !x.receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.DailyOperations)
+            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolUnspecified0x3000)
+            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolTechnicalEvent0x3001)
+            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolAccountingEvent0x3002)).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
         if (to < 0)
         {
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
