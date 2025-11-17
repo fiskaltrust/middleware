@@ -22,7 +22,7 @@ public class JournalProcessorPT : IJournalProcessor
     }
 
     public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
-        => (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.UTF8.WebName }, ProcessSAFTAsync(request));
+        => (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.GetEncoding("windows-1252").WebName }, ProcessSAFTAsync(request));
 
     public async IAsyncEnumerable<byte[]> ProcessSAFTAsync(JournalRequest request)
     {
