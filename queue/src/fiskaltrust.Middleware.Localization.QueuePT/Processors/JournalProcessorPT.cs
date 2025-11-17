@@ -18,15 +18,17 @@ public class JournalProcessorPT : IJournalProcessor
 
     public JournalProcessorPT(IStorageProvider storageProvider)
     {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _storageProvider = storageProvider;
     }
 
     public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
-        => (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.GetEncoding("windows-1252").WebName }, ProcessSAFTAsync(request));
+    {
+        return (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.GetEncoding("windows-1252").WebName }, ProcessSAFTAsync(request));
+    }
 
     public async IAsyncEnumerable<byte[]> ProcessSAFTAsync(JournalRequest request)
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var masterData = new AccountMasterData
         {
             AccountId = Guid.NewGuid(),
