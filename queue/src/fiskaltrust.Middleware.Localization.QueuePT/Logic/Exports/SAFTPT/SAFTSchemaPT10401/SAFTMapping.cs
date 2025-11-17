@@ -371,7 +371,7 @@ public class SaftExporter
                     TaxPercentage = 5.000000m,
                 }
         };
-        var lines = receipt.SelectMany(x => x.receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
+        var lines = receipt.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)).SelectMany(x => x.receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
         var taxTableEntries = lines.Select(x => staticTaxes.Single(t => t.TaxType == x.Tax.TaxType && t.TaxCountryRegion == x.Tax.TaxCountryRegion && t.TaxCode == x.Tax.TaxCode && t.TaxPercentage == x.Tax.TaxPercentage)).DistinctBy(x => x.TaxCode).ToList();
         return new TaxTable
         {
