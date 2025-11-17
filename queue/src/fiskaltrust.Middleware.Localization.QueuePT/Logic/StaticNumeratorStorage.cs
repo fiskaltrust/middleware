@@ -117,6 +117,7 @@ public class StaticNumeratorStorage
                     if (lastSignature != null)
                     {
                         series.LastHash = lastSignature.Data;
+                        series.LastCbReceiptMoment = lastReceiptResponse.ftReceiptMoment;
                     }
                     break;
                 }

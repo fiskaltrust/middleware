@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v2.Cases;
+﻿using System;
+using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
 
@@ -51,4 +52,7 @@ public static class ErrorMessagesPT
     /// Error message for OtherService charge items exceeding 100€ net amount limit
     /// </summary>
     public const string EEEE_OtherServiceNetAmountExceedsLimit = "EEEE_The sum of OtherService charge items exceeds the legal limit of 100€ net amount. Services must not exceed this limit on a Point of Sale receipt.";
+
+    public static string EEEE_CbReceiptMomentBeforeLastMoment(string seriesIdentifier, DateTime lastMoment) =>
+        $"EEEE_cbReceiptMoment ({lastMoment:O}) must not be earlier than the last recorded cbReceiptMoment for series '{seriesIdentifier}'. Only handwritten receipts may be backdated.";
 }

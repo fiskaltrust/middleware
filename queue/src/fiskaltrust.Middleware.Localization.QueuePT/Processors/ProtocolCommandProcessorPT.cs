@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -66,6 +67,10 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
     {
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
         var series = GetSeriesForReceiptRequest(staticNumberStorage, request.ReceiptRequest);
+        if (!ValidateReceiptMomentOrder(request, series))
+        {
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
         ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
@@ -78,6 +83,10 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         var qrCode = PortugalReceiptCalculations.CreateProFormaQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
+        if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+        }
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
@@ -106,4 +115,17 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
     }
 
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
+
+    private static bool ValidateReceiptMomentOrder(ProcessCommandRequest request, NumberSeries series)
+    {
+        if (series.LastCbReceiptMoment.HasValue &&
+            !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) &&
+            request.ReceiptRequest.cbReceiptMoment < series.LastCbReceiptMoment.Value)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_CbReceiptMomentBeforeLastMoment(series.Identifier, series.LastCbReceiptMoment.Value));
+            return false;
+        }
+
+        return true;
+    }
 }

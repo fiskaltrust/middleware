@@ -56,7 +56,8 @@ namespace fiskaltrust.storage.V0
         public string ATCUD { get; set; }
         public string Series { get; set; }
         public string Identifier => $"{TypeCode} {Series}";
-        public long Numerator { get; set; }
+        public long Numerator { get; set; }     
         public string LastHash { get; set; }
+        public DateTime? LastCbReceiptMoment { get; set; }
     }
 }
