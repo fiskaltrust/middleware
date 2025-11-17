@@ -349,13 +349,6 @@ public class AADEFactory
             invoice.invoiceHeader.vatPaymentSuspensionSpecified = true;
         }
 
-        // Apply exchange rate
-        if (headerOverride.ExchangeRate.HasValue)
-        {
-            invoice.invoiceHeader.exchangeRate = headerOverride.ExchangeRate.Value;
-            invoice.invoiceHeader.exchangeRateSpecified = true;
-        }
-
         // Apply self-pricing
         if (headerOverride.SelfPricing.HasValue)
         {
