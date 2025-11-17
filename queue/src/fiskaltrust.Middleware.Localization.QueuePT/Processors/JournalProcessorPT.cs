@@ -24,6 +24,7 @@ public class JournalProcessorPT : IJournalProcessor
 
     public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
     {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         return (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.GetEncoding("windows-1252").WebName }, ProcessSAFTAsync(request));
     }
 
