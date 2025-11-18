@@ -128,13 +128,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
         if (request.ReceiptRequest.cbCustomer is null)
         {
-            response.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Caption = "",
-                Data = $"Consumidor final",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
-            });
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
         }
 
         series.LastHash = hash;

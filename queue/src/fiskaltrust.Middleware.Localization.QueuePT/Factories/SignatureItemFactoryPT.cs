@@ -129,4 +129,15 @@ public static class SignatureItemFactoryPT
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };
     }
+
+    public static SignatureItem AddConsumidorFinal()
+    {
+        return new SignatureItem
+        {
+            Caption = "",
+            Data = "Consumidor final",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+        };
+    }
 }
