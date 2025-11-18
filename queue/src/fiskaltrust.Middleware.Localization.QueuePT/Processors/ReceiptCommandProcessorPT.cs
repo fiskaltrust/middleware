@@ -148,32 +148,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
-
-        // Get the series for validation
         var series = staticNumberStorage.PaymentSeries;
-
-        // Perform validations using the new validator (returns one ValidationResult per error)
-        // Now includes receipt moment order validation with the series
-        var validator = new ReceiptValidator(request.ReceiptRequest);
-        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
-        {
-            IsRefund = false,
-            GeneratesSignature = true,
-            IsHandwritten = false,
-            NumberSeries = series  // Include series for moment order validation
-        });
-        
-        if (!validationResults.IsValid)
-        {
-            foreach (var result in validationResults.Results)
-            {
-                foreach (var error in result.Errors)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-                }
-            }
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
 
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];

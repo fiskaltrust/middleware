@@ -57,6 +57,12 @@ public static class ErrorMessagesPT
         $"EEEE_cbReceiptMoment ({lastMoment:O}) must not be earlier than the last recorded cbReceiptMoment for series '{seriesIdentifier}'. Only handwritten receipts may be backdated.";
 
     /// <summary>
+    /// Error message for cbReceiptMoment deviating too much from server time
+    /// </summary>
+    public static string EEEE_CbReceiptMomentDeviationExceeded(DateTime cbReceiptMoment, DateTime serverTime, double differenceInMinutes) =>
+        $"EEEE_cbReceiptMoment ({cbReceiptMoment:O}) deviates more than 10 minutes from server time ({serverTime:O}). Time difference: {differenceInMinutes:F2} minutes. Please ensure the client system clock is synchronized with the server.";
+
+    /// <summary>
     /// Error message for attempting to create multiple refunds for the same receipt
     /// </summary>
     public static string EEEE_RefundAlreadyExists(string receiptReference) =>

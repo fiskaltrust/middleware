@@ -411,38 +411,34 @@ public static class PortugalValidationRules
     }
 
     /// <summary>
-    /// Validates that receipt moment is not earlier than the last recorded receipt moment for the series.
-    /// This ensures chronological order of receipts (except for handwritten receipts which may be backdated).
+    /// Validates that receipt moment is not more than 10 minutes different from the current server time.
+    /// This ensures receipts are created with accurate timestamps (except for handwritten receipts which may be backdated).
     /// Returns a single ValidationResult if validation fails.
     /// </summary>
     public static IEnumerable<ValidationResult> ValidateReceiptMomentOrder(ReceiptRequest request, object series, bool isHandwritten)
     {
-        // Use reflection to access properties since we don't have a direct type reference
-        var seriesType = series.GetType();
-        var lastCbReceiptMomentProperty = seriesType.GetProperty("LastCbReceiptMoment");
-        var identifierProperty = seriesType.GetProperty("Identifier");
-
-        if (lastCbReceiptMomentProperty == null || identifierProperty == null)
+        // Skip validation for handwritten receipts which may be backdated
+        if (isHandwritten)
         {
-            // If properties don't exist, skip validation
             yield break;
         }
 
-        var lastCbReceiptMoment = lastCbReceiptMomentProperty.GetValue(series) as DateTime?;
-        var identifier = identifierProperty.GetValue(series) as string;
+        var serverTime = DateTime.UtcNow;
+        var timeDifference = Math.Abs((request.cbReceiptMoment.ToUniversalTime() - serverTime).TotalMinutes);
+        
+        const double maxAllowedDifferenceMinutes = 10.0;
 
-        if (lastCbReceiptMoment.HasValue &&
-            !isHandwritten &&
-            request.cbReceiptMoment < lastCbReceiptMoment.Value)
+        if (timeDifference > maxAllowedDifferenceMinutes)
         {
             yield return ValidationResult.Failed(new ValidationError(
-                ErrorMessagesPT.EEEE_CbReceiptMomentBeforeLastMoment(identifier ?? "Unknown", lastCbReceiptMoment.Value),
-                "EEEE_CbReceiptMomentBeforeLastMoment",
+                ErrorMessagesPT.EEEE_CbReceiptMomentDeviationExceeded(request.cbReceiptMoment, serverTime, timeDifference),
+                "EEEE_CbReceiptMomentDeviationExceeded",
                 "cbReceiptMoment"
             )
-            .WithContext("SeriesIdentifier", identifier ?? "Unknown")
-            .WithContext("LastReceiptMoment", lastCbReceiptMoment.Value)
-            .WithContext("CurrentReceiptMoment", request.cbReceiptMoment));
+            .WithContext("ServerTime", serverTime)
+            .WithContext("CbReceiptMoment", request.cbReceiptMoment)
+            .WithContext("DifferenceInMinutes", timeDifference)
+            .WithContext("MaxAllowedDifferenceMinutes", maxAllowedDifferenceMinutes));
         }
     }
 }
