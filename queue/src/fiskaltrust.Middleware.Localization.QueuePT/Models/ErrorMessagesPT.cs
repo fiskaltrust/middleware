@@ -63,6 +63,12 @@ public static class ErrorMessagesPT
         $"EEEE_cbReceiptMoment ({cbReceiptMoment:O}) deviates more than 10 minutes from server time ({serverTime:O}). Time difference: {differenceInMinutes:F2} minutes. Please ensure the client system clock is synchronized with the server.";
 
     /// <summary>
+    /// Error message for cbReceiptMoment being in the future
+    /// </summary>
+    public static string EEEE_CbReceiptMomentInFuture(DateTime cbReceiptMoment, DateTime serverTime) =>
+        $"EEEE_cbReceiptMoment ({cbReceiptMoment:O}) cannot be in the future. Server time: ({serverTime:O}). Please ensure the receipt moment is set to the current time or a past time.";
+
+    /// <summary>
     /// Error message for attempting to create multiple refunds for the same receipt
     /// </summary>
     public static string EEEE_RefundAlreadyExists(string receiptReference) =>

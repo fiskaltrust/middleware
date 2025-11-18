@@ -411,20 +411,38 @@ public static class PortugalValidationRules
     }
 
     /// <summary>
-    /// Validates that receipt moment is not more than 10 minutes different from the current server time.
+    /// Validates that receipt moment is not more than 10 minutes different from the current server time,
+    /// and that it is never in the future.
     /// This ensures receipts are created with accurate timestamps (except for handwritten receipts which may be backdated).
     /// Returns a single ValidationResult if validation fails.
     /// </summary>
     public static IEnumerable<ValidationResult> ValidateReceiptMomentOrder(ReceiptRequest request, object series, bool isHandwritten)
     {
-        // Skip validation for handwritten receipts which may be backdated
+        var serverTime = DateTime.UtcNow;
+        var receiptMomentUtc = request.cbReceiptMoment.ToUniversalTime();
+
+        // Check if receipt moment is in the future - this is always invalid
+        if (receiptMomentUtc > serverTime)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_CbReceiptMomentInFuture(request.cbReceiptMoment, serverTime),
+                "EEEE_CbReceiptMomentInFuture",
+                "cbReceiptMoment"
+            )
+            .WithContext("ServerTime", serverTime)
+            .WithContext("CbReceiptMoment", request.cbReceiptMoment));
+            
+            // If receipt is in the future, don't check time deviation
+            yield break;
+        }
+
+        // Skip time deviation validation for handwritten receipts which may be backdated
         if (isHandwritten)
         {
             yield break;
         }
 
-        var serverTime = DateTime.UtcNow;
-        var timeDifference = Math.Abs((request.cbReceiptMoment.ToUniversalTime() - serverTime).TotalMinutes);
+        var timeDifference = Math.Abs((receiptMomentUtc - serverTime).TotalMinutes);
         
         const double maxAllowedDifferenceMinutes = 10.0;
 
