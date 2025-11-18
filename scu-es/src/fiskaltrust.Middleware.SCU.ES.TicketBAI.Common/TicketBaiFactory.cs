@@ -31,13 +31,13 @@ public class TicketBaiFactory
         };
         _software = new SoftwareFacturacionType
         {
-            LicenciaTBAI = TicketBaiConstants.LicenciaTBAI,
+            LicenciaTBAI = configuration.SoftwareLicenciaTBAI,
             EntidadDesarrolladora = new EntidadDesarrolladoraType
             {
-                NIF = TicketBaiConstants.NIF
+                NIF = configuration.SoftwareNif
             },
-            Nombre = TicketBaiConstants.Name,
-            Version = TicketBaiConstants.Version
+            Nombre = configuration.SoftwareName,
+            Version = configuration.SoftwareVersion
         };
     }
 

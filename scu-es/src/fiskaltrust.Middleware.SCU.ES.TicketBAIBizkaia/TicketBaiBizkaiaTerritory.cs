@@ -71,7 +71,7 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
     }
     public ByteArrayContent GetContent(TicketBaiRequest request, string content)
     {
-        var loreRequest = new LROEPJ240FacturasEmitidasConSGAltaPeticion
+        var lroeRequest = new LROEPJ240FacturasEmitidasConSGAltaPeticion
         {
             Cabecera = new Cabecera240Type
             {
@@ -96,7 +96,7 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
                 }
             ]
         };
-        var rawContent = XmlHelpers.GetXMLIncludingNamespace(loreRequest);
+        var rawContent = XmlHelpers.GetXMLIncludingNamespace(lroeRequest);
         var requestContent = new ByteArrayContent(Compress(rawContent));
         requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         requestContent.Headers.Add("Content-Encoding", "gzip");
@@ -121,22 +121,31 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
 
     public async Task<Result<string, Result<string, Exception>>> GetResponse(HttpResponseMessage response)
     {
-        var loreContent = await response.Content.ReadAsStringAsync();
-        var loreResponse = XmlHelpers.ParseXML<LROEPJ240FacturasEmitidasConSGAltaRespuesta>(loreContent);
-        if (response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-tipo-respuesta", out HeaderStringValues type) && type.ToString() == "Incorrecto")
+        var lroeContent = await response.Content.ReadAsStringAsync();
+        LROEPJ240FacturasEmitidasConSGAltaRespuesta? lroeResponse = null;
+        try
+        {
+            lroeResponse = XmlHelpers.ParseXML<LROEPJ240FacturasEmitidasConSGAltaRespuesta>(lroeContent);
+        }
+        catch { }
+        var type = response.Headers.NonValidated["eus-bizkaia-n3-tipo-respuesta"].ToString();
+        if (type == "Incorrecto")
         {
             response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-codigo-respuesta", out HeaderStringValues code);
             response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-mensaje-respuesta", out HeaderStringValues messages);
 
             var error = "";
-            var situacionRegistro = loreResponse?.Registros.FirstOrDefault()?.SituacionRegistro;
+            var situacionRegistro = lroeResponse?.Registros.FirstOrDefault()?.SituacionRegistro;
             if (situacionRegistro is not null)
             {
                 error = $"{situacionRegistro.CodigoErrorRegistro}: {situacionRegistro.DescripcionErrorRegistroES}; {situacionRegistro.DescripcionErrorRegistroEU}";
             }
             return new Result<string, Result<string, Exception>>.Err(new Exception($"{code}: {messages}\n{error}"));
         }
-        return loreContent;
+
+        var identificativo = response.Headers.NonValidated["eus-bizkaia-n3-identificativo"].ToString();
+
+        return lroeContent;
     }
 }
 

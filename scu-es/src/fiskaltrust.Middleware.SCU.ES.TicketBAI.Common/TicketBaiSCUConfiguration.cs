@@ -11,6 +11,10 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common
         public string EmisorNif { get; set; } = null!;
         public string EmisorApellidosNombreRazonSocial { get; set; } = null!;
 
+        public string SoftwareVersion { get; set; } = null!;
+        public string SoftwareName { get; set; } = null!;
+        public string SoftwareLicenciaTBAI { get; set; } = null!;
+        public string SoftwareNif { get; set; } = null!;
 
         public static TicketBaiSCUConfiguration FromConfiguration(Dictionary<string, object> configuration)
         {
@@ -32,6 +36,26 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common
             if (configuration.ContainsKey("EmisorApellidosNombreRazonSocial") && configuration["EmisorApellidosNombreRazonSocial"] != null)
             {
                 config.EmisorApellidosNombreRazonSocial = configuration["EmisorApellidosNombreRazonSocial"].ToString()!;
+            }
+
+            if (configuration.ContainsKey("SoftwareVersion") && configuration["SoftwareVersion"] != null)
+            {
+                config.SoftwareVersion = configuration["SoftwareVersion"].ToString()!;
+            }
+
+            if (configuration.ContainsKey("SoftwareLicenciaTBAI") && configuration["SoftwareLicenciaTBAI"] != null)
+            {
+                config.SoftwareLicenciaTBAI = configuration["SoftwareLicenciaTBAI"].ToString()!;
+            }
+
+            if (configuration.ContainsKey("SoftwareName") && configuration["SoftwareName"] != null)
+            {
+                config.SoftwareName = configuration["SoftwareName"].ToString()!;
+            }
+
+            if (configuration.ContainsKey("SoftwareNif") && configuration["SoftwareNif"] != null)
+            {
+                config.SoftwareNif = configuration["SoftwareNif"].ToString()!;
             }
 
             return config;
