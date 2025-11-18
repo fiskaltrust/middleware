@@ -61,29 +61,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             series = isHandwritten ? staticNumberStorage.HandWrittenFSSeries : staticNumberStorage.SimplifiedInvoiceSeries;
         }
 
-        // Perform all validations using the new validator (returns one ValidationResult per error)
-        // Now includes receipt moment order validation with the series
-        var validator = new ReceiptValidator(request.ReceiptRequest);
-        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
-        {
-            IsRefund = isRefund,
-            GeneratesSignature = true,
-            IsHandwritten = isHandwritten,
-            NumberSeries = series  // Include series for moment order validation
-        });
-
-        if (!validationResults.IsValid)
-        {
-            foreach (var result in validationResults.Results)
-            {
-                foreach (var error in result.Errors)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-                }
-            }
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
