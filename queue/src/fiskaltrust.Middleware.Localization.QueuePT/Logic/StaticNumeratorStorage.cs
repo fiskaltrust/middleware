@@ -11,63 +11,6 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 public class StaticNumeratorStorage
 {
-    //public NumberSeries InvoiceSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "FT",
-    //    ATCUD = "AAJFJGVC33",
-    //    Series = "ft2025019d"
-    //};
-
-    //public NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "FS",
-    //    ATCUD = "AAJFJ4VC3W",
-    //    Series = "ft2025019d"
-    //};
-
-    //public NumberSeries CreditNoteSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "NC",
-    //    ATCUD = "AAJFJ3VC34",
-    //    Series = "ft2025019d"
-    //};
-
-    //public NumberSeries HandWrittenFSSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "FS",
-    //    ATCUD = "AAJFJBKFZR",
-    //    Series = "ft2025771b"
-    //};
-
-    //public NumberSeries ProFormaSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "PF",
-    //    ATCUD = "AAJFJ9VC37",
-    //    Series = "ft2025019d"
-    //};
-
-    //public NumberSeries PaymentSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "RG",
-    //    ATCUD = "AAJFJMVC3G",
-    //    Series = "ft2025019d"
-    //};
-
-    //public NumberSeries BudgetSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "OR",
-    //    ATCUD = "AAJFJKVC3P",
-    //    Series = "ft2025eb51"
-    //};
-
-    //public NumberSeries TableChecqueSeries { get; set; } = new NumberSeries
-    //{
-    //    TypeCode = "CM",
-    //    ATCUD = "AAJFJ2VC3R",
-    //    Series = "ft2025eb51"
-    //};
-
-
     public static async Task<NumeratorStorage> GetStaticNumeratorStorageAsync(ftQueuePT queuePT, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         await LoadStorageNumbers(queuePT.NumeratorStorage, middlewareQueueItemRepository);
