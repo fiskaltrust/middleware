@@ -55,4 +55,45 @@ public static class ErrorMessagesPT
 
     public static string EEEE_CbReceiptMomentBeforeLastMoment(string seriesIdentifier, DateTime lastMoment) =>
         $"EEEE_cbReceiptMoment ({lastMoment:O}) must not be earlier than the last recorded cbReceiptMoment for series '{seriesIdentifier}'. Only handwritten receipts may be backdated.";
+
+    /// <summary>
+    /// Error message for attempting to create multiple refunds for the same receipt
+    /// </summary>
+    public static string EEEE_RefundAlreadyExists(string receiptReference) =>
+        $"EEEE_A refund for receipt '{receiptReference}' already exists. Multiple refunds for the same receipt are not allowed.";
+
+    /// <summary>
+    /// Error message for refunds missing cbPreviousReceiptReference
+    /// </summary>
+    public const string EEEE_RefundMissingPreviousReceiptReference = "EEEE_Refunds must have a cbPreviousReceiptReference set to identify the original receipt being refunded.";
+
+    /// <summary>
+    /// Error message for unsupported VAT rates
+    /// </summary>
+    public static string EEEE_UnsupportedVatRate(int position, ChargeItemCase vatRate) =>
+        $"EEEE_Charge item at position {position} uses unsupported VAT rate '{vatRate}' (0x{(long)vatRate:X}). Portugal only supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE).";
+
+    /// <summary>
+    /// Error message for VAT rate category not matching the specified VAT rate percentage
+    /// </summary>
+    public static string EEEE_VatRateMismatch(int position, ChargeItemCase vatRateCategory, decimal expectedVatRate, decimal actualVatRate) =>
+        $"EEEE_Charge item at position {position}: VAT rate category '{vatRateCategory}' expects {expectedVatRate}% but VATRate property is set to {actualVatRate}%. Please ensure the VATRate matches the category.";
+
+    /// <summary>
+    /// Error message for VAT amount calculation mismatch
+    /// </summary>
+    public static string EEEE_VatAmountMismatch(int position, decimal providedVatAmount, decimal calculatedVatAmount, decimal difference) =>
+        $"EEEE_Charge item at position {position}: VATAmount {providedVatAmount:F2} does not match the calculated VAT amount {calculatedVatAmount:F2} (difference: {difference:F2}). The difference exceeds the acceptable rounding tolerance of 0.01.";
+
+    /// <summary>
+    /// Error message for negative quantity in non-refund receipts
+    /// </summary>
+    public static string EEEE_NegativeQuantityNotAllowed(int position, decimal quantity) =>
+        $"EEEE_Charge item at position {position}: Negative quantity ({quantity}) is not allowed in non-refund receipts. Only discounts may have negative values.";
+
+    /// <summary>
+    /// Error message for negative amount in non-refund receipts
+    /// </summary>
+    public static string EEEE_NegativeAmountNotAllowed(int position, decimal amount) =>
+        $"EEEE_Charge item at position {position}: Negative amount ({amount:F2}) is not allowed in non-refund receipts. Only discounts may have negative values.";
 }

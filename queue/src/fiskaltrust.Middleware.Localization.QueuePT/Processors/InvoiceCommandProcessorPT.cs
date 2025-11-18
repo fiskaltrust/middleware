@@ -31,10 +31,44 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        // Validate supported VAT rates
+        var vatRateError = PortugalReceiptValidation.ValidateSupportedVatRates(request.ReceiptRequest);
+        if (vatRateError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(vatRateError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        // Validate VAT rate category matches percentage and VAT amount calculation
+        var vatRateAndAmountError = PortugalReceiptValidation.ValidateVatRateAndAmount(request.ReceiptRequest);
+        if (vatRateAndAmountError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(vatRateAndAmountError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        // Validate that non-refund receipts don't have negative amounts/quantities (except discounts)
+        var negativeValuesError = PortugalReceiptValidation.ValidateNegativeAmountsAndQuantities(
+            request.ReceiptRequest, 
+            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund));
+        if (negativeValuesError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(negativeValuesError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
         if (cashPaymentError != null)
         {
             request.ReceiptResponse.SetReceiptResponseError(cashPaymentError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        // Validate that refunds have a cbPreviousReceiptReference
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) &&
+            request.ReceiptRequest.cbPreviousReceiptReference is null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundMissingPreviousReceiptReference);
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
@@ -52,6 +86,19 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
             }
+            
+            // Check for duplicate refund if this is a refund receipt
+            if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
+                var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef, request.ReceiptRequest.cbTerminalID);
+                if (hasExistingRefund)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef));
+                    return new ProcessCommandResponse(request.ReceiptResponse, []);
+                }
+            }
+            
             receiptResponse.ftStateData = new
             {
                 ReferencedReceiptResponse = receiptReferences[0].Item2,

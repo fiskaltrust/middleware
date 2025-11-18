@@ -76,4 +76,147 @@ public static class PortugalReceiptValidation
 
         return null;
     }
+
+    /// <summary>
+    /// Validates that only supported VAT rates are used in charge items.
+    /// Portugal supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE)
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateSupportedVatRates(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            return null;
+        }
+
+        var unsupportedVatRates = new[]
+        {
+            ChargeItemCase.UnknownService,
+            ChargeItemCase.SuperReducedVatRate1,
+            ChargeItemCase.SuperReducedVatRate2,
+            ChargeItemCase.ParkingVatRate,
+            ChargeItemCase.ZeroVatRate
+        };
+
+        for (int i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+            var vatRate = chargeItem.ftChargeItemCase.Vat();
+
+            if (unsupportedVatRates.Contains(vatRate))
+            {
+                return Models.ErrorMessagesPT.EEEE_UnsupportedVatRate(i, vatRate);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates that the VAT rate category matches the specified VAT rate percentage,
+    /// and that the VAT amount is correctly calculated.
+    /// Considers rounding differences up to 0.01 (1 cent) per item.
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateVatRateAndAmount(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            return null;
+        }
+
+        // Define expected VAT rates for each category in Portugal (mainland)
+        var expectedVatRates = new Dictionary<ChargeItemCase, decimal>
+        {
+            { ChargeItemCase.DiscountedVatRate1, 6.0m },      // RED
+            { ChargeItemCase.DiscountedVatRate2, 13.0m },     // INT
+            { ChargeItemCase.NormalVatRate, 23.0m },          // NOR
+            { ChargeItemCase.NotTaxable, 0.0m }               // ISE
+        };
+
+        const decimal roundingTolerance = 0.01m; // 1 cent tolerance for rounding differences
+
+        for (int i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+            var vatRateCategory = chargeItem.ftChargeItemCase.Vat();
+
+            // Skip unsupported VAT rates (they should be caught by ValidateSupportedVatRates)
+            if (!expectedVatRates.ContainsKey(vatRateCategory))
+            {
+                continue;
+            }
+
+            var expectedVatRatePercentage = expectedVatRates[vatRateCategory];
+
+            // Check if the VAT rate percentage matches the category
+            if (Math.Abs(chargeItem.VATRate - expectedVatRatePercentage) > 0.001m)
+            {
+                return Models.ErrorMessagesPT.EEEE_VatRateMismatch(i, vatRateCategory, expectedVatRatePercentage, chargeItem.VATRate);
+            }
+
+            // Validate VAT amount calculation
+            if (chargeItem.VATAmount.HasValue && chargeItem.VATRate > 0)
+            {
+                // Calculate expected VAT amount: VATAmount = Amount / (100 + VATRate) * VATRate
+                var calculatedVatAmount = chargeItem.Amount / (100 + chargeItem.VATRate) * chargeItem.VATRate;
+                var difference = Math.Abs(chargeItem.VATAmount.Value - calculatedVatAmount);
+
+                if (difference > roundingTolerance)
+                {
+                    return Models.ErrorMessagesPT.EEEE_VatAmountMismatch(i, chargeItem.VATAmount.Value, calculatedVatAmount, difference);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validates that non-refund receipts do not have negative quantities or amounts,
+    /// except for discounts which are allowed to be negative.
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <param name="isRefund">Whether this is a refund receipt</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateNegativeAmountsAndQuantities(ReceiptRequest request, bool isRefund)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            return null;
+        }
+
+        // Skip validation for refund receipts
+        if (isRefund)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            // Discounts are allowed to be negative
+            if (chargeItem.IsDiscount())
+            {
+                continue;
+            }
+
+            // Check for negative quantity
+            if (chargeItem.Quantity < 0)
+            {
+                return Models.ErrorMessagesPT.EEEE_NegativeQuantityNotAllowed(i, chargeItem.Quantity);
+            }
+
+            // Check for negative amount
+            if (chargeItem.Amount < 0)
+            {
+                return Models.ErrorMessagesPT.EEEE_NegativeAmountNotAllowed(i, chargeItem.Amount);
+            }
+        }
+
+        return null;
+    }
 }
