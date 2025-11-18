@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Linq;
+using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
@@ -32,14 +33,21 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        // Perform all validations using the new validator (returns one ValidationResult per error)
+        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
+        
+        // Determine the series to use (needed for validation)
         var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
+        var series = isRefund ? staticNumberStorage.CreditNoteSeries : staticNumberStorage.InvoiceSeries;
+
+        // Perform all validations using the new validator (returns one ValidationResult per error)
+        // Now includes receipt moment order validation with the series
         var validator = new ReceiptValidator(request.ReceiptRequest);
         var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
             IsRefund = isRefund,
             GeneratesSignature = true,
-            IsHandwritten = false
+            IsHandwritten = false,
+            NumberSeries = series  // Include series for moment order validation
         });
 
         if (!validationResults.IsValid)
@@ -54,7 +62,6 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
-        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
         var receiptResponse = request.ReceiptResponse;
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
@@ -89,12 +96,6 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
         if (isRefund)
         {
-            var series = staticNumberStorage.CreditNoteSeries;
-            if (!ValidateReceiptMomentOrder(request, series))
-            {
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
-            }
-
             series.Numerator++;
             ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
             var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -123,12 +124,6 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         }
         else
         {
-            var series = staticNumberStorage.InvoiceSeries;
-            if (!ValidateReceiptMomentOrder(request, series))
-            {
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
-            }
-
             series.Numerator++;
             ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
             var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -168,18 +163,5 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());
-    }
-
-    private static bool ValidateReceiptMomentOrder(ProcessCommandRequest request, NumberSeries series)
-    {
-        if (series.LastCbReceiptMoment.HasValue &&
-            !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) &&
-            request.ReceiptRequest.cbReceiptMoment < series.LastCbReceiptMoment.Value)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_CbReceiptMomentBeforeLastMoment(series.Identifier, series.LastCbReceiptMoment.Value));
-            return false;
-        }
-
-        return true;
     }
 }

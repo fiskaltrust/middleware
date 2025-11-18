@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using System.Collections.Generic;
 using System.Linq;
@@ -393,6 +394,42 @@ public static class PortugalValidationRules
                 "EEEE_RefundMissingPreviousReceiptReference",
                 "cbPreviousReceiptReference"
             ));
+        }
+    }
+
+    /// <summary>
+    /// Validates that receipt moment is not earlier than the last recorded receipt moment for the series.
+    /// This ensures chronological order of receipts (except for handwritten receipts which may be backdated).
+    /// Returns a single ValidationResult if validation fails.
+    /// </summary>
+    public static IEnumerable<ValidationResult> ValidateReceiptMomentOrder(ReceiptRequest request, object series, bool isHandwritten)
+    {
+        // Use reflection to access properties since we don't have a direct type reference
+        var seriesType = series.GetType();
+        var lastCbReceiptMomentProperty = seriesType.GetProperty("LastCbReceiptMoment");
+        var identifierProperty = seriesType.GetProperty("Identifier");
+
+        if (lastCbReceiptMomentProperty == null || identifierProperty == null)
+        {
+            // If properties don't exist, skip validation
+            yield break;
+        }
+
+        var lastCbReceiptMoment = lastCbReceiptMomentProperty.GetValue(series) as DateTime?;
+        var identifier = identifierProperty.GetValue(series) as string;
+
+        if (lastCbReceiptMoment.HasValue &&
+            !isHandwritten &&
+            request.cbReceiptMoment < lastCbReceiptMoment.Value)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_CbReceiptMomentBeforeLastMoment(identifier ?? "Unknown", lastCbReceiptMoment.Value),
+                "EEEE_CbReceiptMomentBeforeLastMoment",
+                "cbReceiptMoment"
+            )
+            .WithContext("SeriesIdentifier", identifier ?? "Unknown")
+            .WithContext("LastReceiptMoment", lastCbReceiptMoment.Value)
+            .WithContext("CurrentReceiptMoment", request.cbReceiptMoment));
         }
     }
 }

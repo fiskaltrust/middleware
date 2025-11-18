@@ -7,6 +7,7 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text;
+using System.Linq;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.ifPOS.v2.pt;
@@ -41,14 +42,34 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
         }
 
-        // Perform all validations using the new validator (returns one ValidationResult per error)
         var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
+        var isHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten);
+        
+        // Determine the series to use (needed for validation)
+        NumberSeries series;
+        if (isRefund)
+        {
+            if (isHandwritten)
+            {
+                request.ReceiptResponse.SetReceiptResponseError("Handwritten refunds are not supported.");
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
+            }
+            series = staticNumberStorage.CreditNoteSeries;
+        }
+        else
+        {
+            series = isHandwritten ? staticNumberStorage.HandWrittenFSSeries : staticNumberStorage.SimplifiedInvoiceSeries;
+        }
+
+        // Perform all validations using the new validator (returns one ValidationResult per error)
+        // Now includes receipt moment order validation with the series
         var validator = new ReceiptValidator(request.ReceiptRequest);
         var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
             IsRefund = isRefund,
             GeneratesSignature = true,
-            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+            IsHandwritten = isHandwritten,
+            NumberSeries = series  // Include series for moment order validation
         });
 
         if (!validationResults.IsValid)
@@ -95,39 +116,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             };
         }
 
-        NumberSeries series;
-
-        if (isRefund)
-        {
-            if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-            {
-                request.ReceiptResponse.SetReceiptResponseError("Handwritten refunds are not supported.");
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
-            }
-            else
-            {
-                series = staticNumberStorage.CreditNoteSeries;
-                if (!ValidateReceiptMomentOrder(request, series))
-                {
-                    return new ProcessCommandResponse(request.ReceiptResponse, []);
-                }
-            }
-        }
-        else
-        {
-            if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-            {
-                series = staticNumberStorage.HandWrittenFSSeries;
-            }
-            else
-            {
-                series = staticNumberStorage.SimplifiedInvoiceSeries;
-                if (!ValidateReceiptMomentOrder(request, series))
-                {
-                    return new ProcessCommandResponse(request.ReceiptResponse, []);
-                }
-            }
-        }
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -153,7 +141,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         }
 
         // Add manual document identification signature for handwritten receipts
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        if (isHandwritten)
         {
             if (request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) && data.PT is not null && data.PT.Series is not null && data.PT.Number.HasValue)
             {
@@ -173,7 +161,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         }
 
         series.LastHash = hash;
-        if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        if (!isHandwritten)
         {
             series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
         }
@@ -184,14 +172,20 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
 
+        // Get the series for validation
+        var series = staticNumberStorage.PaymentSeries;
+
         // Perform validations using the new validator (returns one ValidationResult per error)
+        // Now includes receipt moment order validation with the series
         var validator = new ReceiptValidator(request.ReceiptRequest);
         var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
             IsRefund = false,
             GeneratesSignature = true,
-            IsHandwritten = false
+            IsHandwritten = false,
+            NumberSeries = series  // Include series for moment order validation
         });
+        
         if (!validationResults.IsValid)
         {
             foreach (var result in validationResults.Results)
@@ -223,11 +217,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             };
         }
 
-        var series = staticNumberStorage.PaymentSeries;
-        if (!ValidateReceiptMomentOrder(request, series))
-        {
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -279,18 +268,5 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
-    }
-
-    private static bool ValidateReceiptMomentOrder(ProcessCommandRequest request, NumberSeries series)
-    {
-        if (series.LastCbReceiptMoment.HasValue &&
-            !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) &&
-            request.ReceiptRequest.cbReceiptMoment < series.LastCbReceiptMoment.Value)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_CbReceiptMomentBeforeLastMoment(series.Identifier, series.LastCbReceiptMoment.Value));
-            return false;
-        }
-
-        return true;
     }
 }

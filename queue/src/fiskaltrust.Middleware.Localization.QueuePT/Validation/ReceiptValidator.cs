@@ -89,6 +89,15 @@ public class ReceiptValidator
                 yield return result;
             }
         }
+
+        // Validate receipt moment order if series is provided
+        if (context.NumberSeries != null)
+        {
+            foreach (var result in PortugalValidationRules.ValidateReceiptMomentOrder(_request, context.NumberSeries, context.IsHandwritten))
+            {
+                yield return result;
+            }
+        }
     }
 
     /// <summary>
@@ -119,6 +128,12 @@ public class ReceiptValidationContext
     /// Whether this is a handwritten receipt
     /// </summary>
     public bool IsHandwritten { get; set; }
+
+    /// <summary>
+    /// The NumberSeries object for receipt moment order validation.
+    /// Optional - if not provided, receipt moment order validation is skipped.
+    /// </summary>
+    public object? NumberSeries { get; set; }
 }
 
 /// <summary>
