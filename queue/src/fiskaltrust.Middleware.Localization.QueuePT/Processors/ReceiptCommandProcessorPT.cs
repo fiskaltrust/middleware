@@ -13,6 +13,7 @@ using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -40,98 +41,26 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
         }
 
-        // Validate supported VAT rates
-        var vatRateError = PortugalReceiptValidation.ValidateSupportedVatRates(request.ReceiptRequest);
-        if (vatRateError != null)
+        // Perform all validations using the new validator (returns one ValidationResult per error)
+        var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
+        var validator = new ReceiptValidator(request.ReceiptRequest);
+        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
-            request.ReceiptResponse.SetReceiptResponseError(vatRateError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
+            IsRefund = isRefund,
+            GeneratesSignature = true,
+            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+        });
 
-        // Validate supported charge item cases (service types and flags)
-        var chargeItemCaseError = PortugalReceiptValidation.ValidateSupportedChargeItemCases(request.ReceiptRequest);
-        if (chargeItemCaseError != null)
+        if (!validationResults.IsValid)
         {
-            request.ReceiptResponse.SetReceiptResponseError(chargeItemCaseError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate VAT rate category matches percentage and VAT amount calculation
-        var vatRateAndAmountError = PortugalReceiptValidation.ValidateVatRateAndAmount(request.ReceiptRequest);
-        if (vatRateAndAmountError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(vatRateAndAmountError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate that non-refund receipts don't have negative amounts/quantities (except discounts)
-        var negativeValuesError = PortugalReceiptValidation.ValidateNegativeAmountsAndQuantities(
-            request.ReceiptRequest, 
-            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund));
-        if (negativeValuesError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(negativeValuesError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate that charge items sum matches pay items sum (receipt balance)
-        var balanceError = PortugalReceiptValidation.ValidateReceiptBalance(request.ReceiptRequest);
-        if (balanceError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(balanceError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate cbUser presence for signature-generating receipts
-        var userPresenceError = PortugalReceiptValidation.ValidateUserPresenceForSignatures(request.ReceiptRequest, generatesSignature: true);
-        if (userPresenceError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(userPresenceError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate cbUser structure (must follow PTUserObject format)
-        var userStructureError = PortugalReceiptValidation.ValidateUserStructure(request.ReceiptRequest);
-        if (userStructureError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(userStructureError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate cash payment limit (>3000€)
-        var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
-        if (cashPaymentError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(cashPaymentError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate POS receipt net amount limit (>1000€)
-        if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-        {
-            var netAmountError = PortugalReceiptValidation.ValidatePosReceiptNetAmountLimit(request.ReceiptRequest);
-            if (netAmountError != null)
+            foreach (var result in validationResults.Results)
             {
-                request.ReceiptResponse.SetReceiptResponseError(netAmountError);
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
+                foreach (var error in result.Errors)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
+                }
             }
-
-            // Validate OtherService net amount limit (>100€)
-            var otherServiceError = PortugalReceiptValidation.ValidateOtherServiceNetAmountLimit(request.ReceiptRequest);
-            if (otherServiceError != null)
-            {
-                request.ReceiptResponse.SetReceiptResponseError(otherServiceError);
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
-            }
-        }
-        else
-        {
-            // Validate that refunds have a cbPreviousReceiptReference
-            if (request.ReceiptRequest.cbPreviousReceiptReference is null)
-            {
-                request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundMissingPreviousReceiptReference);
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
-            }
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
         ReceiptResponse receiptResponse = request.ReceiptResponse;
@@ -149,7 +78,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
             
             // Check for duplicate refund if this is a refund receipt
-            if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            if (isRefund)
             {
                 var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
                 var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef, request.ReceiptRequest.cbTerminalID);
@@ -168,7 +97,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
         NumberSeries series;
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        if (isRefund)
         {
             if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
             {
@@ -207,7 +136,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             ReceiptResponse = receiptResponse,
         }, series.LastHash);
         var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        if (isRefund)
         {
             var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
@@ -255,19 +184,23 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
 
-        // Validate cbUser presence for signature-generating receipts
-        var userPresenceError = PortugalReceiptValidation.ValidateUserPresenceForSignatures(request.ReceiptRequest, generatesSignature: true);
-        if (userPresenceError != null)
+        // Perform validations using the new validator (returns one ValidationResult per error)
+        var validator = new ReceiptValidator(request.ReceiptRequest);
+        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
-            request.ReceiptResponse.SetReceiptResponseError(userPresenceError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate cbUser structure (must follow PTUserObject format)
-        var userStructureError = PortugalReceiptValidation.ValidateUserStructure(request.ReceiptRequest);
-        if (userStructureError != null)
+            IsRefund = false,
+            GeneratesSignature = true,
+            IsHandwritten = false
+        });
+        if (!validationResults.IsValid)
         {
-            request.ReceiptResponse.SetReceiptResponseError(userStructureError);
+            foreach (var result in validationResults.Results)
+            {
+                foreach (var error in result.Errors)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
+                }
+            }
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 

@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -31,76 +32,25 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        // Validate supported VAT rates
-        var vatRateError = PortugalReceiptValidation.ValidateSupportedVatRates(request.ReceiptRequest);
-        if (vatRateError != null)
+        // Perform all validations using the new validator (returns one ValidationResult per error)
+        var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
+        var validator = new ReceiptValidator(request.ReceiptRequest);
+        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
-            request.ReceiptResponse.SetReceiptResponseError(vatRateError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
+            IsRefund = isRefund,
+            GeneratesSignature = true,
+            IsHandwritten = false
+        });
 
-        // Validate supported charge item cases (service types and flags)
-        var chargeItemCaseError = PortugalReceiptValidation.ValidateSupportedChargeItemCases(request.ReceiptRequest);
-        if (chargeItemCaseError != null)
+        if (!validationResults.IsValid)
         {
-            request.ReceiptResponse.SetReceiptResponseError(chargeItemCaseError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate VAT rate category matches percentage and VAT amount calculation
-        var vatRateAndAmountError = PortugalReceiptValidation.ValidateVatRateAndAmount(request.ReceiptRequest);
-        if (vatRateAndAmountError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(vatRateAndAmountError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate that non-refund receipts don't have negative amounts/quantities (except discounts)
-        var negativeValuesError = PortugalReceiptValidation.ValidateNegativeAmountsAndQuantities(
-            request.ReceiptRequest, 
-            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund));
-        if (negativeValuesError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(negativeValuesError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate that charge items sum matches pay items sum (receipt balance)
-        var balanceError = PortugalReceiptValidation.ValidateReceiptBalance(request.ReceiptRequest);
-        if (balanceError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(balanceError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate cbUser presence for signature-generating receipts
-        var userPresenceError = PortugalReceiptValidation.ValidateUserPresenceForSignatures(request.ReceiptRequest, generatesSignature: true);
-        if (userPresenceError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(userPresenceError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate cbUser structure (must follow PTUserObject format)
-        var userStructureError = PortugalReceiptValidation.ValidateUserStructure(request.ReceiptRequest);
-        if (userStructureError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(userStructureError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
-        if (cashPaymentError != null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(cashPaymentError);
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-        // Validate that refunds have a cbPreviousReceiptReference
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) &&
-            request.ReceiptRequest.cbPreviousReceiptReference is null)
-        {
-            request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundMissingPreviousReceiptReference);
+            foreach (var result in validationResults.Results)
+            {
+                foreach (var error in result.Errors)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
+                }
+            }
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
@@ -120,7 +70,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             }
             
             // Check for duplicate refund if this is a refund receipt
-            if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            if (isRefund)
             {
                 var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
                 var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef, request.ReceiptRequest.cbTerminalID);
@@ -137,7 +87,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             };
         }
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        if (isRefund)
         {
             var series = staticNumberStorage.CreditNoteSeries;
             if (!ValidateReceiptMomentOrder(request, series))
