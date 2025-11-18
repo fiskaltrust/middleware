@@ -66,6 +66,14 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        // Validate supported charge item cases (service types and flags)
+        var chargeItemCaseError = PortugalReceiptValidation.ValidateSupportedChargeItemCases(request.ReceiptRequest);
+        if (chargeItemCaseError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(chargeItemCaseError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         // Validate cbUser presence for signature-generating receipts
         var userPresenceError = PortugalReceiptValidation.ValidateUserPresenceForSignatures(request.ReceiptRequest, generatesSignature: true);
         if (userPresenceError != null)

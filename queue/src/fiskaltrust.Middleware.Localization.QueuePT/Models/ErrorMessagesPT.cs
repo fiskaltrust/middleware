@@ -113,4 +113,10 @@ public static class ErrorMessagesPT
     /// Error message for missing cbUser in receipts that generate signatures
     /// </summary>
     public const string EEEE_UserRequiredForSignatures = "EEEE_cbUser is mandatory for all receipts that generate signatures. Please provide a valid PTUserObject with UserId.";
+
+    /// <summary>
+    /// Error message for unsupported charge item service type
+    /// </summary>
+    public static string EEEE_UnsupportedChargeItemServiceType(int position, ChargeItemCaseTypeOfService serviceType) =>
+        $"EEEE_Charge item at position {position}: Type of service '{serviceType}' is not supported in Portugal. Supported types: UnknownService, Delivery, OtherService, Tip, CatalogService.";
 }

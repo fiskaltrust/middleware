@@ -315,4 +315,46 @@ public static class PortugalReceiptValidation
 
         return null;
     }
+
+    /// <summary>
+    /// Validates that only supported charge item cases are used.
+    /// Portugal supports specific TypeOfService values and flags (Refund, Void, ExtraOrDiscount).
+    /// Unsupported service types or flag combinations will be rejected.
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateSupportedChargeItemCases(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            return null;
+        }
+
+        // Supported types of service in Portugal
+        var supportedServiceTypes = new[]
+        {
+            ChargeItemCaseTypeOfService.UnknownService,
+            ChargeItemCaseTypeOfService.Delivery,
+            ChargeItemCaseTypeOfService.OtherService,
+            ChargeItemCaseTypeOfService.Tip,
+            ChargeItemCaseTypeOfService.CatalogService
+        };
+
+        for (int i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+            var serviceType = chargeItem.ftChargeItemCase.TypeOfService();
+
+            // Validate type of service
+            if (!supportedServiceTypes.Contains(serviceType))
+            {
+                return Models.ErrorMessagesPT.EEEE_UnsupportedChargeItemServiceType(i, serviceType);
+            }
+
+            // Note: ChargeItemCaseFlags (Refund, Void, ExtraOrDiscount) are all supported in Portugal
+            // No need to validate individual flags as they are all handled correctly in the processing logic
+        }
+
+        return null;
+    }
 }

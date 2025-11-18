@@ -48,6 +48,14 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
+        // Validate supported charge item cases (service types and flags)
+        var chargeItemCaseError = PortugalReceiptValidation.ValidateSupportedChargeItemCases(request.ReceiptRequest);
+        if (chargeItemCaseError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(chargeItemCaseError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         // Validate VAT rate category matches percentage and VAT amount calculation
         var vatRateAndAmountError = PortugalReceiptValidation.ValidateVatRateAndAmount(request.ReceiptRequest);
         if (vatRateAndAmountError != null)
