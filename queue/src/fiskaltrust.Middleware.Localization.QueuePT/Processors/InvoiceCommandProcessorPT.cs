@@ -36,9 +36,11 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
         var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
         var series = isRefund ? staticNumberStorage.CreditNoteSeries : staticNumberStorage.InvoiceSeries;
+        var receiptRequest = request.ReceiptRequest;
         var receiptResponse = request.ReceiptResponse;
+
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
-        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        if (receiptRequest.cbPreviousReceiptReference is not null)
         {
             receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
             if (receiptReferences.Count == 0)
@@ -53,8 +55,8 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             // Check for duplicate refund if this is a refund receipt
             if (isRefund)
             {
-                var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
-                var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef, request.ReceiptRequest.cbTerminalID);
+                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.ToString();
+                var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef, receiptRequest.cbTerminalID);
                 if (hasExistingRefund)
                 {
                     request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef));
@@ -67,53 +69,45 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 ReferencedReceiptResponse = receiptReferences[0].Item2,
             };
         }
+        series.Numerator++;
+        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
+        var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = receiptRequest,
+            ReceiptResponse = receiptResponse,
+        }, series.LastHash);
+        var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
 
         if (isRefund)
         {
-            series.Numerator++;
-            ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
-            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = request.ReceiptRequest,
-                ReceiptResponse = receiptResponse,
-            }, series.LastHash);
-            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, receiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
 
-            if (request.ReceiptRequest.cbCustomer is null)
+            if (receiptRequest.cbCustomer is null)
             {
                 response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
             }
             series.LastHash = hash;
-            series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+            series.LastCbReceiptMoment = receiptRequest.cbReceiptMoment;
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
         else
         {
-            series.Numerator++;
-            ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
-            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = request.ReceiptRequest,
-                ReceiptResponse = request.ReceiptResponse,
-            }, series.LastHash);
-            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-            var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, receiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+            if (receiptRequest.cbPreviousReceiptReference is not null)
             {
                 response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
             }
 
-            if (request.ReceiptRequest.cbCustomer is null)
+            if (receiptRequest.cbCustomer is null)
             {
                 response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
             }
 
             series.LastHash = hash;
-            series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+            series.LastCbReceiptMoment = receiptRequest.cbReceiptMoment;
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
     });
