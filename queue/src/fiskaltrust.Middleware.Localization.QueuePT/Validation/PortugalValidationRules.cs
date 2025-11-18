@@ -259,13 +259,26 @@ public static class PortugalValidationRules
                     "cbUser"
                 )));
             }
-            else if (string.IsNullOrWhiteSpace(userObject.UserId))
+            else
             {
-                results.Add(ValidationResult.Failed(new ValidationError(
-                    ErrorMessagesPT.EEEE_InvalidUserStructure("cbUser must contain a non-empty 'UserId' property."),
-                    "EEEE_InvalidUserStructure",
-                    "cbUser.UserId"
-                )));
+                if (string.IsNullOrWhiteSpace(userObject.UserId))
+                {
+                    results.Add(ValidationResult.Failed(new ValidationError(
+                        ErrorMessagesPT.EEEE_InvalidUserStructure("cbUser must contain a non-empty 'UserId' property."),
+                        "EEEE_InvalidUserStructure",
+                        "cbUser.UserId"
+                    )));
+                }
+
+                if (!string.IsNullOrWhiteSpace(userObject.UserDisplayName) && userObject.UserDisplayName.Length < 3)
+                {
+                    results.Add(ValidationResult.Failed(new ValidationError(
+                        ErrorMessagesPT.EEEE_InvalidUserStructure($"cbUser.UserDisplayName must be at least 3 characters long. Current length: {userObject.UserDisplayName.Length}"),
+                        "EEEE_InvalidUserStructure",
+                        "cbUser.UserDisplayName"
+                    ).WithContext("ActualLength", userObject.UserDisplayName.Length)
+                     .WithContext("MinimumLength", 3)));
+                }
             }
         }
         catch (System.Text.Json.JsonException ex)
