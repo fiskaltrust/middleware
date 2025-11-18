@@ -93,8 +93,7 @@ public class SAFTTests
             cbUser = new PTUserObject
             {
                 UserId = "1",
-                UserDisplayName = "Test User",
-                UserEmail = "Test"
+                UserDisplayName = "Test User"
             }
         };
 
@@ -215,8 +214,7 @@ public class SAFTTests
             cbUser = new PTUserObject
             {
                 UserId = "1",
-                UserDisplayName = "Test User",
-                UserEmail = "Test"
+                UserDisplayName = "Test User"
             }
         };
 

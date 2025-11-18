@@ -8,6 +8,4 @@ public class PTUserObject
     public string? UserId { get; set; }
     [JsonPropertyName("UserDisplayName")]
     public string? UserDisplayName { get; set; }
-    [JsonPropertyName("UserEmail")]
-    public string? UserEmail { get; set; }
 }
