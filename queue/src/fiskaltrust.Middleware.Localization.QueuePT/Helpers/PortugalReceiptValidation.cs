@@ -252,4 +252,67 @@ public static class PortugalReceiptValidation
 
         return null;
     }
+
+    /// <summary>
+    /// Validates that cbUser follows the required PTUserObject structure for Portugal.
+    /// PTUserObject must have UserId, and optionally UserDisplayName and UserEmail.
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateUserStructure(ReceiptRequest request)
+    {
+        if (request.cbUser == null)
+        {
+            // cbUser is optional, so null is valid
+            return null;
+        }
+
+        try
+        {
+            // Attempt to deserialize cbUser to PTUserObject
+            var userJson = System.Text.Json.JsonSerializer.Serialize(request.cbUser);
+            var userObject = System.Text.Json.JsonSerializer.Deserialize<Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PTUserObject>(userJson);
+
+            if (userObject == null)
+            {
+                return Models.ErrorMessagesPT.EEEE_InvalidUserStructure("cbUser could not be deserialized to PTUserObject structure.");
+            }
+
+            // Validate that at least UserId is provided
+            if (string.IsNullOrWhiteSpace(userObject.UserId))
+            {
+                return Models.ErrorMessagesPT.EEEE_InvalidUserStructure("cbUser must contain a non-empty 'UserId' property.");
+            }
+
+            return null;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return Models.ErrorMessagesPT.EEEE_InvalidUserStructure($"cbUser format is invalid: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Validates that cbUser is present for receipts that generate signatures.
+    /// In Portugal, all receipts that generate signatures must have a user identified.
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <param name="generatesSignature">Whether this receipt type generates a signature</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateUserPresenceForSignatures(ReceiptRequest request, bool generatesSignature)
+    {
+        // Only validate if this receipt generates a signature
+        if (!generatesSignature)
+        {
+            return null;
+        }
+
+        // cbUser must be present for receipts that generate signatures
+        if (request.cbUser == null)
+        {
+            return Models.ErrorMessagesPT.EEEE_UserRequiredForSignatures;
+        }
+
+        return null;
+    }
 }

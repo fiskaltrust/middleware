@@ -102,4 +102,15 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_ReceiptNotBalanced(decimal chargeItemsSum, decimal payItemsSum, decimal difference) =>
         $"EEEE_Receipt is not balanced: Sum of charge items ({chargeItemsSum:F2}) does not match sum of pay items ({payItemsSum:F2}). Difference: {difference:F2}.";
+
+    /// <summary>
+    /// Error message for invalid cbUser structure
+    /// </summary>
+    public static string EEEE_InvalidUserStructure(string reason) =>
+        $"EEEE_cbUser must follow the PTUserObject structure (UserId, UserDisplayName, UserEmail). {reason}";
+
+    /// <summary>
+    /// Error message for missing cbUser in receipts that generate signatures
+    /// </summary>
+    public const string EEEE_UserRequiredForSignatures = "EEEE_cbUser is mandatory for all receipts that generate signatures. Please provide a valid PTUserObject with UserId.";
 }

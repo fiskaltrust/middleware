@@ -65,6 +65,22 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
+        // Validate cbUser presence for signature-generating receipts
+        var userPresenceError = PortugalReceiptValidation.ValidateUserPresenceForSignatures(request.ReceiptRequest, generatesSignature: true);
+        if (userPresenceError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(userPresenceError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        // Validate cbUser structure (must follow PTUserObject format)
+        var userStructureError = PortugalReceiptValidation.ValidateUserStructure(request.ReceiptRequest);
+        if (userStructureError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(userStructureError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
         if (cashPaymentError != null)
         {

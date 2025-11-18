@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -65,6 +66,22 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        // Validate cbUser presence for signature-generating receipts
+        var userPresenceError = PortugalReceiptValidation.ValidateUserPresenceForSignatures(request.ReceiptRequest, generatesSignature: true);
+        if (userPresenceError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(userPresenceError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        // Validate cbUser structure (must follow PTUserObject format)
+        var userStructureError = PortugalReceiptValidation.ValidateUserStructure(request.ReceiptRequest);
+        if (userStructureError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(userStructureError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
         var series = GetSeriesForReceiptRequest(staticNumberStorage, request.ReceiptRequest);
         if (!ValidateReceiptMomentOrder(request, series))
