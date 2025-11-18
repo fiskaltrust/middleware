@@ -66,6 +66,14 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
+        // Validate that charge items sum matches pay items sum (receipt balance)
+        var balanceError = PortugalReceiptValidation.ValidateReceiptBalance(request.ReceiptRequest);
+        if (balanceError != null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(balanceError);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         // Validate cash payment limit (>3000€)
         var cashPaymentError = PortugalReceiptValidation.ValidateCashPaymentLimit(request.ReceiptRequest);
         if (cashPaymentError != null)

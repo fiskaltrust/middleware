@@ -219,4 +219,37 @@ public static class PortugalReceiptValidation
 
         return null;
     }
+
+    /// <summary>
+    /// Validates that the sum of charge items matches the sum of pay items.
+    /// This ensures the receipt balances correctly from an accounting perspective.
+    /// Considers rounding differences up to 0.01 (1 cent).
+    /// </summary>
+    /// <param name="request">The receipt request to validate</param>
+    /// <returns>Error message if validation fails, null otherwise</returns>
+    public static string? ValidateReceiptBalance(ReceiptRequest request)
+    {
+        decimal chargeItemsSum = 0m;
+        decimal payItemsSum = 0m;
+
+        if (request.cbChargeItems != null && request.cbChargeItems.Count > 0)
+        {
+            chargeItemsSum = request.cbChargeItems.Sum(ci => ci.Amount);
+        }
+
+        if (request.cbPayItems != null && request.cbPayItems.Count > 0)
+        {
+            payItemsSum = request.cbPayItems.Sum(pi => pi.Amount);
+        }
+
+        const decimal roundingTolerance = 0.01m; // 1 cent tolerance for rounding differences
+        var difference = Math.Abs(chargeItemsSum - payItemsSum);
+
+        if (difference > roundingTolerance)
+        {
+            return Models.ErrorMessagesPT.EEEE_ReceiptNotBalanced(chargeItemsSum, payItemsSum, difference);
+        }
+
+        return null;
+    }
 }

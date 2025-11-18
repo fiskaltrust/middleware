@@ -96,4 +96,10 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_NegativeAmountNotAllowed(int position, decimal amount) =>
         $"EEEE_Charge item at position {position}: Negative amount ({amount:F2}) is not allowed in non-refund receipts. Only discounts may have negative values.";
+
+    /// <summary>
+    /// Error message for receipt balance mismatch between charge items and pay items
+    /// </summary>
+    public static string EEEE_ReceiptNotBalanced(decimal chargeItemsSum, decimal payItemsSum, decimal difference) =>
+        $"EEEE_Receipt is not balanced: Sum of charge items ({chargeItemsSum:F2}) does not match sum of pay items ({payItemsSum:F2}). Difference: {difference:F2}.";
 }
