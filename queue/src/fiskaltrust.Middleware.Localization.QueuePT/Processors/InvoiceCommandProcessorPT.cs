@@ -56,7 +56,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             if (isRefund)
             {
                 var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.ToString();
-                var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef, receiptRequest.cbTerminalID);
+                var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
                 if (hasExistingRefund)
                 {
                     request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef));
