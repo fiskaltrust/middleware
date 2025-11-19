@@ -73,7 +73,7 @@ public class ReceiptReferenceProvider
         throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
     }
 
-    public async Task<bool> HasExistingRefundAsync(string cbPreviousReceiptReference, string cbTerminalId)
+    public async Task<bool> HasExistingRefundAsync(string cbPreviousReceiptReference)
     {
         var queueItemRepository = await _readOnlyQueueItemRepository.Value;
         
@@ -96,13 +96,7 @@ public class ReceiptReferenceProvider
             {
                 continue;
             }
-            
-            // Filter by terminal ID if provided
-            if (!string.IsNullOrEmpty(cbTerminalId) && queueItem.cbTerminalID != cbTerminalId)
-            {
-                continue;
-            }
-
+ 
             try
             {
                 var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
