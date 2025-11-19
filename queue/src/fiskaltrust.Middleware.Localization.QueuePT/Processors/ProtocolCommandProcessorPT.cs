@@ -54,7 +54,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = receiptResponse,
         }, series.LastHash);
-        var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+        var printHash = GeneratePrintHash(hash);
         var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
@@ -64,6 +64,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         }
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
+    private static string GeneratePrintHash(string hash) => new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
 
     private NumberSeries GetSeriesForReceiptRequest(NumeratorStorage staticNumberStorage, ReceiptRequest receiptRequest)
     {
