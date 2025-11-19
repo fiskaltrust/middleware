@@ -452,7 +452,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft7A2#FT 20241210002/1");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -475,7 +475,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft3X4#PF 20241210003");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateProFormaQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -498,7 +498,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft8Y9#RG 20241210004");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateRGQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -521,7 +521,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft2B3#FS 20241210005/99");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -563,7 +563,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FS20241210006");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -582,7 +582,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FT 20241210007");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -610,7 +610,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FT 20241210008");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -630,7 +630,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FS 20241210009");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -650,7 +650,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FT 20241225010");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -678,7 +678,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse(ftReceiptIdentification);
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();

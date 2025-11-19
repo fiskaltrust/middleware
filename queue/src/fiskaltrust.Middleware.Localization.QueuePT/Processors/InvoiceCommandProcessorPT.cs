@@ -94,7 +94,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         }
         else
         {
-            var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, receiptRequest, response.ReceiptResponse);
+            var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, receiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
             if (receiptRequest.cbPreviousReceiptReference is not null)
             {
