@@ -222,6 +222,20 @@ public static class AADEMappings
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
+        // Validate that agency business (NotOwnSales) items are not mixed with other types
+        var hasNotOwnSales = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales));
+        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x => 
+        {
+            var typeOfService = x.ftChargeItemCase.TypeOfService();
+            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales && 
+                   typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
+        });
+
+        if (hasNotOwnSales && hasOtherTypes)
+        {
+            throw new Exception("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
+        }
+
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
         {
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))

@@ -217,7 +217,7 @@ public static class PT_Phase2_CertificationExamples
             {
                 Amount = 10,
                 VATRate = PTVATRates.NotTaxable,
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_3018,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918,
                 Description = "Line item 5"
             },
         };

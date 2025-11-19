@@ -207,14 +207,15 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
-    public void Item_1_1_GetInvoiceType_B2BInvoice_WithMixedNotOwnSalesAndOtherItems_ReturnsItem11()
+    public void GetInvoiceType_B2BInvoice_WithMixedNotOwnSalesAndOtherItems_ThrowsException()
     {
         var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.Delivery);
         receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Agency Item", ChargeItemCaseTypeOfService.NotOwnSales));
 
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
+        var act = () => AADEMappings.GetInvoiceType(receiptRequest);
 
-        result.Should().Be(InvoiceType.Item11);
+        act.Should().Throw<Exception>()
+            .WithMessage("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
     }
 
     [Fact]
@@ -502,7 +503,7 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
-    public void Item_11_1_GetInvoiceType_RetailReceipt_WithMixedNotOwnSalesAndOtherItems_ReturnsItem111()
+    public void GetInvoiceType_RetailReceipt_WithMixedNotOwnSalesAndOtherItems_ThrowsException()
     {
         var chargeItems = new List<ChargeItem>
         {
@@ -511,8 +512,9 @@ public class AADEMappingsInvoiceTypeTests
         };
         var receiptRequest = CreateReceipt(chargeItems);
 
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
+        var act = () => AADEMappings.GetInvoiceType(receiptRequest);
 
-        result.Should().Be(InvoiceType.Item111);
+        act.Should().Throw<Exception>()
+            .WithMessage("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
     }
 }
