@@ -215,6 +215,7 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_1,
             ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
+            ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
             _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
         };
     }
@@ -254,14 +255,10 @@ public static class AADEMappings
                 return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            //if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
-            //{
-            //    return InvoiceType.Item15;
-            //}
-            //if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
-            //{
-            //    return InvoiceType.Item14;
-            //}
+            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            {
+                return InvoiceType.Item14;
+            }
             else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes())
             {
                 //if (receiptRequest.cbPreviousReceiptReference is not null)

@@ -185,6 +185,39 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
+    public void Item_1_4_GetInvoiceType_B2BInvoice_WithAllNotOwnSalesItems_ReturnsItem14()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.NotOwnSales);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item14);
+    }
+
+    [Fact]
+    public void Item_1_4_GetInvoiceType_B2BInvoice_WithMultipleNotOwnSalesItems_ReturnsItem14()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.NotOwnSales);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Agency Item 2", ChargeItemCaseTypeOfService.NotOwnSales));
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(3, 75, 24, "Agency Item 3", ChargeItemCaseTypeOfService.NotOwnSales));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item14);
+    }
+
+    [Fact]
+    public void Item_1_1_GetInvoiceType_B2BInvoice_WithMixedNotOwnSalesAndOtherItems_ReturnsItem11()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Agency Item", ChargeItemCaseTypeOfService.NotOwnSales));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item11);
+    }
+
+    [Fact]
     public void Item_2_1_GetInvoiceType_B2BInvoice_WithOtherServiceItems_WithGreekCustomer_ReturnsItem21()
     {
         var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OtherService);
@@ -440,5 +473,46 @@ public class AADEMappingsInvoiceTypeTests
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
         result.Should().Be(InvoiceType.Item112);
+    }
+
+    [Fact]
+    public void Item_11_5_GetInvoiceType_RetailReceipt_WithAllNotOwnSalesItems_ReturnsItem115()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.NotOwnSales);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item115);
+    }
+
+    [Fact]
+    public void Item_11_5_GetInvoiceType_RetailReceipt_WithMultipleNotOwnSalesItems_ReturnsItem115()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Agency Item 1", ChargeItemCaseTypeOfService.NotOwnSales),
+            CreateChargeItem(2, 50, 24, "Agency Item 2", ChargeItemCaseTypeOfService.NotOwnSales),
+            CreateChargeItem(3, 75, 24, "Agency Item 3", ChargeItemCaseTypeOfService.NotOwnSales)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item115);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithMixedNotOwnSalesAndOtherItems_ReturnsItem111()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Delivery Item", ChargeItemCaseTypeOfService.Delivery),
+            CreateChargeItem(2, 50, 24, "Agency Item", ChargeItemCaseTypeOfService.NotOwnSales)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
     }
 }
