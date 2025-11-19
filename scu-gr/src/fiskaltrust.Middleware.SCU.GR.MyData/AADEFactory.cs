@@ -321,7 +321,7 @@ public class AADEFactory
         if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
         {
             // Define allowed invoice types for override
-            var allowedInvoiceTypes = new HashSet<string> { "3.1", "3.2", "6.1", "6.2", "8.1", "8.2", "9.3" };
+            var allowedInvoiceTypes = new HashSet<string> { "8.2", "9.3" };
             
             if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
             {
@@ -331,11 +331,6 @@ public class AADEFactory
             // Map string to InvoiceType enum
             invoice.invoiceHeader.invoiceType = headerOverride.InvoiceType switch
             {
-                "3.1" => InvoiceType.Item31,
-                "3.2" => InvoiceType.Item32,
-                "6.1" => InvoiceType.Item61,
-                "6.2" => InvoiceType.Item62,
-                "8.1" => InvoiceType.Item81,
                 "8.2" => InvoiceType.Item82,
                 "9.3" => InvoiceType.Item93,
                 _ => throw new Exception($"Unmapped invoice type '{headerOverride.InvoiceType}'")
