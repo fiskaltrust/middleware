@@ -319,8 +319,11 @@ public class MyDataOverrideTests
                     {
                         invoiceHeader = new
                         {
-                            startShippingBranch = 5,
-                            completeShippingBranch = 10
+                            otherDeliveryNoteHeader = new
+                            {
+                                startShippingBranch = 5,
+                                completeShippingBranch = 10
+                            }
                         }
                     }
                 }
@@ -377,10 +380,10 @@ public class MyDataOverrideTests
                                     number = "0",
                                     postalCode = "54622",
                                     city = "ΘΕΣΣΑΛΟΝΙΚΗ"
-                                }
-                            },
-                            startShippingBranch = 0,
-                            completeShippingBranch = 0
+                                },
+                                startShippingBranch = 0,
+                                completeShippingBranch = 0
+                            }
                         }
                     }
                 }
