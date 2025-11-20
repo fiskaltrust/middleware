@@ -1,13 +1,14 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData;
+using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using FluentAssertions;
 using Xunit;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Linq;
 using System;
 using System.Collections.Generic;
-using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 
@@ -1135,5 +1136,154 @@ public class AADEFactoryTests
         invoice.issuer.Should().NotBeNull();
         invoice.issuer.vatNumber.Should().Be("999123456");
         invoice.issuer.country.Should().Be(CountryType.GR);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithHasTransportInformationFlag_ShouldSetIsDeliveryNoteToTrue()
+    {
+        // Arrange
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Description = "Test Item",
+                Quantity = 1,
+                Unit = "Kg",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        };
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100,
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                }
+            ],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
+                .WithFlag(ReceiptCaseFlagsGR.HasTransportInformation),
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "TEST-123"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "123456789",
+                AccountName = "Test Company"
+            },
+            Outlet = new storage.V0.MasterData.OutletMasterData
+            {
+                LocationId = "1",
+                Street = "Test Street",
+                City = "Athens",
+                Zip = "12345"
+            }
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        invoiceDoc!.invoice.Should().HaveCount(1);
+        
+        var invoice = invoiceDoc.invoice[0];
+        invoice.invoiceHeader.Should().NotBeNull();
+        invoice.invoiceHeader.isDeliveryNote.Should().BeTrue("HasTransportInformation flag should set isDeliveryNote to true");
+        invoice.invoiceHeader.isDeliveryNoteSpecified.Should().BeTrue("isDeliveryNoteSpecified should be set to true");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutHasTransportInformationFlag_ShouldNotSetIsDeliveryNote()
+    {
+        // Arrange
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Description = "Test Item",
+                Quantity = 1,
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        };
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100,
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                }
+            ],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "TEST-123"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "123456789",
+                AccountName = "Test Company"
+            },
+            Outlet = new storage.V0.MasterData.OutletMasterData
+            {
+                LocationId = "1",
+                Street = "Test Street",
+                City = "Athens",
+                Zip = "12345"
+            }
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        invoiceDoc!.invoice.Should().HaveCount(1);
+        
+        var invoice = invoiceDoc.invoice[0];
+        invoice.invoiceHeader.Should().NotBeNull();
+        invoice.invoiceHeader.isDeliveryNoteSpecified.Should().BeFalse("isDeliveryNoteSpecified should not be set when flag is not present");
     }
 }
