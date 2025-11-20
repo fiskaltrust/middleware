@@ -128,12 +128,6 @@ public class InvoiceHeaderOverride
     public OtherDeliveryNoteHeaderOverride? OtherDeliveryNoteHeader { get; set; }
 
     /// <summary>
-    /// Delivery note indicator
-    /// </summary>
-    [JsonPropertyName("isDeliveryNote")]
-    public bool? IsDeliveryNote { get; set; }
-
-    /// <summary>
     /// Other move purpose title (free text)
     /// </summary>
     [JsonPropertyName("otherMovePurposeTitle")]

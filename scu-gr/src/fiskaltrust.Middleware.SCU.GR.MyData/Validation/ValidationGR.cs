@@ -26,11 +26,6 @@ public class ValidationGR
             return (false, new MiddlewareValidationError("VoidNotSupported", "Voiding of documents is not supported. Please use refund."));
         }
 
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
-        {
-            return (false, new MiddlewareValidationError("SelfPricingNotSupported", "Self-pricing operations are not supported."));
-        }
-
         if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest)) && !receiptRequest.ContainsCustomerInfo())
         {
             return (false, new MiddlewareValidationError("CustomerInfoRequired", "Customer info is required for this invoice type."));

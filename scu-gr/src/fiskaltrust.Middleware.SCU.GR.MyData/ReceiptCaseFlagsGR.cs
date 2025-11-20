@@ -1,10 +1,10 @@
-using fiskaltrust.ifPOS.v2.Cases;
+﻿using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.SCU.GR.Abstraction;
 
 public enum ReceiptCaseFlagsGR : long
 {
-    IsSelfPricingOperation = 0x0100_0000_0000,
+    HasTransportInformation = 0x0400_0000_0000_0000
 }
 
 public static class ReceiptCaseFlagsGRExt

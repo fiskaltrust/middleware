@@ -299,6 +299,13 @@ public class AADEFactory
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
         
+        // Set isDeliveryNote if HasTransportInformation flag is set
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            inv.invoiceHeader.isDeliveryNote = true;
+            inv.invoiceHeader.isDeliveryNoteSpecified = true;
+        }
+
         // Apply mydataoverride if present
         if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData) && overrideData?.GR?.MyDataOverride != null)
         {
@@ -397,13 +404,6 @@ public class AADEFactory
         {
             invoice.invoiceHeader.invoiceVariationType = headerOverride.InvoiceVariationType.Value;
             invoice.invoiceHeader.invoiceVariationTypeSpecified = true;
-        }
-
-        // Apply is delivery note
-        if (headerOverride.IsDeliveryNote.HasValue)
-        {
-            invoice.invoiceHeader.isDeliveryNote = headerOverride.IsDeliveryNote.Value;
-            invoice.invoiceHeader.isDeliveryNoteSpecified = true;
         }
 
         // Apply other move purpose title
