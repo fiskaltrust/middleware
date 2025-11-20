@@ -223,7 +223,7 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        if (receiptRequest.ContainsCustomerInfo() && AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType))
+        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
         {
             var counterpart = GetCounterPart(receiptRequest);
             if (counterpart != null)
@@ -797,7 +797,8 @@ public class AADEFactory
                 {
                     street = customer?.CustomerStreet,
                     city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip
+                    postalCode = customer?.CustomerZip,
+                    number = 0.ToString()
                 },
                 name = customer?.CustomerName,
             };
@@ -882,7 +883,8 @@ public class AADEFactory
                 {
                     street = _masterDataConfiguration.Outlet.Street,
                     city = _masterDataConfiguration.Outlet.City,
-                    postalCode = _masterDataConfiguration.Outlet.Zip
+                    postalCode = _masterDataConfiguration.Outlet.Zip,
+                    number = "0"
                 },
                 name = _masterDataConfiguration.Account.AccountName,
             };
