@@ -298,7 +298,7 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
-        
+
         // Set isDeliveryNote if HasTransportInformation flag is set
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
         {
@@ -329,7 +329,7 @@ public class AADEFactory
         {
             // Define allowed invoice types for override
             var allowedInvoiceTypes = new HashSet<string> { "8.2", "9.3" };
-            
+
             if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
             {
                 throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
@@ -559,12 +559,25 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.itemDescr = x.Description;
-                // Todo change
-                invoiceRow.measurementUnit = 1;
-                invoiceRow.measurementUnitSpecified = true;
+                if (x.Unit == "Litres")
+                {
+                    invoiceRow.measurementUnit = 3;
+                    invoiceRow.measurementUnitSpecified = true;
+                }
+                else if (x.Unit == "Kg")
+                {
+                    invoiceRow.measurementUnit = 2;
+                    invoiceRow.measurementUnitSpecified = true;
+                }
+                else
+                {
+                    invoiceRow.measurementUnit = 1;
+                    invoiceRow.measurementUnitSpecified = true;
+                }
+
             }
 
             if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
