@@ -98,8 +98,8 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                         ""mydataoverride"": {
                             ""invoice"": {
                                 ""invoiceHeader"": {
-                                    ""dispatchDate"": ""2025-06-18"",
-                                    ""dispatchTime"": ""14:30:00"",
+                                    ""dispatchDate"": ""2025-06-18T12:00:00Z"",
+                                    ""dispatchTime"": ""2025-06-18T14:30:00Z"",
                                     ""movePurpose"": 1
                                 }
                             }
@@ -169,11 +169,9 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                         ""mydataoverride"": {
                             ""invoice"": {
                                 ""invoiceHeader"": {
-                                    ""dispatchDate"": ""2025-06-18"",
-                                    ""dispatchTime"": ""10:44:19"",
+                                    ""dispatchDate"": ""2025-06-18T12:00:00Z"",
+                                    ""dispatchTime"": ""2025-06-18T14:30:00Z"",
                                     ""movePurpose"": 1,
-                                    ""startShippingBranch"": 0,
-                                    ""completeShippingBranch"": 0,
                                     ""otherDeliveryNoteHeader"": {
                                         ""loadingAddress"": {
                                             ""street"": ""?apad?aµ??t? 24"",
@@ -186,7 +184,9 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                                             ""number"": ""0"",
                                             ""postalCode"": ""54622"",
                                             ""city"": ""T?SS???????""
-                                        }
+                                        },
+                                        ""startShippingBranch"": 0,
+                                        ""completeShippingBranch"": 0
                                     }
                                 }
                             }
@@ -270,11 +270,9 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                         ""mydataoverride"": {
                             ""invoice"": {
                                 ""invoiceHeader"": {
-                                    ""dispatchDate"": ""2025-06-18"",
-                                    ""dispatchTime"": ""09:30:00"",
-                                    ""movePurpose"": 9,
-                                    ""startShippingBranch"": 1,
-                                    ""completeShippingBranch"": 5,
+                                    ""dispatchDate"": ""2025-06-18T12:00:00Z"",
+                                    ""dispatchTime"": ""2025-06-18T14:30:00Z"",
+                                    ""movePurpose"": 2,
                                     ""otherDeliveryNoteHeader"": {
                                         ""loadingAddress"": {
                                             ""street"": ""?d?? ?p?????? 10"",
@@ -287,7 +285,9 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                                             ""number"": ""25"",
                                             ""postalCode"": ""54622"",
                                             ""city"": ""Tessa??????""
-                                        }
+                                        },
+                                        ""startShippingBranch"": 1,
+                                        ""completeShippingBranch"": 5
                                     }
                                 }
                             }
@@ -310,7 +310,7 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                 var invoice = invoiceDoc!.invoice[0];
 
                 // Verify move purpose for transfer
-                invoice.invoiceHeader.movePurpose.Should().Be(9, "move purpose 9 indicates transfer");
+                invoice.invoiceHeader.movePurpose.Should().Be(2, "move purpose 2 indicates transfer");
 
                 // Verify shipping branches
                 invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranch.Should().Be(1);
@@ -438,8 +438,8 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                         ""mydataoverride"": {
                             ""invoice"": {
                                 ""invoiceHeader"": {
-                                    ""dispatchDate"": ""2025-06-18"",
-                                    ""dispatchTime"": ""10:44:19"",
+                                    ""dispatchDate"": ""2025-06-18T12:00:00Z"",
+                                    ""dispatchTime"": ""2025-06-18T12:00:00Z"",
                                     ""movePurpose"": 1,
                                     ""otherDeliveryNoteHeader"": {
                                         ""loadingAddress"": {
@@ -659,8 +659,8 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                         ""mydataoverride"": {
                             ""invoice"": {
                                 ""invoiceHeader"": {
-                                    ""dispatchDate"": ""2025-06-18"",
-                                    ""dispatchTime"": ""19:45:00"",
+                                    ""dispatchDate"": ""2025-06-18T19:45:00Z"",
+                                    ""dispatchTime"": ""2025-06-18T19:45:00Z"",
                                     ""movePurpose"": 1,
                                     ""otherDeliveryNoteHeader"": {
                                         ""loadingAddress"": {

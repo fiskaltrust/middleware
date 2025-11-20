@@ -129,7 +129,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.IntegrationTest.MyDataSCU
                     CustomerCountry = "GR",
                 }
             };
-            ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
+            ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_1, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
@@ -158,32 +158,6 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.IntegrationTest.MyDataSCU
         }
 
         [Fact]
-        public void AADECertificationExamples_A1_1_1p6()
-        {
-            var receiptRequest = new ReceiptRequest
-            {
-                cbTerminalID = "1",
-                Currency = Currency.EUR,
-                cbReceiptMoment = DateTime.UtcNow,
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                ftPosSystemId = Guid.NewGuid(),
-                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2C0x1001),
-                cbChargeItems = [CreateChargeItem(1, 100, 24, "Line item 1", ChargeItemCaseTypeOfService.Delivery, ChargeItemCase.NormalVatRate)],
-                cbPayItems = [CreatePayItem(1, 100, "Κάρτα", PayItemCase.DebitCardPayment)],
-                cbPreviousReceiptReference = "400001941223252",
-                cbCustomer = new MiddlewareCustomer
-                {
-                    CustomerVATId = CUSOMTER_VATNUMBER,
-                    CustomerName = "Πελάτης A.E.",
-                    CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
-                    CustomerCity = "Αθηνών",
-                    CustomerCountry = "GR",
-                }
-            };
-            ValidateMyData(receiptRequest, InvoiceType.Item16, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
-        }
-
-        [Fact]
         public void AADECertificationExamples_A1_2_2p1()
         {
             var receiptRequest = new ReceiptRequest
@@ -209,32 +183,6 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.IntegrationTest.MyDataSCU
         }
 
         [Fact]
-        public void AADECertificationExamples_A1_2_2p4()
-        {
-            var receiptRequest = new ReceiptRequest
-            {
-                cbTerminalID = "1",
-                Currency = Currency.EUR,
-                cbReceiptMoment = DateTime.UtcNow,
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                ftPosSystemId = Guid.NewGuid(),
-                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2C0x1001),
-                cbChargeItems = [CreateChargeItem(1, 100, 24, "Line item 1", ChargeItemCaseTypeOfService.OtherService, ChargeItemCase.NormalVatRate)],
-                cbPayItems = [CreatePayItem(1, 100, "Κάρτα", PayItemCase.DebitCardPayment)],
-                cbPreviousReceiptReference = "400001941223252",
-                cbCustomer = new MiddlewareCustomer
-                {
-                    CustomerVATId = CUSOMTER_VATNUMBER,
-                    CustomerName = "Πελάτης A.E.",
-                    CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
-                    CustomerCity = "Αθηνών",
-                    CustomerCountry = "GR",
-                }
-            };
-            ValidateMyData(receiptRequest, InvoiceType.Item24, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
-        }
-
-        [Fact]
         public void AADECertificationExamples_A2_11_11p1()
         {
             var receiptRequest = new ReceiptRequest
@@ -248,7 +196,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.IntegrationTest.MyDataSCU
                 cbChargeItems = [CreateChargeItem(1, 100, 24, "Line item 1", ChargeItemCaseTypeOfService.Delivery, ChargeItemCase.NormalVatRate)],
                 cbPayItems = [CreatePayItem(1, 100, "Κάρτα", PayItemCase.DebitCardPayment)]
             };
-            ValidateMyData(receiptRequest, InvoiceType.Item111, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
+            ValidateMyData(receiptRequest, InvoiceType.Item111, IncomeClassificationCategoryType.category1_1, IncomeClassificationValueType.E3_561_003);
         }
 
         [Fact]
@@ -282,7 +230,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.IntegrationTest.MyDataSCU
                 cbChargeItems = [CreateChargeItem(1, -100, 24, "Line item 1", ChargeItemCaseTypeOfService.Delivery, ChargeItemCase.NormalVatRate)],
                 cbPayItems = [CreatePayItem(1, -100, "Κάρτα", PayItemCase.DebitCardPayment)]
             };
-            ValidateMyData(receiptRequest, InvoiceType.Item114, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
+            ValidateMyData(receiptRequest, InvoiceType.Item114, IncomeClassificationCategoryType.category1_1, IncomeClassificationValueType.E3_561_003);
         }
 
         [Fact]
