@@ -20,6 +20,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueuePT\fiskaltrust.Middleware.Localization.QueuePT.csproj" />
+      <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
     </ItemGroup>
 
     <ItemGroup>

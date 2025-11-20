@@ -21,6 +21,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
     private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
 
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
@@ -46,19 +47,55 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
             }
-            if (receiptReferences.Count > 1)
-            {
-                throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
-            }
-            
-            // Check for duplicate refund if this is a refund receipt
+
             if (isRefund)
             {
-                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.ToString();
+                if (receiptReferences.Count > 1)
+                {
+                    throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+                }
+
+                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
                 var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
                 if (hasExistingRefund)
                 {
                     request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef));
+                    return new ProcessCommandResponse(request.ReceiptResponse, []);
+                }
+
+                // Validate full refund: check if all articles from original invoice are properly refunded
+                var originalRequest = receiptReferences[0].Item1;
+                var validationError = await _refundValidator.ValidateFullRefundAsync(
+                    receiptRequest,
+                    originalRequest,
+                    previousReceiptRef);
+                
+                if (validationError != null)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError(validationError);
+                    return new ProcessCommandResponse(request.ReceiptResponse, []);
+                }
+            }
+            else
+            {
+                // Check for partial refund: items have refund flag but receipt case does not
+                if (receiptReferences.Count > 1)
+                {
+                    throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+                }
+
+                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
+                var originalRequest = receiptReferences[0].Item1;
+
+                // Validate partial refund: check for mixed items and quantity/amount limits
+                var validationError = await _refundValidator.ValidatePartialRefundAsync(
+                    receiptRequest,
+                    originalRequest,
+                    previousReceiptRef);
+                
+                if (validationError != null)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError(validationError);
                     return new ProcessCommandResponse(request.ReceiptResponse, []);
                 }
             }
@@ -68,6 +105,16 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 ReferencedReceiptResponse = receiptReferences[0].Item2,
             };
         }
+        else
+        {
+            // If no cbPreviousReceiptReference but items have refund flags, this is invalid
+            if (!isRefund && receiptRequest.cbChargeItems?.Any(item => item.IsRefund()) == true)
+            {
+                request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed);
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
+            }
+        }
+
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest

@@ -131,4 +131,27 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_UnsupportedChargeItemServiceType(int position, ChargeItemCaseTypeOfService serviceType) =>
         $"EEEE_Charge item at position {position}: Type of service '{serviceType}' is not supported in Portugal. Supported types: UnknownService, Delivery, OtherService, Tip, CatalogService.";
+
+    /// <summary>
+    /// Error message for full refund not matching original invoice items
+    /// </summary>
+    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference) =>
+        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts.";
+
+    /// <summary>
+    /// Error message for mixed refund and non-refund items in partial refund
+    /// </summary>
+    public const string EEEE_MixedRefundItemsNotAllowed = "EEEE_Partial refund contains mixed refund and non-refund items. In Portugal, it is not allowed to mix refunds with non-refunds in the same receipt. All charge items must have the refund flag set for partial refunds.";
+
+    /// <summary>
+    /// Error message for partial refund exceeding original quantity
+    /// </summary>
+    public static string EEEE_PartialRefundExceedsOriginalQuantity(string productNumber, decimal refundedQuantity, decimal originalQuantity) =>
+        $"EEEE_Partial refund for product '{productNumber}' exceeds the original quantity. Total refunded: {refundedQuantity}, Original: {originalQuantity}.";
+
+    /// <summary>
+    /// Error message for partial refund exceeding original amount
+    /// </summary>
+    public static string EEEE_PartialRefundExceedsOriginalAmount(string productNumber, decimal refundedAmount, decimal originalAmount) =>
+        $"EEEE_Partial refund for product '{productNumber}' exceeds the original amount. Total refunded: {refundedAmount:F2}€, Original: {originalAmount:F2}€.";
 }
