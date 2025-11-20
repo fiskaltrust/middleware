@@ -545,7 +545,7 @@ public class AADEFactory
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
             };
 
-            if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.quantitySpecified = true;
             }
@@ -559,7 +559,7 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)
             {
                 invoiceRow.itemDescr = x.Description;
                 // Todo change
@@ -773,6 +773,23 @@ public class AADEFactory
             return null;
         }
 
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            return new PartyType
+            {
+                vatNumber = customer?.CustomerVATId,
+                country = countryType,
+                branch = 0,
+                address = new AddressType
+                {
+                    street = customer?.CustomerStreet,
+                    city = customer?.CustomerCity,
+                    postalCode = customer?.CustomerZip
+                },
+                name = customer?.CustomerName,
+            };
+        }
+
 
         if (customer?.CustomerVATId?.StartsWith("EL") == true && countryType == CountryType.GR)
         {
@@ -832,12 +849,30 @@ public class AADEFactory
         return issuerVat;
     }
 
-    private PartyType CreateIssuer()
+    private PartyType CreateIssuer(ReceiptRequest receiptRequest)
     {
         var branch = 0;
         if (!string.IsNullOrEmpty(_masterDataConfiguration?.Outlet?.LocationId) && int.TryParse(_masterDataConfiguration?.Outlet?.LocationId, out var locationId))
         {
             branch = locationId;
+        }
+
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            return new PartyType
+            {
+                vatNumber = GetAADEVAT(_masterDataConfiguration?.Account?.VatId),
+                country = CountryType.GR,
+                branch = branch,
+                address = new AddressType
+                {
+                    street = _masterDataConfiguration.Outlet.Street,
+                    city = _masterDataConfiguration.Outlet.City,
+                    postalCode = _masterDataConfiguration.Outlet.Zip
+                },
+                name = _masterDataConfiguration.Account.AccountName,
+            };
         }
 
         return new PartyType
