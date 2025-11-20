@@ -185,7 +185,7 @@ public class AADEFactory
 
         var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
         var paymentMethods = GetPayments(receiptRequest);
-        var issuer = CreateIssuer();
+        var issuer = CreateIssuer(receiptRequest);
         var inv = new AadeBookInvoiceType
         {
             issuer = issuer,
