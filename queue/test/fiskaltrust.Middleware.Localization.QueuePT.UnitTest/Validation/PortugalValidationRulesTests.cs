@@ -380,5 +380,411 @@ public class PortugalValidationRulesTests
         }
 
         #endregion
+
+        #region Validate_ChargeItems_DiscountExceedsArticleAmount Tests
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithValidDiscount_ShouldPass()
+        {
+            // Arrange - discount of 10 on item of 100
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Main item",
+                        Quantity = 1,
+                        Amount = 123m, // 100 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Discount",
+                        Quantity = 1,
+                        Amount = -12.3m, // -10 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().BeEmpty("discount does not exceed the article amount");
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithExactDiscount_ShouldPass()
+        {
+            // Arrange - discount equals item amount (100% discount)
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Main item",
+                        Quantity = 1,
+                        Amount = 123m, // 100 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Full discount",
+                        Quantity = 1,
+                        Amount = -123m, // -100 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().BeEmpty("100% discount is valid");
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithExcessiveDiscount_ShouldFail()
+        {
+            // Arrange - discount of 150 on item of 100
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Main item",
+                        Quantity = 1,
+                        Amount = 123m, // 100 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Excessive discount",
+                        Quantity = 1,
+                        Amount = -184.5m, // -150 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().HaveCount(1);
+            results[0].IsValid.Should().BeFalse();
+            results[0].Errors.Should().HaveCount(1);
+            results[0].Errors[0].Code.Should().Be("EEEE_DiscountExceedsArticleAmount");
+            results[0].Errors[0].Message.Should().Contain("Main item");
+            results[0].Errors[0].Message.Should().Contain("150");
+            results[0].Errors[0].Message.Should().Contain("100");
+            results[0].Errors[0].Field.Should().Be("cbChargeItems");
+            results[0].Errors[0].ItemIndex.Should().Be(0);
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithMultipleDiscounts_ShouldValidateTotal()
+        {
+            // Arrange - two discounts totaling more than the article
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Main item",
+                        Quantity = 1,
+                        Amount = 123m, // 100 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "First discount",
+                        Quantity = 1,
+                        Amount = -73.8m, // -60 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Second discount",
+                        Quantity = 1,
+                        Amount = -61.5m, // -50 net + 23% VAT
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().HaveCount(1, "the total of both discounts (110) exceeds the article amount (100)");
+            results[0].Errors[0].Code.Should().Be("EEEE_DiscountExceedsArticleAmount");
+            results[0].Errors[0].Context.Should().ContainKey("DiscountNetAmount");
+            results[0].Errors[0].Context["DiscountNetAmount"].Should().Be(110m);
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithExtra_ShouldPass()
+        {
+            // Arrange - extra (positive modifier) should not be validated
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Main item",
+                        Quantity = 1,
+                        Amount = 123m,
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Extra charge",
+                        Quantity = 1,
+                        Amount = 246m, // positive amount (extra, not discount)
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().BeEmpty("extras (positive modifiers) are not validated");
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithMultipleGroups_ShouldValidateEachSeparately()
+        {
+            // Arrange - two article groups, one with valid discount, one with excessive discount
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    // First group - valid discount
+                    new ChargeItem
+                    {
+                        Description = "Article 1",
+                        Quantity = 1,
+                        Amount = 123m, // 100 net
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Valid discount",
+                        Quantity = 1,
+                        Amount = -12.3m, // -10 net
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    },
+                    // Second group - excessive discount
+                    new ChargeItem
+                    {
+                        Description = "Article 2",
+                        Quantity = 1,
+                        Amount = 61.5m, // 50 net
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 2
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Excessive discount",
+                        Quantity = 1,
+                        Amount = -123m, // -100 net
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 2
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().HaveCount(1, "only the second group has excessive discount");
+            results[0].Errors[0].Code.Should().Be("EEEE_DiscountExceedsArticleAmount");
+            results[0].Errors[0].ItemIndex.Should().Be(2, "should reference Article 2");
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithoutModifiers_ShouldPass()
+        {
+            // Arrange - article without any discounts or extras
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Main item",
+                        Quantity = 1,
+                        Amount = 123m,
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().BeEmpty("no modifiers to validate");
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithNullChargeItems_ShouldPass()
+        {
+            // Arrange
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = null
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithEmptyChargeItems_ShouldPass()
+        {
+            // Arrange
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>()
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_ErrorContext_ShouldContainDetails()
+        {
+            // Arrange
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Test Article",
+                        Quantity = 1,
+                        Amount = 123m, // 100 net
+                        VATRate = 23m,
+                        ftChargeItemCase = ChargeItemCase.NormalVatRate,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Excessive discount",
+                        Quantity = 1,
+                        Amount = -246m, // -200 net
+                        VATRate = 23m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().HaveCount(1);
+            var error = results[0].Errors[0];
+            error.Context.Should().ContainKey("MainItemNetAmount");
+            error.Context.Should().ContainKey("DiscountNetAmount");
+            error.Context.Should().ContainKey("Difference");
+            error.Context.Should().ContainKey("MainItemDescription");
+            error.Context.Should().ContainKey("ModifierCount");
+            
+            error.Context["MainItemNetAmount"].Should().Be(100m);
+            error.Context["DiscountNetAmount"].Should().Be(200m);
+            error.Context["Difference"].Should().Be(100m);
+            error.Context["MainItemDescription"].Should().Be("Test Article");
+            error.Context["ModifierCount"].Should().Be(1);
+        }
+
+        [Fact]
+        public void Validate_ChargeItems_DiscountExceedsArticleAmount_WithDifferentVATRates_ShouldValidateCorrectly()
+        {
+            // Arrange - discount with 6% VAT exceeding article with 6% VAT
+            var request = new ReceiptRequest
+            {
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Description = "Reduced VAT item",
+                        Quantity = 1,
+                        Amount = 106m, // 100 net + 6% VAT
+                        VATRate = 6m,
+                        ftChargeItemCase = ChargeItemCase.DiscountedVatRate1,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        Description = "Excessive discount",
+                        Quantity = 1,
+                        Amount = -159m, // -150 net + 6% VAT
+                        VATRate = 6m,
+                        ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.DiscountedVatRate1 | (long)ChargeItemCaseFlags.ExtraOrDiscount),
+                        Position = 1
+                    }
+                }
+            };
+
+            // Act
+            var results = ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(request).ToList();
+
+            // Assert
+            results.Should().HaveCount(1);
+            results[0].Errors[0].Code.Should().Be("EEEE_DiscountExceedsArticleAmount");
+        }
+
+        #endregion
     }
 }

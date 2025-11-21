@@ -63,6 +63,12 @@ public class ReceiptValidator
             yield return result;
         }
         
+        // Validate that discounts do not exceed article amounts
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(_request))
+        {
+            yield return result;
+        }
+        
         if (!context.IsRefund)
         {
             foreach (var result in ChargeItemValidations.Validate_ChargeItems_Amount_Quantity_NegativeAmountsAndQuantities(_request, context.IsRefund))

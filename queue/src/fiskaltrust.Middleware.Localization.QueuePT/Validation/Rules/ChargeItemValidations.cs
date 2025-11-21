@@ -365,4 +365,73 @@ public static class ChargeItemValidations
             }
         }
     }
+
+    /// <summary>
+    /// Validates that discounts and extras do not exceed the amount of their associated article.
+    /// Groups charge items similar to SAFT export: main items with their modifiers (discounts/extras).
+    /// Returns one ValidationResult per validation error found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_DiscountExceedsArticleAmount(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        // Group charge items using the same logic as SAFT export
+        var groupedItems = request.GetGroupedChargeItems();
+
+        for (var groupIndex = 0; groupIndex < groupedItems.Count; groupIndex++)
+        {
+            var group = groupedItems[groupIndex];
+            var mainItem = group.chargeItem;
+            var modifiers = group.modifiers;
+
+            // Skip validation if there are no modifiers
+            if (modifiers == null || modifiers.Count == 0)
+            {
+                continue;
+            }
+
+            // Calculate the main item's net amount
+            var mainItemGrossAmount = mainItem.Amount;
+            var mainItemVatAmount = mainItem.GetVATAmount();
+            var mainItemNetAmount = mainItemGrossAmount - mainItemVatAmount;
+
+            // Calculate total modifiers net amount (discounts and extras)
+            var modifiersGrossAmount = modifiers.Sum(x => x.Amount);
+            var modifiersVatAmount = modifiers.Sum(x => x.GetVATAmount());
+            var modifiersNetAmount = modifiersGrossAmount - modifiersVatAmount;
+
+            // For discounts (negative amounts), the absolute value should not exceed the main item amount
+            if (modifiersNetAmount < 0)
+            {
+                var absoluteDiscountAmount = Math.Abs(modifiersNetAmount);
+                var absoluteMainItemNetAmount = Math.Abs(mainItemNetAmount);
+
+                if (absoluteDiscountAmount > absoluteMainItemNetAmount)
+                {
+                    // Find the index of the main item for better error reporting
+                    var mainItemIndex = request.cbChargeItems.IndexOf(mainItem);
+                    
+                    yield return ValidationResult.Failed(new ValidationError(
+                        ErrorMessagesPT.EEEE_DiscountExceedsArticleAmount(
+                            mainItemIndex,
+                            mainItem.Description,
+                            absoluteDiscountAmount,
+                            absoluteMainItemNetAmount
+                        ),
+                        "EEEE_DiscountExceedsArticleAmount",
+                        "cbChargeItems",
+                        mainItemIndex
+                    )
+                    .WithContext("MainItemNetAmount", absoluteMainItemNetAmount)
+                    .WithContext("DiscountNetAmount", absoluteDiscountAmount)
+                    .WithContext("Difference", absoluteDiscountAmount - absoluteMainItemNetAmount)
+                    .WithContext("MainItemDescription", mainItem.Description)
+                    .WithContext("ModifierCount", modifiers.Count));
+                }
+            }
+        }
+    }
 }
