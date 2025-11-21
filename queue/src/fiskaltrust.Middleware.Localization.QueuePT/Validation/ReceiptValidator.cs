@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation;
@@ -111,6 +113,34 @@ public class ReceiptValidator
             {
                 yield return result;
             }
+        }
+
+        if(_request.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && _request.cbPreviousReceiptReference is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
+        }
+
+
+        if (_request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && _request.cbPreviousReceiptReference is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
+        }
+
+        if (_request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && _request.cbPreviousReceiptReference is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
         }
     }
 

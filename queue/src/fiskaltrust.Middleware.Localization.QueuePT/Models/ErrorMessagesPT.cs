@@ -11,7 +11,9 @@ public static class ErrorMessagesPT
     public static string NotSupportedReceiptCase(ReceiptCase caseCode, string name) => $"The ftReceiptCase {name} - 0x{caseCode:x} is not supported in the QueuePT implementation.";
     
     public const string PreviousReceiptReferenceNotFound = "The given cbPreviousReceiptReference didn't match with any of the items in the Queue.";
-    
+
+    public const string PreviousReceiptMissing = "The receipt referenced by cbPreviousReceiptReference could not be found in the Queue.";
+
     public const string MultipleReceiptReferencesNotSupported = "Multiple receipt references are currently not supported.";
     
     public const string VoidNotSupported = "Void is not supported";
@@ -30,6 +32,10 @@ public static class ErrorMessagesPT
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
     public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
+
+    public const string EEEE_CustomerInvalid = "EEEE_cbCustomer definition is invalid";
+
+    public const string EEEE_PreviousReceiptReference = "EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt.";
 
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 

@@ -20,6 +20,7 @@ public static class CustomerValidations
         }
 
         MiddlewareCustomer? middlewareCustomer = null;
+        bool customerDeserializationFailed = false;
         try
         {
             var customerJson = JsonSerializer.Serialize(request.cbCustomer);
@@ -27,7 +28,16 @@ public static class CustomerValidations
         }
         catch (JsonException)
         {
-            // If deserialization fails, skip customer validation
+            customerDeserializationFailed = true;
+        }
+
+        if (customerDeserializationFailed)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                  ErrorMessagesPT.EEEE_CustomerInvalid,
+                  "EEEE_CustomerInvalid",
+                  "cbCustomer"
+              ));
             yield break;
         }
 
