@@ -57,7 +57,7 @@ class CashBoxBuilderES : ICashBoxBuilder
             builder.AddConsole();
         });
 
-        IESSSCD scu = _scuConfiguration.Package switch
+        IESSSCD scu = _scuConfiguration!.Package switch
         {
             "fiskaltrust.Middleware.SCU.ES.VeriFactu" => new VeriFactuSCU(new VeriFactuInMemoryClient(), new VeriFactuSCUConfiguration
             {

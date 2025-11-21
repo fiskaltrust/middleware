@@ -1,12 +1,17 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
+using Microsoft.Xades;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
 
@@ -35,6 +40,24 @@ public class TicketBaiArabaTerritory : ITicketBaiTerritory
     public string CancelZuzendu => "/anulaciones/baja";
 
     public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers) { }
-    public ByteArrayContent GetContent(TicketBaiRequest request, string content) => new StringContent(content, Encoding.UTF8, "application/xml");
-    public async Task<Result<string, Result<string, Exception>>> GetResponse(HttpResponseMessage response) => await response.Content.ReadAsStringAsync();
+
+    public string ProcessContent(TicketBaiRequest request, string content) => content;
+
+    public ByteArrayContent GetHttpContent(string content) => new StringContent(content, Encoding.UTF8, "application/xml");
+
+    public async Task<(bool success, List<(string code, string message)> messages, string response)> GetSuccess(HttpResponseMessage response)
+    {
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var ticketBaiResponse = XmlHelpers.ParseXML<TicketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
+
+
+        if (ticketBaiResponse.Salida!.Estado == "00")
+        {
+            return (true, ticketBaiResponse.Salida?.ResultadosValidacion?.Select(x => (x.Codigo, x.Descripcion))?.ToList() ?? new(), responseContent);
+        }
+        else
+        {
+            return (false, ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList(), responseContent);
+        }
+    }
 }

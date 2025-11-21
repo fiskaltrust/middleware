@@ -6,6 +6,7 @@ using FirmaXadesNetCore.Crypto;
 using FirmaXadesNetCore.Signature.Parameters;
 using FirmaXadesNetCore;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.Xades;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers
 {
@@ -49,7 +50,7 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers
             return stringBuilder.ToString();
         }
 
-        public static string SignXmlContentWithXades(string xml, string policyIdentifier, string policyDigest, X509Certificate2 certificate)
+        public static (string signed, XadesSignedXml signature) SignXmlContentWithXades(string xml, string policyIdentifier, string policyDigest, X509Certificate2 certificate)
         {
             var xadesService = new XadesService();
             var parameters = new SignatureParameters
@@ -65,14 +66,15 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers
                 {
                     MimeType = "text/xml"
                 },
-                DigestMethod = DigestMethod.SHA256,
+                DigestMethod = FirmaXadesNetCore.Crypto.DigestMethod.SHA256,
                 Signer = new Signer(certificate)
             };
 
             var byteArray = Encoding.ASCII.GetBytes(xml);
             var stream = new MemoryStream(byteArray);
-            var signedXmlBytes = xadesService.Sign(stream, parameters).GetDocumentBytes();
-            return Encoding.UTF8.GetString(signedXmlBytes, 0, signedXmlBytes.Length);
+            var signed = xadesService.Sign(stream, parameters);
+            var signedXmlBytes = signed.GetDocumentBytes();
+            return (Encoding.UTF8.GetString(signedXmlBytes, 0, signedXmlBytes.Length), signed.XadesSignature);
         }
     }
 }

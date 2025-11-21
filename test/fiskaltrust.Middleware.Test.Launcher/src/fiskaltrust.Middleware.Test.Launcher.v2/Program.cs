@@ -5,7 +5,6 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using FluentAssertions;
-using Org.BouncyCastle.Ocsp;
 
 var builder = new CashBoxBuilder(
     "ES" switch
