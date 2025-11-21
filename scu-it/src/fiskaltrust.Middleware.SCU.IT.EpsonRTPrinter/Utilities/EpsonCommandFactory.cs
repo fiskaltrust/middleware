@@ -769,8 +769,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         // TODO: check VAT rate table on printer at the moment according to xml example
         private static readonly int _vatRateBasic = 1;
         private static readonly int _vatRateDeduction1 = 2;
-        private static readonly int _vatRateDeduction2 = 3;
-        private static readonly int _vatRateSuperReduced1 = 4;
+        private static readonly int _vatRateDeduction2 = 4;
+        private static readonly int _vatRateSuperReduced1 = 3;
         private static readonly int _vatRateZero = 13;
         private static readonly int _vatRateUnknown = -1;
         private static readonly int _notTaxable = 0;
@@ -797,9 +797,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 0x0 => _vatRateUnknown, // 0 ???
                 0x1 => _vatRateDeduction1, // 10%
-                0x2 => _vatRateDeduction2, // 4%
+                0x2 => _vatRateDeduction2, // 5%
                 0x3 => _vatRateBasic, // 22%
-                0x4 => _vatRateSuperReduced1, // 5%
+                0x4 => _vatRateSuperReduced1, // 4%
                 0x5 => _vatRateSuperReduced2, // ?
                 0x6 => _vatRateParking, // ?
                 0x7 => _vatRateZero, // ?
@@ -828,9 +828,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 0x0 => ("      ", "", 0), // 0 ???
                 0x1 => ("10,00%", "", 10), // 10%
-                0x2 => (" 4,00%", "", 4), // 4%
+                0x2 => (" 5,00%", "", 5), // 5%
                 0x3 => ("22,00%", "", 22), // 22%
-                0x4 => (" 5,00%", "", 5), // 5%
+                0x4 => (" 4,00%", "", 4), // 4%
                 0x5 => ("      ", "", 0), // ?
                 0x6 => ("      ", "", 0), // ?
                 0x7 => ("      ", "", 0), // ?
