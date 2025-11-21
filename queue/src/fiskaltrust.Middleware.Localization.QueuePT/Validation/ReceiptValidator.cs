@@ -24,6 +24,11 @@ public class ReceiptValidator
     /// </summary>
     public IEnumerable<ValidationResult> Validate(ReceiptValidationContext context)
     {
+        foreach (var result in CustomerValidations.ValidateCustomerTaxId(_request))
+        {
+            yield return result;
+        }
+        
         // Run all applicable validations and collect results (one per error)
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_MandatoryFields(_request))
         {

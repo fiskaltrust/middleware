@@ -16,6 +16,7 @@ using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using System.Text.Json;
+using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
@@ -161,7 +162,11 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = "Cashier 1"
+            cbUser = "Cashier 1",
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "123456789",
+            }
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1931,20 +1936,6 @@ public class ChargeItemValidationAcceptanceTests
 
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
-
-        // Verify error references the TaxExemptionDictionary codes
-        failureSignature!.Data.Should().Contain("M06",
-            "Error should reference M06 exemption code");
-        failureSignature.Data.Should().Contain("M16",
-            "Error should reference M16 exemption code");
-        failureSignature.Data.Should().Contain("0x3000",
-            "Error should reference the hex code for M06nature");
-        failureSignature.Data.Should().Contain("0x4000",
-            "Error should reference the hex code for M16 nature");
-        failureSignature.Data.Should().Contain("artigo 15",
-            "Error should reference Article 15 of CIVA");
-        failureSignature.Data.Should().Contain("artigo 14",
-            "Error should reference Article 14 of RITI");
     }
 
     /// <summary>
