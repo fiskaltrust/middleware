@@ -162,8 +162,7 @@ public static class ErrorMessagesPT
     /// Error message for missing nature of VAT (exempt reason) when VAT rate is 0
     /// </summary>
     public static string EEEE_ZeroVatRateMissingNature(int position) =>
-        $"EEEE_Charge item at position {position}: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. " +
-        $"Use 0x3000 for M06 (Isento artigo 15.º do CIVA) or 0x4000 for M16 (Isento artigo 14.º do RITI).";
+        $"EEEE_Charge item at position {position}: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. ";
 
     public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) => 
         $"EEEE_Charge item at position {i}: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
