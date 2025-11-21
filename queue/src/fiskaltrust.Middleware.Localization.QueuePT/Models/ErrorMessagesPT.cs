@@ -29,6 +29,8 @@ public static class ErrorMessagesPT
     
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
+    public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
+
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 
     /// <summary>

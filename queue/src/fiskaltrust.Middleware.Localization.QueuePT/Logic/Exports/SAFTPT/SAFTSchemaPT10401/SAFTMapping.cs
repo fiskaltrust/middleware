@@ -73,17 +73,14 @@ public class SaftExporter
 
     public string GetSourceID(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.cbUser is string && string.IsNullOrEmpty(receiptRequest.cbUser as string))
+        var user = receiptRequest.GetcbUserOrNull();
+        if(string.IsNullOrEmpty(user))
         {
-            return Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(receiptRequest.cbUser as string)));
+            // This should not happen in production since we have inbound validation. For data that made it into the queue we rather export something than fail the export.
+            return "Desconhecido";
         }
 
-        var userObject = JsonSerializer.Deserialize<PTUserObject>(JsonSerializer.Serialize(receiptRequest.cbUser))!;
-        if (userObject != null && !string.IsNullOrEmpty(userObject.UserId))
-        {
-            return userObject.UserId;
-        }
-        return JsonSerializer.Serialize(receiptRequest.cbUser);
+        return Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(user)));
     }
 
     public Customer GetCustomerData(ReceiptRequest receiptRequest)

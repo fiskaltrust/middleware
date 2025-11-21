@@ -36,11 +36,7 @@ public static class ReceiptExamples
         ftPosSystemId = Guid.Empty,
         cbTerminalID = "00010001",
         cbReceiptReference = "0001-0002",
-        cbUser = new PTUserObject
-        {
-            UserId = "1",
-            UserDisplayName = "Test User"
-        },
+        cbUser =  "Test User",
         cbReceiptMoment = DateTime.UtcNow,
         cbChargeItems =
         [

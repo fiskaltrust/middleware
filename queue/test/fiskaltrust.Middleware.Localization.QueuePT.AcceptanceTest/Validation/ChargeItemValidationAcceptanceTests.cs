@@ -15,6 +15,7 @@ using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
+using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
@@ -40,7 +41,7 @@ public class ChargeItemValidationAcceptanceTests
     {
         _queueItemRepository = new InMemoryQueueItemRepository();
         _mockSscd = new MockPTSSCD();
-        
+
         _queuePT = new ftQueuePT
         {
             ftQueuePTId = Guid.NewGuid(),
@@ -160,11 +161,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -173,15 +170,15 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
         var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+            new ProcessCommandRequest(new ftQueue(), JsonSerializer.Deserialize<ReceiptRequest>(JsonSerializer.Serialize(receiptRequest)), receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Complete charge item should be accepted");
     }
 
@@ -222,11 +219,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -235,7 +228,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -243,7 +236,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Minimum valid description length (3 chars) should be accepted");
     }
 
@@ -302,11 +295,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -315,7 +304,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -323,7 +312,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Multiple valid charge items should be accepted");
     }
 
@@ -368,11 +357,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -381,7 +366,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -389,9 +374,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Missing description should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionMissing",
@@ -435,11 +420,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -448,7 +429,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -456,9 +437,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Empty description should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionMissing",
@@ -502,11 +483,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -515,7 +492,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -523,9 +500,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Description with less than 3 characters should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionTooShort",
@@ -569,11 +546,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -582,7 +555,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -590,9 +563,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Whitespace-only description should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionMissing",
@@ -640,11 +613,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -653,7 +622,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -661,9 +630,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Negative quantity in non-refund receipt should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_NegativeQuantityNotAllowed",
@@ -707,11 +676,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -720,7 +685,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -728,9 +693,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Negative amount in non-refund receipt should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_NegativeAmountNotAllowed",
@@ -782,11 +747,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -795,7 +756,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -803,7 +764,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Discount with negative amount should be accepted");
     }
 
@@ -848,11 +809,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -861,7 +818,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -869,9 +826,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Missing amount should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemAmountMissing",
@@ -915,11 +872,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -928,7 +881,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -936,16 +889,16 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate without proper configuration should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         // With the new validation order, zero VAT rate nature validation runs first
         // This catches the missing nature before the VAT rate mismatch validation
         failureSignature!.Data.Should().ContainAny(
-            "EEEE_VatRateMismatch", 
-            "EEEE_ChargeItemVATRateMissing", 
+            "EEEE_VatRateMismatch",
+            "EEEE_ChargeItemVATRateMissing",
             "EEEE_ZeroVatRateMissingNature",
             "Any of these errors correctly indicates the configuration problem");
     }
@@ -991,11 +944,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1004,7 +953,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1012,7 +961,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Portuguese characters should be accepted");
     }
 
@@ -1053,11 +1002,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1066,7 +1011,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1074,7 +1019,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Emoji characters should be accepted");
     }
 
@@ -1119,11 +1064,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1132,7 +1073,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1140,7 +1081,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Normal VAT rate of 23% should be accepted");
     }
 
@@ -1181,11 +1122,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1194,7 +1131,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1202,7 +1139,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Discounted VAT rate 1 of 6% should be accepted");
     }
 
@@ -1243,11 +1180,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1256,7 +1189,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1264,7 +1197,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Discounted VAT rate 2 of 13% should be accepted");
     }
 
@@ -1305,11 +1238,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1318,7 +1247,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1326,9 +1255,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Not taxable with 0% VAT and proper exempt reason should be accepted");
-        
+
         // Verify that proper signatures are present
         result.receiptResponse.ftSignatures.Should().NotBeNullOrEmpty("Receipt should have signatures");
         result.receiptResponse.ftSignatures.Should().Contain(s => s.Caption == "[www.fiskaltrust.pt]",
@@ -1374,11 +1303,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1387,7 +1312,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1395,9 +1320,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "ZeroVatRate case is not supported in Portugal");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().ContainAny("EEEE_UnsupportedVatRate", "EEEE_ZeroVatRateMissingNature");
@@ -1440,11 +1365,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1453,7 +1374,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1461,9 +1382,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "ParkingVatRate case is not supported in Portugal");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_UnsupportedVatRate",
@@ -1534,11 +1455,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1547,7 +1464,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1555,7 +1472,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Mixed valid VAT rates should be accepted");
     }
 
@@ -1596,11 +1513,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1609,7 +1522,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1617,9 +1530,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "VAT rate percentage must match the category");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_VatRateMismatch",
@@ -1667,11 +1580,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1680,7 +1589,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1688,7 +1597,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate with M06 exempt reason should be accepted");
     }
 
@@ -1729,11 +1638,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1742,7 +1647,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1750,7 +1655,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate with M16 exempt reason should be accepted");
     }
 
@@ -1791,11 +1696,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1804,7 +1705,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1812,9 +1713,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate without exempt reason should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ZeroVatRateMissingNature",
@@ -1876,11 +1777,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1889,7 +1786,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1897,7 +1794,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Multiple items with different valid exempt reasons should be accepted");
     }
 
@@ -1947,11 +1844,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -1960,7 +1853,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -1968,9 +1861,9 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Item with zero VAT but missing exempt reason should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ZeroVatRateMissingNature",
@@ -2016,11 +1909,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -2029,7 +1918,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -2037,19 +1926,19 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate without exempt reason should be rejected");
-        
+
         var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
-        
+
         // Verify error references the TaxExemptionDictionary codes
         failureSignature!.Data.Should().Contain("M06",
             "Error should reference M06 exemption code");
         failureSignature.Data.Should().Contain("M16",
             "Error should reference M16 exemption code");
         failureSignature.Data.Should().Contain("0x3000",
-            "Error should reference the hex code for M06 nature");
+            "Error should reference the hex code for M06nature");
         failureSignature.Data.Should().Contain("0x4000",
             "Error should reference the hex code for M16 nature");
         failureSignature.Data.Should().Contain("artigo 15",
@@ -2122,11 +2011,7 @@ public class ChargeItemValidationAcceptanceTests
                     ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
                 }
             },
-            cbUser = new PTUserObject
-            {
-                UserDisplayName = "Cashier 1",
-                UserId = "cashier1"
-            }
+            cbUser = "Cashier 1"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -2135,7 +2020,7 @@ public class ChargeItemValidationAcceptanceTests
             ftQueueItemID = Guid.NewGuid(),
             ftQueueRow = 1,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
 
         // Act
@@ -2143,7 +2028,7 @@ public class ChargeItemValidationAcceptanceTests
             new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE,
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Large transaction with properly exempted items should be accepted");
     }
 
