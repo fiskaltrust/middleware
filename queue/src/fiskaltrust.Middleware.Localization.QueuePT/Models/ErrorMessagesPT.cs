@@ -18,6 +18,11 @@ public static class ErrorMessagesPT
     
     public const string VoidNotSupported = "Void is not supported";
 
+    public const string CopyReceiptRequestMismatch = "The incoming ReceiptRequest does not match the referenced receipt's ReceiptRequest. Both must be identical for a copy receipt operation.";
+    
+    public static string CopyReceiptRequestMismatchDetails(string differences) => 
+        $"The incoming ReceiptRequest does not match the referenced receipt's ReceiptRequest. Differences found:\n{differences}";
+
     // Validation error messages with EEEE_ prefix
     public const string EEEE_BottleLessThanOneLiterNotAllowed = "EEEE_Articles classified as 'Garrafão < 1 litro' are not allowed in this receipt type.";
     
