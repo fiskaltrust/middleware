@@ -304,7 +304,41 @@ public class AADEMappingsInvoiceTypeTests
 
         result.Should().Be(InvoiceType.Item52);
     }
-    
+
+    [Fact]
+    public void Item_9_3_GetInvoiceType_DeliveryNote_WithTransportDocumentFlag_ReturnsItem93()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.DeliveryNote0x0005) | (ReceiptCase)ReceiptCaseFlagsGR.HasTransportInformation;
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item93);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_DeliveryNote_WithoutTransportDocumentFlag_ReturnsItem111()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.DeliveryNote0x0005);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_POSReceipt_WithTransportDocumentFlag_ReturnsItem111()
+    {
+        // Transport document flag should only work with DeliveryNote, not with regular POS receipts
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001) | (ReceiptCase)ReceiptCaseFlagsGR.HasTransportInformation;
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
     [Fact]
     public void Item_11_1_GetInvoiceType_RetailReceipt_WithGoodsItems_ReturnsItem111()
     {
