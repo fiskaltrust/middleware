@@ -133,7 +133,11 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         //request.ReceiptResponse.ftSignatures.AddRange(originalResponse.ftSignatures);
         request.ReceiptResponse.ftStateData = new
         {
-            Original = receiptReferences[0]
+            Original = new
+            {
+                ReceiptRequest = receiptReferences[0].Item1,
+                ReceiptResponse = receiptReferences[0].Item2
+            }
         };
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
