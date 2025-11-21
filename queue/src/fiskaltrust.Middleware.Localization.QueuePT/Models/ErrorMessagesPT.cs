@@ -1,5 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
 
@@ -154,4 +155,14 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_PartialRefundExceedsOriginalAmount(string productNumber, decimal refundedAmount, decimal originalAmount) =>
         $"EEEE_Partial refund for product '{productNumber}' exceeds the original amount. Total refunded: {refundedAmount:F2}€, Original: {originalAmount:F2}€.";
+
+    /// <summary>
+    /// Error message for missing nature of VAT (exempt reason) when VAT rate is 0
+    /// </summary>
+    public static string EEEE_ZeroVatRateMissingNature(int position) =>
+        $"EEEE_Charge item at position {position}: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. " +
+        $"Use 0x3000 for M06 (Isento artigo 15.º do CIVA) or 0x4000 for M16 (Isento artigo 14.º do RITI).";
+
+    public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) => 
+        $"EEEE_Charge item at position {i}: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
 }

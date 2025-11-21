@@ -6,15 +6,16 @@ using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PaymentDocumentModels;
-using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.storage.V0.MasterData;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Validation;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
@@ -53,7 +54,7 @@ public class SaftExporter
     /// <returns>True if the tax ID is valid, false otherwise</returns>
     public static bool IsValidPortugueseTaxId(string taxId)
     {
-        return ReceiptRequestValidatorPT.IsValidPortugueseTaxId(taxId);
+        return PortugalValidationHelpers.IsValidPortugueseTaxId(taxId);
     }
 
     private static string GetCustomerCountry(MiddlewareCustomer middlewareCustomer)
@@ -74,7 +75,7 @@ public class SaftExporter
     {
         if (receiptRequest.cbUser is string && string.IsNullOrEmpty(receiptRequest.cbUser as string))
         {
-            return string.Empty;
+            return Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(receiptRequest.cbUser as string)));
         }
 
         var userObject = JsonSerializer.Deserialize<PTUserObject>(JsonSerializer.Serialize(receiptRequest.cbUser))!;

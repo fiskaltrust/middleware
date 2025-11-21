@@ -19,6 +19,14 @@ public abstract class ProcessorPreparation
 
     public async Task<ProcessCommandResponse> WithPreparations(ProcessCommandRequest request, Func<Task<ProcessCommandResponse>> process)
     {
+
+        foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
+        {
+            if (!chargeItem.VATAmount.HasValue)
+            {
+                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
+            }
+        }
         //var series = isRefund ? staticNumberStorage.CreditNoteSeries : staticNumberStorage.InvoiceSeries;
 
         // Perform all validations using the new validator (returns one ValidationResult per error)
@@ -42,16 +50,6 @@ public abstract class ProcessorPreparation
             }
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
-
-
-        foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
-        {
-            if (!chargeItem.VATAmount.HasValue)
-            {
-                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
-            }
-        }
-        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
         return await process();
     }
 }

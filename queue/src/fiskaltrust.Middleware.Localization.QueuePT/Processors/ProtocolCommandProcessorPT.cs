@@ -1,16 +1,17 @@
-﻿using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.storage.V0;
-using fiskaltrust.ifPOS.v2.Cases;
+﻿using System.Text;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using System.Text;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueuePT.Factories;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
-using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Validation;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -28,14 +29,25 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     private static async Task<ProcessCommandResponse> ProcessLogMessageAsync(ProcessCommandRequest request)
     {
-        foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
+        var validator = new ReceiptValidator(request.ReceiptRequest);
+        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
         {
-            if (!chargeItem.VATAmount.HasValue)
+            IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
+            GeneratesSignature = true,
+            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
+            //NumberSeries = series  // Include series for moment order validation
+        });
+        if (!validationResults.IsValid)
+        {
+            foreach (var result in validationResults.Results)
             {
-                chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
+                foreach (var error in result.Errors)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
+                }
             }
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
-        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
         await Task.CompletedTask;
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
