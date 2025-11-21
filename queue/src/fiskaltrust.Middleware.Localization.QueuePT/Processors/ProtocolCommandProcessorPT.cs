@@ -121,16 +121,16 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
             throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
         }
 
-        // Compare the incoming ReceiptRequest with the referenced ReceiptRequest
-        var (originalRequest, originalResponse) = receiptReferences[0];
-        var (areEqual, differences) = ReceiptRequestComparer.Compare(originalRequest, request.ReceiptRequest);
+        //// Compare the incoming ReceiptRequest with the referenced ReceiptRequest
+        //var (originalRequest, originalResponse) = receiptReferences[0];
+        //var (areEqual, differences) = ReceiptRequestComparer.Compare(originalRequest, request.ReceiptRequest);
         
-        if (!areEqual)
-        {
-            throw new InvalidOperationException(ErrorMessagesPT.CopyReceiptRequestMismatchDetails(differences));
-        }
+        //if (!areEqual)
+        //{
+        //    throw new InvalidOperationException(ErrorMessagesPT.CopyReceiptRequestMismatchDetails(differences));
+        //}
 
-        request.ReceiptResponse.ftSignatures.AddRange(originalResponse.ftSignatures);
+        //request.ReceiptResponse.ftSignatures.AddRange(originalResponse.ftSignatures);
         request.ReceiptResponse.ftStateData = new
         {
             Original = receiptReferences[0]
