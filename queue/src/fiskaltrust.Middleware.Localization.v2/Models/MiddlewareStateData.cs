@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.ifPOS.v2;

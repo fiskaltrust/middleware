@@ -17,6 +17,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
@@ -33,94 +34,53 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 /// </summary>
 public class ChargeItemValidationAcceptanceTests
 {
-    private readonly InMemoryQueueItemRepository _queueItemRepository;
-    private readonly InvoiceCommandProcessorPT _processor;
-    private readonly ftQueuePT _queuePT;
-    private readonly MockPTSSCD _mockSscd;
+    private readonly Func<string, Task<string>> _signProcessor;
+    private readonly Guid _queueId;
+    private readonly Guid _cashBoxId;
 
     public ChargeItemValidationAcceptanceTests()
     {
-        _queueItemRepository = new InMemoryQueueItemRepository();
-        _mockSscd = new MockPTSSCD();
-
-        _queuePT = new ftQueuePT
+        _queueId = Guid.NewGuid();
+        _cashBoxId = Guid.NewGuid();
+        
+        var mockSscd = new MockPTSSCD();
+        
+        var configuration = new Dictionary<string, object>
         {
-            ftQueuePTId = Guid.NewGuid(),
-            IssuerTIN = "123456789",
-            NumeratorStorage = new NumeratorStorage
-            {
-                InvoiceSeries = new NumberSeries
-                {
-                    TypeCode = "FT",
-                    ATCUD = "AAJFJ2K6JF",
-                    Series = "ft2025b814",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                SimplifiedInvoiceSeries = new NumberSeries
-                {
-                    TypeCode = "FS",
-                    ATCUD = "AAJFJNK6JJ",
-                    Series = "ft20257d14",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                CreditNoteSeries = new NumberSeries
-                {
-                    TypeCode = "NC",
-                    ATCUD = "AAJFJ6K6J5",
-                    Series = "ft2025128b",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                HandWrittenFSSeries = new NumberSeries
-                {
-                    TypeCode = "FS",
-                    ATCUD = "AAJFJHK6J6",
-                    Series = "ft20250a62",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                ProFormaSeries = new NumberSeries
-                {
-                    TypeCode = "PF",
-                    ATCUD = "AAJFJFK6JH",
-                    Series = "ft20253a3b",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                PaymentSeries = new NumberSeries
-                {
-                    TypeCode = "RG",
-                    ATCUD = "AAJFJ8K6JT",
-                    Series = "ft2025a4fa",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                BudgetSeries = new NumberSeries
-                {
-                    TypeCode = "OR",
-                    ATCUD = "AAJFJYK6JN",
-                    Series = "ft20255389",
-                    Numerator = 0,
-                    LastHash = "0"
-                },
-                TableChecqueSeries = new NumberSeries
-                {
-                    TypeCode = "CM",
-                    ATCUD = "AAJFJPK6JZ",
-                    Series = "ft20259c2f",
-                    Numerator = 0,
-                    LastHash = "0"
-                }
-            }
+            { "cashboxid", _cashBoxId },
+            { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue> 
+            { 
+                new ftQueue 
+                { 
+                    ftQueueId = _queueId,
+                    ftCashBoxId = _cashBoxId,
+                    StartMoment = DateTime.UtcNow
+                } 
+            }) },
+            { "init_ftQueuePT", JsonSerializer.Serialize(new List<ftQueuePT> 
+            { 
+                new ftQueuePT 
+                { 
+                    ftQueuePTId = _queueId,
+                    IssuerTIN = "123456789"
+                } 
+            }) },
+            { "init_ftSignaturCreationUnitPT", JsonSerializer.Serialize(new List<ftSignaturCreationUnitPT>()) }
         };
 
-        _processor = new InvoiceCommandProcessorPT(
-            _mockSscd,
-            _queuePT,
-            new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(_queueItemRepository))
-        );
+        var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
+        var bootstrapper = new QueuePTBootstrapper(_queueId, loggerFactory, configuration, mockSscd);
+        _signProcessor = bootstrapper.RegisterForSign();
+    }
+
+    private async Task<ReceiptResponse> ProcessReceiptAsync(ReceiptRequest receiptRequest)
+    {
+        receiptRequest.ftCashBoxID = _cashBoxId;
+        receiptRequest.ftQueueID = _queueId;
+        
+        var requestJson = JsonSerializer.Serialize(receiptRequest);
+        var responseJson = await _signProcessor(requestJson);
+        return JsonSerializer.Deserialize<ReceiptResponse>(responseJson)!;
     }
 
     #region Scenario 1: Valid Charge Items
@@ -169,21 +129,11 @@ public class ChargeItemValidationAcceptanceTests
             }
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), JsonSerializer.Deserialize<ReceiptRequest>(JsonSerializer.Serialize(receiptRequest)), receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Complete charge item should be accepted");
     }
 
@@ -227,21 +177,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Minimum valid description length (3 chars) should be accepted");
     }
 
@@ -303,21 +243,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Multiple valid charge items should be accepted");
     }
 
@@ -365,24 +295,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Missing description should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionMissing",
             "Error should indicate missing description");
@@ -428,24 +348,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Empty description should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionMissing",
             "Error should indicate missing description");
@@ -491,24 +401,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Description with less than 3 characters should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionTooShort",
             "Error should indicate description too short");
@@ -554,24 +454,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Whitespace-only description should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemDescriptionMissing",
             "Error should indicate missing description");
@@ -621,24 +511,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Negative quantity in non-refund receipt should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_NegativeQuantityNotAllowed",
             "Error should indicate negative quantity not allowed");
@@ -684,24 +564,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Negative amount in non-refund receipt should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_NegativeAmountNotAllowed",
             "Error should indicate negative amount not allowed");
@@ -755,21 +625,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Discount with negative amount should be accepted");
     }
 
@@ -817,24 +677,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Missing amount should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ChargeItemAmountMissing",
             "Error should indicate missing amount");
@@ -880,24 +730,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate without proper configuration should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         // With the new validation order, zero VAT rate nature validation runs first
         // This catches the missing nature before the VAT rate mismatch validation
@@ -952,21 +792,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Portuguese characters should be accepted");
     }
 
@@ -1010,21 +840,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Emoji characters should be accepted");
     }
 
@@ -1072,21 +892,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Normal VAT rate of 23% should be accepted");
     }
 
@@ -1130,21 +940,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Discounted VAT rate 1 of 6% should be accepted");
     }
 
@@ -1188,21 +988,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Discounted VAT rate 2 of 13% should be accepted");
     }
 
@@ -1246,28 +1036,18 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Not taxable with 0% VAT and proper exempt reason should be accepted");
 
         // Verify that proper signatures are present
-        result.receiptResponse.ftSignatures.Should().NotBeNullOrEmpty("Receipt should have signatures");
-        result.receiptResponse.ftSignatures.Should().Contain(s => s.Caption == "[www.fiskaltrust.pt]",
+        receiptResponse.ftSignatures.Should().NotBeNullOrEmpty("Receipt should have signatures");
+        receiptResponse.ftSignatures.Should().Contain(s => s.Caption == "[www.fiskaltrust.pt]",
             "Receipt should have QR code signature");
-        result.receiptResponse.ftSignatures.Should().Contain(s => s.Data.StartsWith("ATCUD:"),
+        receiptResponse.ftSignatures.Should().Contain(s => s.Data.StartsWith("ATCUD:"),
             "Receipt should have ATCUD signature");
     }
 
@@ -1311,24 +1091,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "ZeroVatRate case is not supported in Portugal");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().ContainAny("EEEE_UnsupportedVatRate", "EEEE_ZeroVatRateMissingNature");
     }
@@ -1373,24 +1143,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "ParkingVatRate case is not supported in Portugal");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_UnsupportedVatRate",
             "Error should indicate unsupported VAT rate");
@@ -1463,21 +1223,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Mixed valid VAT rates should be accepted");
     }
 
@@ -1521,24 +1271,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "VAT rate percentage must match the category");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_VatRateMismatch",
             "Error should indicate VAT rate mismatch");
@@ -1588,21 +1328,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate with M06 exempt reason should be accepted");
     }
 
@@ -1646,21 +1376,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate with M16 exempt reason should be accepted");
     }
 
@@ -1704,24 +1424,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate without exempt reason should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ZeroVatRateMissingNature",
             "Error should indicate missing exempt reason (nature)");
@@ -1785,21 +1495,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Multiple items with different valid exempt reasons should be accepted");
     }
 
@@ -1852,24 +1552,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Item with zero VAT but missing exempt reason should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ZeroVatRateMissingNature",
             "Error should indicate missing exempt reason on second item");
@@ -1917,24 +1607,14 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
             "Zero VAT rate without exempt reason should be rejected");
 
-        var failureSignature = result.receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
+        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
         failureSignature.Should().NotBeNull("Error should be in signatures");
     }
 
@@ -2005,21 +1685,11 @@ public class ChargeItemValidationAcceptanceTests
             cbUser = "Cashier 1"
         };
 
-        var receiptResponse = new ReceiptResponse
-        {
-            ftQueueID = _queuePT.ftQueuePTId,
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) 0x5054_0000_0000_0000
-        };
-
         // Act
-        var result = await _processor.InvoiceB2C0x1001Async(
-            new ProcessCommandRequest(new ftQueue(), receiptRequest, receiptResponse));
+        var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
             "Large transaction with properly exempted items should be accepted");
     }
 

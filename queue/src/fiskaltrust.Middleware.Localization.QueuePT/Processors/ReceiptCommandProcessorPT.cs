@@ -65,19 +65,9 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
-            receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
-            if (receiptReferences.Count == 0)
-            {
-                throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
-            }
-            if (receiptReferences.Count > 1)
-            {
-                throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
-            }
-            
-            // Check for duplicate refund if this is a refund receipt
             if (isRefund)
             {
+                var receiptReference = request.ReceiptResponse.GetPreviousReceiptReference();
                 var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
                 var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
                 if (hasExistingRefund)
@@ -86,11 +76,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                     return new ProcessCommandResponse(request.ReceiptResponse, []);
                 }
             }
-            
-            request.ReceiptResponse.ftStateData = new
-            {
-                ReferencedReceiptResponse = receiptReferences[0].Item2,
-            };
         }
 
         series.Numerator++;
