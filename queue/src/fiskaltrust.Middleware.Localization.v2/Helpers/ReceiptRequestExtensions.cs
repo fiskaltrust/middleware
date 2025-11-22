@@ -108,4 +108,27 @@ public static class ReceiptRequestExtensions
         }
         return null;
     }
+
+    public static string? GetcbUserOrNull(this ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbUser != null)
+        {
+
+            if(receiptRequest.cbUser is string userString)
+            {
+                return userString;
+            }
+
+            if(receiptRequest.cbUser is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.String)
+            {
+                return jsonElement.GetString();
+            }
+
+            return JsonSerializer.Deserialize<string>(JsonSerializer.Serialize(receiptRequest.cbUser), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        return null;
+    }
 }

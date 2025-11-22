@@ -1,9 +1,8 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
@@ -126,6 +125,17 @@ public static class SignatureItemFactoryPT
         {
             Caption = "",
             Data = $"Cópia do documento original - FSM {series}/{number:D4}",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+        };
+    }
+
+    public static SignatureItem AddConsumidorFinal()
+    {
+        return new SignatureItem
+        {
+            Caption = "",
+            Data = "Consumidor final",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };

@@ -3,10 +3,8 @@ using System.Net.Mime;
 using System.Text;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -31,28 +29,30 @@ public class JournalProcessorGR : IJournalProcessor
 
     public async IAsyncEnumerable<byte[]> ProcessAADEAsync(JournalRequest request)
     {
-        var queueItems = new List<ftQueueItem>();
-        if (request.From > 0)
-        {
-            queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
-        }
-        else
-        {
-            queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
-        }
+        //var queueItems = new List<ftQueueItem>();
+        //if (request.From > 0)
+        //{
+        //    queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
+        //}
+        //else
+        //{
+        //    queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
+        //}
 
-        var aadFactory = new AADEFactory(_masterDataConfiguration);
-        using var memoryStream = new MemoryStream();
-        var invoiceDoc = aadFactory.LoadInvoiceDocsFromQueueItems(queueItems.ToList());
-        if (request.To == -1)
-        {
-            invoiceDoc.invoice = invoiceDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
-        }
-        var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
-        xmlSerializer.Serialize(memoryStream, invoiceDoc);
-        memoryStream.Position = 0;
+        //var aadFactory = new AADEFactory(_masterDataConfiguration);
+        //using var memoryStream = new MemoryStream();
+        //var invoiceDoc = aadFactory.LoadInvoiceDocsFromQueueItems(queueItems.ToList());
+        //if (request.To == -1)
+        //{
+        //    invoiceDoc.invoice = invoiceDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
+        //}
+        //var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
+        //xmlSerializer.Serialize(memoryStream, invoiceDoc);
+        //memoryStream.Position = 0;
 
-        yield return memoryStream.ToArray();
+        //yield return memoryStream.ToArray();
+
+        yield return new byte[0];
     }
 
 }
