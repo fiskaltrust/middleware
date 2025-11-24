@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -13,6 +12,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
+using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -81,8 +81,22 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString() },
                 { "OSArchitecture", RuntimeInformation.OSArchitecture.ToString() },
                 { "OSDescription", RuntimeInformation.OSDescription.ToString() },
-                { "...", "redacted"}
+                { "...", "redacted" }
             };
+
+            var cashboxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(middlewareConfiguration.Configuration["configuration"].ToString());
+
+            var activeQueue = cashboxConfiguration.ftQueues.First(x => x.Id == middlewareConfiguration.QueueId);
+            
+            configuration["QueueVersion"] = activeQueue.Version;
+            configuration["QueueUrl"] = activeQueue.Url;
+
+            configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
+            configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
+
+            configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
+
+            configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
 
             var actionJournal = new ftActionJournal
             {
@@ -100,7 +114,10 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                     IsSandbox = middlewareConfiguration.IsSandbox,
                     ServiceFolder = middlewareConfiguration.ServiceFolder,
                     Configuration = configuration,
-                    PreviewFeatures = middlewareConfiguration.PreviewFeatures,
+                    AssemblyName = middlewareConfiguration.AssemblyName,
+                    AssemblyVersion = middlewareConfiguration.AssemblyVersion,
+                    LauncherEnvironment = middlewareConfiguration.LauncherEnvironment,
+                    PreviewFeatures = middlewareConfiguration.PreviewFeatures
                 }),
                 TimeStamp = DateTime.UtcNow.Ticks
             };
@@ -152,4 +169,3 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
         }
     }
 }
-

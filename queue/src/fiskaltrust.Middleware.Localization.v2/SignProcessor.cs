@@ -109,7 +109,16 @@ public class SignProcessor : ISignProcessor
                 }
                 catch (Exception e)
                 {
-                    receiptResponse.SetReceiptResponseError(e.ToString());
+                    _logger.LogError(e, "Uncaught exception during receipt processing");
+
+                    receiptResponse.MarkAsFailed();
+                    receiptResponse.AddSignatureItem(new SignatureItem
+                    {
+                        ftSignatureFormat = SignatureFormat.Text,
+                        ftSignatureType = receiptRequest.ftReceiptCase.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
+                        Caption = "uncaught-exeption",
+                        Data = e.ToString()
+                    });
                 }
                 if (_isSandbox)
                 {
