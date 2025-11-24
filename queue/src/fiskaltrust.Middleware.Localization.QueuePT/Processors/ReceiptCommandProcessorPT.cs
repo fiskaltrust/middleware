@@ -43,6 +43,8 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 return new ProcessCommandResponse(request.ReceiptResponse, []);
             }
         }
+        var receiptRequest = request.ReceiptRequest;
+        var receiptResponse = request.ReceiptResponse;
 
         var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
         var isHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten);
@@ -63,15 +65,23 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             series = isHandwritten ? staticNumberStorage.HandWrittenFSSeries : staticNumberStorage.SimplifiedInvoiceSeries;
         }
 
-        ReceiptResponse receiptResponse = request.ReceiptResponse;
-        Receipt receiptReference = null;
-        ReceiptRequest originalRequest = null;
-        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        List<Receipt> receiptReferences = [];
+        if (receiptRequest.cbPreviousReceiptReference is not null)
         {
+            receiptReferences = request.ReceiptResponse.GetPreviousReceiptReference() ?? [];
+            if (receiptReferences.Count == 0)
+            {
+                throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
+            }
+
             if (isRefund)
             {
-                receiptReference = request.ReceiptResponse.GetPreviousReceiptReference()[0];
-                var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
+                if (receiptReferences.Count > 1)
+                {
+                    throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+                }
+
+                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
                 var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
                 if (hasExistingRefund)
                 {
@@ -79,24 +89,50 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                     return new ProcessCommandResponse(request.ReceiptResponse, []);
                 }
 
-                // Load the original request for validation
-                var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
-                if (receiptReferences.Count > 0)
+                // Validate full refund: check if all articles from original invoice are properly refunded
+                var originalRequest = receiptReferences[0].Request;
+                var validationError = await _refundValidator.ValidateFullRefundAsync(
+                    receiptRequest,
+                    originalRequest,
+                    previousReceiptRef);
+
+                if (validationError != null)
                 {
-                    originalRequest = receiptReferences[0].Item1;
-                    
-                    // Validate full refund - ensure charge items match exactly (with negative amounts)
-                    var validationError = await _refundValidator.ValidateFullRefundAsync(
-                        request.ReceiptRequest,
-                        originalRequest,
-                        previousReceiptRef);
-                    
-                    if (validationError != null)
-                    {
-                        request.ReceiptResponse.SetReceiptResponseError(validationError);
-                        return new ProcessCommandResponse(request.ReceiptResponse, []);
-                    }
+                    request.ReceiptResponse.SetReceiptResponseError(validationError);
+                    return new ProcessCommandResponse(request.ReceiptResponse, []);
                 }
+            }
+            else
+            {
+                // Check for partial refund: items have refund flag but receipt case does not
+                if (receiptReferences.Count > 1)
+                {
+                    throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+                }
+
+                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
+                var originalRequest = receiptReferences[0].Request;
+
+                // Validate partial refund: check for mixed items and quantity/amount limits
+                var validationError = await _refundValidator.ValidatePartialRefundAsync(
+                    receiptRequest,
+                    originalRequest,
+                    previousReceiptRef);
+
+                if (validationError != null)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError(validationError);
+                    return new ProcessCommandResponse(request.ReceiptResponse, []);
+                }
+            }
+        }
+        else
+        {
+            // If no cbPreviousReceiptReference but items have refund flags, this is invalid
+            if (!isRefund && receiptRequest.cbChargeItems?.Any(item => item.IsRefund()) == true)
+            {
+                request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed);
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
             }
         }
 
@@ -112,7 +148,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         {
             var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature([receiptReference]));
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences);
         }
         else
         {
@@ -120,7 +156,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             AddSignatures(series, response, hash, printHash, qrCode);
             if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
-                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference([receiptReference]));
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
             }
         }
 

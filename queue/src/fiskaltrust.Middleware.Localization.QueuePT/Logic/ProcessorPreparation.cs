@@ -50,6 +50,9 @@ public abstract class ProcessorPreparation
             }
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
+
+
+
         return await process();
     }
 }

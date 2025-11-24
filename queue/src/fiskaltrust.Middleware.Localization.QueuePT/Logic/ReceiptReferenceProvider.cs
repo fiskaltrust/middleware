@@ -105,7 +105,7 @@ public class ReceiptReferenceProvider
                     referencedRequest.cbPreviousReceiptReference != null)
                 {
                     // Check if this refund references the receipt we're checking for
-                    var previousRef = referencedRequest.cbPreviousReceiptReference.ToString();
+                    var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
                     if (previousRef == cbPreviousReceiptReference)
                     {
                         return true;

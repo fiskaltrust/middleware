@@ -23,254 +23,21 @@ using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
-public class GeneralScenarios : AbstractScenarioTests
+public class RefundScenarios : AbstractScenarioTests
 {
-    #region Scenario 1: Transactions that are part of fiscalization should be rejected if no cbUser is provided
+    #region Scenario 1: Transactions with Refund with no reference should be rejected
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario1_TransactionWithoutUser_ShouldFail(ReceiptCase receiptCase)
+    public async Task Scenario1_TransactionWithRefundWithNoReference_ShouldFail(ReceiptCase receiptCase)
     {
-        var json = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "tes",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ]
-            }
-            """;
-
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.State().Should().Be(State.Error);
-    }
-
-    #endregion
-
-    #region Scenario 2: Transactions with a cbUser with length of below 3 characters should be rejected
-
-    [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
-    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
-    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario2_TransactionWithoutUserWithShortLength_ShouldFail(ReceiptCase receiptCase)
-    {
-        var json = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "tes",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ],
-                "cbUser": "St"
-            }
-            """;
-
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
-
-    #region Scenario 3: Transactions with article description of below 3 characters should be rejected
-
-    [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
-    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
-    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario3_TransactionWithShortArticleDescription_ShouldFail(ReceiptCase receiptCase)
-    {
-        var json = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "te",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ],
-                "cbUser": "Stefan Kert"
-            }
-            """;
-
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
-
-    #region Scenario 4: Transactions with negative amount on a usual sales should be rejected
-
-    [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
-    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
-    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario4_TransactionWithNegativeAmount_ShouldFail(ReceiptCase receiptCase)
-    {
-        var json = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Amount": -20,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ],
-                "cbUser": "Stefan Kert"
-            }
-            """;
-
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
-
-    #region Scenario 5: Transactions with negative quantity on a usual sales should be rejected
-
-    [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
-    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
-    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario5_TransactionWithNegativeQuantity_ShouldFail(ReceiptCase receiptCase)
-    {
-        var json = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Quantity": -1,
-                        "Amount": 20,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ],
-                "cbUser": "Stefan Kert"
-            }
-            """;
-
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
-
-    #region Scenario 6: Transactions with illegal VAT Rate should be rejected
-
-    [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
-    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
-    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario6_TransactionWithIllegalVATRate_ShouldFail(ReceiptCase receiptCase)
-    {
+        // Arrange
         var json = """
             {
                 "cbReceiptReference": "{{$guid}}",
@@ -282,7 +49,7 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Quantity": 1,
                         "Amount": 20,
                         "Description": "Test",
-                        "VATRate": 22,
+                        "VATRate": 23,
                         "ftChargeItemCase": 3
                     }
                 ],
@@ -292,80 +59,25 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Description": "Cash"
                     }
                 ],
-                "cbUser": "Stefan Kert"
-            }
-            """;
-
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
-
-    #region Scenario 7: Transactions with discount that exceed the total of the lineitem should fail
-
-
-    [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
-    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
-    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario7_TransactionWithDiscountExceedingTotal_ShouldFail(ReceiptCase receiptCase)
-    {
-        var originalReceipt = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Amount": 55,
-                        "Quantity": 100,
-                        "Description": "Article 1",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 5788286605450018835
-                    },
-                    {
-                        "Amount": -55.84,
-                        "Description": "Desconto",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 5788286605450280979
-                    },
-                    {
-                        "Amount": 13.8,
-                        "Description": "Line item 2",
-                        "VATRate": 23,
-                        "Quantity": 4,
-                        "ftChargeItemCase": 5788286605450018835
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 12.96,
-                        "Description": "Cash"
-                    }
-                ],
                 "cbUser": "Stefan Kert",
                 "cbCustomer": {
                     "CustomerVATId": "123456789"
                 }
             }
             """;
-        var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
-        response.ftState.State().Should().Be(State.Error, because: Environment.NewLine + string.Join(Environment.NewLine, response.ftSignatures.Select(x => x.Data)));
+
+        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        response.ftState.State().Should().Be(State.Error);
+
+        response.ftSignatures[0].Data.Should().EndWith("Validation error [EEEE_PreviousReceiptReference]: EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt. (Field: cbPreviousReceiptReference, Index: )");
+        // also check the signaturedata if the returned error is included
+        
+
     }
 
     #endregion
 
-    #region Scenario 8: Transactions with mismatch between charge + payitems
+    #region Scenario 2: Transactions with Refund with missing reference should be rejected
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
@@ -377,9 +89,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
-    public async Task Scenario8_TransactionWithMismatchForChargeItems(ReceiptCase receiptCase)
+    public async Task Scenario2_TransactionWithRefundWithMissingReference_ShouldFail(ReceiptCase receiptCase)
     {
         var originalReceipt = """
             {
@@ -389,11 +99,11 @@ public class GeneralScenarios : AbstractScenarioTests
                 "ftReceiptCase": {{ftReceiptCase}},
                 "cbChargeItems": [
                     {
-                        "Amount": 55,
-                        "Quantity": 100,
-                        "Description": "Article 1",
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 5788286605450018835
+                        "ftChargeItemCase": 3
                     }
                 ],
                 "cbPayItems": [
@@ -408,9 +118,270 @@ public class GeneralScenarios : AbstractScenarioTests
                 }
             }
             """;
-        var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
-        response.ftState.State().Should().Be(State.Error, because: Environment.NewLine + string.Join(Environment.NewLine, response.ftSignatures.Select(x => x.Data)));
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [],
+                "cbPayItems": [],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "FIXED"
+            }
+            """;
+
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        voidResponse.ftState.State().Should().Be(State.Error);
+
+        voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue.");
     }
 
     #endregion
+
+    #region Scenario 3: Transactions with Refund with reference to multiple receipts should be rejected
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario3_TransactionWithRefundWithMissingReference_ShouldFail(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "FIXED-scenario3",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [],
+                "cbPayItems": [],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "FIXED-scenario3"
+            }
+            """;
+
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        voidResponse.ftState.State().Should().Be(State.Error);
+
+        voidResponse.ftSignatures[0].Data.Should().EndWith($"The given cbPreviousReceiptReference 'FIXED-scenario3' did match with more than one item in the Queue.");
+    }
+
+    #endregion
+
+    #region Scenario 4: Transactions with Refund with reference should match the original
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    // [InlineData(ReceiptCase.PaymentTransfer0x0002)] => PaymentTransfer receipts cannot be refunded
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario4_TransactionWithRefundWithReference_ShouldMatchOriginal(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 10,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 10,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        voidResponse.ftState.State().Should().Be(State.Error);
+
+        voidResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts.");
+    }
+
+    #endregion
+
+
+    #region Scenario 5: Transactions with Refund for already refunded receipt should fail
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    // [InlineData(ReceiptCase.PaymentTransfer0x0002)] => PaymentTransfer receipts cannot be refunded
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario5_TransactionWithRefundForAlreadyRefundedReceipt_ShouldFail(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        refundResponse.ftState.State().Should().Be(State.Success);
+
+
+        (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        refundResponse.ftState.State().Should().Be(State.Error);
+        refundResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_A refund for receipt '{originalResponse.cbReceiptReference}' already exists. Multiple refunds for the same receipt are not allowed.");
+    }
+
+    #endregion
+
 }

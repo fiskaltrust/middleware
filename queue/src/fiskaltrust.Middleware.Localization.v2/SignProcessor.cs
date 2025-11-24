@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
 using System.Text.Json;
+using Microsoft.Identity.Client.Utils.Windows;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -210,10 +211,20 @@ public class SignProcessor : ISignProcessor
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
-            receiptResponse.ftStateData = new MiddlewareStateData
+            (var receiptReferences, var error) = await _queueStorageProvider.GetReferencedReceiptsAsync(request);
+            if (error != null)
             {
-                PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(request)
-            };
+                receiptResponse.SetReceiptResponseError(error);
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
+            if (receiptReferences is not null)
+            {
+                receiptResponse.ftStateData = new MiddlewareStateData
+                {
+                    PreviousReceiptReference = receiptReferences
+                };
+            }
         }
 
         return await _processRequest(request, receiptResponse, queue, queueItem).ConfigureAwait(false);

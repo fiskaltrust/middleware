@@ -23,7 +23,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
-public class PosReceiptScenarios
+public class PosReceiptScenarios : AbstractScenarioTests
 {
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly Guid _queueId;
@@ -355,109 +355,6 @@ public class PosReceiptScenarios
 
     #endregion
 
-    #region Scenario 14: Transactions with void with no reference should be rejected
-
-    [Fact]
-    public async Task Scenario14_TransactionWithVoidWithNoReference_ShouldFail()
-    {
-        // Arrange
-        var json = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Quantity": 1,
-                        "Amount": 20,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ],
-                "cbUser": "Stefan Kert",
-                "cbCustomer": {
-                    "CustomerVATId": "123456789"
-                }
-            }
-            """;
-
-        var receiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void);
-        ;
-        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase);
-
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
-
-    #region Scenario 15: Transactions with void with missing reference should be rejected
-
-    [Fact]
-    public async Task Scenario15_TransactionWithVoidWithMissingReference_ShouldFail()
-    {
-        var originalReceipt = """
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Quantity": 1,
-                        "Amount": 20,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 20,
-                        "Description": "Cash"
-                    }
-                ],
-                "cbUser": "Stefan Kert",
-                "cbCustomer": {
-                    "CustomerVATId": "123456789"
-                }
-            }
-            """;
-
-        var posReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
-        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) posReceiptCase);
-
-        // Arrange
-        var copyReceipt = """       
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [],
-                "cbPayItems": [],
-                "cbUser": "Stefan Kert",
-                "cbCustomer": {
-                    "CustomerVATId": "123456789"
-                },
-                "cbPreviousReceiptReference": "FIXED"
-            }
-            """;
-
-
-        var copyReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void);
-        var (copyRequest, copyResponse) = await ProcessReceiptAsync(copyReceipt, (long) copyReceiptCase);
-        copyResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
-    }
-
-    #endregion
 
     #region Scenario 16: Transactions with void with missing reference should be rejected
 
