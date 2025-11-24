@@ -25,6 +25,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 #pragma warning disable
     private readonly ftQueuePT _queuePT = queuePT;
     private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
 
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
@@ -64,6 +65,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
         ReceiptResponse receiptResponse = request.ReceiptResponse;
         Receipt receiptReference = null;
+        ReceiptRequest originalRequest = null;
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
             if (isRefund)
@@ -75,6 +77,25 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 {
                     request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef));
                     return new ProcessCommandResponse(request.ReceiptResponse, []);
+                }
+
+                // Load the original request for validation
+                var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+                if (receiptReferences.Count > 0)
+                {
+                    originalRequest = receiptReferences[0].Item1;
+                    
+                    // Validate full refund - ensure charge items match exactly (with negative amounts)
+                    var validationError = await _refundValidator.ValidateFullRefundAsync(
+                        request.ReceiptRequest,
+                        originalRequest,
+                        previousReceiptRef);
+                    
+                    if (validationError != null)
+                    {
+                        request.ReceiptResponse.SetReceiptResponseError(validationError);
+                        return new ProcessCommandResponse(request.ReceiptResponse, []);
+                    }
                 }
             }
         }

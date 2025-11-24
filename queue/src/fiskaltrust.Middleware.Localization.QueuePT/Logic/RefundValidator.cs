@@ -61,6 +61,34 @@ public class RefundValidator
             {
                 return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
             }
+
+            // Compare VAT rates - must be identical
+            if (Math.Abs(originalItem.VATRate - refundItem.VATRate) > 0.001m)
+            {
+                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+            }
+
+            // Compare VAT amounts (considering absolute values for refunds)
+            if (originalItem.VATAmount.HasValue && refundItem.VATAmount.HasValue)
+            {
+                var originalVatAmount = originalItem.VATAmount.Value;
+                var refundVatAmount = Math.Abs(refundItem.VATAmount.Value);
+
+                if (Math.Abs(originalVatAmount - refundVatAmount) > 0.01m)
+                {
+                    return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+                }
+            }
+
+            // Compare ftChargeItemCase (excluding flags that should differ)
+            // The base case should match, but flags like Refund may differ
+            var originalCase = ((long)originalItem.ftChargeItemCase) & 0x0000_FFFF_FFFF_0000;
+            var refundCase = ((long)refundItem.ftChargeItemCase) & 0x0000_FFFF_FFFF_0000;
+            
+            if (originalCase != refundCase)
+            {
+                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+            }
         }
 
         // Check if there are any extra items in the refund that weren't in the original

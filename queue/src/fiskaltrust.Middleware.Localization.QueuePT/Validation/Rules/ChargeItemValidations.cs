@@ -395,19 +395,14 @@ public static class ChargeItemValidations
 
             // Calculate the main item's net amount
             var mainItemGrossAmount = mainItem.Amount;
-            var mainItemVatAmount = mainItem.GetVATAmount();
-            var mainItemNetAmount = mainItemGrossAmount - mainItemVatAmount;
 
             // Calculate total modifiers net amount (discounts and extras)
             var modifiersGrossAmount = modifiers.Sum(x => x.Amount);
-            var modifiersVatAmount = modifiers.Sum(x => x.GetVATAmount());
-            var modifiersNetAmount = modifiersGrossAmount - modifiersVatAmount;
-
             // For discounts (negative amounts), the absolute value should not exceed the main item amount
-            if (modifiersNetAmount < 0)
+            if (modifiersGrossAmount < 0)
             {
-                var absoluteDiscountAmount = Math.Abs(modifiersNetAmount);
-                var absoluteMainItemNetAmount = Math.Abs(mainItemNetAmount);
+                var absoluteDiscountAmount = Math.Abs(modifiersGrossAmount);
+                var absoluteMainItemNetAmount = Math.Abs(mainItemGrossAmount);
 
                 if (absoluteDiscountAmount > absoluteMainItemNetAmount)
                 {
