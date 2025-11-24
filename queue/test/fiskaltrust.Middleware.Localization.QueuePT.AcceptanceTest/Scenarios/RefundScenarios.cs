@@ -298,7 +298,6 @@ public class RefundScenarios : AbstractScenarioTests
 
     #endregion
 
-
     #region Scenario 5: Transactions with Refund for already refunded receipt should fail
 
     [Theory]
@@ -380,6 +379,45 @@ public class RefundScenarios : AbstractScenarioTests
         (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
         refundResponse.ftState.State().Should().Be(State.Error);
         refundResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_A refund for receipt '{originalResponse.cbReceiptReference}' already exists. Multiple refunds for the same receipt are not allowed.");
+    }
+
+    #endregion
+
+    #region Scenario 6: Transactions with Refund with multiple references should be rejected
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario6_TransactionsWithRefundWithMultipleReferences_ShouldFail(ReceiptCase receiptCase)
+    {
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [],
+                "cbPayItems": [],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": ["FIXED", "Test"]
+            }
+            """;
+
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        voidResponse.ftState.State().Should().Be(State.Error);
+
+        voidResponse.ftSignatures[0].Data.Should().EndWith("Refunding a receipt is only supported with single references.");
     }
 
     #endregion
