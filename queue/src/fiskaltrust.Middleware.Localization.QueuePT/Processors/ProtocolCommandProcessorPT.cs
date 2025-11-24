@@ -106,11 +106,6 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
     {
-        if (request.ReceiptRequest.cbPreviousReceiptReference is null)
-        {
-            return await PTFallBackOperations.NoOp(request);
-        }
-
         var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
         if (receiptReferences.Count == 0)
         {

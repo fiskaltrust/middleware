@@ -109,14 +109,7 @@ public class SignProcessor : ISignProcessor
                 }
                 catch (Exception e)
                 {
-                    receiptResponse.HasFailed();
-                    receiptResponse.AddSignatureItem(new SignatureItem
-                    {
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = receiptRequest.ftReceiptCase.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
-                        Caption = "uncaught-exeption",
-                        Data = e.ToString()
-                    });
+                    receiptResponse.SetReceiptResponseError(e.ToString());
                 }
                 if (_isSandbox)
                 {

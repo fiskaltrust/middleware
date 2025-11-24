@@ -70,14 +70,17 @@ public class PosReceiptScenarios
         _signProcessor = bootstrapper.RegisterForSign();
     }
 
-    private async Task<ReceiptResponse> ProcessReceiptAsync(string rawJson)
+    private async Task<(ReceiptRequest request, ReceiptResponse response)> ProcessReceiptAsync(string rawJson)
     {
         var preparedJson = rawJson.Replace("{{$guid}}", Guid.NewGuid().ToString())
             .Replace("{{$isoTimestamp}}", DateTime.UtcNow.ToString("o"))
             .Replace("{{cashboxid}}", _cashBoxId.ToString());
 
+        var request = JsonSerializer.Deserialize<ReceiptRequest>(preparedJson)!;
         var responseJson = await _signProcessor(preparedJson);
-        return JsonSerializer.Deserialize<ReceiptResponse>(responseJson)!;
+        var response = JsonSerializer.Deserialize<ReceiptResponse>(responseJson)!;
+        
+        return (request, response);
     }
 
     #region Scenario 1: Transactions without a cbUser should be rejected
@@ -109,9 +112,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -146,9 +149,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -183,9 +186,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -220,9 +223,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -258,9 +261,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -296,9 +299,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -334,9 +337,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -375,9 +378,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -411,9 +414,9 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
@@ -452,18 +455,17 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(json);
+        var (request, response) = await ProcessReceiptAsync(json);
 
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
     }
 
     #endregion
 
-
-    #region Scenario 11: Printing a copy of an existing document should be a full copy of the original and include it in the ftStateData
+    #region Scenario 11: Printing a copy of a non existing document should fail
 
     [Fact]
-    public async Task Scenario11_PrintingCopyOfAnExistingDocument_ShouldIncludeOriginalInStateData()
+    public async Task Scenario11_PrintingCopyOfANonExistingDocument_ShouldFail()
     {
         var originalReceipt = """
             {
@@ -493,7 +495,7 @@ public class PosReceiptScenarios
             }
             """;
 
-        var receiptResponse = await ProcessReceiptAsync(originalReceipt);
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt);
 
         // Arrange
         var copyReceipt = """
@@ -501,7 +503,65 @@ public class PosReceiptScenarios
                 "cbReceiptReference": "{{$guid}}",
                 "cbReceiptMoment": "{{$isoTimestamp}}",
                 "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": 5283883447184535568,
+                "ftReceiptCase": 5788286605450018816,
+                "cbChargeItems": [],
+                "cbPayItems": [],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "FIXED_VALUE"
+            }
+            """;
+        /* 0x5054200000003010 */
+        var (copyRequest, copyResponse) = await ProcessReceiptAsync(copyReceipt);
+        copyResponse.ftState.State().Should().Be(State.Error, "Scenario1_TransactionWithoutUser_ShouldFail");
+    }
+
+    #endregion
+
+    #region Scenario 12: Printing a copy of a not supported document should fail
+
+    [Fact]
+    public async Task Scenario12_PrintingCopyOfANotSupportedDocument_ShouldFail()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": 5788286605450018816,
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt);
+
+        // Arrange
+        var copyReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": 5788286605450018816,
                 "cbChargeItems": [],
                 "cbPayItems": [],
                 "cbUser": "Stefan Kert",
@@ -510,16 +570,75 @@ public class PosReceiptScenarios
                 },
                 "cbPreviousReceiptReference": "{{originalReceipt}}"
             }
-            """.Replace("{{originalReceipt}}", receiptResponse.cbReceiptReference);
+            """.Replace("{{originalReceipt}}", originalResponse.cbReceiptReference);
+        /* 0x5054200000003010 */
+        var (copyRequest, copyResponse) = await ProcessReceiptAsync(copyReceipt);
+        copyResponse.ftState.State().Should().Be(State.Error, "Scenario1_TransactionWithoutUser_ShouldFail");
+    }
 
-        var copyResponse = await ProcessReceiptAsync(copyReceipt);
+    #endregion
+
+
+    #region Scenario 12: Printing a copy of an existing document should be a full copy of the original and include it in the ftStateData
+
+    [Fact]
+    public async Task Scenario12_PrintingCopyOfAnExistingDocument_ShouldIncludeOriginalInStateData()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": 1,
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt);
+
+        // Arrange
+        var copyReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": 5788286605450018816,
+                "cbChargeItems": [],
+                "cbPayItems": [],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{originalReceipt}}"
+            }
+            """.Replace("{{originalReceipt}}", originalResponse.cbReceiptReference);
+
+        var (copyRequest, copyResponse) = await ProcessReceiptAsync(copyReceipt);
         copyResponse.ftState.Should().Be((State) 0x5054_2000_0000_0000, "Scenario1_TransactionWithoutUser_ShouldFail");
 
         // check if ftStateData contains the original receipt response
         var stateDataJson = MiddlewareStateData.FromReceiptResponse(copyResponse);
         stateDataJson.PreviousReceiptReference.Should().HaveCount(1, "ftStateData should contain exactly one PreviousReceiptReference");
         var previousReceipt = stateDataJson.PreviousReceiptReference!.First();
-        previousReceipt.Response.cbReceiptReference.Should().Be(receiptResponse.cbReceiptReference, "The PreviousReceiptReference should match the original receipt reference");
+        previousReceipt.Response.cbReceiptReference.Should().Be(originalResponse.cbReceiptReference, "The PreviousReceiptReference should match the original receipt reference");
     }
 
     #endregion
