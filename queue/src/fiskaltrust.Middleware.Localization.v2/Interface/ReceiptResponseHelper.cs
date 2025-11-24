@@ -33,5 +33,8 @@ public static class ReceiptResponseHelper
         receiptResponse.ftSignatures.Add(signaturItem);
     }
 
-    public static bool HasFailed(this ReceiptResponse receiptRespons) => receiptRespons.ftState.IsState(State.Error);
+    public static void MarkAsFailed(this ReceiptResponse receiptResponse)
+    {
+        receiptResponse.ftState = receiptResponse.ftState.WithState(State.Error);
+    }
 }
