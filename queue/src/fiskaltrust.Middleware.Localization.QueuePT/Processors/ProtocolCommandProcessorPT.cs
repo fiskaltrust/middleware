@@ -130,15 +130,15 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         //    throw new InvalidOperationException(ErrorMessagesPT.CopyReceiptRequestMismatchDetails(differences));
         //}
 
-        //request.ReceiptResponse.ftSignatures.AddRange(originalResponse.ftSignatures);
-        request.ReceiptResponse.ftStateData = new
-        {
-            Original = new
-            {
-                ReceiptRequest = receiptReferences[0].Item1,
-                ReceiptResponse = receiptReferences[0].Item2
-            }
-        };
+        ////request.ReceiptResponse.ftSignatures.AddRange(originalResponse.ftSignatures);
+        //request.ReceiptResponse.ftStateData = new
+        //{
+        //    Original = new
+        //    {
+        //        ReceiptRequest = receiptReferences[0].Item1,
+        //        ReceiptResponse = receiptReferences[0].Item2
+        //    }
+        //};
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 }

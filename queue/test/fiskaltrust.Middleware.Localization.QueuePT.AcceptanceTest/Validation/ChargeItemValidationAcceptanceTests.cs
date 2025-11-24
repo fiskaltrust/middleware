@@ -140,7 +140,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_2000_EEEE_EEEE,
             "Complete charge item should be accepted");
     }
 
@@ -306,7 +306,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Missing description should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -359,7 +359,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Empty description should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -412,7 +412,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Description with less than 3 characters should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -465,7 +465,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Whitespace-only description should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -522,7 +522,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Negative quantity in non-refund receipt should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -575,7 +575,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Negative amount in non-refund receipt should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -688,7 +688,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Missing amount should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -741,7 +741,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Zero VAT rate without proper configuration should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -1102,7 +1102,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "ZeroVatRate case is not supported in Portugal");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -1154,7 +1154,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "ParkingVatRate case is not supported in Portugal");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -1282,7 +1282,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "VAT rate percentage must match the category");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -1435,7 +1435,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Zero VAT rate without exempt reason should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -1563,7 +1563,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Item with zero VAT but missing exempt reason should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
@@ -1618,7 +1618,7 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE,
+        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
             "Zero VAT rate without exempt reason should be rejected");
 
         var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
