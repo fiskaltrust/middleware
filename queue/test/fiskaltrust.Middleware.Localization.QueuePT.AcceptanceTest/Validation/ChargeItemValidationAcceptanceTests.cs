@@ -2,6 +2,7 @@
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
@@ -48,6 +49,11 @@ public class ChargeItemValidationAcceptanceTests
         var configuration = new Dictionary<string, object>
         {
             { "cashboxid", _cashBoxId },
+            { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox
+                {
+                    ftCashBoxId = _cashBoxId,
+                    TimeStamp = DateTime.UtcNow.Ticks
+                }) },
             { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue> 
             { 
                 new ftQueue 
@@ -69,7 +75,8 @@ public class ChargeItemValidationAcceptanceTests
         };
 
         var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
-        var bootstrapper = new QueuePTBootstrapper(_queueId, loggerFactory, configuration, mockSscd);
+        var storageProvider = new InMemoryLocalizationStorageProvider(_queueId, configuration, loggerFactory);
+        var bootstrapper = new QueuePTBootstrapper(_queueId, loggerFactory, configuration, mockSscd, storageProvider);
         _signProcessor = bootstrapper.RegisterForSign();
     }
 
