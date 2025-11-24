@@ -106,7 +106,9 @@ public class SignProcessor : ISignProcessor
                 }
                 catch (Exception e)
                 {
-                    receiptResponse.HasFailed();
+                    _logger.LogError(e, "Uncaught exception during receipt processing");
+
+                    receiptResponse.MarkAsFailed();
                     receiptResponse.AddSignatureItem(new SignatureItem
                     {
                         ftSignatureFormat = SignatureFormat.Text,
