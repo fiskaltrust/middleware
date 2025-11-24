@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
@@ -39,10 +40,10 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         var receiptRequest = request.ReceiptRequest;
         var receiptResponse = request.ReceiptResponse;
 
-        List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
+        List<Receipt> receiptReferences = [];
         if (receiptRequest.cbPreviousReceiptReference is not null)
         {
-            receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+            receiptReferences = request.ReceiptResponse.GetPreviousReceiptReference() ?? [];
             if (receiptReferences.Count == 0)
             {
                 throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
@@ -64,7 +65,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 }
 
                 // Validate full refund: check if all articles from original invoice are properly refunded
-                var originalRequest = receiptReferences[0].Item1;
+                var originalRequest = receiptReferences[0].Request;
                 var validationError = await _refundValidator.ValidateFullRefundAsync(
                     receiptRequest,
                     originalRequest,
@@ -85,7 +86,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 }
 
                 var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-                var originalRequest = receiptReferences[0].Item1;
+                var originalRequest = receiptReferences[0].Request;
 
                 // Validate partial refund: check for mixed items and quantity/amount limits
                 var validationError = await _refundValidator.ValidatePartialRefundAsync(
@@ -99,11 +100,6 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                     return new ProcessCommandResponse(request.ReceiptResponse, []);
                 }
             }
-            
-            receiptResponse.ftStateData = new
-            {
-                ReferencedReceiptResponse = receiptReferences[0].Item2,
-            };
         }
         else
         {

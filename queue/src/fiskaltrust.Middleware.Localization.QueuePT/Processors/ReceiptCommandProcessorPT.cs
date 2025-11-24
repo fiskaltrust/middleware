@@ -15,6 +15,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation;
+using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -62,12 +63,12 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         }
 
         ReceiptResponse receiptResponse = request.ReceiptResponse;
-        List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
+        Receipt receiptReference = null;
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
             if (isRefund)
             {
-                var receiptReference = request.ReceiptResponse.GetPreviousReceiptReference();
+                receiptReference = request.ReceiptResponse.GetPreviousReceiptReference()[0];
                 var previousReceiptRef = request.ReceiptRequest.cbPreviousReceiptReference.ToString();
                 var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
                 if (hasExistingRefund)
@@ -90,7 +91,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         {
             var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature([receiptReference]));
         }
         else
         {
@@ -98,7 +99,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             AddSignatures(series, response, hash, printHash, qrCode);
             if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
-                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference([receiptReference]));
             }
         }
 

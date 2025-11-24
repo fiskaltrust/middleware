@@ -100,6 +100,12 @@ public static class ErrorMessagesPT
         $"EEEE_Charge item at position {position} uses unsupported VAT rate '{vatRate}' (0x{(long)vatRate:X}). Portugal only supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE).";
 
     /// <summary>
+    /// Error message for unsupported receipt type for copy receipt operation
+    /// </summary>
+    public static string CopyReceiptNotSupportedForType(ReceiptCase receiptCase) =>
+        $"CopyReceipt (0x3010) is only supported for PosReceipt (0x0001) and Invoice types (0x100x). The receipt type 0x{(long)receiptCase:X} is not supported for this operation.";
+
+    /// <summary>
     /// Error message for VAT rate category not matching the specified VAT rate percentage
     /// </summary>
     public static string EEEE_VatRateMismatch(int position, ChargeItemCase vatRateCategory, decimal expectedVatRate, decimal actualVatRate) =>

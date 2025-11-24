@@ -116,8 +116,24 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
             throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
         }
 
+        // Get the original receipt request to check its type
+        var (originalRequest, originalResponse) = receiptReferences[0];
+        var originalReceiptCase = originalRequest.ftReceiptCase.Case();
+        
+        // Validate that CopyReceipt is only supported for PosReceipt (0x0001) and Invoice types (0x100x)
+        var isPosReceipt = originalReceiptCase == ReceiptCase.PointOfSaleReceipt0x0001;
+        var isInvoice = originalReceiptCase == ReceiptCase.InvoiceUnknown0x1000 ||
+                        originalReceiptCase == ReceiptCase.InvoiceB2C0x1001 ||
+                        originalReceiptCase == ReceiptCase.InvoiceB2B0x1002 ||
+                        originalReceiptCase == ReceiptCase.InvoiceB2G0x1003;
+        
+        if (!isPosReceipt && !isInvoice)
+        {
+            throw new NotSupportedException(ErrorMessagesPT.CopyReceiptNotSupportedForType(originalReceiptCase));
+        }
+
         //// Compare the incoming ReceiptRequest with the referenced ReceiptRequest
-        //var (originalRequest, originalResponse) = receiptReferences[0];
+        
         //var (areEqual, differences) = ReceiptRequestComparer.Compare(originalRequest, request.ReceiptRequest);
         
         //if (!areEqual)

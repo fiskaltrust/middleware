@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
@@ -86,22 +87,22 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem AddProformaReference(List<(ReceiptRequest, ReceiptResponse)> receiptReferences)
+    public static SignatureItem AddProformaReference(List<Receipt> receiptReferences)
     {
         return new SignatureItem
         {
             Caption = $"",
-            Data = $"Referencia: Proforma {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
+            Data = $"Referencia: Proforma {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };
     }
 
-    public static SignatureItem AddReferenceSignature(List<(ReceiptRequest, ReceiptResponse)> receiptReferences)
+    public static SignatureItem AddReferenceSignature(List<Receipt> receiptReferences)
     {
         return new SignatureItem
         {
-            Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
+            Caption = $"Referencia {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
             Data = $"Razão: Devolução",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
