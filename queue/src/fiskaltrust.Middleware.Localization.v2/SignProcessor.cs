@@ -205,6 +205,12 @@ public class SignProcessor : ISignProcessor
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
+            if (request.IsPartialRefundReceipt() && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
+            {
+                receiptResponse.SetReceiptResponseError("Partial refunding a receipt is only supported with single references.");
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
             if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {
                 receiptResponse.SetReceiptResponseError("Voiding a receipt is only supported with single references.");

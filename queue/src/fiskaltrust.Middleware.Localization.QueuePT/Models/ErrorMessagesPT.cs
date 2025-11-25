@@ -175,6 +175,7 @@ public static class ErrorMessagesPT
     public static string EEEE_PartialRefundExceedsOriginalAmount(string productNumber, decimal refundedAmount, decimal originalAmount) =>
         $"EEEE_Partial refund for product '{productNumber}' exceeds the original amount. Total refunded: {refundedAmount:F2}€, Original: {originalAmount:F2}€.";
 
+
     /// <summary>
     /// Error message for missing nature of VAT (exempt reason) when VAT rate is 0
     /// </summary>

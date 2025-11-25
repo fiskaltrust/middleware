@@ -1,9 +1,12 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Reflection.Emit;
+using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using System.Text.Json;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -32,76 +35,291 @@ public class RefundValidator
             return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
         }
 
-        // Build a dictionary of original items by product number/description for comparison
-        var originalItems = BuildItemDictionary(originalRequest.cbChargeItems);
-        var refundItems = BuildItemDictionary(refundRequest.cbChargeItems);
-
-        // Check if all original items are present in the refund with correct quantities and amounts
-        foreach (var (key, originalItem) in originalItems)
+        if (refundRequest.cbChargeItems.Count != originalRequest.cbChargeItems.Count)
         {
-            if (!refundItems.TryGetValue(key, out var refundItem))
+            return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+        }
+
+        if (refundRequest.cbPayItems.Count != originalRequest.cbPayItems.Count)
+        {
+            return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+        }
+
+        var (flowControl, value) = CompareReceiptRequest(originalReceiptReference, refundRequest, originalRequest);
+        if (!flowControl)
+        {
+            return value;
+        }
+
+        for (int i = 0; i < refundRequest.cbChargeItems.Count; i++)
+        {
+            var refundItem = refundRequest.cbChargeItems[i];
+            var originalItem = originalRequest.cbChargeItems[i];
+
+            (flowControl, value) = CompareChargeItems(originalReceiptReference, refundItem, originalItem);
+            if (!flowControl)
             {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
-            }
-
-            // Compare quantities (considering absolute values for refunds)
-            var originalQuantity = originalItem.Quantity;
-            var refundQuantity = Math.Abs(refundItem.Quantity);
-
-            if (Math.Abs(originalQuantity - refundQuantity) > 0.001m)
-            {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
-            }
-
-            // Compare amounts (considering absolute values for refunds)
-            var originalAmount = originalItem.Amount;
-            var refundAmount = Math.Abs(refundItem.Amount);
-
-            if (Math.Abs(originalAmount - refundAmount) > 0.01m)
-            {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
-            }
-
-            // Compare VAT rates - must be identical
-            if (Math.Abs(originalItem.VATRate - refundItem.VATRate) > 0.001m)
-            {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
-            }
-
-            // Compare VAT amounts (considering absolute values for refunds)
-            if (originalItem.VATAmount.HasValue && refundItem.VATAmount.HasValue)
-            {
-                var originalVatAmount = originalItem.VATAmount.Value;
-                var refundVatAmount = Math.Abs(refundItem.VATAmount.Value);
-
-                if (Math.Abs(originalVatAmount - refundVatAmount) > 0.01m)
-                {
-                    return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
-                }
-            }
-
-            // Compare ftChargeItemCase (excluding flags that should differ)
-            // The base case should match, but flags like Refund may differ
-            var originalCase = ((long)originalItem.ftChargeItemCase) & 0x0000_FFFF_FFFF_0000;
-            var refundCase = ((long)refundItem.ftChargeItemCase) & 0x0000_FFFF_FFFF_0000;
-            
-            if (originalCase != refundCase)
-            {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+                return value;
             }
         }
 
-        // Check if there are any extra items in the refund that weren't in the original
-        foreach (var key in refundItems.Keys)
+        for (int i = 0; i < refundRequest.cbPayItems.Count; i++)
         {
-            if (!originalItems.ContainsKey(key))
+            var refundItem = refundRequest.cbPayItems[i];
+            var originalItem = originalRequest.cbPayItems[i];
+
+            (flowControl, value) = ComparePayItems(originalReceiptReference, refundItem, originalItem);
+            if (!flowControl)
             {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+                return value;
             }
         }
-
         return null; // Validation passed
     }
+
+    private static (bool flowControl, string? value) CompareReceiptRequest(string originalReceiptReference, ReceiptRequest refundItem, ReceiptRequest originalItem)
+    {
+        // We ignore cbTerminalID cause it can be different
+        // We ignore cbReceiptReference cause it will be different
+        // We ignore the cbReceiptMoment because it must be different
+
+        if (originalItem.ftCashBoxID != refundItem.ftCashBoxID)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        // We ignore ftPOSSystemId cause it can be different
+
+        var originalCase = ((long) originalItem.ftReceiptCase) & 0x0000_0000_0000_FFFF;
+        var refundCase = ((long) refundItem.ftReceiptCase) & 0x0000_0000_0000_FFFF;
+        if (originalCase != refundCase)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ftReceiptCaseData != refundItem.ftReceiptCaseData)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        // We ignore cbPreviousReceiptReference because it will be different
+        // We ignore cbUser because it will be different
+
+        if (originalItem.cbArea != refundItem.cbArea)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+        
+        if(originalItem.cbCustomer is string originalCustomer && refundItem.cbCustomer is string refundCustomer)
+        {
+            if (originalCustomer != refundCustomer)
+            {
+                return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+            }
+        }
+
+        if (originalItem.cbCustomer is JsonElement originalJsonCustomer && refundItem.cbCustomer is JsonElement refundJsonCustomer)
+        {
+            if (!JsonSerializer.Serialize(originalJsonCustomer).Equals(JsonSerializer.Serialize(refundJsonCustomer), StringComparison.Ordinal))
+            {
+                return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+            }
+        }
+
+        if (originalItem.cbSettlement != refundItem.cbSettlement)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.Currency != refundItem.Currency)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.DecimalPrecisionMultiplier != refundItem.DecimalPrecisionMultiplier)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        return (flowControl: true, value: null);
+    }
+
+    private static (bool flowControl, string? value) CompareChargeItems(string originalReceiptReference, ChargeItem refundItem, ChargeItem originalItem)
+    {
+        if (Math.Abs(originalItem.Quantity - Math.Abs(refundItem.Quantity)) > 0.001m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.Description != refundItem.Description)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (Math.Abs(originalItem.Amount - Math.Abs(refundItem.Amount)) > 0.01m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (Math.Abs(originalItem.VATRate - refundItem.VATRate) > 0.001m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        var originalCase = ((long) originalItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+        var refundCase = ((long) refundItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+        if (originalCase != refundCase)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ftChargeItemCaseData != refundItem.ftChargeItemCaseData)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (Math.Abs(originalItem.GetVATAmount() - Math.Abs(refundItem.GetVATAmount())) > 0.001m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        // Moment can be different
+        if (originalItem.Position != refundItem.Position)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.AccountNumber != refundItem.AccountNumber)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.CostCenter != refundItem.CostCenter)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ProductGroup != refundItem.ProductGroup)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ProductGroup != refundItem.ProductGroup)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ProductNumber != refundItem.ProductNumber)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ProductBarcode != refundItem.ProductBarcode)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.Unit != refundItem.Unit)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (Math.Abs(originalItem.UnitQuantity ?? 0.0m - Math.Abs(refundItem.UnitQuantity ?? 0.0m)) > 0.001m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (Math.Abs(originalItem.UnitPrice ?? 0.0m - Math.Abs(refundItem.UnitPrice ?? 0.0m)) > 0.001m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.Currency != refundItem.Currency)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.DecimalPrecisionMultiplier != refundItem.DecimalPrecisionMultiplier)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        return (flowControl: true, value: null);
+    }
+
+    private static (bool flowControl, string? value) ComparePayItems(string originalReceiptReference, PayItem refundItem, PayItem originalItem)
+    {
+        if (Math.Abs(originalItem.Quantity - Math.Abs(refundItem.Quantity)) > 0.001m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.Description != refundItem.Description)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (Math.Abs(originalItem.Amount - Math.Abs(refundItem.Amount)) > 0.01m)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        var originalCase = ((long) originalItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
+        var refundCase = ((long) refundItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
+        if (originalCase != refundCase)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.ftPayItemCaseData != refundItem.ftPayItemCaseData)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        // Moment can be different
+        if (originalItem.Position != refundItem.Position)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.AccountNumber != refundItem.AccountNumber)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.CostCenter != refundItem.CostCenter)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.MoneyGroup != refundItem.MoneyGroup)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.MoneyNumber != refundItem.MoneyNumber)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.MoneyBarcode != refundItem.MoneyBarcode)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.Currency != refundItem.Currency)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        if (originalItem.DecimalPrecisionMultiplier != refundItem.DecimalPrecisionMultiplier)
+        {
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference));
+        }
+
+        return (flowControl: true, value: null);
+    }
+
 
     /// <summary>
     /// Validates a partial refund to ensure:
@@ -113,121 +331,80 @@ public class RefundValidator
         ReceiptRequest originalRequest,
         string originalReceiptReference)
     {
-        if (refundRequest.cbChargeItems == null)
+        var existingRefunds = await LoadExistingRefundsAsync(refundRequest);
+        var (flowControl, value) = CompareReceiptRequest(originalReceiptReference, refundRequest, originalRequest);
+        if (!flowControl)
         {
-            return null; // No items to validate
+            return value;
         }
 
-        // Check 1: All items must have the refund flag (no mixing)
-        var hasRefundItems = false;
-        var hasNonRefundItems = false;
-
-        foreach (var item in refundRequest.cbChargeItems)
+        var chargeItemsAvailable = originalRequest.cbChargeItems;
+        foreach(var existingRefund in existingRefunds.SelectMany(x => x.cbChargeItems))
         {
-            if (item.IsRefund())
+            var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
+                (Math.Abs(item.Amount - Math.Abs(existingRefund.Amount)) < 0.01m) &&
+                item.Description == existingRefund.Description &&
+                (Math.Abs(item.VATRate - existingRefund.VATRate) < 0.01m));
+            if(matchingItem != null)
             {
-                hasRefundItems = true;
-            }
-            else
-            {
-                hasNonRefundItems = true;
-            }
-        }
-
-        if (hasRefundItems && hasNonRefundItems)
-        {
-            return ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed;
-        }
-
-        if (!hasRefundItems)
-        {
-            return null; // This is not a partial refund, no validation needed
-        }
-
-        // Check 2: Load all existing refunds for this receipt and validate totals
-        var existingRefunds = await LoadExistingRefundsAsync(originalReceiptReference);
-        
-        // Build dictionaries for comparison
-        var originalItems = BuildItemDictionary(originalRequest.cbChargeItems ?? []);
-        var currentRefundItems = BuildItemDictionary(refundRequest.cbChargeItems);
-
-        // Calculate total refunded quantities and amounts per product (including this refund)
-        var totalRefundedByProduct = new Dictionary<string, (decimal Quantity, decimal Amount)>();
-
-        // Add existing refunds
-        foreach (var existingRefund in existingRefunds)
-        {
-            foreach (var item in existingRefund.cbChargeItems ?? [])
-            {
-                var key = GetItemKey(item);
-                var quantity = Math.Abs(item.Quantity);
-                var amount = Math.Abs(item.Amount);
-
-                if (totalRefundedByProduct.ContainsKey(key))
-                {
-                    var existing = totalRefundedByProduct[key];
-                    totalRefundedByProduct[key] = (existing.Quantity + quantity, existing.Amount + amount);
-                }
-                else
-                {
-                    totalRefundedByProduct[key] = (quantity, amount);
-                }
+                chargeItemsAvailable.Remove(matchingItem);
             }
         }
 
-        // Add current refund items
-        foreach (var (key, item) in currentRefundItems)
+        var payItemsAvailable = originalRequest.cbPayItems;
+        foreach(var existingRefund in existingRefunds.SelectMany(x => x.cbPayItems))
         {
-            var quantity = Math.Abs(item.Quantity);
-            var amount = Math.Abs(item.Amount);
-
-            if (totalRefundedByProduct.ContainsKey(key))
+            var matchingItem = payItemsAvailable.FirstOrDefault(item =>
+                (Math.Abs(item.Amount - Math.Abs(existingRefund.Amount)) < 0.01m) &&
+                item.Description == existingRefund.Description);
+            if(matchingItem != null)
             {
-                var existing = totalRefundedByProduct[key];
-                totalRefundedByProduct[key] = (existing.Quantity + quantity, existing.Amount + amount);
-            }
-            else
-            {
-                totalRefundedByProduct[key] = (quantity, amount);
+                payItemsAvailable.Remove(matchingItem);
             }
         }
 
-        // Validate that refunds don't exceed originals
-        foreach (var (key, refundedTotals) in totalRefundedByProduct)
+
+        for (int i = 0; i < refundRequest.cbChargeItems.Count; i++)
         {
-            if (!originalItems.TryGetValue(key, out var originalItem))
+            var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
+                (Math.Abs(item.Amount - Math.Abs(refundRequest.cbChargeItems[i].Amount)) < 0.01m) &&
+                item.Description == refundRequest.cbChargeItems[i].Description &&
+                (Math.Abs(item.VATRate - refundRequest.cbChargeItems[i].VATRate) < 0.01m));
+            if (matchingItem == null)
             {
-                continue; // Item not in original, skip validation
+                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
             }
 
-            // Check quantity
-            if (refundedTotals.Quantity > originalItem.Quantity + 0.001m)
+            (flowControl, value) = CompareChargeItems(originalReceiptReference, refundRequest.cbChargeItems[i], matchingItem);
+            if (!flowControl)
             {
-                var productNumber = originalItem.ProductNumber ?? originalItem.Description ?? key;
-                return ErrorMessagesPT.EEEE_PartialRefundExceedsOriginalQuantity(
-                    productNumber,
-                    refundedTotals.Quantity,
-                    originalItem.Quantity);
-            }
-
-            // Check amount
-            if (refundedTotals.Amount > originalItem.Amount + 0.01m)
-            {
-                var productNumber = originalItem.ProductNumber ?? originalItem.Description ?? key;
-                return ErrorMessagesPT.EEEE_PartialRefundExceedsOriginalAmount(
-                    productNumber,
-                    refundedTotals.Amount,
-                    originalItem.Amount);
+                return value;
             }
         }
 
+        for (int i = 0; i < refundRequest.cbPayItems.Count; i++)
+        {
+            var matchingItem = payItemsAvailable.FirstOrDefault(item =>
+                (Math.Abs(item.Amount - Math.Abs(refundRequest.cbPayItems[i].Amount)) < 0.01m) &&
+                item.Description == refundRequest.cbPayItems[i].Description);
+            if (matchingItem == null)
+            {
+                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+            }
+
+            (flowControl, value) = ComparePayItems(originalReceiptReference, refundRequest.cbPayItems[i], matchingItem);
+            if (!flowControl)
+            {
+                return value;
+            }
+        }
         return null; // Validation passed
     }
 
     /// <summary>
     /// Loads all existing refunds for a given receipt reference
     /// </summary>
-    private async Task<List<ReceiptRequest>> LoadExistingRefundsAsync(string originalReceiptReference)
+    private async Task<List<ReceiptRequest>> LoadExistingRefundsAsync(ReceiptRequest refundRequest)
     {
         var queueItemRepository = await _readOnlyQueueItemRepository.Value;
         var existingRefunds = new List<ReceiptRequest>();
@@ -242,85 +419,22 @@ public class RefundValidator
             try
             {
                 var request = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
-                if (request != null &&
-                    request.cbPreviousReceiptReference != null)
+                if (request != null && request.cbPreviousReceiptReference != null && request.cbReceiptReference != refundRequest.cbReceiptReference)
                 {
-                    // Check if this is a partial refund (no full refund flag) that references our original
                     var isFullRefund = request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
-                    var previousRef = request.cbPreviousReceiptReference.ToString();
-                    
-                    // Only include partial refunds (items with refund flag but receipt case without refund flag)
-                    if (!isFullRefund && previousRef == originalReceiptReference)
+                    var previousRef = request.cbPreviousReceiptReference;
+                    if (request.IsPartialRefundReceipt() && previousRef.SingleValue == refundRequest.cbPreviousReceiptReference.SingleValue)
                     {
-                        // Check if any items have refund flag
-                        if (request.cbChargeItems?.Any(item => item.IsRefund()) == true)
-                        {
-                            existingRefunds.Add(request);
-                        }
+                        existingRefunds.Add(request);
                     }
                 }
             }
             catch
             {
-                // Ignore deserialization errors and continue
                 continue;
             }
         }
 
         return existingRefunds;
-    }
-
-    /// <summary>
-    /// Builds a dictionary of charge items keyed by a unique identifier
-    /// </summary>
-    private Dictionary<string, ChargeItem> BuildItemDictionary(IEnumerable<ChargeItem> items)
-    {
-        var dictionary = new Dictionary<string, ChargeItem>();
-        
-        foreach (var item in items)
-        {
-            // Skip discounts/extras as they are not products
-            if (item.IsDiscountOrExtra())
-            {
-                continue;
-            }
-
-            var key = GetItemKey(item);
-            
-            // If we already have this key, aggregate the quantities and amounts
-            if (dictionary.ContainsKey(key))
-            {
-                var existing = dictionary[key];
-                dictionary[key] = new ChargeItem
-                {
-                    ProductNumber = item.ProductNumber,
-                    Description = item.Description,
-                    Quantity = existing.Quantity + item.Quantity,
-                    Amount = existing.Amount + item.Amount,
-                    VATRate = item.VATRate,
-                    ftChargeItemCase = item.ftChargeItemCase
-                };
-            }
-            else
-            {
-                dictionary[key] = item;
-            }
-        }
-
-        return dictionary;
-    }
-
-    /// <summary>
-    /// Gets a unique key for a charge item based on product number and description
-    /// </summary>
-    private string GetItemKey(ChargeItem item)
-    {
-        // Use product number as primary key, fall back to description
-        var key = !string.IsNullOrEmpty(item.ProductNumber)
-            ? item.ProductNumber
-            : item.Description ?? Guid.NewGuid().ToString();
-        
-        // Include VAT rate in the key to differentiate same products with different VAT
-        return $"{key}_{item.VATRate}";
     }
 }

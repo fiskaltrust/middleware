@@ -291,6 +291,16 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
         var originalRequest = receiptReferences[0].Request;
 
+        var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
+        if (hasExistingRefund)
+        {
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef),
+                "EEEE_RefundAlreadyExists",
+                "cbPreviousReceiptReference"
+            ));
+        }
+
         // Validate partial refund: check for mixed items and quantity/amount limits
         var validationError = await _refundValidator.ValidatePartialRefundAsync(
             receiptRequest,

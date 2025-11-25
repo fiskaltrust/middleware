@@ -270,7 +270,7 @@ public static class ChargeItemValidations
         {
             var chargeItem = request.cbChargeItems[i];
 
-            if (chargeItem.IsDiscount())
+            if (chargeItem.IsDiscount() || chargeItem.IsRefund() || chargeItem.IsVoid())
             {
                 continue;
             }
