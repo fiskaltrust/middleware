@@ -32,6 +32,37 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     /// </summary>
     public async IAsyncEnumerable<ValidationResult> Validate(ReceiptValidationContext context)
     {
+        if(_receiptRequest.ftReceiptCase.Country() != "PT")
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_InvalidCountryCodeForPT,
+                   "EEEE_InvalidCountryCodeForPT",
+                   "ftReceiptCase"
+               ));
+            yield break;
+        }
+
+        if(_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.Country() != "PT"))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_InvalidCountryCodeInChargeItemsForPT,
+                   "EEEE_InvalidCountryCodeInChargeItemsForPT",
+                   "cbChargeItems"
+               ));
+            yield break;
+        }
+
+        if (_receiptRequest.cbPayItems.Any(ci => ci.ftPayItemCase.Country() != "PT"))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_InvalidCountryCodeInPayItemsForPT,
+                   "EEEE_InvalidCountryCodeInPayItemsForPT",
+                   "cbPayItems"
+               ));
+            yield break;
+        }
+ 
+
         foreach (var result in CustomerValidations.ValidateCustomerTaxId(_receiptRequest))
         {
             yield return result;

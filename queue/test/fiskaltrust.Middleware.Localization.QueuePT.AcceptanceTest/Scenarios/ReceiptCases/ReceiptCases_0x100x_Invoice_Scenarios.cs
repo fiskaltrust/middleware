@@ -42,14 +42,14 @@ public class ReceiptCases_0x100x_Invoice_Scenarios : AbstractScenarioTests
                         "Amount": 3001,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 3001,
                         "Description": "Cash",
-                        "ftPayItemCase": 1
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",

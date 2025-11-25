@@ -126,7 +126,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -283,7 +284,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -321,7 +322,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                 "cbPayItems": [
                     {
                         "Amount": 30,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",

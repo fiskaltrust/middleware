@@ -50,13 +50,14 @@ public class VoidScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -241,13 +242,14 @@ public class VoidScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018835
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -272,13 +274,14 @@ public class VoidScenarios : AbstractScenarioTests
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 10,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018835
                     }
                 ],
                 "cbUser": "Stefan Kert",

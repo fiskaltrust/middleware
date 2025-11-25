@@ -52,13 +52,14 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "tes",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ]
             }
@@ -97,13 +98,14 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "tes",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "St"
@@ -143,13 +145,14 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "te",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert"
@@ -189,13 +192,14 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Amount": -20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert"
@@ -236,13 +240,14 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert"
@@ -283,13 +288,14 @@ public class GeneralScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 22,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert"
@@ -349,7 +355,8 @@ public class GeneralScenarios : AbstractScenarioTests
                 "cbPayItems": [
                     {
                         "Amount": 12.96,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -396,7 +403,8 @@ public class GeneralScenarios : AbstractScenarioTests
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -443,7 +451,8 @@ public class GeneralScenarios : AbstractScenarioTests
                 "cbPayItems": [
                     {
                         "Amount": 55,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -493,7 +502,8 @@ public class GeneralScenarios : AbstractScenarioTests
                 "cbPayItems": [
                     {
                         "Amount": 55,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",

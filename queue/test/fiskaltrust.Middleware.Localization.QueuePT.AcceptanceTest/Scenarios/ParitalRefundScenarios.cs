@@ -499,13 +499,14 @@ public class PartialRefundScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450149889
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -537,7 +538,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
                         "Amount": -20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 1
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -549,7 +550,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
                     {
                         "Amount": -20,
                         "Description": "Cash",
-                        "ftPayItemCase": 1
+                        "ftPayItemCase": 5788286605450149889
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -559,7 +560,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
                 "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
             }
             """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
-
+        // 5054200000000013
         var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT"));
         refundResponse.ftSignatures[0].Data.Should().EndWith("EEEE_Partial refund contains mixed refund and non-refund items. In Portugal, it is not allowed to mix refunds with non-refunds in the same receipt. All charge items must have the refund flag set for partial refunds. (Field: , Index: )");
     }
@@ -593,13 +594,14 @@ public class PartialRefundScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -624,13 +626,14 @@ public class PartialRefundScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -709,13 +712,14 @@ public class PartialRefundScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -740,13 +744,14 @@ public class PartialRefundScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",

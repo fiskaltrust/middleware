@@ -2,39 +2,40 @@
 using System.Net.Mime;
 using System.Security.Cryptography;
 using System.Text.Json;
-using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.ifPOS.v2.pt;
+using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT;
 
 public class QueuePTBootstrapper : IV2QueueBootstrapper
 {
-  private readonly Queue _queue;
+    private readonly Queue _queue;
 
-  public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD) : this(id, loggerFactory, configuration, ptSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
+    public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD) : this(id, loggerFactory, configuration, ptSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
-  public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD, IStorageProvider storageProvider)
-  {
-    var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
-    var queuePT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
-    if (queuePT.IssuerTIN is null)
+    public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD, IStorageProvider storageProvider)
     {
-      queuePT.IssuerTIN = "980833310";
-    }
+        var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
+        var queuePT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
+        if (queuePT.IssuerTIN is null)
+        {
+            queuePT.IssuerTIN = "980833310";
+        }
 
-    if (configuration.ContainsKey("NumeratorStorage"))
-    {
-      queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>(configuration["NumeratorStorage"]!.ToString()!);
-    }
-    else
-    {
-      queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>("""
+        if (configuration.ContainsKey("NumeratorStorage"))
+        {
+            queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>(configuration["NumeratorStorage"]!.ToString()!);
+        }
+        else
+        {
+            queuePT.NumeratorStorage = JsonSerializer.Deserialize<NumeratorStorage>("""
             {
               "InvoiceSeries": {
                 "TypeCode": "FT",
@@ -78,30 +79,35 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
               }
             }
             """);
+        }
+        var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
+        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()));
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration, fallBackCountryCode: "PT");
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
+        {
+            Id = id,
+            Configuration = configuration,
+        };
     }
-    var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-    var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()));
-    var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration, fallBackCountryCode: "PT");
-    var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
-    _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
+
+    public MasterDataConfiguration? GetFromConfig(Dictionary<string, object> configuration)
     {
-      Id = id,
-      Configuration = configuration,
-    };
-  }
+        return configuration.ContainsKey("init_masterData") ? Newtonsoft.Json.JsonConvert.DeserializeObject<MasterDataConfiguration>(configuration["init_masterData"].ToString()!) : null;
+    }
 
-  public Func<string, Task<string>> RegisterForSign()
-  {
-    return _queue.RegisterForSign();
-  }
+    public Func<string, Task<string>> RegisterForSign()
+    {
+        return _queue.RegisterForSign();
+    }
 
-  public Func<string, Task<string>> RegisterForEcho()
-  {
-    return _queue.RegisterForEcho();
-  }
+    public Func<string, Task<string>> RegisterForEcho()
+    {
+        return _queue.RegisterForEcho();
+    }
 
-  public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal()
-  {
-    return _queue.RegisterForJournal();
-  }
+    public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal()
+    {
+        return _queue.RegisterForJournal();
+    }
 }
