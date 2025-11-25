@@ -170,4 +170,54 @@ public class ReceiptReferenceProvider
         
         return false;
     }
+
+    public async Task<bool> HasExistingVoidAsync(string cbPreviousReceiptReference)
+    {
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+
+        // Unfortunately, there's no direct way to query by cbPreviousReceiptReference,
+        // so we need to check queue items that might reference this receipt.
+        // We use GetQueueItemsForReceiptReferenceAsync which returns items with this cbReceiptReference
+        // but we actually need to check all items to find refunds that reference it via cbPreviousReceiptReference
+
+        // A more efficient approach: check recent items (assuming refunds come after original receipts)
+        var lastItem = await queueItemRepository.GetLastQueueItemAsync();
+        if (lastItem == null)
+        {
+            return false;
+        }
+
+        // Search through queue items to find any refund that references this receipt
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            try
+            {
+                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                if (referencedRequest != null &&
+                    referencedRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) &&
+                    referencedRequest.cbPreviousReceiptReference != null)
+                {
+                    // Check if this void references the receipt we're checking for
+                    var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
+                    if (previousRef == cbPreviousReceiptReference)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore deserialization errors and continue
+                continue;
+            }
+        }
+
+        return false;
+    }
+
 }

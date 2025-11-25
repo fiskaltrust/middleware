@@ -21,9 +21,9 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
+namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios.ReceiptCases;
 
-public class PaymentTransferScenarios : AbstractScenarioTests
+public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTests
 {
     #region Scenario 0: Transactions with PaymentTransfer should work
 
@@ -490,6 +490,111 @@ public class PaymentTransferScenarios : AbstractScenarioTests
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
         voidResponse.ftSignatures[0].Data.Should().Contain($"EEEE_PaymentTransfer pay items require at least one accounts receivable charge item in the receipt.");
+    }
+
+    #endregion
+
+    #region Scenario 8: Transactions with PaymentTransfer for already voided receipt should fail
+
+    [Fact]
+    public async Task Scenario8_TransactionWithPaymentTransferForAlreadyVoidedReceipt_ShouldFail()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 10,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 10,
+                        "Description": "On Credit",
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) ReceiptCase.InvoiceUnknown0x1000.WithCountry("PT"));
+
+        var voidReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 10,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 10,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(voidReceipt, (long) ReceiptCase.InvoiceUnknown0x1000.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 10,
+                        "Description": "Test",
+                        "VATRate": 0,
+                        "ftChargeItemCase": 5788286605450018968
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 10,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
+        refundResponse.ftState.State().Should().Be(State.Error);
+        refundResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_HasBeenVoidedAlready(originalResponse.cbReceiptReference));
     }
 
     #endregion

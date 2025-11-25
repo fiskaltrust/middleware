@@ -28,17 +28,50 @@ public class VoidValidator
         ReceiptRequest originalRequest,
         string originalReceiptReference)
     {
-        // Void receipts should have empty charge items and pay items
-        if (voidRequest.cbChargeItems?.Any() == true)
+        if (voidRequest.cbChargeItems == null || originalRequest.cbChargeItems == null)
         {
-            return ErrorMessagesPT.EEEE_VoidMustHaveEmptyChargeItems;
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
         }
 
-        if (voidRequest.cbPayItems?.Any() == true)
+        if (voidRequest.cbChargeItems.Count != originalRequest.cbChargeItems.Count)
         {
-            return ErrorMessagesPT.EEEE_VoidMustHaveEmptyPayItems;
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
         }
 
+        if (voidRequest.cbPayItems.Count != originalRequest.cbPayItems.Count)
+        {
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+        }
+
+        var (flowControl, value) = RefundValidator.CompareReceiptRequest(originalReceiptReference, voidRequest, originalRequest);
+        if (!flowControl)
+        {
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+        }
+
+        for (int i = 0; i < voidRequest.cbChargeItems.Count; i++)
+        {
+            var refundItem = voidRequest.cbChargeItems[i];
+            var originalItem = originalRequest.cbChargeItems[i];
+
+            (flowControl, value) = RefundValidator.CompareChargeItems(originalReceiptReference, refundItem, originalItem);
+            if (!flowControl)
+            {
+                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+            }
+        }
+
+        for (int i = 0; i < voidRequest.cbPayItems.Count; i++)
+        {
+            var refundItem = voidRequest.cbPayItems[i];
+            var originalItem = originalRequest.cbPayItems[i];
+
+            (flowControl, value) = RefundValidator.ComparePayItems(originalReceiptReference, refundItem, originalItem);
+            if (!flowControl)
+            {
+                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+            }
+        }
         return null; // Validation passed
     }
 

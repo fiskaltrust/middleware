@@ -1,5 +1,6 @@
 ﻿using System.Reflection.PortableExecutable;
 using System.Text.Json;
+using Azure;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -485,6 +486,87 @@ public class RefundScenarios : AbstractScenarioTests
 
         voidResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: , Index: )");
     }
+    
     #endregion
 
+    #region Scenario 8: Transactions with Refund for already voided receipt should fail
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario8_TransactionWithRefundForAlreadyVoidedReceipt_ShouldFail(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+
+        // Arrange
+        var copyReceipt = """       
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 3
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+        refundResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, refundResponse.ftSignatures.Select(x => x.Data)));
+
+        (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        refundResponse.ftState.State().Should().Be(State.Error);
+        refundResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_HasBeenVoidedAlready(originalResponse.cbReceiptReference));
+    }
+
+    #endregion
 }

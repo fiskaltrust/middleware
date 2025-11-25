@@ -21,9 +21,9 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
+namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios.ReceiptCases;
 
-public class InvoiceScenarios : AbstractScenarioTests
+public class ReceiptCases_0x100x_Invoice_Scenarios : AbstractScenarioTests
 {
     #region Scenario 1: Transactions with cash payment of > 3000 € net should fail
 

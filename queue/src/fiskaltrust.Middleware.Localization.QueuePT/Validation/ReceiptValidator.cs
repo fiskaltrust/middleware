@@ -175,6 +175,37 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             }
         }
 
+        if (_receiptRequest.cbPreviousReceiptReference is not null)
+        {
+            if (_receiptRequest.cbPreviousReceiptReference.IsSingle)
+            {
+                var status = await _receiptReferenceProvider.HasExistingVoidAsync(_receiptRequest.cbPreviousReceiptReference.SingleValue!);
+                if (status)
+                {
+                    yield return ValidationResult.Failed(new ValidationError(
+                       ErrorMessagesPT.EEEE_HasBeenVoidedAlready(_receiptRequest.cbPreviousReceiptReference.SingleValue!),
+                       "EEEE_PreviousReceiptIsVoided",
+                       "cbPreviousReceiptReference"
+                   ));
+                }
+            }
+            else
+            {
+                foreach (var reference in _receiptRequest.cbPreviousReceiptReference.GroupValue)
+                {
+                    var status = await _receiptReferenceProvider.HasExistingVoidAsync(reference);
+                    if (status)
+                    {
+                        yield return ValidationResult.Failed(new ValidationError(
+                           ErrorMessagesPT.EEEE_HasBeenVoidedAlready(reference),
+                           "EEEE_PreviousReceiptIsVoided",
+                           "cbPreviousReceiptReference"
+                       ));
+                    }
+                }
+            }
+        }
+
         if (_receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
         {
             yield return await ValidatePaymentTransferForInvoiceAsync(_receiptRequest, _receiptResponse);
@@ -241,7 +272,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
      ReceiptRequest originalRequest,
      string originalReceiptReference)
     {
-        if(originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceUnknown0x1000 &&
+        if (originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceUnknown0x1000 &&
            originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2C0x1001 &&
            originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2B0x1002 &&
            originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2G0x1003)

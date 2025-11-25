@@ -88,6 +88,9 @@ public static class ErrorMessagesPT
     public static string EEEE_RefundAlreadyExists(string receiptReference) =>
         $"EEEE_A refund for receipt '{receiptReference}' already exists. Multiple refunds for the same receipt are not allowed.";
 
+    public static string EEEE_HasBeenVoidedAlready(string receiptReference) =>
+        $"EEEE_VOID for receipt '{receiptReference}' already exists. Changing the receipt state after voiding the same receipt is not allowed.";
+
     /// <summary>
     /// Error message for refunds missing cbPreviousReceiptReference
     /// </summary>
@@ -157,6 +160,9 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference) =>
         $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts.";
+
+    public static string EEEE_VoidItemsMismatch(string originalReceiptReference) =>
+        $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
 
     /// <summary>
     /// Error message for mixed refund and non-refund items in partial refund

@@ -17,8 +17,6 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
 public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : ProcessorPreparation, IProtocolCommandProcessor
 {
-    private readonly IPTSSCD _sscd = sscd;
-    private readonly ftQueuePT _queuePT = queuePT;
     private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
 
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
@@ -60,15 +58,6 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
-    {
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
-    }
-
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
     {
         var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
@@ -90,7 +79,10 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         var isInvoice = originalReceiptCase == ReceiptCase.InvoiceUnknown0x1000 ||
                         originalReceiptCase == ReceiptCase.InvoiceB2C0x1001 ||
                         originalReceiptCase == ReceiptCase.InvoiceB2B0x1002 ||
-                        originalReceiptCase == ReceiptCase.InvoiceB2G0x1003;
+                        originalReceiptCase == ReceiptCase.InvoiceB2G0x1003 ||
+                        originalReceiptCase == ReceiptCase.UnknownReceipt0x0000 ||
+                        originalReceiptCase == ReceiptCase.DeliveryNote0x0005 ||
+                        originalReceiptCase == (ReceiptCase) 0x0006;
 
         if (!isPosReceipt && !isInvoice)
         {

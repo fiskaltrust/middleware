@@ -291,8 +291,7 @@ public class VoidScenarios : AbstractScenarioTests
 
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(voidReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
         voidResponse.ftState.State().Should().Be(State.Error);
-
-        voidResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VoidMustHaveEmptyChargeItems);
+        voidResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VoidItemsMismatch(originalResponse.cbReceiptReference));
     }
 
     #endregion
