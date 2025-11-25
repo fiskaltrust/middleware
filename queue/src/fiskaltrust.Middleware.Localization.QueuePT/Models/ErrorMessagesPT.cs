@@ -7,33 +7,33 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
 public static class ErrorMessagesPT
 {
     public static string UnknownReceiptCase(long caseCode) => $"The given ftReceiptCase 0x{caseCode:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.";
-    
+
     public static string NotSupportedReceiptCase(ReceiptCase caseCode, string name) => $"The ftReceiptCase {name} - 0x{caseCode:x} is not supported in the QueuePT implementation.";
-    
+
     public const string PreviousReceiptReferenceNotFound = "The given cbPreviousReceiptReference didn't match with any of the items in the Queue.";
 
     public const string PreviousReceiptMissing = "The receipt referenced by cbPreviousReceiptReference could not be found in the Queue.";
 
     public const string MultipleReceiptReferencesNotSupported = "Multiple receipt references are currently not supported.";
-    
+
     public const string VoidNotSupported = "Void is not supported";
 
     public const string CopyReceiptRequestMismatch = "The incoming ReceiptRequest does not match the referenced receipt's ReceiptRequest. Both must be identical for a copy receipt operation.";
-    
-    public static string CopyReceiptRequestMismatchDetails(string differences) => 
+
+    public static string CopyReceiptRequestMismatchDetails(string differences) =>
         $"The incoming ReceiptRequest does not match the referenced receipt's ReceiptRequest. Differences found:\n{differences}";
 
     // Validation error messages with EEEE_ prefix
     public const string EEEE_BottleLessThanOneLiterNotAllowed = "EEEE_Articles classified as 'Garrafão < 1 litro' are not allowed in this receipt type.";
-    
+
     public const string EEEE_ChargeItemDescriptionTooShort = "EEEE_Charge item description must be at least 3 characters long.";
-    
+
     public const string EEEE_ChargeItemDescriptionMissing = "EEEE_Charge item description is mandatory and cannot be null or empty.";
-    
+
     public const string EEEE_ChargeItemVATRateMissing = "EEEE_Charge item VAT rate is mandatory and must be set.";
-    
+
     public const string EEEE_ChargeItemAmountMissing = "EEEE_Charge item amount (price) is mandatory and must be set.";
-    
+
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
     public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
@@ -49,7 +49,7 @@ public static class ErrorMessagesPT
     /// </summary>
     /// <param name="taxId">The invalid tax ID that was provided</param>
     /// <returns>A descriptive error message</returns>
-    public static string EEEE_InvalidPortugueseTaxId(string taxId) => 
+    public static string EEEE_InvalidPortugueseTaxId(string taxId) =>
         $"EEEE_Invalid Portuguese Tax Identification Number (NIF): '{taxId}'. The NIF must be a 9-digit number with a valid check digit according to the Portuguese tax authority validation algorithm.";
 
     /// <summary>
@@ -97,13 +97,13 @@ public static class ErrorMessagesPT
     /// Error message for unsupported VAT rates
     /// </summary>
     public static string EEEE_UnsupportedVatRate(int position, ChargeItemCase vatRate) =>
-        $"EEEE_Charge item at position {position} uses unsupported VAT rate '{vatRate}' (0x{(long)vatRate:X}). Portugal only supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE).";
+        $"EEEE_Charge item at position {position} uses unsupported VAT rate '{vatRate}' (0x{(long) vatRate:X}). Portugal only supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE).";
 
     /// <summary>
     /// Error message for unsupported receipt type for copy receipt operation
     /// </summary>
     public static string CopyReceiptNotSupportedForType(ReceiptCase receiptCase) =>
-        $"CopyReceipt (0x3010) is only supported for PosReceipt (0x0001) and Invoice types (0x100x). The receipt type 0x{(long)receiptCase:X} is not supported for this operation.";
+        $"CopyReceipt (0x3010) is only supported for PosReceipt (0x0001) and Invoice types (0x100x). The receipt type 0x{(long) receiptCase:X} is not supported for this operation.";
 
     /// <summary>
     /// Error message for VAT rate category not matching the specified VAT rate percentage
@@ -181,7 +181,7 @@ public static class ErrorMessagesPT
     public static string EEEE_ZeroVatRateMissingNature(int position) =>
         $"EEEE_Charge item at position {position}: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. ";
 
-    public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) => 
+    public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) =>
         $"EEEE_Charge item at position {i}: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
 
     /// <summary>
@@ -189,4 +189,24 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_DiscountExceedsArticleAmount(int position, string description, decimal discountAmount, decimal articleAmount) =>
         $"EEEE_Charge item at position {position} ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
+
+    /// <summary>
+    /// Error message for attempting to create multiple voids for the same receipt
+    /// </summary>
+    public static string EEEE_VoidAlreadyExists(string receiptReference) =>
+        $"EEEE_A void for receipt '{receiptReference}' already exists. Multiple voids for the same receipt are not allowed.";
+
+    /// <summary>
+    /// Error message for void receipts that contain charge items
+    /// </summary>
+    public const string EEEE_VoidMustHaveEmptyChargeItems = "EEEE_Void receipts must have empty charge items. Voiding a receipt is only supported with single references and requires no items in the request.";
+
+    /// <summary>
+    /// Error message for void receipts that contain pay items
+    /// </summary>
+    public const string EEEE_VoidMustHaveEmptyPayItems = "EEEE_Void receipts must have empty pay items. Voiding a receipt is only supported with single references and requires no items in the request.";
+
+    public const string EEEE_HandwrittenReceiptsNotSupported = "EEEE_Handwritten receipts must not be used in combination with void/refund or other connections.";
+
+    public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
 }

@@ -260,8 +260,8 @@ public class VoidScenarios : AbstractScenarioTests
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
 
-        // Arrange
-        var copyReceipt = """       
+        // Arrange - Void receipt with charge items should be rejected
+        var voidReceipt = """       
             {
                 "cbReceiptReference": "{{$guid}}",
                 "cbReceiptMoment": "{{$isoTimestamp}}",
@@ -290,10 +290,10 @@ public class VoidScenarios : AbstractScenarioTests
             }
             """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
-        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(voidReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"The given cbPreviousReceiptReference 'FIXED-scenario3' did match with more than one item in the Queue.");
+        voidResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VoidMustHaveEmptyChargeItems);
     }
 
     #endregion

@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
-public abstract class ProcessorPreparation
+public abstract class ProcessorPreparation 
 {
     public static class VATHelpers
     {
@@ -31,8 +31,8 @@ public abstract class ProcessorPreparation
 
         // Perform all validations using the new validator (returns one ValidationResult per error)
         // Now includes receipt moment order validation with the series
-        var validator = new ReceiptValidator(request.ReceiptRequest);
-        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
+        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _readOnlyQueueItemRepository);
+        var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
         {
             IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
             GeneratesSignature = true,

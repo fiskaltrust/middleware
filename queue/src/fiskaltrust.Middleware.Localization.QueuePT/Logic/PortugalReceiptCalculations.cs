@@ -1,11 +1,13 @@
 ﻿using System.Reflection.Metadata;
+using System.Text;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.storage.V0;
 using Org.BouncyCastle.Asn1.Ocsp;
-using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
-using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -20,6 +22,8 @@ public static class InvoiceStatus
 
 public static class PortugalReceiptCalculations
 {
+    public static string GetPrintHash(string hash) => new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+
     private static (string documentType, string uniqueIdentification) ExtractDocumentTypeAndUniqueIdentification(string ftReceiptIdentification)
     {
         if (string.IsNullOrEmpty(ftReceiptIdentification))
@@ -43,8 +47,9 @@ public static class PortugalReceiptCalculations
         return (string.Empty, uniqueIdentification);
     }
 
-    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
+        var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
         var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
@@ -86,8 +91,9 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string CreateVatFreeQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateVatFreeQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
+        var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
         var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
@@ -130,8 +136,9 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string CreateQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
+        var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
         var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();

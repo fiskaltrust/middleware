@@ -6,11 +6,73 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Microsoft.Win32.SafeHandles;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 public class StaticNumeratorStorage
 {
+    public static async Task<NumberSeries> GetNumberSeriesAsync(ReceiptRequest receiptRequest, ftQueuePT queuePT, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+    {
+        var numeratorStorage = await GetStaticNumeratorStorageAsync(queuePT, middlewareQueueItemRepository);
+        var isRefund = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || receiptRequest.IsPartialRefundReceipt();
+        var isHandwritten = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten);
+
+        if (isRefund)
+        {
+            return numeratorStorage.CreditNoteSeries;
+        }
+        else if (isHandwritten)
+        {
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            {
+                return numeratorStorage.HandWrittenFSSeries;
+            }
+            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            {
+                return numeratorStorage.HandWrittenFTSeries;
+            }
+            else
+            {
+                throw new NotSupportedException("HandWritten receipt case is not supported for this type of receipt.");
+            }
+        }
+        else
+        {
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.UnknownReceipt0x0000))
+            {
+                return numeratorStorage.SimplifiedInvoiceSeries;
+            }
+            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceUnknown0x1000) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2B0x1002) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2G0x1003))
+            {
+                return numeratorStorage.InvoiceSeries;
+            }
+            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+            {
+                return numeratorStorage.PaymentSeries;
+            }
+            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+            {
+                if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
+                {
+                    return numeratorStorage.TableChecqueSeries;
+                }
+                else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
+                {
+                    return numeratorStorage.BudgetSeries;
+                }
+                else
+                {
+                    return numeratorStorage.ProFormaSeries;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException("Receipt case is not supported for this type of receipt.");
+            }
+        }
+    }
+
     public static async Task<NumeratorStorage> GetStaticNumeratorStorageAsync(ftQueuePT queuePT, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         await LoadStorageNumbers(queuePT.NumeratorStorage, middlewareQueueItemRepository);

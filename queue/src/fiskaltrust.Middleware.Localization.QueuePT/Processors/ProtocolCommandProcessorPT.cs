@@ -29,10 +29,10 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await ProcessLogMessageAsync(request);
 
-    private static async Task<ProcessCommandResponse> ProcessLogMessageAsync(ProcessCommandRequest request)
+    private async Task<ProcessCommandResponse> ProcessLogMessageAsync(ProcessCommandRequest request)
     {
-        var validator = new ReceiptValidator(request.ReceiptRequest);
-        var validationResults = validator.ValidateAndCollect(new ReceiptValidationContext
+        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, readOnlyQueueItemRepository);
+        var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
         {
             IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
             GeneratesSignature = true,
@@ -58,40 +58,23 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
-        var series = GetSeriesForReceiptRequest(staticNumberStorage, request.ReceiptRequest);
+        var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
-        var receiptResponse = request.ReceiptResponse;
-        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
+        ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
+
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = receiptResponse,
+            ReceiptResponse = request.ReceiptResponse,
         }, series.LastHash);
-        var printHash = GeneratePrintHash(hash);
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+
+        var printHash = PortugalReceiptCalculations.GetPrintHash(hash);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
-        if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
-        }
+        series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
-    private static string GeneratePrintHash(string hash) => new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-
-    private NumberSeries GetSeriesForReceiptRequest(NumeratorStorage staticNumberStorage, ReceiptRequest receiptRequest)
-    {
-        if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
-        {
-            return staticNumberStorage.TableChecqueSeries;
-        }
-        else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
-        {
-            return staticNumberStorage.BudgetSeries;
-        }
-        return staticNumberStorage.ProFormaSeries;
-    }
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
@@ -119,23 +102,23 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         // Get the original receipt request to check its type
         var (originalRequest, originalResponse) = receiptReferences[0];
         var originalReceiptCase = originalRequest.ftReceiptCase.Case();
-        
+
         // Validate that CopyReceipt is only supported for PosReceipt (0x0001) and Invoice types (0x100x)
         var isPosReceipt = originalReceiptCase == ReceiptCase.PointOfSaleReceipt0x0001;
         var isInvoice = originalReceiptCase == ReceiptCase.InvoiceUnknown0x1000 ||
                         originalReceiptCase == ReceiptCase.InvoiceB2C0x1001 ||
                         originalReceiptCase == ReceiptCase.InvoiceB2B0x1002 ||
                         originalReceiptCase == ReceiptCase.InvoiceB2G0x1003;
-        
+
         if (!isPosReceipt && !isInvoice)
         {
             throw new NotSupportedException(ErrorMessagesPT.CopyReceiptNotSupportedForType(originalReceiptCase));
         }
 
         //// Compare the incoming ReceiptRequest with the referenced ReceiptRequest
-        
+
         //var (areEqual, differences) = ReceiptRequestComparer.Compare(originalRequest, request.ReceiptRequest);
-        
+
         //if (!areEqual)
         //{
         //    throw new InvalidOperationException(ErrorMessagesPT.CopyReceiptRequestMismatchDetails(differences));

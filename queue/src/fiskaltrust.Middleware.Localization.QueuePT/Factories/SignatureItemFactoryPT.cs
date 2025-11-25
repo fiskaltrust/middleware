@@ -1,8 +1,13 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 
@@ -140,5 +145,21 @@ public static class SignatureItemFactoryPT
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };
+    }
+
+    public static void AddCustomerSignaturesIfNecessary(ProcessCommandRequest request, ProcessResponse response)
+    {
+        if (request.ReceiptRequest.cbCustomer is null)
+        {
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
+        }
+    }
+
+    public static void AddHandWrittenSignatures(ProcessCommandRequest request, ProcessResponse response)
+    {
+        if (request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) && data.PT is not null && data.PT.Series is not null && data.PT.Number.HasValue)
+        {
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddManualDocumentIdentification(data.PT.Series, data.PT.Number.Value));
+        }
     }
 }

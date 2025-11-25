@@ -24,7 +24,7 @@ public static class AADECertificationExamples
                     Amount = 100,
                     VATRate = 0,
                     VATAmount = 0,
-                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_6017,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_1217,
                     Quantity = 1,
                     Description = "Line item 1"
                 }

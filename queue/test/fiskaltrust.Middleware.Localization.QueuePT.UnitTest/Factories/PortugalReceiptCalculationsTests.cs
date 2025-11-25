@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTests.Factories;
 
@@ -26,6 +27,17 @@ public class PortugalReceiptCalculationsTests
         }
 
         return ((string, string))method.Invoke(null, new object[] { ftReceiptIdentification })!;
+    }
+
+    private static NumberSeries CreateTestNumberSeries(string atcud, string typeCode = "FT", string series = "A")
+    {
+        return new NumberSeries
+        {
+            ATCUD = atcud,
+            TypeCode = typeCode,
+            Series = series,
+            Numerator = 1
+        };
     }
 
     #region ExtractDocumentTypeAndUniqueIdentification Tests
@@ -423,19 +435,19 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "TESTHASH123";
         var issuerTIN = "123456789";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft5B1#NC 20241210001");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
         qrCode.Should().Contain("A:123456789*"); // IssuerTIN
         qrCode.Should().Contain("D:NC*"); // DocumentType extracted from ftReceiptIdentification
         qrCode.Should().Contain("G:NC 20241210001*"); // UniqueIdentificationOfTheDocument - everything after #
-        qrCode.Should().Contain("H:0*"); // ATCUD
+        qrCode.Should().Contain("H:0-1*"); // ATCUD
         qrCode.Should().Contain("Q:TESTHASH123*"); // Hash
         qrCode.Should().Contain("R:9999*"); // SoftwareCertificateNumber
         qrCode.Should().Contain($"S:qiid={response.ftQueueItemID}"); // OtherInformation
@@ -447,19 +459,19 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "INVHASH456";
         var issuerTIN = "987654321";
-        var atcud = "123";
+        var numberSeries = CreateTestNumberSeries("123");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft7A2#FT 20241210002/1");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
         qrCode.Should().Contain("A:987654321*"); // IssuerTIN
         qrCode.Should().Contain("D:FT*"); // DocumentType extracted from ftReceiptIdentification
         qrCode.Should().Contain("G:FT 20241210002/1*"); // UniqueIdentificationOfTheDocument - everything after #
-        qrCode.Should().Contain("H:123*"); // ATCUD
+        qrCode.Should().Contain("H:123-1*"); // ATCUD
         qrCode.Should().Contain("I1:PT*"); // TaxCountryRegion
         qrCode.Should().Contain("Q:INVHASH456*"); // Hash
     }
@@ -470,19 +482,19 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "PROFHASH789";
         var issuerTIN = "555666777";
-        var atcud = "456";
+        var numberSeries = CreateTestNumberSeries("456");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft3X4#PF 20241210003");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
         qrCode.Should().Contain("A:555666777*"); // IssuerTIN
         qrCode.Should().Contain("D:PF*"); // DocumentType extracted from ftReceiptIdentification
         qrCode.Should().Contain("G:PF 20241210003*"); // UniqueIdentificationOfTheDocument - everything after #
-        qrCode.Should().Contain("H:456*"); // ATCUD
+        qrCode.Should().Contain("H:456-1*"); // ATCUD
         qrCode.Should().Contain("I1:PT*"); // TaxCountryRegion
         qrCode.Should().Contain("Q:PROFHASH789*"); // Hash
     }
@@ -493,19 +505,19 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "RGHASH012";
         var issuerTIN = "111222333";
-        var atcud = "789";
+        var numberSeries = CreateTestNumberSeries("789");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft8Y9#RG 20241210004");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
         qrCode.Should().Contain("A:111222333*"); // IssuerTIN
         qrCode.Should().Contain("D:RG*"); // DocumentType extracted from ftReceiptIdentification
         qrCode.Should().Contain("G:RG 20241210004*"); // UniqueIdentificationOfTheDocument - everything after #
-        qrCode.Should().Contain("H:789*"); // ATCUD
+        qrCode.Should().Contain("H:789-1*"); // ATCUD
         qrCode.Should().Contain("I1:0*"); // TaxCountryRegion = "0" for RG documents
         qrCode.Should().Contain("Q:RGHASH012*"); // Hash
     }
@@ -516,19 +528,19 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "SIMPHASH345";
         var issuerTIN = "444555666";
-        var atcud = "012";
+        var numberSeries = CreateTestNumberSeries("012");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft2B3#FS 20241210005/99");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
         qrCode.Should().Contain("A:444555666*"); // IssuerTIN
         qrCode.Should().Contain("D:FS*"); // DocumentType extracted from ftReceiptIdentification
         qrCode.Should().Contain("G:FS 20241210005/99*"); // UniqueIdentificationOfTheDocument - everything after #
-        qrCode.Should().Contain("H:012*"); // ATCUD
+        qrCode.Should().Contain("H:012-1*"); // ATCUD
         qrCode.Should().Contain("I1:PT*"); // TaxCountryRegion
         qrCode.Should().Contain("Q:SIMPHASH345*"); // Hash
     }
@@ -539,12 +551,12 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "COMPLEXHASH";
         var issuerTIN = "777888999";
-        var atcud = "999";
+        var numberSeries = CreateTestNumberSeries("999");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft5B1#queue#system#NC 202412100000001/999");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -558,12 +570,12 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "NOSPACE";
         var issuerTIN = "111111111";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft5B1#FS20241210006");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -577,12 +589,12 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "VATHASH";
         var issuerTIN = "123123123";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse("ft5B1#FT 20241210007");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -600,7 +612,7 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "CUSTHASH";
         var issuerTIN = "999999999";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         request.cbCustomer = new MiddlewareCustomer
         {
@@ -610,7 +622,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FT 20241210008");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -624,13 +636,13 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "ANONHASH";
         var issuerTIN = "888888888";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         request.cbCustomer = null; // No customer provided
         var response = CreateTestReceiptResponse("ft5B1#FS 20241210009");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -644,13 +656,13 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "DATEHASH";
         var issuerTIN = "777777777";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         request.cbReceiptMoment = new DateTime(2024, 12, 25, 10, 15, 30);
         var response = CreateTestReceiptResponse("ft5B1#FT 20241225010");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -673,12 +685,12 @@ public class PortugalReceiptCalculationsTests
         // Arrange
         var qrCodeHash = "EXTRACTHASH";
         var issuerTIN = "123456789";
-        var atcud = "0";
+        var numberSeries = CreateTestNumberSeries("0");
         var request = CreateTestReceiptRequest();
         var response = CreateTestReceiptResponse(ftReceiptIdentification);
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, atcud, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();

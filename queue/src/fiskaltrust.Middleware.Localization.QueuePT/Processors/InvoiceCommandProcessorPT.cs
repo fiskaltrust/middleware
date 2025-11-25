@@ -21,8 +21,6 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
-    private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
 
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
@@ -34,125 +32,49 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        var staticNumberStorage = await StaticNumeratorStorage.GetStaticNumeratorStorageAsync(queuePT, await _readOnlyQueueItemRepository);
-        var isRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
-        var series = isRefund ? staticNumberStorage.CreditNoteSeries : staticNumberStorage.InvoiceSeries;
-        var receiptRequest = request.ReceiptRequest;
-        var receiptResponse = request.ReceiptResponse;
-
-        List<Receipt> receiptReferences = [];
-        if (receiptRequest.cbPreviousReceiptReference is not null)
-        {
-            receiptReferences = request.ReceiptResponse.GetPreviousReceiptReference() ?? [];
-            if (receiptReferences.Count == 0)
-            {
-                throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
-            }
-
-            if (isRefund)
-            {
-                if (receiptReferences.Count > 1)
-                {
-                    throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
-                }
-
-                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-                var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
-                if (hasExistingRefund)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef));
-                    return new ProcessCommandResponse(request.ReceiptResponse, []);
-                }
-
-                // Validate full refund: check if all articles from original invoice are properly refunded
-                var originalRequest = receiptReferences[0].Request;
-                var validationError = await _refundValidator.ValidateFullRefundAsync(
-                    receiptRequest,
-                    originalRequest,
-                    previousReceiptRef);
-                
-                if (validationError != null)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError(validationError);
-                    return new ProcessCommandResponse(request.ReceiptResponse, []);
-                }
-            }
-            else
-            {
-                // Check for partial refund: items have refund flag but receipt case does not
-                if (receiptReferences.Count > 1)
-                {
-                    throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
-                }
-
-                var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-                var originalRequest = receiptReferences[0].Request;
-
-                // Validate partial refund: check for mixed items and quantity/amount limits
-                var validationError = await _refundValidator.ValidatePartialRefundAsync(
-                    receiptRequest,
-                    originalRequest,
-                    previousReceiptRef);
-                
-                if (validationError != null)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError(validationError);
-                    return new ProcessCommandResponse(request.ReceiptResponse, []);
-                }
-            }
-        }
-        else
-        {
-            // If no cbPreviousReceiptReference but items have refund flags, this is invalid
-            if (!isRefund && receiptRequest.cbChargeItems?.Any(item => item.IsRefund()) == true)
-            {
-                request.ReceiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed);
-                return new ProcessCommandResponse(request.ReceiptResponse, []);
-            }
-        }
-
+        var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
-        ReceiptIdentificationHelper.AppendSeriesIdentification(receiptResponse, series);
+        ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
+
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
-            ReceiptRequest = receiptRequest,
-            ReceiptResponse = receiptResponse,
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
         }, series.LastHash);
-        var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
 
-        if (isRefund)
+        var printHash = PortugalReceiptCalculations.GetPrintHash(hash);
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || request.ReceiptRequest.IsPartialRefundReceipt())
         {
-            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, receiptRequest, response.ReceiptResponse);
+            var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
+            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
-
-            if (receiptRequest.cbCustomer is null)
-            {
-                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
-            }
-            series.LastHash = hash;
-            series.LastCbReceiptMoment = receiptRequest.cbReceiptMoment;
-            return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
         else
         {
-            var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, receiptRequest, response.ReceiptResponse);
+            var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            if (receiptRequest.cbPreviousReceiptReference is not null)
+            if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
+                var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
                 response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
             }
-
-            if (receiptRequest.cbCustomer is null)
-            {
-                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
-            }
-
-            series.LastHash = hash;
-            series.LastCbReceiptMoment = receiptRequest.cbReceiptMoment;
-            return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
+
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            SignatureItemFactoryPT.AddHandWrittenSignatures(request, response);
+        }
+        SignatureItemFactoryPT.AddCustomerSignaturesIfNecessary(request, response);
+
+        series.LastHash = hash;
+        if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+        }
+        return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
+
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
@@ -162,4 +84,5 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());
     }
+
 }
