@@ -32,6 +32,14 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            var receiptReference = request.ReceiptResponse.GetRequiredPreviousReceiptReference().First();
+            request.ReceiptResponse.ftReceiptIdentification += $"{receiptReference.Response.ftReceiptIdentification.Split('#').Last()}";
+            // TODO we need to add more signatures
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);

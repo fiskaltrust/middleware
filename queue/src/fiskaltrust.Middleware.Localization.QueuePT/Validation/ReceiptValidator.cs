@@ -127,6 +127,15 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             }
         }
 
+        if(_receiptRequest.Currency != Currency.EUR)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_OnlyEuroCurrencySupported,
+                   "EEEE_OnlyEuroCurrencySupported",
+                   "Currency"
+               ));
+        }
+
         if (_receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && _receiptRequest.cbPreviousReceiptReference is null)
         {
             yield return ValidationResult.Failed(new ValidationError(

@@ -62,18 +62,6 @@ public class RefundValidator
                 return value;
             }
         }
-
-        for (int i = 0; i < refundRequest.cbPayItems.Count; i++)
-        {
-            var refundItem = refundRequest.cbPayItems[i];
-            var originalItem = originalRequest.cbPayItems[i];
-
-            (flowControl, value) = ComparePayItems(originalReceiptReference, refundItem, originalItem);
-            if (!flowControl)
-            {
-                return value;
-            }
-        }
         return null; // Validation passed
     }
 
@@ -351,19 +339,6 @@ public class RefundValidator
             }
         }
 
-        var payItemsAvailable = originalRequest.cbPayItems;
-        foreach(var existingRefund in existingRefunds.SelectMany(x => x.cbPayItems))
-        {
-            var matchingItem = payItemsAvailable.FirstOrDefault(item =>
-                (Math.Abs(item.Amount - Math.Abs(existingRefund.Amount)) < 0.01m) &&
-                item.Description == existingRefund.Description);
-            if(matchingItem != null)
-            {
-                payItemsAvailable.Remove(matchingItem);
-            }
-        }
-
-
         for (int i = 0; i < refundRequest.cbChargeItems.Count; i++)
         {
             var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
@@ -376,23 +351,6 @@ public class RefundValidator
             }
 
             (flowControl, value) = CompareChargeItems(originalReceiptReference, refundRequest.cbChargeItems[i], matchingItem);
-            if (!flowControl)
-            {
-                return value;
-            }
-        }
-
-        for (int i = 0; i < refundRequest.cbPayItems.Count; i++)
-        {
-            var matchingItem = payItemsAvailable.FirstOrDefault(item =>
-                (Math.Abs(item.Amount - Math.Abs(refundRequest.cbPayItems[i].Amount)) < 0.01m) &&
-                item.Description == refundRequest.cbPayItems[i].Description);
-            if (matchingItem == null)
-            {
-                return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
-            }
-
-            (flowControl, value) = ComparePayItems(originalReceiptReference, refundRequest.cbPayItems[i], matchingItem);
             if (!flowControl)
             {
                 return value;

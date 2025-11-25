@@ -462,4 +462,53 @@ public class GeneralScenarios : AbstractScenarioTests
     }
 
     #endregion
+
+    #region Scenario 10: Transactions with foreign currencies should be blocked
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario10_TransactionsWithForeignCurrenciesShouldBeBlocked(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Amount": 55,
+                        "Quantity": 100,
+                        "Description": "Article 1",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 55,
+                        "Description": "Cash"
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456799"
+                },
+                "Currency": "USD"
+            }
+            """;
+        var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        response.ftState.State().Should().Be(State.Error, because: Environment.NewLine + string.Join(Environment.NewLine, response.ftSignatures.Select(x => x.Data)));
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_OnlyEuroCurrencySupported);
+    }
+
+    #endregion
 }

@@ -34,6 +34,14 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            var receiptReference = request.ReceiptResponse.GetRequiredPreviousReceiptReference().First();
+            request.ReceiptResponse.ftReceiptIdentification += $"{receiptReference.Response.ftReceiptIdentification.Split('#').Last()}";
+            // TODO we need to add more signatures
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
@@ -79,6 +87,14 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            var receiptReference = request.ReceiptResponse.GetRequiredPreviousReceiptReference().First();
+            request.ReceiptResponse.ftReceiptIdentification += $"{receiptReference.Response.ftReceiptIdentification.Split('#').Last()}";
+            // TODO we need to add more signatures
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
@@ -108,6 +124,25 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsPT.HasTransportInformation))
+        {
+            var validationResult = ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_TransportationIsNotSupported,
+                   "EEEE_TransportationIsNotSupported",
+                   "ftReceiptCaseFlags"
+               ));
+            request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            var receiptReference = request.ReceiptResponse.GetRequiredPreviousReceiptReference().First();
+            request.ReceiptResponse.ftReceiptIdentification += $"{receiptReference.Response.ftReceiptIdentification.Split('#').Last()}";
+            // TODO we need to add more signatures
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
@@ -128,6 +163,14 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            var receiptReference = request.ReceiptResponse.GetRequiredPreviousReceiptReference().First();
+            request.ReceiptResponse.ftReceiptIdentification += $"{receiptReference.Response.ftReceiptIdentification.Split('#').Last()}";
+            // TODO we need to add more signatures
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
         series.Numerator++;
         ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);

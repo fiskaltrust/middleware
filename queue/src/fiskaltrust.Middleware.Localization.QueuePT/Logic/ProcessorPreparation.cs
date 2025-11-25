@@ -19,7 +19,6 @@ public abstract class ProcessorPreparation
 
     public async Task<ProcessCommandResponse> WithPreparations(ProcessCommandRequest request, Func<Task<ProcessCommandResponse>> process)
     {
-
         foreach (var chargeItem in request?.ReceiptRequest.cbChargeItems ?? Enumerable.Empty<ChargeItem>())
         {
             if (!chargeItem.VATAmount.HasValue)

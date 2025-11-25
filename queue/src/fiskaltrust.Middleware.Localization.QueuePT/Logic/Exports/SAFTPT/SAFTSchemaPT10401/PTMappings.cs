@@ -6,45 +6,6 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTS
 
 public static class PTMappings
 {
-    public static string GetWorkType(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
-        {
-            if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
-            {
-                return "CM";
-            }
-            else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
-            {
-                return "OR";
-            }
-            return "PF";
-        }
-
-        var type = receiptRequest.ftReceiptCase.Case() switch
-        {
-            _ => "PF"
-        };
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            return type + "M";
-        }
-        return type;
-    }
-
-    public static string GetPaymentType(ReceiptRequest receiptRequest)
-    {
-        var type = receiptRequest.ftReceiptCase.Case() switch
-        {
-            _ => "RG"
-        };
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            return type + "M";
-        }
-        return type;
-    }
-
     public static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
@@ -52,10 +13,6 @@ public static class PTMappings
             // Credit notes are not supported to be handwritten?
             return "NC";
         }
-
-
-
-
 
         var type = receiptRequest.ftReceiptCase.Case() switch
         {
@@ -121,13 +78,13 @@ public static class PTMappings
         ChargeItemCaseTypeOfService.Delivery => "P", // Delivery (supply of goods) / Products
         ChargeItemCaseTypeOfService.OtherService => "S", // Other service (supply of service) / Services
         ChargeItemCaseTypeOfService.Tip => "S", // Tip / Services
-        ChargeItemCaseTypeOfService.Voucher => "?", // Voucher / ???
-        ChargeItemCaseTypeOfService.CatalogService => "S", // Catalog Service / Services
-        ChargeItemCaseTypeOfService.NotOwnSales => "?", // Not own sales Agency busines / ???
-        ChargeItemCaseTypeOfService.OwnConsumption => "?", // Own Consumption / ???
-        ChargeItemCaseTypeOfService.Grant => "?", // Grant / ???
-        ChargeItemCaseTypeOfService.Receivable => "?", // Receivable / ???
-        ChargeItemCaseTypeOfService.CashTransfer => "?", // Receivable / ???
+        ChargeItemCaseTypeOfService.Voucher => "O", // Voucher / ???
+        ChargeItemCaseTypeOfService.CatalogService => "O", // Catalog Service / Services
+        ChargeItemCaseTypeOfService.NotOwnSales => "O", // Not own sales Agency busines / ???
+        ChargeItemCaseTypeOfService.OwnConsumption => "O", // Own Consumption / ???
+        ChargeItemCaseTypeOfService.Grant => "O", // Grant / ???
+        ChargeItemCaseTypeOfService.Receivable => "O", // Receivable / ???
+        ChargeItemCaseTypeOfService.CashTransfer => "O", // Receivable / ???
         _ => throw new NotImplementedException($"The given ChargeItemCase {chargeItem.ftChargeItemCase} type is not supported"),
     };
 }

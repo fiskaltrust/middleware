@@ -218,4 +218,8 @@ public static class ErrorMessagesPT
     public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
 
     public static string EEEE_PaymentTransferRequiresAccountReceivableItem = "EEEE_PaymentTransfer pay items require at least one accounts receivable charge item in the receipt.";
+
+    public static string EEEE_OnlyEuroCurrencySupported = "EEEE_Only Euro (EUR) currency is supported for receipts in Portugal.";
+
+    public static string EEEE_TransportationIsNotSupported = "EEEE_TransportationIsNotSupported with Flag TransportInformation is not supported in Portugal.";
 }
