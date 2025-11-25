@@ -540,10 +540,11 @@ public class SaftExporter
     private static string GetItemTypeFromReceipt((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var type = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last().Split(" ").First();
-        if (receipt.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            return type + "M";
-        }
+        // Let's check if we need this
+        //if (receipt.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && includeHandwritten)
+        //{
+        //    return type + "M";
+        //}
         return type;
     }
 
@@ -557,7 +558,6 @@ public class SaftExporter
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
         atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
         var netAmount = grossAmount - taxable;
-        var invoiceType = PTMappings.GetInvoiceType(receiptRequest);
         if (hashSignature == null || atcudSignature == null)
         {
             return null;
@@ -659,7 +659,6 @@ public class SaftExporter
             atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
         }
         var netAmount = grossAmount - taxable;
-        var invoiceType = PTMappings.GetInvoiceType(receiptRequest);
         var customer = GetCustomerData(receiptRequest);
 
         // Convert UTC time to Portugal local time
@@ -732,7 +731,7 @@ public class SaftExporter
 
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
         {
-            invoice.HashControl = invoice.HashControl + "-" + PTMappings.GetInvoiceType(receiptRequest) + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
+            invoice.HashControl = invoice.HashControl + "-" + GetItemTypeFromReceipt((receiptRequest, receiptResponse)) + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
         }
         //if (lines.Any(x => x.SettlementAmount.HasValue))
         //{
@@ -833,7 +832,7 @@ public class SaftExporter
             Tax = tax
         };
 
-        if (PTMappings.GetInvoiceType(receiptRequest) == "NC")
+        if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "NC")
         {
             var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
             line.References = new References
@@ -848,7 +847,7 @@ public class SaftExporter
             line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
         }
 
-        if (PTMappings.GetInvoiceType(receiptRequest) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
+        if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
         {
             var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
             line.OrderReferences = new OrderReferences
@@ -863,7 +862,7 @@ public class SaftExporter
         }
 
 
-        if (PTMappings.GetInvoiceType(receiptRequest) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
+        if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
         {
             var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
             line.OrderReferences = new OrderReferences

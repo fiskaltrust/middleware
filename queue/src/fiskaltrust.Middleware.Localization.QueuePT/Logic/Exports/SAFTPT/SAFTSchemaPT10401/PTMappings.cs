@@ -6,30 +6,30 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTS
 
 public static class PTMappings
 {
-    public static string GetInvoiceType(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-        {
-            // Credit notes are not supported to be handwritten?
-            return "NC";
-        }
+    //public static string GetInvoiceType(ReceiptRequest receiptRequest)
+    //{
+    //    if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+    //    {
+    //        // Credit notes are not supported to be handwritten?
+    //        return "NC";
+    //    }
 
-        var type = receiptRequest.ftReceiptCase.Case() switch
-        {
-            ReceiptCase.UnknownReceipt0x0000 => "FS",
-            ReceiptCase.PointOfSaleReceipt0x0001 => "FS",
-            ReceiptCase.PaymentTransfer0x0002 => "FS",
-            ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
-            ReceiptCase.ECommerce0x0004 => "FS",
-            ReceiptCase.DeliveryNote0x0005 => "FS", // no invoicetype.. workign document?
-            ReceiptCase.InvoiceUnknown0x1000 => "FT",
-            ReceiptCase.InvoiceB2C0x1001 => "FT",
-            ReceiptCase.InvoiceB2B0x1002 => "FT",
-            ReceiptCase.InvoiceB2G0x1003 => "FT",
-            _ => "FS"
-        };
-        return type;
-    }
+    //    var type = receiptRequest.ftReceiptCase.Case() switch
+    //    {
+    //        ReceiptCase.UnknownReceipt0x0000 => "FS",
+    //        ReceiptCase.PointOfSaleReceipt0x0001 => "FS",
+    //        ReceiptCase.PaymentTransfer0x0002 => "FS",
+    //        ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
+    //        ReceiptCase.ECommerce0x0004 => "FS",
+    //        ReceiptCase.DeliveryNote0x0005 => "FS", // no invoicetype.. workign document?
+    //        ReceiptCase.InvoiceUnknown0x1000 => "FT",
+    //        ReceiptCase.InvoiceB2C0x1001 => "FT",
+    //        ReceiptCase.InvoiceB2B0x1002 => "FT",
+    //        ReceiptCase.InvoiceB2G0x1003 => "FT",
+    //        _ => "FS"
+    //    };
+    //    return type;
+    //}
 
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
     public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
