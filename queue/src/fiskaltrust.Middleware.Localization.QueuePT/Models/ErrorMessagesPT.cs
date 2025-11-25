@@ -210,4 +210,6 @@ public static class ErrorMessagesPT
     public const string EEEE_HandwrittenReceiptsNotSupported = "EEEE_Handwritten receipts must not be used in combination with void/refund or other connections.";
 
     public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
+
+    public static string EEEE_PaymentTransferRequiresAccountReceivableItem = "EEEE_PaymentTransfer pay items require at least one accounts receivable charge item in the receipt.";
 }

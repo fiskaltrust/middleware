@@ -77,7 +77,7 @@ public class RefundValidator
         return null; // Validation passed
     }
 
-    private static (bool flowControl, string? value) CompareReceiptRequest(string originalReceiptReference, ReceiptRequest refundItem, ReceiptRequest originalItem)
+    public static (bool flowControl, string? value) CompareReceiptRequest(string originalReceiptReference, ReceiptRequest refundItem, ReceiptRequest originalItem)
     {
         // We ignore cbTerminalID cause it can be different
         // We ignore cbReceiptReference cause it will be different
@@ -144,7 +144,7 @@ public class RefundValidator
         return (flowControl: true, value: null);
     }
 
-    private static (bool flowControl, string? value) CompareChargeItems(string originalReceiptReference, ChargeItem refundItem, ChargeItem originalItem)
+    public static (bool flowControl, string? value) CompareChargeItems(string originalReceiptReference, ChargeItem refundItem, ChargeItem originalItem)
     {
         if (Math.Abs(originalItem.Quantity - Math.Abs(refundItem.Quantity)) > 0.001m)
         {
@@ -247,7 +247,7 @@ public class RefundValidator
         return (flowControl: true, value: null);
     }
 
-    private static (bool flowControl, string? value) ComparePayItems(string originalReceiptReference, PayItem refundItem, PayItem originalItem)
+    public static (bool flowControl, string? value) ComparePayItems(string originalReceiptReference, PayItem refundItem, PayItem originalItem)
     {
         if (Math.Abs(originalItem.Quantity - Math.Abs(refundItem.Quantity)) > 0.001m)
         {

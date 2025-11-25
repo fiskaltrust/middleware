@@ -94,6 +94,11 @@ public static class ChargeItemValidations
     /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_NetAmountLimit(ReceiptRequest request)
     {
+        if (!request.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+        {
+            yield break;
+        }
+
         if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
         {
             yield break;
@@ -167,7 +172,8 @@ public static class ChargeItemValidations
             ChargeItemCaseTypeOfService.Delivery,
             ChargeItemCaseTypeOfService.OtherService,
             ChargeItemCaseTypeOfService.Tip,
-            ChargeItemCaseTypeOfService.CatalogService
+            ChargeItemCaseTypeOfService.CatalogService,
+            ChargeItemCaseTypeOfService.Receivable
         };
 
         for (var i = 0; i < request.cbChargeItems.Count; i++)
@@ -319,6 +325,10 @@ public static class ChargeItemValidations
         for (var i = 0; i < request.cbChargeItems.Count; i++)
         {
             var chargeItem = request.cbChargeItems[i];
+            if(chargeItem.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Receivable)
+            {
+                continue;
+            }
 
             // Check if VAT rate is 0
             if (Math.Abs(chargeItem.VATRate) < 0.001m)

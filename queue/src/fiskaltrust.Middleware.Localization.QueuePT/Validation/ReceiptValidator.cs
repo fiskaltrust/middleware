@@ -174,6 +174,86 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
             }
         }
+
+        if (_receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+        {
+            yield return await ValidatePaymentTransferForInvoiceAsync(_receiptRequest, _receiptResponse);
+        }
+    }
+
+    private async Task<ValidationResult> ValidatePaymentTransferForInvoiceAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    {
+        if (_receiptRequest.cbPreviousReceiptReference is null)
+        {
+            return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
+        }
+
+        var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
+        if (receiptReferences.Count > 1)
+        {
+            throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+        }
+
+
+        if (_receiptRequest.cbChargeItems == null || !_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+        {
+            return ValidationResult.Failed(new ValidationError(
+               ErrorMessagesPT.EEEE_PaymentTransferRequiresAccountReceivableItem,
+               "EEEE_PaymentTransferRequiresAccountReceivableItem",
+               "cbChargeItems"
+           ));
+        }
+
+        var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
+        var hasExistingRefund = await _receiptReferenceProvider.HasExistingPaymentTransferAsync(previousReceiptRef);
+        if (hasExistingRefund)
+        {
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef),
+                "EEEE_RefundAlreadyExists",
+                "cbPreviousReceiptReference"
+            ));
+        }
+
+        // Validate full refund: check if all articles from original invoice are properly refunded
+        var originalRequest = receiptReferences[0].Request;
+        var validationError = await ValidatePaymentTransferAsync(
+            receiptRequest,
+            originalRequest,
+            previousReceiptRef);
+
+        if (validationError != null)
+        {
+            return ValidationResult.Failed(validationError);
+        }
+        else
+        {
+            return ValidationResult.Success();
+        }
+    }
+
+    public async Task<string?> ValidatePaymentTransferAsync(
+     ReceiptRequest refundRequest,
+     ReceiptRequest originalRequest,
+     string originalReceiptReference)
+    {
+        if(originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceUnknown0x1000 &&
+           originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2C0x1001 &&
+           originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2B0x1002 &&
+           originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2G0x1003)
+        {
+            return $"The original receipt '{originalReceiptReference}' is not a valid receipt for payment transfer. Only Invoices are allowed.";
+        }
+
+        if (originalRequest.cbPayItems.Where(x => x.ftPayItemCase.Case() == PayItemCase.AccountsReceivable).Sum(x => x.Amount) != refundRequest.cbPayItems.Sum(x => x.Amount))
+        {
+            return $"The total amount of pay items in the payment transfer receipt must match the total amount of pay items in the original invoice receipt '{originalReceiptReference}'.";
+        }
+        return null; // Validation passed
     }
 
     private async Task<ValidationResult> ValidateRefundAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
