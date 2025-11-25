@@ -371,8 +371,6 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]

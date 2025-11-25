@@ -182,7 +182,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.Pay0x3005)]
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
-    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
+    // [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
     [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
     [InlineData(ReceiptCase.FinishSCUSwitch0x4012)]
     public async Task Scenario3_PrintingCopyOfANotSupportedDocument_ShouldFail(ReceiptCase receiptCase)

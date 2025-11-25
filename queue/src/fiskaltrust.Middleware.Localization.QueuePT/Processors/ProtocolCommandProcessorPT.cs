@@ -87,6 +87,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
                         originalReceiptCase == ReceiptCase.InvoiceB2G0x1003 ||
                         originalReceiptCase == ReceiptCase.UnknownReceipt0x0000 ||
                         originalReceiptCase == ReceiptCase.DeliveryNote0x0005 ||
+                        originalReceiptCase == ReceiptCase.PaymentTransfer0x0002 ||
                         originalReceiptCase == (ReceiptCase) 0x0006;
 
         if (!isPosReceipt && !isInvoice)
