@@ -77,8 +77,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
-
-
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
@@ -108,7 +106,45 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
+    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
+    {
+        var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
+        series.Numerator++;
+        ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
+
+        var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        }, series.LastHash);
+
+        var printHash = PortugalReceiptCalculations.GetPrintHash(hash);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
+        AddSignatures(series, response, hash, printHash, qrCode);
+        series.LastHash = hash;
+        series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+        return new ProcessCommandResponse(response.ReceiptResponse, []);
+    });
+
+    public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
+    {
+        var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
+        series.Numerator++;
+        ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
+
+        var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        }, series.LastHash);
+
+        var printHash = PortugalReceiptCalculations.GetPrintHash(hash);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
+        AddSignatures(series, response, hash, printHash, qrCode);
+        series.LastHash = hash;
+        series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+        return new ProcessCommandResponse(response.ReceiptResponse, []);
+    });
 
     private static void AddOrigemReferenceSignature(ProcessResponse response, List<Receipt> receiptReferences)
     {

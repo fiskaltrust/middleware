@@ -56,25 +56,7 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
-    {
-        var series = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, queuePT, await _readOnlyQueueItemRepository);
-        series.Numerator++;
-        ReceiptIdentificationHelper.AppendSeriesIdentification(request.ReceiptResponse, series);
-
-        var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        }, series.LastHash);
-
-        var printHash = PortugalReceiptCalculations.GetPrintHash(hash);
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
-        AddSignatures(series, response, hash, printHash, qrCode);
-        series.LastHash = hash;
-        series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
-        return new ProcessCommandResponse(response.ReceiptResponse, []);
-    });
+    public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 

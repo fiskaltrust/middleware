@@ -32,12 +32,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario1_TransactionWithoutUser_ShouldFail(ReceiptCase receiptCase)
     {
@@ -77,12 +77,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario2_TransactionWithoutUserWithShortLength_ShouldFail(ReceiptCase receiptCase)
     {
@@ -123,12 +123,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario3_TransactionWithShortArticleDescription_ShouldFail(ReceiptCase receiptCase)
     {
@@ -169,12 +169,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario4_TransactionWithNegativeAmount_ShouldFail(ReceiptCase receiptCase)
     {
@@ -215,12 +215,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario5_TransactionWithNegativeQuantity_ShouldFail(ReceiptCase receiptCase)
     {
@@ -262,12 +262,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario6_TransactionWithIllegalVATRate_ShouldFail(ReceiptCase receiptCase)
     {
@@ -304,18 +304,17 @@ public class GeneralScenarios : AbstractScenarioTests
 
     #region Scenario 7: Transactions with discount that exceed the total of the lineitem should fail
 
-
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario7_TransactionWithDiscountExceedingTotal_ShouldFail(ReceiptCase receiptCase)
     {
@@ -372,12 +371,12 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
-    // [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData((ReceiptCase) 0x0006)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task Scenario8_TransactionWithMismatchForChargeItems(ReceiptCase receiptCase)
     {

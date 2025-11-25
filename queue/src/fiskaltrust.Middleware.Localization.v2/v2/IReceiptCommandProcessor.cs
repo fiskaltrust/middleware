@@ -10,4 +10,5 @@ public interface IReceiptCommandProcessor
     public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request);
+    public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest processCommandRequest);
 }

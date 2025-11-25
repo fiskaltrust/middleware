@@ -164,7 +164,7 @@ public class SAFTTests
     }
 
     [Fact]
-    public void AuditFile_With_ChargeItems_WithSameName_ButDifferentPrices_ShouldCreate_TwoProducts()
+    public void AuditFile_With_ChargeItems_WithSameName_ButDifferentPrices_ShouldCreate_OneProducts()
     {
         var chargeItems = new List<ChargeItem>
         {
@@ -261,6 +261,6 @@ public class SAFTTests
             request = JsonSerializer.Serialize(receiptRequest),
             response = JsonSerializer.Serialize(receiptResponse)
         }], 0);
-        data.MasterFiles.Product!.Should().HaveCount(2);
+        data.MasterFiles.Product!.Should().HaveCount(1);
     }
 }

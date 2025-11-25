@@ -69,6 +69,7 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => await _receiptCommandProcessor.PointOfSaleReceiptWithoutObligation0x0003Async(processCommandRequest),
                     ReceiptCase.ECommerce0x0004 => await _receiptCommandProcessor.ECommerce0x0004Async(processCommandRequest),
                     ReceiptCase.DeliveryNote0x0005 => await _receiptCommandProcessor.DeliveryNote0x0005Async(processCommandRequest),
+                    (ReceiptCase) 0x0006 /* Table Check, replace with enum */ => await _receiptCommandProcessor.TableCheck0x0006Async(processCommandRequest),
                     _ => null
                 };
             }

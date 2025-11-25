@@ -51,13 +51,9 @@ public class StaticNumeratorStorage
             {
                 return numeratorStorage.PaymentSeries;
             }
-            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
             {
-                if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0001_0000_0000) == (ReceiptCase) 0x0000_0001_0000_0000)
-                {
-                    return numeratorStorage.TableChecqueSeries;
-                }
-                else if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
+                if ((receiptRequest.ftReceiptCase & (ReceiptCase) 0x0000_0002_0000_0000) == (ReceiptCase) 0x0000_0002_0000_0000)
                 {
                     return numeratorStorage.BudgetSeries;
                 }
@@ -65,6 +61,10 @@ public class StaticNumeratorStorage
                 {
                     return numeratorStorage.ProFormaSeries;
                 }
+            }
+            else if (receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006))
+            {
+                return numeratorStorage.TableChecqueSeries;
             }
             else
             {

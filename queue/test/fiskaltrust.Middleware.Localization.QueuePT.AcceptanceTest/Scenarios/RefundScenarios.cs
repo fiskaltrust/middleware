@@ -71,8 +71,6 @@ public class RefundScenarios : AbstractScenarioTests
 
         response.ftSignatures[0].Data.Should().EndWith("Validation error [EEEE_PreviousReceiptReference]: EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt. (Field: cbPreviousReceiptReference, Index: )");
         // also check the signaturedata if the returned error is included
-        
-
     }
 
     #endregion

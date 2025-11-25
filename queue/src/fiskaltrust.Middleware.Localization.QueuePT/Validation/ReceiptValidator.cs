@@ -136,16 +136,6 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
         }
 
-
-        if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && _receiptRequest.cbPreviousReceiptReference is null)
-        {
-            yield return ValidationResult.Failed(new ValidationError(
-                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
-               ));
-        }
-
         if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             yield return await ValidateRefundAsync(_receiptRequest, _receiptResponse);
@@ -188,6 +178,15 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
     private async Task<ValidationResult> ValidateRefundAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
+        if (_receiptRequest.cbPreviousReceiptReference is null)
+        {
+            return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
+        }
+
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
         if (receiptReferences.Count > 1)
         {
@@ -224,6 +223,15 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
     private async Task<ValidationResult> ValidateVoidAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
+        if (_receiptRequest.cbPreviousReceiptReference is null)
+        {
+            return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
+        }
+
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
         if (receiptReferences.Count > 1)
         {
@@ -260,9 +268,13 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
     private async Task<ValidationResult> ValidatePartialRefundAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
-        if( receiptRequest.cbPreviousReceiptReference is null)
+        if (_receiptRequest.cbPreviousReceiptReference is null)
         {
-            return ValidationResult.Failed(ErrorMessagesPT.EEEE_PreviousReceiptReference);
+            return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
         }
 
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();

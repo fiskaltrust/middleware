@@ -62,4 +62,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
         
         return await GRFallBackOperations.NotSupported(request, "DeliveryNote");
     }
+
+    // TODO this should be 8.6
+    public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "ECommerce");
 }
