@@ -46,17 +46,28 @@ public static class PTMappings
         ChargeItemCase c => throw new NotImplementedException($"The given tax scheme 0x{c:X} is not supported in Portugal"),
     };
 
-    public static string GetTaxExemptionCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
+    public static string GetTaxExemptionCode(ChargeItem chargeItem)
     {
-        ChargeItemCaseNatureOfVatPT.Group0x30 => "M06",
-        _ => "M16",
-    };
+        if (Constants.TaxExemptionDictionary.TaxExemptionTable.TryGetValue(
+            Enum.Parse<Constants.TaxExemptionCode>(GetTaxExemptionCode(chargeItem)),
+            out var taxExemptionInfo))
+        {
+            return taxExemptionInfo.Code;
+        }
+        return "";
+    }
 
-    public static string GetTaxExemptionReason(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
+    public static string GetTaxExemptionReason(ChargeItem chargeItem)
     {
-        ChargeItemCaseNatureOfVatPT.Group0x30 => "Isento artigo 15.º do CIVA",
-        _ => "Isento artigo 14.º do RITI",
-    };
+        if(Constants.TaxExemptionDictionary.TaxExemptionTable.TryGetValue(
+            Enum.Parse<Constants.TaxExemptionCode>(GetTaxExemptionCode(chargeItem)),
+            out var taxExemptionInfo))
+        {
+            return taxExemptionInfo.Mention;
+        }
+        return "";
+
+    }
 
     public static string GetPaymentMecahnism(PayItem payItem) => payItem.ftPayItemCase.Case() switch
     {
