@@ -4,19 +4,27 @@ using fiskaltrust.storage.V0;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
+using System.Net.Mime;
+using System.IO.Pipelines;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
 public class AbstractScenarioTests
 {
     private readonly Func<string, Task<string>> _signProcessor;
+    private readonly Func<string, Task<(ContentType contentType, PipeReader reader)>> _journalProcessor;
     private readonly Guid _queueId;
     private readonly Guid _cashBoxId;
 
-    public AbstractScenarioTests()
+    public AbstractScenarioTests(): this(Guid.NewGuid(), Guid.NewGuid())
     {
-        _queueId = Guid.NewGuid();
-        _cashBoxId = Guid.NewGuid();
+        
+    }
+
+    public AbstractScenarioTests(Guid cashBoxId, Guid queueId)
+    {
+        _queueId = queueId;
+        _cashBoxId = cashBoxId;
 
         var mockSscd = new MockPTSSCD();
 
@@ -52,6 +60,31 @@ public class AbstractScenarioTests
         var storageProvider = new InMemoryLocalizationStorageProvider(_queueId, configuration, loggerFactory);
         var bootstrapper = new QueuePTBootstrapper(_queueId, loggerFactory, configuration, mockSscd, storageProvider);
         _signProcessor = bootstrapper.RegisterForSign();
+        _journalProcessor = bootstrapper.RegisterForJournal();
+    }
+
+    public async Task<byte[]> ExecuteJournal(JournalRequest journalRequest)
+    {
+        var (contentType, reader) = await _journalProcessor(JsonSerializer.Serialize(journalRequest));
+        using var ms = new MemoryStream();
+        while (true)
+        {
+            var result = await reader.ReadAsync();
+            var buffer = result.Buffer;
+            if (buffer.Length > 0)
+            {
+                foreach (var segment in buffer)
+                {
+                    await ms.WriteAsync(segment);
+                }
+            }
+            reader.AdvanceTo(buffer.End);
+            if (result.IsCompleted)
+            {
+                break;
+            }
+        }
+        return ms.ToArray();
     }
 
     public async Task<(ReceiptRequest request, ReceiptResponse response)> ProcessReceiptAsync(string rawJson, long? ftReceiptCase = null)

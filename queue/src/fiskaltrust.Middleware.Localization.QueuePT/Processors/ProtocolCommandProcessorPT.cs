@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -60,18 +61,22 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
     {
-        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
-        if (receiptReferences.Count == 0)
+        if (request.ReceiptRequest.cbPreviousReceiptReference is null)
         {
-            throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
-        }
-        if (receiptReferences.Count > 1)
-        {
-            throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+            var validationResult = ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PreviousReceiptReference,
+                   "EEEE_PreviousReceiptReference",
+                   "cbPreviousReceiptReference"
+               ));
+            request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
+        var receiptReferences = request.ReceiptResponse.GetRequiredPreviousReceiptReference();
+
         // Get the original receipt request to check its type
-        var (originalRequest, originalResponse) = receiptReferences[0];
+        var originalRequest = receiptReferences[0].Request;
+        var originalResponse = receiptReferences[0].Response;
         var originalReceiptCase = originalRequest.ftReceiptCase.Case();
 
         // Validate that CopyReceipt is only supported for PosReceipt (0x0001) and Invoice types (0x100x)
