@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 using System.Net.Mime;
 using System.IO.Pipelines;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
@@ -16,9 +17,9 @@ public class AbstractScenarioTests
     private readonly Guid _queueId;
     private readonly Guid _cashBoxId;
 
-    public AbstractScenarioTests(): this(Guid.NewGuid(), Guid.NewGuid())
+    public AbstractScenarioTests() : this(Guid.NewGuid(), Guid.NewGuid())
     {
-        
+
     }
 
     public AbstractScenarioTests(Guid cashBoxId, Guid queueId)
@@ -35,7 +36,8 @@ public class AbstractScenarioTests
                 {
                     ftCashBoxId = _cashBoxId,
                     TimeStamp = DateTime.UtcNow.Ticks
-                }) },
+                }) 
+            },
             { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue>
             {
                 new ftQueue
@@ -44,16 +46,31 @@ public class AbstractScenarioTests
                     ftCashBoxId = _cashBoxId,
                     StartMoment = DateTime.UtcNow
                 }
-            }) },
+            })
+            },
             { "init_ftQueuePT", JsonSerializer.Serialize(new List<ftQueuePT>
             {
                 new ftQueuePT
                 {
                     ftQueuePTId = _queueId,
-                    IssuerTIN = "123456789"
+                    IssuerTIN = "980833310"
                 }
-            }) },
-            { "init_ftSignaturCreationUnitPT", JsonSerializer.Serialize(new List<ftSignaturCreationUnitPT>()) }
+            })},
+            { "init_ftSignaturCreationUnitPT", JsonSerializer.Serialize(new List<ftSignaturCreationUnitPT>()) },
+            { "init_masterData", JsonSerializer.Serialize(new MasterDataConfiguration
+            {
+                Account = new AccountMasterData
+                {
+                    AccountId = Guid.NewGuid(),
+                    AccountName = "FISKALTRUST CONSULTING GMBH - SUCURSAL EM",
+                    VatId = "980833310",
+                    Street = "AV DA REPUBLICA N 35 4 ANDAR",
+                    Zip = "1050-189",
+                    City = "Lisboa",
+                    Country = "PT",
+                    TaxId = "980833310"
+                }
+            })}
         };
 
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
