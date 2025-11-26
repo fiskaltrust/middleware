@@ -1,26 +1,27 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Text;
+using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
+using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
-using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Xunit;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
-using System.Text.Json;
-using fiskaltrust.Middleware.Localization.v2.Models;
-using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
 using FluentAssertions.Execution;
+using Microsoft.Extensions.Logging;
+using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
@@ -245,7 +246,7 @@ public class FullScenarios : AbstractScenarioTests
                   "Description": "Line item 2",
                   "Amount": 50,
                   "VATRate": 0,
-                  "ftChargeItemCase": 5788286605450035224,
+                  "ftChargeItemCase": 5788286605450024472,  
                   "Position": 2
                 },
                 {
@@ -288,6 +289,8 @@ public class FullScenarios : AbstractScenarioTests
               }
             }
             """;
+
+        // 5054200000001618
         var (receipt_5_6_Request, receipt_5_6_Response) = await ProcessReceiptAsync(receipt_5_6);
         receipt_5_6_Response.ftState.State().Should().Be(State.Success);
         receipt_5_6_Response.ftReceiptIdentification.Should().Be("ft5#FT ft2025b814/2");
@@ -623,7 +626,8 @@ public class FullScenarios : AbstractScenarioTests
                 To = DateTime.Parse("2025-12-31T00:00:00Z").Ticks,
                 ftJournalType = (JournalType) 0x5054_2000_0000_0001,
             });
-            File.WriteAllBytes("C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-18\\phase1\\SAFT_fullscenario.xml", xmlData);
+            var data = Encoding.GetEncoding(1252).GetString(xmlData);
+            File.WriteAllBytes("C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-18\\phase1\\SAFT_fullscenario.xml", Encoding.GetEncoding(1252).GetBytes(data));
         }
         catch (Exception ex)
         {
@@ -836,7 +840,7 @@ public class FullScenarios : AbstractScenarioTests
                   "Description": "Line item 2",
                   "Amount": 10,
                   "VATRate": 0,
-                  "ftChargeItemCase": 5788286605450035224
+                  "ftChargeItemCase": 5788286605450024472 
                 },
                 {
                   "Quantity": 1,
@@ -857,7 +861,7 @@ public class FullScenarios : AbstractScenarioTests
                   "Description": "Line item 5",
                   "Amount": 10,
                   "VATRate": 0,
-                  "ftChargeItemCase": 5788286605450031128
+                  "ftChargeItemCase": 5788286605450020376 
                 }
               ],
               "cbPayItems": [
@@ -882,6 +886,8 @@ public class FullScenarios : AbstractScenarioTests
               }
             }
             """;
+
+
         var (receipt_13_Request, receipt_13_Response) = await ProcessReceiptAsync(receipt_13);
         receipt_13_Response.ftState.State().Should().Be(State.Success);
         receipt_13_Response.ftReceiptIdentification.Should().Be("ft5#FT ft2025b814/1");
@@ -1339,7 +1345,7 @@ public class FullScenarios : AbstractScenarioTests
             To = DateTime.Parse("2025-12-31T00:00:00Z").Ticks,
             ftJournalType = (JournalType) 0x5054_2000_0000_0001,
         });
-
-        File.WriteAllBytes("C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-18\\phase2\\SAFT_fullscenario.xml", xmlData);
+        var data = Encoding.GetEncoding(1252).GetString(xmlData);
+        File.WriteAllBytes("C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-18\\phase2\\SAFT_fullscenario.xml", Encoding.GetEncoding(1252).GetBytes(data));
     }
 }

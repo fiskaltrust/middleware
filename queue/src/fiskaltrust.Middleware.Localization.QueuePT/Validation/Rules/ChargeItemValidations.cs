@@ -315,13 +315,6 @@ public static class ChargeItemValidations
             yield break;
         }
 
-        // Map nature codes to their corresponding tax exemption codes
-        var natureToExemptionMap = new Dictionary<ChargeItemCaseNatureOfVatPT, Constants.TaxExemptionCode>
-        {
-            { ChargeItemCaseNatureOfVatPT.Group0x30, Constants.TaxExemptionCode.M06 },
-            { ChargeItemCaseNatureOfVatPT.Group0x40, Constants.TaxExemptionCode.M16 }
-        };
-
         for (var i = 0; i < request.cbChargeItems.Count; i++)
         {
             var chargeItem = request.cbChargeItems[i];
@@ -349,27 +342,24 @@ public static class ChargeItemValidations
                     .WithContext("NatureOfVat", natureOfVat.ToString())
                     .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
                 }
-                else if (natureToExemptionMap.TryGetValue(natureOfVat, out var exemptionCode))
+                else
                 {
-                    // Valid nature is specified, optionally add exemption info to context for logging
-                    // This is just for informational purposes and doesn't fail validation
-                    if (Constants.TaxExemptionDictionary.TaxExemptionTable.TryGetValue(exemptionCode, out var exemptionInfo))
+                    var exemptionCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
+                    if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) exemptionCode))
                     {
-                        // Validation passes - exemption is properly specified
-                        // You could log this information if needed
                     }
                     else
                     {
                         yield return ValidationResult.Failed(new ValidationError(
-                            ErrorMessagesPT.EEEE_UnknownTaxExemptionCode(i, exemptionCode),
-                            "EEEE_UnknownTaxExemptionCode",
-                            "cbChargeItems.ftChargeItemCase",
-                            i
-                        )
-                        .WithContext("VATRate", chargeItem.VATRate)
-                        .WithContext("NatureOfVat", natureOfVat.ToString())
-                        .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}")
-                        .WithContext("ExemptionCode", exemptionCode.ToString()));
+                              ErrorMessagesPT.EEEE_UnknownTaxExemptionCode(i, (Constants.TaxExemptionCode) exemptionCode),
+                              "EEEE_UnknownTaxExemptionCode",
+                              "cbChargeItems.ftChargeItemCase",
+                              i
+                          )
+                          .WithContext("VATRate", chargeItem.VATRate)
+                          .WithContext("NatureOfVat", natureOfVat.ToString())
+                          .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}")
+                          .WithContext("ExemptionCode", exemptionCode.ToString()));
                     }
                 }
             }
