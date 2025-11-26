@@ -127,26 +127,19 @@ public class SaftExporter
 
     public byte[] SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
-        try
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var data = CreateAuditFile(accountMasterData, queueItems, to);
+        using var memoryStream = new MemoryStream();
+        var settings = new XmlWriterSettings
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            var data = CreateAuditFile(accountMasterData, queueItems, to);
-            using var memoryStream = new MemoryStream();
-            var settings = new XmlWriterSettings
-            {
-                Encoding = Encoding.GetEncoding("windows-1252"),
-                Indent = true
-            };
-            var serializer = new XmlSerializer(typeof(AuditFile));
-            using var writer = XmlWriter.Create(memoryStream, settings);
-            serializer.Serialize(writer, data);
-            memoryStream.Position = 0;
-            return memoryStream.ToArray();
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("An error occurred during SAFT export serialization.");
-        }
+            Encoding = Encoding.GetEncoding("windows-1252"),
+            Indent = true
+        };
+        var serializer = new XmlSerializer(typeof(AuditFile));
+        using var writer = XmlWriter.Create(memoryStream, settings);
+        serializer.Serialize(writer, data);
+        memoryStream.Position = 0;
+        return memoryStream.ToArray();
     }
 
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
