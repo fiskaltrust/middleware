@@ -85,17 +85,18 @@ public class FullScenarios : AbstractScenarioTests
               "cbReceiptMoment": "2025-09-16T04:16:53",
               "cbChargeItems": [
                 {
-                  "Quantity": 1,
+                  "Quantity": -1,
                   "Description": "Line item 1",
-                  "Amount": 100,
+                  "Amount": -100,
                   "VATRate": 23,
                   "ftChargeItemCase": 5788286605450018835
                 }
               ],
               "cbPayItems": [
-                {
+                { 
+                  "Quantity": -1,
                   "Description": "Numerario",
-                  "Amount": 100,
+                  "Amount": -100,
                   "ftPayItemCase": 5788286605450018817
                 }
               ],

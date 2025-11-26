@@ -100,9 +100,11 @@ public class ReceiptReferenceProvider
             try
             {
                 var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
-                if (referencedRequest != null &&
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+                if (referencedRequest != null && referencedResponse != null &&
                     referencedRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-                    referencedRequest.cbPreviousReceiptReference != null)
+                    referencedRequest.cbPreviousReceiptReference != null
+                    && referencedResponse.ftState.IsState(State.Success))
                 {
                     // Check if this refund references the receipt we're checking for
                     var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
@@ -149,9 +151,11 @@ public class ReceiptReferenceProvider
             try
             {
                 var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
-                if (referencedRequest != null && 
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+                if (referencedRequest != null && referencedResponse != null &&
                     referencedRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) &&
-                    referencedRequest.cbPreviousReceiptReference != null)
+                    referencedRequest.cbPreviousReceiptReference != null
+                    && referencedResponse.ftState.IsState(State.Success))
                 {
                     // Check if this refund references the receipt we're checking for
                     var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
@@ -198,9 +202,11 @@ public class ReceiptReferenceProvider
             try
             {
                 var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
-                if (referencedRequest != null &&
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+                if (referencedRequest != null && referencedResponse != null &&
                     referencedRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) &&
-                    referencedRequest.cbPreviousReceiptReference != null)
+                    referencedRequest.cbPreviousReceiptReference != null
+                    && referencedResponse.ftState.IsState(State.Success))
                 {
                     // Check if this void references the receipt we're checking for
                     var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
