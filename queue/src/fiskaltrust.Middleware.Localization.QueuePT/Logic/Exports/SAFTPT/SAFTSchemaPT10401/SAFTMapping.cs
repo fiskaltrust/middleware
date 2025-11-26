@@ -127,19 +127,26 @@ public class SaftExporter
 
     public byte[] SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var data = CreateAuditFile(accountMasterData, queueItems, to);
-        using var memoryStream = new MemoryStream();
-        var settings = new XmlWriterSettings
+        try
         {
-            Encoding = Encoding.GetEncoding("windows-1252"),
-            Indent = true
-        };
-        var serializer = new XmlSerializer(typeof(AuditFile));
-        using var writer = XmlWriter.Create(memoryStream, settings);
-        serializer.Serialize(writer, data);
-        memoryStream.Position = 0;
-        return memoryStream.ToArray();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var data = CreateAuditFile(accountMasterData, queueItems, to);
+            using var memoryStream = new MemoryStream();
+            var settings = new XmlWriterSettings
+            {
+                Encoding = Encoding.GetEncoding("windows-1252"),
+                Indent = true
+            };
+            var serializer = new XmlSerializer(typeof(AuditFile));
+            using var writer = XmlWriter.Create(memoryStream, settings);
+            serializer.Serialize(writer, data);
+            memoryStream.Position = 0;
+            return memoryStream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("An error occurred during SAFT export serialization.");
+        }
     }
 
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
@@ -185,8 +192,16 @@ public class SaftExporter
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
         actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptRequest.cbReceiptMoment).ToList();
-        var invoices = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolAccountingEvent0x3002) && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) && !x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006) && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
-        var workingDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) || x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
+
+        var invoiceReceiptRequests = actualReceiptRequests
+            .Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+            .Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolAccountingEvent0x3002)
+            && !x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007)
+            && !x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)
+            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).ToList();
+
+        var invoices = invoiceReceiptRequests.Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
+        var workingDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007) || x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
         var paymentDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
         return new AuditFile
         {
@@ -483,7 +498,7 @@ public class SaftExporter
             SourceID = GetSourceID(receiptRequest),
             SourceBilling = GetSourceBilling(receiptRequest),
         };
-        if(references.Count > 0)
+        if (references.Count > 0)
         {
             if (references.Any(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)))
             {
@@ -642,106 +657,113 @@ public class SaftExporter
 
     public Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
-        var receiptRequest = receipt.receiptRequest;
-        var receiptResponse = receipt.receiptResponse;
-        var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
-        if (lines.Count == 0)
+        try
         {
-            return null;
-        }
-
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
-        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
-        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
-        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
-        if (atcudSignature != null)
-        {
-            atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
-        }
-        var netAmount = grossAmount - taxable;
-        var customer = GetCustomerData(receiptRequest);
-
-        // Convert UTC time to Portugal local time
-        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
-        var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
-        var invoiceStatus = new InvoiceDocumentStatus
-        {
-            InvoiceStatus = "N",
-            InvoiceStatusDate = portugalTime,
-            SourceID = GetSourceID(receiptRequest),
-            SourceBilling = GetSourceBilling(receiptRequest),
-        };
-        if (references.Count > 0)
-        {
-            if (references.Any(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)))
+            var receiptRequest = receipt.receiptRequest;
+            var receiptResponse = receipt.receiptResponse;
+            var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
+            if (lines.Count == 0)
             {
-                var request = references.Where(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).First();
-                invoiceStatus = new InvoiceDocumentStatus
+                return null;
+            }
+
+            var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
+            var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
+            var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
+            var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
+            if (atcudSignature != null)
+            {
+                atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
+            }
+            var netAmount = grossAmount - taxable;
+            var customer = GetCustomerData(receiptRequest);
+
+            // Convert UTC time to Portugal local time
+            var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+            var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
+            var invoiceStatus = new InvoiceDocumentStatus
+            {
+                InvoiceStatus = "N",
+                InvoiceStatusDate = portugalTime,
+                SourceID = GetSourceID(receiptRequest),
+                SourceBilling = GetSourceBilling(receiptRequest),
+            };
+            if (references.Count > 0)
+            {
+                if (references.Any(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)))
                 {
-                    InvoiceStatus = "A",
-                    InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item1.cbReceiptMoment),
-                    SourceID = GetSourceID(request.Item1),
-                    SourceBilling = GetSourceBilling(request.Item1),
-                    Reason = "Anulado"
-                };
+                    var request = references.Where(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).First();
+                    invoiceStatus = new InvoiceDocumentStatus
+                    {
+                        InvoiceStatus = "A",
+                        InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item1.cbReceiptMoment),
+                        SourceID = GetSourceID(request.Item1),
+                        SourceBilling = GetSourceBilling(request.Item1),
+                        Reason = "Anulado"
+                    };
+                }
+                else
+                {
+                    // This should not happen
+                    // “S” -Self - billing;
+                    // “R” -Summary document for other documents created in other applications and generated in this application;
+                    // “F” -Invoiced document.
+                }
             }
-            else
+
+            var invoice = new Invoice
             {
-                // This should not happen
-                // “S” -Self - billing;
-                // “R” -Summary document for other documents created in other applications and generated in this application;
-                // “F” -Invoiced document.
+                InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
+                ATCUD = atcudSignature?.Data ?? "",
+                DocumentStatus = invoiceStatus,
+                Hash = hashSignature?.Data ?? "",
+                HashControl = "1",
+                Period = portugalTime.Month,
+                InvoiceDate = portugalTime,
+                InvoiceType = GetItemTypeFromReceipt(receipt),
+                SpecialRegimes = new SpecialRegimes
+                {
+                    SelfBillingIndicator = 0,
+                    CashVATSchemeIndicator = 0,
+                    ThirdPartiesBillingIndicator = 0,
+                },
+                SourceID = GetSourceID(receiptRequest),
+                SystemEntryDate = portugalTime,
+                Line = lines,
+                CustomerID = customer.CustomerID,
+                DocumentTotals = new DocumentTotals
+                {
+                    TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
+                    NetTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount),
+                    GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
+                }
+            };
+
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+            {
+                var handwrittenPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+                invoice.DocumentStatus.InvoiceStatusDate = handwrittenPortugalTime;
+                invoice.SystemEntryDate = handwrittenPortugalTime;
             }
-        }
 
-        var invoice = new Invoice
-        {
-            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
-            ATCUD = atcudSignature?.Data ?? "",
-            DocumentStatus = invoiceStatus,
-            Hash = hashSignature?.Data ?? "",
-            HashControl = "1",
-            Period = portugalTime.Month,
-            InvoiceDate = portugalTime,
-            InvoiceType = GetItemTypeFromReceipt(receipt),
-            SpecialRegimes = new SpecialRegimes
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
             {
-                SelfBillingIndicator = 0,
-                CashVATSchemeIndicator = 0,
-                ThirdPartiesBillingIndicator = 0,
-            },
-            SourceID = GetSourceID(receiptRequest),
-            SystemEntryDate = portugalTime,
-            Line = lines,
-            CustomerID = customer.CustomerID,
-            DocumentTotals = new DocumentTotals
-            {
-                TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
-                NetTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount),
-                GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
+                invoice.HashControl = invoice.HashControl + "-" + GetItemTypeFromReceipt((receiptRequest, receiptResponse)) + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
             }
-        };
-
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            var handwrittenPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
-            invoice.DocumentStatus.InvoiceStatusDate = handwrittenPortugalTime;
-            invoice.SystemEntryDate = handwrittenPortugalTime;
+            //if (lines.Any(x => x.SettlementAmount.HasValue))
+            //{
+            //    invoice.DocumentTotals.Settlement = new Settlement
+            //    {
+            //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
+            //    };
+            //}
+            invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, x)).ToList();
+            return invoice;
         }
-
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
+        catch (Exception ex)
         {
-            invoice.HashControl = invoice.HashControl + "-" + GetItemTypeFromReceipt((receiptRequest, receiptResponse)) + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
+            throw new Exception("An error occurred while generating the invoice for the receipt request.", ex);
         }
-        //if (lines.Any(x => x.SettlementAmount.HasValue))
-        //{
-        //    invoice.DocumentTotals.Settlement = new Settlement
-        //    {
-        //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
-        //    };
-        //}
-        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, x)).ToList();
-        return invoice;
     }
 
     private static string GetSourcePayment(ReceiptRequest receiptRequest)
@@ -779,113 +801,120 @@ public class SaftExporter
 
     public Line GetLine(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
     {
-        var chargeItemData = chargeItem.chargeItem;
-        var tax = new Tax
+        try
         {
-            TaxType = "IVA", // one of IVA => vat; IS => stamp duty; NS => Not subject to VAT or Stamp Duty.
-            TaxCountryRegion = "PT", // will depend on the location of the taxpayer.. autonomous regions madeira and azores
-            TaxCode = PTMappings.GetIVATAxCode(chargeItemData),
-            TaxPercentage = Helpers.CreateMonetaryValue(chargeItemData.VATRate)
-        };
-
-
-        var grossAmount = chargeItemData.Amount;
-        var vatAmount = chargeItem.chargeItem.GetVATAmount();
-        var netAmount = grossAmount - vatAmount;
-
-        var grossAmountModifiers = chargeItem.modifiers.Sum(x => x.Amount);
-        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.GetVATAmount());
-        var netAmountModifiers = grossAmountModifiers - vatAmountModifiers;
-        if (netAmountModifiers < 0)
-        {
-            netAmountModifiers *= -1;
-        }
-        var netLinePrice = netAmount - netAmountModifiers;
-        var quantity = chargeItemData.Quantity;
-        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-        {
-            netLinePrice *= -1;
-            quantity *= -1;
-        }
-
-        var unitPrice = 0m;
-        if (chargeItemData.Amount == 0 || quantity == 0)
-        {
-            unitPrice = 0m;
-        }
-        else
-        {
-            // calculate 5 digits after digit
-            unitPrice = netLinePrice / quantity;
-        }
-        var line = new Line
-        {
-            LineNumber = (long) chargeItemData.Position,
-            ProductCode = GenerateUniqueProductIdentifier(chargeItemData),
-            ProductDescription = chargeItemData.Description,
-            Quantity = Helpers.CreateMonetaryValue(quantity),
-            UnitOfMeasure = chargeItemData.Unit ?? "Unit",
-            UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
-            TaxPointDate = chargeItemData.Moment ?? receiptRequest.cbReceiptMoment,
-            Description = chargeItemData.Description,
-
-            Tax = tax
-        };
-
-        if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "NC")
-        {
-            var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
-            line.References = new References
+            var chargeItemData = chargeItem.chargeItem;
+            var tax = new Tax
             {
-                Reference = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
-                Reason = "Devolução"
+                TaxType = "IVA", // one of IVA => vat; IS => stamp duty; NS => Not subject to VAT or Stamp Duty.
+                TaxCountryRegion = "PT", // will depend on the location of the taxpayer.. autonomous regions madeira and azores
+                TaxCode = PTMappings.GetIVATAxCode(chargeItemData),
+                TaxPercentage = Helpers.CreateMonetaryValue(chargeItemData.VATRate)
             };
-            line.DebitAmount = Helpers.CreateMonetaryValue(netLinePrice);
-        }
-        else
-        {
-            line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
-        }
 
-        if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
-        {
-            var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
-            line.OrderReferences = new OrderReferences
+
+            var grossAmount = chargeItemData.Amount;
+            var vatAmount = chargeItem.chargeItem.GetVATAmount();
+            var netAmount = grossAmount - vatAmount;
+
+            var grossAmountModifiers = chargeItem.modifiers.Sum(x => x.Amount);
+            var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.GetVATAmount());
+            var netAmountModifiers = grossAmountModifiers - vatAmountModifiers;
+            if (netAmountModifiers < 0)
             {
-                OriginatingON = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
-                OrderDate = referencedReceiptResponse!.ftReceiptMoment
-            };
-            if (!InvoicedProformas.ContainsKey(referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last()))
-            {
-                InvoicedProformas.Add(referencedReceiptResponse.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+                netAmountModifiers *= -1;
             }
-        }
-
-
-        if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
-        {
-            var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
-            line.OrderReferences = new OrderReferences
+            var netLinePrice = netAmount - netAmountModifiers;
+            var quantity = chargeItemData.Quantity;
+            if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                OriginatingON = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
-                OrderDate = referencedReceiptResponse!.ftReceiptMoment
-            };
-            if (!InvoicedProformas.ContainsKey(referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last()))
-            {
-                InvoicedProformas.Add(referencedReceiptResponse.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+                netLinePrice *= -1;
+                quantity *= -1;
             }
-        }
 
-        if (chargeItem.modifiers.Count > 0)
-        {
-            line.SettlementAmount = netAmountModifiers;
+            var unitPrice = 0m;
+            if (chargeItemData.Amount == 0 || quantity == 0)
+            {
+                unitPrice = 0m;
+            }
+            else
+            {
+                // calculate 5 digits after digit
+                unitPrice = netLinePrice / quantity;
+            }
+            var line = new Line
+            {
+                LineNumber = (long) chargeItemData.Position,
+                ProductCode = GenerateUniqueProductIdentifier(chargeItemData),
+                ProductDescription = chargeItemData.Description,
+                Quantity = Helpers.CreateMonetaryValue(quantity),
+                UnitOfMeasure = chargeItemData.Unit ?? "Unit",
+                UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
+                TaxPointDate = chargeItemData.Moment ?? receiptRequest.cbReceiptMoment,
+                Description = chargeItemData.Description,
+
+                Tax = tax
+            };
+
+            if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "NC")
+            {
+                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
+                line.References = new References
+                {
+                    Reference = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
+                    Reason = "Devolução"
+                };
+                line.DebitAmount = Helpers.CreateMonetaryValue(netLinePrice);
+            }
+            else
+            {
+                line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
+            }
+
+            if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
+            {
+                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
+                line.OrderReferences = new OrderReferences
+                {
+                    OriginatingON = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
+                    OrderDate = referencedReceiptResponse!.ftReceiptMoment
+                };
+                if (!InvoicedProformas.ContainsKey(referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last()))
+                {
+                    InvoicedProformas.Add(referencedReceiptResponse.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+                }
+            }
+
+
+            if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
+            {
+                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
+                line.OrderReferences = new OrderReferences
+                {
+                    OriginatingON = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
+                    OrderDate = referencedReceiptResponse!.ftReceiptMoment
+                };
+                if (!InvoicedProformas.ContainsKey(referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last()))
+                {
+                    InvoicedProformas.Add(referencedReceiptResponse.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+                }
+            }
+
+            if (chargeItem.modifiers.Count > 0)
+            {
+                line.SettlementAmount = netAmountModifiers;
+            }
+            if (((long) chargeItemData.ftChargeItemCase & 0xFF00) > 0x0000)
+            {
+                line.TaxExemptionReason = PTMappings.GetTaxExemptionReason(chargeItemData);
+                line.TaxExemptionCode = PTMappings.GetTaxExemptionCode(chargeItemData);
+            }
+            return line;
         }
-        if (((long) chargeItemData.ftChargeItemCase & 0xFF00) > 0x0000)
+        catch (Exception ex)
         {
-            line.TaxExemptionReason = PTMappings.GetTaxExemptionReason(chargeItemData);
-            line.TaxExemptionCode = PTMappings.GetTaxExemptionCode(chargeItemData);
+            throw new Exception("An error occurred while generating the line for the receipt request.", ex);
         }
-        return line;
 
     }
 }

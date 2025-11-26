@@ -30,33 +30,40 @@ public static class ReceiptRequestExtensions
 
     public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItemsModifyPositionsIfNotSet(this ReceiptRequest receiptRequest)
     {
-        var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
-        var currentPos = 1;
-        foreach (var receiptChargeItem in receiptRequest.cbChargeItems)
-        {            
-            if(receiptChargeItem.Position == 0)
+        try
+        {
+            var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
+            var currentPos = 1;
+            foreach (var receiptChargeItem in receiptRequest.cbChargeItems)
             {
-                receiptChargeItem.Position = currentPos;
-            }
-            if (receiptChargeItem.IsVoucherRedeem() || receiptChargeItem.IsDiscountOrExtra())
-            {
-                var last = data.LastOrDefault();
-                if (last == default)
+                if (receiptChargeItem.Position == 0)
                 {
-                    data.Add((receiptChargeItem, new List<ChargeItem>()));
+                    receiptChargeItem.Position = currentPos;
+                }
+                if (receiptChargeItem.IsVoucherRedeem() || receiptChargeItem.IsDiscountOrExtra())
+                {
+                    var last = data.LastOrDefault();
+                    if (last == default)
+                    {
+                        data.Add((receiptChargeItem, new List<ChargeItem>()));
+                    }
+                    else
+                    {
+                        last.modifiers.Add(receiptChargeItem);
+                    }
                 }
                 else
                 {
-                    last.modifiers.Add(receiptChargeItem);
+                    data.Add((receiptChargeItem, new List<ChargeItem>()));
+                    currentPos++;
                 }
             }
-            else
-            {
-                data.Add((receiptChargeItem, new List<ChargeItem>()));
-                currentPos++;
-            }
+            return data;
         }
-        return data;
+        catch (Exception ex)
+        {
+            throw;
+        }
     }
 
 
@@ -114,12 +121,12 @@ public static class ReceiptRequestExtensions
         if (receiptRequest.cbUser != null)
         {
 
-            if(receiptRequest.cbUser is string userString)
+            if (receiptRequest.cbUser is string userString)
             {
                 return userString;
             }
 
-            if(receiptRequest.cbUser is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.String)
+            if (receiptRequest.cbUser is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.String)
             {
                 return jsonElement.GetString();
             }

@@ -70,6 +70,7 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.ECommerce0x0004 => await _receiptCommandProcessor.ECommerce0x0004Async(processCommandRequest),
                     ReceiptCase.DeliveryNote0x0005 => await _receiptCommandProcessor.DeliveryNote0x0005Async(processCommandRequest),
                     (ReceiptCase) 0x0006 /* Table Check, replace with enum */ => await _receiptCommandProcessor.TableCheck0x0006Async(processCommandRequest),
+                    (ReceiptCase) 0x0007 /* Pro Forma, replace with enum */ => await _receiptCommandProcessor.ProForma0x0007Async(processCommandRequest),
                     _ => null
                 };
             }

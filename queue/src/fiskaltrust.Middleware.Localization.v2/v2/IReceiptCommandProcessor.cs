@@ -11,4 +11,5 @@ public interface IReceiptCommandProcessor
     public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest processCommandRequest);
+    public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest processCommandRequest);
 }

@@ -248,24 +248,84 @@ Format: `0x5054_VVVV_0000_NNNN`
 
 **Description:** Validates that charge item descriptions must contain at least 3 characters.
 
-**Test Data:** Description = "te" (2 characters)
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Amount": 20,
+            "Description": "te",  // Only 2 characters - invalid
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 20,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert"
+}
+```
+
+**What the Test Does:**
+1. Creates a receipt with a charge item description containing only 2 characters
+2. Processes the receipt
+3. Validates rejection with specific error state
+4. Ensures the middleware enforces the minimum description length
 
 **Expected Result:** Receipt is rejected with error state `0x5054_2000_EEEE_EEEE`.
 
-**Business Rule:** Article descriptions must be sufficiently detailed to identify the product or service.
+**Business Rule:** Article descriptions must be sufficiently detailed (minimum 3 characters) to identify the product or service for audit and tax purposes.
 
 ---
 
 ### Scenario 4: Transactions With Negative Amount
 **Test:** `Scenario4_TransactionWithNegativeAmount_ShouldFail`
 
-**Description:** Validates that normal sales receipts cannot contain charge items with negative amounts (except for discounts/refunds).
+**Description:** Validates that normal sales receipts cannot contain charge items with negative amounts (except for discounts/refunds with appropriate flags).
 
-**Test Data:** Amount = -20
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Amount": -20,  // Negative amount without discount flag
+            "Description": "Test",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 20,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert"
+}
+```
+
+**What the Test Does:**
+1. Creates a receipt with a negative amount charge item
+2. The charge item case does NOT have the discount flag (0x0020)
+3. Attempts to process the receipt
+4. Validates that the middleware rejects it
 
 **Expected Result:** Receipt is rejected with error state `0x5054_2000_EEEE_EEEE`.
 
-**Business Rule:** Negative amounts are only allowed for specific operations like discounts, refunds, or returns.
+**Business Rule:** Negative amounts are only allowed for specific operations like discounts, refunds, or returns when the appropriate flags are set in `ftChargeItemCase`.
 
 ---
 
@@ -274,11 +334,42 @@ Format: `0x5054_VVVV_0000_NNNN`
 
 **Description:** Validates that normal sales receipts cannot contain charge items with negative quantities.
 
-**Test Data:** Quantity = -1
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Quantity": -1,  // Negative quantity
+            "Amount": 20,
+            "Description": "Test",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 20,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert"
+}
+```
+
+**What the Test Does:**
+1. Creates a receipt with a negative quantity
+2. The ftChargeItemCase does NOT have the refund flag (0x0010)
+3. Processes the receipt
+4. Validates that the middleware rejects negative quantities without proper flags
 
 **Expected Result:** Receipt is rejected with error state `0x5054_2000_EEEE_EEEE`.
 
-**Business Rule:** Negative quantities are only allowed for refunds or returns with appropriate flags.
+**Business Rule:** Negative quantities are only allowed for refunds or returns when the appropriate flags are set. Normal sales must have positive quantities.
 
 ---
 
@@ -287,31 +378,115 @@ Format: `0x5054_VVVV_0000_NNNN`
 
 **Description:** Validates that only official Portuguese VAT rates are accepted.
 
-**Test Data:** VATRate = 22 (not a valid Portuguese VAT rate)
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Quantity": 1,
+            "Amount": 20,
+            "Description": "Test",
+            "VATRate": 22,  // Invalid rate - not a Portuguese VAT rate
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 20,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert"
+}
+```
 
-**Valid Portuguese VAT Rates:**
-- 23% (Normal rate)
-- 13% (Intermediate rate)
-- 6% (Reduced rate)
-- 0% (Exempt with proper reason)
+**What the Test Does:**
+1. Creates a receipt with a VAT rate of 22%
+2. 22% is not a valid Portuguese VAT rate
+3. Processes the receipt
+4. Validates that the middleware rejects invalid VAT rates
+
+**Valid Portuguese VAT Rates (Continent):**
+- **23%** - Normal rate (Taxa Normal)
+- **13%** - Intermediate rate (Taxa Intermédia)
+- **6%** - Reduced rate (Taxa Reduzida)
+- **0%** - Exempt (with proper exemption reason codes)
 
 **Expected Result:** Receipt is rejected with error state `0x5054_2000_EEEE_EEEE`.
+
+**Business Rule:** Only officially recognized Portuguese VAT rates are allowed. Using incorrect rates can lead to tax reporting errors and legal issues.
 
 ---
 
 ### Scenario 7: Transactions With Excessive Discount
 **Test:** `Scenario7_TransactionWithDiscountExceedingTotal_ShouldFail`
 
-**Description:** Validates that discounts cannot exceed the total amount of line items.
+**Description:** Validates that discounts cannot exceed the total amount of line items they apply to.
 
-**Test Data:** 
-- Line item 1: €55.00
-- Discount: -€55.84 (exceeds line item amount)
-- Line item 2: €13.80
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Amount": 55,
+            "Quantity": 100,
+            "Description": "Article 1",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        },
+        {
+            "Amount": -55.84,  // Discount exceeds line item amount (55.00)
+            "Description": "Desconto",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450280979  // Discount flag (0x0020)
+        },
+        {
+            "Amount": 13.8,
+            "Description": "Line item 2",
+            "VATRate": 23,
+            "Quantity": 4,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 12.96,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert",
+    "cbCustomer": {
+        "CustomerVATId": "123456789"
+    }
+}
+```
+
+**What the Test Does:**
+1. Creates a receipt with Article 1 for €55.00
+2. Applies a discount of €55.84 (exceeds the article amount)
+3. Adds a second article for €13.80
+4. Attempts to process the receipt
+5. Validates that the middleware detects the excessive discount
+
+**Calculation:**
+- Article 1: €55.00
+- Discount: -€55.84 (exceeds by €0.84)
+- Article 2: €13.80
+- Total: €12.96 (but discount is invalid)
 
 **Expected Result:** Receipt is rejected with error state.
 
-**Business Rule:** Discounts must not result in a negative total for the affected line items.
+**Business Rule:** Discounts must not result in a negative total for the affected line items. This prevents accounting errors and potential fraud.
 
 ---
 
@@ -320,39 +495,172 @@ Format: `0x5054_VVVV_0000_NNNN`
 
 **Description:** Validates that the total of charge items must match the total of pay items.
 
-**Test Data:**
-- Charge items total: €55.00
-- Pay items total: €20.00
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Amount": 55,
+            "Quantity": 100,
+            "Description": "Article 1",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 20,  // Only 20 paid, but charged 55
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert",
+    "cbCustomer": {
+        "CustomerVATId": "123456789"
+    }
+}
+```
+
+**What the Test Does:**
+1. Creates charge items totaling €55.00
+2. Creates pay items totaling only €20.00
+3. Processes the receipt
+4. Validates that the middleware detects the mismatch
+
+**Calculation:**
+- Total Charged: €55.00
+- Total Paid: €20.00
+- Difference: €35.00 (mismatch)
 
 **Expected Result:** Receipt is rejected with error state.
 
-**Business Rule:** The sum of all charge items must equal the sum of all pay items.
+**Business Rule:** The sum of all charge items must equal the sum of all pay items to ensure balanced accounting and prevent errors in fiscal reporting.
+
+**Note:** Some receipt cases (like Payment Transfer or partial payments) may have legitimate reasons for a mismatch, but for standard POS receipts, this validation ensures data integrity.
 
 ---
 
 ### Scenario 9: Transactions With Invalid Customer NIF
 **Test:** `Scenario9_TransactionWithInvalidCustomerNIF`
 
-**Description:** Validates the Portuguese Tax Identification Number (NIF) using check digit validation.
+**Description:** Validates the Portuguese Tax Identification Number (NIF) using check digit validation according to the official Portuguese tax authority algorithm.
 
-**Test Data:** CustomerVATId = "123456799" (invalid check digit)
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Amount": 55,
+            "Quantity": 100,
+            "Description": "Article 1",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 55,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert",
+    "cbCustomer": {
+        "CustomerVATId": "123456799"  // Invalid check digit (should be 123456789)
+    }
+}
+```
 
-**Expected Result:** Receipt is rejected with error message containing `EEEE_Invalid Portuguese Tax Identification Number`.
+**What the Test Does:**
+1. Creates a receipt with an invalid Portuguese NIF
+2. The NIF "123456799" has an incorrect check digit (last digit)
+3. The middleware validates the NIF using the Portuguese algorithm
+4. The test verifies the specific error message about invalid NIF
 
-**Business Rule:** Portuguese NIFs must be validated according to the official tax authority algorithm.
+**NIF Validation Algorithm:**
+The Portuguese NIF uses a modulo-11 check digit algorithm:
+1. First 8 digits are multiplied by sequence: 9, 8, 7, 6, 5, 4, 3, 2
+2. Sum all the results
+3. Calculate: 11 - (sum % 11)
+4. If result is 10 or 11, check digit is 0
+5. Otherwise, check digit is the result
+
+**Example for "123456789":**
+- 1×9 + 2×8 + 3×7 + 4×6 + 5×5 + 6×4 + 7×3 + 8×2 = 165
+- 165 % 11 = 0
+- 11 - 0 = 11 ? check digit = 0 (but the NIF shows 9, so it's invalid if it was "123456799")
+
+**Expected Result:** Receipt is rejected with error message: 
+```
+EEEE_Invalid Portuguese Tax Identification Number (NIF): '123456799'. 
+The NIF must be a 9-digit number with a valid check digit according to 
+the Portuguese tax authority validation algorithm.
+```
+
+**Business Rule:** Portuguese NIFs must be validated according to the official tax authority algorithm to ensure data quality and prevent fraud. Invalid NIFs cannot be used for invoicing.
 
 ---
 
 ### Scenario 10: Transactions With Foreign Currency
 **Test:** `Scenario10_TransactionsWithForeignCurrenciesShouldBeBlocked`
 
-**Description:** Validates that only EUR currency is supported.
+**Description:** Validates that only EUR currency is supported in Portuguese fiscal receipts.
 
-**Test Data:** Currency = "USD"
+**JSON Sample:**
+```json
+{
+    "cbReceiptReference": "{{$guid}}",
+    "cbReceiptMoment": "{{$isoTimestamp}}",
+    "ftCashBoxID": "{{cashboxid}}",
+    "ftReceiptCase": 5788286605450018817,
+    "cbChargeItems": [
+        {
+            "Amount": 55,
+            "Quantity": 100,
+            "Description": "Article 1",
+            "VATRate": 23,
+            "ftChargeItemCase": 5788286605450018835
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Amount": 55,
+            "Description": "Cash",
+            "ftPayItemCase": 5788286605450018817
+        }
+    ],
+    "cbUser": "Stefan Kert",
+    "cbCustomer": {
+        "CustomerVATId": "123456789"
+    },
+    "Currency": "USD"  // Invalid - only EUR is allowed
+}
+```
 
-**Expected Result:** Receipt is rejected with error message containing `EEEE_OnlyEuroCurrencySupported`.
+**What the Test Does:**
+1. Creates a receipt with "USD" as the currency
+2. Processes the receipt
+3. Validates that the middleware rejects non-EUR currencies
+4. Checks for the specific error message about currency support
 
-**Business Rule:** Portuguese fiscal regulations require all transactions to be in Euros.
+**Expected Result:** Receipt is rejected with error message containing:
+```
+EEEE_OnlyEuroCurrencySupported
+```
+
+**Business Rule:** Portuguese fiscal regulations require all transactions to be recorded in Euros (EUR). Foreign currency transactions must be converted to EUR before processing, or the original currency transaction should be recorded with the EUR equivalent.
+
+**Supported Currency:** Only "EUR" (or null/empty, which defaults to EUR)
+
+**Rejected Currencies:** All other ISO 4217 currency codes (USD, GBP, CHF, etc.)
 
 ---
 

@@ -29,7 +29,7 @@ public class FullScenarios : AbstractScenarioTests
 
     public FullScenarios() : base(Guid.Parse("a8466a96-aa7e-40f7-bbaa-5303e60c7943"), Guid.NewGuid())
     {
-        
+
     }
 
     [Fact]
@@ -134,12 +134,11 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "cbPayItems": [],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
-              "ftReceiptCase": 5788286605450018821,
+              "ftReceiptCase": 5788286605450018823,
               "cbUser": "Stefan Kert"
             }
             """;
-        // 5788286605450031108
-        // 5054200000000005
+
         var (receipt_5_3_Request, receipt_5_3_Response) = await ProcessReceiptAsync(receipt_5_3);
         receipt_5_3_Response.ftState.State().Should().Be(State.Success);
         receipt_5_3_Response.ftReceiptIdentification.Should().Be("ft2#PF ft20253a3b/1");
@@ -526,7 +525,7 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "cbPayItems": [],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
-              "ftReceiptCase": 5788286605450018821,
+              "ftReceiptCase": 5788286605450018823,
               "cbUser": "Stefan Kert"
             }
             """;
@@ -615,14 +614,23 @@ public class FullScenarios : AbstractScenarioTests
         receipt_5_13_2_Response.ftState.State().Should().Be(State.Success);
         receipt_5_13_2_Response.ftReceiptIdentification.Should().Be("ftB#RG ft2025a4fa/1");
 
-        var xmlData = await ExecuteJournal(new JournalRequest
+        scope.Dispose();
+        try
         {
-            From = DateTime.Parse("2025-01-01T00:00:00Z").Ticks,
-            To = DateTime.Parse("2025-12-31T00:00:00Z").Ticks,
-            ftJournalType = (JournalType) 0x5054_2000_0000_0001,
-        });
+            var xmlData = await ExecuteJournal(new JournalRequest
+            {
+                From = DateTime.Parse("2025-01-01T00:00:00Z").Ticks,
+                To = DateTime.Parse("2025-12-31T00:00:00Z").Ticks,
+                ftJournalType = (JournalType) 0x5054_2000_0000_0001,
+            });
+            File.WriteAllBytes("C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-18\\phase1\\SAFT_fullscenario.xml", xmlData);
+        }
+        catch (Exception ex)
+        {
+            //   scope.AddReportable($"Error during journal export: {ex}");
+            throw;
+        }
 
-        File.WriteAllBytes("C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-11-18\\phase1\\SAFT_fullscenario.xml", xmlData);
     }
 
     [Fact]
@@ -713,7 +721,7 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "cbPayItems": [],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
-              "ftReceiptCase": 5788286605450018821,
+              "ftReceiptCase": 5788286605450018823,
               "cbUser": "Stefan Kert"
             }
             """;
@@ -1313,13 +1321,17 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "cbPayItems": [],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
-              "ftReceiptCase": 5788286614039953413,
+              "ftReceiptCase": 5788286614039953415,
               "cbUser": "Stefan Kert"
             }
             """;
+
+        // 5054200200000007
         var (receipt_33_2_OR_Request, receipt_33_2_OR_Response) = await ProcessReceiptAsync(receipt_33_2_OR);
         receipt_33_2_OR_Response.ftState.State().Should().Be(State.Success);
         receipt_33_2_OR_Response.ftReceiptIdentification.Should().Be("ft10#OR ft20255389/1");
+
+        scope.Dispose();
 
         var xmlData = await ExecuteJournal(new JournalRequest
         {

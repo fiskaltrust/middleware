@@ -13,7 +13,7 @@ public class ReceiptRequestValidations
     /// </summary>
     public static IEnumerable<ValidationResult> ValidateReceiptBalance(ReceiptRequest request)
     {
-        if(request.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) || request.ftReceiptCase.IsCase((ReceiptCase) 0x0006))
+        if(request.ftReceiptCase.IsCase((ReceiptCase) 0x0007) || request.ftReceiptCase.IsCase((ReceiptCase) 0x0006))
         {
             // Delivery notes are not required to be balanced
             yield break;

@@ -38,4 +38,6 @@ public class ReceiptCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
     public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 
     public async Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+
+    public async Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
 }

@@ -23,22 +23,20 @@ public static class PTMappings
 
     public static string GetTaxExemptionCode(ChargeItem chargeItem)
     {
-        if (Constants.TaxExemptionDictionary.TaxExemptionTable.TryGetValue(
-            Enum.Parse<Constants.TaxExemptionCode>(GetTaxExemptionCode(chargeItem)),
-            out var taxExemptionInfo))
+        var taxExemptCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
+        if(Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
         {
-            return taxExemptionInfo.Code;
+            return Constants.TaxExemptionDictionary.TaxExemptionTable[((Constants.TaxExemptionCode) taxExemptCode)].Code;
         }
         return "";
     }
 
     public static string GetTaxExemptionReason(ChargeItem chargeItem)
     {
-        if(Constants.TaxExemptionDictionary.TaxExemptionTable.TryGetValue(
-            Enum.Parse<Constants.TaxExemptionCode>(GetTaxExemptionCode(chargeItem)),
-            out var taxExemptionInfo))
+        var taxExemptCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
+        if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
         {
-            return taxExemptionInfo.Mention;
+            return Constants.TaxExemptionDictionary.TaxExemptionTable[((Constants.TaxExemptionCode) taxExemptCode)].Mention;
         }
         return "";
 
