@@ -22,6 +22,15 @@ public static class AADEMappings
             };
         }
 
+        if(receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) && receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            return new IncomeClassificationType
+            {
+                amount = netAmount,
+                classificationCategory = IncomeClassificationCategoryType.category3
+            };
+        }
+
         if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.UnknownService))
         {
             return new IncomeClassificationType
