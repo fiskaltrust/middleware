@@ -213,6 +213,12 @@ public class AADEFactory
             }
         };
 
+        if(inv.invoiceHeader.invoiceType == InvoiceType.Item93)
+        {
+            // It looks like Item93 does NOT allow to specify the currency
+            inv.invoiceHeader.currencySpecified = false;
+        }
+
         // Add withholding taxes to the invoice if any exist
         if (documentLevelTaxes.Count > 0)
         {
