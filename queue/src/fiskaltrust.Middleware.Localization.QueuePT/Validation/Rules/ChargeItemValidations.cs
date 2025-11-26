@@ -4,6 +4,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 
@@ -267,7 +268,7 @@ public static class ChargeItemValidations
     /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_Amount_Quantity_NegativeAmountsAndQuantities(ReceiptRequest request, bool isRefund)
     {
-        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0 || isRefund)
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0 || isRefund || request.IsPartialRefundReceipt() || request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
             yield break;
         }
