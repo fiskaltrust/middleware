@@ -519,4 +519,53 @@ public class GeneralScenarios : AbstractScenarioTests
     }
 
     #endregion
+
+    #region Scenario 11: Transactions with illegal exempt reason
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData((ReceiptCase) 0x0007)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    public async Task Scenario11_TransactionWithIllegalExemptReason_ShouldFail(ReceiptCase receiptCase)
+    {
+        var json = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 0,
+                        "ftChargeItemCase": 5788286605450084120 
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
+        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+    }
+
+    #endregion
+
 }
