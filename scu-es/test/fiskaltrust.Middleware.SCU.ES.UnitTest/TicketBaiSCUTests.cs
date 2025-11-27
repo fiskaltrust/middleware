@@ -65,8 +65,12 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 ReceiptResponse = new ReceiptResponse
                 {
                     ftReceiptMoment = DateTime.Now,
-                    ftCashBoxIdentification = "test"
-                }
+                    ftCashBoxIdentification = "test",
+                    ftStateData = new MiddlewareStateData
+                    {
+                        ES = new MiddlewareStateDataES { }
+                    }
+                },
             });
             var responseContent = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
             _output.WriteLine(responseContent);
