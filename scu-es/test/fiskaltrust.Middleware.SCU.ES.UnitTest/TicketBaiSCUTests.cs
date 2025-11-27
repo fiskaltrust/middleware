@@ -37,7 +37,11 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             {
                 Certificate = cert,
                 EmisorNif = "B10646545",
-                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L.",
+                SoftwareVersion = "1.0",
+                SoftwareName = "Incodebiz",
+                SoftwareLicenciaTBAI = "TBAIARbKKFCFdCC00879",
+                SoftwareNif = "B10646545"
             };
             await PerformTicketBaiRequestChain(config, new TicketBaiGipuzkoaTerritory());
 
@@ -123,7 +127,11 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             {
                 Certificate = cert,
                 EmisorNif = "B10646545",
-                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L.",
+                SoftwareVersion = "1.0",
+                SoftwareName = "Incodebiz",
+                SoftwareLicenciaTBAI = "TBAIARbKKFCFdCC00879",
+                SoftwareNif = "B10646545"
             };
             await PerformTicketBaiRequestChain(config, new TicketBaiArabaTerritory());
         }
@@ -135,8 +143,12 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                EmisorNif = "B10646545",
-                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
+                EmisorNif = "A99810541",
+                EmisorApellidosNombreRazonSocial = "8Hj2DimGJbQjW00FCDUxHFK06kwS3m",
+                SoftwareVersion = "1.0",
+                SoftwareName = "SOFTWARE GARANTE TICKETBAI PRUEBA",
+                SoftwareLicenciaTBAI = "TBAIBI00000000PRUEBA",
+                SoftwareNif = "A99800005"
             };
             await PerformTicketBaiRequestChain(config, new TicketBaiBizkaiaTerritory());
         }
