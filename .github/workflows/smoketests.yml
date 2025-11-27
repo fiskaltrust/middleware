@@ -2,7 +2,15 @@
 
 on:
   workflow_dispatch:
-    inputs:      
+    inputs:   
+      platform:
+        description: "platform"
+        required: true
+        type: choice
+        options:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
       launcherVersion:
         description: "launcherVersion"
         required: true
@@ -32,12 +40,46 @@ env:
   launcherpath: "./launcher"
  
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        run: |
+            if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *MySQL* ]]; then
+              echo "❌ MySQL not supported on Linux!"
+              exit 1
+            fi
+
+            if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *EF* && "${{ inputs.launcherVersion }}" == "v1.3" ]]; then
+              echo "❌ Launcher v1.3 can't run EF on Linux!"
+              exit 1
+            fi
+
+            if [[ "${{ inputs.platform }}" == "macos-latest" &&  "${{ inputs.queuePackage }}" != *SQLite* ]]; then
+              echo "❌ Only SQLite supported on macOS!"
+              exit 1
+            fi
+
+            echo ""
+            echo "### ✅ Supported combinations"
+            echo ""
+            echo "| Platform       | Launcher Version | Queue Package                      | Supported |"
+            echo "|----------------|------------------|------------------------------------|------------|"
+            echo "| windows-latest | v1.3, v2.0       | SQLite, MySQL, EF                  | ✅ Yes     |"
+            echo "| ubuntu-latest  | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
+            echo "| ubuntu-latest  | any              | MySQL                              | ❌ No      |"
+            echo "| ubuntu-latest  | v2.0             | EF                                 | ✅ Yes     |"
+            echo "| macos-latest   | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
+            echo "| macos-latest   | any              | MySQL, EF                          | ❌ No      |"
+            echo ""
+
   test-middleware:
-    runs-on: windows-latest
+    needs: validate
+    runs-on: ${{ inputs.platform }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4      
-
+      
       - name: Create cashbox
         shell: pwsh
         run: |
@@ -54,13 +96,14 @@ jobs:
             $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
             $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
-            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
-             $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
+            $pass="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
+             $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
             if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
-             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;"
+             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
              $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
             }
 
@@ -94,7 +137,7 @@ jobs:
 
             # Set a known root password
             $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
-            & $mysqladmin -u root password "my-secret-pw"
+            & $mysqladmin -u root password "${{ secrets.FT_SMOKETESTS_PASSWORD }}"
 
             # Verify connection
             $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
@@ -106,15 +149,20 @@ jobs:
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
         shell: pwsh
         run: |
-          sqllocaldb create MSSQLLocalDB -s
-          sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"    
+          if($isWindows){
+              sqllocaldb create MSSQLLocalDB -s
+              sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
+          }
+          elseif($isLinux){
+            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=${{ secrets.FT_SMOKETESTS_PASSWORD }}" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+          }
 
-      - name: Download launcher package
+      - name: Download launcher package for ${{inputs.platform}}--launcherVersion=${{inputs.launcherVersion}}--package=${{inputs.queuePackage}}-${{inputs.queueVersion}}
         shell: pwsh
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
-          $platform ="win-x64"
+          $platformV2 = if ($isMacos) { "osx-x64" } elseif ($isLinux) { "linux-x64" } else { "win-x64" }
           $offline = "false"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
@@ -124,11 +172,15 @@ jobs:
           if ("${{ inputs.launcherVersion }}" -eq "v1.3") {
            $headers = @{ Authorization = "Basic $encoded" }
            $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+           if ($isLinux -or $isMacos) {
+           #for both platform, the same package will be downloaded
+           $url=$url + "&platform=linux"
+           } 
           } 
           else
           {
            $headers = @{ accessToken = $accessToken }
-           $url = "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download-launcher?cashboxId=$cashboxId&offline=$offline&platform=$platform"
+           $url = "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download-launcher?cashboxId=$cashboxId&offline=$offline&platform=$platformV2"
           }
          
           $output = "$launcher.$cashboxId.zip"
@@ -147,23 +199,81 @@ jobs:
          }
          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
+      - name: Install Mono if platform is Ubuntu
+        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest'  && inputs.launcherVersion == 'v1.3') }}
+        run: |
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
+             
+              sudo apt-get update -y
+              sudo apt-get install -y mono-complete
+          else
+             
+              brew update
+              brew install mono
+          fi
+
+      - name: Install expect
+        if: ${{ (inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest') && inputs.launcherVersion == 'v1.3' }}
+        run: |
+           if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
+              sudo apt-get update && sudo apt-get install -y expect
+           else
+              brew install expect
+            fi
+
       - name:  Run launcher,send requests, and stop
         shell: pwsh
         run: |
           #....Run launcher....
           Write-Host "Starting launcher..."
-          $exeFileName = "test.cmd"
-          if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $exeFileName = "launcher-test.cmd" }
-          $scriptPath = (Resolve-Path "${{ env.launcherpath }}/$exeFileName").Path
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
-          
+          $launcherPath = "${{ env.launcherpath }}"
+          if ($isWindows)
+          {
+              $exeFileName = "test.cmd"
+              if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $exeFileName = "launcher-test.cmd" }
+              $scriptPath = (Resolve-Path "$launcherPath/$exeFileName").Path
+              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          }
+          elseif ("${{ inputs.launcherVersion }}" -eq "v1.3")
+          {
+             $exeFileName = "test.sh"
+             $cmd = @"    
+             set timeout -1
+             spawn bash "./$exeFileName"
+             expect {
+                "Press a button to stop" { puts "Launcher waiting..."; exp_continue }
+                eof
+            }
+          "@
+             $expectScript = "/tmp/run_launcher.exp"
+             Set-Content -Path $expectScript -Value $cmd
+             bash -c "chmod +x $expectScript"
+
+             $process = Start-Process -FilePath "/usr/bin/expect" -ArgumentList $expectScript -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
+            
+          }
+          else
+          {
+             $exeFileName = "launcher-test.sh"
+             $scriptPath = (Resolve-Path "$launcherPath/$exeFileName").Path
+             bash -c "chmod +x '$scriptPath'"
+             $process = Start-Process -FilePath "sudo" -ArgumentList "bash", $scriptPath -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
+          }
+         
+            
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
           $maxAttempts = 30
           for ($i = 1; $i -le $maxAttempts; $i++) {
-            $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+            if ($isWindows) {
+                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+            } else {
+               bash -c "nc -z localhost 1500"
+               $tcpReady = ($LASTEXITCODE -eq 0)
+            }
+            
             if ($tcpReady) {
                 Write-Host "Launcher is ready!"
                 break
@@ -179,15 +289,15 @@ jobs:
            $baseFile = ".github/scripts/requests"
            $requests = @(
                 @{ Name = "Echo";                      Url = "$baseUrl/json/v1/Echo"; File = "$baseFile/Echo.json" }
-                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Zeroreceipt.json" }
-                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Initial-operation-receipt.json" }
-                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Pos-receipt.json" }
-                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/sign"; File = "$baseFile/Daily-closing-receipt.json" }
-                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914"; File = "" }
+                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Zero-receipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Pos-receipt.json" }
+                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Daily-closing-receipt.json" }
+                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00"; File = "" }
                 # @{ Name = "Tar-Export-from-middleware";Url = "$baseUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
-                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1"; File = "" }
-                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2"; File = "" }
-                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3"; File = "" }
+                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1&from=0&to=00"; File = "" }
+                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2&from=0&to=00"; File = "" }
+                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3&from=0&to=00"; File = "" }
             )
 
             $ErrorActionPreference = "Stop"
@@ -198,13 +308,20 @@ jobs:
                  $bodyTemplate = Get-Content $req.File -Raw 
                  $body = $bodyTemplate -replace "{{cashbox_id}}", "${{ env.cashboxId }}" -replace "{{current_moment}}", (Get-Date).ToString("o")
                 }
+                $contentType = "application/json"
+                if($isLinux -or $isMacos){
+                    $req.Url = $req.Url.Replace("/json/v1/Echo", "/echo");
+                    $req.Url = $req.Url.Replace("/json/v1/Sign", "/sign");
+                    $req.Url = $req.Url.Replace("/json/v0/Journal", "/journal");
+                    if ($req.Name -like "*Export*") {$contentType = "text/plain"}
+                }
 
                 try {
 
                   if ($null -ne $body) {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -ErrorAction Stop
                   }
                   Write-Host "Response: $($response | ConvertTo-Json)"
 
@@ -227,7 +344,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ inputs.queuePackage }}-Launcher-${{ inputs.launcherVersion }}
+          name: output-${{ inputs.platform }}-${{ inputs.queuePackage }}-${{ inputs.queueVersion }}-Launcher-${{ inputs.launcherVersion }}
           path: test-output.log
         continue-on-error: true
  
