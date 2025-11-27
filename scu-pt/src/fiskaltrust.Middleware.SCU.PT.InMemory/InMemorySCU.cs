@@ -28,21 +28,18 @@ public class InMemorySCU : IPTSSCD
     {
         return await Task.FromResult(new PTSSCDInfo());
     }
+
     public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
+        // TODO: We will need to convert the ftReceiptMoment to PT localtime zone
         var element = new PTInvoiceElement
         {
-            InvoiceDate = receipt.cbReceiptMoment,
-            SystemEntryDate = receipt.cbReceiptMoment,
+            InvoiceDate = receiptResponse.ftReceiptMoment,
+            SystemEntryDate = receiptResponse.ftReceiptMoment,
             InvoiceNo = receiptResponse.ftReceiptIdentification.Split("#").Last(),
-            GrossTotal = receipt.cbChargeItems.Sum(x => receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? -x.Amount : x.Amount),
+            GrossTotal = Math.Abs(receipt.cbChargeItems.Sum(x => x.Amount)),
             Hash = lastHash ?? ""
         };
-        // Todo this is just a workoaurnd while we are going through the certification
-        if (receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            element.SystemEntryDate = receiptResponse.ftReceiptMoment;
-        }
         return element;
     }
 

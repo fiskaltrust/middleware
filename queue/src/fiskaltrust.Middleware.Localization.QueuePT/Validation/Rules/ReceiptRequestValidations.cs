@@ -138,4 +138,31 @@ public class ReceiptRequestValidations
             .WithContext("MaxAllowedDifferenceMinutes", maxAllowedDifferenceMinutes));
         }
     }
+
+    /// <summary>
+    /// Validates that the time difference between cbReceiptMoment and ftReceiptMoment does not exceed 2 minutes.
+    /// Returns a single ValidationResult if validation fails.
+    /// </summary>
+    public static IEnumerable<ValidationResult> ValidateReceiptMomentTimeDifference(ReceiptRequest request, ReceiptResponse receiptResponse)
+    {
+        if(request.cbReceiptMoment.Kind != DateTimeKind.Utc)
+        {
+           yield return ValidationResult.Failed(new ValidationError(
+                "cbReceiptMoment must be in UTC format for time difference validation.",
+                "EEEE_CbReceiptMomentNotUtc",
+                "cbReceiptMoment"
+            ));
+        }
+
+        var timeDifference = (receiptResponse.ftReceiptMoment - request.cbReceiptMoment).Duration();
+        
+        if (timeDifference > TimeSpan.FromMinutes(1))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                $"The time difference between cbReceiptMoment ({request.cbReceiptMoment:yyyy-MM-dd HH:mm:ss}) and ftReceiptMoment ({receiptResponse.ftReceiptMoment:yyyy-MM-dd HH:mm:ss}) is {timeDifference.TotalMinutes:F2} minutes, which exceeds the maximum allowed difference of 2 minutes.",
+                "EEEE_ReceiptMomentTimeDifferenceExceeded",
+                "cbReceiptMoment,ftReceiptMoment"
+            ));
+        }
+    }
 }

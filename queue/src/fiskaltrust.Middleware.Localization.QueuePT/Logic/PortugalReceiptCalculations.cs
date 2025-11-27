@@ -63,7 +63,7 @@ public static class PortugalReceiptCalculations
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
         // Convert UTC time to Portugal local time
-        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
 
         return new PTQrCode
         {
@@ -107,7 +107,7 @@ public static class PortugalReceiptCalculations
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
         // Convert UTC time to Portugal local time
-        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
 
         return new PTQrCode
         {
@@ -152,7 +152,7 @@ public static class PortugalReceiptCalculations
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
         // Convert UTC time to Portugal local time
-        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
 
         return new PTQrCode
         {

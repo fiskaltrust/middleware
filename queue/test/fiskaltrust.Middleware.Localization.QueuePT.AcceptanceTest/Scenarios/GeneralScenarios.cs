@@ -568,4 +568,98 @@ public class GeneralScenarios : AbstractScenarioTests
 
     #endregion
 
+
+    #region Scenario 12: Going Backwards in Time is not allowed
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData((ReceiptCase) 0x0007)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario12_GoingBackwardsInTime_ShouldFail(ReceiptCase receiptCase)
+    {
+        var json = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestampMinus1Minute}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835 
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert"
+            }
+            """.Replace("{{$isoTimestampMinus1Minute}}", DateTime.UtcNow.AddMinutes(-1).ToString("o"));
+
+        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain("which exceeds the maximum allowed difference of 2 minutes");
+    }
+
+    #endregion
+
+
+    #region Scenario 13: Block none UTC times
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    // [InlineData(ReceiptCase.ECommerce0x0004)]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData((ReceiptCase) 0x0007)]
+    [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    public async Task Scenario13_Block_None_UTC_times(ReceiptCase receiptCase)
+    {
+        var json = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestampNoneUtc}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835 
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert"
+            }
+            """.Replace("{{$isoTimestampNoneUtc}}", DateTime.UtcNow.ToString("o").Replace("Z", ""));
+
+        var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain("cbReceiptMoment must be in UTC format for time difference validation.");
+    }
+    #endregion
 }

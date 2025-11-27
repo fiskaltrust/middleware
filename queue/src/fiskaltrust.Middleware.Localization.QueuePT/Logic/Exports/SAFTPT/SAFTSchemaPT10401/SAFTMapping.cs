@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
@@ -184,7 +185,7 @@ public class SaftExporter
         {
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
-        actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptRequest.cbReceiptMoment).ToList();
+        actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptResponse.ftReceiptMoment).ToList();
 
         var invoiceReceiptRequests = actualReceiptRequests
             .Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
@@ -480,7 +481,7 @@ public class SaftExporter
         }
 
         // Convert UTC time to Portugal local time
-        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment);
         var customer = GetCustomerData(receiptRequest);
 
         var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
@@ -499,7 +500,7 @@ public class SaftExporter
                 workStatus = new WorkDocumentStatus
                 {
                     WorkStatus = "A",
-                    WorkStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item1.cbReceiptMoment),
+                    WorkStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item2.ftReceiptMoment),
                     SourceID = GetSourceID(request.Item1),
                     SourceBilling = GetSourceBilling(request.Item1),
                     Reason = "Anulado"
@@ -507,8 +508,8 @@ public class SaftExporter
             }
             else
             {
-                var invoicedProforma = references.OrderBy(x => x.Item1.cbReceiptMoment).LastOrDefault();
-                var referencedPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(invoicedProforma.Item1.cbReceiptMoment);
+                var invoicedProforma = references.OrderBy(x => x.Item2.ftReceiptMoment).LastOrDefault();
+                var referencedPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(invoicedProforma.Item2.ftReceiptMoment);
                 workStatus = new WorkDocumentStatus
                 {
                     WorkStatus = "F",
@@ -572,7 +573,7 @@ public class SaftExporter
         }
 
         // Convert UTC time to Portugal local time
-        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+        var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment);
 
         var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
         var paymentStatus = new PaymentDocumentStatus
@@ -590,7 +591,7 @@ public class SaftExporter
                 paymentStatus = new PaymentDocumentStatus
                 {
                     PaymentStatus = "A",
-                    PaymentStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item1.cbReceiptMoment),
+                    PaymentStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item2.ftReceiptMoment),
                     SourceID = GetSourceID(request.Item1),
                     SourcePayment = GetSourcePayment(request.Item1),
                     Reason = "Anulado"
@@ -641,7 +642,7 @@ public class SaftExporter
             workDocument.Line[0].SourceDocumentID = new SourceDocument
             {
                 OriginatingON = referencedReceiptReference!.ftReceiptIdentification.Split("#").Last(),
-                InvoiceDate = receiptRequest.cbReceiptMoment
+                InvoiceDate = referencedReceiptReference.ftReceiptMoment
             };
         }
 
@@ -672,7 +673,7 @@ public class SaftExporter
             var customer = GetCustomerData(receiptRequest);
 
             // Convert UTC time to Portugal local time
-            var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+            var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
             var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
             var invoiceStatus = new InvoiceDocumentStatus
             {
@@ -689,7 +690,7 @@ public class SaftExporter
                     invoiceStatus = new InvoiceDocumentStatus
                     {
                         InvoiceStatus = "A",
-                        InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item1.cbReceiptMoment),
+                        InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item2.ftReceiptMoment),
                         SourceID = GetSourceID(request.Item1),
                         SourceBilling = GetSourceBilling(request.Item1),
                         Reason = "Anulado"
@@ -750,7 +751,7 @@ public class SaftExporter
             //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
             //    };
             //}
-            invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, x)).ToList();
+            invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, receiptResponse, x)).ToList();
             return invoice;
         }
         catch (Exception ex)
@@ -777,7 +778,7 @@ public class SaftExporter
         return "P";
     }
 
-    public Payment GetPayment(ReceiptRequest receiptRequest, PayItem payItem)
+    public Payment GetPayment(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, PayItem payItem)
     {
         var amount = payItem.Amount;
         if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
@@ -787,7 +788,7 @@ public class SaftExporter
         return new Payment
         {
             PaymentAmount = amount,
-            PaymentDate = payItem.Moment ?? receiptRequest.cbReceiptMoment,
+            PaymentDate = payItem.Moment ?? receiptResponse.ftReceiptMoment,
             PaymentMechanism = PTMappings.GetPaymentMecahnism(payItem),
         };
     }
@@ -843,7 +844,7 @@ public class SaftExporter
                 Quantity = Helpers.CreateMonetaryValue(quantity),
                 UnitOfMeasure = chargeItemData.Unit ?? "Unit",
                 UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
-                TaxPointDate = chargeItemData.Moment ?? receiptRequest.cbReceiptMoment,
+                TaxPointDate = chargeItemData.Moment ?? receiptResponse.ftReceiptMoment,
                 Description = chargeItemData.Description,
 
                 Tax = tax

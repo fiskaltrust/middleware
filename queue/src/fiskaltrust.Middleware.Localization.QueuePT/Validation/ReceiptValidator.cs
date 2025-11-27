@@ -32,7 +32,14 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     /// </summary>
     public async IAsyncEnumerable<ValidationResult> Validate(ReceiptValidationContext context)
     {
-        if(_receiptRequest.ftReceiptCase.Country() != "PT")
+        // Validate time difference between cbReceiptMoment and ftReceiptMoment
+        foreach (var result in ReceiptRequestValidations.ValidateReceiptMomentTimeDifference(_receiptRequest, _receiptResponse))
+        {
+            yield return result;
+        }
+
+
+        if (_receiptRequest.ftReceiptCase.Country() != "PT")
         {
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_InvalidCountryCodeForPT,
@@ -61,7 +68,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
             yield break;
         }
- 
+
 
         foreach (var result in CustomerValidations.ValidateCustomerTaxId(_receiptRequest))
         {
