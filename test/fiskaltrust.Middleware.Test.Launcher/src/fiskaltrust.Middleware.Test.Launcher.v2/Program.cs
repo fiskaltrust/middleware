@@ -13,7 +13,7 @@ var builder = new CashBoxBuilder(
         _ => throw new NotImplementedException(),
     },
     Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "queue-configuration.json"))),
-    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "scu-configuration.json")))
+    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "scu-configuration-bizkaia.json")))
 );
 
 var middleware = builder.Build();

@@ -138,7 +138,7 @@ public class TicketBaiFactory
             return c;
         });
 
-        var vatRates = request.ReceiptRequest.cbChargeItems.GroupBy(x => x.VATRate);
+        var vatRates = chargeItems.GroupBy(x => x.VATRate);
         return vatRates.Select(x => new DetalleIVAType
         {
             BaseImponible = x.Sum(x => x.Amount - x.VATAmount!.Value).ToString("0.00", CultureInfo.InvariantCulture),

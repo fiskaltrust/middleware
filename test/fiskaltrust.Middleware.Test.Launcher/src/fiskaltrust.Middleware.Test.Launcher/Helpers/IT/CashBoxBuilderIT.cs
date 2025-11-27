@@ -76,7 +76,6 @@ class CashBoxBuilderIT : ICashBoxBuilder
         bootstrapper.Configuration = _queueConfiguration.Configuration.NewtonsoftJsonWarp();
 
         var serviceCollection = new ServiceCollection();
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         serviceCollection.AddSingleton(LoggerFactory.Create(builder => builder.AddConsole()));
         serviceCollection.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
         serviceCollection.AddSingleton<IClientFactory<IITSSCD>>(new InMemoryClientFactory<IITSSCD>(_itsscd));

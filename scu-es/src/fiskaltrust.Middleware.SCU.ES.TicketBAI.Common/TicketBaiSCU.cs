@@ -74,7 +74,7 @@ public class TicketBaiSCU : IESSSCD
 
         requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
 
-        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
+        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
         {
             Content = _ticketBaiTerritory.GetHttpContent(requestContent)
         };

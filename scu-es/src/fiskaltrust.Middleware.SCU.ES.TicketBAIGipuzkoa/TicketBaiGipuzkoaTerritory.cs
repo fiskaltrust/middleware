@@ -48,14 +48,11 @@ public class TicketBaiGipuzkoaTerritory : ITicketBaiTerritory
     {
         var responseContent = await response.Content.ReadAsStringAsync();
         var ticketBaiResponse = XmlHelpers.ParseXML<TicketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
-        if (ticketBaiResponse.Salida.Estado == "00")
-        {
-            var identifier = ticketBaiResponse.Salida.IdentificadorTBAI.Split('-');
-            return (true, ticketBaiResponse.Salida?.ResultadosValidacion?.Select(x => (x.Codigo, x.Descripcion))?.ToList() ?? new(), responseContent);
-        }
-        else
-        {
-            return (false, ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList(), responseContent);
-        }
+        var isSuccess = ticketBaiResponse.Salida!.Estado == "00";
+        return (isSuccess,
+            isSuccess
+                ? ticketBaiResponse.Salida?.ResultadosValidacion?.Select(x => (x.Codigo, x.Descripcion))?.ToList() ?? new()
+                : ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList(),
+            responseContent);
     }
 }

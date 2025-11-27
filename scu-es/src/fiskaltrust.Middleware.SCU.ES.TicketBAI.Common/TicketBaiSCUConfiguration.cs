@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common
 {
@@ -20,42 +19,42 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common
         {
             var config = new TicketBaiSCUConfiguration();
 
-            if (configuration.ContainsKey("CertificateBase64") && configuration["CertificateBase64"] != null &&
-                configuration.ContainsKey("CertificatePassword") && configuration["CertificatePassword"] != null)
+            if (configuration.TryGetValue("CertificateBase64", out var certificateBase64) && certificateBase64 != null &&
+                configuration.TryGetValue("CertificatePassword", out var certificatePassword) && certificatePassword != null)
             {
                 config.Certificate = new X509Certificate2(
-                    Convert.FromBase64String(configuration["CertificateBase64"].ToString()!),
-                    configuration["CertificatePassword"].ToString()!);
+                    Convert.FromBase64String(certificateBase64.ToString()!),
+                    certificatePassword.ToString()!);
             }
 
-            if (configuration.ContainsKey("EmisorNif") && configuration["EmisorNif"] != null)
+            if (configuration.TryGetValue("EmisorNif", out var emisorNif) && emisorNif != null)
             {
-                config.EmisorNif = configuration["EmisorNif"].ToString()!;
+                config.EmisorNif = emisorNif.ToString()!;
             }
 
-            if (configuration.ContainsKey("EmisorApellidosNombreRazonSocial") && configuration["EmisorApellidosNombreRazonSocial"] != null)
+            if (configuration.TryGetValue("EmisorApellidosNombreRazonSocial", out var emisorApellidosNombreRazonSocial) && emisorApellidosNombreRazonSocial != null)
             {
-                config.EmisorApellidosNombreRazonSocial = configuration["EmisorApellidosNombreRazonSocial"].ToString()!;
+                config.EmisorApellidosNombreRazonSocial = emisorApellidosNombreRazonSocial.ToString()!;
             }
 
-            if (configuration.ContainsKey("SoftwareVersion") && configuration["SoftwareVersion"] != null)
+            if (configuration.TryGetValue("SoftwareVersion", out var softwareVersion) && softwareVersion != null)
             {
-                config.SoftwareVersion = configuration["SoftwareVersion"].ToString()!;
+                config.SoftwareVersion = softwareVersion.ToString()!;
             }
 
-            if (configuration.ContainsKey("SoftwareLicenciaTBAI") && configuration["SoftwareLicenciaTBAI"] != null)
+            if (configuration.TryGetValue("SoftwareLicenciaTBAI", out var softwareLicenciaTBAI) && softwareLicenciaTBAI != null)
             {
-                config.SoftwareLicenciaTBAI = configuration["SoftwareLicenciaTBAI"].ToString()!;
+                config.SoftwareLicenciaTBAI = softwareLicenciaTBAI.ToString()!;
             }
 
-            if (configuration.ContainsKey("SoftwareName") && configuration["SoftwareName"] != null)
+            if (configuration.TryGetValue("SoftwareName", out var softwareName) && softwareName != null)
             {
-                config.SoftwareName = configuration["SoftwareName"].ToString()!;
+                config.SoftwareName = softwareName.ToString()!;
             }
 
-            if (configuration.ContainsKey("SoftwareNif") && configuration["SoftwareNif"] != null)
+            if (configuration.TryGetValue("SoftwareNif", out var softwareNif) && softwareNif != null)
             {
-                config.SoftwareNif = configuration["SoftwareNif"].ToString()!;
+                config.SoftwareNif = softwareNif.ToString()!;
             }
 
             return config;

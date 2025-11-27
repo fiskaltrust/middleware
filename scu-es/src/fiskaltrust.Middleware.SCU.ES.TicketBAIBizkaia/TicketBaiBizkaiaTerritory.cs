@@ -146,12 +146,9 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
             response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-mensaje-respuesta", out HeaderStringValues message);
             messages.Add((code.ToString(), message.ToString()));
 
-            foreach (var registro in lroeResponse?.Registros ?? [])
+            foreach (var registro in (lroeResponse?.Registros ?? []).Where(registro => registro?.SituacionRegistro is not null))
             {
-                if (registro.SituacionRegistro is not null)
-                {
-                    messages.Add((registro.SituacionRegistro.CodigoErrorRegistro, $"{registro.SituacionRegistro.DescripcionErrorRegistroES}; {registro.SituacionRegistro.DescripcionErrorRegistroEU}"));
-                }
+                messages.Add((registro.SituacionRegistro.CodigoErrorRegistro, $"{registro.SituacionRegistro.DescripcionErrorRegistroES}; {registro.SituacionRegistro.DescripcionErrorRegistroEU}"));
             }
             return (false, messages, lroeContent);
         }

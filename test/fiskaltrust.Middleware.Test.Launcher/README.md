@@ -6,7 +6,7 @@ Those test launchers start an in memory queue in a certain market that's connect
 
 ## Goals
 
-* Debugging a certain businescase with it should be as easy as selecting the businescase.
+* Debugging a certain business case with it should be as easy as selecting the business case.
 * Where possible the test launcher should create the whole cashbox configuration on the fly so the whole project is "plug and play".
 * Everything should work in memory/local only where possible.
 
