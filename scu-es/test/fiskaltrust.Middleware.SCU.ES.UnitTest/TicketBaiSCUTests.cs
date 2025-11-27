@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
 using fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
@@ -41,51 +45,70 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
         private async Task PerformTicketBaiRequestChain(TicketBaiSCUConfiguration config, ITicketBaiTerritory territory)
         {
             var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config, territory);
-            var series = $"T-{DateTime.UtcNow.Ticks}";
-            var request = new SubmitInvoiceRequest
+
+            var request = new ReceiptRequest
             {
-                InvoiceMoment = DateTime.UtcNow,
-                Series = series,
-                InvoiceNumber = "001",
-                InvoiceLine = new List<InvoiceLine>
-                {
-                    new InvoiceLine
-                    {
-                        VATRate = 21.0m,
-                        Amount = 121,
-                        VATAmount = 21,
-                        Description = "test object",
-                        Quantity = 1
-                    }
-                }
+                cbReceiptReference = "001",
+                cbChargeItems = [
+                        new ChargeItem {
+                            VATRate = 21.0m,
+                            Amount = 121,
+                            VATAmount = 21,
+                            Description = "test object",
+                            Quantity = 1
+                        }
+                    ]
             };
-            var response = await sut.SendAsync(request, territory.SubmitInvoices);
-            _output.WriteLine(FormatXml(response.ResponseContent));
-            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
-
-            var response2 = await sut.SendAsync(new SubmitInvoiceRequest
+            var response = await sut.ProcessReceiptAsync(new ifPOS.v2.es.ProcessRequest
             {
-                InvoiceMoment = DateTime.UtcNow,
-                Series = series,
-                InvoiceNumber = "002",
-                LastInvoiceMoment = request.LastInvoiceMoment,
-                LastInvoiceNumber = request.InvoiceNumber,
-                LastInvoiceSignature = response.ShortSignatureValue,
-                InvoiceLine = new List<InvoiceLine>
+                ReceiptRequest = request,
+                ReceiptResponse = new ReceiptResponse
                 {
-                    new InvoiceLine
-                    {
-                        VATRate = 21.0m,
-                        Amount = 121,
-                        VATAmount = 21,
-                        Description = "test object",
-                        Quantity = 1
-                    }
+                    ftReceiptMoment = DateTime.Now,
+                    ftCashBoxIdentification = "test"
                 }
-            }, territory.SubmitInvoices);
+            });
+            var responseContent = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            _output.WriteLine(responseContent);
+            response.ReceiptResponse.ftState.State().Should().Be(State.Success, because: responseContent);
 
-            _output.WriteLine(FormatXml(response2.ResponseContent));
-            response2.Succeeded.Should().BeTrue(because: response2.ResponseContent);
+            var response2 = await sut.ProcessReceiptAsync(
+                new ifPOS.v2.es.ProcessRequest
+                {
+                    ReceiptRequest = new ReceiptRequest
+                    {
+                        cbReceiptReference = "002",
+                        cbChargeItems = [
+                        new ChargeItem {
+                            VATRate = 21.0m,
+                            Amount = 121,
+                            VATAmount = 21,
+                            Description = "test object",
+                            Quantity = 1
+                        }
+                    ]
+                    },
+                    ReceiptResponse = new ReceiptResponse
+                    {
+                        ftReceiptMoment = DateTime.Now,
+                        ftCashBoxIdentification = "test",
+                        ftStateData = new MiddlewareStateData
+                        {
+                            ES = new MiddlewareStateDataES
+                            {
+                                LastReceipt = new Receipt
+                                {
+                                    Request = request,
+                                    Response = response.ReceiptResponse
+                                }
+                            }
+                        }
+                    }
+                });
+
+            var response2Content = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            _output.WriteLine(response2Content);
+            response2.ReceiptResponse.ftState.State().Should().Be(State.Success, because: response2Content);
         }
 
         [Fact]
@@ -112,19 +135,6 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
             await PerformTicketBaiRequestChain(config, new TicketBaiBizkaiaTerritory());
-        }
-
-        private string FormatXml(string xml)
-        {
-            try
-            {
-                var doc = XDocument.Parse(xml);
-                return doc.ToString();
-            }
-            catch (Exception)
-            {
-                return xml;
-            }
         }
     }
 }
