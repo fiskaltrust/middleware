@@ -1,6 +1,6 @@
 ## Specify Configuration
 
-Crate a file `queue-configuration.json` and a file `scu-configuration.json` in this directory.
+Create a file `queue-configuration.json` and a file `scu-configuration.json` in this directory.
 
 The queue file needs to contain at least this empty configuration.
 ```json
