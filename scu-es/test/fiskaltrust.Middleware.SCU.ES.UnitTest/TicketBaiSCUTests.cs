@@ -55,14 +55,14 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             {
                 cbReceiptReference = "001",
                 cbChargeItems = [
-                        new ChargeItem {
-                            VATRate = 21.0m,
-                            Amount = 121,
-                            VATAmount = 21,
-                            Description = "test object",
-                            Quantity = 1
-                        }
-                    ]
+                    new ChargeItem {
+                        VATRate = 21.0m,
+                        Amount = 121,
+                        VATAmount = 21,
+                        Description = "test object",
+                        Quantity = 1
+                    }
+                ]
             };
             var response = await sut.ProcessReceiptAsync(JsonSerializer.Deserialize<ProcessRequest>(JsonSerializer.Serialize(new ProcessRequest
             {
@@ -119,7 +119,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             response2.ReceiptResponse.ftState.State().Should().Be(State.Success, because: response2Content);
         }
 
-        [Fact]
+        [Fact(Skip = "Araba certificate is not working")]
         public async Task SubmitArabaInvoiceAsync()
         {
             var cert = new X509Certificate2(@"TestCertificates/Araba/dispositivo_act.p12", "Iz3np32023", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
