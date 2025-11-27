@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
@@ -59,7 +60,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                         }
                     ]
             };
-            var response = await sut.ProcessReceiptAsync(new ifPOS.v2.es.ProcessRequest
+            var response = await sut.ProcessReceiptAsync(JsonSerializer.Deserialize<ProcessRequest>(JsonSerializer.Serialize(new ProcessRequest
             {
                 ReceiptRequest = request,
                 ReceiptResponse = new ReceiptResponse
@@ -71,18 +72,17 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                         ES = new MiddlewareStateDataES { }
                     }
                 },
-            });
+            })));
             var responseContent = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
             _output.WriteLine(responseContent);
             response.ReceiptResponse.ftState.State().Should().Be(State.Success, because: responseContent);
 
-            var response2 = await sut.ProcessReceiptAsync(
-                new ifPOS.v2.es.ProcessRequest
+            var response2 = await sut.ProcessReceiptAsync(JsonSerializer.Deserialize<ProcessRequest>(JsonSerializer.Serialize(new ProcessRequest
+            {
+                ReceiptRequest = new ReceiptRequest
                 {
-                    ReceiptRequest = new ReceiptRequest
-                    {
-                        cbReceiptReference = "002",
-                        cbChargeItems = [
+                    cbReceiptReference = "002",
+                    cbChargeItems = [
                         new ChargeItem {
                             VATRate = 21.0m,
                             Amount = 121,
@@ -91,24 +91,24 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                             Quantity = 1
                         }
                     ]
-                    },
-                    ReceiptResponse = new ReceiptResponse
+                },
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftReceiptMoment = DateTime.Now,
+                    ftCashBoxIdentification = "test",
+                    ftStateData = new MiddlewareStateData
                     {
-                        ftReceiptMoment = DateTime.Now,
-                        ftCashBoxIdentification = "test",
-                        ftStateData = new MiddlewareStateData
+                        ES = new MiddlewareStateDataES
                         {
-                            ES = new MiddlewareStateDataES
+                            LastReceipt = new Receipt
                             {
-                                LastReceipt = new Receipt
-                                {
-                                    Request = request,
-                                    Response = response.ReceiptResponse
-                                }
+                                Request = request,
+                                Response = response.ReceiptResponse
                             }
                         }
                     }
-                });
+                }
+            })));
 
             var response2Content = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
             _output.WriteLine(response2Content);
