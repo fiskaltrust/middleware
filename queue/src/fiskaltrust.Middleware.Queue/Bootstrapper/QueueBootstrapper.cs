@@ -84,19 +84,19 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "...", "redacted" }
             };
 
-            var cashboxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(middlewareConfiguration.Configuration["configuration"].ToString());
+            //var cashboxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(middlewareConfiguration.Configuration["configuration"].ToString());
 
-            var activeQueue = cashboxConfiguration.ftQueues.First(x => x.Id == middlewareConfiguration.QueueId);
+            //var activeQueue = cashboxConfiguration.ftQueues.First(x => x.Id == middlewareConfiguration.QueueId);
             
-            configuration["QueueVersion"] = activeQueue.Version;
-            configuration["QueueUrl"] = activeQueue.Url;
+            //configuration["QueueVersion"] = activeQueue.Version;
+            //configuration["QueueUrl"] = activeQueue.Url;
 
-            configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
-            configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
+            //configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
+            //configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
 
-            configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
+            //configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
 
-            configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
+            //configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
 
             var actionJournal = new ftActionJournal
             {
