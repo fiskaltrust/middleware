@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         protected ConcurrentDictionary<TKey, T> Data { get; }
         public AbstractInMemoryRepository() { }
 
-        public AbstractInMemoryRepository(IEnumerable<T> seed) => Data = new ConcurrentDictionary<TKey, T>(seed?.ToDictionary(x => GetIdForEntity(x), x => x));
+        public AbstractInMemoryRepository(IEnumerable<T> seed) => Data = new ConcurrentDictionary<TKey, T>(seed?.ToDictionary(x => GetIdForEntity(x), x => x) ?? new());
 
         protected abstract TKey GetIdForEntity(T entity);
 
