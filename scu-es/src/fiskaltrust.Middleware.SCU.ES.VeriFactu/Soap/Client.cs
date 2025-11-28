@@ -1,16 +1,10 @@
 ﻿using System.Diagnostics;
-using System.Runtime.InteropServices.Marshalling;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Xml;
-using System.Xml.Linq;
 using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.Middleware.SCU.ES.Models;
 
-namespace fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 
 public interface IClient
 {
@@ -49,7 +43,7 @@ public class Client : IClient
         try
         {
             using var reader = new StringReader(governmentAPI.Response);
-            content = (Envelope<ResponseBody>)serializer.Deserialize(reader)!;
+            content = (Envelope<ResponseBody>) serializer.Deserialize(reader)!;
         }
         catch (Exception ex)
         {

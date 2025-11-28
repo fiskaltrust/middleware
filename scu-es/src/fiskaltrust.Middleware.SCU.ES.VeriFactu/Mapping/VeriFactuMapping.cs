@@ -7,10 +7,9 @@ using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using Version = fiskaltrust.Middleware.SCU.ES.VeriFactuModels.Version;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
+using Version = fiskaltrust.Middleware.SCU.ES.VeriFactu.Models.Version;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 

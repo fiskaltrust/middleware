@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 
 public static class ReceiptResponseHelper
 {

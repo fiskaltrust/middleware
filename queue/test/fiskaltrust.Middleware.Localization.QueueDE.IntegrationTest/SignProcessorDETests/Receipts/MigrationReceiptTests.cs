@@ -22,10 +22,10 @@ using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class MigrationReceiptTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class MigrationReceiptTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
-        public MigrationReceiptTests(SignProcessorDependenciesFixture fixture) => _fixture = fixture;
+        public MigrationReceiptTests() => _fixture = new SignProcessorDependenciesFixture();
         [Fact]
         public async Task SignProcessor_MigrationScript_ShouldSaveInfoBlockFurtherCalls()
         {
