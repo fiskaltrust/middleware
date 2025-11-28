@@ -221,7 +221,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(response, true, qrCode));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());
     }
 
@@ -230,7 +230,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(response, true, qrCode));
     }
-
 }

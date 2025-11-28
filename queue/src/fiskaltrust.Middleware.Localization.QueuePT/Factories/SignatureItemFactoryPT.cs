@@ -37,15 +37,28 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem CreatePTQRCode(string qrCode)
+    public static SignatureItem CreatePTQRCode(ProcessResponse processResponse, bool sandbox, string qrCode)
     {
-        return new SignatureItem()
+        if (sandbox)
         {
-            Caption = "[www.fiskaltrust.pt]",
-            Data = qrCode,
-            ftSignatureFormat = SignatureFormat.QRCode,
-            ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
-        };
+            return new SignatureItem()
+            {
+                Caption = $"https://receipts-sandbox.fiskaltrust.eu/{processResponse.ReceiptResponse.ftQueueID}/{processResponse.ReceiptResponse.ftQueueItemID}",
+                Data = qrCode,
+                ftSignatureFormat = SignatureFormat.QRCode,
+                ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
+            };
+        }
+        else
+        {
+            return new SignatureItem()
+            {
+                Caption = $"https://receipts.fiskaltrust.eu/{processResponse.ReceiptResponse.ftQueueID}/{processResponse.ReceiptResponse.ftQueueItemID}",
+                Data = qrCode,
+                ftSignatureFormat = SignatureFormat.QRCode,
+                ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
+            };
+        }
     }
 
     public static SignatureItem AddIvaIncluido()
