@@ -1,8 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using FluentAssertions;
 using Xunit;
 

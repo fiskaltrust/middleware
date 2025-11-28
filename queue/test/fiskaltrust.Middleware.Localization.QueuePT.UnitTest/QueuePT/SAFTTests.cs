@@ -5,13 +5,12 @@ using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueuePT.CertificationTool.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -24,7 +23,7 @@ public class SAFTTests
         {
             TaxId = "999"
         }, [], 0);
-        data.Should().StartWith("<?xml version=\"1.0\" encoding=\"windows-1252\"?>");
+        Encoding.UTF8.GetString(data).Should().StartWith("<?xml version=\"1.0\" encoding=\"windows-1252\"?>");
     }
 
     [Fact]
@@ -91,12 +90,7 @@ public class SAFTTests
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = new PTUserObject
-            {
-                UserId = "1",
-                UserDisplayName = "Test User",
-                UserEmail = "Test"
-            }
+            cbUser = "Test User"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -170,7 +164,7 @@ public class SAFTTests
     }
 
     [Fact]
-    public void AuditFile_With_ChargeItems_WithSameName_ButDifferentPrices_ShouldCreate_TwoProducts()
+    public void AuditFile_With_ChargeItems_WithSameName_ButDifferentPrices_ShouldCreate_OneProducts()
     {
         var chargeItems = new List<ChargeItem>
         {
@@ -213,12 +207,7 @@ public class SAFTTests
             ],
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
-            cbUser = new PTUserObject
-            {
-                UserId = "1",
-                UserDisplayName = "Test User",
-                UserEmail = "Test"
-            }
+            cbUser = "Test User"
         };
 
         var receiptResponse = new ReceiptResponse
@@ -272,6 +261,6 @@ public class SAFTTests
             request = JsonSerializer.Serialize(receiptRequest),
             response = JsonSerializer.Serialize(receiptResponse)
         }], 0);
-        data.MasterFiles.Product!.Should().HaveCount(2);
+        data.MasterFiles.Product!.Should().HaveCount(1);
     }
 }

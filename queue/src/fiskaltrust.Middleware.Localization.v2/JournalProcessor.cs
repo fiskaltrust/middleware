@@ -80,7 +80,37 @@ public class JournalProcessor
             _logger.LogError(ex, "An error occured while processing the Journal request.");
             throw;
         }
+
         var pipe = new Pipe();
+        
+        // For PT market, stream directly to pipe without using a temp file
+        if (request.ftJournalType.Country() == "PT")
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await foreach (var journal in response)
+                    {
+                        await pipe.Writer.WriteAsync(journal);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "An error occured while processing the Journal request for PT market.");
+                    await pipe.Writer.CompleteAsync(ex);
+                    throw;
+                }
+                finally
+                {
+                    await pipe.Writer.CompleteAsync();
+                }
+            });
+
+            return (contentType, pipe.Reader);
+        }
+
+        // For other markets, use temp file storage
         var tempFile = Path.GetTempFileName();
         try
         {

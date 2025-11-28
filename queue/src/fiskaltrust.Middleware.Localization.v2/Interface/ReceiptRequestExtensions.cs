@@ -1,9 +1,13 @@
 ﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
 public static class ReceiptRequestExtensions
 {
+    public static bool IsPartialRefundReceipt(this ReceiptRequest receiptRequest) => receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund));
+
+
     // public static long GetCasePart(this ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF;
 
     // public static bool IsVoid(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0;
