@@ -41,7 +41,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_1 = """
             {
               "cbReceiptReference": "1dadd294-0f2e-4af5-b0a4-326d9d44a34d",
-              "cbReceiptMoment": "2025-10-02T04:16:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -82,7 +82,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_2 = """
             {
               "cbReceiptReference": "d06af8dc-75c9-499d-9ad6-39811d015143",
-              "cbReceiptMoment": "2025-09-16T04:16:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": -1,
@@ -124,7 +124,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_3 = """
             {
               "cbReceiptReference": "367e60f0-ec99-4090-871a-99acfddfb0fb",
-              "cbReceiptMoment": "2025-10-02T04:18:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -149,7 +149,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_4 = """
             {
               "cbReceiptReference": "ba7db496-ddfb-49d8-a182-fa41e38dfafb",
-              "cbReceiptMoment": "2025-10-02T04:19:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -190,7 +190,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_5 = """
             {
               "cbReceiptReference": "e1eff8b4-d021-44be-8d2a-58f5fef775f4",
-              "cbReceiptMoment": "2025-10-02T04:20:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": -1,
@@ -232,7 +232,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_6 = """
             {
               "cbReceiptReference": "a5f94391-59e1-4a03-8ebf-3e2f9b548fb8",
-              "cbReceiptMoment": "2025-10-02T04:21:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -300,7 +300,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_7 = """
             {
               "cbReceiptReference": "548fd241-0ae1-4cef-8a67-341ba9ed3e55",
-              "cbReceiptMoment": "2025-10-02T04:22:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 100,
@@ -348,7 +348,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_8 = """
             {
               "cbReceiptReference": "9d5ee916-e22f-4244-8fe7-6a471ccbe06d",
-              "cbReceiptMoment": "2025-09-16T04:22:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 100,
@@ -397,7 +397,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_9 = """
             {
               "cbReceiptReference": "7410a647-5ca7-4b1f-a538-d243062c8c4e",
-              "cbReceiptMoment": "2025-10-02T04:24:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -437,7 +437,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_10 = """
             {
               "cbReceiptReference": "eed675d3-750e-4677-99ac-8ed8db1e7ed8",
-              "cbReceiptMoment": "2025-10-02T04:25:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -477,7 +477,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_11 = """
             {
               "cbReceiptReference": "bd086cbb-fccd-42b8-a12d-c8a8cf7d1ded",
-              "cbReceiptMoment": "2025-09-16T04:25:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -517,7 +517,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_12 = """
             {
               "cbReceiptReference": "16e17740-27f2-4e91-9858-137a7323a652",
-              "cbReceiptMoment": "2025-10-02T04:27:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -550,7 +550,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_13_1 = """
             {
               "cbReceiptReference": "2f480b2f-fe1b-4b18-9603-d21a7e2b2094",
-              "cbReceiptMoment": "2025-10-02T04:28:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -590,7 +590,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_5_13_2 = """
             {
               "cbReceiptReference": "f88b4d9b-7381-4c0e-b4cb-9d221d613a79",
-              "cbReceiptMoment": "2025-10-02T04:29:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                     {
                         "Quantity": 1,
@@ -646,7 +646,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_6 = """
             {
               "cbReceiptReference": "afde2a23-d71d-4c6f-8ecd-fe988919e692",
-              "cbReceiptMoment": "2025-10-02T04:21:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -680,7 +680,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_7 = """
             {
               "cbReceiptReference": "d06af8dc-75c9-499d-9ad6-39811d015143",
-              "cbReceiptMoment": "2025-10-02T04:21:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -714,7 +714,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_8 = """
             {
               "cbReceiptReference": "f7e2ef47-f5c3-43b8-8db3-7764cb3efd83",
-              "cbReceiptMoment": "2025-10-02T04:23:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -738,7 +738,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_9 = """
             {
               "cbReceiptReference": "b6f6795b-9732-4fe5-9efd-1b62c9929bb3",
-              "cbReceiptMoment": "2025-10-02T04:23:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -761,7 +761,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_10 = """
             {
               "cbReceiptReference": "f017bb65-cd0a-44c4-96fc-0957ebb26918",
-              "cbReceiptMoment": "2025-10-02T04:25:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -792,7 +792,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_11 = """
             {
               "cbReceiptReference": "0a865647-5de0-4149-82b4-19b40d998573",
-              "cbReceiptMoment": "2025-10-02T04:26:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": -1,
@@ -827,7 +827,7 @@ public class FullScenarios : AbstractScenarioTests
             {
               "cbTerminalID": "1",
               "cbReceiptReference": "f9abebd7-bf1e-47d5-b40b-50c859f1f817",
-              "cbReceiptMoment": "2025-10-02T04:28:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -900,7 +900,7 @@ public class FullScenarios : AbstractScenarioTests
             {
               "cbTerminalID": "1",
               "cbReceiptReference": "f753d49a-06a7-4508-94c8-daa1d022aedb",
-              "cbReceiptMoment": "2025-10-02T04:28:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": -1,
@@ -943,7 +943,7 @@ public class FullScenarios : AbstractScenarioTests
             {
               "cbTerminalID": "1",
               "cbReceiptReference": "c3829e81-67b8-4348-a358-0764498beafc",
-              "cbReceiptMoment": "2025-10-02T04:31:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 100,
@@ -991,7 +991,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_17 = """
             {
               "cbReceiptReference": "f532647a-7673-49b3-a94b-8ce8bd4b981e",
-              "cbReceiptMoment": "2025-11-17T23:17:18.4939334Z",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [       
                 {
                     "Quantity": 1,
@@ -1024,7 +1024,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_18 = """
             {
               "cbReceiptReference": "9d5ee916-e22f-4244-8fe7-6a471ccbe06d",
-              "cbReceiptMoment": "2025-09-16T04:22:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 100,
@@ -1073,7 +1073,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_19 = """
             {
               "cbReceiptReference": "5a8007c5-3338-42cd-8221-d7c6b54f9f56",
-              "cbReceiptMoment": "2025-10-02T04:34:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -1107,7 +1107,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_20 = """
             {
               "cbReceiptReference": "6732aff2-9514-4fb1-b90c-9488f1da2fdc",
-              "cbReceiptMoment": "2025-10-02T04:35:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -1141,7 +1141,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_21 = """
             {
               "cbReceiptReference": "ce63f531-79e3-4efb-bd1c-7106f3f6f9d4",
-              "cbReceiptMoment": "2025-10-02T04:36:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 2000,
@@ -1172,7 +1172,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_22 = """
             {
               "cbReceiptReference": "231260a6-9183-4743-a24c-1b69ad24033b",
-              "cbReceiptMoment": "2025-10-02T04:37:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -1288,7 +1288,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_33_1_CM = """
             {
               "cbReceiptReference": "1d7b26f4-a76a-43ea-93b5-0f337feb8528",
-              "cbReceiptMoment": "2025-10-02T04:49:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
@@ -1316,7 +1316,7 @@ public class FullScenarios : AbstractScenarioTests
         var receipt_33_2_OR = """
             {
               "cbReceiptReference": "ca7354eb-3265-477d-b17a-1ef2b9a57c2f",
-              "cbReceiptMoment": "2025-10-02T04:50:53",
+              "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
                   "Quantity": 1,
