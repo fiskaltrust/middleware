@@ -51,7 +51,7 @@ public class SaftExporter
 
     private Dictionary<string, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> InvoicedProformas { get; } = new Dictionary<string, (ReceiptRequest, ReceiptResponse)>();
 
-    private Dictionary<string, List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>> References { get; } = new Dictionary<string, List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>>();
+    private Dictionary<string, List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>> References { get; } = new Dictionary<string, List<(ReceiptRequest, ReceiptResponse)>>();
 
 
     /// <summary>
@@ -197,6 +197,12 @@ public class SaftExporter
         var invoices = invoiceReceiptRequests.Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
         var workingDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007) || x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
         var paymentDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
+        
+        // Filter out documents with status "A" (cancelled) or "F" (invoiced) for total calculations per Portuguese SAF-T specification
+        var invoicesForTotals = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A" && x.DocumentStatus.InvoiceStatus != "F").ToList();
+        var workingDocumentsForTotals = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A" && x.DocumentStatus.WorkStatus != "F").ToList();
+        var paymentDocumentsForTotals = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != "A").ToList();
+        
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
@@ -211,22 +217,22 @@ public class SaftExporter
                 SalesInvoices = new SalesInvoices
                 {
                     NumberOfEntries = invoices.Count,
-                    TotalDebit = invoices.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = invoices.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalDebit = invoicesForTotals.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = invoicesForTotals.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Invoice = invoices!
                 },
                 WorkingDocuments = new WorkingDocuments
                 {
                     NumberOfEntries = workingDocuments.Count,
-                    TotalDebit = workingDocuments.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = workingDocuments.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalDebit = workingDocumentsForTotals.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = workingDocumentsForTotals.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     WorkDocument = workingDocuments!
                 },
                 Payments = new Payments
                 {
                     NumberOfEntries = paymentDocuments.Count,
                     TotalDebit = 0,
-                    TotalCredit = paymentDocuments.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalCredit = paymentDocumentsForTotals.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Payment = paymentDocuments!,
                 }
             }
