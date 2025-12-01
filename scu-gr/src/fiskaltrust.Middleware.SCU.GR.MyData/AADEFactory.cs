@@ -213,7 +213,7 @@ public class AADEFactory
             }
         };
 
-        if(inv.invoiceHeader.invoiceType == InvoiceType.Item93)
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item93)
         {
             // It looks like Item93 does NOT allow to specify the currency
             inv.invoiceHeader.currencySpecified = false;
@@ -329,25 +329,7 @@ public class AADEFactory
         }
 
         var headerOverride = overrideData.Invoice.InvoiceHeader;
-
         // Apply invoice type override with validation
-        if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
-        {
-            // Define allowed invoice types for override
-            var allowedInvoiceTypes = new HashSet<string> { "8.2" };
-            if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
-            {
-                throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
-            }
-
-            // Map string to InvoiceType enum
-            invoice.invoiceHeader.invoiceType = headerOverride.InvoiceType switch
-            {
-                "8.2" => InvoiceType.Item82,
-                _ => throw new Exception($"Unmapped invoice type '{headerOverride.InvoiceType}'")
-            };
-        }
-
         // Apply VAT payment suspension
         if (headerOverride.VatPaymentSuspension.HasValue)
         {
@@ -466,6 +448,12 @@ public class AADEFactory
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
     {
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        {
+            // For item 82 we define the taxes at line level only
+            return new List<TaxTotalsType>();
+        }
+
         var documentTaxes = new List<TaxTotalsType>();
         foreach (var item in receiptRequest.cbChargeItems.Where(x => SpecialTaxMappings.IsSpecialTaxItem(x)))
         {
@@ -530,11 +518,94 @@ public class AADEFactory
         return documentTaxes;
     }
 
+    private static List<InvoiceRowType> GetInvoiceDetailsIncludingTaxes(ReceiptRequest receiptRequest)
+    {
+        var nonSpecialTaxes = receiptRequest.GetGroupedChargeItems()
+            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .ToList();
+
+        if (nonSpecialTaxes.Count > 0)
+        {
+            throw new Exception("When using this type of invoice only ChargeItems of type Special Tax are supported.");
+        }
+        var chargeItems = receiptRequest.GetGroupedChargeItems().ToList();
+        var invoiceRows = new List<InvoiceRowType>();
+        foreach (var chargeItem in chargeItems)
+        {
+            var item = chargeItem.chargeItem;
+            var invoiceRow = new InvoiceRowType
+            {
+                lineNumber = (int) item.Position,
+                netValue = 0,
+                vatCategory = AADEMappings.GetVATCategory(item),
+                vatAmount = 0
+            };
+
+            var withholdingMapping = SpecialTaxMappings.GetWithholdingTaxMapping(item.Description);
+            if (withholdingMapping != null)
+            {
+                invoiceRow.withheldAmount = Math.Abs(item.Amount);
+                invoiceRow.withheldAmountSpecified = true;
+                invoiceRow.withheldPercentCategory = withholdingMapping.Code;
+                invoiceRow.withheldPercentCategorySpecified = true;
+                invoiceRows.Add(invoiceRow);
+                continue;
+            }
+
+            var feeMapping = SpecialTaxMappings.GetFeeMapping(item.Description);
+            if (feeMapping != null)
+            {
+                invoiceRow.feesAmount = Math.Abs(item.Amount);
+                invoiceRow.feesAmountSpecified = true;
+                invoiceRow.feesPercentCategory = feeMapping.Code;
+                invoiceRow.feesPercentCategorySpecified = true;
+                invoiceRows.Add(invoiceRow);
+                continue;
+            }
+
+            // If no fee mapping found, try stamp duty mapping
+            var stampDutyMapping = SpecialTaxMappings.GetStampDutyMapping(item.Description);
+            if (stampDutyMapping != null)
+            {
+                invoiceRow.stampDutyAmount = Math.Abs(item.Amount);
+                invoiceRow.stampDutyAmountSpecified = true;
+                invoiceRow.stampDutyPercentCategory = stampDutyMapping.Code;
+                invoiceRow.stampDutyPercentCategorySpecified = true;
+                invoiceRows.Add(invoiceRow);
+                continue;
+            }
+
+            // If no stamp duty mapping found, try other tax mapping
+            var otherTaxMapping = SpecialTaxMappings.GetOtherTaxMapping(item.Description);
+            if (otherTaxMapping != null)
+            {
+                invoiceRow.otherTaxesAmount = Math.Abs(item.Amount);
+                invoiceRow.otherTaxesAmountSpecified = true;
+                invoiceRow.otherTaxesPercentCategory = otherTaxMapping.Code;
+                invoiceRow.otherTaxesPercentCategorySpecified = true;
+                invoiceRows.Add(invoiceRow);
+                continue;
+            }
+
+            // If no mapping found, throw exception. To add new mappings based on the category in the official mydata repo. At this stage we do a 1:1 mapping from description in the given original table (e.g. withholding) to the mydata category.
+            throw new Exception($"No withholding tax, fee, stamp duty, or other tax mapping found for description: '{item.Description}'. " +
+                              "Please use one of the supported Greek tax descriptions or add a new mapping.");
+        }
+        return invoiceRows;
+    }
+
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
+        if(AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        {
+            // For Invoice Types of type 82 we use a different loading mechanism for the invocies to ensure that taxlevels are included
+            return GetInvoiceDetailsIncludingTaxes(receiptRequest);
+        }
+
         var chargeItems = receiptRequest.GetGroupedChargeItems()
             .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
             .ToList();
+
         var nextPosition = 1;
         return chargeItems.Select(grouped =>
         {

@@ -1,10 +1,11 @@
-﻿using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.SCU.GR.Abstraction;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.GR.MyData.Models;
-using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.Abstraction;
+using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
+using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public static class AADEMappings
@@ -231,6 +232,26 @@ public static class AADEMappings
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData) && overrideData?.GR?.MyDataOverride != null)
+        {
+            var headerOverride = overrideData.GR.MyDataOverride.Invoice?.InvoiceHeader;
+            if (!string.IsNullOrEmpty(headerOverride?.InvoiceType))
+            {
+                // Define allowed invoice types for override
+                var allowedInvoiceTypes = new HashSet<string> { "8.2" };
+                if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
+                {
+                    throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
+                }
+
+                if(headerOverride.InvoiceType == "8.2")
+                {
+                    return InvoiceType.Item82;
+                }
+            }
+        }
+
+
         // Validate that agency business (NotOwnSales) items are not mixed with other types
         var hasNotOwnSales = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales));
         var hasOtherTypes = receiptRequest.cbChargeItems.Any(x => 
