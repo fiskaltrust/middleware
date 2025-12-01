@@ -530,6 +530,7 @@ public class AADEFactory
         }
         var chargeItems = receiptRequest.GetGroupedChargeItems().ToList();
         var invoiceRows = new List<InvoiceRowType>();
+        var nextPosition = 1;
         foreach (var chargeItem in chargeItems)
         {
             var item = chargeItem.chargeItem;
@@ -540,6 +541,15 @@ public class AADEFactory
                 vatCategory = AADEMappings.GetVATCategory(item),
                 vatAmount = 0
             };
+
+            if (((int) item.Position) == 0)
+            {
+                invoiceRow.lineNumber = nextPosition++;
+            }
+            else
+            {
+                nextPosition = (int) item.Position + 1;
+            }
 
             var withholdingMapping = SpecialTaxMappings.GetWithholdingTaxMapping(item.Description);
             if (withholdingMapping != null)
