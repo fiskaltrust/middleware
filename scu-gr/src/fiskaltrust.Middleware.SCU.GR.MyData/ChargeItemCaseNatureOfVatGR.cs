@@ -31,7 +31,6 @@ public enum ChargeItemCaseNatureOfVatGR
     // 60 - VAT paid in other EU country
     VatPaidOtherEUArticle13 = 0x6100,                   // [61] (mydata:3) ar-ticle 17 Sales of goods which DUR-ING SALES are lo-cated outside of Greece, sales on boats and or planes during an intra-eu sale Χωρίς ΦΠΑ - άρθρο 17 του Κώδικα ΦΠΑ
     VatPaidOtherEUArticle14 = 0x6200,                   // [62] (mydata:4) ar-ticle 18 Services taxed outside fo Greece including restaurant and ca-tering services pro-vided abroad IN-CLUDING SERVICES provided digitally when the receiver is living abroad. Χωρίς ΦΠΑ - άρθρο 18 του Κώδικα ΦΠΑ
-    VatPaidGoodsServicesForEUOrThirdCountry = 0x6300,   // [63] (mydata:26) special case where you don't pay vat as long as the goods or services are intented for another EU state or 3rd party country
 
     // 80 - Excluded
     ExcludedArticle2And3 = 0x8100,                      // [81] (mydata:1) Ar-ticle 2&3 Includes transactions out-side the scope of VAT (e.g. compen-sations for material damages, income from participa-tions, subsidies, grants, etc., as well as the special re-gime of Mount Athos. Χωρίς ΦΠΑ - άρθρο 2 και 3 του Κώδικα ΦΠΑ
@@ -41,6 +40,7 @@ public enum ChargeItemCaseNatureOfVatGR
     ExcludedArticle32OpenSeasShips = 0x8500,            // [85] (mydata:12) Article 32.Open seas ships
     ExcludedArticle32_1OpenSeasShips = 0x8600,          // [86] (mydata:13) Article 32.1.Open seas ships
     ExcludedPOL_1029_1995 = 0x8700,                     // [87] Χωρίς ΦΠΑ - ΠΟΛ.1029/1995
+    ExcludeGoodsServicesForEUOrThirdCountry = 0x8800,   // [88] (mydata:26) special case where you don't pay vat as long as the goods or services are intented for another EU state or 3rd party country
 }
 
 public static class ChargeItemCaseNatureOfVatGRExt

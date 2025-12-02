@@ -565,7 +565,6 @@ public static class AADEMappings
             // VAT paid in other EU country (60)
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle13 => MyDataVatExemptionCategory.GoodsOutsideGreece,
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle14 => MyDataVatExemptionCategory.ServicesOutsideGreece,
-            ChargeItemCaseNatureOfVatGR.VatPaidGoodsServicesForEUOrThirdCountry => MyDataVatExemptionCategory.GoodsServicesForEUOrThirdCountry,
 
             // Excluded (80)
             ChargeItemCaseNatureOfVatGR.ExcludedArticle2And3 => MyDataVatExemptionCategory.GeneralExemption,
@@ -575,6 +574,7 @@ public static class AADEMappings
             ChargeItemCaseNatureOfVatGR.ExcludedArticle32OpenSeasShips => MyDataVatExemptionCategory.OpenSeasShips,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle32_1OpenSeasShips => MyDataVatExemptionCategory.OpenSeasShipsArticle32_1,
             ChargeItemCaseNatureOfVatGR.ExcludedPOL_1029_1995 => MyDataVatExemptionCategory.POL_1029_1995,
+            ChargeItemCaseNatureOfVatGR.ExcludeGoodsServicesForEUOrThirdCountry => MyDataVatExemptionCategory.GoodsServicesForEUOrThirdCountry,
             ChargeItemCaseNatureOfVatGR.UsualVatApplies => null,
             _ => throw new NotSupportedException($"The ChargeItemCase 0x{chargeItem.ftChargeItemCase:x} contains a not supported Nature NN.") // Unknown nature, no exemption category
         };
