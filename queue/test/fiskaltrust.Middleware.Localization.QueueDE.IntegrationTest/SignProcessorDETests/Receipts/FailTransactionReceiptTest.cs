@@ -9,14 +9,14 @@ using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class FailTransactionReceiptTest : IClassFixture<SignProcessorDependenciesFixture>
+    public class FailTransactionReceiptTest
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
-        public FailTransactionReceiptTest(SignProcessorDependenciesFixture fixture)
+        public FailTransactionReceiptTest()
         {
-            _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = new SignProcessorDependenciesFixture();
+            _receiptTests = new ReceiptTests(_fixture);
         }
         [Fact]
         public async Task FailTransaction_IsImplicitFlowOnSingle_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoImplFlow", 0x444500010000000b), "ReceiptCase {0:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.").ConfigureAwait(false);
@@ -28,10 +28,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             receiptRequest.ftReceiptCaseData = "{\"CurrentStartedTransactionNumbers\": [8, 9]}";
             await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, "ReceiptCase {0:X} (fail-transaction-receipt) must use implicit-flow flag when multiple transactions should be failed.").ConfigureAwait(false);
         }
-        
+
         [Fact]
         public async Task FailTransaction_NoOpenTransOnSingle_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptReference(_receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoOpenTransSingle", 0x444500000000000b), "No open transaction found for cbReceiptReference '{0:X}'. If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.").ConfigureAwait(false);
-        
+
         [Fact]
         public async Task FailTransaction_SingleTrans_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoImplFlow", 0x444500010000000b), "ReceiptCase {0:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.").ConfigureAwait(false);
 
