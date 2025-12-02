@@ -66,8 +66,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var queueItem = await queueItemRepository.GetLastQueueItemAsync().ConfigureAwait(false);
             receiptResponse.ftQueueItemID.Should().Be(queueItem.ftQueueItemId.ToString());
 
-            var actionjournala = await actionJournalRepository.GetAsync().ConfigureAwait(false);
-            var actionjournal = actionjournala.Last();
+            var actionjournals = await actionJournalRepository.GetAsync().ConfigureAwait(false);
+            var actionjournal = actionjournals.Where(x => x.Type == "4445000100000019").Last();
 
             var migrationState = JsonConvert.DeserializeObject<MigrationState>(actionjournal.DataJson);
             var ajCount = await actionJournalRepository.CountAsync().ConfigureAwait(false);

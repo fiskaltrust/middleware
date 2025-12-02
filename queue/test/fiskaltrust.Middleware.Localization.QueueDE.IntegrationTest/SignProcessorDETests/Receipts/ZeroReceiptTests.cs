@@ -33,8 +33,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
         public ZeroReceiptTests()
         {
-            _receiptTests = new ReceiptTests(_fixture);
             _fixture = new();
+            _receiptTests = new ReceiptTests(_fixture);
         }
 
         [Fact]
