@@ -188,6 +188,87 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var response = await sut.ProcessAsync(request);
             response.Should().NotBeNull();
         }
+        
+        [Fact]
+        public async Task ProcessAsync_WhenCountrySpecificThrows_ShouldSetFtStateCountryFromQueue()
+        {
+            var queueId = Guid.NewGuid();
+            var cashBoxId = Guid.NewGuid();
+
+            var queue = new ftQueue
+            {
+                ftQueueId = queueId,
+                ftCashBoxId = cashBoxId,
+                ftQueuedRow = 0,
+                ftCurrentRow = 1,
+                CountryCode = "DE" 
+            };
+
+            var request = new ReceiptRequest
+            {
+                ftCashBoxID = cashBoxId.ToString(),
+                ftReceiptCase = 0x4154000000000000,
+                cbReceiptReference = "ABC",
+                cbTerminalID = "TERM1",
+                cbReceiptMoment = DateTime.UtcNow,
+                cbChargeItems = Array.Empty<ChargeItem>(),
+                cbPayItems = Array.Empty<PayItem>()
+            };
+
+            var logger = new Mock<ILogger<SignProcessor>>();
+
+            var configurationRepo = new Mock<IConfigurationRepository>();
+            configurationRepo
+                .Setup(x => x.GetQueueAsync(queueId))
+                .ReturnsAsync(queue);
+
+            var queueItemRepo = new Mock<IMiddlewareQueueItemRepository>();
+            queueItemRepo
+                .Setup(x => x.InsertOrUpdateAsync(It.IsAny<ftQueueItem>()))
+                .Returns(Task.CompletedTask);
+
+            var receiptJournalRepo = new Mock<IMiddlewareReceiptJournalRepository>();
+            var actionJournalRepo = new Mock<IMiddlewareActionJournalRepository>();
+
+            var crypto = new Mock<ICryptoHelper>();
+            crypto.Setup(x => x.GenerateBase64Hash(It.IsAny<string>()))
+                 .Returns("HASH");
+
+            var marketSpecific = new Mock<IMarketSpecificSignProcessor>();
+            marketSpecific
+                .Setup(x => x.ProcessAsync(request, queue, It.IsAny<ftQueueItem>()))
+                .ThrowsAsync(new Exception("boom"));
+
+            marketSpecific
+                .Setup(x => x.GetFtCashBoxIdentificationAsync(queue))
+                .ReturnsAsync("IDENTIFIER");
+
+            var cfg = new MiddlewareConfiguration
+            {
+                QueueId = queueId,
+                CashBoxId = cashBoxId
+            };
+
+            var processor = new SignProcessor(
+                logger.Object,
+                configurationRepo.Object,
+                queueItemRepo.Object,
+                receiptJournalRepo.Object,
+                actionJournalRepo.Object,
+                crypto.Object,
+                marketSpecific.Object,
+                cfg);
+
+            var response = await processor.ProcessAsync(request);
+
+            ulong ftState = (ulong)response.ftState;
+
+            ulong expectedCountryBits = EncodeCountry_TestOnly("DE");
+
+            (ftState & 0xFFFF000000000000UL).Should().Be(expectedCountryBits);
+
+            (ftState & 0xFFFFFFFFUL).Should().Be(0xEEEE_EEEEUL);
+        }
 
         private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo) SetupTestEnvironment(long ftReceiptCase, long ftState)
         {
@@ -242,6 +323,18 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 Mock.Of<IMarketSpecificSignProcessor>(),
                 config);
         }
-
+        
+        private static ulong EncodeCountry_TestOnly(string code)
+        {
+            return code switch
+            {
+                "DE" => 0x4445000000000000UL,
+                "FR" => 0x4652000000000000UL,
+                "ME" => 0x4D45000000000000UL,
+                "IT" => 0x4954000000000000UL,
+                "AT" => 0x4154000000000000UL,
+                _ => 0x4154000000000000UL
+            };
+        }
     }
 }
