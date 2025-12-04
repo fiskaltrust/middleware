@@ -73,7 +73,11 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                     ftCashBoxIdentification = "test",
                     ftStateData = new MiddlewareStateData
                     {
-                        ES = new MiddlewareStateDataES { }
+                        ES = new MiddlewareStateDataES
+                        {
+                            SerieFactura = "I",
+                            NumFactura = 1
+                        }
                     }
                 },
             })));
@@ -108,7 +112,9 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                             {
                                 Request = request,
                                 Response = response.ReceiptResponse
-                            }
+                            },
+                            SerieFactura = "I",
+                            NumFactura = 2
                         }
                     }
                 }

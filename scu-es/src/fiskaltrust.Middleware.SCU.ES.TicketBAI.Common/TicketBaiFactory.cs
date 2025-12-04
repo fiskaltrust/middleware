@@ -5,6 +5,8 @@ using System.Globalization;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
+using System;
 
 #pragma warning disable IDE0052
 
@@ -44,26 +46,26 @@ public class TicketBaiFactory
         };
     }
 
-    public TicketBaiRequest ConvertTo(ProcessRequest request, Receipt? lastReceipt)
+    public TicketBaiRequest ConvertTo(ProcessRequest request, MiddlewareStateDataES middlewareStateDataES)
     {
         var ticketBaiRequest = new TicketBaiRequest
         {
             Cabecera = _cabacera,
             Sujetos = _sujetos,
-            HuellaTBAI = CreateHuellTBai(request, lastReceipt),
-            Factura = CreateFactura(request, lastReceipt)
+            HuellaTBAI = CreateHuellTBai(request, middlewareStateDataES.LastReceipt),
+            Factura = CreateFactura(request, middlewareStateDataES.SerieFactura, middlewareStateDataES.NumFactura)
         };
         return ticketBaiRequest;
     }
 
-    private static Factura CreateFactura(ProcessRequest request, Receipt? lastReceipt)
+    private static Factura CreateFactura(ProcessRequest request, string serieFactura, ulong numFactura)
     {
         var facturoa = new Factura
         {
             CabeceraFactura = new CabeceraFacturaType
             {
-                SerieFactura = "T", // QUESTION
-                NumFactura = request.ReceiptRequest.cbReceiptReference,
+                SerieFactura = serieFactura, // QUESTION
+                NumFactura = numFactura.ToString(),
                 FechaExpedicionFactura = request.ReceiptResponse.ftReceiptMoment.ToString("dd-MM-yyyy"),
                 HoraExpedicionFactura = request.ReceiptResponse.ftReceiptMoment.ToString("HH:mm:ss"),
                 FacturaSimplificada = SiNoType.S,
@@ -90,13 +92,13 @@ public class TicketBaiFactory
                     Sujeta = new SujetaType
                     {
                         NoExenta = new List<DetalleNoExentaType>
-                                 {
-                                     new DetalleNoExentaType
-                                     {
-                                         TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                         DesgloseIVA = CreateDetalleIVAType(request)
-                                     }
-                                 }
+                            {
+                                new DetalleNoExentaType
+                                {
+                                    TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
+                                    DesgloseIVA = CreateDetalleIVAType(request)
+                                }
+                            }
                     }
                 }
             }
@@ -113,8 +115,8 @@ public class TicketBaiFactory
         };
 
         var numFacturaAnterior = lastReceipt?.Request.cbReceiptReference;
-        var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
-        var serieFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.IsType((SignatureTypeES) 0x4553_2000_0000_0005)).Data;
+        var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
+        var serieFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType((SignatureTypeES) 0x0005)).Data;
         var fechaExpedicionFacturaAnterior = lastReceipt?.Response.ftReceiptMoment;
         if (numFacturaAnterior != null && signatureValueFirmaFacturaAnterior != null && fechaExpedicionFacturaAnterior != null)
         {
@@ -123,7 +125,7 @@ public class TicketBaiFactory
                 SerieFacturaAnterior = serieFacturaAnterior,
                 NumFacturaAnterior = numFacturaAnterior,
                 FechaExpedicionFacturaAnterior = fechaExpedicionFacturaAnterior.Value.ToString("dd-MM-yyyy"),
-                SignatureValueFirmaFacturaAnterior = signatureValueFirmaFacturaAnterior
+                SignatureValueFirmaFacturaAnterior = signatureValueFirmaFacturaAnterior.Substring(0, 100)
             };
         }
 
