@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
@@ -22,52 +23,54 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
 {
     public class SignProcessorTests
     {
-        private SignProcessor CreateSignProcessor(
-            Mock<IMiddlewareQueueItemRepository> queueItemRepositoryMock,
-            MiddlewareConfiguration? config = null)
+    private SignProcessor CreateSignProcessor(
+        Mock<IMiddlewareQueueItemRepository> queueItemRepositoryMock,
+        MiddlewareConfiguration? config = null,
+        string? queueCountryCode = null)
+    {
+        var loggerMock = new Mock<ILogger<SignProcessor>>();
+        var storageProviderMock = new Mock<IStorageProvider>();
+        var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>();
+        actionJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Returns(Task.CompletedTask);
+        var receiptJournalRepositoryMock = new Mock<IMiddlewareReceiptJournalRepository>();
+        receiptJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftReceiptJournal>())).Returns(Task.CompletedTask);
+
+        var processRequestMock = new Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse, List<ftActionJournal>)>>(
+            (req, resp, queue, item) => Task.FromResult((resp, new List<ftActionJournal>()))
+        );
+        var cashBoxIdentification = new AsyncLazy<string>(() => Task.FromResult("TestCashBoxIdentification"));
+        var queueItemRepositoryLazy = new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(queueItemRepositoryMock.Object));
+        var configuration = config ?? new MiddlewareConfiguration
         {
-            var loggerMock = new Mock<ILogger<SignProcessor>>();
-            var storageProviderMock = new Mock<IStorageProvider>();
-            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>();
-            actionJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Returns(Task.CompletedTask);
-            var receiptJournalRepositoryMock = new Mock<IMiddlewareReceiptJournalRepository>();
-            receiptJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftReceiptJournal>())).Returns(Task.CompletedTask);
+            QueueId = Guid.NewGuid(),
+            CashBoxId = Guid.NewGuid(),
+            IsSandbox = false,
+            ReceiptRequestMode = 0
+        };
 
-            var processRequestMock = new Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse, List<ftActionJournal>)>>(
-                (req, resp, queue, item) => Task.FromResult((resp, new List<ftActionJournal>()))
-            );
-            var cashBoxIdentification = new AsyncLazy<string>(() => Task.FromResult("TestCashBoxIdentification"));
-            var queueItemRepositoryLazy = new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(queueItemRepositoryMock.Object));
-            var configuration = config ?? new MiddlewareConfiguration
-            {
-                QueueId = Guid.NewGuid(),
-                CashBoxId = Guid.NewGuid(),
-                IsSandbox = false,
-                ReceiptRequestMode = 0
-            };
+        var configurationRepositoryMock = new Mock<IConfigurationRepository>();
+        configurationRepositoryMock.Setup(x => x.GetQueueAsync(configuration.QueueId)).ReturnsAsync(new ftQueue
+        {
+            ftQueueId = configuration.QueueId,
+            Timeout = 300,
+            StartMoment = DateTime.MinValue,
+            StopMoment = null,
+            CountryCode = queueCountryCode
+        });
 
-            var configurationRepositoryMock = new Mock<IConfigurationRepository>();
-            configurationRepositoryMock.Setup(x => x.GetQueueAsync(configuration.QueueId)).ReturnsAsync(new ftQueue
-            {
-                ftQueueId = configuration.QueueId,
-                Timeout = 300,
-                StartMoment = DateTime.MinValue,
-                StopMoment = null
-            });
+        storageProviderMock.Setup(x => x.CreateConfigurationRepository()).Returns(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configurationRepositoryMock.Object)));
+        storageProviderMock.Setup(x => x.CreateMiddlewareQueueItemRepository()).Returns(queueItemRepositoryLazy);
+        storageProviderMock.Setup(x => x.CreateMiddlewareActionJournalRepository()).Returns(new AsyncLazy<IMiddlewareActionJournalRepository>(() => Task.FromResult(actionJournalRepositoryMock.Object)));
+        storageProviderMock.Setup(x => x.CreateMiddlewareReceiptJournalRepository()).Returns(new AsyncLazy<IMiddlewareReceiptJournalRepository>(() => Task.FromResult(receiptJournalRepositoryMock.Object)));
 
-            storageProviderMock.Setup(x => x.CreateConfigurationRepository()).Returns(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configurationRepositoryMock.Object)));
-            storageProviderMock.Setup(x => x.CreateMiddlewareQueueItemRepository()).Returns(queueItemRepositoryLazy);
-            storageProviderMock.Setup(x => x.CreateMiddlewareActionJournalRepository()).Returns(new AsyncLazy<IMiddlewareActionJournalRepository>(() => Task.FromResult(actionJournalRepositoryMock.Object)));
-            storageProviderMock.Setup(x => x.CreateMiddlewareReceiptJournalRepository()).Returns(new AsyncLazy<IMiddlewareReceiptJournalRepository>(() => Task.FromResult(receiptJournalRepositoryMock.Object)));
-
-            return new SignProcessor(
-                loggerMock.Object,
-                new QueueStorageProvider(configuration.QueueId, storageProviderMock.Object),
-                processRequestMock,
-                cashBoxIdentification,
-                configuration
-            );
-        }
+        return new SignProcessor(
+            loggerMock.Object,
+            new QueueStorageProvider(configuration.QueueId, storageProviderMock.Object),
+            processRequestMock,
+            cashBoxIdentification,
+            configuration
+        );
+    }
 
         private static ftQueueItem CreateQueueItem(string reference, ReceiptRequest req, ReceiptResponse resp)
         {
@@ -172,6 +175,115 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             response!.ftStateData.Should().NotBeNull();
             var middlewareStateData = (MiddlewareStateData) response.ftStateData!;
             middlewareStateData.PreviousReceiptReference.Should().BeNull();
+        }
+        
+        [Fact]
+        public async Task ProcessAsync_ShouldFail_WhenReceiptCaseCountryDiffersFromQueueCountry()
+        {
+            // Arrange
+            const string queueCountry = "AT";
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftReceiptCase = default(ReceiptCase).WithCountry("DE")
+            };
+
+            var queueItemRepoMock = new Mock<IMiddlewareQueueItemRepository>();
+            var config = new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value };
+
+            var processor = CreateSignProcessor(queueItemRepoMock, config, queueCountryCode: queueCountry);
+
+            // Act
+            var response = await processor.ProcessAsync(receiptRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.ftState.IsState(State.Error).Should().BeTrue();
+            response.ftState.Country().Should().Be(queueCountry);
+            response.ftSignatures.Should().NotBeNull();
+            response.ftSignatures.Should().HaveCount(1);
+            response.ftSignatures[0].Caption.Should().Be("FAILURE");
+            response.ftSignatures[0].Data.Should().Contain("ReceiptCase");
+            response.ftSignatures[0].Data.Should().Contain("does not match the queue country");
+        }
+        
+        [Fact]
+        public async Task ProcessAsync_ShouldFail_WhenChargeItemCountryDiffersFromQueueCountry()
+        {
+            // Arrange
+            const string queueCountry = "AT";
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftReceiptCase = default(ReceiptCase).WithCountry(queueCountry),
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = default(ChargeItemCase).WithCountry("DE"),
+                        Amount = 100
+                    }
+                }
+            };
+
+            var queueItemRepoMock = new Mock<IMiddlewareQueueItemRepository>();
+            var config = new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value };
+            var processor = CreateSignProcessor(queueItemRepoMock, config, queueCountryCode: queueCountry);
+
+            // Act
+            var response = await processor.ProcessAsync(receiptRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.ftState.IsState(State.Error).Should().BeTrue();
+            response.ftState.Country().Should().Be(queueCountry);
+
+            response.ftSignatures.Should().NotBeNull();
+            response.ftSignatures.Should().HaveCount(1);
+            response.ftSignatures[0].Caption.Should().Be("FAILURE");
+            response.ftSignatures[0].Data.Should().Contain("ChargeItemCase");
+            response.ftSignatures[0].Data.Should().Contain("does not match the queue country");
+        }
+        
+        [Fact]
+        public async Task ProcessAsync_ShouldFail_WhenPayItemCountryDiffersFromQueueCountry()
+        {
+            // Arrange
+            const string queueCountry = "AT";
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftReceiptCase = default(ReceiptCase).WithCountry(queueCountry),
+                cbPayItems = new List<PayItem>
+                {
+                    new PayItem
+                    {
+                        ftPayItemCase = default(PayItemCase).WithCountry("DE"),
+                        Amount = 100
+                    }
+                }
+            };
+
+            var queueItemRepoMock = new Mock<IMiddlewareQueueItemRepository>();
+            var config = new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value };
+            var processor = CreateSignProcessor(queueItemRepoMock, config, queueCountryCode: queueCountry);
+
+            // Act
+            var response = await processor.ProcessAsync(receiptRequest);
+
+            // Assert
+            response.Should().NotBeNull();
+            response!.ftState.IsState(State.Error).Should().BeTrue();
+            response.ftState.Country().Should().Be(queueCountry);
+
+            response.ftSignatures.Should().NotBeNull();
+            response.ftSignatures.Should().HaveCount(1);
+            response.ftSignatures[0].Caption.Should().Be("FAILURE");
+            response.ftSignatures[0].Data.Should().Contain("PayItemCase");
+            response.ftSignatures[0].Data.Should().Contain("does not match the queue country");
         }
     }
 }
