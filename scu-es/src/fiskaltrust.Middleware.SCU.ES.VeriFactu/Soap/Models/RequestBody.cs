@@ -1,7 +1,7 @@
 ﻿using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 
-namespace fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 
 [Serializable]
 [XmlRoot("Body")]

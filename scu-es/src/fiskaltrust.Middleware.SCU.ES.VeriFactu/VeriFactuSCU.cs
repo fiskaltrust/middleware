@@ -1,20 +1,10 @@
-﻿using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
-using System.ServiceModel;
-using System.Text;
-using System.Text.Json;
-using System.Xml;
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using System.Text.Json.Serialization;
-using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 

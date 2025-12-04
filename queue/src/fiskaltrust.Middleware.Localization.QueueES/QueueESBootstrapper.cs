@@ -25,11 +25,13 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
     private readonly Queue _queue;
 
     public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration)
+        : this(id, loggerFactory, clientFactory, configuration, new AzureStorageProvider(loggerFactory, id, configuration)) { }
+
+    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
 
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
         var masterDataService = new MasterDataService(configuration, storageProvider);

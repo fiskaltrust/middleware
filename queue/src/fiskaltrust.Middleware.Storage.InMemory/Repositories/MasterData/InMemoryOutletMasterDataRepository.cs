@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData
 
         public Task CreateAsync(OutletMasterData entity)
         {
-            Data.Add(entity.OutletId, entity);
+            Data.TryAdd(entity.OutletId, entity);
             return Task.CompletedTask;
         }
 
