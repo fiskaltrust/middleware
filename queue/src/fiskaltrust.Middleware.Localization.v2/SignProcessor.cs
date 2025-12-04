@@ -193,6 +193,46 @@ public class SignProcessor : ISignProcessor
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
 
+        if (!string.IsNullOrWhiteSpace(queue.CountryCode))
+        {
+            receiptResponse.ftState = receiptResponse.ftState.WithCountry(queue.CountryCode);
+        }
+
+        if (!string.IsNullOrWhiteSpace(queue.CountryCode))
+        {
+            var queueCountry = queue.CountryCode;
+
+            var receiptCountry = request.ftReceiptCase.Country();
+            if (!string.Equals(receiptCountry, queueCountry, StringComparison.OrdinalIgnoreCase))
+            {
+                return ReturnWithCountryMismatch("ReceiptCase", receiptCountry, queue, receiptResponse, queueItem);
+            }
+
+            if (request.cbChargeItems != null)
+            {
+                foreach (var chargeItem in request.cbChargeItems)
+                {
+                    var chargeItemCountry = chargeItem.ftChargeItemCase.Country();
+                    if (!string.Equals(chargeItemCountry, queueCountry, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ReturnWithCountryMismatch("ChargeItemCase", chargeItemCountry, queue, receiptResponse, queueItem);
+                    }
+                }
+            }
+
+            if (request.cbPayItems != null)
+            {
+                foreach (var payItem in request.cbPayItems)
+                {
+                    var payItemCountry = payItem.ftPayItemCase.Country();
+                    if (!string.Equals(payItemCountry, queueCountry, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ReturnWithCountryMismatch("PayItemCase", payItemCountry, queue, receiptResponse, queueItem);
+                    }
+                }
+            }
+        }
+
         if (queue.CountryCode != "GR" && queue.CountryCode != "PT")
         {
             receiptResponse.ftStateData = new MiddlewareStateData
@@ -229,6 +269,29 @@ public class SignProcessor : ISignProcessor
                 ftQueueItemId = queueItem.ftQueueItemId,
                 Moment = DateTime.UtcNow,
                 Message = $"QueueId {queueItem.ftQueueId} has been disabled."
+            }]);
+    }
+    
+    private (ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals) ReturnWithCountryMismatch(string componentName, string? requestCountry, ftQueue queue, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+    {
+        var queueCountry = queue.CountryCode ?? "<null>";
+        var errorMessage = $"The country of the {componentName} ('{requestCountry ?? "<null>"}') does not match the queue country ('{queueCountry}').";
+
+        if (!string.IsNullOrWhiteSpace(queue.CountryCode))
+        {
+            receiptResponse.ftState = receiptResponse.ftState.WithCountry(queue.CountryCode);
+        }
+
+        receiptResponse.SetReceiptResponseError(errorMessage);
+
+        return (receiptResponse, [
+            new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queueItem.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                Moment = DateTime.UtcNow,
+                Message = errorMessage
             }]);
     }
 }
