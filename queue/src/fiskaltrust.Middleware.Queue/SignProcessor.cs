@@ -409,17 +409,13 @@ namespace fiskaltrust.Middleware.Queue
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         }
         
-        private static ulong EncodeCountry(string? countryCode)
+        private static ulong EncodeCountry(string? countryCode) => countryCode?.ToUpperInvariant() switch 
         {
-            switch (countryCode?.ToUpperInvariant())
-            {
-                case "DE": return 0x4445000000000000UL;
-                case "FR": return 0x4652000000000000UL;
-                case "ME": return 0x4D45000000000000UL;
-                case "IT": return 0x4954000000000000UL;
-                case "AT":
-                default:   return 0x4154000000000000UL; // "AT"
-            }
-        }
+                "DE" => 0x4445000000000000,
+                "FR" => 0x4652000000000000,
+                "ME" => 0x4D45000000000000,
+                "IT" => 0x4954000000000000,
+                _    => 0x4154000000000000, // "AT"
+        };
     }
 }
