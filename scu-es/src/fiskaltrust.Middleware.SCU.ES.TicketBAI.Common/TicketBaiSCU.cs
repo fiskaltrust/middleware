@@ -104,22 +104,6 @@ public class TicketBaiSCU : IESSSCD
             ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
         });
 
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "SerieFactura",
-            Data = ticketBaiRequest.Factura.CabeceraFactura.SerieFactura,
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = ((ifPOS.v2.Cases.SignatureType) 0x0005).WithCountry("ES").WithVersion(2).WithFlag(SignatureTypeFlags.DontVisualize)
-        });
-
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "NumFactura",
-            Data = ticketBaiRequest.Factura.CabeceraFactura.NumFactura,
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = ((ifPOS.v2.Cases.SignatureType) 0x0006).WithCountry("ES").WithVersion(2).WithFlag(SignatureTypeFlags.DontVisualize)
-        });
-
         foreach (var message in responseMessages)
         {
             request.ReceiptResponse.AddSignatureItem(new SignatureItem()

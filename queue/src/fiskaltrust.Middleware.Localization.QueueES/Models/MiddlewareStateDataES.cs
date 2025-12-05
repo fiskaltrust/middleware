@@ -30,12 +30,6 @@ public class MiddlewareStateDataES
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public v2.Models.Receipt? LastReceipt { get; set; } = null;
 
-    [JsonPropertyName("SerieFactura")]
-    public required string SerieFactura { get; set; }
-
-    [JsonPropertyName("NumFactura")]
-    public required ulong NumFactura { get; set; }
-
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;

@@ -55,11 +55,11 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         responseStateData.ES = new MiddlewareStateDataES
         {
             LastReceipt = lastReceipt,
-            SerieFactura = $"{request.ReceiptResponse.ftCashBoxIdentification}/S",
-            NumFactura = (queueES.CurrentSimplifiedInvoiceSeriesNumber ?? 0) + 1
         };
+        var serieFactura = $"{request.ReceiptResponse.ftCashBoxIdentification}/S";
+        var numFactura = (queueES.CurrentSimplifiedInvoiceSeriesNumber ?? 0) + 1;
 
-        request.ReceiptResponse.ftReceiptIdentification += $"{responseStateData.ES.SerieFactura}/{responseStateData.ES.NumFactura}";
+        request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}/{numFactura}";
         request.ReceiptResponse.ftStateData = responseStateData;
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest
@@ -87,10 +87,8 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         }
 
         queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
-        if (responseStateData.ES?.NumFactura is not null)
-        {
-            queueES.CurrentSimplifiedInvoiceSeriesNumber = responseStateData.ES!.NumFactura;
-        }
+        queueES.CurrentSimplifiedInvoiceSeriesNumber = numFactura;
+
         await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
 
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

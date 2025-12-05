@@ -61,7 +61,6 @@ public class VeriFactuSCU : IESSSCD
             receiptResponse = CreateResponse(
                 response,
                 request,
-                middlewareStateData.ES,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFacturaAnulada
             );
@@ -82,7 +81,6 @@ public class VeriFactuSCU : IESSSCD
             receiptResponse = CreateResponse(
                 response,
                 request,
-                middlewareStateData.ES,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFactura,
                 SignaturItemHelper.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
@@ -101,7 +99,6 @@ public class VeriFactuSCU : IESSSCD
     private ReceiptResponse CreateResponse(
         Result<RespuestaRegFactuSistemaFacturacion, Error> veriFactuResponse,
         ProcessRequest request,
-        MiddlewareStateDataES middlewareStateDataES,
         string huella,
         string idEmisorFactura,
         SignatureItem[]? signatureItems = null
@@ -112,9 +109,10 @@ public class VeriFactuSCU : IESSSCD
             throw new Exception(veriFactuResponse.ErrValue!.ToString());
         }
         var respuesta = veriFactuResponse.OkValue!;
+        var numSerieFactura = request.ReceiptResponse.ftReceiptIdentification.Split('#')[1];
         if (respuesta.EstadoEnvio != EstadoEnvio.Correcto)
         {
-            var line = respuesta.RespuestaLinea!.Where(x => x.IDFactura.NumSerieFactura == middlewareStateDataES.GetNumSerieFactura()).Single();
+            var line = respuesta.RespuestaLinea!.Where(x => x.IDFactura.NumSerieFactura == numSerieFactura).Single();
             throw new Exception($"{respuesta.EstadoEnvio}({line.CodigoErrorRegistro}): {line.DescripcionErrorRegistro}");
         }
 
@@ -132,21 +130,6 @@ public class VeriFactuSCU : IESSSCD
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeES.NIF.As<SignatureType>()
         });
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "SerieFactura",
-            Data = middlewareStateDataES.SerieFactura,
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = ((SignatureType) 0x0005).WithCountry("ES").WithVersion(2).WithFlag(SignatureTypeFlags.DontVisualize)
-        });
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "NumFactura",
-            Data = middlewareStateDataES.NumFactura.ToString(),
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = ((SignatureType) 0x0006).WithCountry("ES").WithVersion(2).WithFlag(SignatureTypeFlags.DontVisualize)
-        });
-
 
         if (signatureItems is not null)
         {

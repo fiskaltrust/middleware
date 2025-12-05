@@ -5,6 +5,7 @@ using System.Globalization;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 
 #pragma warning disable IDE0052
 
@@ -51,13 +52,14 @@ public class TicketBaiFactory
             Cabecera = _cabacera,
             Sujetos = _sujetos,
             HuellaTBAI = CreateHuellTBai(request, middlewareStateDataES.LastReceipt),
-            Factura = CreateFactura(request, middlewareStateDataES.SerieFactura, middlewareStateDataES.NumFactura)
+            Factura = CreateFactura(request)
         };
         return ticketBaiRequest;
     }
 
-    private static Factura CreateFactura(ProcessRequest request, string serieFactura, ulong numFactura)
+    private static Factura CreateFactura(ProcessRequest request)
     {
+        var (serieFactura, numFactura) = request.ReceiptResponse.GetNumSerieFacturaParts();
         var facturoa = new Factura
         {
             CabeceraFactura = new CabeceraFacturaType
@@ -112,16 +114,15 @@ public class TicketBaiFactory
             NumSerieDispositivo = request.ReceiptResponse.ftCashBoxIdentification
         };
 
-        var numFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType((SignatureTypeES) 0x0006)).Data;
+        var anterior = lastReceipt?.Response?.GetNumSerieFacturaParts();
         var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
-        var serieFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType((SignatureTypeES) 0x0005)).Data;
         var fechaExpedicionFacturaAnterior = lastReceipt?.Response.ftReceiptMoment;
-        if (numFacturaAnterior != null && signatureValueFirmaFacturaAnterior != null && fechaExpedicionFacturaAnterior != null)
+        if (anterior != null && signatureValueFirmaFacturaAnterior != null && fechaExpedicionFacturaAnterior != null)
         {
             huellTbai.EncadenamientoFacturaAnterior = new EncadenamientoFacturaAnteriorType
             {
-                SerieFacturaAnterior = serieFacturaAnterior,
-                NumFacturaAnterior = numFacturaAnterior,
+                SerieFacturaAnterior = anterior.Value.serieFactura,
+                NumFacturaAnterior = anterior.Value.numFactura.ToString(),
                 FechaExpedicionFacturaAnterior = fechaExpedicionFacturaAnterior.Value.ToString("dd-MM-yyyy"),
                 SignatureValueFirmaFacturaAnterior = signatureValueFirmaFacturaAnterior.Substring(0, 100)
             };

@@ -498,9 +498,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
                 ES = new MiddlewareStateDataES
                 {
                     LastReceipt = lastReceipt,
-                    GovernmentAPI = governmentApi,
-                    SerieFactura = "I",
-                    NumFactura = 1
+                    GovernmentAPI = governmentApi
                 }
             };
 
