@@ -43,7 +43,7 @@ class CashBoxBuilderES : ICashBoxBuilder
                     new ftQueueES
                     {
                         ftQueueESId = queueId,
-                        CashBoxIdentification = queueId.ToString().Substring(0, 20),
+                        CashBoxIdentification = queueId.ToString().Substring(0, 18),
                         ftSignaturCreationUnitESId = scuId
                     }
                 }

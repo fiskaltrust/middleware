@@ -1,14 +1,10 @@
-﻿using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2;
+﻿using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
-using fiskaltrust.ifPOS.v2.Cases;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using Microsoft.Extensions.Logging;
 
@@ -59,10 +55,11 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         responseStateData.ES = new MiddlewareStateDataES
         {
             LastReceipt = lastReceipt,
-            SerieFactura = "S",
-            NumFactura = queueES.CurrentSimplifiedInvoiceSeriesNumber ?? 1
+            SerieFactura = $"{queueES.CashBoxIdentification}/S",
+            NumFactura = (queueES.CurrentSimplifiedInvoiceSeriesNumber ?? 0) + 1
         };
 
+        request.ReceiptResponse.ftReceiptIdentification += $"{responseStateData.ES.SerieFactura}/{responseStateData.ES.NumFactura}";
         request.ReceiptResponse.ftStateData = responseStateData;
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest

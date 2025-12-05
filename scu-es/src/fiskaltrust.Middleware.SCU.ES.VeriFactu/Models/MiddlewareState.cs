@@ -47,6 +47,8 @@ public class MiddlewareStateDataES
     [JsonPropertyName("GovernmentAPI")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GovernmentAPI? GovernmentAPI { get; set; } = null;
+
+    public string GetNumSerieFactura() => $"{SerieFactura}/{NumFactura}";
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -3,10 +3,8 @@ using System.Linq;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using System.Globalization;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
-using System;
 
 #pragma warning disable IDE0052
 
@@ -114,7 +112,7 @@ public class TicketBaiFactory
             NumSerieDispositivo = request.ReceiptResponse.ftCashBoxIdentification
         };
 
-        var numFacturaAnterior = lastReceipt?.Request.cbReceiptReference;
+        var numFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType((SignatureTypeES) 0x0006)).Data;
         var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
         var serieFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType((SignatureTypeES) 0x0005)).Data;
         var fechaExpedicionFacturaAnterior = lastReceipt?.Response.ftReceiptMoment;

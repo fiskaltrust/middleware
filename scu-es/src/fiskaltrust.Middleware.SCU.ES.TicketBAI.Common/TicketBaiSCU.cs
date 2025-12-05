@@ -60,7 +60,6 @@ public class TicketBaiSCU : IESSSCD
             throw new Exception("ES state must be present in ftStateData.");
         }
 
-
         var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                 ? _ticketBaiTerritory.SubmitInvoices
                 : _ticketBaiTerritory.CancelInvoices;

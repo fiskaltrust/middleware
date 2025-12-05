@@ -23,8 +23,6 @@ public class VeriFactuSCU : IESSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        request.ReceiptResponse.ftReceiptIdentification += $"{request.ReceiptResponse.ftQueueRow}/{request.ReceiptRequest.cbReceiptReference}";
-
         ReceiptResponse receiptResponse;
 
         if (request.ReceiptResponse.ftStateData is null)
@@ -63,7 +61,7 @@ public class VeriFactuSCU : IESSSCD
             receiptResponse = CreateResponse(
                 response,
                 request,
-                journalES.IDFactura.NumSerieFacturaAnulada,
+                middlewareStateData.ES,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFacturaAnulada
             );
@@ -84,7 +82,7 @@ public class VeriFactuSCU : IESSSCD
             receiptResponse = CreateResponse(
                 response,
                 request,
-                journalES.IDFactura.NumSerieFactura,
+                middlewareStateData.ES,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFactura,
                 SignaturItemHelper.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
@@ -103,7 +101,7 @@ public class VeriFactuSCU : IESSSCD
     private ReceiptResponse CreateResponse(
         Result<RespuestaRegFactuSistemaFacturacion, Error> veriFactuResponse,
         ProcessRequest request,
-        string numSerieFactura,
+        MiddlewareStateDataES middlewareStateDataES,
         string huella,
         string idEmisorFactura,
         SignatureItem[]? signatureItems = null
@@ -116,7 +114,7 @@ public class VeriFactuSCU : IESSSCD
         var respuesta = veriFactuResponse.OkValue!;
         if (respuesta.EstadoEnvio != EstadoEnvio.Correcto)
         {
-            var line = respuesta.RespuestaLinea!.Where(x => x.IDFactura.NumSerieFactura == numSerieFactura).Single();
+            var line = respuesta.RespuestaLinea!.Where(x => x.IDFactura.NumSerieFactura == middlewareStateDataES.GetNumSerieFactura()).Single();
             throw new Exception($"{respuesta.EstadoEnvio}({line.CodigoErrorRegistro}): {line.DescripcionErrorRegistro}");
         }
 
@@ -133,6 +131,20 @@ public class VeriFactuSCU : IESSSCD
             Data = idEmisorFactura,
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeES.NIF.As<SignatureType>()
+        });
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+        {
+            Caption = "SerieFactura",
+            Data = middlewareStateDataES.SerieFactura,
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = ((SignatureType) 0x0005).WithCountry("ES").WithVersion(2).WithFlag(SignatureTypeFlags.DontVisualize)
+        });
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+        {
+            Caption = "NumFactura",
+            Data = middlewareStateDataES.NumFactura.ToString(),
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = ((SignatureType) 0x0006).WithCountry("ES").WithVersion(2).WithFlag(SignatureTypeFlags.DontVisualize)
         });
 
 
