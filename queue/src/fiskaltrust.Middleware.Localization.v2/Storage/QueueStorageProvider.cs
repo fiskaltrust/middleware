@@ -44,21 +44,30 @@ public class QueueStorageProvider : IQueueStorageProvider
     public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
     {
         _cachedQueue ??= await GetQueueAsync();
+        var queue = _cachedQueue;
+
         var jsonSerializerOptions = new JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
+
+        var country = queue.CountryCode;
+        if (string.IsNullOrWhiteSpace(country))
+        {
+            country = receiptRequest.ftReceiptCase.Country();
+        }
+
         var queueItem = new ftQueueItem
         {
             ftQueueItemId = Guid.NewGuid(),
             ftQueueId = _queueId,
             ftQueueMoment = DateTime.UtcNow,
-            ftQueueTimeout = _cachedQueue.Timeout,
+            ftQueueTimeout = queue.Timeout,
             cbReceiptMoment = receiptRequest.cbReceiptMoment,
             cbTerminalID = receiptRequest.cbTerminalID,
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
-            country = receiptRequest.ftReceiptCase.Country(),
+            country = country,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };

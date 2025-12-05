@@ -159,14 +159,18 @@ namespace fiskaltrust.Middleware.Queue
                 queueItem.ftQueueTimeout = 15000;
             }
 
-            queueItem.country = ReceiptRequestHelper.GetCountry(data);
+            var country = queue.CountryCode;
+            if (string.IsNullOrWhiteSpace(country))
+            {
+                country = ReceiptRequestHelper.GetCountry(data);
+            }
+
+            queueItem.country = country;
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
             queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
             _logger.LogTrace("SignProcessor.InternalSign: Adding QueueItem to database.");
             await _queueItemRepository.InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
-            _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
-            await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
             var actionjournals = new List<ftActionJournal>();
             ftReceiptJournal receiptJournal = null;
@@ -195,16 +199,29 @@ namespace fiskaltrust.Middleware.Queue
                         cbReceiptReference = data.cbReceiptReference,
                         ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
                         ftReceiptMoment = DateTime.UtcNow,
-                        ftSignatures = new SignaturItem[] {
-                            new SignaturItem() {
+                        ftSignatures = new SignaturItem[]
+                        {
+                            new SignaturItem
+                            {
                                 ftSignatureFormat = 0x1,
-                                ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                ftSignatureType = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
                                 Caption = "uncaught-exeption",
                                 Data = e.ToString()
                             }
                         },
                         ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
+
+                    if (!string.IsNullOrWhiteSpace(queue.CountryCode))
+                    {
+                        var ftState = (ulong)receiptResponse.ftState;
+
+                        ftState &= 0x0000_FFFF_FFFF_FFFFUL;
+
+                        ftState |= EncodeCountry(queue.CountryCode);
+
+                        receiptResponse.ftState = (long)ftState;
+                    }
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
 
@@ -391,5 +408,14 @@ namespace fiskaltrust.Middleware.Queue
             queue.ftReceiptTotalizer += receiptJournal.ftReceiptTotal;
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         }
+        
+        private static ulong EncodeCountry(string? countryCode) => countryCode?.ToUpperInvariant() switch 
+        {
+                "DE" => 0x4445000000000000,
+                "FR" => 0x4652000000000000,
+                "ME" => 0x4D45000000000000,
+                "IT" => 0x4954000000000000,
+                _    => 0x4154000000000000, // "AT"
+        };
     }
 }
