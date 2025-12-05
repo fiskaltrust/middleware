@@ -55,7 +55,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         responseStateData.ES = new MiddlewareStateDataES
         {
             LastReceipt = lastReceipt,
-            SerieFactura = $"{queueES.CashBoxIdentification}/S",
+            SerieFactura = $"{request.ReceiptResponse.ftCashBoxIdentification}/S",
             NumFactura = (queueES.CurrentSimplifiedInvoiceSeriesNumber ?? 0) + 1
         };
 
