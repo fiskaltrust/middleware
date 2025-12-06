@@ -34,7 +34,7 @@ public class TicketBaiFactory
             LicenciaTBAI = TicketBaiConstants.LicenciaTBAI,
             EntidadDesarrolladora = new EntidadDesarrolladoraType
             {
-                NIF = TicketBaiConstants.NIF
+                NIF = TicketBaiConstants.NIF,
             },
             Nombre = TicketBaiConstants.Name,
             Version = TicketBaiConstants.Version
