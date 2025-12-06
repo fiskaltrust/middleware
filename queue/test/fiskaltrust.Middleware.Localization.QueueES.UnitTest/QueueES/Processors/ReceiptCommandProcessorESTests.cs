@@ -327,6 +327,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
                 ftQueueItemID = previousQueueItem.ftQueueItemId,
                 ftQueueRow = 1,
                 ftReceiptIdentification = "prev#",
+                ftCashBoxIdentification = "test",
                 ftReceiptMoment = DateTime.UtcNow
             };
             previousQueueItem.request = JsonSerializer.Serialize(previousReceiptRequest);
@@ -373,6 +374,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
                 ftQueueItemID = queueItem.ftQueueItemId,
                 ftQueueRow = 2,
                 ftReceiptIdentification = "current#",
+                ftCashBoxIdentification = "test",
                 ftReceiptMoment = DateTime.UtcNow,
                 ftStateData = new
                 {
@@ -386,7 +388,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             var result = await sut.PointOfSaleReceipt0x0001Async(request);
 
             // Assert
-            result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options.Excluding(x => x.ftStateData));
+            result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options.Excluding(x => x.ftStateData).Excluding(x => x.ftReceiptIdentification));
+            result.receiptResponse.ftReceiptIdentification.Should().BeEquivalentTo(receiptResponse.ftReceiptIdentification + "test/S/1");
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
 
@@ -446,6 +449,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
                 ftQueueItemID = queueItem.ftQueueItemId,
                 ftQueueRow = 1,
                 ftReceiptIdentification = "current#",
+                ftCashBoxIdentification = "test",
                 ftReceiptMoment = DateTime.UtcNow,
                 ftStateData = new
                 {
@@ -459,7 +463,10 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             var result = await sut.PointOfSaleReceipt0x0001Async(request);
 
             // Assert
-            result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options.Excluding(x => x.ftStateData));
+            result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options
+                .Excluding(x => x.ftStateData)
+                .Excluding(x => x.ftReceiptIdentification));
+            result.receiptResponse.ftReceiptIdentification.Should().BeEquivalentTo(receiptResponse.ftReceiptIdentification + "test/S/1");
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
 

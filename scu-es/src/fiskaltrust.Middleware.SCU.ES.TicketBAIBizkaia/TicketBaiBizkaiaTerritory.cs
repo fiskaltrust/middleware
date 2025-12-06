@@ -1,12 +1,21 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.ServiceModel.Channels;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
+using System.Web;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
+using Microsoft.Xades;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
 
@@ -61,35 +70,43 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
         // TODO which year needs to be transmitted?
         headers.Add("eus-bizkaia-n3-data",
                 JsonSerializer.Serialize(GenerateHeader(request.Sujetos.Emisor.NIF, request.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
-
     }
-    public ByteArrayContent GetContent(TicketBaiRequest request, string content)
-    {
 
-        var rawContent = $"""
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<lrpjfecsgap:LROEPJ240FacturasEmitidasConSGAltaPeticion
-	xmlns:lrpjfecsgap="https://www.batuz.eus/fitxategiak/batuz/LROE/esquemas/LROE_PJ_240_1_1_FacturasEmitidas_ConSG_AltaPeticion_V1_0_2.xsd">
-	<Cabecera>
-		<Modelo>240</Modelo>
-		<Capitulo>1</Capitulo>
-		<Subcapitulo>1.1</Subcapitulo>
-		<Operacion>A00</Operacion>
-		<Version>1.0</Version>
-		<Ejercicio>{DateTime.UtcNow.Year}</Ejercicio>
-		<ObligadoTributario>
-	        <NIF>{request.Sujetos.Emisor.NIF}</NIF>
-            <ApellidosNombreRazonSocial>{request.Sujetos.Emisor.ApellidosNombreRazonSocial}</ApellidosNombreRazonSocial>
-		</ObligadoTributario>
-	</Cabecera>
-	<FacturasEmitidas>
-		<FacturaEmitida>
-			<TicketBai>{Convert.ToBase64String(Encoding.UTF8.GetBytes(content))}</TicketBai>
-		</FacturaEmitida>
-	</FacturasEmitidas>
-</lrpjfecsgap:LROEPJ240FacturasEmitidasConSGAltaPeticion>
-""";
-        var requestContent = new ByteArrayContent(Compress(rawContent));
+
+    public string ProcessContent(TicketBaiRequest request, string content)
+    {
+        var lroeRequest = new LROEPJ240FacturasEmitidasConSGAltaPeticion
+        {
+            Cabecera = new Cabecera240Type
+            {
+                Modelo = Modelo240Enum.Item240,
+                Capitulo = CapituloModelo240Enum.Item1,
+                Subcapitulo = SubcapituloModelo240Enum.Item11,
+                SubcapituloSpecified = true,
+                Operacion = OperacionEnum.A00,
+                Version = IDVersionEnum.Item10,
+                Ejercicio = DateTime.UtcNow.Year,
+                ObligadoTributario = new NIFPersonaType
+                {
+                    NIF = request.Sujetos.Emisor.NIF,
+                    ApellidosNombreRazonSocial = request.Sujetos.Emisor.ApellidosNombreRazonSocial,
+                },
+            },
+            FacturasEmitidas =
+                [
+                    new DetalleEmitidaConSGCodificadoType
+                {
+                    TicketBai = Encoding.UTF8.GetBytes(content)
+                }
+                ]
+        };
+
+        return XmlHelpers.GetXMLIncludingNamespace(lroeRequest);
+    }
+
+    public ByteArrayContent GetHttpContent(string content)
+    {
+        var requestContent = new ByteArrayContent(Compress(content));
         requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         requestContent.Headers.Add("Content-Encoding", "gzip");
 
@@ -109,6 +126,34 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
                 return compressedStream.ToArray();
             }
         }
+    }
+
+    public async Task<(bool success, List<(string code, string message)> messages, string response)> GetSuccess(HttpResponseMessage response)
+    {
+        var lroeContent = await response.Content.ReadAsStringAsync();
+        LROEPJ240FacturasEmitidasConSGAltaRespuesta? lroeResponse = null;
+        try
+        {
+            lroeResponse = XmlHelpers.ParseXML<LROEPJ240FacturasEmitidasConSGAltaRespuesta>(lroeContent);
+        }
+        catch { }
+        var type = response.Headers.NonValidated["eus-bizkaia-n3-tipo-respuesta"].ToString();
+        if (type == "Incorrecto")
+        {
+            var messages = new List<(string code, string message)>();
+
+            response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-codigo-respuesta", out HeaderStringValues code);
+            response.Headers.NonValidated.TryGetValues("eus-bizkaia-n3-mensaje-respuesta", out HeaderStringValues message);
+            messages.Add((code.ToString(), message.ToString()));
+
+            foreach (var registro in (lroeResponse?.Registros ?? []).Where(registro => registro?.SituacionRegistro is not null))
+            {
+                messages.Add((registro.SituacionRegistro.CodigoErrorRegistro, $"{registro.SituacionRegistro.DescripcionErrorRegistroES}; {registro.SituacionRegistro.DescripcionErrorRegistroEU}"));
+            }
+            return (false, messages, lroeContent);
+        }
+
+        return (true, [], lroeContent);
     }
 }
 

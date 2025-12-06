@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
 
-namespace fiskaltrust.Middleware.SCU.ES.Models;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 
 public class MiddlewareStateData
 {

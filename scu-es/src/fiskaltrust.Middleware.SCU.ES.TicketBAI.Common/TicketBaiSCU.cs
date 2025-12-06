@@ -11,10 +11,9 @@ using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
+using Microsoft.Xades;
 
 #pragma warning disable IDE0052
 
@@ -29,7 +28,6 @@ public class TicketBaiSCU : IESSSCD
     private readonly ILogger<TicketBaiSCU> _logger;
     private readonly ITicketBaiTerritory _ticketBaiTerritory;
     private readonly Uri _baseAddress;
-    private readonly Uri _qrCodeBaseAddress;
 
     public TicketBaiSCU(ILogger<TicketBaiSCU> logger, TicketBaiSCUConfiguration configuration, ITicketBaiTerritory ticketBaiTerritory)
     {
@@ -37,7 +35,6 @@ public class TicketBaiSCU : IESSSCD
         _configuration = configuration;
         _ticketBaiTerritory = ticketBaiTerritory;
         _baseAddress = new Uri(_ticketBaiTerritory.SandboxEndpoint);
-        _qrCodeBaseAddress = new Uri(_ticketBaiTerritory.QrCodeSandboxValidationEndpoint);
 
         var handler = new HttpClientHandler();
         handler.ClientCertificates.Add(_configuration.Certificate);
@@ -49,69 +46,6 @@ public class TicketBaiSCU : IESSSCD
             BaseAddress = _baseAddress
         };
         _ticketBaiFactory = new TicketBaiFactory(configuration);
-    }
-
-    public async Task<SubmitResponse> SendAsync(SubmitInvoiceRequest request, string endpoint)
-    {
-        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
-        ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
-        ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
-
-        var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
-        var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-
-        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
-        {
-            Content = _ticketBaiTerritory.GetContent(ticketBaiRequest, content)
-        };
-        _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
-
-        var response = await _httpClient.SendAsync(httpRequestMessage);
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var result = GetResponseFromContent(responseContent, ticketBaiRequest);
-        result.RequestContent = content;
-        return result;
-    }
-
-    private Uri GetQrCodeUri(TicketBaiRequest ticketBaiRequest, TicketBaiResponse ticketBaiResponse)
-    {
-        var crc8 = new CRC8Calculator();
-        var url = $"{_qrCodeBaseAddress}?{IdentifierUrl(ticketBaiResponse.Salida.IdentificadorTBAI, ticketBaiRequest)}";
-        var cr8 = crc8.ComputeChecksum(url).ToString();
-        url += $"&cr={cr8.PadLeft(3, '0')}";
-        return new Uri(url);
-    }
-
-    private string IdentifierUrl(string ticketBaiIdentifier, TicketBaiRequest ticketBaiRequest) => $"id={HttpUtility.UrlEncode(ticketBaiIdentifier)}&s={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.SerieFactura)}&nf={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.NumFactura)}&i={HttpUtility.UrlEncode(ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura)}";
-
-    private SubmitResponse GetResponseFromContent(string responseContent, TicketBaiRequest ticketBaiRequest)
-    {
-        var ticketBaiResponse = XmlHelpers.ParseXML<TicketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
-        if (ticketBaiResponse.Salida.Estado == "00")
-        {
-            var identifier = ticketBaiResponse.Salida.IdentificadorTBAI.Split('-');
-            return new SubmitResponse
-            {
-                IssuerVatId = identifier[1],
-                ExpeditionDate = identifier[2],
-                ShortSignatureValue = identifier[3],
-                Identifier = ticketBaiResponse.Salida.IdentificadorTBAI,
-                ResponseContent = responseContent,
-                SignatureValue = ticketBaiRequest.Signature,
-                Succeeded = true,
-                QrCode = GetQrCodeUri(ticketBaiRequest, ticketBaiResponse),
-                ResultMessages = ticketBaiResponse.Salida?.ResultadosValidacion?.Select(x => (x.Codigo, x.Descripcion))?.ToList() ?? new()
-            };
-        }
-        else
-        {
-            return new SubmitResponse
-            {
-                ResponseContent = responseContent,
-                Succeeded = false,
-                ResultMessages = ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList()
-            };
-        }
     }
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -126,40 +60,38 @@ public class TicketBaiSCU : IESSSCD
             throw new Exception("ES state must be present in ftStateData.");
         }
 
-        var submitInvoiceRequest = new SubmitInvoiceRequest
-        {
-            ftCashBoxIdentification = request.ReceiptResponse.ftCashBoxIdentification,
-            InvoiceMoment = request.ReceiptResponse.ftReceiptMoment,
-            InvoiceNumber = request.ReceiptRequest.cbReceiptReference!, // QUESTION
-            LastInvoiceMoment = middlewareStateData.ES.LastReceipt?.Response.ftReceiptMoment,
-            LastInvoiceNumber = middlewareStateData.ES.LastReceipt?.Request.cbReceiptReference,
-            LastInvoiceSignature = middlewareStateData.ES.LastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data,
-            Series = "",
-            InvoiceLine = request.ReceiptRequest.cbChargeItems.Select(c => new InvoiceLine
-            {
-                Amount = c.Amount,
-                Description = c.Description,
-                Quantity = c.Quantity,
-                VATAmount = c.VATAmount ?? (c.Amount * c.VATRate),
-                VATRate = c.VATRate
-            }).ToList()
-        };
-
-        var submitResponse = await SendAsync(
-            submitInvoiceRequest,
-            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+        var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                 ? _ticketBaiTerritory.SubmitInvoices
-                : _ticketBaiTerritory.CancelInvoices);
+                : _ticketBaiTerritory.CancelInvoices;
 
-        if (!submitResponse.Succeeded)
+        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request, middlewareStateData.ES);
+        ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
+        ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
+
+        var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
+        var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
+
+        requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
+
+        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
         {
-            throw new AggregateException(submitResponse.ResultMessages.Select(r => new Exception($"{r.code}: {r.message}")));
+            Content = _ticketBaiTerritory.GetHttpContent(requestContent)
+        };
+        _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
+
+        var response = await _httpClient.SendAsync(httpRequestMessage);
+
+        var (success, responseMessages, responseContent) = await _ticketBaiTerritory.GetSuccess(response);
+
+        if (!success)
+        {
+            throw new AggregateException(responseMessages.Select(r => new Exception($"{r.code}: {r.message}")));
         }
 
         request.ReceiptResponse.AddSignatureItem(new SignatureItem()
         {
             Caption = "[www.fiskaltrust.es]",
-            Data = submitResponse.QrCode!.ToString(),
+            Data = GetQrCodeUri(request, ticketBaiRequest, signature).ToString(),
             ftSignatureFormat = SignatureFormat.QRCode,
             ftSignatureType = SignatureTypeES.Url.As<ifPOS.v2.Cases.SignatureType>()
         });
@@ -167,12 +99,12 @@ public class TicketBaiSCU : IESSSCD
         request.ReceiptResponse.AddSignatureItem(new SignatureItem()
         {
             Caption = "Signature",
-            Data = submitResponse.ShortSignatureValue!,
+            Data = Convert.ToBase64String(signature.SignatureValue!),
             ftSignatureFormat = SignatureFormat.Base64,
-            ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>()
+            ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
         });
 
-        foreach (var message in submitResponse.ResultMessages)
+        foreach (var message in responseMessages)
         {
             request.ReceiptResponse.AddSignatureItem(new SignatureItem()
             {
@@ -184,13 +116,37 @@ public class TicketBaiSCU : IESSSCD
         }
 
 
-        // middlewareStateData.ES.GovernmentAPI = governmentAPI;
+        middlewareStateData.ES.GovernmentAPI = new GovernmentAPI
+        {
+            Version = GovernmentAPISchemaVersion.V0,
+            Request = requestContent,
+            Response = responseContent
+        };
         request.ReceiptResponse.ftStateData = middlewareStateData;
 
         return new ProcessResponse
         {
             ReceiptResponse = request.ReceiptResponse
         };
+    }
+
+
+    private Uri GetQrCodeUri(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
+    {
+        var crc8 = new CRC8Calculator();
+        var url = $"{new Uri(_ticketBaiTerritory.QrCodeSandboxValidationEndpoint)}?{IdentifierUrl(request, ticketBaiRequest, signature)}";
+        var cr8 = crc8.ComputeChecksum(url).ToString();
+        url += $"&cr={cr8.PadLeft(3, '0')}";
+        return new Uri(url);
+    }
+
+    private string IdentifierUrl(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
+    {
+        var shortSignature = Convert.ToBase64String(signature.SignatureValue!.Take(12).ToArray()).Substring(0, 13);
+        var ticketBaiIdentifier = $"TBAI-{ticketBaiRequest.Sujetos.Emisor.NIF}-{request.ReceiptResponse.ftReceiptMoment:ddMMyy}-{shortSignature}-";
+        var crc8 = new CRC8Calculator();
+        ticketBaiIdentifier += crc8.ComputeChecksum(ticketBaiIdentifier).ToString("000");
+        return $"id={HttpUtility.UrlEncode(ticketBaiIdentifier)}&s={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.SerieFactura)}&nf={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.NumFactura)}&i={HttpUtility.UrlEncode(ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura)}";
     }
 
     public Task<ESSSCDInfo> GetInfoAsync() => throw new NotImplementedException();

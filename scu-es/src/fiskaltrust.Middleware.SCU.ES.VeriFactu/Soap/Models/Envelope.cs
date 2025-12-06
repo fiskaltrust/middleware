@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 
 [Serializable]
 [XmlRoot("Envelope", Namespace = NAMESPACE)]

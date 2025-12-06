@@ -26,15 +26,15 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class ZeroReceiptTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class ZeroReceiptTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
 
-        public ZeroReceiptTests(SignProcessorDependenciesFixture fixture)
+        public ZeroReceiptTests()
         {
-            _fixture = fixture;
-            _receiptTests = new ReceiptTests(fixture);
+            _fixture = new();
+            _receiptTests = new ReceiptTests(_fixture);
         }
 
         [Fact]
@@ -44,11 +44,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var queue = new ftQueue { ftQueueId = Guid.Parse(receiptRequest.ftQueueID), StartMoment = DateTime.UtcNow };
             var sut = GetSUT();
 
-           foreach(var opentrans in await _fixture.openTransactionRepository.GetAsync())
+            foreach (var opentrans in await _fixture.openTransactionRepository.GetAsync())
             {
-                 await _fixture.openTransactionRepository.RemoveAsync(opentrans.cbReceiptReference);
+                await _fixture.openTransactionRepository.RemoveAsync(opentrans.cbReceiptReference);
             }
-           _fixture.InMemorySCU.OpenTans = new ulong[0];
+            _fixture.InMemorySCU.OpenTans = new ulong[0];
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
