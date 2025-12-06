@@ -4,7 +4,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 
 public enum ReceiptCaseFlagsGR : long
 {
-    IsSelfPricingOperation = 0x0100_0000_0000,
+    HasTransportInformation = 0x0000_0000_0400_0000
 }
 
 public static class ReceiptCaseFlagsGRExt
