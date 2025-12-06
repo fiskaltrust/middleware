@@ -60,12 +60,11 @@ public class TicketBaiSCU : IESSSCD
             throw new Exception("ES state must be present in ftStateData.");
         }
 
-
         var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                 ? _ticketBaiTerritory.SubmitInvoices
                 : _ticketBaiTerritory.CancelInvoices;
 
-        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request, middlewareStateData.ES.LastReceipt);
+        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request, middlewareStateData.ES);
         ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
         ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
 
@@ -102,15 +101,7 @@ public class TicketBaiSCU : IESSSCD
             Caption = "Signature",
             Data = Convert.ToBase64String(signature.SignatureValue!),
             ftSignatureFormat = SignatureFormat.Base64,
-            ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>()
-        });
-
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "Series",
-            Data = ticketBaiRequest.Factura.CabeceraFactura.SerieFactura,
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = (ifPOS.v2.Cases.SignatureType) 0x4553_2000_0000_0005
+            ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
         });
 
         foreach (var message in responseMessages)
@@ -151,7 +142,8 @@ public class TicketBaiSCU : IESSSCD
 
     private string IdentifierUrl(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
     {
-        var ticketBaiIdentifier = $"TBAI-{ticketBaiRequest.Sujetos.Emisor.NIF}-{request.ReceiptResponse.ftReceiptMoment:ddMMyy}-{Convert.ToBase64String(signature.SignatureValue!.Take(12).ToArray()).Substring(0, 13)}-";
+        var shortSignature = Convert.ToBase64String(signature.SignatureValue!.Take(12).ToArray()).Substring(0, 13);
+        var ticketBaiIdentifier = $"TBAI-{ticketBaiRequest.Sujetos.Emisor.NIF}-{request.ReceiptResponse.ftReceiptMoment:ddMMyy}-{shortSignature}-";
         var crc8 = new CRC8Calculator();
         ticketBaiIdentifier += crc8.ComputeChecksum(ticketBaiIdentifier).ToString("000");
         return $"id={HttpUtility.UrlEncode(ticketBaiIdentifier)}&s={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.SerieFactura)}&nf={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.NumFactura)}&i={HttpUtility.UrlEncode(ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura)}";

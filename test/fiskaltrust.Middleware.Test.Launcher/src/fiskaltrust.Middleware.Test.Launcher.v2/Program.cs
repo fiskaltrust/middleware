@@ -71,6 +71,12 @@ var requests = Directory.EnumerateDirectories(
     response.ftState.Should().Match(x => !x!.Value.IsState(State.Error)).And.Match(x => !x!.Value.IsState(State.Fail));
 }
 
+{
+    var response = await middleware.Sign(await requests["SignRequestReceipt_CashSaleReceipt"].First()(r => r.cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8)));
+    response.Should().NotBeNull();
+    response.ftState.Should().Match(x => !x!.Value.IsState(State.Error)).And.Match(x => !x!.Value.IsState(State.Fail));
+}
+
 // {
 //     var response = await sign(new ReceiptRequest
 //     {

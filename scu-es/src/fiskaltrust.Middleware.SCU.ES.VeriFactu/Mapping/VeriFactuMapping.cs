@@ -66,7 +66,7 @@ public class VeriFactuMapping
             {
 
                 IDEmisorFacturaAnulada = referencedReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
-                NumSerieFacturaAnulada = referencedReceiptResponse.ftReceiptIdentification.Split('#')[1],
+                NumSerieFacturaAnulada = referencedReceiptResponse.GetNumSerieFactura(),
                 FechaExpedicionFacturaAnulada = referencedReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
             Encadenamiento = new RegistroFacturacionAnulacionEncadenamiento
@@ -109,7 +109,7 @@ public class VeriFactuMapping
             IDFactura = new IDFactura
             {
                 IDEmisorFactura = _veriFactuSCUConfiguration.Nif,
-                NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
+                NumSerieFactura = receiptResponse.GetNumSerieFactura(),
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
 
@@ -198,7 +198,7 @@ public class VeriFactuMapping
         return new EncadenamientoFacturaAnterior
         {
             IDEmisorFactura = lastReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
-            NumSerieFactura = lastReceiptResponse.ftReceiptIdentification.Split('#')[1],
+            NumSerieFactura = lastReceiptResponse.GetNumSerieFactura(),
             FechaExpedicionFactura = lastReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
             Huella = lastReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
         };
@@ -211,7 +211,7 @@ public class VeriFactuMapping
         return new EncadenamientoFacturaAnterior
         {
             IDEmisorFactura = referencedReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
-            NumSerieFactura = referencedReceiptResponse.ftReceiptIdentification.Split('#')[1],
+            NumSerieFactura = referencedReceiptResponse.GetNumSerieFactura(),
             FechaExpedicionFactura = referencedReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
             Huella = lastReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
         };

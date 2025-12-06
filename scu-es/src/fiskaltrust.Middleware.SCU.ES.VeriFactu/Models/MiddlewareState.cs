@@ -17,7 +17,7 @@ public class MiddlewareStateData
     [JsonExtensionData]
     public Dictionary<string, JsonElement> ExtraData { get; set; } = new Dictionary<string, JsonElement>();
 
-    public static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<MiddlewareStateData>(((JsonElement) receiptResponse.ftStateData!).GetRawText())!;
+    public static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse) => JsonSerializer.Deserialize<MiddlewareStateData>(((JsonElement)receiptResponse.ftStateData!).GetRawText())!;
 }
 
 public class Receipt
