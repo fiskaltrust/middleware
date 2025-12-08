@@ -505,14 +505,15 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 config);
         }
         
-        private static ulong EncodeCountry_TestOnly(string code) => code.ToUpperInvariant() switch
+        private static ulong EncodeCountry_TestOnly(string? countryCode) => countryCode?.ToUpperInvariant() switch 
         {
-                "DE" => 0x4445000000000000,
-                "FR" => 0x4652000000000000,
-                "ME" => 0x4D45000000000000,
-                "IT" => 0x4954000000000000,
-                "AT" => 0x4154000000000000,
-                _    => 0x4154000000000000,
+            "DE" => 0x4445000000000000,
+            "FR" => 0x4652000000000000,
+            "ME" => 0x4D45000000000000,
+            "IT" => 0x4954000000000000,
+            "AT" => 0x4154000000000000,
+            null => throw new ArgumentNullException(nameof(countryCode), "Country code cannot be null"),
+            _ => throw new NotSupportedException($"Country code '{countryCode}' is not supported")
         };
     }
 }

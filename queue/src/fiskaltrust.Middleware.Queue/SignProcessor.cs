@@ -214,13 +214,21 @@ namespace fiskaltrust.Middleware.Queue
 
                     if (!string.IsNullOrWhiteSpace(queue.CountryCode))
                     {
-                        var ftState = (ulong)receiptResponse.ftState;
+                        var encodedCountry = EncodeCountry(queue.CountryCode);
 
-                        ftState &= 0x0000_FFFF_FFFF_FFFFUL;
+                        if (encodedCountry == 0)
+                        {
+                            _logger.LogError("Unsupported CountryCode '{CountryCode}' configured for queue {QueueId}. " + "ftState country bits will not be overridden.", queue.CountryCode, queue.ftQueueId);
+                        }
+                        else
+                        {
+                            var state = (ulong)receiptResponse.ftState;
 
-                        ftState |= EncodeCountry(queue.CountryCode);
+                            state &= 0x0000_FFFF_FFFF_FFFF; 
+                            state |= encodedCountry;
 
-                        receiptResponse.ftState = (long)ftState;
+                            receiptResponse.ftState = (long)state;
+                        }
                     }
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
@@ -409,13 +417,17 @@ namespace fiskaltrust.Middleware.Queue
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         }
         
-        private static ulong EncodeCountry(string? countryCode) => countryCode?.ToUpperInvariant() switch 
+        private static ulong EncodeCountry(string? countryCode)
         {
+            return countryCode?.ToUpperInvariant() switch
+            {
                 "DE" => 0x4445000000000000,
                 "FR" => 0x4652000000000000,
                 "ME" => 0x4D45000000000000,
                 "IT" => 0x4954000000000000,
-                _    => 0x4154000000000000, // "AT"
-        };
+                "AT" => 0x4154000000000000,
+                _    => 0
+            };
+        }
     }
 }
