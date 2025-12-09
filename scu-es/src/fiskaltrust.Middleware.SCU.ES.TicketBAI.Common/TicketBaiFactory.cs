@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
+using System;
 
 #pragma warning disable IDE0052
 
@@ -26,9 +27,12 @@ public class TicketBaiFactory
                 NIF = configuration.EmisorNif,
                 ApellidosNombreRazonSocial = configuration.EmisorApellidosNombreRazonSocial
             },
-            VariosDestinatarios = SiNoType.N,
-            EmitidaPorTercerosODestinatario = EmitidaPorTercerosType.N
+            VariosDestinatarios = SiNoType.N, // this probably needs to be S in cases of multiple cbCustomers, but how can one invoice have multiple recipients?
+            EmitidaPorTercerosODestinatario = EmitidaPorTercerosType.N,
+            // TODDO: We should map the cbCustomer to recepients
         };
+
+
         _cabacera = new Cabecera
         {
             IDVersionTBAI = IDVersionTicketBaiType.Item1Period2
@@ -66,14 +70,14 @@ public class TicketBaiFactory
             {
                 SerieFactura = serieFactura, // QUESTION
                 NumFactura = numFactura.ToString(),
-                FechaExpedicionFactura = request.ReceiptResponse.ftReceiptMoment.ToString("dd-MM-yyyy"),
-                HoraExpedicionFactura = request.ReceiptResponse.ftReceiptMoment.ToString("HH:mm:ss"),
-                FacturaSimplificada = SiNoType.S,
+                FechaExpedicionFactura = GetLocalTime(request.ReceiptResponse.ftReceiptMoment).ToString("dd-MM-yyyy"),
+                HoraExpedicionFactura = GetLocalTime(request.ReceiptResponse.ftReceiptMoment).ToString("HH:mm:ss"),
+                FacturaSimplificada = request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) ? SiNoType.S : SiNoType.N,
                 FacturaEmitidaSustitucionSimplificada = SiNoType.N,
             },
             DatosFactura = new DatosFacturaType
             {
-                FechaOperacion = request.ReceiptResponse.ftReceiptMoment.ToString("dd-MM-yyyy"), //TODO: needs to be set if issuing the invoice was different from the actual date
+                //FechaOperacion = GetLocalTime(request.ReceiptResponse.ftReceiptMoment).ToString("dd-MM-yyyy"), //TODO: needs to be set if issuing the invoice was different from the actual date
                 DescripcionFactura = "Invoice", //TODO: Can we hardcode this value?
                 DetallesFactura = CreateFacturas(request),
                 ImporteTotalFactura = request.ReceiptRequest.cbChargeItems.Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
@@ -104,6 +108,13 @@ public class TicketBaiFactory
             }
         };
         return facturoa;
+    }
+
+    private static DateTime GetLocalTime(DateTime utcTime)
+    {
+        TimeZoneInfo spainZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Madrid");
+        DateTime spainLocal = TimeZoneInfo.ConvertTimeFromUtc(utcTime, spainZone);
+        return spainLocal;
     }
 
     private HuellaTBAI CreateHuellTBai(ProcessRequest request, Receipt? lastReceipt)
@@ -156,6 +167,9 @@ public class TicketBaiFactory
             c.VATAmount = c.VATAmount ?? (c.Amount * c.VATRate / 100.0m);
             return c;
         });
+        // TOdo add discount handling
+
+
         return chargeItems.Select(x => new IDDetalleFacturaType
         {
             DescripcionDetalle = x.Description,

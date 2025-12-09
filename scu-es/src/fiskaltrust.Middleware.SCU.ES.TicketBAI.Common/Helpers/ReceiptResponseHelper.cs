@@ -26,14 +26,24 @@ public static class ReceiptResponseHelper
         var numSerieFactura = receiptResponse.GetNumSerieFactura();
         if (numSerieFactura.Count(x => x == '/') != 2)
         {
-            throw new Exception("Invalid ftReceiptIdentification format. Needs exactly two '/'.");
+            var parts = numSerieFactura.Split('/');
+            var serieFactura = $"{parts[0]}";
+            if (!ulong.TryParse(parts[1], out ulong numFactura))
+            {
+                throw new Exception("Invalid ftReceiptIdentification format. Last part is not a number.");
+            }
+            return (serieFactura, numFactura);
+            // throw new Exception("Invalid ftReceiptIdentification format. Needs exactly two '/'.");
         }
-        var parts = numSerieFactura.Split('/');
-        var serieFactura = $"{parts[0]}/{parts[1]}";
-        if (!ulong.TryParse(parts[2], out ulong numFactura))
+        else
         {
-            throw new Exception("Invalid ftReceiptIdentification format. Last part is not a number.");
+            var parts = numSerieFactura.Split('/');
+            var serieFactura = $"{parts[0]}/{parts[1]}";
+            if (!ulong.TryParse(parts[2], out ulong numFactura))
+            {
+                throw new Exception("Invalid ftReceiptIdentification format. Last part is not a number.");
+            }
+            return (serieFactura, numFactura);
         }
-        return (serieFactura, numFactura);
     }
 }

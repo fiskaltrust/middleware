@@ -90,6 +90,14 @@ public class TicketBaiSCU : IESSSCD
 
         request.ReceiptResponse.AddSignatureItem(new SignatureItem()
         {
+            Caption = "",
+            Data = GetIdentier(request, ticketBaiRequest, signature).ToString(),
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCountry("ES")
+        });
+
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+        {
             Caption = "[www.fiskaltrust.es]",
             Data = GetQrCodeUri(request, ticketBaiRequest, signature).ToString(),
             ftSignatureFormat = SignatureFormat.QRCode,
@@ -130,23 +138,30 @@ public class TicketBaiSCU : IESSSCD
         };
     }
 
+    private string GetIdentier(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
+    {
+        string datePart = request.ReceiptResponse.ftReceiptMoment.ToString("ddMMyy");
+        string first13 = Convert.ToBase64String(signature.SignatureValue!).Substring(0, Math.Min(13, Convert.ToBase64String(signature.SignatureValue!).Length));
+        string baseId = $"TBAI-{Uri.EscapeDataString(ticketBaiRequest.Sujetos.Emisor.NIF)}-{datePart}-{first13}";
+        string crcInput = baseId + "-";
+        var crc8 = new CRC8Calculator();
+        var identifier = $"{baseId}-{CRC8Calculator.Calculate(crcInput)}";
+        return identifier;
+    }
 
     private Uri GetQrCodeUri(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
     {
-        var crc8 = new CRC8Calculator();
-        var url = $"{new Uri(_ticketBaiTerritory.QrCodeSandboxValidationEndpoint)}?{IdentifierUrl(request, ticketBaiRequest, signature)}";
-        var cr8 = crc8.ComputeChecksum(url).ToString();
-        url += $"&cr={cr8.PadLeft(3, '0')}";
-        return new Uri(url);
+        var identifier = GetIdentier(request, ticketBaiRequest, signature);
+        return new Uri(BuildValidationUrl(identifier, ticketBaiRequest.Factura.CabeceraFactura.SerieFactura, ticketBaiRequest.Factura.CabeceraFactura.NumFactura, ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura));
     }
 
-    private string IdentifierUrl(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
+
+    public static string BuildValidationUrl(string identifier, string series, string number, string total, string baseUrl = "https://batuz.eus/QRTBAI/")
     {
-        var shortSignature = Convert.ToBase64String(signature.SignatureValue!.Take(12).ToArray()).Substring(0, 13);
-        var ticketBaiIdentifier = $"TBAI-{ticketBaiRequest.Sujetos.Emisor.NIF}-{request.ReceiptResponse.ftReceiptMoment:ddMMyy}-{shortSignature}-";
-        var crc8 = new CRC8Calculator();
-        ticketBaiIdentifier += crc8.ComputeChecksum(ticketBaiIdentifier).ToString("000");
-        return $"id={HttpUtility.UrlEncode(ticketBaiIdentifier)}&s={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.SerieFactura)}&nf={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.NumFactura)}&i={HttpUtility.UrlEncode(ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura)}";
+        if (!baseUrl.EndsWith("/"))
+            baseUrl += "/";
+        string urlWithoutCrc = $"{baseUrl}?id={identifier}&s={Uri.EscapeDataString(series)}&nf={number}&i={total}";
+        return $"{urlWithoutCrc}&cr={CRC8Calculator.Calculate(urlWithoutCrc)}";
     }
 
     public Task<ESSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
