@@ -193,6 +193,37 @@ public class SignProcessor : ISignProcessor
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
 
+
+        const ulong TagMask = 0x0000_F000_0000_0000;
+        const ulong V2Tag   = 0x0000_2000_0000_0000;
+
+        if (((ulong) request.ftReceiptCase & TagMask) != V2Tag)
+        {
+            return ReturnWithUnsupportedTaggingVersion("ReceiptCase", (ulong) request.ftReceiptCase, queue, receiptResponse, queueItem);
+        }
+
+        if (request.cbChargeItems != null)
+        {
+            foreach (var chargeItem in request.cbChargeItems)
+            {
+                if (((ulong) chargeItem.ftChargeItemCase & TagMask) != V2Tag)
+                {
+                    return ReturnWithUnsupportedTaggingVersion("ChargeItemCase", (ulong) chargeItem.ftChargeItemCase, queue, receiptResponse, queueItem);
+                }
+            }
+        }
+
+        if (request.cbPayItems != null)
+        {
+            foreach (var payItem in request.cbPayItems)
+            {
+                if (((ulong) payItem.ftPayItemCase & TagMask) != V2Tag)
+                {
+                    return ReturnWithUnsupportedTaggingVersion("PayItemCase", (ulong) payItem.ftPayItemCase, queue, receiptResponse, queueItem);
+                }
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(queue.CountryCode))
         {
             receiptResponse.ftState = receiptResponse.ftState.WithCountry(queue.CountryCode);
@@ -276,6 +307,28 @@ public class SignProcessor : ISignProcessor
     {
         var queueCountry = queue.CountryCode ?? "<null>";
         var errorMessage = $"The country of the {componentName} ('{requestCountry ?? "<null>"}') does not match the queue country ('{queueCountry}').";
+
+        if (!string.IsNullOrWhiteSpace(queue.CountryCode))
+        {
+            receiptResponse.ftState = receiptResponse.ftState.WithCountry(queue.CountryCode);
+        }
+
+        receiptResponse.SetReceiptResponseError(errorMessage);
+
+        return (receiptResponse, [
+            new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queueItem.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                Moment = DateTime.UtcNow,
+                Message = errorMessage
+            }]);
+    }
+    
+    private (ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals) ReturnWithUnsupportedTaggingVersion(string componentName, ulong caseValue, ftQueue queue, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+    {
+        var errorMessage = $"The tagging version of the {componentName} (0x{caseValue:X}) is not supported for localization v2. " + "All cases must have tagging version 2 (case & 0x0000_F000_0000_0000 == 0x2000_0000_0000).";
 
         if (!string.IsNullOrWhiteSpace(queue.CountryCode))
         {
