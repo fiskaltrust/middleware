@@ -23,10 +23,10 @@ public class TicketBAIArabaAcceptanceTests : ESScuAcceptanceTestBase
         {
             EmisorNif = "B10646545",
             EmisorApellidosNombreRazonSocial = "Test Company S.L.",
-            SoftwareLicenciaTBAI = "TBAIBI00000000PRUEBA",
-            SoftwareNif = "A99800005",
-            SoftwareName = "SOFTWARE GARANTE TICKETBAI PRUEBA",
-            SoftwareVersion = "1.0.0",
+            SoftwareLicenciaTBAI = "TBAIARbKKFCFdCC00879",
+            SoftwareNif = "B10646545",
+            SoftwareName = "Incodebiz",
+            SoftwareVersion = "1.0",
             Certificate = new X509Certificate2(Convert.FromBase64String(certificateBase64.ToString()!), certificatePassword.ToString()!)
         };
     }

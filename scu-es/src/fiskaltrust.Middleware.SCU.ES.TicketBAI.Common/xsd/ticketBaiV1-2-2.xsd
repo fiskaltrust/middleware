@@ -1,0 +1,905 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:T="urn:ticketbai:emision" targetNamespace="urn:ticketbai:emision" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+	<xsd:import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="http://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd" />
+
+<xsd:complexType name="TicketBaiType">
+    <xsd:sequence>
+        <xsd:element name="Cabecera" type="T:Cabecera" />
+        <xsd:element name="Sujetos" type="T:Sujetos" />
+        <xsd:element name="Factura" type="T:Factura" />
+        <xsd:element name="HuellaTBAI" type="T:HuellaTBAI" />
+        <xsd:element ref="ds:Signature" />
+    </xsd:sequence>
+</xsd:complexType>
+
+<xsd:element name="TicketBai" type="T:TicketBaiType" />
+	<xsd:complexType name="Cabecera">
+		<xsd:sequence>
+			<xsd:element name="IDVersionTBAI" type="T:IDVersionTicketBaiType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="Sujetos">
+		<xsd:sequence>
+			<xsd:element name="Emisor" type="T:Emisor" />
+			<xsd:element name="Destinatarios" type="T:Destinatarios" minOccurs="0" />
+			<xsd:element name="VariosDestinatarios" type="T:SiNoType" minOccurs="0" />
+			<xsd:element name="EmitidaPorTercerosODestinatario" type="T:EmitidaPorTercerosType" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:complexType name="Emisor">
+		<xsd:sequence>		
+			<xsd:element name="NIF" type="T:NIFType" />
+			<xsd:element name="ApellidosNombreRazonSocial" type="T:TextMax120ObligatorioType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="Destinatarios">
+		<xsd:sequence>
+			<xsd:element name="IDDestinatario" type="T:IDDestinatario" minOccurs="1" maxOccurs="100" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="IDDestinatario">
+		<xsd:sequence>
+			<xsd:choice>
+				<xsd:element name="NIF" type="T:NIFType" />
+				<xsd:element name="IDOtro" type="T:IDOtro" />
+			</xsd:choice>
+			<xsd:element name="ApellidosNombreRazonSocial" type="T:TextMax120Type" />
+			<xsd:element name="CodigoPostal" type="T:TextMax20Type" minOccurs="0" />
+			<xsd:element name="Direccion" type="T:TextMax250Type" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:complexType name="IDOtro">
+		<xsd:sequence>
+			<xsd:element name="CodigoPais" type="T:CountryType2" minOccurs="0" />
+			<xsd:element name="IDType" type="T:IDTypeType" />
+			<xsd:element name="ID" type="T:TextMax20Type" />
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:complexType name="Factura">
+		<xsd:sequence>
+			<xsd:element name="CabeceraFactura" type="T:CabeceraFacturaType" />
+			<xsd:element name="DatosFactura" type="T:DatosFacturaType" />
+			<xsd:element name="TipoDesglose" type="T:TipoDesgloseType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="CabeceraFacturaType">
+		<xsd:sequence>
+			<xsd:element name="SerieFactura" type="T:TextMax20Type" minOccurs="0" />
+			<xsd:element name="NumFactura" type="T:TextMax20ObligatorioType" />
+			<xsd:element name="FechaExpedicionFactura" type="T:FechaType" />            
+			<xsd:element name="HoraExpedicionFactura" type="T:HoraType" />
+			<xsd:element name="FacturaSimplificada" type="T:SiNoType" minOccurs="0" />
+			<xsd:element name="FacturaEmitidaSustitucionSimplificada" type="T:SiNoType" minOccurs="0" />
+			<xsd:element name="FacturaRectificativa" type="T:FacturaRectificativaType" minOccurs="0" />
+			<xsd:element name="FacturasRectificadasSustituidas" type="T:FacturasRectificadasSustituidasType" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="FacturaRectificativaType">
+		<xsd:sequence>
+			<xsd:element name="Codigo" type="T:ClaveTipoFacturaType" />
+			<xsd:element name="Tipo" type="T:ClaveTipoRectificativaType" />
+			<xsd:element name="ImporteRectificacionSustitutiva" type="T:ImporteRectificacionSustitutivaType" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ImporteRectificacionSustitutivaType">
+		<xsd:sequence>
+			<xsd:element name="BaseRectificada" type="T:ImporteSgn12.2Type" />
+			<xsd:element name="CuotaRectificada" type="T:ImporteSgn12.2Type" />
+			<xsd:element name="CuotaRecargoRectificada" type="T:ImporteSgn12.2Type" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>		
+	<xsd:complexType name="DatosFacturaType">
+		<xsd:sequence>
+			<xsd:element name="FechaOperacion" type="T:FechaType" minOccurs="0" />
+			<xsd:element name="DescripcionFactura" type="T:TextMax250ObligatorioType" />
+			<xsd:element name="DetallesFactura" type="T:DetallesFacturaType" minOccurs="0" />
+			<xsd:element name="ImporteTotalFactura" type="T:ImporteSgn12.2Type" />
+			<xsd:element name="RetencionSoportada" type="T:ImporteSgn12.2Type" minOccurs="0" />
+			<xsd:element name="BaseImponibleACoste" type="T:ImporteSgn12.2Type" minOccurs="0" />
+			<xsd:element name="Claves" type="T:ClavesType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="DetallesFacturaType">
+			<xsd:sequence>
+				<xsd:element name="IDDetalleFactura" type="T:IDDetalleFacturaType" minOccurs="1" maxOccurs="1000" />
+			</xsd:sequence>
+	</xsd:complexType>	
+	<xsd:complexType name="IDDetalleFacturaType">
+		<xsd:sequence>	
+			<xsd:element name="DescripcionDetalle" type="T:TextMax250ObligatorioType" />
+			<xsd:element name="Cantidad" type="T:ImporteSgn12.8Type" />
+			<xsd:element name="ImporteUnitario" type="T:ImporteSgn12.8Type" />
+			<xsd:element name="Descuento" type="T:ImporteSgn12.8Type" minOccurs="0" />
+			<xsd:element name="ImporteTotal" type="T:ImporteSgn12.8Type" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ClavesType">
+		<xsd:sequence>
+			<xsd:element name="IDClave" type="T:IDClaveType" minOccurs="1" maxOccurs="3" />
+		</xsd:sequence>
+	</xsd:complexType>	
+	<xsd:complexType name="IDClaveType">
+		<xsd:sequence>	
+			<xsd:element name="ClaveRegimenIvaOpTrascendencia" type="T:IdOperacionesTrascendenciaTributariaType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="FacturasRectificadasSustituidasType">
+		<xsd:sequence>
+			<xsd:element name="IDFacturaRectificadaSustituida" type="T:IDFacturaRectificadaSustituidaType" minOccurs="1" maxOccurs="100" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="IDFacturaRectificadaSustituidaType">
+		<xsd:sequence>
+			<xsd:element name="SerieFactura" type="T:TextMax20Type" minOccurs="0" />
+			<xsd:element name="NumFactura" type="T:TextMax20ObligatorioType" />
+			<xsd:element name="FechaExpedicionFactura" type="T:FechaType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="TipoDesgloseType">  
+	   <xsd:sequence>
+			<xsd:choice>
+				<xsd:element name="DesgloseFactura" type="T:DesgloseFacturaType" /> 
+				<xsd:element name="DesgloseTipoOperacion" type="T:DesgloseTipoOperacionType" />
+			</xsd:choice>
+       </xsd:sequence>
+	</xsd:complexType>
+    <xsd:complexType name="DesgloseTipoOperacionType">
+         <xsd:sequence>
+        <xsd:element name="PrestacionServicios" type="T:PrestacionServicios" minOccurs="0" /> 
+        <xsd:element name="Entrega" type="T:Entrega" minOccurs="0" /> 
+       </xsd:sequence>    
+    </xsd:complexType>
+     <xsd:complexType name="PrestacionServicios">
+        <xsd:sequence>
+            <xsd:element name="Sujeta" type="T:SujetaType" minOccurs="0" />
+			<xsd:element name="NoSujeta" type="T:NoSujetaType" minOccurs="0" />
+		</xsd:sequence>
+    </xsd:complexType>
+     <xsd:complexType name="Entrega">
+        <xsd:sequence>
+            <xsd:element name="Sujeta" type="T:SujetaType" minOccurs="0" />
+			<xsd:element name="NoSujeta" type="T:NoSujetaType" minOccurs="0" />
+		</xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="DesgloseFacturaType">
+        <xsd:sequence>
+            <xsd:element name="Sujeta" type="T:SujetaType" minOccurs="0" />
+			<xsd:element name="NoSujeta" type="T:NoSujetaType" minOccurs="0" />
+		</xsd:sequence>
+    </xsd:complexType>
+	<xsd:complexType name="SujetaType">
+		<xsd:sequence>
+			<xsd:element name="Exenta" type="T:ExentaType" minOccurs="0" />
+			<xsd:element name="NoExenta" type="T:NoExentaType" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="NoSujetaType">
+		<xsd:sequence>
+			<xsd:element name="DetalleNoSujeta" type="T:DetalleNoSujeta" minOccurs="1" maxOccurs="4" />
+		</xsd:sequence>
+	</xsd:complexType>	
+	<xsd:complexType name="DetalleNoSujeta">
+		<xsd:sequence>
+			<xsd:element name="Causa" type="T:CausaNoSujetaType" />
+			<xsd:element name="Importe" type="T:ImporteSgn12.2Type" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="ExentaType">
+		<xsd:sequence>
+			<xsd:element name="DetalleExenta" type="T:DetalleExentaType" minOccurs="1" maxOccurs="7" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="DetalleExentaType">
+		<xsd:sequence>
+			<xsd:element name="CausaExencion" type="T:CausaExencionType" />
+			<xsd:element name="BaseImponible" type="T:ImporteSgn12.2Type" />
+		</xsd:sequence>
+	</xsd:complexType>	
+	<xsd:complexType name="NoExentaType">
+		<xsd:sequence>
+			<xsd:element name="DetalleNoExenta" type="T:DetalleNoExentaType" minOccurs="1" maxOccurs="2" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="DetalleNoExentaType">
+		<xsd:sequence>
+			<xsd:element name="TipoNoExenta" type="T:TipoOperacionSujetaNoExentaType" />
+			<xsd:element name="DesgloseIVA" type="T:DesgloseIVAType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="DesgloseIVAType">
+		<xsd:sequence>
+			<xsd:element name="DetalleIVA" type="T:DetalleIVAType" minOccurs="1" maxOccurs="12" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="DetalleIVAType">
+		<xsd:sequence>
+			<xsd:element name="BaseImponible" type="T:ImporteSgn12.2Type" />
+			<xsd:element name="TipoImpositivo" type="T:Tipo3.2Type" minOccurs="0" />
+			<xsd:element name="CuotaImpuesto" type="T:ImporteSgn12.2Type" minOccurs="0" />
+			<xsd:element name="TipoRecargoEquivalencia" type="T:Tipo3.2Type" minOccurs="0" />
+			<xsd:element name="CuotaRecargoEquivalencia" type="T:ImporteSgn12.2Type" minOccurs="0" />
+			<xsd:element name="OperacionEnRecargoDeEquivalenciaORegimenSimplificado" type="T:SiNoType" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="EncadenamientoFacturaAnteriorType">
+		<xsd:sequence>
+			<xsd:element name="SerieFacturaAnterior" type="T:TextMax20Type" minOccurs="0" />
+			<xsd:element name="NumFacturaAnterior" type="T:TextMax20ObligatorioType" />
+			<xsd:element name="FechaExpedicionFacturaAnterior" type="T:FechaType" />
+			<xsd:element name="SignatureValueFirmaFacturaAnterior" type="T:TextMax100ObligatorioType" />
+		</xsd:sequence>
+	</xsd:complexType>   
+    <xsd:complexType name="HuellaTBAI">
+		<xsd:sequence>
+			<xsd:element name="EncadenamientoFacturaAnterior" type="T:EncadenamientoFacturaAnteriorType" minOccurs="0" />
+			<xsd:element name="Software" type="T:SoftwareFacturacionType" />
+			<xsd:element name="NumSerieDispositivo" type="T:TextMax30Type" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>     
+     <xsd:complexType name="SoftwareFacturacionType">
+		<xsd:sequence>
+			<xsd:element name="LicenciaTBAI" type="T:TextMax20ObligatorioType" />
+            <xsd:element name="EntidadDesarrolladora" type="T:EntidadDesarrolladoraType" />
+			<xsd:element name="Nombre" type="T:TextMax120ObligatorioType" />
+			<xsd:element name="Version" type="T:TextMax20ObligatorioType" />
+		</xsd:sequence>
+	</xsd:complexType>
+     <xsd:complexType name="EntidadDesarrolladoraType">
+		<xsd:sequence>
+			<xsd:choice>
+				<xsd:element name="NIF" type="T:NIFType" />
+				<xsd:element name="IDOtro" type="T:IDOtro" />
+			</xsd:choice>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:simpleType name="NIFType">
+		<xsd:annotation>
+			<xsd:documentation>IFZ: 9 zifrako edo letrako segida - NIF: Secuencia de 9 dígitos o letras</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="string">
+			<xsd:length value="9" />
+			<xsd:pattern value="(([a-z|A-Z]{1}\d{7}[a-z|A-Z]{1})|(\d{8}[a-z|A-Z]{1})|([a-z|A-Z]{1}\d{8}))" />
+		</xsd:restriction>
+		<!-- ([A-Z]|\d){9} -->
+	</xsd:simpleType>
+	<xsd:simpleType name="FechaType">
+		<xsd:restriction base="string">
+			<xsd:length value="10" />
+			<xsd:pattern value="\d{2,2}-\d{2,2}-\d{4,4}" />
+		</xsd:restriction>
+	</xsd:simpleType>
+    <xsd:simpleType name="HoraType">
+        <xsd:restriction base="string">
+            <xsd:pattern value="\d{2,2}:\d{2,2}:\d{2,2}" />
+        </xsd:restriction>
+    </xsd:simpleType>
+	<!-- Tipo de 6 dígitos (3+2) "." como separador decimal -->	
+	<xsd:simpleType name="Tipo3.2Type">
+		<xsd:restriction base="string">
+			<xsd:pattern value="\d{1,3}(\.\d{0,2})?" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Importe de 15 dígitos (12+2) "." como separador decimal -->
+	<xsd:simpleType name="ImporteSgn12.2Type">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\+|-)?\d{1,12}(\.\d{0,2})?" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Importe de 20 dígitos (12+8) "." como separador decimal -->
+	<xsd:simpleType name="ImporteSgn12.8Type">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\+|-)?\d{1,12}(\.\d{0,8})?" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 20 caracteres -->
+	<xsd:simpleType name="TextMax20Type">
+		<xsd:restriction base="string">
+			<xsd:maxLength value="20" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 20 caracteres obligatorio-->
+	<xsd:simpleType name="TextMax20ObligatorioType">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\s*[^\s]\s*)+"></xsd:pattern>
+			<xsd:minLength value="1" />
+			<xsd:maxLength value="20" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Cadena de 30 caracteres -->
+	<xsd:simpleType name="TextMax30Type">
+		<xsd:restriction base="string">
+			<xsd:maxLength value="30" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 100 caracteres obligatorio-->
+	<xsd:simpleType name="TextMax100ObligatorioType">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\s*[^\s]\s*)+"></xsd:pattern>
+			<xsd:minLength value="1" />
+			<xsd:maxLength value="100" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 120 caracteres -->
+	<xsd:simpleType name="TextMax120Type">
+		<xsd:restriction base="string">
+			<xsd:maxLength value="120" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Cadena de 120 caracteres obligatorio-->
+	<xsd:simpleType name="TextMax120ObligatorioType">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\s*[^\s]\s*)+"></xsd:pattern>
+			<xsd:minLength value="1" />
+			<xsd:maxLength value="120" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Cadena de 250 caracteres -->
+	<xsd:simpleType name="TextMax250Type">
+		<xsd:restriction base="string">
+			<xsd:maxLength value="250" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 250 caracteres obligatorio-->
+	<xsd:simpleType name="TextMax250ObligatorioType">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\s*[^\s]\s*)+"></xsd:pattern>
+			<xsd:minLength value="1" />
+			<xsd:maxLength value="250" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!--  IDTicketBaiBertsioa - IDVersionTicketBai -->
+	<xsd:simpleType name="IDVersionTicketBaiType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="1.2" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!--  Egoitza herrialdeko identifikazio motak - Tipos de identificación en el país de residencia -->
+	<xsd:simpleType name="IDTypeType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="02">
+				<xsd:annotation>
+					<xsd:documentation>IFZ BEZ - NIF IVA</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="03">
+				<xsd:annotation>
+					<xsd:documentation>Pasaportea - Pasaporte</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="04">
+				<xsd:annotation>
+					<xsd:documentation>Egoitza dagoen herrialdeak edo lurraldeak emandako nortasun agiri ofiziala - Documento oficial de identificación expedido por el país o territorio de residencia</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="05">
+				<xsd:annotation>
+					<xsd:documentation>Egoitza ziurtagiria - Certificado de residencia</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="06">
+				<xsd:annotation>
+					<xsd:documentation>Beste frogagiri bat - Otro documento probatorio</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Zuzentzeko fakturaren kodea - Código de factura rectificativa -->
+	<xsd:simpleType name="ClaveTipoFacturaType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="R1">
+				<xsd:annotation>
+					<xsd:documentation>Faktura zuzentzailea: zuzenbidean oinarritutako akatsa eta BEZaren Foru Arauaren 80.artikuluko Bat, Bi eta Sei - Factura rectificativa: error fundado en derecho y Art. 80 Uno, Dos y Seis de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="R2">
+				<xsd:annotation>
+					<xsd:documentation>Faktura zuzentzailea: BEZari buruzko Foru Arauko 80. artikuluko Hiru - Factura rectificativa: artículo 80 Tres de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="R3">
+				<xsd:annotation>
+					<xsd:documentation>Faktura zuzentzailea: BEZari buruzko Foru Arauko 80. artikuluko Lau - Factura rectificativa: artículo 80 Cuatro de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="R4">
+				<xsd:annotation>
+					<xsd:documentation>Faktura zuzentzailea: Gainerakoak - Factura rectificativa: Resto </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="R5">
+				<xsd:annotation>
+					<xsd:documentation>Faktura zuzentzailea faktura erraztuetan - Factura rectificativa en facturas simplificadas </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Faktura zuzentzaile mota - Tipo de factura rectificativa -->
+	<xsd:simpleType name="ClaveTipoRectificativaType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="S">
+				<xsd:annotation>
+					<xsd:documentation>Ordezkatzeagatiko faktura zuzentzailea - Factura rectificativa por sustitución</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="I">
+				<xsd:annotation>
+					<xsd:documentation>Ezberdintasunengatiko faktura zuzentzailea - Factura rectificativa por diferencias</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- BEZaren araudi bereziaren gakoa eta zerga garrantziadun eragiketak - Clave de régimen especial de IVA y operaciones con trascendencia tributaria -->
+	<xsd:simpleType name="IdOperacionesTrascendenciaTributariaType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="01">
+                <xsd:annotation>
+                    <xsd:documentation>Erregimen orokorreko eragiketa eta hurrengo balioetan jaso gabe dagoen beste edozein kasu - Operación de régimen general y cualquier otro supuesto que no esté recogido en los siguientes valores</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="02">
+                <xsd:annotation>
+                    <xsd:documentation>Esportazioa - Exportación</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="03">
+                <xsd:annotation>
+                    <xsd:documentation>Erabilitako ondasunen, arte objektuen, zaharkinen eta bilduma objektuen araudi berezia aplikatzen zaien eragiketak - Operaciones a las que se aplique el régimen especial de bienes usados, objetos de arte, antigüedades y objetos de colección</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="04">
+                <xsd:annotation>
+                    <xsd:documentation>Inbertsio urrearen araubide berezia - Régimen especial del oro de inversión</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="05">
+                <xsd:annotation>
+                    <xsd:documentation>Bidaia-agentzien araubide berezia - Régimen especial de las agencias de viajes</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="06">
+                <xsd:annotation>
+                    <xsd:documentation>BEZeko erakundeen multzoaren araudi berezia (maila aurreratua) - Régimen especial grupo de entidades en IVA (Nivel Avanzado)</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="07">
+                <xsd:annotation>
+                    <xsd:documentation>Kutxa-irizpidearen araubide berezia - Régimen especial del criterio de caja</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="08">
+                <xsd:annotation>
+                    <xsd:documentation>Ekoizpen, Zerbitzu eta Inportazioaren gaineko Zergari / Kanarietako Zeharkako Zerga Orokorrari lotutako eragiketak - Operaciones sujetas al IPSI/IGIC (Impuesto sobre la Producción, los Servicios y la Importación / Impuesto General Indirecto Canario)</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="09">
+                <xsd:annotation>
+                    <xsd:documentation>Besteren izenean eta kontura ari diren bidai agentziek egindako zerbitzuen fakturazioa(Fakturazio Araudiko 3. xedapen gehigarria) - Facturación de las prestaciones de servicios de agencias de viaje que actúan como mediadoras en nombre y por cuenta ajena (disposición adicional 3ª del Reglamento de Facturación)</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="10">
+                <xsd:annotation>
+                    <xsd:documentation>Hirugarrenen kontura kobratzea ordainsari profesionalak edo jabetza industrialetik eratorritako eskubideak, egilearenak edo bazkideen, bazkideen edo elkargokideen kontura kobratzeko eginkizun horiek betetzen dituzten sozietate, elkarte, elkargo profesional edo bestelako erakundeek egindakoak - Cobros por cuenta de terceros o terceras de honorarios profesionales o de derechos derivados de la propiedad industrial, de autor u otros por cuenta de sus socios, socias, asociados, asociadas, colegiados o colegiadas efectuados por sociedades, asociaciones, colegios profesionales u otras entidades que realicen estas funciones de cobro</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="11">
+                <xsd:annotation>
+                    <xsd:documentation>Negozio lokala errentatzeko eragiketak, atxikipenari lotuak - Operaciones de arrendamiento de local de negocio sujetos a retención</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="12">
+                <xsd:annotation>
+                    <xsd:documentation>Negozio lokala errentatzeko eragiketak, atxikipenari lotu gabeak - Operaciones de arrendamiento de local de negocio no sujetos a retención</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+		    <xsd:enumeration value="13">
+                <xsd:annotation>
+                    <xsd:documentation>Negozio lokala errentatzeko eragiketak, atxikipenari lotuak eta lotu gabeak - Operaciones de arrendamiento de local de negocio sujetas y no sujetas a retención</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			 <xsd:enumeration value="14">
+                <xsd:annotation>
+                    <xsd:documentation>Hartzailea administrazio publiko bat denean ordaintzeke dauden BEZdun fakturak, obra ziurtagirietakoak - Factura con IVA pendiente de devengo en certificaciones de obra cuyo destinatario sea una Administración Pública</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			 <xsd:enumeration value="15">
+                <xsd:annotation>
+                    <xsd:documentation>Segidako traktuko eragiketetan ordaintzeke dagoen BEZdun faktura - Factura con IVA pendiente de devengo en operaciones de tracto sucesivo</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>			
+			 <xsd:enumeration value="17">
+                <xsd:annotation>
+                    <xsd:documentation>IX. tituluko XI. kapituluan aurreikusitako araubideren bati atxikitako eragiketa (OSS eta IOSS) - Operación acogida a alguno de los regímenes previstos en el Capítulo XI del Título IX (OSS e IOSS)</xsd:documentation>
+                </xsd:annotation>	
+            </xsd:enumeration>
+			 <xsd:enumeration value="19">
+                <xsd:annotation>
+                    <xsd:documentation>Nekazaritza, abeltzaintza eta arrantzaren araubide berezian dauden jardueren eragiketak (NAAAB) - Operaciones de actividades incluidas en el Régimen Especial de Agricultura, Ganadería y Pesca (REAGYP)</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>			
+			 <xsd:enumeration value="51">
+                <xsd:annotation>
+                    <xsd:documentation>Baliokidetasun errekarguko eragiketak - Operaciones en recargo de equivalencia</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			 <xsd:enumeration value="52">
+                <xsd:annotation>
+                    <xsd:documentation>Erregimen erraztuko eragiketak - Operaciones en régimen simplificado</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="53">
+                <xsd:annotation>
+                    <xsd:documentation>BEZaren ondorioetarako enpresari edo profesionaltzat jotzen ez diren pertsona edo erakundeek egindako eragiketak - Operaciones realizadas por personas o entidades que no tengan la consideración de empresarios, empresarias o profesionales a efectos del IVA</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="54">
+                <xsd:annotation>
+                    <xsd:documentation>Kanarietan, Ceutan eta Melillan kokatutako establezimendu iraunkorretatik egindako eragiketak - Operaciones realizadas desde Establecimientos Permanentes situados en Canarias, Ceuta y Melilla</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>			
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!--  Lotutako eta salbuetsitako eragiketen salbuesteko kausa - Causa de exención de operaciones sujetas y exentas  -->
+	<xsd:simpleType name="CausaExencionType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="E1">
+				<xsd:annotation>
+					<xsd:documentation>BEZaren Foru Arauaren 20. artikuluak salbuetsia - Exenta por el artículo 20 de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="E2">
+				<xsd:annotation>
+					<xsd:documentation>BEZaren Foru Arauaren 21. artikuluak salbuetsia - Exenta por el artículo 21 de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="E3">
+				<xsd:annotation>
+					<xsd:documentation>BEZaren Foru Arauaren 22. artikuluak salbuetsia - Exenta por el artículo 22 de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="E4">
+				<xsd:annotation>
+					<xsd:documentation>BEZaren Foru Arauaren 23. eta 24. artikuluek salbuetsia - Exenta por el artículo 23 y 24 de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="E5">
+				<xsd:annotation>
+					<xsd:documentation>BEZaren Foru Arauaren 25. artikuluak salbuetsia - Exenta por el artículo 25 de la Norma Foral del IVA </xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="E6">
+				<xsd:annotation>
+					<xsd:documentation>Beste arrazoi bategatik salbuetsia - Exenta por otra causa</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Salbuetsi gabeko mota - Tipo no exenta -->
+	<xsd:simpleType name="TipoOperacionSujetaNoExentaType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="S1">
+				<xsd:annotation>
+					<xsd:documentation>Subjektu pasiboaren inbertsiorik gabe - Sin inversión del sujeto pasivo</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="S2">
+				<xsd:annotation>
+					<xsd:documentation>Subjektu pasiboaren inbertsioarekin - Con inversión del sujeto pasivo</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Hirugarren batek edo hartzaileak emandako faktura - Factura emitida por tercero o tercera o por destinatario o destinataria  -->
+	<xsd:simpleType name="EmitidaPorTercerosType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="N">
+                <xsd:annotation>
+                  <xsd:documentation>Hartzaileak berak emandako faktura - Factura emitida por el propio emisor o emisora</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="T">
+                <xsd:annotation>
+                  <xsd:documentation>Hirugarren batek egindako faktura - Factura emitida por tercero o tercera</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+            <xsd:enumeration value="D">
+                <xsd:annotation>
+                  <xsd:documentation>Eragiketaren hartzaileak emandako faktura - Factura emitida por el destinatario o la destinataria de la operación</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<xsd:simpleType name="SiNoType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="S" />			
+			<xsd:enumeration value="N" />			
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!--  Ez lotzearen arrazoia - Causa de no sujeción -->
+    <xsd:simpleType name="CausaNoSujetaType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="OT">
+                <xsd:annotation>
+                  <xsd:documentation>BEZaren Foru Arauaren 7. artikuluak lotu gabea Lotu gabeko beste kasu batzuk - No sujeto por el artículo 7 de la Norma Foral de IVA Otros supuestos de no sujeción</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="RL">
+                <xsd:annotation>
+                  <xsd:documentation>Lokalizazio arauengatik lotu gabe - No sujeto por reglas de localización</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="VT">
+                <xsd:annotation>
+                  <xsd:documentation>Ez subjektua, hirugarrenen kontura egindako salmentak (BEZaren eta PFEZaren ondorioetarako konputagarria ez den zenbatekoa) - No sujeto, ventas realizadas por cuenta de terceros (importe no computable a efectos de IVA ni de IRPF)</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+			<xsd:enumeration value="IE">
+                <xsd:annotation>
+                  <xsd:documentation>Lokalizazio-arauak direla-eta ZALen subjektua ez dena, baina atzerriko zerga, IPS/IGIC edo EBko beste estatu kide bateko BEZa eragiten duena - No sujeto en el TAI por reglas de localización, pero repercute impuesto extranjero, IPS/IGIC o IVA de otro estado miembro UE</xsd:documentation>
+                </xsd:annotation>
+            </xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType> 
+	<!-- Herrialdearen kodea - Código de país -->
+	<xsd:simpleType name="CountryType2">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="AF" />
+			<xsd:enumeration value="AL" />
+			<xsd:enumeration value="DE" />
+			<xsd:enumeration value="AD" />
+			<xsd:enumeration value="AO" />
+			<xsd:enumeration value="AI" />
+			<xsd:enumeration value="AQ" />
+			<xsd:enumeration value="AG" />
+			<xsd:enumeration value="SA" />
+			<xsd:enumeration value="DZ" />
+			<xsd:enumeration value="AR" />
+			<xsd:enumeration value="AM" />
+			<xsd:enumeration value="AW" />
+			<xsd:enumeration value="AU" />
+			<xsd:enumeration value="AT" />
+			<xsd:enumeration value="AZ" />
+			<xsd:enumeration value="BS" />
+			<xsd:enumeration value="BH" />
+			<xsd:enumeration value="BD" />
+			<xsd:enumeration value="BB" />
+			<xsd:enumeration value="BE" />
+			<xsd:enumeration value="BZ" />
+			<xsd:enumeration value="BJ" />
+			<xsd:enumeration value="BM" />
+			<xsd:enumeration value="BY" />
+			<xsd:enumeration value="BO" />
+			<xsd:enumeration value="BA" />
+			<xsd:enumeration value="BW" />
+			<xsd:enumeration value="BV" />
+			<xsd:enumeration value="BR" />
+			<xsd:enumeration value="BN" />
+			<xsd:enumeration value="BG" />
+			<xsd:enumeration value="BF" />
+			<xsd:enumeration value="BI" />
+			<xsd:enumeration value="BT" />
+			<xsd:enumeration value="CV" />
+			<xsd:enumeration value="KY" />
+			<xsd:enumeration value="KH" />
+			<xsd:enumeration value="CM" />
+			<xsd:enumeration value="CA" />
+			<xsd:enumeration value="CF" />
+			<xsd:enumeration value="CC" />
+			<xsd:enumeration value="CO" />
+			<xsd:enumeration value="KM" />
+			<xsd:enumeration value="CG" />
+			<xsd:enumeration value="CD" />
+			<xsd:enumeration value="CK" />
+			<xsd:enumeration value="KP" />
+			<xsd:enumeration value="KR" />
+			<xsd:enumeration value="CI" />
+			<xsd:enumeration value="CR" />
+			<xsd:enumeration value="HR" />
+			<xsd:enumeration value="CU" />
+			<xsd:enumeration value="TD" />
+			<xsd:enumeration value="CZ" />
+			<xsd:enumeration value="CL" />
+			<xsd:enumeration value="CN" />
+			<xsd:enumeration value="CY" />
+			<xsd:enumeration value="CW" />
+			<xsd:enumeration value="DK" />
+			<xsd:enumeration value="DM" />
+			<xsd:enumeration value="DO" />
+			<xsd:enumeration value="EC" />
+			<xsd:enumeration value="EG" />
+			<xsd:enumeration value="AE" />
+			<xsd:enumeration value="ER" />
+			<xsd:enumeration value="SK" />
+			<xsd:enumeration value="SI" />
+			<xsd:enumeration value="ES" />
+			<xsd:enumeration value="US" />
+			<xsd:enumeration value="EE" />
+			<xsd:enumeration value="ET" />
+			<xsd:enumeration value="FO" />
+			<xsd:enumeration value="PH" />
+			<xsd:enumeration value="FI" />
+			<xsd:enumeration value="FJ" />
+			<xsd:enumeration value="FR" />
+			<xsd:enumeration value="GA" />
+			<xsd:enumeration value="GM" />
+			<xsd:enumeration value="GE" />
+			<xsd:enumeration value="GS" />
+			<xsd:enumeration value="GH" />
+			<xsd:enumeration value="GI" />
+			<xsd:enumeration value="GD" />
+			<xsd:enumeration value="GR" />
+			<xsd:enumeration value="GL" />
+			<xsd:enumeration value="GU" />
+			<xsd:enumeration value="GT" />
+			<xsd:enumeration value="GG" />
+			<xsd:enumeration value="GN" />
+			<xsd:enumeration value="GQ" />
+			<xsd:enumeration value="GW" />
+			<xsd:enumeration value="GY" />
+			<xsd:enumeration value="HT" />
+			<xsd:enumeration value="HM" />
+			<xsd:enumeration value="HN" />
+			<xsd:enumeration value="HK" />
+			<xsd:enumeration value="HU" />
+			<xsd:enumeration value="IN" />
+			<xsd:enumeration value="ID" />
+			<xsd:enumeration value="IR" />
+			<xsd:enumeration value="IQ" />
+			<xsd:enumeration value="IE" />
+			<xsd:enumeration value="IM" />
+			<xsd:enumeration value="IS" />
+			<xsd:enumeration value="IL" />
+			<xsd:enumeration value="IT" />
+			<xsd:enumeration value="JM" />
+			<xsd:enumeration value="JP" />
+			<xsd:enumeration value="JE" />
+			<xsd:enumeration value="JO" />
+			<xsd:enumeration value="KZ" />
+			<xsd:enumeration value="KE" />
+			<xsd:enumeration value="KG" />
+			<xsd:enumeration value="KI" />
+			<xsd:enumeration value="KW" />
+			<xsd:enumeration value="LA" />
+			<xsd:enumeration value="LS" />
+			<xsd:enumeration value="LV" />
+			<xsd:enumeration value="LB" />
+			<xsd:enumeration value="LR" />
+			<xsd:enumeration value="LY" />
+			<xsd:enumeration value="LI" />
+			<xsd:enumeration value="LT" />
+			<xsd:enumeration value="LU" />
+			<xsd:enumeration value="XG" />
+			<xsd:enumeration value="MO" />
+			<xsd:enumeration value="MK" />
+			<xsd:enumeration value="MG" />
+			<xsd:enumeration value="MY" />
+			<xsd:enumeration value="MW" />
+			<xsd:enumeration value="MV" />
+			<xsd:enumeration value="ML" />
+			<xsd:enumeration value="MT" />
+			<xsd:enumeration value="FK" />
+			<xsd:enumeration value="MP" />
+			<xsd:enumeration value="MA" />
+			<xsd:enumeration value="MH" />
+			<xsd:enumeration value="MU" />
+			<xsd:enumeration value="MR" />
+			<xsd:enumeration value="YT" />
+			<xsd:enumeration value="UM" />
+			<xsd:enumeration value="MX" />
+			<xsd:enumeration value="FM" />
+			<xsd:enumeration value="MD" />
+			<xsd:enumeration value="MC" />
+			<xsd:enumeration value="MN" />
+			<xsd:enumeration value="ME" />
+			<xsd:enumeration value="MS" />
+			<xsd:enumeration value="MZ" />
+			<xsd:enumeration value="MM" />
+			<xsd:enumeration value="NA" />
+			<xsd:enumeration value="NR" />
+			<xsd:enumeration value="CX" />
+			<xsd:enumeration value="NP" />
+			<xsd:enumeration value="NI" />
+			<xsd:enumeration value="NE" />
+			<xsd:enumeration value="NG" />
+			<xsd:enumeration value="NU" />
+			<xsd:enumeration value="NF" />
+			<xsd:enumeration value="NO" />
+			<xsd:enumeration value="NC" />
+			<xsd:enumeration value="NZ" />
+			<xsd:enumeration value="IO" />
+			<xsd:enumeration value="OM" />
+			<xsd:enumeration value="NL" />
+			<xsd:enumeration value="BQ" />
+			<xsd:enumeration value="PK" />
+			<xsd:enumeration value="PW" />
+			<xsd:enumeration value="PA" />
+			<xsd:enumeration value="PG" />
+			<xsd:enumeration value="PY" />
+			<xsd:enumeration value="PE" />
+			<xsd:enumeration value="PN" />
+			<xsd:enumeration value="PF" />
+			<xsd:enumeration value="PL" />
+			<xsd:enumeration value="PT" />
+			<xsd:enumeration value="PR" />
+			<xsd:enumeration value="QA" />
+			<xsd:enumeration value="GB" />
+			<xsd:enumeration value="RW" />
+			<xsd:enumeration value="RO" />
+			<xsd:enumeration value="RU" />
+			<xsd:enumeration value="SB" />
+			<xsd:enumeration value="SV" />
+			<xsd:enumeration value="WS" />
+			<xsd:enumeration value="AS" />
+			<xsd:enumeration value="KN" />
+			<xsd:enumeration value="SM" />
+			<xsd:enumeration value="SX" />
+			<xsd:enumeration value="PM" />
+			<xsd:enumeration value="VC" />
+			<xsd:enumeration value="SH" />
+			<xsd:enumeration value="LC" />
+			<xsd:enumeration value="ST" />
+			<xsd:enumeration value="SN" />
+			<xsd:enumeration value="RS" />
+			<xsd:enumeration value="SC" />
+			<xsd:enumeration value="SL" />
+			<xsd:enumeration value="SG" />
+			<xsd:enumeration value="SY" />
+			<xsd:enumeration value="SO" />
+			<xsd:enumeration value="LK" />
+			<xsd:enumeration value="SZ" />
+			<xsd:enumeration value="ZA" />
+			<xsd:enumeration value="SD" />
+			<xsd:enumeration value="SS" />
+			<xsd:enumeration value="SE" />
+			<xsd:enumeration value="CH" />
+			<xsd:enumeration value="SR" />
+			<xsd:enumeration value="TH" />
+			<xsd:enumeration value="TW" />
+			<xsd:enumeration value="TZ" />
+			<xsd:enumeration value="TJ" />
+			<xsd:enumeration value="PS" />
+			<xsd:enumeration value="TF" />
+			<xsd:enumeration value="TL" />
+			<xsd:enumeration value="TG" />
+			<xsd:enumeration value="TK" />
+			<xsd:enumeration value="TO" />
+			<xsd:enumeration value="TT" />
+			<xsd:enumeration value="TN" />
+			<xsd:enumeration value="TC" />
+			<xsd:enumeration value="TM" />
+			<xsd:enumeration value="TR" />
+			<xsd:enumeration value="TV" />
+			<xsd:enumeration value="UA" />
+			<xsd:enumeration value="UG" />
+			<xsd:enumeration value="UY" />
+			<xsd:enumeration value="UZ" />
+			<xsd:enumeration value="VU" />
+			<xsd:enumeration value="VA" />
+			<xsd:enumeration value="VE" />
+			<xsd:enumeration value="VN" />
+			<xsd:enumeration value="VG" />
+			<xsd:enumeration value="VI" />
+			<xsd:enumeration value="WF" />
+			<xsd:enumeration value="YE" />
+			<xsd:enumeration value="DJ" />
+			<xsd:enumeration value="ZM" />
+			<xsd:enumeration value="ZW" />
+			<xsd:enumeration value="QU" />
+			<xsd:enumeration value="XB" />
+			<xsd:enumeration value="XU" />
+			<xsd:enumeration value="XN" />
+			<xsd:enumeration value="AX" />
+			<xsd:enumeration value="BL" />
+			<xsd:enumeration value="EH" />
+			<xsd:enumeration value="GF" />
+			<xsd:enumeration value="GP" />
+			<xsd:enumeration value="MF" />
+			<xsd:enumeration value="MQ" />
+			<xsd:enumeration value="RE" />
+			<xsd:enumeration value="SJ" />
+		</xsd:restriction>
+	</xsd:simpleType>
+</xsd:schema>

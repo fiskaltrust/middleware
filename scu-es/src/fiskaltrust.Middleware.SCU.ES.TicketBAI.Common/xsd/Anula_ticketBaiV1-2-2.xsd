@@ -1,0 +1,408 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:T="urn:ticketbai:anulacion" targetNamespace="urn:ticketbai:anulacion" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+	<xsd:import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="http://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd" />
+
+	<xsd:element name="AnulaTicketBai">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="Cabecera" type="T:Cabecera" />				
+				<xsd:element name="IDFactura" type="T:IDFactura" />
+				<xsd:element name="HuellaTBAI" type="T:HuellaTBAI" />
+				<xsd:element ref="ds:Signature" />
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+	<xsd:complexType name="Cabecera">
+		<xsd:sequence>
+			<xsd:element name="IDVersionTBAI" type="T:IDVersionTicketBaiType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="Emisor">
+		<xsd:sequence>		
+			<xsd:element name="NIF" type="T:NIFType" />			
+			<xsd:element name="ApellidosNombreRazonSocial" type="T:TextMax120ObligatorioType" />			
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="IDFactura">
+		<xsd:sequence>
+			<xsd:element name="Emisor" type="T:Emisor" />
+			<xsd:element name="CabeceraFactura" type="T:CabeceraFacturaType" />
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="CabeceraFacturaType">
+		<xsd:sequence>
+			<xsd:element name="SerieFactura" type="T:TextMax20Type" minOccurs="0" />			
+			<xsd:element name="NumFactura" type="T:TextMax20ObligatorioType" />
+			<xsd:element name="FechaExpedicionFactura" type="T:FechaType" />
+		</xsd:sequence>
+	</xsd:complexType>	  
+    <xsd:complexType name="HuellaTBAI">
+		<xsd:sequence>
+			<xsd:element name="Software" type="T:SoftwareFacturacionType" />
+			<xsd:element name="NumSerieDispositivo" type="T:TextMax30Type" minOccurs="0" />
+		</xsd:sequence>
+	</xsd:complexType>	
+     <xsd:complexType name="SoftwareFacturacionType">
+		<xsd:sequence>
+			<xsd:element name="LicenciaTBAI" type="T:TextMax20ObligatorioType" />		
+            <xsd:element name="EntidadDesarrolladora" type="T:EntidadDesarrolladoraType" />			
+			<xsd:element name="Nombre" type="T:TextMax120ObligatorioType" />
+			<xsd:element name="Version" type="T:TextMax20ObligatorioType" />
+		</xsd:sequence>
+	</xsd:complexType>	
+     <xsd:complexType name="EntidadDesarrolladoraType">
+		<xsd:sequence>
+			<xsd:choice>
+				<xsd:element name="NIF" type="T:NIFType" />
+				<xsd:element name="IDOtro" type="T:IDOtro" />
+			</xsd:choice>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="IDOtro">
+		<xsd:sequence>
+			<xsd:element name="CodigoPais" type="T:CountryType2" minOccurs="0" />
+			<xsd:element name="IDType" type="T:IDTypeType" />			
+			<xsd:element name="ID" type="T:TextMax20Type" />			
+		</xsd:sequence>
+	</xsd:complexType>
+		<xsd:simpleType name="NIFType">
+		<xsd:annotation>
+			<xsd:documentation>IFZ: 9 zifrako edo letrako segida - NIF: Secuencia de 9 dígitos o letras</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="string">
+			<xsd:length value="9" />
+			<xsd:pattern value="(([a-z|A-Z]{1}\d{7}[a-z|A-Z]{1})|(\d{8}[a-z|A-Z]{1})|([a-z|A-Z]{1}\d{8}))" />
+		</xsd:restriction>
+		<!-- ([A-Z]|\d){9} -->
+	</xsd:simpleType>
+	<xsd:simpleType name="FechaType">
+		<xsd:restriction base="string">
+			<xsd:length value="10" />
+			<xsd:pattern value="\d{2,2}-\d{2,2}-\d{4,4}" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Cadena de 20 caracteres -->
+	<xsd:simpleType name="TextMax20Type">
+		<xsd:restriction base="string">
+			<xsd:maxLength value="20" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 20 caracteres obligatorio-->
+	<xsd:simpleType name="TextMax20ObligatorioType">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\s*[^\s]\s*)+"></xsd:pattern>
+			<xsd:minLength value="1" />
+			<xsd:maxLength value="20" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!-- Cadena de 30 caracteres -->
+	<xsd:simpleType name="TextMax30Type">
+		<xsd:restriction base="string">
+			<xsd:maxLength value="30" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Cadena de 120 caracteres obligatorio-->
+	<xsd:simpleType name="TextMax120ObligatorioType">
+		<xsd:restriction base="string">
+			<xsd:pattern value="(\s*[^\s]\s*)+"></xsd:pattern>
+			<xsd:minLength value="1" />
+			<xsd:maxLength value="120" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!--  IDTicketBaiBertsioa - IDVersionTicketBai -->
+	<xsd:simpleType name="IDVersionTicketBaiType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="1.2" />
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Herrialdearen kodea - Código de país -->
+	<xsd:simpleType name="CountryType2">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="AF" />
+			<xsd:enumeration value="AL" />
+			<xsd:enumeration value="DE" />
+			<xsd:enumeration value="AD" />
+			<xsd:enumeration value="AO" />
+			<xsd:enumeration value="AI" />
+			<xsd:enumeration value="AQ" />
+			<xsd:enumeration value="AG" />
+			<xsd:enumeration value="SA" />
+			<xsd:enumeration value="DZ" />
+			<xsd:enumeration value="AR" />
+			<xsd:enumeration value="AM" />
+			<xsd:enumeration value="AW" />
+			<xsd:enumeration value="AU" />
+			<xsd:enumeration value="AT" />
+			<xsd:enumeration value="AZ" />
+			<xsd:enumeration value="BS" />
+			<xsd:enumeration value="BH" />
+			<xsd:enumeration value="BD" />
+			<xsd:enumeration value="BB" />
+			<xsd:enumeration value="BE" />
+			<xsd:enumeration value="BZ" />
+			<xsd:enumeration value="BJ" />
+			<xsd:enumeration value="BM" />
+			<xsd:enumeration value="BY" />
+			<xsd:enumeration value="BO" />
+			<xsd:enumeration value="BA" />
+			<xsd:enumeration value="BW" />
+			<xsd:enumeration value="BV" />
+			<xsd:enumeration value="BR" />
+			<xsd:enumeration value="BN" />
+			<xsd:enumeration value="BG" />
+			<xsd:enumeration value="BF" />
+			<xsd:enumeration value="BI" />
+			<xsd:enumeration value="BT" />
+			<xsd:enumeration value="CV" />
+			<xsd:enumeration value="KY" />
+			<xsd:enumeration value="KH" />
+			<xsd:enumeration value="CM" />
+			<xsd:enumeration value="CA" />
+			<xsd:enumeration value="CF" />
+			<xsd:enumeration value="CC" />
+			<xsd:enumeration value="CO" />
+			<xsd:enumeration value="KM" />
+			<xsd:enumeration value="CG" />
+			<xsd:enumeration value="CD" />
+			<xsd:enumeration value="CK" />
+			<xsd:enumeration value="KP" />
+			<xsd:enumeration value="KR" />
+			<xsd:enumeration value="CI" />
+			<xsd:enumeration value="CR" />
+			<xsd:enumeration value="HR" />
+			<xsd:enumeration value="CU" />
+			<xsd:enumeration value="TD" />
+			<xsd:enumeration value="CZ" />
+			<xsd:enumeration value="CL" />
+			<xsd:enumeration value="CN" />
+			<xsd:enumeration value="CY" />
+			<xsd:enumeration value="CW" />
+			<xsd:enumeration value="DK" />
+			<xsd:enumeration value="DM" />
+			<xsd:enumeration value="DO" />
+			<xsd:enumeration value="EC" />
+			<xsd:enumeration value="EG" />
+			<xsd:enumeration value="AE" />
+			<xsd:enumeration value="ER" />
+			<xsd:enumeration value="SK" />
+			<xsd:enumeration value="SI" />
+			<xsd:enumeration value="ES" />
+			<xsd:enumeration value="US" />
+			<xsd:enumeration value="EE" />
+			<xsd:enumeration value="ET" />
+			<xsd:enumeration value="FO" />
+			<xsd:enumeration value="PH" />
+			<xsd:enumeration value="FI" />
+			<xsd:enumeration value="FJ" />
+			<xsd:enumeration value="FR" />
+			<xsd:enumeration value="GA" />
+			<xsd:enumeration value="GM" />
+			<xsd:enumeration value="GE" />
+			<xsd:enumeration value="GS" />
+			<xsd:enumeration value="GH" />
+			<xsd:enumeration value="GI" />
+			<xsd:enumeration value="GD" />
+			<xsd:enumeration value="GR" />
+			<xsd:enumeration value="GL" />
+			<xsd:enumeration value="GU" />
+			<xsd:enumeration value="GT" />
+			<xsd:enumeration value="GG" />
+			<xsd:enumeration value="GN" />
+			<xsd:enumeration value="GQ" />
+			<xsd:enumeration value="GW" />
+			<xsd:enumeration value="GY" />
+			<xsd:enumeration value="HT" />
+			<xsd:enumeration value="HM" />
+			<xsd:enumeration value="HN" />
+			<xsd:enumeration value="HK" />
+			<xsd:enumeration value="HU" />
+			<xsd:enumeration value="IN" />
+			<xsd:enumeration value="ID" />
+			<xsd:enumeration value="IR" />
+			<xsd:enumeration value="IQ" />
+			<xsd:enumeration value="IE" />
+			<xsd:enumeration value="IM" />
+			<xsd:enumeration value="IS" />
+			<xsd:enumeration value="IL" />
+			<xsd:enumeration value="IT" />
+			<xsd:enumeration value="JM" />
+			<xsd:enumeration value="JP" />
+			<xsd:enumeration value="JE" />
+			<xsd:enumeration value="JO" />
+			<xsd:enumeration value="KZ" />
+			<xsd:enumeration value="KE" />
+			<xsd:enumeration value="KG" />
+			<xsd:enumeration value="KI" />
+			<xsd:enumeration value="KW" />
+			<xsd:enumeration value="LA" />
+			<xsd:enumeration value="LS" />
+			<xsd:enumeration value="LV" />
+			<xsd:enumeration value="LB" />
+			<xsd:enumeration value="LR" />
+			<xsd:enumeration value="LY" />
+			<xsd:enumeration value="LI" />
+			<xsd:enumeration value="LT" />
+			<xsd:enumeration value="LU" />
+			<xsd:enumeration value="XG" />
+			<xsd:enumeration value="MO" />
+			<xsd:enumeration value="MK" />
+			<xsd:enumeration value="MG" />
+			<xsd:enumeration value="MY" />
+			<xsd:enumeration value="MW" />
+			<xsd:enumeration value="MV" />
+			<xsd:enumeration value="ML" />
+			<xsd:enumeration value="MT" />
+			<xsd:enumeration value="FK" />
+			<xsd:enumeration value="MP" />
+			<xsd:enumeration value="MA" />
+			<xsd:enumeration value="MH" />
+			<xsd:enumeration value="MU" />
+			<xsd:enumeration value="MR" />
+			<xsd:enumeration value="YT" />
+			<xsd:enumeration value="UM" />
+			<xsd:enumeration value="MX" />
+			<xsd:enumeration value="FM" />
+			<xsd:enumeration value="MD" />
+			<xsd:enumeration value="MC" />
+			<xsd:enumeration value="MN" />
+			<xsd:enumeration value="ME" />
+			<xsd:enumeration value="MS" />
+			<xsd:enumeration value="MZ" />
+			<xsd:enumeration value="MM" />
+			<xsd:enumeration value="NA" />
+			<xsd:enumeration value="NR" />
+			<xsd:enumeration value="CX" />
+			<xsd:enumeration value="NP" />
+			<xsd:enumeration value="NI" />
+			<xsd:enumeration value="NE" />
+			<xsd:enumeration value="NG" />
+			<xsd:enumeration value="NU" />
+			<xsd:enumeration value="NF" />
+			<xsd:enumeration value="NO" />
+			<xsd:enumeration value="NC" />
+			<xsd:enumeration value="NZ" />
+			<xsd:enumeration value="IO" />
+			<xsd:enumeration value="OM" />
+			<xsd:enumeration value="NL" />
+			<xsd:enumeration value="BQ" />
+			<xsd:enumeration value="PK" />
+			<xsd:enumeration value="PW" />
+			<xsd:enumeration value="PA" />
+			<xsd:enumeration value="PG" />
+			<xsd:enumeration value="PY" />
+			<xsd:enumeration value="PE" />
+			<xsd:enumeration value="PN" />
+			<xsd:enumeration value="PF" />
+			<xsd:enumeration value="PL" />
+			<xsd:enumeration value="PT" />
+			<xsd:enumeration value="PR" />
+			<xsd:enumeration value="QA" />
+			<xsd:enumeration value="GB" />
+			<xsd:enumeration value="RW" />
+			<xsd:enumeration value="RO" />
+			<xsd:enumeration value="RU" />
+			<xsd:enumeration value="SB" />
+			<xsd:enumeration value="SV" />
+			<xsd:enumeration value="WS" />
+			<xsd:enumeration value="AS" />
+			<xsd:enumeration value="KN" />
+			<xsd:enumeration value="SM" />
+			<xsd:enumeration value="SX" />
+			<xsd:enumeration value="PM" />
+			<xsd:enumeration value="VC" />
+			<xsd:enumeration value="SH" />
+			<xsd:enumeration value="LC" />
+			<xsd:enumeration value="ST" />
+			<xsd:enumeration value="SN" />
+			<xsd:enumeration value="RS" />
+			<xsd:enumeration value="SC" />
+			<xsd:enumeration value="SL" />
+			<xsd:enumeration value="SG" />
+			<xsd:enumeration value="SY" />
+			<xsd:enumeration value="SO" />
+			<xsd:enumeration value="LK" />
+			<xsd:enumeration value="SZ" />
+			<xsd:enumeration value="ZA" />
+			<xsd:enumeration value="SD" />
+			<xsd:enumeration value="SS" />
+			<xsd:enumeration value="SE" />
+			<xsd:enumeration value="CH" />
+			<xsd:enumeration value="SR" />
+			<xsd:enumeration value="TH" />
+			<xsd:enumeration value="TW" />
+			<xsd:enumeration value="TZ" />
+			<xsd:enumeration value="TJ" />
+			<xsd:enumeration value="PS" />
+			<xsd:enumeration value="TF" />
+			<xsd:enumeration value="TL" />
+			<xsd:enumeration value="TG" />
+			<xsd:enumeration value="TK" />
+			<xsd:enumeration value="TO" />
+			<xsd:enumeration value="TT" />
+			<xsd:enumeration value="TN" />
+			<xsd:enumeration value="TC" />
+			<xsd:enumeration value="TM" />
+			<xsd:enumeration value="TR" />
+			<xsd:enumeration value="TV" />
+			<xsd:enumeration value="UA" />
+			<xsd:enumeration value="UG" />
+			<xsd:enumeration value="UY" />
+			<xsd:enumeration value="UZ" />
+			<xsd:enumeration value="VU" />
+			<xsd:enumeration value="VA" />
+			<xsd:enumeration value="VE" />
+			<xsd:enumeration value="VN" />
+			<xsd:enumeration value="VG" />
+			<xsd:enumeration value="VI" />
+			<xsd:enumeration value="WF" />
+			<xsd:enumeration value="YE" />
+			<xsd:enumeration value="DJ" />
+			<xsd:enumeration value="ZM" />
+			<xsd:enumeration value="ZW" />
+			<xsd:enumeration value="QU" />
+			<xsd:enumeration value="XB" />
+			<xsd:enumeration value="XU" />
+			<xsd:enumeration value="XN" />
+			<xsd:enumeration value="AX" />
+			<xsd:enumeration value="BL" />
+			<xsd:enumeration value="EH" />
+			<xsd:enumeration value="GF" />
+			<xsd:enumeration value="GP" />
+			<xsd:enumeration value="MF" />
+			<xsd:enumeration value="MQ" />
+			<xsd:enumeration value="RE" />
+			<xsd:enumeration value="SJ" />
+		</xsd:restriction>
+	</xsd:simpleType>	
+	<!--  Egoitza herrialdeko identifikazio motak - Tipos de identificación en el país de residencia -->
+	<xsd:simpleType name="IDTypeType">
+		<xsd:restriction base="string">
+			<xsd:enumeration value="02">
+				<xsd:annotation>
+					<xsd:documentation>IFZ BEZ - NIF IVA</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="03">
+				<xsd:annotation>
+					<xsd:documentation>Pasaportea - Pasaporte</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="04">
+				<xsd:annotation>
+					<xsd:documentation>Egoitza dagoen herrialdeak edo lurraldeak emandako nortasun agiri ofiziala - Documento oficial de identificación expedido por el país o territorio de residencia</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="05">
+				<xsd:annotation>
+					<xsd:documentation>Egoitza ziurtagiria - Certificado de residencia</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="06">
+				<xsd:annotation>
+					<xsd:documentation>Beste frogagiri bat - Otro documento probatorio</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>		
+</xsd:schema>

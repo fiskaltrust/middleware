@@ -172,11 +172,22 @@ public class TicketBaiFactory
 
         return chargeItems.Select(x => new IDDetalleFacturaType
         {
-            DescripcionDetalle = x.Description,
+            DescripcionDetalle = CapText(x.Description, 250),
             Cantidad = x.Quantity.ToString("0.00", CultureInfo.InvariantCulture),
             ImporteUnitario = (x.Amount - x.VATAmount!.Value).ToString("0.00", CultureInfo.InvariantCulture),
             //Descuento = "0", TODO How should we handle discounts? is this a must have or can e ignore that
             ImporteTotal = x.Amount.ToString("0.00", CultureInfo.InvariantCulture)
         }).ToList();
+    }
+
+    private static string CapText(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        if (text.Length <= maxLength)
+            return text;
+
+        return text[..maxLength];
     }
 }

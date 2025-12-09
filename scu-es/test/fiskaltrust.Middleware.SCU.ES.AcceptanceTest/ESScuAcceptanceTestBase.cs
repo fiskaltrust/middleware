@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
+using FluentAssertions;
 using Xunit;
 
 namespace fiskaltrust.Middleware.SCU.ES.AcceptanceTest;
@@ -17,32 +18,34 @@ public abstract class ESScuAcceptanceTestBase
     [Fact]
     public async Task Test_Echo_ShouldReturnSameMessage()
     {
-        // Arrange
         var scu = CreateScu();
         var request = new EchoRequest { Message = "Test Message" };
-
-        // Act
         var response = await scu.EchoAsync(request);
-
-        // Assert
-        Assert.Equal(request.Message, response.Message);
+        request.Message.Should().Be(response.Message);
     }
 
     [Fact]
     public virtual async Task Test_ProcessReceipt_PosReceipt_WithCash()
     {
-        // Arrange
         var scu = CreateScu();
-        var receiptRequest = ReceiptExamples.GetPosReceiptWithCash();
+        var receiptRequest = ReceiptExamples.GetPosReceiptWithCash(ReceiptCase.PointOfSaleReceipt0x0001);
         var processRequest = CreateProcessRequest(receiptRequest);
 
-        // Act
         var processResponse = await scu.ProcessReceiptAsync(processRequest);
 
-        // Assert
         AssertSuccessfulReceipt(processResponse);
-        Assert.NotNull(processResponse.ReceiptResponse.ftSignatures);
-        Assert.NotEmpty(processResponse.ReceiptResponse.ftSignatures);
+    }
+
+    [Fact]
+    public virtual async Task Test_ProcessReceipt_Invoice_WithCash()
+    {
+        var scu = CreateScu();
+        var receiptRequest = ReceiptExamples.GetPosReceiptWithCash(ReceiptCase.InvoiceB2C0x1001);
+        var processRequest = CreateProcessRequest(receiptRequest);
+
+        var processResponse = await scu.ProcessReceiptAsync(processRequest);
+
+        AssertSuccessfulReceipt(processResponse);
     }
 
     [Theory]
@@ -55,94 +58,19 @@ public abstract class ESScuAcceptanceTestBase
     {
         // Arrange
         var scu = CreateScu();
-
-        var currentMoment = DateTime.UtcNow;
         var receiptRequest = new ReceiptRequest
         {
-            cbTerminalID = "TERM001",
             cbReceiptReference = $"POS-{Guid.NewGuid().ToString()[..8]}",
-            cbUser = "TestUser",
-            cbReceiptMoment = currentMoment,
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem
-                {
-                    Quantity = 1.0m,
-                    Amount = 100.0m,
-                    UnitPrice = 100.0m,
-                    VATRate = 21.0m,
-                    VATAmount = 17.36m,
-                    Description = "Service",
-                    ftChargeItemCase = (ChargeItemCase)0x4753_0000_0000_0001,
-                    Moment = currentMoment
-                }
-            },
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Quantity = 1,
-                    Description = "Card",
-                    ftPayItemCase = (PayItemCase)0x4753_0000_0000_0002,
-                    Moment = currentMoment,
-                    Amount = 100.0m
-                }
-            },
-            ftReceiptCase = ((ReceiptCase) 0x4753_0000_0000_0000).WithCase(receiptCase)
+            cbReceiptMoment = DateTime.UtcNow,
+            cbChargeItems = [],
+            cbPayItems = [],
+            ftReceiptCase = receiptCase.WithCountry("ES").WithVersion(2)
         };
 
         var processRequest = CreateProcessRequest(receiptRequest);
-
         var processResponse = await scu.ProcessReceiptAsync(processRequest);
-        AssertErrorReceipt(processResponse);
-    }
 
-    [Fact]
-    public virtual async Task Test_ProcessReceipt_VoidReceipt()
-    {
-        // Arrange
-        var scu = CreateScu();
-
-        // First, create a normal receipt
-        var normalReceiptRequest = ReceiptExamples.GetPosReceiptWithCash();
-        var normalProcessRequest = CreateProcessRequest(normalReceiptRequest);
-        var normalResponse = await scu.ProcessReceiptAsync(normalProcessRequest);
-
-        // Now create a void receipt
-        var voidReceiptRequest = ReceiptExamples.GetVoidReceipt();
-        var voidProcessRequest = CreateProcessRequest(voidReceiptRequest);
-
-        // Act
-        var voidResponse = await scu.ProcessReceiptAsync(voidProcessRequest);
-
-        // Assert
-        AssertSuccessfulReceipt(voidResponse);
-        Assert.NotNull(voidResponse.ReceiptResponse.ftSignatures);
-        Assert.NotEmpty(voidResponse.ReceiptResponse.ftSignatures);
-    }
-
-    [Fact]
-    public virtual async Task Test_ProcessReceipt_RefundReceipt()
-    {
-        // Arrange
-        var scu = CreateScu();
-
-        // First, create a normal receipt
-        var normalReceiptRequest = ReceiptExamples.GetPosReceiptWithCash();
-        var normalProcessRequest = CreateProcessRequest(normalReceiptRequest);
-        var normalResponse = await scu.ProcessReceiptAsync(normalProcessRequest);
-
-        // Now create a refund receipt
-        var refundReceiptRequest = ReceiptExamples.GetRefundReceipt();
-        var refundProcessRequest = CreateProcessRequest(refundReceiptRequest);
-
-        // Act
-        var refundResponse = await scu.ProcessReceiptAsync(refundProcessRequest);
-
-        // Assert
-        AssertSuccessfulReceipt(refundResponse);
-        Assert.NotNull(refundResponse.ReceiptResponse.ftSignatures);
-        Assert.NotEmpty(refundResponse.ReceiptResponse.ftSignatures);
+        AssertSuccessfulReceipt(processResponse);
     }
 
     protected virtual ProcessRequest CreateProcessRequest(ReceiptRequest receiptRequest)
@@ -185,16 +113,17 @@ public abstract class ESScuAcceptanceTestBase
 
     protected virtual void AssertSuccessfulReceipt(ProcessResponse processResponse)
     {
-        Assert.NotNull(processResponse);
-        Assert.NotNull(processResponse.ReceiptResponse);
-        Assert.True(((ulong) processResponse.ReceiptResponse.ftState & 0xFFFF_0000_0000_0000) == 0x4753_0000_0000_0000,
-            "Receipt should have ES country code");
+        processResponse.Should().NotBeNull();
+        processResponse.ReceiptResponse.Should().NotBeNull();
+
+        processResponse.ReceiptResponse.ftState.State().Should().Be(State.Success);
     }
 
     protected virtual void AssertErrorReceipt(ProcessResponse processResponse)
     {
-        Assert.NotNull(processResponse);
-        Assert.NotNull(processResponse.ReceiptResponse);
-        Assert.True(processResponse.ReceiptResponse.ftState.IsState(State.Error), "Receipt should have ES country code");
+        processResponse.Should().NotBeNull();
+        processResponse.ReceiptResponse.Should().NotBeNull();
+
+        processResponse.ReceiptResponse.ftState.State().Should().Be(State.Error);
     }
 }

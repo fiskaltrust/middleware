@@ -14,6 +14,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Xades;
+using System.Collections.Generic;
 
 #pragma warning disable IDE0052
 
@@ -21,6 +22,15 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
 public class TicketBaiSCU : IESSSCD
 {
+    private readonly List<ReceiptCase> UnprocessedCases = new List<ReceiptCase>
+    {
+        ReceiptCase.ZeroReceipt0x2000,
+        ReceiptCase.OneReceipt0x2001,
+        ReceiptCase.DailyClosing0x2011,
+        ReceiptCase.MonthlyClosing0x2012,
+        ReceiptCase.YearlyClosing0x2013
+    };
+
     private readonly TicketBaiSCUConfiguration _configuration;
 
     private readonly HttpClient _httpClient;
@@ -50,10 +60,14 @@ public class TicketBaiSCU : IESSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        if (request.ReceiptResponse.ftStateData is null)
+        if (UnprocessedCases.Contains(request.ReceiptRequest.ftReceiptCase.Case()))
         {
-            throw new Exception("ftStateData must be present.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
+
         var middlewareStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
         if (middlewareStateData is null || middlewareStateData.ES is null)
         {
