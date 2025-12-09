@@ -42,15 +42,15 @@ function Set-XsdPrefix {
     }
 }
 
-Set-XsdPrefix -Node $doc.DocumentElement -Namespace $schemaNamespace -Prefix 'xsd'
+Set-XsdPrefix -Node $doc.DocumentElement -Namespace $schemaNamespace -Prefix 'xs'
 
 $root = $doc.DocumentElement
 if ($null -eq $root) {
     throw 'The provided XML does not have a document element.'
 }
 
-if (-not $root.HasAttribute('xmlns:xsd')) {
-    $root.SetAttribute('xmlns:xsd', $schemaNamespace)
+if (-not $root.HasAttribute('xmlns:xs')) {
+    $root.SetAttribute('xmlns:xs', $schemaNamespace)
 }
 
 if ($root.HasAttribute('xmlns') -and $root.GetAttribute('xmlns') -eq $schemaNamespace) {
