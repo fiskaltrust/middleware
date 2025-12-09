@@ -69,6 +69,42 @@ namespace fiskaltrust.Middleware.Queue
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
 
+                const ulong TagMask  = 0x0000_F000_0000_0000;
+                const ulong V1Tag_0 = 0x0000_0000_0000_0000;
+                const ulong V1Tag_8 = 0x0000_8000_0000_0000;
+
+                ulong tagging;
+
+                tagging = (ulong) request.ftReceiptCase & TagMask;
+                if (tagging != V1Tag_0 && tagging != V1Tag_8)
+                {
+                    throw new NotSupportedException($"Unsupported tagging version in ftReceiptCase for localization v1. " + $"Expected version 0 or 8 ((case & 0x0000_F000_0000_0000) == 0 or 0x8000_0000_0000), " + $"but got tagging 0x{tagging:X} (full value 0x{(ulong) request.ftReceiptCase:X}).");
+                }
+
+                if (request.cbChargeItems != null)
+                {
+                    foreach (var chargeItem in request.cbChargeItems)
+                    {
+                        tagging = (ulong) chargeItem.ftChargeItemCase & TagMask;
+                        if (tagging != V1Tag_0 && tagging != V1Tag_8)
+                        {
+                            throw new NotSupportedException($"Unsupported tagging version in ftChargeItemCase for localization v1. " + $"Expected version 0 or 8 ((case & 0x0000_F000_0000_0000) == 0 or 0x8000_0000_0000), " + $"but got tagging 0x{tagging:X} (full value 0x{(ulong) chargeItem.ftChargeItemCase:X}).");
+                        }
+                    }
+                }
+
+                if (request.cbPayItems != null)
+                {
+                    foreach (var payItem in request.cbPayItems)
+                    {
+                        tagging = (ulong) payItem.ftPayItemCase & TagMask;
+                        if (tagging != V1Tag_0 && tagging != V1Tag_8)
+                        {
+                            throw new NotSupportedException($"Unsupported tagging version in ftPayItemCase for localization v1. " + $"Expected version 0 or 8 ((case & 0x0000_F000_0000_0000) == 0 or 0x8000_0000_0000), " + $"but got tagging 0x{tagging:X} (full value 0x{(ulong) payItem.ftPayItemCase:X}).");
+                        }
+                    }
+                }
+
                 var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
                 var response = await InternalSign(queue, request).ConfigureAwait(false);
