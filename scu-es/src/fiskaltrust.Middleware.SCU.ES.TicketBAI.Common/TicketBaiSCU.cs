@@ -60,105 +60,124 @@ public class TicketBaiSCU : IESSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        if (UnprocessedCases.Contains(request.ReceiptRequest.ftReceiptCase.Case()))
+        try
         {
+            if (UnprocessedCases.Contains(request.ReceiptRequest.ftReceiptCase.Case()))
+            {
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+
+            var middlewareStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+            if (middlewareStateData is null || middlewareStateData.ES is null)
+            {
+                throw new Exception("ES state must be present in ftStateData.");
+            }
+
+            var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                    ? _ticketBaiTerritory.SubmitInvoices
+                    : _ticketBaiTerritory.CancelInvoices;
+
+            var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request, middlewareStateData.ES);
+            ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
+            ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
+
+
+            var ticketBaiRequestModels = _ticketBaiFactory.ConvertToTicketBaiRequest(request, middlewareStateData.ES);
+            ticketBaiRequestModels.Sujetos.Emisor.NIF = _configuration.EmisorNif;
+            ticketBaiRequestModels.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
+
+
+            var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
+            var modelsXml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequestModels);
+
+            var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
+            var (modelsRequestContent, _) = XmlHelpers.SignXmlContentWithXades(modelsXml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
+
+            requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
+
+            using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
+            {
+                Content = _ticketBaiTerritory.GetHttpContent(requestContent)
+            };
+            _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
+
+            var response = await _httpClient.SendAsync(httpRequestMessage);
+
+            var (success, responseMessages, responseContent) = await _ticketBaiTerritory.GetSuccess(response);
+
+            if (!success)
+            {
+                throw new AggregateException(responseMessages.Select(r => new Exception($"{r.code}: {r.message}")));
+            }
+
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+            {
+                Caption = "",
+                Data = GetIdentier(request, ticketBaiRequest, signature).ToString(),
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCountry("ES")
+            });
+
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+            {
+                Caption = "[www.fiskaltrust.es]",
+                Data = GetQrCodeUri(request, ticketBaiRequest, signature).ToString(),
+                ftSignatureFormat = SignatureFormat.QRCode,
+                ftSignatureType = SignatureTypeES.Url.As<ifPOS.v2.Cases.SignatureType>()
+            });
+
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+            {
+                Caption = "Signature",
+                Data = Convert.ToBase64String(signature.SignatureValue!),
+                ftSignatureFormat = SignatureFormat.Base64,
+                ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
+            });
+
+            foreach (var message in responseMessages)
+            {
+                request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+                {
+                    Caption = $"Codigo {message.code}",
+                    Data = message.message,
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCategory(SignatureTypeCategory.Information)
+                });
+            }
+
+
+            middlewareStateData.ES.GovernmentAPI = new GovernmentAPI
+            {
+                Version = GovernmentAPISchemaVersion.V0,
+                Request = requestContent,
+                Response = responseContent
+            };
+            request.ReceiptResponse.ftStateData = middlewareStateData;
+
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
             };
         }
-
-        var middlewareStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
-        if (middlewareStateData is null || middlewareStateData.ES is null)
+        catch (Exception ex)
         {
-            throw new Exception("ES state must be present in ftStateData.");
-        }
-
-        var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
-                ? _ticketBaiTerritory.SubmitInvoices
-                : _ticketBaiTerritory.CancelInvoices;
-
-        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request, middlewareStateData.ES);
-        ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
-        ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
-
-
-        var ticketBaiRequestModels = _ticketBaiFactory.ConvertToTicketBaiRequest(request, middlewareStateData.ES);
-        ticketBaiRequestModels.Sujetos.Emisor.NIF = _configuration.EmisorNif;
-        ticketBaiRequestModels.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
-
-
-        var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
-        var modelsXml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequestModels);
-        
-        var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-        var (modelsRequestContent, _) = XmlHelpers.SignXmlContentWithXades(modelsXml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-
-        requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
-
-        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
-        {
-            Content = _ticketBaiTerritory.GetHttpContent(requestContent)
-        };
-        _ticketBaiTerritory.AddHeaders(ticketBaiRequest, httpRequestMessage.Headers);
-
-        var response = await _httpClient.SendAsync(httpRequestMessage);
-
-        var (success, responseMessages, responseContent) = await _ticketBaiTerritory.GetSuccess(response);
-
-        if (!success)
-        {
-            throw new AggregateException(responseMessages.Select(r => new Exception($"{r.code}: {r.message}")));
-        }
-
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "",
-            Data = GetIdentier(request, ticketBaiRequest, signature).ToString(),
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCountry("ES")
-        });
-
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "[www.fiskaltrust.es]",
-            Data = GetQrCodeUri(request, ticketBaiRequest, signature).ToString(),
-            ftSignatureFormat = SignatureFormat.QRCode,
-            ftSignatureType = SignatureTypeES.Url.As<ifPOS.v2.Cases.SignatureType>()
-        });
-
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-        {
-            Caption = "Signature",
-            Data = Convert.ToBase64String(signature.SignatureValue!),
-            ftSignatureFormat = SignatureFormat.Base64,
-            ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
-        });
-
-        foreach (var message in responseMessages)
-        {
+            _logger.LogError(ex, "Error processing TicketBAI receipt.");
             request.ReceiptResponse.AddSignatureItem(new SignatureItem()
             {
-                Caption = $"Codigo {message.code}",
-                Data = message.message,
+                Caption = "scu-ticketbai-unhandled-error",
+                Data = ex.Message,
                 ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCategory(SignatureTypeCategory.Information)
+                ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCategory(SignatureTypeCategory.Failure)
             });
+            request.ReceiptResponse.ftState = request.ReceiptResponse.ftState.WithState(State.Error);
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
-
-
-        middlewareStateData.ES.GovernmentAPI = new GovernmentAPI
-        {
-            Version = GovernmentAPISchemaVersion.V0,
-            Request = requestContent,
-            Response = responseContent
-        };
-        request.ReceiptResponse.ftStateData = middlewareStateData;
-
-        return new ProcessResponse
-        {
-            ReceiptResponse = request.ReceiptResponse
-        };
     }
 
     private string GetIdentier(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
