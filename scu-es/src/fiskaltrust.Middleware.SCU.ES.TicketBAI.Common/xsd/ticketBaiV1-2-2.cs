@@ -1192,9 +1192,9 @@ public partial class SignaturePropertyType {
 [System.SerializableAttribute()]
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
-[System.Xml.Serialization.XmlTypeAttribute(Namespace="urn:ticketbai:emision")]
-[System.Xml.Serialization.XmlRootAttribute("TicketBai", Namespace="urn:ticketbai:emision", IsNullable=false)]
-public partial class TicketBaiType {
+[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="urn:ticketbai:emision")]
+[System.Xml.Serialization.XmlRootAttribute(Namespace="urn:ticketbai:emision", IsNullable=false)]
+public partial class TicketBai {
     
     private Cabecera cabeceraField;
     
@@ -1207,6 +1207,7 @@ public partial class TicketBaiType {
     private SignatureType signatureField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public Cabecera Cabecera {
         get {
             return this.cabeceraField;
@@ -1217,6 +1218,7 @@ public partial class TicketBaiType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public Sujetos Sujetos {
         get {
             return this.sujetosField;
@@ -1227,6 +1229,7 @@ public partial class TicketBaiType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public Factura Factura {
         get {
             return this.facturaField;
@@ -1237,6 +1240,7 @@ public partial class TicketBaiType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public HuellaTBAI HuellaTBAI {
         get {
             return this.huellaTBAIField;
@@ -1269,6 +1273,7 @@ public partial class Cabecera {
     private IDVersionTicketBaiType iDVersionTBAIField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public IDVersionTicketBaiType IDVersionTBAI {
         get {
             return this.iDVersionTBAIField;
@@ -1311,6 +1316,7 @@ public partial class Sujetos {
     private bool emitidaPorTercerosODestinatarioFieldSpecified;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public Emisor Emisor {
         get {
             return this.emisorField;
@@ -1321,7 +1327,8 @@ public partial class Sujetos {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute(IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public IDDestinatario[] Destinatarios {
         get {
             return this.destinatariosField;
@@ -1332,6 +1339,7 @@ public partial class Sujetos {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SiNoType VariosDestinatarios {
         get {
             return this.variosDestinatariosField;
@@ -1353,6 +1361,7 @@ public partial class Sujetos {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public EmitidaPorTercerosType EmitidaPorTercerosODestinatario {
         get {
             return this.emitidaPorTercerosODestinatarioField;
@@ -1387,6 +1396,7 @@ public partial class Emisor {
     private string apellidosNombreRazonSocialField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string NIF {
         get {
             return this.nIFField;
@@ -1397,6 +1407,7 @@ public partial class Emisor {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string ApellidosNombreRazonSocial {
         get {
             return this.apellidosNombreRazonSocialField;
@@ -1424,8 +1435,8 @@ public partial class IDDestinatario {
     private string direccionField;
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlElementAttribute("IDOtro", typeof(IDOtro))]
-    [System.Xml.Serialization.XmlElementAttribute("NIF", typeof(string))]
+    [System.Xml.Serialization.XmlElementAttribute("IDOtro", typeof(IDOtro), Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlElementAttribute("NIF", typeof(string), Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public object Item {
         get {
             return this.itemField;
@@ -1436,6 +1447,7 @@ public partial class IDDestinatario {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string ApellidosNombreRazonSocial {
         get {
             return this.apellidosNombreRazonSocialField;
@@ -1446,6 +1458,7 @@ public partial class IDDestinatario {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string CodigoPostal {
         get {
             return this.codigoPostalField;
@@ -1456,6 +1469,7 @@ public partial class IDDestinatario {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string Direccion {
         get {
             return this.direccionField;
@@ -1483,6 +1497,7 @@ public partial class IDOtro {
     private string idField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public CountryType2 CodigoPais {
         get {
             return this.codigoPaisField;
@@ -1504,6 +1519,7 @@ public partial class IDOtro {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public IDTypeType IDType {
         get {
             return this.iDTypeField;
@@ -1514,6 +1530,7 @@ public partial class IDOtro {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string ID {
         get {
             return this.idField;
@@ -2364,6 +2381,7 @@ public partial class Factura {
     private TipoDesgloseType tipoDesgloseField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public CabeceraFacturaType CabeceraFactura {
         get {
             return this.cabeceraFacturaField;
@@ -2374,6 +2392,7 @@ public partial class Factura {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public DatosFacturaType DatosFactura {
         get {
             return this.datosFacturaField;
@@ -2384,6 +2403,7 @@ public partial class Factura {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public TipoDesgloseType TipoDesglose {
         get {
             return this.tipoDesgloseField;
@@ -2423,6 +2443,7 @@ public partial class CabeceraFacturaType {
     private IDFacturaRectificadaSustituidaType[] facturasRectificadasSustituidasField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string SerieFactura {
         get {
             return this.serieFacturaField;
@@ -2433,6 +2454,7 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string NumFactura {
         get {
             return this.numFacturaField;
@@ -2443,6 +2465,7 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string FechaExpedicionFactura {
         get {
             return this.fechaExpedicionFacturaField;
@@ -2453,6 +2476,7 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string HoraExpedicionFactura {
         get {
             return this.horaExpedicionFacturaField;
@@ -2463,6 +2487,7 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SiNoType FacturaSimplificada {
         get {
             return this.facturaSimplificadaField;
@@ -2484,6 +2509,7 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SiNoType FacturaEmitidaSustitucionSimplificada {
         get {
             return this.facturaEmitidaSustitucionSimplificadaField;
@@ -2505,6 +2531,7 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public FacturaRectificativaType FacturaRectificativa {
         get {
             return this.facturaRectificativaField;
@@ -2515,7 +2542,8 @@ public partial class CabeceraFacturaType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("IDFacturaRectificadaSustituida", IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute("IDFacturaRectificadaSustituida", Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public IDFacturaRectificadaSustituidaType[] FacturasRectificadasSustituidas {
         get {
             return this.facturasRectificadasSustituidasField;
@@ -2541,6 +2569,7 @@ public partial class FacturaRectificativaType {
     private ImporteRectificacionSustitutivaType importeRectificacionSustitutivaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public ClaveTipoFacturaType Codigo {
         get {
             return this.codigoField;
@@ -2551,6 +2580,7 @@ public partial class FacturaRectificativaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public ClaveTipoRectificativaType Tipo {
         get {
             return this.tipoField;
@@ -2561,6 +2591,7 @@ public partial class FacturaRectificativaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public ImporteRectificacionSustitutivaType ImporteRectificacionSustitutiva {
         get {
             return this.importeRectificacionSustitutivaField;
@@ -2621,6 +2652,7 @@ public partial class ImporteRectificacionSustitutivaType {
     private string cuotaRecargoRectificadaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string BaseRectificada {
         get {
             return this.baseRectificadaField;
@@ -2631,6 +2663,7 @@ public partial class ImporteRectificacionSustitutivaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string CuotaRectificada {
         get {
             return this.cuotaRectificadaField;
@@ -2641,6 +2674,7 @@ public partial class ImporteRectificacionSustitutivaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string CuotaRecargoRectificada {
         get {
             return this.cuotaRecargoRectificadaField;
@@ -2666,6 +2700,7 @@ public partial class IDFacturaRectificadaSustituidaType {
     private string fechaExpedicionFacturaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string SerieFactura {
         get {
             return this.serieFacturaField;
@@ -2676,6 +2711,7 @@ public partial class IDFacturaRectificadaSustituidaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string NumFactura {
         get {
             return this.numFacturaField;
@@ -2686,6 +2722,7 @@ public partial class IDFacturaRectificadaSustituidaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string FechaExpedicionFactura {
         get {
             return this.fechaExpedicionFacturaField;
@@ -2719,6 +2756,7 @@ public partial class DatosFacturaType {
     private IDClaveType[] clavesField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string FechaOperacion {
         get {
             return this.fechaOperacionField;
@@ -2729,6 +2767,7 @@ public partial class DatosFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string DescripcionFactura {
         get {
             return this.descripcionFacturaField;
@@ -2739,7 +2778,8 @@ public partial class DatosFacturaType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("IDDetalleFactura", IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute("IDDetalleFactura", Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public IDDetalleFacturaType[] DetallesFactura {
         get {
             return this.detallesFacturaField;
@@ -2750,6 +2790,7 @@ public partial class DatosFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string ImporteTotalFactura {
         get {
             return this.importeTotalFacturaField;
@@ -2760,6 +2801,7 @@ public partial class DatosFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string RetencionSoportada {
         get {
             return this.retencionSoportadaField;
@@ -2770,6 +2812,7 @@ public partial class DatosFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string BaseImponibleACoste {
         get {
             return this.baseImponibleACosteField;
@@ -2780,7 +2823,8 @@ public partial class DatosFacturaType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("IDClave", IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute("IDClave", Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public IDClaveType[] Claves {
         get {
             return this.clavesField;
@@ -2810,6 +2854,7 @@ public partial class IDDetalleFacturaType {
     private string importeTotalField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string DescripcionDetalle {
         get {
             return this.descripcionDetalleField;
@@ -2820,6 +2865,7 @@ public partial class IDDetalleFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string Cantidad {
         get {
             return this.cantidadField;
@@ -2830,6 +2876,7 @@ public partial class IDDetalleFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string ImporteUnitario {
         get {
             return this.importeUnitarioField;
@@ -2840,6 +2887,7 @@ public partial class IDDetalleFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string Descuento {
         get {
             return this.descuentoField;
@@ -2850,6 +2898,7 @@ public partial class IDDetalleFacturaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string ImporteTotal {
         get {
             return this.importeTotalField;
@@ -2871,6 +2920,7 @@ public partial class IDClaveType {
     private IdOperacionesTrascendenciaTributariaType claveRegimenIvaOpTrascendenciaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public IdOperacionesTrascendenciaTributariaType ClaveRegimenIvaOpTrascendencia {
         get {
             return this.claveRegimenIvaOpTrascendenciaField;
@@ -2983,8 +3033,8 @@ public partial class TipoDesgloseType {
     private object itemField;
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlElementAttribute("DesgloseFactura", typeof(DesgloseFacturaType))]
-    [System.Xml.Serialization.XmlElementAttribute("DesgloseTipoOperacion", typeof(DesgloseTipoOperacionType))]
+    [System.Xml.Serialization.XmlElementAttribute("DesgloseFactura", typeof(DesgloseFacturaType), Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlElementAttribute("DesgloseTipoOperacion", typeof(DesgloseTipoOperacionType), Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public object Item {
         get {
             return this.itemField;
@@ -3008,6 +3058,7 @@ public partial class DesgloseFacturaType {
     private DetalleNoSujeta[] noSujetaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SujetaType Sujeta {
         get {
             return this.sujetaField;
@@ -3018,7 +3069,8 @@ public partial class DesgloseFacturaType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute(IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public DetalleNoSujeta[] NoSujeta {
         get {
             return this.noSujetaField;
@@ -3042,7 +3094,8 @@ public partial class SujetaType {
     private DetalleNoExentaType[] noExentaField;
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleExenta", IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleExenta", Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public DetalleExentaType[] Exenta {
         get {
             return this.exentaField;
@@ -3053,7 +3106,8 @@ public partial class SujetaType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleNoExenta", IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleNoExenta", Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public DetalleNoExentaType[] NoExenta {
         get {
             return this.noExentaField;
@@ -3077,6 +3131,7 @@ public partial class DetalleExentaType {
     private string baseImponibleField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public CausaExencionType CausaExencion {
         get {
             return this.causaExencionField;
@@ -3087,6 +3142,7 @@ public partial class DetalleExentaType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string BaseImponible {
         get {
             return this.baseImponibleField;
@@ -3135,6 +3191,7 @@ public partial class DetalleNoExentaType {
     private DetalleIVAType[] desgloseIVAField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public TipoOperacionSujetaNoExentaType TipoNoExenta {
         get {
             return this.tipoNoExentaField;
@@ -3145,7 +3202,8 @@ public partial class DetalleNoExentaType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleIVA", IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleIVA", Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public DetalleIVAType[] DesgloseIVA {
         get {
             return this.desgloseIVAField;
@@ -3192,6 +3250,7 @@ public partial class DetalleIVAType {
     private bool operacionEnRecargoDeEquivalenciaORegimenSimplificadoFieldSpecified;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string BaseImponible {
         get {
             return this.baseImponibleField;
@@ -3202,6 +3261,7 @@ public partial class DetalleIVAType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string TipoImpositivo {
         get {
             return this.tipoImpositivoField;
@@ -3212,6 +3272,7 @@ public partial class DetalleIVAType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string CuotaImpuesto {
         get {
             return this.cuotaImpuestoField;
@@ -3222,6 +3283,7 @@ public partial class DetalleIVAType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string TipoRecargoEquivalencia {
         get {
             return this.tipoRecargoEquivalenciaField;
@@ -3232,6 +3294,7 @@ public partial class DetalleIVAType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string CuotaRecargoEquivalencia {
         get {
             return this.cuotaRecargoEquivalenciaField;
@@ -3242,6 +3305,7 @@ public partial class DetalleIVAType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SiNoType OperacionEnRecargoDeEquivalenciaORegimenSimplificado {
         get {
             return this.operacionEnRecargoDeEquivalenciaORegimenSimplificadoField;
@@ -3276,6 +3340,7 @@ public partial class DetalleNoSujeta {
     private string importeField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public CausaNoSujetaType Causa {
         get {
             return this.causaField;
@@ -3286,6 +3351,7 @@ public partial class DetalleNoSujeta {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string Importe {
         get {
             return this.importeField;
@@ -3328,6 +3394,7 @@ public partial class DesgloseTipoOperacionType {
     private Entrega entregaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public PrestacionServicios PrestacionServicios {
         get {
             return this.prestacionServiciosField;
@@ -3338,6 +3405,7 @@ public partial class DesgloseTipoOperacionType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public Entrega Entrega {
         get {
             return this.entregaField;
@@ -3361,6 +3429,7 @@ public partial class PrestacionServicios {
     private DetalleNoSujeta[] noSujetaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SujetaType Sujeta {
         get {
             return this.sujetaField;
@@ -3371,7 +3440,8 @@ public partial class PrestacionServicios {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute(IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public DetalleNoSujeta[] NoSujeta {
         get {
             return this.noSujetaField;
@@ -3395,6 +3465,7 @@ public partial class Entrega {
     private DetalleNoSujeta[] noSujetaField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SujetaType Sujeta {
         get {
             return this.sujetaField;
@@ -3405,7 +3476,8 @@ public partial class Entrega {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute(IsNullable=false)]
+    [System.Xml.Serialization.XmlArrayAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlArrayItemAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified, IsNullable=false)]
     public DetalleNoSujeta[] NoSujeta {
         get {
             return this.noSujetaField;
@@ -3431,6 +3503,7 @@ public partial class HuellaTBAI {
     private string numSerieDispositivoField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public EncadenamientoFacturaAnteriorType EncadenamientoFacturaAnterior {
         get {
             return this.encadenamientoFacturaAnteriorField;
@@ -3441,6 +3514,7 @@ public partial class HuellaTBAI {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public SoftwareFacturacionType Software {
         get {
             return this.softwareField;
@@ -3451,6 +3525,7 @@ public partial class HuellaTBAI {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string NumSerieDispositivo {
         get {
             return this.numSerieDispositivoField;
@@ -3478,6 +3553,7 @@ public partial class EncadenamientoFacturaAnteriorType {
     private string signatureValueFirmaFacturaAnteriorField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string SerieFacturaAnterior {
         get {
             return this.serieFacturaAnteriorField;
@@ -3488,6 +3564,7 @@ public partial class EncadenamientoFacturaAnteriorType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string NumFacturaAnterior {
         get {
             return this.numFacturaAnteriorField;
@@ -3498,6 +3575,7 @@ public partial class EncadenamientoFacturaAnteriorType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string FechaExpedicionFacturaAnterior {
         get {
             return this.fechaExpedicionFacturaAnteriorField;
@@ -3508,6 +3586,7 @@ public partial class EncadenamientoFacturaAnteriorType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string SignatureValueFirmaFacturaAnterior {
         get {
             return this.signatureValueFirmaFacturaAnteriorField;
@@ -3535,6 +3614,7 @@ public partial class SoftwareFacturacionType {
     private string versionField;
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string LicenciaTBAI {
         get {
             return this.licenciaTBAIField;
@@ -3545,6 +3625,7 @@ public partial class SoftwareFacturacionType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public EntidadDesarrolladoraType EntidadDesarrolladora {
         get {
             return this.entidadDesarrolladoraField;
@@ -3555,6 +3636,7 @@ public partial class SoftwareFacturacionType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string Nombre {
         get {
             return this.nombreField;
@@ -3565,6 +3647,7 @@ public partial class SoftwareFacturacionType {
     }
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public string Version {
         get {
             return this.versionField;
@@ -3586,8 +3669,8 @@ public partial class EntidadDesarrolladoraType {
     private object itemField;
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlElementAttribute("IDOtro", typeof(IDOtro))]
-    [System.Xml.Serialization.XmlElementAttribute("NIF", typeof(string))]
+    [System.Xml.Serialization.XmlElementAttribute("IDOtro", typeof(IDOtro), Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+    [System.Xml.Serialization.XmlElementAttribute("NIF", typeof(string), Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
     public object Item {
         get {
             return this.itemField;

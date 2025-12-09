@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -38,9 +38,9 @@ public class TicketBaiGipuzkoaTerritory : ITicketBaiTerritory
 
     public string CancelZuzendu => "/sarrerak/zuzendu-baja";
 
-    public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers) { }
+    public void AddHeaders(TicketBai request, HttpRequestHeaders headers) { }
 
-    public string ProcessContent(TicketBaiRequest request, string content) => content;
+    public string ProcessContent(TicketBai request, string content) => content;
 
     public ByteArrayContent GetHttpContent(string content) => new StringContent(content, Encoding.UTF8, "application/xml");
 

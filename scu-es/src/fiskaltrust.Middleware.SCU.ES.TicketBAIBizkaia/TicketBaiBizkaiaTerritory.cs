@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -63,7 +63,7 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
         return header;
     }
 
-    public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers)
+    public void AddHeaders(TicketBai request, HttpRequestHeaders headers)
     {
         headers.Add("eus-bizkaia-n3-version", "1.0");
         headers.Add("eus-bizkaia-n3-content-type", "application/xml");
@@ -73,7 +73,7 @@ public class TicketBaiBizkaiaTerritory : ITicketBaiTerritory
     }
 
 
-    public string ProcessContent(TicketBaiRequest request, string content)
+    public string ProcessContent(TicketBai request, string content)
     {
         var lroeRequest = new LROEPJ240FacturasEmitidasConSGAltaPeticion
         {

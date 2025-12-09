@@ -23,9 +23,9 @@ public interface ITicketBaiTerritory
     string SubmitZuzendu { get; }
     string CancelZuzendu { get; }
 
-    public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers);
+    public void AddHeaders(TicketBai request, HttpRequestHeaders headers);
 
-    public string ProcessContent(TicketBaiRequest request, string content);
+    public string ProcessContent(TicketBai request, string content);
 
     public ByteArrayContent GetHttpContent(string content);
 

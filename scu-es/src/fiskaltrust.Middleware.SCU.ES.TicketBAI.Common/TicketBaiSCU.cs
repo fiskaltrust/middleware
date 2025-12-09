@@ -82,8 +82,17 @@ public class TicketBaiSCU : IESSSCD
         ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
         ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
 
+
+        var ticketBaiRequestModels = _ticketBaiFactory.ConvertToTicketBaiRequest(request, middlewareStateData.ES);
+        ticketBaiRequestModels.Sujetos.Emisor.NIF = _configuration.EmisorNif;
+        ticketBaiRequestModels.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
+
+
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
+        var modelsXml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequestModels);
+        
         var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
+        var (modelsRequestContent, _) = XmlHelpers.SignXmlContentWithXades(modelsXml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
 
         requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
 
@@ -152,7 +161,7 @@ public class TicketBaiSCU : IESSSCD
         };
     }
 
-    private string GetIdentier(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
+    private string GetIdentier(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
     {
         string datePart = request.ReceiptResponse.ftReceiptMoment.ToString("ddMMyy");
         string first13 = Convert.ToBase64String(signature.SignatureValue!).Substring(0, Math.Min(13, Convert.ToBase64String(signature.SignatureValue!).Length));
@@ -163,7 +172,7 @@ public class TicketBaiSCU : IESSSCD
         return identifier;
     }
 
-    private Uri GetQrCodeUri(ProcessRequest request, TicketBaiRequest ticketBaiRequest, XadesSignedXml signature)
+    private Uri GetQrCodeUri(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
     {
         var identifier = GetIdentier(request, ticketBaiRequest, signature);
         return new Uri(BuildValidationUrl(identifier, ticketBaiRequest.Factura.CabeceraFactura.SerieFactura, ticketBaiRequest.Factura.CabeceraFactura.NumFactura, ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura));
