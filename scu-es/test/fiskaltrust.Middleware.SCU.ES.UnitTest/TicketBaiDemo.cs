@@ -5,12 +5,12 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest;
 
 public static class TicketBaiDemo
 {
-    public static TicketBaiRequest GetTicketBayRequest()
+    public static TicketBai GetTicketBayRequest()
     {
         // Fixed
         var cabecera = new Cabecera
         {
-            IDVersionTBAI = IDVersionTicketBaiType.Item1Period2
+            IDVersionTBAI = IDVersionTicketBaiType.Item12
         };
 
         // Part of the config?
@@ -40,7 +40,7 @@ public static class TicketBaiDemo
                 LicenciaTBAI = "TBAIGIPRE00000001035",
                 EntidadDesarrolladora = new EntidadDesarrolladoraType
                 {
-                    NIF = "B10646545"
+                    Item = "B10646545"
                 },
                 Nombre = "Incodebiz",
                 Version = "1.0"
@@ -62,7 +62,7 @@ public static class TicketBaiDemo
             {
                 FechaOperacion = "15-10-2021",
                 DescripcionFactura = "Servicios Prueba",
-                DetallesFactura = new List<IDDetalleFacturaType> {
+                DetallesFactura = [
                           new IDDetalleFacturaType
                                     {
                                         DescripcionDetalle = "test object",
@@ -71,29 +71,26 @@ public static class TicketBaiDemo
                                         Descuento = "0",
                                         ImporteTotal = "121.00"
                                     }
-                        },
+                        ],
                 ImporteTotalFactura = "121.00",
-                Claves = new List<IDClaveType>
-                        {
+                Claves = [
                             new IDClaveType
                             {
                                 ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item01
                             }
-                        }
+                        ]
             },
             TipoDesglose = new TipoDesgloseType
             {
-                DesgloseFactura = new DesgloseFacturaType
+                Item = new DesgloseFacturaType
                 {
                     Sujeta = new SujetaType
                     {
-                        NoExenta = new List<DetalleNoExentaType>
-                                 {
+                        NoExenta = [
                                      new DetalleNoExentaType
                                      {
                                          TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                         DesgloseIVA = new List<DetalleIVAType>
-                                         {
+                                         DesgloseIVA =[
                                              new DetalleIVAType
                                              {
                                                  BaseImponible = "100.0",
@@ -101,15 +98,15 @@ public static class TicketBaiDemo
                                                  CuotaImpuesto = "21.0",
                                                  OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.N
                                              }
-                                         }
+                                         ]
                                      }
-                                 }
+                                 ]
                     }
                 }
             }
         };
 
-        var request = new TicketBaiRequest
+        var request = new TicketBai
         {
             Cabecera = cabecera,
             Sujetos = sujetos,
