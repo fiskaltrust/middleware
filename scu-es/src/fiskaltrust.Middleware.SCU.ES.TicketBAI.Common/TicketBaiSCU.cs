@@ -70,31 +70,17 @@ public class TicketBaiSCU : IESSSCD
                 };
             }
 
-            var middlewareStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
-            if (middlewareStateData is null || middlewareStateData.ES is null)
-            {
-                throw new Exception("ES state must be present in ftStateData.");
-            }
-
             var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     ? _ticketBaiTerritory.SubmitInvoices
                     : _ticketBaiTerritory.CancelInvoices;
 
-            var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request, middlewareStateData.ES);
+            var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
             ticketBaiRequest.Sujetos.Emisor.NIF = _configuration.EmisorNif;
             ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
 
-
-            var ticketBaiRequestModels = _ticketBaiFactory.ConvertToTicketBaiRequest(request, middlewareStateData.ES);
-            ticketBaiRequestModels.Sujetos.Emisor.NIF = _configuration.EmisorNif;
-            ticketBaiRequestModels.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
-
-
             var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
-            var modelsXml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequestModels);
 
             var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-            var (modelsRequestContent, _) = XmlHelpers.SignXmlContentWithXades(modelsXml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
 
             requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
 
@@ -148,15 +134,17 @@ public class TicketBaiSCU : IESSSCD
                 });
             }
 
-
-            middlewareStateData.ES.GovernmentAPI = new GovernmentAPI
+            var governmentApi = new GovernmentAPI
             {
                 Version = GovernmentAPISchemaVersion.V0,
                 Request = requestContent,
                 Response = responseContent
             };
+            var middlewareStateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+            middlewareStateData ??= new MiddlewareStateData();
+            middlewareStateData.ES ??= new MiddlewareStateDataES();
+            middlewareStateData.ES.GovernmentAPI = governmentApi;
             request.ReceiptResponse.ftStateData = middlewareStateData;
-
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -182,10 +170,10 @@ public class TicketBaiSCU : IESSSCD
 
     private string GetIdentier(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
     {
-        string datePart = request.ReceiptResponse.ftReceiptMoment.ToString("ddMMyy");
-        string first13 = Convert.ToBase64String(signature.SignatureValue!).Substring(0, Math.Min(13, Convert.ToBase64String(signature.SignatureValue!).Length));
-        string baseId = $"TBAI-{Uri.EscapeDataString(ticketBaiRequest.Sujetos.Emisor.NIF)}-{datePart}-{first13}";
-        string crcInput = baseId + "-";
+        var datePart = request.ReceiptResponse.ftReceiptMoment.ToString("ddMMyy");
+        var first13 = Convert.ToBase64String(signature.SignatureValue!).Substring(0, Math.Min(13, Convert.ToBase64String(signature.SignatureValue!).Length));
+        var baseId = $"TBAI-{Uri.EscapeDataString(ticketBaiRequest.Sujetos.Emisor.NIF)}-{datePart}-{first13}";
+        var crcInput = baseId + "-";
         var crc8 = new CRC8Calculator();
         var identifier = $"{baseId}-{CRC8Calculator.Calculate(crcInput)}";
         return identifier;
@@ -202,7 +190,7 @@ public class TicketBaiSCU : IESSSCD
     {
         if (!baseUrl.EndsWith("/"))
             baseUrl += "/";
-        string urlWithoutCrc = $"{baseUrl}?id={identifier}&s={Uri.EscapeDataString(series)}&nf={number}&i={total}";
+        var urlWithoutCrc = $"{baseUrl}?id={identifier}&s={Uri.EscapeDataString(series)}&nf={number}&i={total}";
         return $"{urlWithoutCrc}&cr={CRC8Calculator.Calculate(urlWithoutCrc)}";
     }
 
