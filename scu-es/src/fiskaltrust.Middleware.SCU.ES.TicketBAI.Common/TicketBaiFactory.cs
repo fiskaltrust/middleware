@@ -76,7 +76,7 @@ public class TicketBaiFactory
                 ];
             }
 
-            if(!string.IsNullOrEmpty(customer.CustomerCountry) || customer.CustomerCountry != "ES")
+            if (!string.IsNullOrEmpty(customer.CustomerCountry) || customer.CustomerCountry != "ES")
             {
 
                 // Customer is not from Spain we need to add more details
@@ -178,17 +178,20 @@ public class TicketBaiFactory
         {
             var lastReceipt = middlewareStateData.ES.LastReceipt;
             var anterior = lastReceipt?.Response?.GetNumSerieFacturaParts();
-            var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.First(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
-            var fechaExpedicionFacturaAnterior = lastReceipt?.Response.ftReceiptMoment;
-            if (anterior != null && signatureValueFirmaFacturaAnterior != null && fechaExpedicionFacturaAnterior != null)
+            var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
+            if (signatureValueFirmaFacturaAnterior != null)
             {
-                huellTbai.EncadenamientoFacturaAnterior = new EncadenamientoFacturaAnteriorType
+                var fechaExpedicionFacturaAnterior = lastReceipt?.Response.ftReceiptMoment;
+                if (anterior != null && signatureValueFirmaFacturaAnterior != null && fechaExpedicionFacturaAnterior != null)
                 {
-                    SerieFacturaAnterior = anterior.Value.serieFactura,
-                    NumFacturaAnterior = anterior.Value.numFactura.ToString(),
-                    FechaExpedicionFacturaAnterior = fechaExpedicionFacturaAnterior.Value.ToString("dd-MM-yyyy"),
-                    SignatureValueFirmaFacturaAnterior = signatureValueFirmaFacturaAnterior.Substring(0, 100)
-                };
+                    huellTbai.EncadenamientoFacturaAnterior = new EncadenamientoFacturaAnteriorType
+                    {
+                        SerieFacturaAnterior = anterior.Value.serieFactura,
+                        NumFacturaAnterior = anterior.Value.numFactura.ToString(),
+                        FechaExpedicionFacturaAnterior = fechaExpedicionFacturaAnterior.Value.ToString("dd-MM-yyyy"),
+                        SignatureValueFirmaFacturaAnterior = signatureValueFirmaFacturaAnterior.Substring(0, 100)
+                    };
+                }
             }
         }
 
