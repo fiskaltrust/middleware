@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 

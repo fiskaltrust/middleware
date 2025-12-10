@@ -11,9 +11,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
+using fiskaltrust.Middleware.SCU.ES.Common;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using Microsoft.Xades;
 

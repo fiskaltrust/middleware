@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
 using FluentAssertions;
-using Xunit;
 
 namespace fiskaltrust.Middleware.SCU.ES.AcceptanceTest;
 

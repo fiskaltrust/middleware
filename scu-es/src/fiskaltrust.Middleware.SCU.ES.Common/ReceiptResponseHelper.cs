@@ -7,6 +7,18 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 
 public static class ReceiptResponseHelper
 {
+    public static void SetReceiptResponseError(this ReceiptResponse receiptResponse, string errorMessage)
+    {
+        receiptResponse.ftState = receiptResponse.ftState.WithState(State.Error);
+        receiptResponse.ftSignatures = [];
+        receiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = "FAILURE",
+            Data = errorMessage,
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure)
+        });
+    }
 
     public static void AddSignatureItem(this ReceiptResponse receiptResponse, SignatureItem signaturItem)
     {

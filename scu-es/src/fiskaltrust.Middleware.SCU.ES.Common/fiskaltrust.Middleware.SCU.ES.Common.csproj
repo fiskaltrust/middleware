@@ -1,11 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Description>The fiskaltrust Middleware implementation of the Ticket BAI SCU for Spain (Basque).</Description>
-        <TargetFramework>net8</TargetFramework>
-        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <LangVersion>12.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,13 +16,4 @@
         <PackageReference Include="FirmaXadesNetCore" Version="1.1.0" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ES.Common\fiskaltrust.Middleware.SCU.ES.Common.csproj" />
-    </ItemGroup>
-
-    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
-        <ItemGroup>
-            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
-        </ItemGroup>
-    </Target>
 </Project>

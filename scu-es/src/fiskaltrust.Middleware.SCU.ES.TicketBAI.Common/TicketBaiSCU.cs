@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v2.es;
@@ -15,6 +14,10 @@ using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Xades;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.SCU.ES.Common;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Factories;
+using System.Text.Json;
 
 #pragma warning disable IDE0052
 
@@ -44,7 +47,7 @@ public class TicketBaiSCU : IESSSCD
         _logger = logger;
         _configuration = configuration;
         _ticketBaiTerritory = ticketBaiTerritory;
-        _baseAddress = new Uri(_ticketBaiTerritory.SandboxEndpoint);
+        _baseAddress = configuration.Sandbox ? new Uri(_ticketBaiTerritory.SandboxEndpoint) : new Uri(_ticketBaiTerritory.ProdEndpoint);
 
         var handler = new HttpClientHandler();
         handler.ClientCertificates.Add(_configuration.Certificate);
@@ -72,7 +75,11 @@ public class TicketBaiSCU : IESSSCD
 
             if (request.ReceiptRequest?.cbChargeItems is { } chargeItems && !chargeItems.All(item => item.ftChargeItemCase != 0))
             {
-                throw new InvalidOperationException("All charge items must specify ftChargeItemCase before sending to TicketBAI.");
+                request.ReceiptResponse.SetReceiptResponseError("All charge items must specify ftChargeItemCase before sending to TicketBAI.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
             }
 
             var endpoint = !request.ReceiptRequest!.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
@@ -84,9 +91,7 @@ public class TicketBaiSCU : IESSSCD
             ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial;
 
             var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
-
             var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-
             requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
 
             using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
@@ -98,45 +103,24 @@ public class TicketBaiSCU : IESSSCD
             var response = await _httpClient.SendAsync(httpRequestMessage);
 
             var (success, responseMessages, responseContent) = await _ticketBaiTerritory.GetSuccess(response);
-
             if (!success)
             {
-                throw new AggregateException(responseMessages.Select(r => new Exception($"{r.code}: {r.message}")));
+                var errors = JsonSerializer.Serialize(responseMessages.Select(r => new Exception($"{r.code}: {r.message}")));
+                _logger.LogError("TicketBAI submission failed with errors: {Errors}", errors);
+                request.ReceiptResponse.SetReceiptResponseError(errors);
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
             }
 
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-            {
-                Caption = "",
-                Data = GetIdentier(request, ticketBaiRequest, signature).ToString(),
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCountry("ES")
-            });
-
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-            {
-                Caption = "[www.fiskaltrust.es]",
-                Data = GetQrCodeUri(request, ticketBaiRequest, signature).ToString(),
-                ftSignatureFormat = SignatureFormat.QRCode,
-                ftSignatureType = SignatureTypeES.Url.As<ifPOS.v2.Cases.SignatureType>()
-            });
-
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-            {
-                Caption = "Signature",
-                Data = Convert.ToBase64String(signature.SignatureValue!),
-                ftSignatureFormat = SignatureFormat.Base64,
-                ftSignatureType = SignatureTypeES.Signature.As<ifPOS.v2.Cases.SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
-            });
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateTBAIIdentifierSignature(GetIdentier(request, ticketBaiRequest, signature).ToString()));
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateQRCodeSignature(GetQrCodeUri(request, ticketBaiRequest, signature).ToString()));
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateSignatureSignature(signature));
 
             foreach (var message in responseMessages)
             {
-                request.ReceiptResponse.AddSignatureItem(new SignatureItem()
-                {
-                    Caption = $"Codigo {message.code}",
-                    Data = message.message,
-                    ftSignatureFormat = SignatureFormat.Text,
-                    ftSignatureType = ifPOS.v2.Cases.SignatureType.Unknown.WithCategory(SignatureTypeCategory.Information)
-                });
+                request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateResponseMessageSignature(message));
             }
 
             var governmentApi = new GovernmentAPI
@@ -172,6 +156,7 @@ public class TicketBaiSCU : IESSSCD
             };
         }
     }
+
 
     private string GetIdentier(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
     {

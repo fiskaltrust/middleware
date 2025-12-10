@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
+﻿namespace fiskaltrust.Middleware.SCU.ES.Common.Models;
 
 public class MiddlewareCustomer
 {

@@ -1,8 +1,9 @@
+﻿using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
 
-namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
+namespace fiskaltrust.Middleware.SCU.ES.Common.Models;
 
 public class MiddlewareStateData
 {
@@ -24,11 +25,11 @@ public class Receipt
 {
     [JsonPropertyName("ReceiptRequest")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptRequest Request { get; set; }
+    public ReceiptRequest Request { get; set; } = null!;
 
     [JsonPropertyName("ReceiptResponse")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required ReceiptResponse Response { get; set; }
+    public ReceiptResponse Response { get; set; } = null!;
 }
 
 public class MiddlewareStateDataES
@@ -52,14 +53,14 @@ public class GovernmentAPI
 {
     [JsonPropertyName("Request")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required string Request { get; set; }
+    public string Request { get; set; } = null!;
 
     [JsonPropertyName("Response")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public required string Response { get; set; }
+    public string Response { get; set; } = null!;
 
     [JsonPropertyName("Version")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public required GovernmentAPISchemaVersion Version { get; set; }
+    public GovernmentAPISchemaVersion Version { get; set; }
 }

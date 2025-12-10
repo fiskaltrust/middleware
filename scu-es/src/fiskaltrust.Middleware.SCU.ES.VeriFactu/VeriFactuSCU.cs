@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
