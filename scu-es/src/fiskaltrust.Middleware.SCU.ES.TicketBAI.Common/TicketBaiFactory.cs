@@ -178,7 +178,7 @@ public class TicketBaiFactory
         {
             var lastReceipt = middlewareStateData.ES.LastReceipt;
             var anterior = lastReceipt?.Response?.GetNumSerieFacturaParts();
-            var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data;
+            var signatureValueFirmaFacturaAnterior = lastReceipt?.Response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.Country() == "ES" && x.ftSignatureType.IsType(SignatureTypeES.Signature))?.Data;
             if (signatureValueFirmaFacturaAnterior != null)
             {
                 var fechaExpedicionFacturaAnterior = lastReceipt?.Response.ftReceiptMoment;
