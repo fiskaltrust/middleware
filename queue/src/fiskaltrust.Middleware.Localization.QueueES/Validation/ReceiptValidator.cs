@@ -114,15 +114,8 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
 
-        if (!context.IsRefund)
-        {
-            foreach (var result in ChargeItemValidations.Validate_ChargeItems_NetAmountLimit(_receiptRequest))
-            {
-                yield return result;
-            }
-        }
-        else
-        {
+        if (context.IsRefund)
+        { 
             foreach (var result in ReceiptRequestValidations.ValidateRefundHasPreviousReference(_receiptRequest))
             {
                 yield return result;
