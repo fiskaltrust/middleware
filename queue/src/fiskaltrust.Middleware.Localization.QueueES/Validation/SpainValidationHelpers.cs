@@ -13,6 +13,12 @@ public static class SpainValidationHelpers
         {
             return false;
         }
+
+        var regex = new Regex("(([a-z|A-Z]{1}\\d{7}[a-z|A-Z]{1})|(\\d{8}[a-z|A-Z]{1})|([a-z|A-Z]{1}\\d{8}))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        if (!regex.IsMatch(taxId))
+        {
+            return false;
+        }
         return true;
     }
 }

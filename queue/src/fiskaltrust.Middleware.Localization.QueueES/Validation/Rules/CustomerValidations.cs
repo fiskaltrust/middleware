@@ -99,7 +99,7 @@ public static class CustomerValidations
             {
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesES.EEEE_InvalidSpanishTaxId(middlewareCustomer.CustomerVATId),
-                    "EEEE_InvalidPortugueseTaxId",
+                    "EEEE_InvalidSpanishTaxId",
                     "cbCustomer.CustomerVATId"
                 ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
             }
