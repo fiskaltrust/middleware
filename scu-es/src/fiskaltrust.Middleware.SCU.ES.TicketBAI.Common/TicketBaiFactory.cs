@@ -13,51 +13,46 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 
 public class TicketBaiFactory
 {
-    private readonly Sujetos _sujetos;
-    private readonly Cabecera _cabacera;
+    private readonly TicketBaiSCUConfiguration _configuration;
     private readonly SoftwareFacturacionType _software;
 
     public TicketBaiFactory(TicketBaiSCUConfiguration configuration)
     {
-        _sujetos = new Sujetos
-        {
-            Emisor = new Emisor
-            {
-                NIF = configuration.EmisorNif,
-                ApellidosNombreRazonSocial = configuration.EmisorApellidosNombreRazonSocial
-            },
-            VariosDestinatarios = SiNoType.N, // this probably needs to be S in cases of multiple cbCustomers, but how can one invoice have multiple recipients?
-            VariosDestinatariosSpecified = true,
-            EmitidaPorTercerosODestinatario = EmitidaPorTercerosType.N,
-            EmitidaPorTercerosODestinatarioSpecified = true
-        };
-
-        _cabacera = new Cabecera
-        {
-            IDVersionTBAI = IDVersionTicketBaiType.Item12
-        };
-        _software = new SoftwareFacturacionType
-        {
-            LicenciaTBAI = configuration.SoftwareLicenciaTBAI,
-            EntidadDesarrolladora = new EntidadDesarrolladoraType
-            {
-                Item = configuration.SoftwareNif
-            },
-            Nombre = configuration.SoftwareName,
-            Version = configuration.SoftwareVersion
-        };
+        _configuration = configuration;
     }
 
     public TicketBai ConvertTo(ProcessRequest request)
     {
         var ticketBaiRequest = new TicketBai
         {
-            Cabecera = _cabacera,
-            Sujetos = _sujetos,
-            HuellaTBAI = CreateHuellTBai(request),
-            Factura = CreateFactura(request)
+            Cabecera = new Cabecera
+            {
+                IDVersionTBAI = IDVersionTicketBaiType.Item12
+            },
+            Sujetos = new Sujetos
+            {
+                Emisor = new Emisor
+                {
+                    NIF = _configuration.EmisorNif,
+                    ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial
+                },
+                VariosDestinatarios = SiNoType.N, // this probably needs to be S in cases of multiple cbCustomers, but how can one invoice have multiple recipients?
+                VariosDestinatariosSpecified = true,
+                EmitidaPorTercerosODestinatario = GetEmissionType(),
+                EmitidaPorTercerosODestinatarioSpecified = true
+            },
+            Factura = CreateFactura(request),
+            HuellaTBAI = CreateHuellTBai(request)
         };
+        AddCustomerInfoIfNecessary(request, ticketBaiRequest);
+        return ticketBaiRequest;
+    }
 
+    // Currently we only support N (issuer issues) but we need support for T (third party issues) and D (recipient issues) in the future
+    private static EmitidaPorTercerosType GetEmissionType() => EmitidaPorTercerosType.N;
+
+    private static void AddCustomerInfoIfNecessary(ProcessRequest request, TicketBai ticketBaiRequest)
+    {
         if (request.ReceiptRequest.ContainsCustomerInfo())
         {
             var customer = request.ReceiptRequest.GetCustomerOrNull()!;
@@ -74,15 +69,19 @@ public class TicketBaiFactory
                     }
                 ];
             }
-
-            if (!string.IsNullOrEmpty(customer.CustomerCountry) || customer.CustomerCountry != "ES")
+            else
             {
-
                 // Customer is not from Spain we need to add more details
-                ticketBaiRequest.Sujetos.Destinatarios = [
+                ticketBaiRequest.Sujetos.Destinatarios = 
+                [
                     new IDDestinatario
                     {
-                        Item = customer.CustomerVATId,
+                        Item = new IDOtro  
+                        {
+                            CodigoPais = CountryType2.EC,
+                            CodigoPaisSpecified = true,
+                            IDType = IDTypeType.Item06 // 06 is other, we could use support for other types too
+                        },
                         ApellidosNombreRazonSocial = customer.CustomerName,
                         CodigoPostal = customer.CustomerZip,
                         Direccion = customer.CustomerStreet
@@ -90,9 +89,7 @@ public class TicketBaiFactory
                 ];
             }
         }
-        return ticketBaiRequest;
     }
-
 
     private static Factura CreateFactura(ProcessRequest request)
     {
@@ -105,13 +102,14 @@ public class TicketBaiFactory
                 NumFactura = numFactura.ToString(),
                 FechaExpedicionFactura = GetLocalTime(request.ReceiptRequest.cbReceiptMoment).ToString("dd-MM-yyyy"),
                 HoraExpedicionFactura = GetLocalTime(request.ReceiptRequest.cbReceiptMoment).ToString("HH:mm:ss"),
-                FacturaSimplificada = request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) ? SiNoType.S : SiNoType.N,
+                FacturaSimplificada = request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) | request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.UnknownReceipt0x0000) ? SiNoType.S : SiNoType.N,
                 FacturaSimplificadaSpecified = true,
                 FacturaEmitidaSustitucionSimplificada = SiNoType.N,
                 FacturaEmitidaSustitucionSimplificadaSpecified = true
             },
             DatosFactura = new DatosFacturaType
             {
+                DescripcionFactura = GetDescripcionFactura(request),
                 DetallesFactura = CreateFacturas(request),
                 ImporteTotalFactura = request.ReceiptRequest.cbChargeItems.Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
                 Claves =
@@ -141,20 +139,12 @@ public class TicketBaiFactory
             }
         };
 
-        // The DescripcionFactura depends on the type of receipt. Probably we will need to consider the used ChargeItems and the type of payment too
-        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
-        {
-            factura.DatosFactura.DescripcionFactura = "Factura Simplificada";
-        }
-        else
-        {
-            factura.DatosFactura.DescripcionFactura = "Factura";
-        }
-
         // For the FechOperacion field we could use Moment of the ChargeItem. Right no we omit it
         // factura.DatosFactura.FechaOperacion = GetLocalTime(request.ReceiptRequest.cbReceiptMoment).ToString("dd-MM-yyyy");
         return factura;
     }
+
+    private static string GetDescripcionFactura(ProcessRequest request) => request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) ? "Factura Simplificada" : "Factura";
 
     private static DateTime GetLocalTime(DateTime utcTime)
     {
@@ -167,7 +157,16 @@ public class TicketBaiFactory
     {
         var huellTbai = new HuellaTBAI
         {
-            Software = _software,
+            Software = new SoftwareFacturacionType
+            {
+                LicenciaTBAI = _configuration.SoftwareLicenciaTBAI,
+                EntidadDesarrolladora = new EntidadDesarrolladoraType
+                {
+                    Item = _configuration.SoftwareNif
+                },
+                Nombre = _configuration.SoftwareName,
+                Version = _configuration.SoftwareVersion
+            },
             NumSerieDispositivo = request.ReceiptResponse.ftCashBoxIdentification
         };
 
@@ -199,51 +198,36 @@ public class TicketBaiFactory
 
     private static DetalleIVAType[] CreateDetalleIVAType(ProcessRequest request)
     {
-        var chargeItems = request.ReceiptRequest.cbChargeItems.Select(c =>
+        var vatRates = request.ReceiptRequest.cbChargeItems.GroupBy(x => x.VATRate);
+        return [.. vatRates.Select(x => new DetalleIVAType
         {
-            c.VATAmount = c.VATAmount ?? (c.Amount * c.VATRate / 100.0m);
-            return c;
-        });
-
-        var vatRates = chargeItems.GroupBy(x => x.VATRate);
-        return vatRates.Select(x => new DetalleIVAType
-        {
-            BaseImponible = x.Sum(x => x.Amount - x.VATAmount!.Value).ToString("0.00", CultureInfo.InvariantCulture),
+            BaseImponible = x.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)).ToString("0.00", CultureInfo.InvariantCulture),
             TipoImpositivo = x.Key.ToString("0.00", CultureInfo.InvariantCulture),
-            CuotaImpuesto = x.Sum(x => x.VATAmount!.Value).ToString("0.00", CultureInfo.InvariantCulture),
-            OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.N,
-            OperacionEnRecargoDeEquivalenciaORegimenSimplificadoSpecified = true
-        }).ToArray();
+            CuotaImpuesto = x.Sum(x => x.VATAmount ?? 0.0m).ToString("0.00", CultureInfo.InvariantCulture)
+        })];
     }
 
     private static IDDetalleFacturaType[] CreateFacturas(ProcessRequest request)
     {
-        var chargeItems = request.ReceiptRequest.cbChargeItems.Select(c =>
-        {
-            c.VATAmount = c.VATAmount ?? (c.Amount * c.VATRate / 100.0m);
-            return c;
-        });
         // TOdo add discount handling
 
-
-        return chargeItems.Select(x => new IDDetalleFacturaType
+        return [.. request.ReceiptRequest.cbChargeItems.Select(x => new IDDetalleFacturaType
         {
             DescripcionDetalle = CapText(x.Description, 250),
             Cantidad = x.Quantity.ToString("0.00", CultureInfo.InvariantCulture),
-            ImporteUnitario = (x.Amount - x.VATAmount!.Value).ToString("0.00", CultureInfo.InvariantCulture),
+            ImporteUnitario = ((x.Amount - (x.VATAmount ?? 0.0m)) / x.Quantity).ToString("0.00", CultureInfo.InvariantCulture),
             //Descuento = "0", TODO How should we handle discounts? is this a must have or can e ignore that
             ImporteTotal = x.Amount.ToString("0.00", CultureInfo.InvariantCulture)
-        }).ToArray();
+        })];
     }
 
     private static string CapText(string text, int maxLength)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return string.Empty;
+        }
 
-        if (text.Length <= maxLength)
-            return text;
-
-        return text[..maxLength];
+        return text.Length <= maxLength ? text : text[..maxLength];
     }
 }
