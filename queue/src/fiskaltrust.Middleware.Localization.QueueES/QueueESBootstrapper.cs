@@ -66,7 +66,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             new DailyOperationsCommandProcessorES(
                 essscd,
                 queueStorageProvider),
-            new InvoiceCommandProcessorES(),
+            new InvoiceCommandProcessorES(loggerFactory.CreateLogger<InvoiceCommandProcessorES>(), essscd, storageProvider.CreateConfigurationRepository(), storageProvider.CreateMiddlewareQueueItemRepository(), storageProvider.CreateMiddlewareJournalESRepository()),
             new ProtocolCommandProcessorES()
         );
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
