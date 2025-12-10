@@ -60,69 +60,6 @@ public static class ChargeItemValidations
         }
     }
 
-    /// <summary>
-    /// Validates that charge item descriptions are at least 3 characters long.
-    /// Returns one ValidationResult per validation error found.
-    /// </summary>
-    public static IEnumerable<ValidationResult> Validate_ChargeItems_Description_Length(ReceiptRequest request)
-    {
-        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
-        {
-            yield break;
-        }
-
-        for (var i = 0; i < request.cbChargeItems.Count; i++)
-        {
-            var chargeItem = request.cbChargeItems[i];
-
-            if (!string.IsNullOrWhiteSpace(chargeItem.Description) && chargeItem.Description.Length < 3)
-            {
-                yield return ValidationResult.Failed(new ValidationError(
-                    ErrorMessagesES.EEEE_ChargeItemValidationFailed(i, "description must be at least 3 characters long"),
-                    "EEEE_ChargeItemDescriptionTooShort",
-                    "cbChargeItems.Description",
-                    i
-                )
-                .WithContext("DescriptionLength", chargeItem.Description.Length)
-                .WithContext("MinimumLength", 3));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Validates that POS receipt net amount does not exceed 1000€.
-    /// Returns a single ValidationResult if validation fails.
-    /// </summary>
-    public static IEnumerable<ValidationResult> Validate_ChargeItems_NetAmountLimit(ReceiptRequest request)
-    {
-        if (!request.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
-        {
-            yield break;
-        }
-
-        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
-        {
-            yield break;
-        }
-
-        var totalNetAmount = request.cbChargeItems
-            .Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount());
-
-        if (totalNetAmount > 1000m)
-        {
-            yield return ValidationResult.Failed(new ValidationError(
-                ErrorMessagesES.EEEE_PosReceiptNetAmountExceedsLimit,
-                "EEEE_PosReceiptNetAmountExceedsLimit",
-                "cbChargeItems"
-            ).WithContext("TotalNetAmount", totalNetAmount)
-             .WithContext("Limit", 1000m));
-        }
-    }
-
-    /// <summary>
-    /// Validates that only supported VAT rates are used in charge items.
-    /// Returns one ValidationResult per unsupported VAT rate found.
-    /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_VATRate_SupportedVatRates(ReceiptRequest request)
     {
         if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
@@ -133,10 +70,7 @@ public static class ChargeItemValidations
         var unsupportedVatRates = new[]
         {
             ChargeItemCase.UnknownService,
-            ChargeItemCase.SuperReducedVatRate1,
-            ChargeItemCase.SuperReducedVatRate2,
-            ChargeItemCase.ParkingVatRate,
-            ChargeItemCase.ZeroVatRate
+            ChargeItemCase.ParkingVatRate
         };
 
         for (var i = 0; i < request.cbChargeItems.Count; i++)
@@ -208,10 +142,13 @@ public static class ChargeItemValidations
 
         var expectedVatRates = new Dictionary<ChargeItemCase, decimal>
         {
-            { ChargeItemCase.DiscountedVatRate1, 6.0m },
-            { ChargeItemCase.DiscountedVatRate2, 13.0m },
-            { ChargeItemCase.NormalVatRate, 23.0m },
-            { ChargeItemCase.NotTaxable, 0.0m }
+            { ChargeItemCase.DiscountedVatRate1, 10.0m },
+            { ChargeItemCase.DiscountedVatRate2, 10.0m },
+            { ChargeItemCase.SuperReducedVatRate1, 4.0m },
+            { ChargeItemCase.SuperReducedVatRate2, 4.0m },
+            { ChargeItemCase.NormalVatRate, 21.0m },
+            { ChargeItemCase.NotTaxable, 0.0m },
+            { ChargeItemCase.ZeroVatRate, 0.0m },
         };
 
         const decimal roundingTolerance = 0.01m;

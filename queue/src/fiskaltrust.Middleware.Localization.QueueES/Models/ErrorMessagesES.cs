@@ -223,4 +223,12 @@ public static class ErrorMessagesES
 
     public static string EEEE_InvalidCountryCodeInChargeItemsForES = "EEEE_Invalid country code in charge items for Spain. Only 'ES' is accepted as valid country code in charge items.";
     public static string EEEE_InvalidCountryCodeInPayItemsForES = "EEEE_Invalid country code in pay items for Spain. Only 'ES' is accepted as valid country code in pay items.";
+
+    public static string EEEE_CustomerNameMissing = "EEEE_Customer name is mandatory and cannot be null or empty.";
+
+    public static string EEEE_CustomerZipMissing = "EEEE_Customer zip code is mandatory and cannot be null or empty.";
+
+    public static string EEEE_CustomerStreetMissing = "EEEE_Customer street is mandatory and cannot be null or empty.";
+
+    public static string EEEE_CustomerVATIdMissing = "EEEE_Customer VAT ID is mandatory and cannot be null or empty.";
 }

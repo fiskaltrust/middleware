@@ -46,8 +46,16 @@ public static class CustomerValidations
             yield break;
         }
 
-        // If customer tax ID is provided, validate it
-        if (!string.IsNullOrWhiteSpace(middlewareCustomer.CustomerVATId))
+
+        if (string.IsNullOrEmpty(middlewareCustomer.CustomerVATId))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesES.EEEE_CustomerVATIdMissing,
+                "EEEE_CustomerVATIdMissing",
+                "cbCustomer.CustomerVATId"
+            ));
+        }
+        else
         {
             if (!SpainValidationHelpers.IsValidSpanishTaxId(middlewareCustomer.CustomerVATId))
             {
@@ -57,6 +65,34 @@ public static class CustomerValidations
                     "cbCustomer.CustomerVATId"
                 ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
             }
+        }
+
+
+        if(string.IsNullOrEmpty(middlewareCustomer.CustomerName))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesES.EEEE_CustomerNameMissing,
+                "EEEE_CustomerNameMissing",
+                "cbCustomer.CustomerName"
+            ));
+        }
+
+        if (string.IsNullOrEmpty(middlewareCustomer.CustomerZip))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesES.EEEE_CustomerZipMissing,
+                "EEEE_CustomerZipMissing",
+                "cbCustomer.CustomerZip"
+            ));
+        }
+
+        if (string.IsNullOrEmpty(middlewareCustomer.CustomerStreet))
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesES.EEEE_CustomerStreetMissing,
+                "EEEE_CustomerStreetMissing",
+                "cbCustomer.CustomerStreet"
+            ));
         }
     }
 }
