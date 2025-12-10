@@ -44,17 +44,17 @@ public class MiddlewareStateData : MiddlewareStateDataBase<MiddlewareStateData>
     }
 
     [JsonPropertyName("ftPreviousReceiptReference")] // QUESTION: ftPreviousReceiptReferences or ftPreviousReceiptReference?
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public List<Receipt>? PreviousReceiptReference { get; set; }
 }
 
 public class Receipt
 {
     [JsonPropertyName("ReceiptRequest")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public required ReceiptRequest Request { get; set; }
 
     [JsonPropertyName("ReceiptResponse")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public required ReceiptResponse Response { get; set; }
 }

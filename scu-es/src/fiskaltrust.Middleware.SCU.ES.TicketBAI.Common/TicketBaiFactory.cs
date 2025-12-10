@@ -14,7 +14,6 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 public class TicketBaiFactory
 {
     private readonly TicketBaiSCUConfiguration _configuration;
-    private readonly SoftwareFacturacionType _software;
 
     public TicketBaiFactory(TicketBaiSCUConfiguration configuration)
     {
