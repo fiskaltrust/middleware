@@ -116,11 +116,12 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
             _logger.LogError(ex, "Error processing receipt");
         }
 
-        queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
-        queueES.CurrentFullInvoiceSeriesNumber = numFactura;
-
-        await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
-
+        if (response.ReceiptResponse.ftState.IsState(State.Success))
+        {
+            queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
+            queueES.CurrentSimplifiedInvoiceSeriesNumber = numFactura;
+            await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
+        }
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 }

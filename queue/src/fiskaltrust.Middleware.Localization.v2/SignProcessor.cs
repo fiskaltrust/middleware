@@ -224,14 +224,7 @@ public class SignProcessor : ISignProcessor
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
-            if (queue.CountryCode == "ES")
-            {
-                receiptResponse.ftStateData = new MiddlewareStateData
-                {
-                    PreviousReceiptReference = receiptReferences
-                };
-            }
-            else if (receiptReferences is not null)
+            if (receiptReferences is not null)
             {
                 receiptResponse.ftStateData = new MiddlewareStateData
                 {
