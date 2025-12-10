@@ -86,12 +86,17 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
         public async Task ProcessAsync_SetsMiddlewareState_WithSinglePreviousReceiptReference()
         {
             // Arrange
+            const string queueCountry = "AT";
+
             var previousRef = "prev-ref-1";
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
                 cbPreviousReceiptReference = previousRef
             };
+
+            receiptRequest.ftReceiptCase = (ReceiptCase) ((ulong) default(ReceiptCase).WithCountry(queueCountry) | 0x0000_2000_0000_0000);
+
             var expectedPrevRequest = new ReceiptRequest { ftCashBoxID = receiptRequest.ftCashBoxID };
             var expectedPrevResponse = new ReceiptResponse { ftCashBoxIdentification = "Test" };
             var queueItem = CreateQueueItem(previousRef, expectedPrevRequest, expectedPrevResponse);
@@ -100,7 +105,10 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             repoMock.Setup(r => r.GetByReceiptReferenceAsync(previousRef, It.IsAny<string?>()))
                 .Returns(new[] { queueItem }.ToAsyncEnumerable());
 
-            var processor = CreateSignProcessor(repoMock, new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value });
+            var processor = CreateSignProcessor(
+                repoMock,
+                new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value },
+                queueCountryCode: queueCountry);
 
             // Act
             var response = await processor.ProcessAsync(receiptRequest);
@@ -119,12 +127,16 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
         public async Task ProcessAsync_SetsMiddlewareState_WithMultiplePreviousReceiptReferences()
         {
             // Arrange
+            const string queueCountry = "AT";
+
             var previousRefs = new[] { "prev-ref-1", "prev-ref-2" };
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
                 cbPreviousReceiptReference = previousRefs
             };
+
+            receiptRequest.ftReceiptCase = (ReceiptCase) ((ulong) default(ReceiptCase).WithCountry(queueCountry) | 0x0000_2000_0000_0000);
 
             var queueItems = new List<ftQueueItem>();
             for (int i = 0; i < previousRefs.Length; i++)
@@ -140,7 +152,10 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             repoMock.Setup(r => r.GetByReceiptReferenceAsync(previousRefs[1], It.IsAny<string?>()))
                 .Returns(new[] { queueItems[1] }.ToAsyncEnumerable());
 
-            var processor = CreateSignProcessor(repoMock, new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value });
+            var processor = CreateSignProcessor(
+                repoMock,
+                new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value },
+                queueCountryCode: queueCountry);
 
             // Act
             var response = await processor.ProcessAsync(receiptRequest);
@@ -159,13 +174,20 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
         public async Task ProcessAsync_SetsMiddlewareState_WithNoPreviousReceiptReferences()
         {
             // Arrange
+            const string queueCountry = "AT";
+
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid()
             };
 
+            receiptRequest.ftReceiptCase = (ReceiptCase) ((ulong) default(ReceiptCase).WithCountry(queueCountry) | 0x0000_2000_0000_0000);
+
             var repoMock = new Mock<IMiddlewareQueueItemRepository>();
-            var processor = CreateSignProcessor(repoMock, new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value });
+            var processor = CreateSignProcessor(
+                repoMock,
+                new MiddlewareConfiguration { CashBoxId = receiptRequest.ftCashBoxID.Value },
+                queueCountryCode: queueCountry);
 
             // Act
             var response = await processor.ProcessAsync(receiptRequest);
@@ -186,7 +208,7 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = default(ReceiptCase).WithCountry("DE")
+                ftReceiptCase = (ReceiptCase) ((ulong) default(ReceiptCase).WithCountry("DE") | 0x0000_2000_0000_0000)
             };
 
             var queueItemRepoMock = new Mock<IMiddlewareQueueItemRepository>();
@@ -217,12 +239,12 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = default(ReceiptCase).WithCountry(queueCountry),
+                ftReceiptCase = (ReceiptCase) ((ulong) default(ReceiptCase).WithCountry(queueCountry) | 0x0000_2000_0000_0000),
                 cbChargeItems = new List<ChargeItem>
                 {
                     new ChargeItem
                     {
-                        ftChargeItemCase = default(ChargeItemCase).WithCountry("DE"),
+                        ftChargeItemCase = (ChargeItemCase) ((ulong) default(ChargeItemCase).WithCountry("DE") | 0x0000_2000_0000_0000),
                         Amount = 100
                     }
                 }
@@ -256,12 +278,12 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = default(ReceiptCase).WithCountry(queueCountry),
+                ftReceiptCase = (ReceiptCase) ((ulong) default(ReceiptCase).WithCountry(queueCountry) | 0x0000_2000_0000_0000),
                 cbPayItems = new List<PayItem>
                 {
                     new PayItem
                     {
-                        ftPayItemCase = default(PayItemCase).WithCountry("DE"),
+                        ftPayItemCase = (PayItemCase) ((ulong) default(PayItemCase).WithCountry("DE") | 0x0000_2000_0000_0000),
                         Amount = 100
                     }
                 }
