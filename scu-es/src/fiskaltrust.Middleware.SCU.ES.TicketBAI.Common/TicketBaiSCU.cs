@@ -70,7 +70,12 @@ public class TicketBaiSCU : IESSSCD
                 };
             }
 
-            var endpoint = !request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+            if (request.ReceiptRequest?.cbChargeItems is { } chargeItems && !chargeItems.All(item => item.ftChargeItemCase != 0))
+            {
+                throw new InvalidOperationException("All charge items must specify ftChargeItemCase before sending to TicketBAI.");
+            }
+
+            var endpoint = !request.ReceiptRequest!.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     ? _ticketBaiTerritory.SubmitInvoices
                     : _ticketBaiTerritory.CancelInvoices;
 

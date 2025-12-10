@@ -165,7 +165,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
-
     public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsPT.HasTransportInformation))
