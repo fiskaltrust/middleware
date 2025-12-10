@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.v2.Models;
 
@@ -7,8 +8,45 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Validation.Rules;
 
 public static class CustomerValidations
 {
+    public static IEnumerable<ValidationResult> ValidateCustomerPresence(ReceiptRequest request)
+    {
+        if (request.ftReceiptCase.IsType(ReceiptCaseType.Invoice))
+        {
+            if (request.cbCustomer == null)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesES.EEEE_CustomerRequiredForInvoice,
+                    "EEEE_CustomerMissing",
+                    "cbCustomer"
+                ));
+            }
+
+            MiddlewareCustomer? middlewareCustomer = null;
+            bool customerDeserializationFailed = false;
+            try
+            {
+                var customerJson = JsonSerializer.Serialize(request.cbCustomer);
+                middlewareCustomer = JsonSerializer.Deserialize<MiddlewareCustomer>(customerJson);
+            }
+            catch (JsonException)
+            {
+                customerDeserializationFailed = true;
+            }
+
+            if (customerDeserializationFailed)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                      ErrorMessagesES.EEEE_CustomerRequiredForInvoice,
+                      "EEEE_CustomerInvalid",
+                      "cbCustomer"
+                  ));
+                yield break;
+            }
+        }
+    }
+
     /// <summary>
-    /// Validates the Portuguese customer tax ID (NIF) if provided.
+    /// Validates the Spanish customer tax ID (NIF) if provided.
     /// Returns a single ValidationResult if validation fails.
     /// </summary>
     public static IEnumerable<ValidationResult> ValidateCustomerTaxId(ReceiptRequest request)

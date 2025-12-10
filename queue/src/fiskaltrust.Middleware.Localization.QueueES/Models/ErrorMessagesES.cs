@@ -178,4 +178,6 @@ public static class ErrorMessagesES
     public static string EEEE_CustomerStreetMissing = "EEEE_Customer street is mandatory and cannot be null or empty.";
 
     public static string EEEE_CustomerVATIdMissing = "EEEE_Customer VAT ID is mandatory and cannot be null or empty.";
+
+    public static string EEEE_CustomerRequiredForInvoice = "EEEE_Customer information is mandatory for Invoice receipts and cannot be null. Make sure to fill the field cbCustomer";
 }
