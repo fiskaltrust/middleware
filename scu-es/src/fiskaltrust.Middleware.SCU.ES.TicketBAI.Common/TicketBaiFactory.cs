@@ -75,6 +75,21 @@ public class TicketBaiFactory
                     }
                 ];
             }
+
+            if(!string.IsNullOrEmpty(customer.CustomerCountry) || customer.CustomerCountry != "ES")
+            {
+
+                // Customer is not from Spain we need to add more details
+                ticketBaiRequest.Sujetos.Destinatarios = [
+                    new IDDestinatario
+                    {
+                        Item = customer.CustomerVATId,
+                        ApellidosNombreRazonSocial = customer.CustomerName,
+                        CodigoPostal = customer.CustomerZip,
+                        Direccion = customer.CustomerStreet
+                    }
+                ];
+            }
         }
         return ticketBaiRequest;
     }
