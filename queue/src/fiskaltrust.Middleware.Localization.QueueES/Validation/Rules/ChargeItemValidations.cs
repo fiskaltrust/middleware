@@ -47,6 +47,16 @@ public static class ChargeItemValidations
                 ).WithContext("VATRate", chargeItem.VATRate));
             }
 
+            if (!chargeItem.VATAmount.HasValue)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesES.EEEE_ChargeItemValidationFailed(i, "VAT amount is missing"),
+                    "EEEE_ChargeItemVATAmountMissing",
+                    "cbChargeItems.VATAmount",
+                    i
+                ));
+            }
+
             // Amount (price) validation
             if (chargeItem.Amount == 0)
             {
