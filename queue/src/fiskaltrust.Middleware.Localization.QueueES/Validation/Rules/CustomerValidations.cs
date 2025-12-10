@@ -60,7 +60,7 @@ public static class CustomerValidations
             if (!SpainValidationHelpers.IsValidSpanishTaxId(middlewareCustomer.CustomerVATId))
             {
                 yield return ValidationResult.Failed(new ValidationError(
-                    ErrorMessagesES.EEEE_InvalidPortugueseTaxId(middlewareCustomer.CustomerVATId),
+                    ErrorMessagesES.EEEE_InvalidSpanishTaxId(middlewareCustomer.CustomerVATId),
                     "EEEE_InvalidPortugueseTaxId",
                     "cbCustomer.CustomerVATId"
                 ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
