@@ -69,27 +69,12 @@ namespace fiskaltrust.Middleware.Queue
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
 
-                const ulong TagMask  = 0x0000_F000_0000_0000;
-                const ulong V1Tag_0 = 0x0000_0000_0000_0000;
-                const ulong V1Tag_8 = 0x0000_8000_0000_0000;
-
-                ulong tagging;
-
-                tagging = (ulong) request.ftReceiptCase & TagMask;
-                if (tagging != V1Tag_0 && tagging != V1Tag_8)
-                {
-                    throw new NotSupportedException($"Unsupported tagging version in ftReceiptCase for localization v1. " + $"Expected version 0 or 8 ((case & 0x0000_F000_0000_0000) == 0 or 0x8000_0000_0000), " + $"but got tagging 0x{tagging:X} (full value 0x{(ulong) request.ftReceiptCase:X}).");
-                }
-
+                IsV1Tagging((ulong) request.ftReceiptCase, nameof(request.ftReceiptCase));
                 if (request.cbChargeItems != null)
                 {
                     foreach (var chargeItem in request.cbChargeItems)
                     {
-                        tagging = (ulong) chargeItem.ftChargeItemCase & TagMask;
-                        if (tagging != V1Tag_0 && tagging != V1Tag_8)
-                        {
-                            throw new NotSupportedException($"Unsupported tagging version in ftChargeItemCase for localization v1. " + $"Expected version 0 or 8 ((case & 0x0000_F000_0000_0000) == 0 or 0x8000_0000_0000), " + $"but got tagging 0x{tagging:X} (full value 0x{(ulong) chargeItem.ftChargeItemCase:X}).");
-                        }
+                        IsV1Tagging((ulong) chargeItem.ftChargeItemCase, nameof(chargeItem.ftChargeItemCase));
                     }
                 }
 
@@ -97,11 +82,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     foreach (var payItem in request.cbPayItems)
                     {
-                        tagging = (ulong) payItem.ftPayItemCase & TagMask;
-                        if (tagging != V1Tag_0 && tagging != V1Tag_8)
-                        {
-                            throw new NotSupportedException($"Unsupported tagging version in ftPayItemCase for localization v1. " + $"Expected version 0 or 8 ((case & 0x0000_F000_0000_0000) == 0 or 0x8000_0000_0000), " + $"but got tagging 0x{tagging:X} (full value 0x{(ulong) payItem.ftPayItemCase:X}).");
-                        }
+                        IsV1Tagging((ulong) payItem.ftPayItemCase, nameof(payItem.ftPayItemCase));
                     }
                 }
 
@@ -195,18 +176,19 @@ namespace fiskaltrust.Middleware.Queue
                 queueItem.ftQueueTimeout = 15000;
             }
 
-            var country = queue.CountryCode;
-            if (string.IsNullOrWhiteSpace(country))
+            if (string.IsNullOrWhiteSpace(queue.CountryCode))
             {
-                country = ReceiptRequestHelper.GetCountry(data);
+                throw new InvalidOperationException($"Queue '{queue.ftQueueId}' has no CountryCode configured. For localization v1 the queue CountryCode must be set.");
             }
 
-            queueItem.country = country;
+            queueItem.country = queue.CountryCode;
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
             queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
             _logger.LogTrace("SignProcessor.InternalSign: Adding QueueItem to database.");
             await _queueItemRepository.InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
+            _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
+            await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
             var actionjournals = new List<ftActionJournal>();
             ftReceiptJournal receiptJournal = null;
@@ -225,6 +207,8 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     exception = e;
                     countrySpecificActionJournals = new();
+                    var encodedCountry = EncodeCountry(queue.CountryCode);
+
                     receiptResponse = new ReceiptResponse
                     {
                         ftCashBoxID = queue.ftCashBoxId.ToString(),
@@ -235,37 +219,18 @@ namespace fiskaltrust.Middleware.Queue
                         cbReceiptReference = data.cbReceiptReference,
                         ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
                         ftReceiptMoment = DateTime.UtcNow,
-                        ftSignatures = new SignaturItem[]
+                        ftSignatures = new[]
                         {
                             new SignaturItem
                             {
                                 ftSignatureFormat = 0x1,
-                                ftSignatureType = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                ftSignatureType = (long)(((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
                                 Caption = "uncaught-exeption",
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long)(encodedCountry | 0x2000_EEEE_EEEE)
                     };
-
-                    if (!string.IsNullOrWhiteSpace(queue.CountryCode))
-                    {
-                        var encodedCountry = EncodeCountry(queue.CountryCode);
-
-                        if (encodedCountry == 0)
-                        {
-                            _logger.LogError("Unsupported CountryCode '{CountryCode}' configured for queue {QueueId}. " + "ftState country bits will not be overridden.", queue.CountryCode, queue.ftQueueId);
-                        }
-                        else
-                        {
-                            var state = (ulong)receiptResponse.ftState;
-
-                            state &= 0x0000_FFFF_FFFF_FFFF; 
-                            state |= encodedCountry;
-
-                            receiptResponse.ftState = (long)state;
-                        }
-                    }
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
 
@@ -455,15 +420,35 @@ namespace fiskaltrust.Middleware.Queue
         
         private static ulong EncodeCountry(string? countryCode)
         {
-            return countryCode?.ToUpperInvariant() switch
+            if (string.IsNullOrWhiteSpace(countryCode))
+            {
+                throw new ArgumentException("Country code must not be null or empty.", nameof(countryCode));
+            }
+
+            return countryCode.ToUpperInvariant() switch
             {
                 "DE" => 0x4445000000000000,
                 "FR" => 0x4652000000000000,
                 "ME" => 0x4D45000000000000,
                 "IT" => 0x4954000000000000,
                 "AT" => 0x4154000000000000,
-                _    => 0
+                _    => throw new NotSupportedException($"Country code '{countryCode}' is not supported for v1.")
             };
+        }
+        
+        private const ulong V1TaggingMask = 0x0000_F000_0000_0000;
+        private const ulong V1Tag_0       = 0x0000_0000_0000_0000;
+        private const ulong V1Tag_8       = 0x0000_8000_0000_0000;
+
+        private static void IsV1Tagging(ulong caseValue, string componentName)
+        {
+            var tagging = caseValue & V1TaggingMask;
+            if (tagging != V1Tag_0 && tagging != V1Tag_8)
+            {
+                throw new NotSupportedException($"Unsupported tagging version in {componentName} for localization v1. "+
+                                                $"Only v1 tagging (0x0) and v1 receipt request tagging (0x8) are supported. " +
+                                                $"Found: 0x{tagging:X}");
+            }
         }
     }
 }
