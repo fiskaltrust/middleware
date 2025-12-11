@@ -175,12 +175,7 @@ namespace fiskaltrust.Middleware.Queue
             {
                 queueItem.ftQueueTimeout = 15000;
             }
-
-            if (string.IsNullOrWhiteSpace(queue.CountryCode))
-            {
-                throw new InvalidOperationException($"Queue '{queue.ftQueueId}' has no CountryCode configured. For localization v1 the queue CountryCode must be set.");
-            }
-
+            
             queueItem.country = queue.CountryCode;
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
@@ -207,7 +202,14 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     exception = e;
                     countrySpecificActionJournals = new();
-                    var encodedCountry = EncodeCountry(queue.CountryCode);
+
+                    var countryCode = queue.CountryCode;
+                    if (string.IsNullOrWhiteSpace(countryCode))
+                    {
+                        countryCode = ReceiptRequestHelper.GetCountry(data);
+                    }
+
+                    var encodedCountry = EncodeCountry(countryCode);
 
                     receiptResponse = new ReceiptResponse
                     {
