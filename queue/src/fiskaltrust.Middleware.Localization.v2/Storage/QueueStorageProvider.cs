@@ -17,16 +17,14 @@ public class QueueStorageProvider : IQueueStorageProvider
 {
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
-    readonly MiddlewareConfiguration _middlewareConfiguration;
     private readonly CryptoHelper _cryptoHelper;
     private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
-    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider, MiddlewareConfiguration middlewareConfiguration)
+    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
     {
         _queueId = queueId;
         _storageProvider = storageProvider;
-        _middlewareConfiguration = middlewareConfiguration;
         _cryptoHelper = new CryptoHelper();
     }
 
