@@ -56,7 +56,7 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
 
         var queueItemRepository = await _queueItemRepository;
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
-        var lastQueueItem = queueES.SSCDSignQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
+        var lastQueueItem = queueES.LastInvoiceQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.LastInvoiceQueueItemId.Value) : null;
 
         if (lastQueueItem is not null)
         {
@@ -86,10 +86,12 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
         {
             LastReceipt = lastReceipt,
         };
-        var serieFactura = queueES.InvoiceSeries ?? $"{request.ReceiptResponse.ftCashBoxIdentification}/F";
-        var numFactura = (queueES.InvoiceNumerator ?? 0) + 1;
+        
+        // Generate series identifier if not set
+        var serieFactura = queueES.InvoiceSeries ?? $"fiskaltrust-{GetShortQueueIdentifier(request.queue.ftQueueId)}-1000";
+        var numFactura = queueES.InvoiceNumerator + 1;
 
-        request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}/{numFactura}";
+        request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";
         request.ReceiptResponse.ftStateData = responseStateData;
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest
@@ -106,7 +108,7 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
                 ftJournalESId = Guid.NewGuid(),
                 Number = response.ReceiptResponse.ftQueueRow,
                 Data = JsonSerializer.Serialize(responseStateData.ES!.GovernmentAPI),
-                JournalType = JournalESType.VeriFactu.ToString(),
+                JournalType = JournalESType.TicketBAI.ToString(),
                 ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
                 ftQueueId = response.ReceiptResponse.ftQueueID,
             });
@@ -126,5 +128,11 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
             await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
         }
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
+
+    private static string GetShortQueueIdentifier(Guid queueId)
+    {
+        // Take first 8 characters of the GUID (without hyphens) for a shorter but still unique identifier
+        return queueId.ToString("N")[..8];
     }
 }

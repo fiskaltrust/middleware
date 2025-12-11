@@ -214,7 +214,7 @@ public class TicketBaiFactory
         {
             DescripcionDetalle = CapText(x.Description, 250),
             Cantidad = x.Quantity.ToString("0.00", CultureInfo.InvariantCulture),
-            ImporteUnitario = ((x.Amount - (x.VATAmount ?? 0.0m)) / x.Quantity).ToString("0.00", CultureInfo.InvariantCulture),
+            ImporteUnitario = x.Amount == 0.0m ? "0.00" : ((x.Amount - (x.VATAmount ?? 0.0m)) / x.Quantity).ToString("0.00", CultureInfo.InvariantCulture),
             //Descuento = "0", TODO How should we handle discounts? is this a must have or can e ignore that
             ImporteTotal = x.Amount.ToString("0.00", CultureInfo.InvariantCulture)
         })];

@@ -37,26 +37,26 @@ public static class ReceiptResponseHelper
     public static (string serieFactura, ulong numFactura) GetNumSerieFacturaParts(this ReceiptResponse receiptResponse)
     {
         var numSerieFactura = receiptResponse.GetNumSerieFactura();
-        if (numSerieFactura.Count(x => x == '/') != 2)
+        
+        // Find the last occurrence of either '/' or '-' separator
+        int lastSlashIndex = numSerieFactura.LastIndexOf('/');
+        int lastDashIndex = numSerieFactura.LastIndexOf('-');
+        int lastSeparatorIndex = Math.Max(lastSlashIndex, lastDashIndex);
+        
+        if (lastSeparatorIndex == -1)
         {
-            var parts = numSerieFactura.Split('/');
-            var serieFactura = $"{parts[0]}";
-            if (!ulong.TryParse(parts[1], out ulong numFactura))
-            {
-                throw new Exception("Invalid ftReceiptIdentification format. Last part is not a number.");
-            }
-            return (serieFactura, numFactura);
-            // throw new Exception("Invalid ftReceiptIdentification format. Needs exactly two '/'.");
+            throw new Exception("Invalid ftReceiptIdentification format. Needs at least one '/' or '-' separator.");
         }
-        else
+        
+        // Split at the last separator
+        var serieFactura = numSerieFactura.Substring(0, lastSeparatorIndex);
+        var numFacturaStr = numSerieFactura.Substring(lastSeparatorIndex + 1);
+        
+        if (!ulong.TryParse(numFacturaStr, out ulong numFactura))
         {
-            var parts = numSerieFactura.Split('/');
-            var serieFactura = $"{parts[0]}/{parts[1]}";
-            if (!ulong.TryParse(parts[2], out ulong numFactura))
-            {
-                throw new Exception("Invalid ftReceiptIdentification format. Last part is not a number.");
-            }
-            return (serieFactura, numFactura);
+            throw new Exception("Invalid ftReceiptIdentification format. Last part after separator is not a valid number.");
         }
+        
+        return (serieFactura, numFactura);
     }
 }
