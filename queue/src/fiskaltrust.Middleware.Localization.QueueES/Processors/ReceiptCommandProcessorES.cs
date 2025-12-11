@@ -81,7 +81,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         };
         
         // Generate series identifier if not set
-        var serieFactura = queueES.SimplifiedInvoiceSeries ?? $"fiskaltrust-{GetShortQueueIdentifier(request.queue.ftQueueId)}-0000";
+        var serieFactura = queueES.SimplifiedInvoiceSeries ?? $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}0000";
         var numFactura = queueES.SimplifiedInvoiceNumerator + 1;
 
         request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";
@@ -134,10 +134,4 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
     public async Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
     public async Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-
-    private static string GetShortQueueIdentifier(Guid queueId)
-    {
-        // Take first 8 characters of the GUID (without hyphens) for a shorter but still unique identifier
-        return queueId.ToString("N")[..8];
-    }
 }
