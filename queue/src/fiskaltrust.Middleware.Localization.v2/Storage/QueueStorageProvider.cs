@@ -5,6 +5,7 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
@@ -16,28 +17,17 @@ public class QueueStorageProvider : IQueueStorageProvider
 {
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
+    readonly MiddlewareConfiguration _middlewareConfiguration;
     private readonly CryptoHelper _cryptoHelper;
     private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
-    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
+    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider, MiddlewareConfiguration middlewareConfiguration)
     {
         _queueId = queueId;
         _storageProvider = storageProvider;
+        _middlewareConfiguration = middlewareConfiguration;
         _cryptoHelper = new CryptoHelper();
-        _processingVersion = GetVersion(typeof(QueueStorageProvider)).processingVersion;
-    }
-
-    private (string name, Version version, string processingVersion) GetVersion(Type assemblyType)
-    {
-        var assemblyName = assemblyType.Assembly.GetName();
-        var fileAttribute = assemblyType.Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>().Version;
-        var processingVersion = assemblyType.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-        var version = Version.TryParse(fileAttribute, out var result)
-            ? new Version(result.Major, result.Minor, result.Build, 0)
-            : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
-        assemblyName.Version = version;
-        return (assemblyName.FullName, version, processingVersion);
     }
 
     public async Task ActivateQueueAsync()
@@ -74,7 +64,8 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
             country = _cachedQueue.CountryCode,
-            ProcessingVersion = _processingVersion,
+            // TOdo we need to set this to the correct procsesing version
+            // ProcessingVersion = _middlewareConfiguration.ProcessingVersion,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
