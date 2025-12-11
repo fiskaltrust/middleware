@@ -94,7 +94,7 @@ public class TicketBaiSCU : IESSSCD
             var (requestContent, signature) = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
             requestContent = _ticketBaiTerritory.ProcessContent(ticketBaiRequest, requestContent);
 
-            using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + endpoint))
+            using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri((_configuration.Sandbox ? _ticketBaiTerritory.SandboxEndpoint : _ticketBaiTerritory.ProdEndpoint) + endpoint))
             {
                 Content = _ticketBaiTerritory.GetHttpContent(requestContent)
             };
@@ -158,7 +158,7 @@ public class TicketBaiSCU : IESSSCD
     }
 
 
-    private string GetIdentier(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
+    public string GetIdentier(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
     {
         var datePart = request.ReceiptResponse.ftReceiptMoment.ToString("ddMMyy");
         var first13 = Convert.ToBase64String(signature.SignatureValue!).Substring(0, Math.Min(13, Convert.ToBase64String(signature.SignatureValue!).Length));
@@ -169,7 +169,7 @@ public class TicketBaiSCU : IESSSCD
         return identifier;
     }
 
-    private Uri GetQrCodeUri(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
+    public Uri GetQrCodeUri(ProcessRequest request, TicketBai ticketBaiRequest, XadesSignedXml signature)
     {
         var identifier = GetIdentier(request, ticketBaiRequest, signature);
         return new Uri(BuildValidationUrl(identifier, ticketBaiRequest.Factura.CabeceraFactura.SerieFactura, ticketBaiRequest.Factura.CabeceraFactura.NumFactura, ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura));
