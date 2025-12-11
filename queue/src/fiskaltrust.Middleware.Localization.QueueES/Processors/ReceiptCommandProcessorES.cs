@@ -1,11 +1,14 @@
-﻿using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.storage.V0;
-using System.Text.Json;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
+using fiskaltrust.Middleware.Localization.QueueES.Validation;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
@@ -24,9 +27,29 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
+        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _queueItemRepository);
+        var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
+        {
+            IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
+            GeneratesSignature = true,
+            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
+            //NumberSeries = series  // Include series for moment order validation
+        });
+        if (!validationResults.IsValid)
+        {
+            foreach (var result in validationResults.Results)
+            {
+                foreach (var error in result.Errors)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
+                }
+            }
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         var queueItemRepository = await _queueItemRepository;
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
-        var lastQueueItem = queueES.SSCDSignQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
+        var lastQueueItem = queueES.LastSimplifiedInvoiceQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.LastSimplifiedInvoiceQueueItemId.Value) : null;
 
         if (lastQueueItem is not null)
         {
@@ -56,10 +79,12 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         {
             LastReceipt = lastReceipt,
         };
-        var serieFactura = $"{request.ReceiptResponse.ftCashBoxIdentification}/S";
-        var numFactura = (queueES.CurrentSimplifiedInvoiceSeriesNumber ?? 0) + 1;
+        
+        // Generate series identifier if not set
+        var serieFactura = queueES.SimplifiedInvoiceSeries ?? $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}0000";
+        var numFactura = queueES.SimplifiedInvoiceNumerator + 1;
 
-        request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}/{numFactura}";
+        request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";
         request.ReceiptResponse.ftStateData = responseStateData;
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest
@@ -76,7 +101,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
                 ftJournalESId = Guid.NewGuid(),
                 Number = response.ReceiptResponse.ftQueueRow,
                 Data = JsonSerializer.Serialize(responseStateData.ES!.GovernmentAPI),
-                JournalType = JournalESType.VeriFactu.ToString(),
+                JournalType = JournalESType.TicketBAI.ToString(),
                 ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
                 ftQueueId = response.ReceiptResponse.ftQueueID,
             });
@@ -86,11 +111,15 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
             _logger.LogError(ex, "Error processing receipt");
         }
 
-        queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
-        queueES.CurrentSimplifiedInvoiceSeriesNumber = numFactura;
-
-        await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
-
+        if (response.ReceiptResponse.ftState.IsState(State.Success))
+        {
+            queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
+            queueES.SimplifiedInvoiceNumerator = numFactura;
+            queueES.SimplifiedInvoiceSeries = serieFactura;
+            queueES.LastSimplifiedInvoiceMoment = request.ReceiptRequest.cbReceiptMoment;
+            queueES.LastSimplifiedInvoiceQueueItemId = response.ReceiptResponse.ftQueueItemID;
+            await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
+        }
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
@@ -101,4 +130,8 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
     public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
     public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+
+    public async Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+
+    public async Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 }

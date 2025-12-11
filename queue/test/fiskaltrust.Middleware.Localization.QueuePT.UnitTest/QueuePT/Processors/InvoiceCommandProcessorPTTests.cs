@@ -40,6 +40,7 @@ public class InvoiceCommandProcessorPTTests
         };
         var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
+        result.receiptResponse.ftSignatures.Should().BeEmpty();
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
     }

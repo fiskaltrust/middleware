@@ -1,9 +1,14 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+using fiskaltrust.ifPOS.v2.pt;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
@@ -32,15 +37,28 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem CreatePTQRCode(string qrCode)
+    public static SignatureItem CreatePTQRCode(ProcessResponse processResponse, bool sandbox, string qrCode)
     {
-        return new SignatureItem()
+        if (sandbox)
         {
-            Caption = "[www.fiskaltrust.pt]",
-            Data = qrCode,
-            ftSignatureFormat = SignatureFormat.QRCode,
-            ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
-        };
+            return new SignatureItem()
+            {
+                Caption = $"https://receipts-sandbox.fiskaltrust.eu/{processResponse.ReceiptResponse.ftQueueID}/{processResponse.ReceiptResponse.ftQueueItemID}",
+                Data = qrCode,
+                ftSignatureFormat = SignatureFormat.QRCode,
+                ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
+            };
+        }
+        else
+        {
+            return new SignatureItem()
+            {
+                Caption = $"https://receipts.fiskaltrust.eu/{processResponse.ReceiptResponse.ftQueueID}/{processResponse.ReceiptResponse.ftQueueItemID}",
+                Data = qrCode,
+                ftSignatureFormat = SignatureFormat.QRCode,
+                ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
+            };
+        }
     }
 
     public static SignatureItem AddIvaIncluido()
@@ -87,22 +105,22 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem AddProformaReference(List<(ReceiptRequest, ReceiptResponse)> receiptReferences)
+    public static SignatureItem AddProformaReference(List<Receipt> receiptReferences)
     {
         return new SignatureItem
         {
             Caption = $"",
-            Data = $"Referencia: Proforma {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
+            Data = $"Referencia: Proforma {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };
     }
 
-    public static SignatureItem AddReferenceSignature(List<(ReceiptRequest, ReceiptResponse)> receiptReferences)
+    public static SignatureItem AddReferenceSignature(List<Receipt> receiptReferences)
     {
         return new SignatureItem
         {
-            Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification.Split("#").Last()}",
+            Caption = $"Referencia {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
             Data = $"Razão: Devolução",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
@@ -129,5 +147,32 @@ public static class SignatureItemFactoryPT
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };
+    }
+
+    public static SignatureItem AddConsumidorFinal()
+    {
+        return new SignatureItem
+        {
+            Caption = "",
+            Data = "Consumidor final",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+        };
+    }
+
+    public static void AddCustomerSignaturesIfNecessary(ProcessCommandRequest request, ProcessResponse response)
+    {
+        if (request.ReceiptRequest.cbCustomer is null)
+        {
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
+        }
+    }
+
+    public static void AddHandWrittenSignatures(ProcessCommandRequest request, ProcessResponse response)
+    {
+        if (request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) && data.PT is not null && data.PT.Series is not null && data.PT.Number.HasValue)
+        {
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddManualDocumentIdentification(data.PT.Series, data.PT.Number.Value));
+        }
     }
 }

@@ -31,6 +31,7 @@ public class ProtocolCommandProcessorPTTests
             ftReceiptCase = ((ReceiptCase) 0x5054_2000_0000_0000).WithCase(receiptCase),
             cbChargeItems = [],
             cbPayItems = [],
+            cbUser = "testUser"
         };
         var receiptResponse = new ReceiptResponse
         {
@@ -63,10 +64,77 @@ public class ProtocolCommandProcessorPTTests
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
         middlewareQueueItemRepositoryMock.Setup(x => x.GetAsync())
             .ReturnsAsync([]);
+        queuePT.NumeratorStorage = new NumeratorStorage
+        {
+            ProFormaSeries = new NumberSeries
+            {
+                TypeCode = "PF",
+                ATCUD = "AAJFJ9VC37",
+                Series = "ft2025019d",
+                Numerator = 0,
+                LastHash = ""
+            },
+            BudgetSeries = new NumberSeries
+            {
+                TypeCode = "OR",
+                ATCUD = "AAJFJ9VC38",
+                Series = "ft2025019e",
+                Numerator = 0,
+                LastHash = ""
+            },
+            CreditNoteSeries = new NumberSeries
+            {
+                TypeCode = "NC",
+                ATCUD = "AAJFJ9VC39",
+                Series = "ft2025019f",
+                Numerator = 0,
+                LastHash = ""
+            },
+            InvoiceSeries = new NumberSeries
+            {
+                TypeCode = "FT",
+                ATCUD = "AAJFJ9VC30",
+                Series = "ft2025019a",
+                Numerator = 0,
+                LastHash = ""
+            },
+            SimplifiedInvoiceSeries = new NumberSeries
+            {
+                TypeCode = "FS",
+                ATCUD = "AAJFJ9VC31",
+                Series = "ft2025019b",
+                Numerator = 0,
+                LastHash = ""
+            },
+            PaymentSeries = new NumberSeries
+            {
+                TypeCode = "RE",
+                ATCUD = "AAJFJ9VC32",
+                Series = "ft2025019c",
+                Numerator = 0,
+                LastHash = ""
+            },
+            HandWrittenFSSeries = new NumberSeries
+            {
+                TypeCode = "FSV",
+                ATCUD = "AAJFJ9VC33",
+                Series = "ft2025019g",
+                Numerator = 0,
+                LastHash = ""
+            },
+            TableChecqueSeries = new NumberSeries
+            {
+                TypeCode = "CM",
+                ATCUD = "AAJFJ9VC33",
+                Series = "ft2025019g",
+                Numerator = 0,
+                LastHash = ""
+            }
+        };
         var protocolCommandProcessorGR = new ProtocolCommandProcessorPT(grSSCDMock.Object, queuePT, new v2.Helpers.AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
-        result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
+        result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000, because: string.Join(Environment.NewLine, result.receiptResponse.ftSignatures.Select(x => x.Data)));
     }
 
     [Theory]

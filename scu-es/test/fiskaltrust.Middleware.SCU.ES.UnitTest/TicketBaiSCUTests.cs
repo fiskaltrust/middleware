@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
 using fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;

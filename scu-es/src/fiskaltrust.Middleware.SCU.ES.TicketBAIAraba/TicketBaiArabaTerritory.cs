@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -7,9 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using fiskaltrust.Middleware.SCU.ES.Common;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
 using Microsoft.Xades;
 
@@ -39,9 +39,9 @@ public class TicketBaiArabaTerritory : ITicketBaiTerritory
 
     public string CancelZuzendu => "/anulaciones/baja";
 
-    public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers) { }
+    public void AddHeaders(TicketBai request, HttpRequestHeaders headers) { }
 
-    public string ProcessContent(TicketBaiRequest request, string content) => content;
+    public string ProcessContent(TicketBai request, string content) => content;
 
     public ByteArrayContent GetHttpContent(string content) => new StringContent(content, Encoding.UTF8, "application/xml");
 

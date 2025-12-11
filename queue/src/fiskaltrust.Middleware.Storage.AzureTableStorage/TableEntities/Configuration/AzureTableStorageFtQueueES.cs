@@ -10,8 +10,18 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
         public string CashBoxIdentification { get; set; }
 
         public Guid? SSCDSignQueueItemId { get; set; }
-        public ulong? CurrentFullInvoiceSeriesNumber { get; set; }
-        public ulong? CurrentSimplifiedInvoiceSeriesNumber { get; set; }
+        
+        // Simplified Invoice fields
+        public DateTime? LastSimplifiedInvoiceMoment { get; set; }
+        public Guid? LastSimplifiedInvoiceQueueItemId { get; set; }
+        public long SimplifiedInvoiceNumerator { get; set; }
+        public string SimplifiedInvoiceSeries { get; set; }
+
+        // Full Invoice fields
+        public DateTime? LastInvoiceMoment { get; set; }
+        public Guid? LastInvoiceQueueItemId { get; set; }
+        public long InvoiceNumerator { get; set; }
+        public string InvoiceSeries { get; set; }
 
         public int SSCDFailCount { get; set; }
         public DateTime? SSCDFailMoment { get; set; }

@@ -4,7 +4,6 @@ using System.Linq.Expressions;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Models;
 using Microsoft.Xades;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
@@ -23,9 +22,9 @@ public interface ITicketBaiTerritory
     string SubmitZuzendu { get; }
     string CancelZuzendu { get; }
 
-    public void AddHeaders(TicketBaiRequest request, HttpRequestHeaders headers);
+    public void AddHeaders(TicketBai request, HttpRequestHeaders headers);
 
-    public string ProcessContent(TicketBaiRequest request, string content);
+    public string ProcessContent(TicketBai request, string content);
 
     public ByteArrayContent GetHttpContent(string content);
 
