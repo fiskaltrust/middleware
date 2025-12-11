@@ -108,6 +108,16 @@ public class TicketBaiSCU : IESSSCD
                 var errors = JsonSerializer.Serialize(responseMessages.Select(r => new Exception($"{r.code}: {r.message}")));
                 _logger.LogError("TicketBAI submission failed with errors: {Errors}", errors);
                 request.ReceiptResponse.SetReceiptResponseError(errors);
+
+                var middlewareStateDataInner = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+                middlewareStateDataInner ??= new MiddlewareStateData();
+                middlewareStateDataInner.ES ??= new MiddlewareStateDataES();
+                middlewareStateDataInner.ES.GovernmentAPI = new GovernmentAPI
+                {
+                    Version = GovernmentAPISchemaVersion.V0,
+                    Request = requestContent,
+                    Response = responseContent
+                };
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
