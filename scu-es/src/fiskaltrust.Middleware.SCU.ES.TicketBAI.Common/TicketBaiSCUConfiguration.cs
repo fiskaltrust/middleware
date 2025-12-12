@@ -57,6 +57,11 @@ public class TicketBaiSCUConfiguration
             config.SoftwareNif = softwareNif.ToString()!;
         }
 
+        if (configuration.TryGetValue(nameof(Sandbox), out var sandbox) && sandbox != null)
+        {
+            config.Sandbox = Convert.ToBoolean(sandbox);
+        }
+
         return config;
     }
 }
