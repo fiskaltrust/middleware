@@ -145,7 +145,6 @@ namespace fiskaltrust.Middleware.Queue
                     await CreateActionJournalAsync(message, "", null).ConfigureAwait(false);
                 }
 
-
                 if (_middlewareConfiguration.ReceiptRequestMode == 1)
                 {
                     //try to sign, remove receiptrequest-flag
@@ -175,7 +174,12 @@ namespace fiskaltrust.Middleware.Queue
             {
                 queueItem.ftQueueTimeout = 15000;
             }
-            
+
+            if (string.IsNullOrWhiteSpace(queue.CountryCode))
+            {
+                throw new InvalidOperationException($"Queue '{queue.ftQueueId}' has no CountryCode configured. For localization v1 the queue CountryCode must be set.");
+            }
+
             queueItem.country = queue.CountryCode;
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
@@ -203,13 +207,7 @@ namespace fiskaltrust.Middleware.Queue
                     exception = e;
                     countrySpecificActionJournals = new();
 
-                    var countryCode = queue.CountryCode;
-                    if (string.IsNullOrWhiteSpace(countryCode))
-                    {
-                        countryCode = ReceiptRequestHelper.GetCountry(data);
-                    }
-
-                    var encodedCountry = EncodeCountry(countryCode);
+                    var encodedCountry = EncodeCountry(queue.CountryCode);
 
                     receiptResponse = new ReceiptResponse
                     {
