@@ -69,6 +69,23 @@ namespace fiskaltrust.Middleware.Queue
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
 
+                IsV1Tagging((ulong) request.ftReceiptCase, nameof(request.ftReceiptCase));
+                if (request.cbChargeItems != null)
+                {
+                    foreach (var chargeItem in request.cbChargeItems)
+                    {
+                        IsV1Tagging((ulong) chargeItem.ftChargeItemCase, nameof(chargeItem.ftChargeItemCase));
+                    }
+                }
+
+                if (request.cbPayItems != null)
+                {
+                    foreach (var payItem in request.cbPayItems)
+                    {
+                        IsV1Tagging((ulong) payItem.ftPayItemCase, nameof(payItem.ftPayItemCase));
+                    }
+                }
+
                 var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
                 var response = await InternalSign(queue, request).ConfigureAwait(false);
@@ -128,7 +145,6 @@ namespace fiskaltrust.Middleware.Queue
                     await CreateActionJournalAsync(message, "", null).ConfigureAwait(false);
                 }
 
-
                 if (_middlewareConfiguration.ReceiptRequestMode == 1)
                 {
                     //try to sign, remove receiptrequest-flag
@@ -159,7 +175,12 @@ namespace fiskaltrust.Middleware.Queue
                 queueItem.ftQueueTimeout = 15000;
             }
 
-            queueItem.country = ReceiptRequestHelper.GetCountry(data);
+            if (string.IsNullOrWhiteSpace(queue.CountryCode))
+            {
+                throw new InvalidOperationException($"Queue '{queue.ftQueueId}' has no CountryCode configured. For localization v1 the queue CountryCode must be set.");
+            }
+
+            queueItem.country = queue.CountryCode;
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
             queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
@@ -185,6 +206,9 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     exception = e;
                     countrySpecificActionJournals = new();
+
+                    var encodedCountry = EncodeCountry(queue.CountryCode);
+
                     receiptResponse = new ReceiptResponse
                     {
                         ftCashBoxID = queue.ftCashBoxId.ToString(),
@@ -195,15 +219,17 @@ namespace fiskaltrust.Middleware.Queue
                         cbReceiptReference = data.cbReceiptReference,
                         ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
                         ftReceiptMoment = DateTime.UtcNow,
-                        ftSignatures = new SignaturItem[] {
-                            new SignaturItem() {
+                        ftSignatures = new[]
+                        {
+                            new SignaturItem
+                            {
                                 ftSignatureFormat = 0x1,
-                                ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                ftSignatureType = (long)(((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
                                 Caption = "uncaught-exeption",
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long)(encodedCountry | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
@@ -390,6 +416,39 @@ namespace fiskaltrust.Middleware.Queue
             queue.ftReceiptHash = receiptJournal.ftReceiptHash;
             queue.ftReceiptTotalizer += receiptJournal.ftReceiptTotal;
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        }
+        
+        private static ulong EncodeCountry(string? countryCode)
+        {
+            if (string.IsNullOrWhiteSpace(countryCode))
+            {
+                throw new ArgumentException("Country code must not be null or empty.", nameof(countryCode));
+            }
+
+            return countryCode.ToUpperInvariant() switch
+            {
+                "DE" => 0x4445000000000000,
+                "FR" => 0x4652000000000000,
+                "ME" => 0x4D45000000000000,
+                "IT" => 0x4954000000000000,
+                "AT" => 0x4154000000000000,
+                _    => throw new NotSupportedException($"Country code '{countryCode}' is not supported for v1.")
+            };
+        }
+        
+        private const ulong V1TaggingMask = 0x0000_F000_0000_0000;
+        private const ulong V1Tag_0       = 0x0000_0000_0000_0000;
+        private const ulong V1Tag_8       = 0x0000_8000_0000_0000;
+
+        private static void IsV1Tagging(ulong caseValue, string componentName)
+        {
+            var tagging = caseValue & V1TaggingMask;
+            if (tagging != V1Tag_0 && tagging != V1Tag_8)
+            {
+                throw new NotSupportedException($"Unsupported tagging version in {componentName} for localization v1. "+
+                                                $"Only v1 tagging (0x0) and v1 receipt request tagging (0x8) are supported. " +
+                                                $"Found: 0x{tagging:X}");
+            }
         }
     }
 }

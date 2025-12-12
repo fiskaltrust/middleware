@@ -173,7 +173,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = State.Success.WithCountry(queueItem.country?.ToUpper() ?? _fallBackCountryCode).WithVersion(0x2),
+            ftState = 0,
             ftReceiptIdentification = "",
         };
     }
@@ -197,7 +197,91 @@ public class SignProcessor : ISignProcessor
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
 
-        if (queue.CountryCode != "GR")
+        if (string.IsNullOrWhiteSpace(queue.CountryCode))
+        {
+            throw new InvalidOperationException($"Queue '{queue.ftQueueId}' has no CountryCode configured. For localization v2 the queue CountryCode must be set.");
+        }
+
+        if (request.ftReceiptCase.Version() != 2)
+        {
+            var errorMessage = $"The tagging version of the ReceiptCase (0x{(ulong) request.ftReceiptCase:X}) is not supported for localization v2. " + "All cases must have tagging version 2 (case & 0x0000_F000_0000_0000 == 0x2000_0000_0000).";
+
+            receiptResponse.SetReceiptResponseError(errorMessage);
+            return (receiptResponse, new List<ftActionJournal>());
+        }
+
+        if (request.cbChargeItems != null)
+        {
+            foreach (var chargeItem in request.cbChargeItems)
+            {
+                if (chargeItem.ftChargeItemCase.Version() != 2)
+                {
+                    var errorMessage = $"The tagging version of the ChargeItemCase (0x{(ulong) chargeItem.ftChargeItemCase:X}) is not supported for localization v2. " + "All cases must have tagging version 2 (case & 0x0000_F000_0000_0000 == 0x2000_0000_0000).";
+
+                    receiptResponse.SetReceiptResponseError(errorMessage);
+                    return (receiptResponse, new List<ftActionJournal>());
+                }
+            }
+        }
+
+        if (request.cbPayItems != null)
+        {
+            foreach (var payItem in request.cbPayItems)
+            {
+                if (payItem.ftPayItemCase.Version() != 2)
+                {
+                    var errorMessage = $"The tagging version of the PayItemCase (0x{(ulong) payItem.ftPayItemCase:X}) is not supported for localization v2. " + "All cases must have tagging version 2 (case & 0x0000_F000_0000_0000 == 0x2000_0000_0000).";
+
+                    receiptResponse.SetReceiptResponseError(errorMessage);
+                    return (receiptResponse, new List<ftActionJournal>());
+                }
+            }
+        }
+
+        receiptResponse.ftState = receiptResponse.ftState.WithCountry(queue.CountryCode);
+
+        var queueCountry = queue.CountryCode;
+
+        var receiptCountry = request.ftReceiptCase.Country();
+        if (!string.Equals(receiptCountry, queueCountry, StringComparison.OrdinalIgnoreCase))
+        {
+            var errorMessage = $"The country of the ReceiptCase ('{receiptCountry ?? "<null>"}') does not match the queue country ('{queueCountry}').";
+
+            receiptResponse.SetReceiptResponseError(errorMessage);
+            return (receiptResponse, new List<ftActionJournal>());
+        }
+
+        if (request.cbChargeItems != null)
+        {
+            foreach (var chargeItem in request.cbChargeItems)
+            {
+                var chargeItemCountry = chargeItem.ftChargeItemCase.Country();
+                if (!string.Equals(chargeItemCountry, queueCountry, StringComparison.OrdinalIgnoreCase))
+                {
+                    var errorMessage = $"The country of the ChargeItemCase ('{chargeItemCountry ?? "<null>"}') does not match the queue country ('{queueCountry}').";
+
+                    receiptResponse.SetReceiptResponseError(errorMessage);
+                    return (receiptResponse, new List<ftActionJournal>());
+                }
+            }
+        }
+
+        if (request.cbPayItems != null)
+        {
+            foreach (var payItem in request.cbPayItems)
+            {
+                var payItemCountry = payItem.ftPayItemCase.Country();
+                if (!string.Equals(payItemCountry, queueCountry, StringComparison.OrdinalIgnoreCase))
+                {
+                    var errorMessage = $"The country of the PayItemCase ('{payItemCountry ?? "<null>"}') does not match the queue country ('{queueCountry}').";
+
+                    receiptResponse.SetReceiptResponseError(errorMessage);
+                    return (receiptResponse, new List<ftActionJournal>());
+                }
+            }
+        }
+
+        if (queue.CountryCode != "GR" && queue.CountryCode != "PT")
         {
             if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {

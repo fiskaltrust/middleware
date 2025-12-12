@@ -47,10 +47,17 @@ public class QueueStorageProvider : IQueueStorageProvider
     public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
     {
         _cachedQueue ??= await GetQueueAsync();
+
+        if (string.IsNullOrWhiteSpace(_cachedQueue.CountryCode))
+        {
+            throw new InvalidOperationException($"Queue '{_cachedQueue.ftQueueId}' has no CountryCode configured. " + "For localization v2 the queue CountryCode must be set.");
+        }
+
         var jsonSerializerOptions = new JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
+
         var queueItem = new ftQueueItem
         {
             ftQueueItemId = Guid.NewGuid(),
@@ -62,15 +69,14 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
             country = _cachedQueue.CountryCode,
-            // TOdo we need to set this to the correct procsesing version
-            // ProcessingVersion = _middlewareConfiguration.ProcessingVersion,
-            version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
+
         if (queueItem.ftQueueTimeout == 0)
         {
             queueItem.ftQueueTimeout = 15000;
         }
+
         queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
         await (await _storageProvider.CreateMiddlewareQueueItemRepository()).InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
         return queueItem;
