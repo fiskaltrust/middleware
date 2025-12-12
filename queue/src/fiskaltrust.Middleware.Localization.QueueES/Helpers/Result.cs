@@ -1,6 +1,6 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
-namespace fiskaltrust.Middleware.SCU.ES.Helpers;
+namespace fiskaltrust.Middleware.Localization.QueueES.Helpers;
 
 public record Result<T, E>
 {

@@ -20,10 +20,10 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class PosReceiptTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class PosReceiptTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
-        public PosReceiptTests(SignProcessorDependenciesFixture fixture) => _fixture = fixture;
+        public PosReceiptTests() => _fixture = new();
         [Fact]
         public async Task SignProcessor_ImplicitFlow_ShouldReturnValidResponse()
         {

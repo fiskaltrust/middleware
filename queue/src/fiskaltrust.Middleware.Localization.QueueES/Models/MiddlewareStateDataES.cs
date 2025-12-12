@@ -1,4 +1,4 @@
-
+﻿
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2;
@@ -19,7 +19,15 @@ public class MiddlewareStateData : v2.Models.MiddlewareStateData
 
     public new static MiddlewareStateData FromReceiptResponse(ReceiptResponse receiptResponse)
     {
-        return new MiddlewareStateData(v2.Models.MiddlewareStateData.FromReceiptResponse(receiptResponse)!);
+        var data = v2.Models.MiddlewareStateData.FromReceiptResponse(receiptResponse);
+        if (data != null)
+        {
+            var middlewareStateData = new MiddlewareStateData(data);
+        }
+        return new MiddlewareStateData(new v2.Models.MiddlewareStateData
+        {
+
+        });
     }
 
 }

@@ -10,14 +10,14 @@ using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class OtherProcessTypeTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class OtherProcessTypeTests
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
-        public OtherProcessTypeTests(SignProcessorDependenciesFixture fixture)
+        public OtherProcessTypeTests()
         {
-            _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = new();
+            _receiptTests = new ReceiptTests(_fixture);
         }
         [Fact]
         public async Task OtherProcessType_IsNoImplicitFlowAndOpenTrans_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptReference(_receiptTests.GetReceipt("OrderProcessType", "OrderTypeNoImplNoOpen", 0x4445000000000014), "No transactionnumber found for cbReceiptReference '{0}'.").ConfigureAwait(false);

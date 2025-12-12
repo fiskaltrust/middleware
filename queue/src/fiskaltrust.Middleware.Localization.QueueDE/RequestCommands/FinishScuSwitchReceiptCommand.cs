@@ -45,11 +45,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             var ajs = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
             var lastInitiateSwitchJournal = ajs.OrderBy(x => x.Moment).LastOrDefault(x => x.Type == $"{0x4445000000000003:X}-{nameof(InitiateSCUSwitch)}");
-            var initiateSwitchNotification = (!string.IsNullOrEmpty(lastInitiateSwitchJournal.DataJson)
+            var initiateSwitchNotification = (!string.IsNullOrEmpty(lastInitiateSwitchJournal?.DataJson)
                 ? JsonConvert.DeserializeObject<InitiateSCUSwitch>(lastInitiateSwitchJournal.DataJson)
                 : null) ?? throw new Exception($"The SCU switch must be initiated with a initiate-scu-switch receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
 
-            if (queueDE.ftSignaturCreationUnitDEId != null && !(queueDE.ftSignaturCreationUnitDEId == initiateSwitchNotification.TargetSCUId)) 
+            if (queueDE.ftSignaturCreationUnitDEId != null && !(queueDE.ftSignaturCreationUnitDEId == initiateSwitchNotification.TargetSCUId))
             {
                 throw new Exception($"The SCU switch must be initiated with a initiate-scu-switch receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
             }

@@ -11,15 +11,15 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class InitialOperationTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class InitialOperationTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
 
-        public InitialOperationTests(SignProcessorDependenciesFixture fixture)
+        public InitialOperationTests()
         {
-            _fixture = fixture;
-            _receiptTests = new ReceiptTests(fixture);
+            _fixture = new SignProcessorDependenciesFixture();
+            _receiptTests = new ReceiptTests(_fixture);
         }
 
         [Fact]

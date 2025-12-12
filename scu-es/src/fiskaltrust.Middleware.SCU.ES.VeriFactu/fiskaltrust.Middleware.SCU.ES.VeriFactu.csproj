@@ -14,4 +14,8 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ES.Common\fiskaltrust.Middleware.SCU.ES.Common.csproj" />
+  </ItemGroup>
+
 </Project>

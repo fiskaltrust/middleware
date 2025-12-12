@@ -6,14 +6,14 @@ using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class DeltaTransactionReceiptTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class DeltaTransactionReceiptTests
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
-        public DeltaTransactionReceiptTests(SignProcessorDependenciesFixture fixture)
+        public DeltaTransactionReceiptTests()
         {
-            _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = new SignProcessorDependenciesFixture();
+            _receiptTests = new ReceiptTests(_fixture);
         }
         [Fact]
         public async Task DeltaTransaction_IsNoImplicitFlow_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "DeltaTransNoImplFlow", 0x444500010000000A), "ReceiptCase {0:X} (Delta-transaction receipt) can not use implicit-flow flag.").ConfigureAwait(false);

@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 // Key handling is based on this condition to ensure that we are handling it case insensitive
-                LauncherEnvironment =  _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
+                LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
             };
 
@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
-            if((middlewareConfiguration.LauncherEnvironment != LauncherEnvironments.Cloud) && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
+            if ((middlewareConfiguration.LauncherEnvironment != LauncherEnvironments.Cloud) && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
             {
                 return;
             }
@@ -84,19 +84,26 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "...", "redacted" }
             };
 
-            var cashboxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(middlewareConfiguration.Configuration["configuration"].ToString());
+            if (middlewareConfiguration.Configuration.TryGetValue("configuration", out var configurationJson))
+            {
+                try
+                {
+                    var cashboxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationJson.ToString());
 
-            var activeQueue = cashboxConfiguration.ftQueues.First(x => x.Id == middlewareConfiguration.QueueId);
-            
-            configuration["QueueVersion"] = activeQueue.Version;
-            configuration["QueueUrl"] = activeQueue.Url;
+                    var activeQueue = cashboxConfiguration.ftQueues.First(x => x.Id == middlewareConfiguration.QueueId);
 
-            configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
-            configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
+                    configuration["QueueVersion"] = activeQueue.Version;
+                    configuration["QueueUrl"] = activeQueue.Url;
 
-            configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
+                    configuration["ScuVersion"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Version;
+                    configuration["ScuUrl"] = cashboxConfiguration.ftSignaturCreationDevices.FirstOrDefault()?.Url;
 
-            configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
+                    configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
+
+                    configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
+                }
+                catch { }
+            }
 
             var actionJournal = new ftActionJournal
             {

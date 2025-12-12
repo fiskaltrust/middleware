@@ -12,15 +12,15 @@ using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class FinishScuSwitchTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class FinishScuSwitchTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
 
-        public FinishScuSwitchTests(SignProcessorDependenciesFixture fixture)
+        public FinishScuSwitchTests()
         {
-            _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = new SignProcessorDependenciesFixture();
+            _receiptTests = new ReceiptTests(_fixture);
         }
 
         [Fact]

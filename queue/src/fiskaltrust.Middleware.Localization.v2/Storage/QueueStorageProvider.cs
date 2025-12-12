@@ -1,13 +1,15 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.storage.V0;
-using System.Runtime.CompilerServices;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using System.Reflection.Metadata.Ecma335;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2.Storage;
 
@@ -16,6 +18,7 @@ public class QueueStorageProvider : IQueueStorageProvider
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
     private readonly CryptoHelper _cryptoHelper;
+    private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
     public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
@@ -199,11 +202,11 @@ public class QueueStorageProvider : IQueueStorageProvider
         return null;
     }
 
-    public async Task<List<Receipt>?> GetReferencedReceiptsAsync(ReceiptRequest data)
+    public async Task<(List<Receipt>?, string? error)> GetReferencedReceiptsAsync(ReceiptRequest data)
     {
         if (data.cbPreviousReceiptReference is null)
         {
-            return null;
+            return (null, null);
         }
         var queueItemRepository = await _storageProvider.CreateMiddlewareQueueItemRepository();
 
@@ -220,12 +223,12 @@ public class QueueStorageProvider : IQueueStorageProvider
 
             if (previousReceiptReferenceQueueItems.Count == 0)
             {
-                throw new Exception($"Referenced queue item with reference {previousReceiptReference} not found.");
+                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' didn't match with any of the items in the Queue.");
             }
 
             if (previousReceiptReferenceQueueItems.Count > 1)
             {
-                throw new Exception($"Multiple queue items found with reference {previousReceiptReference}.");
+                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' did match with more than one item in the Queue.");
             }
 
             var receipt = new Receipt
@@ -239,6 +242,6 @@ public class QueueStorageProvider : IQueueStorageProvider
             previousReceiptReferenceReceipts.Add(receipt);
         }
 
-        return previousReceiptReferenceReceipts;
+        return (previousReceiptReferenceReceipts, null);
     }
 }

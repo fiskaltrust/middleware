@@ -8,7 +8,7 @@ using FirmaXadesNetCore;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.NetworkInformation;
 
-namespace fiskaltrust.Middleware.SCU.ES.Helpers
+namespace fiskaltrust.Middleware.Localization.QueueES.Helpers
 {
     public class Utf8StringWriter : StringWriter
     {

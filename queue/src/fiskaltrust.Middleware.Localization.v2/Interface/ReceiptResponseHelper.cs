@@ -1,10 +1,27 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
 public static class ReceiptResponseHelper
 {
+    public static List<Receipt> GetRequiredPreviousReceiptReference(this ReceiptResponse receiptResponse)
+    {
+        var middlewareStateData = MiddlewareStateData.FromReceiptResponse(receiptResponse);
+        if(middlewareStateData?.PreviousReceiptReference == null)
+        {
+            throw new InvalidOperationException("PreviousReceiptReference is required but was not found in the ReceiptResponse.");
+        }
+        return middlewareStateData.PreviousReceiptReference;
+    }
+
+    public static List<Receipt>? GetPreviousReceiptReference(this ReceiptResponse receiptResponse)
+    {
+        var middlewareStateData = MiddlewareStateData.FromReceiptResponse(receiptResponse);
+        return middlewareStateData?.PreviousReceiptReference;
+    }
+
     public static void SetReceiptResponseError(this ReceiptResponse receiptResponse, string errorMessage)
     {
         receiptResponse.ftState = receiptResponse.ftState.WithState(State.Error);

@@ -17,7 +17,8 @@ public class QueueESConfiguration
 
     [JsonProperty("scu-max-retries")]
     public int? ScuMaxRetries { get; set; }
+
     public static QueueESConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration)
     => JsonConvert.DeserializeObject<QueueESConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
-            
+
 }

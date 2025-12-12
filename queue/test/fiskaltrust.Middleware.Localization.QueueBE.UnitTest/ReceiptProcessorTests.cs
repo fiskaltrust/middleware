@@ -17,11 +17,11 @@ namespace fiskaltrust.Middleware.Localization.QueueBE.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = (ReceiptCase) 0x4245_2000_0000_0000 // BE case
+                ftReceiptCase = (ReceiptCase)0x4245_2000_0000_0000 // BE case
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = (State) 0x4245_2000_0000_0000, // BE state
+                ftState = (State)0x4245_2000_0000_0000, // BE state
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -45,11 +45,11 @@ namespace fiskaltrust.Middleware.Localization.QueueBE.UnitTest
         {
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (ReceiptCase) 0x4245_2000_0000_0000 // BE case
+                ftReceiptCase = (ReceiptCase)0x4245_2000_0000_0000 // BE case
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = (State) 0x4245_2000_0000_0000, // BE state
+                ftState = (State)0x4245_2000_0000_0000, // BE state
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),

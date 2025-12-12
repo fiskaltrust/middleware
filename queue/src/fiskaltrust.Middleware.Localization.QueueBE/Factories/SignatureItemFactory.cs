@@ -1,5 +1,4 @@
-using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueBE.Interface;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueBE.Models.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;

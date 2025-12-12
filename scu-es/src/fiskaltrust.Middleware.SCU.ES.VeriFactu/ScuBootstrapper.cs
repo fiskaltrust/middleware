@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using fiskaltrust.ifPOS.v2.es;
+﻿using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using System.Security.Cryptography.X509Certificates;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 

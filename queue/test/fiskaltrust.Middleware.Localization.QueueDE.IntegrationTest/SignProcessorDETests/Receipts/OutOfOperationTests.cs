@@ -20,11 +20,11 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class OutOfOperationTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class OutOfOperationTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
 
-        public OutOfOperationTests(SignProcessorDependenciesFixture fixture) => _fixture = fixture;
+        public OutOfOperationTests() => _fixture = new();
 
         [Fact]
         public async Task SignProcessor_OutOfOuerationReceipt_SCUReachableShouldSign()

@@ -12,21 +12,19 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.DE
 
         public Task InsertOrUpdateTransactionAsync(FailedFinishTransaction transaction)
         {
-            if (Data.ContainsKey(transaction.cbReceiptReference))
-            {
-                Data.Remove(transaction.cbReceiptReference);
-            }
-            Data.Add(transaction.cbReceiptReference, transaction);
+            Data.TryRemove(transaction.cbReceiptReference, out var _);
+            Data.TryAdd(transaction.cbReceiptReference, transaction);
             return Task.CompletedTask;
         }
 
         public Task<FailedFinishTransaction> RemoveAsync(string cbReceiptReference)
         {
-            if (Data.TryGetValue(cbReceiptReference, out var transaction))
+            if (Data.TryRemove(cbReceiptReference, out var transaction))
             {
-                Data.Remove(cbReceiptReference);
+                return Task.FromResult(transaction);
             }
-            return Task.FromResult(transaction);
+
+            return null;
         }
 
         public Task<bool> ExistsAsync(string cbReceiptReference) => Task.FromResult(Data.ContainsKey(cbReceiptReference));

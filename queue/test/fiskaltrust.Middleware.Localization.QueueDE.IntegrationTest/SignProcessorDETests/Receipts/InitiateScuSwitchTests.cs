@@ -22,15 +22,15 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class InitiateScuSwitchTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class InitiateScuSwitchTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
 
-        public InitiateScuSwitchTests(SignProcessorDependenciesFixture fixture)
+        public InitiateScuSwitchTests()
         {
-            _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = new();
+            _receiptTests = new ReceiptTests(_fixture);
         }
 
         [Fact]
