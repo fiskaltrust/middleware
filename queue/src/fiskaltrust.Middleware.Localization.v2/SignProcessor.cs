@@ -10,7 +10,6 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
 using System.Text.Json;
-using Microsoft.Identity.Client.Utils.Windows;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -24,25 +23,20 @@ public class SignProcessor : ISignProcessor
     private readonly bool _isSandbox;
     private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
-    private readonly string _fallBackCountryCode;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
         IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
-        MiddlewareConfiguration configuration,
-        string fallBackCountryCode = "")
+        MiddlewareConfiguration configuration)
     {
         _logger = logger;
         _processRequest = processRequest;
         _cashBoxIdentification = cashBoxIdentification;
-        _queueId = configuration.QueueId;
-        _cashBoxId = configuration.CashBoxId;
         _isSandbox = configuration.IsSandbox;
         _queueStorageProvider = queueStorageProvider;
         _receiptRequestMode = configuration.ReceiptRequestMode;
-        _fallBackCountryCode = fallBackCountryCode;
     }
 
     public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
