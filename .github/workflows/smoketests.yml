@@ -2,7 +2,7 @@
 
 on:
   workflow_dispatch:
-    inputs:   
+    inputs:
       platform:
         description: "platform"
         required: true
@@ -30,7 +30,7 @@ on:
         description: "Queue package version"
         type: string
         default: latest
-     
+
 permissions:
   id-token: write
   contents: read
@@ -38,112 +38,112 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
- 
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - name: Validate inputs
         run: |
-            if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *MySQL* ]]; then
-              echo "❌ MySQL not supported on Linux!"
-              exit 1
-            fi
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *MySQL* ]]; then
+            echo "❌ MySQL not supported on Linux!"
+            exit 1
+          fi
 
-            if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *EF* && "${{ inputs.launcherVersion }}" == "v1.3" ]]; then
-              echo "❌ Launcher v1.3 can't run EF on Linux!"
-              exit 1
-            fi
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *EF* && "${{ inputs.launcherVersion }}" == "v1.3" ]]; then
+            echo "❌ Launcher v1.3 can't run EF on Linux!"
+            exit 1
+          fi
 
-            if [[ "${{ inputs.platform }}" == "macos-latest" &&  "${{ inputs.queuePackage }}" != *SQLite* ]]; then
-              echo "❌ Only SQLite supported on macOS!"
-              exit 1
-            fi
+          if [[ "${{ inputs.platform }}" == "macos-latest" &&  "${{ inputs.queuePackage }}" != *SQLite* ]]; then
+            echo "❌ Only SQLite supported on macOS!"
+            exit 1
+          fi
 
-            echo ""
-            echo "### ✅ Supported combinations"
-            echo ""
-            echo "| Platform       | Launcher Version | Queue Package                      | Supported |"
-            echo "|----------------|------------------|------------------------------------|------------|"
-            echo "| windows-latest | v1.3, v2.0       | SQLite, MySQL, EF                  | ✅ Yes     |"
-            echo "| ubuntu-latest  | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
-            echo "| ubuntu-latest  | any              | MySQL                              | ❌ No      |"
-            echo "| ubuntu-latest  | v2.0             | EF                                 | ✅ Yes     |"
-            echo "| macos-latest   | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
-            echo "| macos-latest   | any              | MySQL, EF                          | ❌ No      |"
-            echo ""
+          echo ""
+          echo "### ✅ Supported combinations"
+          echo ""
+          echo "| Platform       | Launcher Version | Queue Package                      | Supported |"
+          echo "|----------------|------------------|------------------------------------|------------|"
+          echo "| windows-latest | v1.3, v2.0       | SQLite, MySQL, EF                  | ✅ Yes     |"
+          echo "| ubuntu-latest  | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
+          echo "| ubuntu-latest  | any              | MySQL                              | ❌ No      |"
+          echo "| ubuntu-latest  | v2.0             | EF                                 | ✅ Yes     |"
+          echo "| macos-latest   | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
+          echo "| macos-latest   | any              | MySQL, EF                          | ❌ No      |"
+          echo ""
 
   test-middleware:
     needs: validate
     runs-on: ${{ inputs.platform }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4      
-      
+        uses: actions/checkout@v4
+
       - name: Create cashbox
         shell: pwsh
         run: |
-            $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
-            $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
+          $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
+          $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
 
-            $headers = @{
-              accountid   = "${{ secrets.FT_ACCOUNT_ID }}"
-              accesstoken = "${{ secrets.FT_ACCESS_TOKEN }}"
-              "Content-Type" = "application/json"
-            }
+          $headers = @{
+            accountid   = "${{ secrets.FT_ACCOUNT_ID }}"
+            accesstoken = "${{ secrets.FT_ACCESS_TOKEN }}"
+            "Content-Type" = "application/json"
+          }
 
-            $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
-            $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
-            $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
+          $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
+          $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
+          $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
-            $pass="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
-            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
-             $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
-             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
-            }
+          $pass="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+          if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
+           $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
+           $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+          }
 
-            if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
-             $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
-             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
-            }
+          if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
+           $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
+           $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+          }
 
-            $body = $body | ConvertTo-Json -Depth 10
+          $body = $body | ConvertTo-Json -Depth 10
 
-            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
+          $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
 
-            # Extract values
-            $cashboxId  = $response.cashBoxId
-            $accessToken = $response.accessToken
-            $queueId = $response.configuration.ftQueues[0].Id
+          # Extract values
+          $cashboxId  = $response.cashBoxId
+          $accessToken = $response.accessToken
+          $queueId = $response.configuration.ftQueues[0].Id
 
-            echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
-            echo "accessToken=$accessToken" >> $env:GITHUB_ENV
-            echo "queueId=$queueId"       >> $env:GITHUB_ENV
+          echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
+          echo "accessToken=$accessToken" >> $env:GITHUB_ENV
+          echo "queueId=$queueId"       >> $env:GITHUB_ENV
 
       - name: Install MySQL and run service
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
         run: |
-            choco install mysql --params "'/port:3306'" -y
+          choco install mysql --params "'/port:3306'" -y
 
-            # Start MySQL service if not already running
-            $service = Get-Service -Name mysql -ErrorAction SilentlyContinue
-            if ($service.Status -ne 'Running') {
-              Start-Service mysql
-            }
+          # Start MySQL service if not already running
+          $service = Get-Service -Name mysql -ErrorAction SilentlyContinue
+          if ($service.Status -ne 'Running') {
+            Start-Service mysql
+          }
 
-            # Wait for MySQL to be ready
-            Write-Host "Waiting for MySQL to be ready..."
-            Start-Sleep -Seconds 10
+          # Wait for MySQL to be ready
+          Write-Host "Waiting for MySQL to be ready..."
+          Start-Sleep -Seconds 10
 
-            # Set a known root password
-            $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
-            & $mysqladmin -u root password "${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+          # Set a known root password
+          $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
+          & $mysqladmin -u root password "${{ secrets.FT_SMOKETESTS_PASSWORD }}"
 
-            # Verify connection
-            $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
-            & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
+          # Verify connection
+          $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
+          & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
 
-            Write-Host "✅ MySQL root password successfully set and verified."
+          Write-Host "✅ MySQL root password successfully set and verified."
 
       - name: Start LocalDB
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
@@ -182,22 +182,22 @@ jobs:
            $headers = @{ accessToken = $accessToken }
            $url = "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download-launcher?cashboxId=$cashboxId&offline=$offline&platform=$platformV2"
           }
-         
+
           $output = "$launcher.$cashboxId.zip"
           Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
 
       - name: Extract launcher package
         shell: pwsh
         run: |
-         $cashboxId = "${{ env.cashboxId }}"
-         $launcher =  "${{ env.launcher }}"
-         $zipPath = "$launcher.$cashboxId.zip"
-         $extractPath = "${{ env.launcherpath }}"
-         
-         if (Test-Path $extractPath) {
-           Remove-Item -Path $extractPath -Recurse -Force
-         }
-         Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+          $cashboxId = "${{ env.cashboxId }}"
+          $launcher =  "${{ env.launcher }}"
+          $zipPath = "$launcher.$cashboxId.zip"
+          $extractPath = "${{ env.launcherpath }}"
+
+          if (Test-Path $extractPath) {
+            Remove-Item -Path $extractPath -Recurse -Force
+          }
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
       - name: Install Mono if platform is Ubuntu
         if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest'  && inputs.launcherVersion == 'v1.3') }}
@@ -215,13 +215,13 @@ jobs:
       - name: Install expect
         if: ${{ (inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest') && inputs.launcherVersion == 'v1.3' }}
         run: |
-           if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
-              sudo apt-get update && sudo apt-get install -y expect
-           else
-              brew install expect
-            fi
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
+             sudo apt-get update && sudo apt-get install -y expect
+          else
+             brew install expect
+           fi
 
-      - name:  Run launcher,send requests, and stop
+      - name: Run launcher,send requests, and stop
         shell: pwsh
         run: |
           #....Run launcher....
@@ -259,7 +259,7 @@ jobs:
              bash -c "chmod +x '$scriptPath'"
              $process = Start-Process -FilePath "sudo" -ArgumentList "bash", $scriptPath -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
           }
-         
+
             
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
@@ -338,7 +338,7 @@ jobs:
 
             #....Stop launcher....
             Write-Host "Stopping launcher process..."
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue      
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
 
       - name: Upload test output
         if: always()
@@ -347,5 +347,3 @@ jobs:
           name: output-${{ inputs.platform }}-${{ inputs.queuePackage }}-${{ inputs.queueVersion }}-Launcher-${{ inputs.launcherVersion }}
           path: test-output.log
         continue-on-error: true
- 
-  
