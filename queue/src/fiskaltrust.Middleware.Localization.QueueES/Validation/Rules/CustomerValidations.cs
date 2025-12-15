@@ -95,7 +95,7 @@ public static class CustomerValidations
         }
         else
         {
-            if (!SpainValidationHelpers.IsValidSpanishTaxId(middlewareCustomer.CustomerVATId))
+            if (!SpainValidationHelpers.IsValidSpanishTaxId(middlewareCustomer))
             {
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesES.EEEE_InvalidSpanishTaxId(middlewareCustomer.CustomerVATId),
