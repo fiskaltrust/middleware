@@ -40,10 +40,11 @@ public static class CountryType2Mapper
     }
 
     /// <summary>
-    /// Maps a customer country string to CountryType2 enum, with a fallback to US if parsing fails.
+    /// Maps a customer country string to CountryType2 enum.
     /// </summary>
     /// <param name="customerCountry">The customer country string from MiddlewareCustomer</param>
-    /// <returns>The mapped CountryType2 enum value, or US as default</returns>
+    /// <returns>The mapped CountryType2 enum value</returns>
+    /// <exception cref="ArgumentException">Thrown when the country code is invalid or not supported</exception>
     public static CountryType2 MapCustomerCountry(string? customerCountry)
     {
         if (TryParseCountryCode(customerCountry, out var country))
@@ -51,7 +52,11 @@ public static class CountryType2Mapper
             return country;
         }
 
-        // Default to US if parsing fails (matching the current hardcoded value in TicketBaiFactory)
-        return CountryType2.US;
+        // Provide a clear error message indicating the invalid country code
+        var errorMessage = string.IsNullOrWhiteSpace(customerCountry)
+            ? "Customer country code is required but was not provided or is empty."
+            : $"Invalid or unsupported customer country code: '{customerCountry}'. Expected a valid ISO 3166-1 alpha-2 country code (e.g., 'US', 'DE', 'ES', 'FR').";
+
+        throw new ArgumentException(errorMessage, nameof(customerCountry));
     }
 }
