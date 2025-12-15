@@ -214,25 +214,25 @@ public class QueueStorageProvider : IQueueStorageProvider
         foreach (var previousReceiptReference in previousReceiptReferences)
         {
             var previousReceiptReferenceQueueItems = await queueItemRepository.GetByReceiptReferenceAsync(previousReceiptReference).ToListAsync();
+            var receipts = previousReceiptReferenceQueueItems
+                .Where(qi => qi.IsReceiptRequestFinished())
+                .Select(qi => new Receipt
+                {
+                    Request = JsonSerializer.Deserialize<ReceiptRequest>(qi.request)!,
+                    Response = JsonSerializer.Deserialize<ReceiptResponse>(qi.response)!,
+                }).Where(x => !x.Response.ftState.IsState(State.Error)).ToList();
 
-            if (previousReceiptReferenceQueueItems.Count == 0)
+            if (receipts.Count == 0)
             {
-                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' didn't match with any of the items in the Queue.");
+                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' didn't match with any of the items in the Queue or the items referenced are invalid.");
             }
-
-            if (previousReceiptReferenceQueueItems.Count > 1)
+            if (receipts.Count > 1)
             {
                 return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' did match with more than one item in the Queue.");
             }
 
-            var receipt = new Receipt
-            {
-                Request = JsonSerializer.Deserialize<ReceiptRequest>(previousReceiptReferenceQueueItems[0].request)!,
-                Response = JsonSerializer.Deserialize<ReceiptResponse>(previousReceiptReferenceQueueItems[0].response)!,
-            };
-
+            var receipt = receipts.First();
             receipt.Response.ftStateData = null;
-
             previousReceiptReferenceReceipts.Add(receipt);
         }
 

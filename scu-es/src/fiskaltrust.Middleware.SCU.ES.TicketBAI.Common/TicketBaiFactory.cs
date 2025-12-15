@@ -55,7 +55,8 @@ public class TicketBaiFactory
         if (request.ReceiptRequest.ContainsCustomerInfo())
         {
             var customer = request.ReceiptRequest.GetCustomerOrNull()!;
-            if (!string.IsNullOrEmpty(customer.CustomerVATId))
+            if (customer.CustomerCountry == "ES" ||
+                string.IsNullOrEmpty(customer.CustomerCountry))
             {
                 // Currently we only set if we get a NIF
                 ticketBaiRequest.Sujetos.Destinatarios = [
@@ -70,21 +71,35 @@ public class TicketBaiFactory
             }
             else
             {
-                // Customer is not from Spain we need to add more details
-                ticketBaiRequest.Sujetos.Destinatarios = 
-                [
+                var idTro = new IDOtro
+                {
+                    CodigoPais = CountryType2Mapper.MapCustomerCountry(customer.CustomerCountry),
+                    CodigoPaisSpecified = true
+                };
+                if (!string.IsNullOrEmpty(customer.CustomerVATId))
+                {
+                    idTro.ID = customer.CustomerVATId;
+                    idTro.IDType = IDTypeType.Item02;
+                }
+                else if (!string.IsNullOrEmpty(customer.CustomerTaxId))
+                {
+                    idTro.ID = customer.CustomerTaxId;
+                    idTro.IDType = IDTypeType.Item04;
+                }
+                else
+                {
+                    idTro.ID = customer.CustomerIdentifier;
+                    idTro.IDType = IDTypeType.Item06;
+                }
+
+                ticketBaiRequest.Sujetos.Destinatarios = [
                     new IDDestinatario
-                    {
-                        Item = new IDOtro  
-                        {
-                            CodigoPais = CountryType2.EC,
-                            CodigoPaisSpecified = true,
-                            IDType = IDTypeType.Item06 // 06 is other, we could use support for other types too
-                        },
-                        ApellidosNombreRazonSocial = customer.CustomerName,
-                        CodigoPostal = customer.CustomerZip,
-                        Direccion = customer.CustomerStreet
-                    }
+                          {
+                              Item = idTro,
+                              ApellidosNombreRazonSocial = customer.CustomerName,
+                              CodigoPostal = customer.CustomerZip,
+                              Direccion = customer.CustomerStreet
+                          }
                 ];
             }
         }
