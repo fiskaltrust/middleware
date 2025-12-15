@@ -85,28 +85,16 @@ public static class CustomerValidations
         }
 
 
-        if (string.IsNullOrEmpty(middlewareCustomer.CustomerVATId))
+        if ((middlewareCustomer.CustomerCountry == "ES" || string.IsNullOrEmpty(middlewareCustomer.CustomerCountry)) && !SpainValidationHelpers.IsValidSpanishTaxId(middlewareCustomer))
         {
             yield return ValidationResult.Failed(new ValidationError(
-                ErrorMessagesES.EEEE_CustomerVATIdMissing,
-                "EEEE_CustomerVATIdMissing",
+                ErrorMessagesES.EEEE_InvalidSpanishTaxId(middlewareCustomer.CustomerVATId),
+                "EEEE_InvalidSpanishTaxId",
                 "cbCustomer.CustomerVATId"
-            ));
-        }
-        else
-        {
-            if (!SpainValidationHelpers.IsValidSpanishTaxId(middlewareCustomer))
-            {
-                yield return ValidationResult.Failed(new ValidationError(
-                    ErrorMessagesES.EEEE_InvalidSpanishTaxId(middlewareCustomer.CustomerVATId),
-                    "EEEE_InvalidSpanishTaxId",
-                    "cbCustomer.CustomerVATId"
-                ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
-            }
+            ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
         }
 
-
-        if(string.IsNullOrEmpty(middlewareCustomer.CustomerName))
+        if (string.IsNullOrEmpty(middlewareCustomer.CustomerName))
         {
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesES.EEEE_CustomerNameMissing,

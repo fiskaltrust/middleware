@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
@@ -86,10 +88,21 @@ public class TicketBaiFactory
                     idTro.ID = customer.CustomerTaxId;
                     idTro.IDType = IDTypeType.Item04;
                 }
-                else
+                else if (!string.IsNullOrEmpty(customer.CustomerIdentifier) && request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001))
                 {
+                    // For B2C invoice we will assume that the identifier is a passport or similar
+                    idTro.ID = customer.CustomerIdentifier;
+                    idTro.IDType = IDTypeType.Item03;
+                }
+                else if(!string.IsNullOrEmpty(customer.CustomerIdentifier))
+                {
+                    // For other cases we will assume that the identifier is a local tax id
                     idTro.ID = customer.CustomerIdentifier;
                     idTro.IDType = IDTypeType.Item06;
+                }
+                else
+                {
+                    // We do not supporte Item05 yet 
                 }
 
                 ticketBaiRequest.Sujetos.Destinatarios = [
@@ -136,11 +149,83 @@ public class TicketBaiFactory
             },
             TipoDesglose = new TipoDesgloseType
             {
-                Item = new DesgloseFacturaType
+                Item = GetFacturaDetails(request)
+            }
+        };
+        // For the FechOperacion field we could use Moment of the ChargeItem. Right no we omit it
+        // factura.DatosFactura.FechaOperacion = GetLocalTime(request.ReceiptRequest.cbReceiptMoment).ToString("dd-MM-yyyy");
+        return factura;
+    }
+
+    private static object GetFacturaDetails(ProcessRequest request)
+    {
+        // if the customer is non spanish we need to use DesgloseTipoOperacionType instead of DesgloseFacturaType
+        if (request.ReceiptRequest.TryGetMiddlewareCustomer(out var customer) && customer != null && !string.IsNullOrEmpty(customer.CustomerCountry) && customer.CustomerCountry != "ES")
+        {
+            var entregaChargeItems = new List<ChargeItemCaseTypeOfService> {
+                ChargeItemCaseTypeOfService.UnknownService,
+                ChargeItemCaseTypeOfService.Delivery,
+                ChargeItemCaseTypeOfService.Voucher,
+                ChargeItemCaseTypeOfService.CatalogService,
+                ChargeItemCaseTypeOfService.NotOwnSales,
+                ChargeItemCaseTypeOfService.OtherService
+            };
+
+            var prestacionServiciosChargeItems = new List<ChargeItemCaseTypeOfService> {
+                ChargeItemCaseTypeOfService.OtherService,
+                ChargeItemCaseTypeOfService.Tip,
+                ChargeItemCaseTypeOfService.Grant,
+                ChargeItemCaseTypeOfService.Receivable,
+                ChargeItemCaseTypeOfService.CashTransfer
+            };
+
+            var entregaTypes = CreateDetalleIVAType(request.ReceiptRequest.cbChargeItems.Where(x => entregaChargeItems.Contains(x.ftChargeItemCase.TypeOfService())).ToList()).ToList();
+            var prestacionServicios = CreateDetalleIVAType(request.ReceiptRequest.cbChargeItems.Where(x => prestacionServiciosChargeItems.Contains(x.ftChargeItemCase.TypeOfService())).ToList()).ToList();
+            var details = new DesgloseTipoOperacionType();
+            if (entregaTypes.Count > 0)
+            {
+                details.Entrega = new Entrega
                 {
                     Sujeta = new SujetaType
                     {
                         NoExenta =
+                                [
+                                    new DetalleNoExentaType
+                                    {
+                                        TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
+                                        DesgloseIVA = entregaTypes.ToArray()
+                                    }
+                                ]
+                    }
+                };
+            }
+
+            if (prestacionServicios.Count > 0)
+            {
+                details.PrestacionServicios = new PrestacionServicios
+                {
+                    Sujeta = new SujetaType
+                    {
+                        NoExenta =
+                                [
+                                    new DetalleNoExentaType
+                                    {
+                                        TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
+                                        DesgloseIVA = prestacionServicios.ToArray()
+                                    }
+                                ]
+                    }
+                };
+            }
+            return details;
+        }
+        else
+        {
+            return new DesgloseFacturaType
+            {
+                Sujeta = new SujetaType
+                {
+                    NoExenta =
                             [
                                 new DetalleNoExentaType
                                 {
@@ -148,14 +233,9 @@ public class TicketBaiFactory
                                     DesgloseIVA = CreateDetalleIVAType(request)
                                 }
                             ]
-                    }
                 }
-            }
-        };
-
-        // For the FechOperacion field we could use Moment of the ChargeItem. Right no we omit it
-        // factura.DatosFactura.FechaOperacion = GetLocalTime(request.ReceiptRequest.cbReceiptMoment).ToString("dd-MM-yyyy");
-        return factura;
+            };
+        }
     }
 
     private static string GetDescripcionFactura(ProcessRequest request) => request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) ? "Factura Simplificada" : "Factura";
@@ -208,6 +288,17 @@ public class TicketBaiFactory
         }
 
         return huellTbai;
+    }
+
+    private static DetalleIVAType[] CreateDetalleIVAType(List<ChargeItem> chargeItems)
+    {
+        var vatRates = chargeItems.GroupBy(x => x.VATRate);
+        return [.. vatRates.Select(x => new DetalleIVAType
+        {
+            BaseImponible = x.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)).ToString("0.00", CultureInfo.InvariantCulture),
+            TipoImpositivo = x.Key.ToString("0.00", CultureInfo.InvariantCulture),
+            CuotaImpuesto = x.Sum(x => x.VATAmount ?? 0.0m).ToString("0.00", CultureInfo.InvariantCulture)
+        })];
     }
 
     private static DetalleIVAType[] CreateDetalleIVAType(ProcessRequest request)

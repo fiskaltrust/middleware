@@ -46,6 +46,64 @@ public abstract class ESScuAcceptanceTestBase
 
 
     [Fact]
+    public virtual async Task Test_Invoice_WithCustomer_WithCash_USCustomer()
+    {
+        var scu = CreateScu();
+        var receiptRequest = new ReceiptRequest
+        {
+            cbReceiptReference = $"POS-{Guid.NewGuid().ToString()[..8]}",
+            cbReceiptMoment = DateTime.UtcNow,
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 2.0m,
+                    Amount = 42.0m,
+                    VATRate = 21.0m,
+                    VATAmount = 7.24m,
+                    Description = "Product A",
+                    ftChargeItemCase = (ChargeItemCase)0x4753_0000_0000_0001
+                },
+                new ChargeItem
+                {
+                    Quantity = 1.0m,
+                    Amount = 10.0m,
+                    VATRate = 10.0m,
+                    VATAmount = 0.91m,
+                    ftChargeItemCase = (ChargeItemCase)0x4753_0000_0000_0001,
+                    Description = "Product B"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Quantity = 1,
+                    Description = "Cash",
+                    ftPayItemCase = (PayItemCase)0x4753_0000_0000_0001,
+                    Amount = 52.0m
+                }
+            ],
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("ES").WithVersion(2),
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerIdentifier = "US673888750",
+                CustomerZip = "28001",
+                CustomerCity = "Madrid",
+                CustomerCountry = "US",
+                CustomerName = "John Doe",
+                CustomerStreet = "Calle de Example, 1"
+            }
+        };
+        var processRequest = CreateProcessRequest(receiptRequest);
+
+        var processResponse = await scu.ProcessReceiptAsync(processRequest);
+
+        AssertSuccessfulReceipt(processResponse);
+    }
+
+
+    [Fact]
     public virtual async Task Test_Invoice_WithCustomer_WithCash()
     {
         var scu = CreateScu();
