@@ -1,6 +1,10 @@
 name: Summary
 on:
+  repository_dispatch:
   pull_request:
+  issue_comment:
+    types: [created]
+
 jobs:
   enforce-all-checks:
     runs-on: ubuntu-latest
@@ -11,3 +15,4 @@ jobs:
         uses: poseidon/wait-for-status-checks@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          delay: 30
