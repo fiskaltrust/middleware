@@ -1,6 +1,6 @@
 name: Summary
 on:
-  check_suite:
+  check_run:
   pull_request:
 
 concurrency:
