@@ -1,9 +1,11 @@
 name: Summary
 on:
-  repository_dispatch:
+  check_suite:
   pull_request:
-  issue_comment:
-    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   enforce-all-checks:
