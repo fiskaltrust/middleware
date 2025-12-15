@@ -6,7 +6,7 @@ on:
 
 jobs:
   remove-label:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && github.event.pull_request.state == 'closed'
     runs-on: ubuntu-latest
     name: Remove meta-no-issue label
     permissions:
