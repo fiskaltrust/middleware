@@ -10,4 +10,6 @@ public class MiddlewareCustomer
     public string? CustomerCity { get; set; }
     public string? CustomerCountry { get; set; }
     public string? CustomerVATId { get; set; }
+    public string? CustomerTaxId { get; set; }
+    public string? CustomerIdentifier { get; set; }
 }
