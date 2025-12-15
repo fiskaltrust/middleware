@@ -17,8 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/labeler@v6
-        with:
-          sync-labels: true
 
   check-labels:
     name: Check labels

@@ -15,7 +15,7 @@ on:
 jobs:
   test:
     name: Test
-    runs-on:  windows-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -33,15 +33,14 @@ jobs:
         with:
           directory: scu-be/test
           pattern: "UnitTest"
-          args: '--no-build --filter only!=local'
+          args: "--no-build --filter only!=local"
 
       - name: Integration Tests
         uses: ./.github/actions/test
         with:
           directory: scu-be/test
           pattern: "IntegrationTest"
-          args: '--no-build'
-
+          args: "--no-build"
 
   publish-test-results:
     name: Publish Tests Results
@@ -50,7 +49,7 @@ jobs:
     permissions:
       checks: write
       pull-requests: write
-    if: always()
+    if: (!cancelled())
 
     steps:
       - name: Download Artifacts
@@ -62,6 +61,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: SCU.BE Test Results
+          check_run: false
           comment_mode: always
           files: "artifacts/**/*.trx"
           commit: ${{ inputs.commit }}
