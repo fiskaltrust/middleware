@@ -97,7 +97,7 @@ jobs:
           pattern: ${{ matrix.project }}
 
   publish-test-results:
-    name: Publish Tests Results
+    name: Publish Acceptance Tests Results
     needs: [queue-acceptance-test, storage-acceptance-test]
     runs-on: ubuntu-latest
     permissions:
@@ -111,7 +111,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Test Results
+      - name: Publish Acceptance Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: Acceptance Test Results

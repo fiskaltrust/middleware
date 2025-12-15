@@ -15,7 +15,7 @@ on:
 jobs:
   test:
     name: Test
-    runs-on:  windows-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -33,14 +33,14 @@ jobs:
         with:
           directory: scu-it/test
           pattern: "UnitTest"
-          args: '--no-build'
+          args: "--no-build"
 
       - name: Integration Tests
         uses: ./.github/actions/test
         with:
           directory: scu-it/test
           pattern: "IntegrationTest"
-          args: '--no-build'
+          args: "--no-build"
 
       # - name: Acceptance Tests
       #   uses: ./.github/actions/test
@@ -50,7 +50,7 @@ jobs:
       #     args: '--no-build'
 
   publish-test-results:
-    name: Publish Tests Results
+    name: Publish SCU.IT Tests Results
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -64,7 +64,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Test Results
+      - name: Publish SCU.IT Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: SCU.IT Test Results

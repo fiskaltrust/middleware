@@ -50,7 +50,7 @@ jobs:
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
   publish-test-results:
-    name: Publish Tests Results
+    name: Publish Queue Tests Results
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -64,7 +64,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Test Results
+      - name: Publish Queue Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: Queue Test Results
