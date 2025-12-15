@@ -71,7 +71,7 @@ jobs:
           args: '--filter "Category!=SkipWhenLiveUnitTesting" --no-build'
 
   publish-test-results:
-    name: Publish SCU.DE Tests Results
+    name: Publish Tests Results
     needs: [test, integration-tests]
     runs-on: ubuntu-latest
     permissions:
@@ -85,10 +85,11 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish SCU.DE Test Results
+      - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: SCU.DE Test Results
+          check_run: false
           comment_mode: always
           files: "artifacts/**/*.trx"
           commit: ${{ inputs.commit }}

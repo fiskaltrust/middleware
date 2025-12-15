@@ -50,7 +50,7 @@ jobs:
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
   publish-test-results:
-    name: Publish Queue Tests Results
+    name: Publish Tests Results
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -64,10 +64,11 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Queue Test Results
+      - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: Queue Test Results
+          check_run: false
           comment_mode: always
           files: "artifacts/**/*.trx"
           commit: ${{ inputs.commit }}

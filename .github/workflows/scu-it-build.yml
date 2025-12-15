@@ -50,7 +50,7 @@ jobs:
       #     args: '--no-build'
 
   publish-test-results:
-    name: Publish SCU.IT Tests Results
+    name: Publish Tests Results
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -64,10 +64,11 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish SCU.IT Test Results
+      - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: SCU.IT Test Results
+          check_run: false
           comment_mode: always
           files: "artifacts/**/*.trx"
           commit: ${{ inputs.commit }}
