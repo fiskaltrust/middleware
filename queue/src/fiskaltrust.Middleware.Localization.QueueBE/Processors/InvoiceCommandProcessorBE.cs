@@ -13,7 +13,6 @@ public class InvoiceCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
 {
 #pragma warning disable
     private readonly IBESSCD _sscd = sscd;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);

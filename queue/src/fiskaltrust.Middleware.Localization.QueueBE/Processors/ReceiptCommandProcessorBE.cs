@@ -12,7 +12,6 @@ public class ReceiptCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
 {
 #pragma warning disable
     private readonly IBESSCD _sscd = sscd;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(queueItemRepository);
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
