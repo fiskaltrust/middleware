@@ -7,6 +7,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Win32.SafeHandles;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -81,6 +82,7 @@ public class StaticNumeratorStorage
 
     public static async Task LoadStorageNumbers(NumeratorStorage numeratorStorage, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
+        // this loop over all queueitems can't stay.
         var queueItems = (await middlewareQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow).ToList();
         ReloadSeries(numeratorStorage.SimplifiedInvoiceSeries, queueItems);
         ReloadSeries(numeratorStorage.CreditNoteSeries, queueItems);

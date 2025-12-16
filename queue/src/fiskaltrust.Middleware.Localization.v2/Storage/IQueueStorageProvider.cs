@@ -11,6 +11,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Storage
         Task FinishQueueItem(ftQueueItem queueItem, ReceiptResponse receiptResponse);
         Task<long> GetCurrentRow();
         Task<ftQueueItem?> GetExistingQueueItemOrNullAsync(ReceiptRequest data);
+        // should use Result<List<Receipt>?, string>>
         Task<(List<Receipt>?, string? error)> GetReferencedReceiptsAsync(ReceiptRequest data);
         Task<long> IncrementQueueRow();
         Task<ftQueue> GetQueueAsync();

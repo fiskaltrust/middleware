@@ -16,6 +16,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -124,7 +125,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsPT.HasTransportInformation))
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_TransportationIsNotSupported,
@@ -167,7 +168,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsPT.HasTransportInformation))
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_TransportationIsNotSupported,

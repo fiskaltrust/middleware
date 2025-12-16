@@ -63,6 +63,8 @@ public class QueueStorageProvider : IQueueStorageProvider
             ftQueueRow = await IncrementQueueRow(),
             country = _cachedQueue.CountryCode,
             // TOdo we need to set this to the correct procsesing version
+            // We can try to just have the assembly version set by Nerdbank.GitVersion.
+            // Or do it like we do in the localization v1 and pass it in through the queue bootstrapper https://github.com/fiskaltrust/middleware/blob/a1c14a66fd3519756a313c50f02de8de7d33ee19/queue/src/fiskaltrust.Middleware.Queue/Bootstrapper/QueueBootstrapper.cs#L35
             // ProcessingVersion = _middlewareConfiguration.ProcessingVersion,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),

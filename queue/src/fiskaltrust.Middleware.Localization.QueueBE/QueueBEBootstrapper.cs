@@ -23,6 +23,7 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var signaturCreationUnitBE = new ftSignaturCreationUnitBE();
+        // With the storage project in the middleware repo this _could_ already be done correctly.
         var queueBE = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueBE>>(configuration["init_ftQueueBE"]!.ToString()!).First();
 
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
@@ -40,7 +41,11 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
 
     public MasterDataConfiguration? GetFromConfig(Dictionary<string, object> configuration)
     {
+        // The masterdata should be already saved in the database
+        // var masterDataService = new MasterDataService(configuration, storageProvider);
         return configuration.ContainsKey("init_masterData") ? JsonConvert.DeserializeObject<MasterDataConfiguration>(configuration["init_masterData"].ToString()!) : null;
+
+        // Do we want to continue with the masterdata process like it is in germany?
     }
 
     public Func<string, Task<string>> RegisterForSign()

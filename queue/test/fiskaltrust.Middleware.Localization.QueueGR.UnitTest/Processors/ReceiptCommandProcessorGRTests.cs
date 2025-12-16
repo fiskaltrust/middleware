@@ -144,7 +144,7 @@ public class ReceiptCommandProcessorGRTests
             // DeliveryNote with HasTransportInformation flag using extension method
             ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
                 .WithCase(ReceiptCase.DeliveryNote0x0005)
-                .WithFlag(ReceiptCaseFlagsGR.HasTransportInformation)
+                .WithFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation)
         };
         var receiptResponse = new ReceiptResponse
         {
@@ -181,7 +181,7 @@ public class ReceiptCommandProcessorGRTests
 
         // Verify that SCU was called
         grSSCDMock.Verify(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()), Times.Once);
-        
+
         // Verify response from SCU is returned
         result.receiptResponse.Should().Be(scuResponse);
         result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000);

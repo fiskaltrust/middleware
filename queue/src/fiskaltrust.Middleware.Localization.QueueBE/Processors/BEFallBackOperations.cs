@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueBE.Processors;
 
+// Should we move this into the localization v2 so that other markets can reuse it?
 public static class BEFallBackOperations
 {
     public static async Task<ProcessCommandResponse> NoOp(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

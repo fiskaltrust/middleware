@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Logic;
 
+// This belongs in the storage or in the queuestorageprovider in the localization v2.
 public class ReceiptReferenceProvider
 {
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository;

@@ -49,7 +49,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
 
     public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
             var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -59,7 +59,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
             }, receiptReferences);
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
-        
+
         return await GRFallBackOperations.NotSupported(request, "DeliveryNote");
     }
 

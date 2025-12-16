@@ -173,6 +173,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
+            // Should we not take this from the `queue.CountryCode` and is there ever a valid case where this can be empty?
             ftState = State.Success.WithCountry(queueItem.country?.ToUpper() ?? _fallBackCountryCode).WithVersion(0x2),
             ftReceiptIdentification = "",
         };
