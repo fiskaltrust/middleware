@@ -47,12 +47,7 @@ public class QueueStorageProvider : IQueueStorageProvider
     public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
     {
         _cachedQueue ??= await GetQueueAsync();
-
-        if (string.IsNullOrWhiteSpace(_cachedQueue.CountryCode))
-        {
-            throw new InvalidOperationException($"Queue '{_cachedQueue.ftQueueId}' has no CountryCode configured. " + "For localization v2 the queue CountryCode must be set.");
-        }
-
+        
         var jsonSerializerOptions = new JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

@@ -12,7 +12,6 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-
 namespace fiskaltrust.Middleware.Queue
 {
     public class SignProcessor : ISignProcessor
@@ -27,7 +26,6 @@ namespace fiskaltrust.Middleware.Queue
 
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly SignatureFactory _signatureFactory;
-        //private readonly Action<string> _onMessage;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -47,7 +45,6 @@ namespace fiskaltrust.Middleware.Queue
             _actionJournalRepository = actionJournalRepository;
             _cryptoHelper = cryptoHelper;
             _middlewareConfiguration = middlewareConfiguration;
-            //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
         }
 
@@ -69,22 +66,7 @@ namespace fiskaltrust.Middleware.Queue
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
 
-                IsV1Tagging((ulong) request.ftReceiptCase, nameof(request.ftReceiptCase));
-                if (request.cbChargeItems != null)
-                {
-                    foreach (var chargeItem in request.cbChargeItems)
-                    {
-                        IsV1Tagging((ulong) chargeItem.ftChargeItemCase, nameof(chargeItem.ftChargeItemCase));
-                    }
-                }
-
-                if (request.cbPayItems != null)
-                {
-                    foreach (var payItem in request.cbPayItems)
-                    {
-                        IsV1Tagging((ulong) payItem.ftPayItemCase, nameof(payItem.ftPayItemCase));
-                    }
-                }
+                request.EnsureV1Tagging();
 
                 var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
@@ -224,7 +206,7 @@ namespace fiskaltrust.Middleware.Queue
                             new SignaturItem
                             {
                                 ftSignatureFormat = 0x1,
-                                ftSignatureType = (long)(((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                ftSignatureType = (long)(encodedCountry | 0x2000_0000_3000),
                                 Caption = "uncaught-exeption",
                                 Data = e.ToString()
                             }
@@ -417,7 +399,7 @@ namespace fiskaltrust.Middleware.Queue
             queue.ftReceiptTotalizer += receiptJournal.ftReceiptTotal;
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         }
-        
+
         private static ulong EncodeCountry(string? countryCode)
         {
             if (string.IsNullOrWhiteSpace(countryCode))
@@ -432,23 +414,8 @@ namespace fiskaltrust.Middleware.Queue
                 "ME" => 0x4D45000000000000,
                 "IT" => 0x4954000000000000,
                 "AT" => 0x4154000000000000,
-                _    => throw new NotSupportedException($"Country code '{countryCode}' is not supported for v1.")
+                _ => throw new NotSupportedException($"Country code '{countryCode}' is not supported for v1.")
             };
-        }
-        
-        private const ulong V1TaggingMask = 0x0000_F000_0000_0000;
-        private const ulong V1Tag_0       = 0x0000_0000_0000_0000;
-        private const ulong V1Tag_8       = 0x0000_8000_0000_0000;
-
-        private static void IsV1Tagging(ulong caseValue, string componentName)
-        {
-            var tagging = caseValue & V1TaggingMask;
-            if (tagging != V1Tag_0 && tagging != V1Tag_8)
-            {
-                throw new NotSupportedException($"Unsupported tagging version in {componentName} for localization v1. "+
-                                                $"Only v1 tagging (0x0) and v1 receipt request tagging (0x8) are supported. " +
-                                                $"Found: 0x{tagging:X}");
-            }
         }
     }
 }
