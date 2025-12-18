@@ -192,7 +192,7 @@ public class SignProcessor : ISignProcessor
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
         
-        if (queue.CountryCode != "GR" && queue.CountryCode != "PT")
+        if (queue.CountryCode != "GR")
         {
             if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {
