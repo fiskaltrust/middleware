@@ -175,7 +175,8 @@ public class SignProcessor : ISignProcessor
 
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
     {
-        var queue = await _queueStorageProvider.GetQueueAsync();
+public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
+{
         if (queue.IsDeactivated())
         {
             return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
