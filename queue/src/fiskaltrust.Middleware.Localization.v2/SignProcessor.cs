@@ -100,7 +100,7 @@ public class SignProcessor : ISignProcessor
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
                 {
-                    (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
+                    (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queue, queueItem).ConfigureAwait(false);
                     actionjournals.AddRange(countrySpecificActionJournals);
                 }
                 catch (Exception e)
@@ -173,10 +173,8 @@ public class SignProcessor : ISignProcessor
         };
     }
 
-    public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+    public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
-public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
-{
         if (queue.IsDeactivated())
         {
             return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
@@ -192,7 +190,7 @@ public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> action
         {
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
-        
+
         if (queue.CountryCode != "GR")
         {
             if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
@@ -213,7 +211,7 @@ public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> action
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
-            (var receiptReferences, var error) = await _queueStorageProvider.GetReferencedReceiptsAsync(request);
+            (var receiptReferences, var error) = await _queueStorageProvider.GetReferencedReceiptsAsync(request).ConfigureAwait(false);
             if (error != null)
             {
                 receiptResponse.SetReceiptResponseError(error);
