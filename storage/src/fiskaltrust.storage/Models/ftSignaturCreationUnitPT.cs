@@ -2,11 +2,6 @@
 
 namespace fiskaltrust.storage.V0
 {
-    public class ftSignaturCreationUnitPTConfiguration
-    {
-        public Guid ftSignaturCreationUnitPTId { get; set; }
-    }
-
     public class ftSignaturCreationUnitPT
     {
         public Guid ftSignaturCreationUnitPTId { get; set; }
@@ -14,6 +9,8 @@ namespace fiskaltrust.storage.V0
         public string PrivateKey { get; set; }
 
         public string SoftwareCertificateNumber { get; set; }
+
+        public string Url { get; set; }
 
         public long TimeStamp { get; set; }
     }
