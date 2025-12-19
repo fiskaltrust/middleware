@@ -86,6 +86,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var logger = new Mock<ILogger<SignProcessor>>(MockBehavior.Loose);
 
             var receiptJournalRepository = new Mock<IMiddlewareReceiptJournalRepository>(MockBehavior.Strict);
+
             var actionJournalRepository = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             actionJournalRepository.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Returns(Task.CompletedTask);
 
@@ -100,8 +101,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 ftCashBoxId = cashboxId,
                 ftQueueId = queueId,
                 ftCurrentRow = 1,
+                CountryCode = "AT"
             };
-
 
             var configuration = new MiddlewareConfiguration
             {
@@ -127,6 +128,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             marketSpecificSignProcessor.Setup(x => x.FirstTaskAsync()).Returns(Task.CompletedTask);
             marketSpecificSignProcessor.Setup(x => x.FinalTaskAsync(queue, It.IsAny<ftQueueItem>(), request, actionJournalRepository.Object, It.IsAny<IMiddlewareQueueItemRepository>(), receiptJournalRepository.Object)).Returns(Task.CompletedTask);
 
+            var expectedCountryBits = EncodeCountry_TestOnly(queue.CountryCode);
+
             var matchResponse = (ftQueueItem queueItem, ReceiptResponse response) =>
             {
                 try
@@ -138,8 +141,9 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                     response.ftQueueItemID.Should().Be(queueItem.ftQueueItemId.ToString());
                     response.cbTerminalID.Should().Be(request.cbTerminalID);
                     response.ftQueueRow.Should().Be(1);
+
                     response.ftSignatures.Should().HaveCount(1).And.ContainSingle(x =>
-                        x.ftSignatureType == ((long) (((ulong) request.ftReceiptCase & 0xFFFF_FFFF_FFFF) | 0x2000_0000_3000))
+                        x.ftSignatureType == (long)(expectedCountryBits | 0x2000_0000_3000)
                         && x.ftSignatureFormat == 0x1
                         && x.Caption == "uncaught-exeption"
                         && x.Data.StartsWith("System.Exception: MyException") && x.Data.Contains("\n")
@@ -152,6 +156,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
 
                 return true;
             };
+
             var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId && qi.response == null))).Returns(Task.CompletedTask).Verifiable();
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId && qi.response != null && matchResponse(qi, JsonConvert.DeserializeObject<ReceiptResponse>(qi.response))))).Returns(Task.CompletedTask).Verifiable();
@@ -161,8 +166,10 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var process = async () => await sut.ProcessAsync(request);
 
             process.Should().Throw<Exception>().WithMessage("MyException");
+
             queueItemRepository.Verify();
         }
+
         [Fact]
         public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnNull()
         {
@@ -201,7 +208,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 ftCashBoxId = cashBoxId,
                 ftQueuedRow = 0,
                 ftCurrentRow = 1,
-                CountryCode = "DE" 
+                CountryCode = "DE"
             };
 
             var request = new ReceiptRequest
@@ -222,10 +229,9 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 .Setup(x => x.GetQueueAsync(queueId))
                 .ReturnsAsync(queue);
 
+            ftQueueItem? persistedWithResponse = null;
             var queueItemRepo = new Mock<IMiddlewareQueueItemRepository>();
-            queueItemRepo
-                .Setup(x => x.InsertOrUpdateAsync(It.IsAny<ftQueueItem>()))
-                .Returns(Task.CompletedTask);
+            queueItemRepo.Setup(x => x.InsertOrUpdateAsync(It.IsAny<ftQueueItem>())).Callback<ftQueueItem>(queueItem => { if (!string.IsNullOrWhiteSpace(queueItem.response)) { persistedWithResponse = queueItem; } }).Returns(Task.CompletedTask);
 
             var receiptJournalRepo = new Mock<IMiddlewareReceiptJournalRepository>();
             var actionJournalRepo = new Mock<IMiddlewareActionJournalRepository>();
@@ -243,6 +249,14 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 .Setup(x => x.GetFtCashBoxIdentificationAsync(queue))
                 .ReturnsAsync("IDENTIFIER");
 
+            marketSpecific
+                .Setup(x => x.FirstTaskAsync())
+                .Returns(Task.CompletedTask);
+
+            marketSpecific
+                .Setup(x => x.FinalTaskAsync(queue, It.IsAny<ftQueueItem>(), request, actionJournalRepo.Object, queueItemRepo.Object, receiptJournalRepo.Object))
+                .Returns(Task.CompletedTask);
+
             var cfg = new MiddlewareConfiguration
             {
                 QueueId = queueId,
@@ -259,14 +273,18 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 marketSpecific.Object,
                 cfg);
 
-            var response = await processor.ProcessAsync(request);
+            var act = async () => await processor.ProcessAsync(request);
 
-            ulong ftState = (ulong)response.ftState;
+            await act.Should().ThrowAsync<Exception>().WithMessage("boom");
 
+            persistedWithResponse.Should().NotBeNull("QueueItem with persisted response should exist even when V1 throws");
+            var response = JsonConvert.DeserializeObject<ReceiptResponse>(persistedWithResponse!.response);
+            response.Should().NotBeNull();
+
+            ulong ftState = (ulong)response!.ftState;
             ulong expectedCountryBits = EncodeCountry_TestOnly("DE");
 
             (ftState & 0xFFFF000000000000UL).Should().Be(expectedCountryBits);
-
             (ftState & 0xFFFFFFFFUL).Should().Be(0xEEEE_EEEEUL);
         }
         
