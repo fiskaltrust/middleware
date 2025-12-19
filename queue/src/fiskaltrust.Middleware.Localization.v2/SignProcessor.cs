@@ -10,7 +10,6 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
 using System.Text.Json;
-using Microsoft.Identity.Client.Utils.Windows;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -24,25 +23,20 @@ public class SignProcessor : ISignProcessor
     private readonly bool _isSandbox;
     private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
-    private readonly string _fallBackCountryCode;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
         IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
-        MiddlewareConfiguration configuration,
-        string fallBackCountryCode = "")
+        MiddlewareConfiguration configuration)
     {
         _logger = logger;
         _processRequest = processRequest;
         _cashBoxIdentification = cashBoxIdentification;
-        _queueId = configuration.QueueId;
-        _cashBoxId = configuration.CashBoxId;
         _isSandbox = configuration.IsSandbox;
         _queueStorageProvider = queueStorageProvider;
         _receiptRequestMode = configuration.ReceiptRequestMode;
-        _fallBackCountryCode = fallBackCountryCode;
     }
 
     public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
@@ -99,13 +93,14 @@ public class SignProcessor : ISignProcessor
             {
                 var queueItem = await _queueStorageProvider.ReserveNextQueueItem(receiptRequest);
                 queueItem.ftWorkMoment = DateTime.UtcNow;
-                var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification);
+                var queue = await _queueStorageProvider.GetQueueAsync();
+                var receiptResponse = CreateReceiptResponse(receiptRequest, queue, queueItem, await _cashBoxIdentification);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
 
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
                 {
-                    (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
+                    (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queue, queueItem).ConfigureAwait(false);
                     actionjournals.AddRange(countrySpecificActionJournals);
                 }
                 catch (Exception e)
@@ -161,7 +156,7 @@ public class SignProcessor : ISignProcessor
         }
     }
 
-    private ReceiptResponse CreateReceiptResponse(ReceiptRequest receiptRequest, ftQueueItem queueItem, string cashBoxIdentification)
+    private ReceiptResponse CreateReceiptResponse(ReceiptRequest receiptRequest, ftQueue queue,ftQueueItem queueItem, string cashBoxIdentification)
     {
         return new ReceiptResponse
         {
@@ -173,14 +168,13 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = State.Success.WithCountry(queueItem.country?.ToUpper() ?? _fallBackCountryCode).WithVersion(0x2),
+            ftState = State.Success.WithCountry(queue.CountryCode.ToUpper()).WithVersion(0x2),
             ftReceiptIdentification = "",
         };
     }
 
-    public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+    public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
-        var queue = await _queueStorageProvider.GetQueueAsync();
         if (queue.IsDeactivated())
         {
             return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
@@ -217,7 +211,7 @@ public class SignProcessor : ISignProcessor
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
-            (var receiptReferences, var error) = await _queueStorageProvider.GetReferencedReceiptsAsync(request);
+            (var receiptReferences, var error) = await _queueStorageProvider.GetReferencedReceiptsAsync(request).ConfigureAwait(false);
             if (error != null)
             {
                 receiptResponse.SetReceiptResponseError(error);
