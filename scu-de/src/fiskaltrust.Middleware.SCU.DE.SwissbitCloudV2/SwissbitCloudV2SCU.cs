@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int)request.TransactionNumber,
+                    Number = (int) request.TransactionNumber,
                 };
                 var updateTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, updateTransactionRequest);
 
@@ -104,7 +104,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int)request.TransactionNumber,
+                    Number = (int) request.TransactionNumber,
                 };
                 var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.FinishTransaction, finishTransactionRequest);
 
@@ -154,8 +154,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     LogTimeFormat = tseResult.LogTimeFormat,
                     MaxLogMemorySize = tseResult.StorageCapacity,
                     MaxNumberOfSignatures = long.MaxValue,
-                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong)x).ToList(),
-                    CurrentState = ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
+                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
+                    CurrentState = ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
                 };
                 LastTseInfo = tseInfo;
 
@@ -188,7 +188,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                 var tseResult = await _swissbitCloudV2Provider.DisableTseAsync();
 
-                return ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
+                return ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
             }
             catch (Exception ex)
             {
@@ -329,7 +329,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                         if (tempStream.Length - exportStateData.ReadPointer < chunkSize)
                         {
-                            chunkSize = (int)tempStream.Length - exportStateData.ReadPointer;
+                            chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
                         }
                         var buffer = new byte[chunkSize];
                         var len = await tempStream.ReadAsync(buffer, 0, buffer.Length);
@@ -377,30 +377,21 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                         {
                             if (request.Erase)
                             {
-                                var openTransaction = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
-                                if (openTransaction.Any())
+                                var openExports = await _swissbitCloudV2Provider.GetExportsAsync();
+                                var exportDto = openExports.FirstOrDefault(x => x.Id == request.TokenId);
+                                if (exportDto != null)
                                 {
-                                    var list = string.Join(",", openTransaction);
-                                    _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were open: {OpenTransactions}. " +
-                                        "If these transactions are not used anymore and could not be closed automatically by a daily closing receipt, please consider sending a fail-transaction-receipt to cancel them.", list);
+                                    exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
+                                    if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
+                                    {
+                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
+                                    }
                                 }
                                 else
                                 {
-                                    var openExports = await _swissbitCloudV2Provider.GetExportsAsync();
-                                    var exportDto = openExports.FirstOrDefault(x => x.Id == request.TokenId);
-                                    if (exportDto != null)
-                                    {
-                                        exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
-                                        if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
-                                        {
-                                            _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting, as it was already deleted.");
-                                    }
+                                    _logger.LogWarning($"Could not delete log files from TSE after successfully exporting, as it was already deleted.");
                                 }
+                                
                             }
                             sessionResponse.IsValid = true;
                             return sessionResponse;
@@ -490,7 +481,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new StartTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
@@ -508,7 +499,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new UpdateTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,
@@ -527,7 +518,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new FinishTransactionResponse
             {
-                TransactionNumber = (ulong)transactionResponse.Number,
+                TransactionNumber = (ulong) transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,

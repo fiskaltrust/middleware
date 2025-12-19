@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
 using System.Text.Json;
+using Microsoft.Identity.Client.Utils.Windows;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -23,13 +24,15 @@ public class SignProcessor : ISignProcessor
     private readonly bool _isSandbox;
     private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
+    private readonly string _fallBackCountryCode;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
         IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
-        MiddlewareConfiguration configuration)
+        MiddlewareConfiguration configuration,
+        string fallBackCountryCode = "")
     {
         _logger = logger;
         _processRequest = processRequest;
@@ -39,6 +42,7 @@ public class SignProcessor : ISignProcessor
         _isSandbox = configuration.IsSandbox;
         _queueStorageProvider = queueStorageProvider;
         _receiptRequestMode = configuration.ReceiptRequestMode;
+        _fallBackCountryCode = fallBackCountryCode;
     }
 
     public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
@@ -106,7 +110,9 @@ public class SignProcessor : ISignProcessor
                 }
                 catch (Exception e)
                 {
-                    receiptResponse.HasFailed();
+                    _logger.LogError(e, "Uncaught exception during receipt processing");
+
+                    receiptResponse.MarkAsFailed();
                     receiptResponse.AddSignatureItem(new SignatureItem
                     {
                         ftSignatureFormat = SignatureFormat.Text,
@@ -167,7 +173,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State) ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_F000_0000_0000),
+            ftState = State.Success.WithCountry(queueItem.country?.ToUpper() ?? _fallBackCountryCode).WithVersion(0x2),
             ftReceiptIdentification = "",
         };
     }
@@ -191,12 +197,40 @@ public class SignProcessor : ISignProcessor
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }
 
-        if (queue.CountryCode != "GR" && queue.CountryCode != "PT")
+        if (queue.CountryCode != "GR")
         {
-            receiptResponse.ftStateData = new MiddlewareStateData
+            if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {
-                PreviousReceiptReference = await _queueStorageProvider.GetReferencedReceiptsAsync(request)
-            };
+                receiptResponse.SetReceiptResponseError("Refunding a receipt is only supported with single references.");
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
+            if (request.IsPartialRefundReceipt() && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
+            {
+                receiptResponse.SetReceiptResponseError("Partial refunding a receipt is only supported with single references.");
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
+            if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
+            {
+                receiptResponse.SetReceiptResponseError("Voiding a receipt is only supported with single references.");
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
+            (var receiptReferences, var error) = await _queueStorageProvider.GetReferencedReceiptsAsync(request);
+            if (error != null)
+            {
+                receiptResponse.SetReceiptResponseError(error);
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
+            if (receiptReferences is not null)
+            {
+                receiptResponse.ftStateData = new MiddlewareStateData
+                {
+                    PreviousReceiptReference = receiptReferences
+                };
+            }
         }
 
         return await _processRequest(request, receiptResponse, queue, queueItem).ConfigureAwait(false);

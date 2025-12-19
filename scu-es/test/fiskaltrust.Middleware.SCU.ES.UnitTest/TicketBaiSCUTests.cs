@@ -1,9 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Threading.Tasks;
-using System.Xml.Linq;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Territories;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
+using fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -27,76 +34,104 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Gipuzkoa,
                 EmisorNif = "B10646545",
-                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L.",
+                SoftwareVersion = "1.0",
+                SoftwareName = "Incodebiz",
+                SoftwareLicenciaTBAI = "TBAIARbKKFCFdCC00879",
+                SoftwareNif = "B10646545"
             };
-            await PerformTicketBaiRequestChain(config);
+            await PerformTicketBaiRequestChain(config, new TicketBaiGipuzkoaTerritory());
 
         }
 
-        private async Task PerformTicketBaiRequestChain(TicketBaiSCUConfiguration config)
+        private async Task PerformTicketBaiRequestChain(TicketBaiSCUConfiguration config, ITicketBaiTerritory territory)
         {
-            var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var series = $"T-{DateTime.UtcNow.Ticks}";
-            var request = new SubmitInvoiceRequest
+            var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config, territory);
+
+            var request = new ReceiptRequest
             {
-                InvoiceMoment = DateTime.UtcNow,
-                Series = series,
-                InvoiceNumber = "001",
-                InvoiceLine = new List<InvoiceLine>
-                {
-                    new InvoiceLine
-                    {
+                cbReceiptReference = "001",
+                cbChargeItems = [
+                    new ChargeItem {
                         VATRate = 21.0m,
                         Amount = 121,
                         VATAmount = 21,
                         Description = "test object",
                         Quantity = 1
                     }
-                }
+                ]
             };
-            var response = await sut.SubmitInvoiceAsync(request);
-            _output.WriteLine(FormatXml(response.ResponseContent));
-            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
-
-            var response2 = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            var response = await sut.ProcessReceiptAsync(JsonSerializer.Deserialize<ProcessRequest>(JsonSerializer.Serialize(new ProcessRequest
             {
-                InvoiceMoment = DateTime.UtcNow,
-                Series = series,
-                InvoiceNumber = "002",
-                LastInvoiceMoment = request.LastInvoiceMoment,
-                LastInvoiceNumber = request.InvoiceNumber,
-                LastInvoiceSignature = response.ShortSignatureValue,
-                InvoiceLine = new List<InvoiceLine>
+                ReceiptRequest = request,
+                ReceiptResponse = new ReceiptResponse
                 {
-                    new InvoiceLine
+                    ftReceiptMoment = DateTime.Now,
+                    ftCashBoxIdentification = "test",
+                    ftStateData = new MiddlewareStateData
                     {
-                        VATRate = 21.0m,
-                        Amount = 121,
-                        VATAmount = 21,
-                        Description = "test object",
-                        Quantity = 1
+                        ES = new MiddlewareStateDataES { }
+                    }
+                },
+            })));
+            var responseContent = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            _output.WriteLine(responseContent);
+            response.ReceiptResponse.ftState.State().Should().Be(State.Success, because: responseContent);
+
+            var response2 = await sut.ProcessReceiptAsync(JsonSerializer.Deserialize<ProcessRequest>(JsonSerializer.Serialize(new ProcessRequest
+            {
+                ReceiptRequest = new ReceiptRequest
+                {
+                    cbReceiptReference = "002",
+                    cbChargeItems = [
+                        new ChargeItem {
+                            VATRate = 21.0m,
+                            Amount = 121,
+                            VATAmount = 21,
+                            Description = "test object",
+                            Quantity = 1
+                        }
+                    ]
+                },
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftReceiptMoment = DateTime.Now,
+                    ftCashBoxIdentification = "test",
+                    ftStateData = new MiddlewareStateData
+                    {
+                        ES = new MiddlewareStateDataES
+                        {
+                            LastReceipt = new Receipt
+                            {
+                                Request = request,
+                                Response = response.ReceiptResponse
+                            }
+                        }
                     }
                 }
-            });
+            })));
 
-            _output.WriteLine(FormatXml(response2.ResponseContent));
-            response2.Succeeded.Should().BeTrue(because: response2.ResponseContent);
+            var response2Content = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            _output.WriteLine(response2Content);
+            response2.ReceiptResponse.ftState.State().Should().Be(State.Success, because: response2Content);
         }
 
-        [Fact]
+        [Fact(Skip = "Araba certificate is not working")]
         public async Task SubmitArabaInvoiceAsync()
         {
             var cert = new X509Certificate2(@"TestCertificates/Araba/dispositivo_act.p12", "Iz3np32023", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Araba,
                 EmisorNif = "B10646545",
-                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L.",
+                SoftwareVersion = "1.0",
+                SoftwareName = "Incodebiz",
+                SoftwareLicenciaTBAI = "TBAIARbKKFCFdCC00879",
+                SoftwareNif = "B10646545"
             };
-            await PerformTicketBaiRequestChain(config);
+            await PerformTicketBaiRequestChain(config, new TicketBaiArabaTerritory());
         }
 
         [Fact(Skip = "Bizkaia certificate is not working")]
@@ -106,24 +141,14 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Bizkaia,
-                EmisorNif = "B10646545",
-                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
+                EmisorNif = "A99810541",
+                EmisorApellidosNombreRazonSocial = "8Hj2DimGJbQjW00FCDUxHFK06kwS3m",
+                SoftwareVersion = "1.0",
+                SoftwareName = "SOFTWARE GARANTE TICKETBAI PRUEBA",
+                SoftwareLicenciaTBAI = "TBAIBI00000000PRUEBA",
+                SoftwareNif = "A99800005"
             };
-            await PerformTicketBaiRequestChain(config);
-        }
-
-        private string FormatXml(string xml)
-        {
-            try
-            {
-                var doc = XDocument.Parse(xml);
-                return doc.ToString();
-            }
-            catch (Exception)
-            {
-                return xml;
-            }
+            await PerformTicketBaiRequestChain(config, new TicketBaiBizkaiaTerritory());
         }
     }
 }

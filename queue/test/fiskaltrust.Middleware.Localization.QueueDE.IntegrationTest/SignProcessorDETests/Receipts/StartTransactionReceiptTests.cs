@@ -10,14 +10,14 @@ using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class StartTransactionReceiptTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class StartTransactionReceiptTests
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
-        public StartTransactionReceiptTests(SignProcessorDependenciesFixture fixture)
+        public StartTransactionReceiptTests()
         {
-            _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = new();
+            _receiptTests = new ReceiptTests(_fixture);
         }
         [Fact]
         public async Task StartTransaction_IsNoImplicitFlow_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "StartTransNoImplFlow", 0x4445000100000008), "ReceiptCase {0:X} (Start-transaction receipt) can not use implicit-flow flag.").ConfigureAwait(false);

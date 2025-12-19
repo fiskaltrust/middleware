@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
 
+#nullable enable
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
     public sealed class FiskalyV2ApiProvider : IFiskalyApiProvider, IDisposable
@@ -87,7 +88,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 (int) response.StatusCode, $"GET tss/{tssId}/tx?states[]=ACTIVE");
         }
 
-        public async Task<ExportStateInformationDto> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
+        public async Task<ExportStateInformationDto?> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
         {
             var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -95,10 +96,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             {
                 return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
             }
+            if ((int) response.StatusCode == 429 /* System.Net.HttpStatusCode.TooManyRequests */)
+            {
+                return null;
+            }
             throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{exportId}). Response: {responseContent}",
             (int) response.StatusCode, $"GET tss/{tssId}/export/{exportId}");
         }
-
 
         public async Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId)
         {
@@ -137,7 +141,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task SetExportMetadataAsync(Guid tssId, Guid exportId, long? fromTransactionNumber, long toTransactionNumber)
         {
-            var metadata = new Dictionary<string, string>
+            var metadata = new Dictionary<string, string?>
             {
                 {"start_transaction_number", fromTransactionNumber?.ToString() },
                 {"end_transaction_number", toTransactionNumber.ToString() }
@@ -193,7 +197,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             return await GetExportByExportStateAsync(exportStateInformation);
         }
 
-#nullable enable
         public async Task<Stream?> StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, splitExportStateData.ExportId);
@@ -210,27 +213,27 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 return null;
             }
         }
-#nullable disable
 
         private async Task<ExportStateInformationDto> WaitUntilExportFinished(Guid tssId, Guid exportId)
         {
             var sw = Stopwatch.StartNew();
+            var backoff = TimeSpan.FromSeconds(1);
             do
             {
                 try
                 {
                     var exportStateInformation = await GetExportStateInformationByIdAsync(tssId, exportId);
-                    if (exportStateInformation.State == "ERROR" || exportStateInformation.State == "COMPLETED")
+                    if (exportStateInformation?.State == "ERROR" || exportStateInformation?.State == "COMPLETED")
                     {
                         return exportStateInformation;
                     }
-                    await Task.Delay(1000);
+                    await Task.Delay(backoff);
                 }
                 catch (Exception)
                 {
-
                     throw;
                 }
+                backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 1.5, TimeSpan.FromSeconds(30).TotalMilliseconds));
             } while (sw.ElapsedMilliseconds < EXPORT_TIMEOUT_MS);
 
             throw new TimeoutException($"Timeout of {EXPORT_TIMEOUT_MS}ms was reached while exporting the backup {exportId}.");

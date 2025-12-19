@@ -26,15 +26,15 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
-    public class ZeroReceiptTests : IClassFixture<SignProcessorDependenciesFixture>
+    public class ZeroReceiptTests
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
 
-        public ZeroReceiptTests(SignProcessorDependenciesFixture fixture)
+        public ZeroReceiptTests()
         {
-            _fixture = fixture;
-            _receiptTests = new ReceiptTests(fixture);
+            _fixture = new();
+            _receiptTests = new ReceiptTests(_fixture);
         }
 
         [Fact]
@@ -43,6 +43,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var (receiptRequest, expectedResponse, queueItem) = GetReceipt(Path.Combine("Data", "ZeroReceipt", "TseInfo"), "ZeroReceiptWithTseInfoFlag");
             var queue = new ftQueue { ftQueueId = Guid.Parse(receiptRequest.ftQueueID), StartMoment = DateTime.UtcNow };
             var sut = GetSUT();
+
+            foreach (var opentrans in await _fixture.openTransactionRepository.GetAsync())
+            {
+                await _fixture.openTransactionRepository.RemoveAsync(opentrans.cbReceiptReference);
+            }
+            _fixture.InMemorySCU.OpenTans = new ulong[0];
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
@@ -219,7 +225,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         private SignProcessorDE GetSUT()
         {
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            _fixture.InMemorySCU.OpenTans = null;
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration
             {

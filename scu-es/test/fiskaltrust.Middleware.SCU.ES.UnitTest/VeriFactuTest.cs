@@ -1,8 +1,7 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
-using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Moq;
@@ -11,7 +10,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
 using System.Net.Http;
 using System.Linq;
 

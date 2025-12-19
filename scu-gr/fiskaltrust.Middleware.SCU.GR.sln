@@ -1,0 +1,55 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D3735F43-830E-4992-8663-7182B6970DA2}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D46180D0-C3B0-4544-8571-46FCF7783EE0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.MyData", "src\fiskaltrust.Middleware.SCU.GR.MyData\fiskaltrust.Middleware.SCU.GR.MyData.csproj", "{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.UnitTest", "test\fiskaltrust.Middleware.SCU.GR.UnitTest\fiskaltrust.Middleware.SCU.GR.UnitTest.csproj", "{94946668-08ED-4AF7-B331-1774A2E94C99}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.AcceptanceTests", "test\fiskaltrust.Middleware.SCU.GR.AcceptanceTests\fiskaltrust.Middleware.SCU.GR.AcceptanceTests.csproj", "{B530EACC-2000-45E9-BE23-DFF022FA5883}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.MyData.UnitTest", "test\fiskaltrust.Middleware.SCU.GR.MyData.UnitTest\fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.csproj", "{77811328-6B61-4F31-BE0E-DD6C4D322F3F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94946668-08ED-4AF7-B331-1774A2E94C99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94946668-08ED-4AF7-B331-1774A2E94C99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94946668-08ED-4AF7-B331-1774A2E94C99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94946668-08ED-4AF7-B331-1774A2E94C99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{94946668-08ED-4AF7-B331-1774A2E94C99} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+		{B530EACC-2000-45E9-BE23-DFF022FA5883} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1855DFED-93D8-4A05-B062-5958E4B3114E}
+	EndGlobalSection
+EndGlobal

@@ -1,20 +1,11 @@
-﻿using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
-using System.ServiceModel;
-using System.Text;
-using System.Text.Json;
-using System.Xml;
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
-using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using System.Text.Json.Serialization;
-using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
+using fiskaltrust.Middleware.SCU.ES.Common.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
@@ -33,8 +24,6 @@ public class VeriFactuSCU : IESSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        request.ReceiptResponse.ftReceiptIdentification += $"{request.ReceiptResponse.ftQueueRow}/{request.ReceiptRequest.cbReceiptReference}";
-
         ReceiptResponse receiptResponse;
 
         if (request.ReceiptResponse.ftStateData is null)
@@ -73,7 +62,6 @@ public class VeriFactuSCU : IESSSCD
             receiptResponse = CreateResponse(
                 response,
                 request,
-                journalES.IDFactura.NumSerieFacturaAnulada,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFacturaAnulada
             );
@@ -94,7 +82,6 @@ public class VeriFactuSCU : IESSSCD
             receiptResponse = CreateResponse(
                 response,
                 request,
-                journalES.IDFactura.NumSerieFactura,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFactura,
                 SignaturItemHelper.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
@@ -113,7 +100,6 @@ public class VeriFactuSCU : IESSSCD
     private ReceiptResponse CreateResponse(
         Result<RespuestaRegFactuSistemaFacturacion, Error> veriFactuResponse,
         ProcessRequest request,
-        string numSerieFactura,
         string huella,
         string idEmisorFactura,
         SignatureItem[]? signatureItems = null
@@ -124,6 +110,7 @@ public class VeriFactuSCU : IESSSCD
             throw new Exception(veriFactuResponse.ErrValue!.ToString());
         }
         var respuesta = veriFactuResponse.OkValue!;
+        var numSerieFactura = request.ReceiptResponse.ftReceiptIdentification.Split('#')[1];
         if (respuesta.EstadoEnvio != EstadoEnvio.Correcto)
         {
             var line = respuesta.RespuestaLinea!.Where(x => x.IDFactura.NumSerieFactura == numSerieFactura).Single();
@@ -144,7 +131,6 @@ public class VeriFactuSCU : IESSSCD
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeES.NIF.As<SignatureType>()
         });
-
 
         if (signatureItems is not null)
         {

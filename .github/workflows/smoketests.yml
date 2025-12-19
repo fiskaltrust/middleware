@@ -3,18 +3,34 @@
 on:
   workflow_dispatch:
     inputs:
+      platform:
+        description: "platform"
+        required: true
+        type: choice
+        options:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+      launcherVersion:
+        description: "launcherVersion"
+        required: true
+        type: choice
+        options:
+          - v1.3
+          - v2.0
       queuePackage:
         description: "Queue package"
         required: true
         type: choice
         options:
           - fiskaltrust.Middleware.Queue.SQLite
+          - fiskaltrust.Middleware.Queue.MySQL
           - fiskaltrust.Middleware.Queue.EF
       queueVersion:
         description: "Queue package version"
         type: string
         default: latest
-     
+
 permissions:
   id-token: write
   contents: read
@@ -22,133 +38,312 @@ permissions:
 env:
   launcher: "fiskaltrust.service.launcher"
   launcherpath: "./launcher"
-  queuePackage: fiskaltrust.Middleware.Queue.SQLite
-  queueVersion: latest
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        run: |
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *MySQL* ]]; then
+            echo "❌ MySQL not supported on Linux!"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" && "${{ inputs.queuePackage }}" == *EF* && "${{ inputs.launcherVersion }}" == "v1.3" ]]; then
+            echo "❌ Launcher v1.3 can't run EF on Linux!"
+            exit 1
+          fi
+
+          if [[ "${{ inputs.platform }}" == "macos-latest" &&  "${{ inputs.queuePackage }}" != *SQLite* ]]; then
+            echo "❌ Only SQLite supported on macOS!"
+            exit 1
+          fi
+
+          echo ""
+          echo "### ✅ Supported combinations"
+          echo ""
+          echo "| Platform       | Launcher Version | Queue Package                      | Supported |"
+          echo "|----------------|------------------|------------------------------------|------------|"
+          echo "| windows-latest | v1.3, v2.0       | SQLite, MySQL, EF                  | ✅ Yes     |"
+          echo "| ubuntu-latest  | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
+          echo "| ubuntu-latest  | any              | MySQL                              | ❌ No      |"
+          echo "| ubuntu-latest  | v2.0             | EF                                 | ✅ Yes     |"
+          echo "| macos-latest   | v1.3, v2.0       | SQLite                             | ✅ Yes     |"
+          echo "| macos-latest   | any              | MySQL, EF                          | ❌ No      |"
+          echo ""
+
   test-middleware:
-    runs-on: windows-latest
+    needs: validate
+    runs-on: ${{ inputs.platform }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Resolve final values
-        run: |
-          echo "queuePackage=${{ inputs.queuePackage || env.queuePackage }}" >> $GITHUB_ENV
-          echo "queueVersion=${{ inputs.queueVersion || env.queueVersion }}" >> $GITHUB_ENV
-
       - name: Create cashbox
         shell: pwsh
         run: |
-            $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
-            $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
+          $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
+          $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
 
-            $headers = @{
-              accountid   = "${{ secrets.FT_ACCOUNT_ID }}"
-              accesstoken = "${{ secrets.FT_ACCESS_TOKEN }}"
-              "Content-Type" = "application/json"
-            }
+          $headers = @{
+            accountid   = "${{ secrets.FT_ACCOUNT_ID }}"
+            accesstoken = "${{ secrets.FT_ACCESS_TOKEN }}"
+            "Content-Type" = "application/json"
+          }
 
-            $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
-            $body.ftQueues[0].Package = "${{ env.queuePackage }}"
-            $body.ftQueues[0].Version = "${{ env.queueVersion }}"
-            if ("${{ env.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {
-             $connectionString = "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;"
-             $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
-            }
+          $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
+          $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
+          $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
-            $body = $body | ConvertTo-Json -Depth 10
+          $pass="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+          if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
+           $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
+           $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+          }
 
-            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
+          if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
+           $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
+           $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
+          }
 
-            # Extract values
-            $cashboxId  = $response.cashBoxId
-            $accessToken = $response.accessToken
-            $queueId = $response.configuration.ftQueues[0].Id
+          $body = $body | ConvertTo-Json -Depth 10
 
-            echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
-            echo "accessToken=$accessToken" >> $env:GITHUB_ENV
-            echo "queueId=$queueId"       >> $env:GITHUB_ENV
+          $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $body
+
+          # Extract values
+          $cashboxId  = $response.cashBoxId
+          $accessToken = $response.accessToken
+          $queueId = $response.configuration.ftQueues[0].Id
+
+          echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
+          echo "accessToken=$accessToken" >> $env:GITHUB_ENV
+          echo "queueId=$queueId"       >> $env:GITHUB_ENV
+
+      - name: Install MySQL and run service
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
+        run: |
+          choco install mysql --params "'/port:3306'" -y
+
+          # Start MySQL service if not already running
+          $service = Get-Service -Name mysql -ErrorAction SilentlyContinue
+          if ($service.Status -ne 'Running') {
+            Start-Service mysql
+          }
+
+          # Wait for MySQL to be ready
+          Write-Host "Waiting for MySQL to be ready..."
+          Start-Sleep -Seconds 10
+
+          # Set a known root password
+          $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
+          & $mysqladmin -u root password "${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+
+          # Verify connection
+          $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
+          & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
+
+          Write-Host "✅ MySQL root password successfully set and verified."
 
       - name: Start LocalDB
-        if: ${{ env.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
+        if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
         shell: pwsh
         run: |
-          sqllocaldb create MSSQLLocalDB -s
-          sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION"    
+          if($isWindows){
+              sqllocaldb create MSSQLLocalDB -s
+              sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
+          }
+          elseif($isLinux){
+            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=${{ secrets.FT_SMOKETESTS_PASSWORD }}" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+          }
 
-      - name: Download launcher package
+      - name: Download launcher package for ${{inputs.platform}}--launcherVersion=${{inputs.launcherVersion}}--package=${{inputs.queuePackage}}-${{inputs.queueVersion}}
         shell: pwsh
         run: |
           $cashboxId = "${{ env.cashboxId }}"
           $accessToken = "${{ env.accessToken }}"
-          $offline = "true"
+          $platformV2 = if ($isMacos) { "osx-x64" } elseif ($isLinux) { "linux-x64" } else { "win-x64" }
+          $offline = "false"
           $launcher = "${{ env.launcher }}"
           $version = "latest"
 
           $pair = "${cashboxId}:${accessToken}"
           $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($pair))
-          $headers = @{ Authorization = "Basic $encoded" }
+          if ("${{ inputs.launcherVersion }}" -eq "v1.3") {
+           $headers = @{ Authorization = "Basic $encoded" }
+           $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
+           if ($isLinux -or $isMacos) {
+           #for both platform, the same package will be downloaded
+           $url=$url + "&platform=linux"
+           } 
+          } 
+          else
+          {
+           $headers = @{ accessToken = $accessToken }
+           $url = "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download-launcher?cashboxId=$cashboxId&offline=$offline&platform=$platformV2"
+          }
 
-          $url = "https://packages-sandbox.fiskaltrust.at/$cashboxId.download?launcher=$launcher&version=$version&offline=$offline"
           $output = "$launcher.$cashboxId.zip"
           Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
 
       - name: Extract launcher package
         shell: pwsh
         run: |
-         $cashboxId = "${{ env.cashboxId }}"
-         $launcher =  "${{ env.launcher }}"
-         $zipPath = "$launcher.$cashboxId.zip"
-         $extractPath = "${{ env.launcherpath }}"
-         
-         if (Test-Path $extractPath) {
-           Remove-Item -Path $extractPath -Recurse -Force
-         }
-         Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+          $cashboxId = "${{ env.cashboxId }}"
+          $launcher =  "${{ env.launcher }}"
+          $zipPath = "$launcher.$cashboxId.zip"
+          $extractPath = "${{ env.launcherpath }}"
+
+          if (Test-Path $extractPath) {
+            Remove-Item -Path $extractPath -Recurse -Force
+          }
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+      - name: Install Mono if platform is Ubuntu
+        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest'  && inputs.launcherVersion == 'v1.3') }}
+        run: |
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
              
-      - name: Run test.cmd, send request, and stop
+              sudo apt-get update -y
+              sudo apt-get install -y mono-complete
+          else
+             
+              brew update
+              brew install mono
+          fi
+
+      - name: Install expect
+        if: ${{ (inputs.platform == 'ubuntu-latest' || inputs.platform == 'macos-latest') && inputs.launcherVersion == 'v1.3' }}
+        run: |
+          if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
+             sudo apt-get update && sudo apt-get install -y expect
+          else
+             brew install expect
+           fi
+
+      - name: Run launcher,send requests, and stop
         shell: pwsh
         run: |
-          $scriptPath = (Resolve-Path '${{ env.launcherpath }}/test.cmd').Path
-          Write-Host "Starting test.cmd..."
-          $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          #....Run launcher....
+          Write-Host "Starting launcher..."
+          $launcherPath = "${{ env.launcherpath }}"
+          if ($isWindows)
+          {
+              $exeFileName = "test.cmd"
+              if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $exeFileName = "launcher-test.cmd" }
+              $scriptPath = (Resolve-Path "$launcherPath/$exeFileName").Path
+              $process = Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', ('"{0}"' -f $scriptPath)) -PassThru -RedirectStandardOutput test-output.log -RedirectStandardError test-output-error.log
+          }
+          elseif ("${{ inputs.launcherVersion }}" -eq "v1.3")
+          {
+             $exeFileName = "test.sh"
+             $cmd = @"    
+             set timeout -1
+             spawn bash "./$exeFileName"
+             expect {
+                "Press a button to stop" { puts "Launcher waiting..."; exp_continue }
+                eof
+            }
+          "@
+             $expectScript = "/tmp/run_launcher.exp"
+             Set-Content -Path $expectScript -Value $cmd
+             bash -c "chmod +x $expectScript"
 
+             $process = Start-Process -FilePath "/usr/bin/expect" -ArgumentList $expectScript -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
+            
+          }
+          else
+          {
+             $exeFileName = "launcher-test.sh"
+             $scriptPath = (Resolve-Path "$launcherPath/$exeFileName").Path
+             bash -c "chmod +x '$scriptPath'"
+             $process = Start-Process -FilePath "sudo" -ArgumentList "bash", $scriptPath -WorkingDirectory $launcherPath -PassThru -RedirectStandardOutput "test-output.log" 
+          }
+
+            
           # Wait a few seconds to let test.cmd start listening
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
-          $maxAttempts = 10
-          $attempt = 0
-          $pollUrl = "http://localhost:1500/${{ env.queueId }}/json/v1/Echo"
-          $pollBody = @{ Message = "Hello fiskaltrust.Middleware!" } | ConvertTo-Json
-          while ($attempt -lt $maxAttempts) {
-              try {
-                  $pollResponse = Invoke-RestMethod -Uri $pollUrl -Method Post -Body $pollBody -ContentType "application/json" -TimeoutSec 2
-                  Write-Host "Response: $($pollResponse | ConvertTo-Json)"
-                  break;
-              } catch {
-                  Write-Host "Launcher not ready yet, waiting 5s... (Attempt $($attempt+1)/$maxAttempts)"
-                  Start-Sleep -Seconds 5
-                  $attempt++
-              }
-          } 
-          if($attempt -eq $maxAttempts)
-          {
-            Write-Error "Request failed: $_"
-          }
-         
+          $maxAttempts = 30
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            if ($isWindows) {
+                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+            } else {
+               bash -c "nc -z localhost 1500"
+               $tcpReady = ($LASTEXITCODE -eq 0)
+            }
+            
+            if ($tcpReady) {
+                Write-Host "Launcher is ready!"
+                break
+            }
 
-          # Stop the launcher
-          Write-Host "Stopping test.cmd..."
-          Stop-Process -Id $process.Id -Force
+            Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
+            Start-Sleep -Seconds 5
+          } 
+
+          #....Send requests....
+          if ($tcpReady) {
+           $baseUrl = "http://localhost:1500/${{ env.queueId }}"
+           $baseFile = ".github/scripts/requests"
+           $requests = @(
+                @{ Name = "Echo";                      Url = "$baseUrl/json/v1/Echo"; File = "$baseFile/Echo.json" }
+                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Zero-receipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Pos-receipt.json" }
+                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Daily-closing-receipt.json" }
+                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00"; File = "" }
+                # @{ Name = "Tar-Export-from-middleware";Url = "$baseUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
+                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1&from=0&to=00"; File = "" }
+                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2&from=0&to=00"; File = "" }
+                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3&from=0&to=00"; File = "" }
+            )
+
+            $ErrorActionPreference = "Stop"
+            foreach ($req in $requests) {
+                Write-Host "`n--- Sending $($req.Name) request ---"
+                $body = $null
+                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {       
+                 $bodyTemplate = Get-Content $req.File -Raw 
+                 $body = $bodyTemplate -replace "{{cashbox_id}}", "${{ env.cashboxId }}" -replace "{{current_moment}}", (Get-Date).ToString("o")
+                }
+                $contentType = "application/json"
+                if($isLinux -or $isMacos){
+                    $req.Url = $req.Url.Replace("/json/v1/Echo", "/echo");
+                    $req.Url = $req.Url.Replace("/json/v1/Sign", "/sign");
+                    $req.Url = $req.Url.Replace("/json/v0/Journal", "/journal");
+                    if ($req.Name -like "*Export*") {$contentType = "text/plain"}
+                }
+
+                try {
+
+                  if ($null -ne $body) {
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
+                  } else {
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -ErrorAction Stop
+                  }
+                  Write-Host "Response: $($response | ConvertTo-Json)"
+
+                } 
+                catch {
+                    Write-Error "$($req.Name) request failed: $_"
+                    Write-Host "Error details: $($_.Exception.Message)"
+                }
+             }
+            }
+            else {
+              Write-Error "Launcher failed to start within the expected time."
+            }
+
+            #....Stop launcher....
+            Write-Host "Stopping launcher process..."
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
 
       - name: Upload test output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-output-${{ env.queuePackage }}
+          name: output-${{ inputs.platform }}-${{ inputs.queuePackage }}-${{ inputs.queueVersion }}-Launcher-${{ inputs.launcherVersion }}
           path: test-output.log
         continue-on-error: true
- 
-  

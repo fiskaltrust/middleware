@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class InvoiceCommandProcessorESTests
     {
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, new InvoiceCommandProcessorES(), null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, new InvoiceCommandProcessorES(Mock.Of<ILogger<InvoiceCommandProcessorES>>(), null!, null!, null!, null!), null);
 
         [Theory]
         [InlineData(ReceiptCase.InvoiceUnknown0x1000)]

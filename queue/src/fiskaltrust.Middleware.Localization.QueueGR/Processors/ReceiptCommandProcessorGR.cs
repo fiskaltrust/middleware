@@ -7,6 +7,8 @@ using fiskaltrust.storage.V0;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueGR.Logic;
+using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
@@ -45,5 +47,24 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
 
     public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "ECommerce");
 
-    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "DeliveryNote");
+    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
+    {
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+            var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, receiptReferences);
+            return new ProcessCommandResponse(response.ReceiptResponse, []);
+        }
+        
+        return await GRFallBackOperations.NotSupported(request, "DeliveryNote");
+    }
+
+    // TODO this should be 8.6
+    public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "TableCheck0x0006Async");
+
+    public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "ProForma0x0007Async");
 }

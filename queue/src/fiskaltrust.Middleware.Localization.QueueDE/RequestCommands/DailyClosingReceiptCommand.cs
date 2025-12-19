@@ -20,9 +20,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     internal class DailyClosingReceiptCommand : ClosingReceiptCommand
     {
         public override string ReceiptName => "Daily-closing receipt";
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
         public DailyClosingReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService) : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         {
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
@@ -86,15 +88,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section openTransactions [exit].");
 
 
-                //remove all transactions on the tse to enable full tar deletion
-                if (request.HasCloseOpenTransactionsOnTseFlag())
+                if (_queueDEConfiguration.CloseOpenTSETransactionsOnDailyClosing)
                 {
+                    //remove all transactions on the tse to enable full tar deletion
                     var tseinfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
-                    foreach (var openTransactionNumber in tseinfo.CurrentStartedTransactionNumbers)
+                    if (tseinfo.CurrentStartedTransactionNumbers != null)
                     {
-                        (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
-                        var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionNumber).ConfigureAwait(false);
-                        openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
+                        foreach (var openTransactionNumber in tseinfo.CurrentStartedTransactionNumbers)
+                        {
+                            (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
+                            var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionNumber).ConfigureAwait(false);
+                            openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
+                        }
                     }
                 }
 

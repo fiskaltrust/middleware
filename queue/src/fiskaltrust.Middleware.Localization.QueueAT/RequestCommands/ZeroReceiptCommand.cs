@@ -38,9 +38,13 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 CreateActionJournal(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} requests zero receipt of Queue {queueAT.ftQueueATId}")
             };
 
-            var (receiptIdentification, ftStateData, _, signatureItems, journalAT, isSigned) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
+            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT, isSigned) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;
+            if (isBackupScuUsed)
+            {
+                response.ftState |= 0x80;
+            }
 
             // Recover from late-signing mode
             if (queueAT.UsedMobileCount > 0 && queueAT.UsedMobileQueueItemId.HasValue)

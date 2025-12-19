@@ -4,9 +4,9 @@ using System.Net.Mime;
 using System.Text;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -18,11 +18,15 @@ public class JournalProcessorPT : IJournalProcessor
 
     public JournalProcessorPT(IStorageProvider storageProvider)
     {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _storageProvider = storageProvider;
     }
 
     public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
-        => (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.UTF8.WebName }, ProcessSAFTAsync(request));
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.GetEncoding("windows-1252").WebName }, ProcessSAFTAsync(request));
+    }
 
     public async IAsyncEnumerable<byte[]> ProcessSAFTAsync(JournalRequest request)
     {
@@ -47,6 +51,6 @@ public class JournalProcessorPT : IJournalProcessor
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
         var data = new SaftExporter().SerializeAuditFile(masterData, queueItems, (int) request.To);
-        yield return Encoding.UTF8.GetBytes(data);
+        yield return data;
     }
 }

@@ -1,13 +1,15 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.storage.V0;
-using System.Runtime.CompilerServices;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using System.Reflection.Metadata.Ecma335;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2.Storage;
 
@@ -16,6 +18,7 @@ public class QueueStorageProvider : IQueueStorageProvider
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
     private readonly CryptoHelper _cryptoHelper;
+    private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
     public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
@@ -58,7 +61,9 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbTerminalID = receiptRequest.cbTerminalID,
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
-            country = receiptRequest.ftReceiptCase.Country(),
+            country = _cachedQueue.CountryCode,
+            // TOdo we need to set this to the correct procsesing version
+            // ProcessingVersion = _middlewareConfiguration.ProcessingVersion,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
@@ -191,11 +196,11 @@ public class QueueStorageProvider : IQueueStorageProvider
         return null;
     }
 
-    public async Task<List<Receipt>?> GetReferencedReceiptsAsync(ReceiptRequest data)
+    public async Task<(List<Receipt>?, string? error)> GetReferencedReceiptsAsync(ReceiptRequest data)
     {
         if (data.cbPreviousReceiptReference is null)
         {
-            return null;
+            return (null, null);
         }
         var queueItemRepository = await _storageProvider.CreateMiddlewareQueueItemRepository();
 
@@ -209,28 +214,28 @@ public class QueueStorageProvider : IQueueStorageProvider
         foreach (var previousReceiptReference in previousReceiptReferences)
         {
             var previousReceiptReferenceQueueItems = await queueItemRepository.GetByReceiptReferenceAsync(previousReceiptReference).ToListAsync();
+            var receipts = previousReceiptReferenceQueueItems
+                .Where(qi => qi.IsReceiptRequestFinished())
+                .Select(qi => new Receipt
+                {
+                    Request = JsonSerializer.Deserialize<ReceiptRequest>(qi.request)!,
+                    Response = JsonSerializer.Deserialize<ReceiptResponse>(qi.response)!,
+                }).Where(x => !x.Response.ftState.IsState(State.Error)).ToList();
 
-            if (previousReceiptReferenceQueueItems.Count == 0)
+            if (receipts.Count == 0)
             {
-                throw new Exception($"Referenced queue item with reference {previousReceiptReference} not found.");
+                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' didn't match with any of the items in the Queue or the items referenced are invalid.");
+            }
+            if (receipts.Count > 1)
+            {
+                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' did match with more than one item in the Queue.");
             }
 
-            if (previousReceiptReferenceQueueItems.Count > 1)
-            {
-                throw new Exception($"Multiple queue items found with reference {previousReceiptReference}.");
-            }
-
-            var receipt = new Receipt
-            {
-                Request = JsonSerializer.Deserialize<ReceiptRequest>(previousReceiptReferenceQueueItems[0].request)!,
-                Response = JsonSerializer.Deserialize<ReceiptResponse>(previousReceiptReferenceQueueItems[0].response)!,
-            };
-
+            var receipt = receipts.First();
             receipt.Response.ftStateData = null;
-
             previousReceiptReferenceReceipts.Add(receipt);
         }
 
-        return previousReceiptReferenceReceipts;
+        return (previousReceiptReferenceReceipts, null);
     }
 }
