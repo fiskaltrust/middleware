@@ -69,8 +69,8 @@ public class JournalProcessor
                     JournalType.Configuration => new[] { Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfigurationAsync())) }.ToAsyncEnumerable(),
                     _ => new[] {Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
                     {
-                        Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
-                        typeof(JournalProcessor).Assembly.GetName().Version
+                        Assembly = ThisAssembly.AssemblyName,
+                        ThisAssembly.AssemblyVersion
                     }))}.ToAsyncEnumerable()
                 };
             }
@@ -82,7 +82,7 @@ public class JournalProcessor
         }
 
         var pipe = new Pipe();
-        
+
         // For PT market, stream directly to pipe without using a temp file
         if (request.ftJournalType.Country() == "PT")
         {
@@ -154,19 +154,21 @@ public class JournalProcessor
             CashBoxList = await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false),
             QueueList = await configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
+            QueueBEList = await configurationRepository.GetQueueBEListAsync().ConfigureAwait(false),
             QueueDEList = await configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
             QueueESList = await configurationRepository.GetQueueESListAsync().ConfigureAwait(false),
             QueueEUList = await configurationRepository.GetQueueEUListAsync().ConfigureAwait(false),
             QueueFRList = await configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
-            QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
+            QueueGRList = await configurationRepository.GetQueueGRListAsync().ConfigureAwait(false),
             QueueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
             QueueMEList = await configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
             QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
             SignaturCreationUnitATList = await configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
+            SignaturCreationUnitBEList = await configurationRepository.GetSignaturCreationUnitBEListAsync().ConfigureAwait(false),
             SignaturCreationUnitDEList = await configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
             SignaturCreationUnitESList = await configurationRepository.GetSignaturCreationUnitESListAsync().ConfigureAwait(false),
             SignaturCreationUnitFRList = await configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
-            SignaturCreationUnitGRList = GetConfigurationFromDictionary<ftSignaturCreationUnitGR>("init_ftSignaturCreationUnitGR"),
+            SignaturCreationUnitGRList = await configurationRepository.GetSignaturCreationUnitGRListAsync().ConfigureAwait(false),
             SignaturCreationUnitITList = await configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
             SignaturCreationUnitMEList = await configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
             SignaturCreationUnitPTList = GetConfigurationFromDictionary<ftSignaturCreationUnitPT>("init_ftSignaturCreationUnitPT"),
@@ -194,7 +196,7 @@ public class JournalProcessor
         IAsyncEnumerable<T> result;
         if (request.To < 0)
         {
-            result = repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int)-request.To);
+            result = repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int) -request.To);
         }
         else if (request.To == 0)
         {
