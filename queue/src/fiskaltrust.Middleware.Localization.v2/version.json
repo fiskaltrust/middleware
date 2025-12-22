@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "pathFilters": [
+    "/queue"
+  ],
+  "publicReleaseRefSpec": [
+    "^refs/heads/main$",
+    "^refs/tags/queue/.+/v.+"
+  ],
+  "inherit": true
+}

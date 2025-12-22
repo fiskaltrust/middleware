@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
@@ -56,8 +57,10 @@ public class ReceiptCommandProcessorGRTests
             {
                 ReceiptResponse = scuResponse,
             });
+        var queueStorageProviderMock = new Mock<IQueueStorageProvider>(MockBehavior.Strict);
+        queueStorageProviderMock.Setup(x => x.GetReceiptReferencesIfNecessaryAsync(It.IsAny<ProcessCommandRequest>())).ReturnsAsync([]);
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -89,7 +92,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -121,7 +124,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -144,7 +147,7 @@ public class ReceiptCommandProcessorGRTests
             // DeliveryNote with HasTransportInformation flag using extension method
             ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
                 .WithCase(ReceiptCase.DeliveryNote0x0005)
-                .WithFlag(ReceiptCaseFlagsGR.HasTransportInformation)
+                .WithFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation)
         };
         var receiptResponse = new ReceiptResponse
         {
@@ -175,13 +178,13 @@ public class ReceiptCommandProcessorGRTests
                 ReceiptResponse = scuResponse,
             });
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         // Verify that SCU was called
         grSSCDMock.Verify(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()), Times.Once);
-        
+
         // Verify response from SCU is returned
         result.receiptResponse.Should().Be(scuResponse);
         result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000);
@@ -209,7 +212,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 

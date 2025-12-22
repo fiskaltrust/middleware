@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
     public class LifecycleCommandProcessorESTests
     {
         private readonly Fixture _fixture = new Fixture();
-        private readonly ReceiptProcessor _sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
+        private readonly ReceiptProcessor _sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(Mock.Of<ILocalizedQueueStorageProvider>(), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>()))), null!, null!, null!, null!);
 
         [Theory]
         [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
@@ -42,7 +42,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(configMock.Object), null!, null!, null!, null!);
+            var configurationRepositoryMock = new Mock<IConfigurationRepository>();
+            configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(new ftQueueES
+            {
+                ftQueueESId = queue.ftQueueId,
+                InvoiceSeries = "1000",
+                SimplifiedInvoiceSeries = "0000",
+            });
+            var sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(configurationRepositoryMock.Object))), null!, null!, null!, null!);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -107,7 +114,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())));
 
             var receiptRequest = new ReceiptRequest
             {
@@ -200,7 +207,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())));
 
             var receiptRequest = new ReceiptRequest
             {
@@ -289,7 +296,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())));
 
             var receiptRequest = new ReceiptRequest
             {
@@ -333,7 +340,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())));
 
             var receiptRequest = new ReceiptRequest
             {

@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -23,14 +24,16 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var signaturCreationUnitBE = new ftSignaturCreationUnitBE();
-        var queueBE = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueBE>>(configuration["init_ftQueueBE"]!.ToString()!).First();
 
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
 
+        var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueBEAsync(id)).CashBoxIdentification);
+
+
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorBE = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorBE(queueStorageProvider), new ReceiptCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorBE(), new InvoiceCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorBE(beSSCD));
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorBE.ProcessAsync, new(() => Task.FromResult(queueBE.CashBoxIdentification)), middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorBE(storageProvider, GetFromConfig(configuration) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorBE.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorBE(storageProvider, GetFromConfig(configuration, storageProvider) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,
@@ -38,9 +41,11 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
         };
     }
 
-    public MasterDataConfiguration? GetFromConfig(Dictionary<string, object> configuration)
+    public MasterDataConfiguration? GetFromConfig(Dictionary<string, object> configuration, IStorageProvider storageProvider)
     {
-        return configuration.ContainsKey("init_masterData") ? JsonConvert.DeserializeObject<MasterDataConfiguration>(configuration["init_masterData"].ToString()!) : null;
+        var masterDataService = new MasterDataService(configuration, storageProvider);
+        // We'll use the config for now and need to think of a general process to handle masterdata in other countries than germany.
+        return masterDataService.GetFromConfig();
     }
 
     public Func<string, Task<string>> RegisterForSign()

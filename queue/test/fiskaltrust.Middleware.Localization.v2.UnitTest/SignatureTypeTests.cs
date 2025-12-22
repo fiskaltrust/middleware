@@ -4,7 +4,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.Middleware.Localization.QueueGR.Models.NewFolder;
+using fiskaltrust.Middleware.Localization.QueueGR.Models;
 
 namespace fiskaltrust.Middleware.Localization.v2.Models.Cases.Tests;
 
