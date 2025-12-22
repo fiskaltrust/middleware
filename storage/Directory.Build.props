@@ -13,7 +13,7 @@
   <ItemGroup>
       <PackageReference Include="Nerdbank.GitVersioning" Condition="Exists('version.json')">
           <PrivateAssets>all</PrivateAssets>
-          <Version>3.6.146</Version>
+          <Version>3.9.50</Version>
       </PackageReference>
   </ItemGroup>
 </Project>
