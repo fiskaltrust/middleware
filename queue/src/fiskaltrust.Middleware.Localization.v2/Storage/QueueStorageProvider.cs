@@ -18,7 +18,6 @@ public class QueueStorageProvider : IQueueStorageProvider
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
     private readonly CryptoHelper _cryptoHelper;
-    private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
     public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
@@ -51,6 +50,8 @@ public class QueueStorageProvider : IQueueStorageProvider
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
+        var theeisAssembly = ThisAssembly.IsPrerelease;
+        var tehisAssembly = ThisAssembly.IsPublicRelease;
         var queueItem = new ftQueueItem
         {
             ftQueueItemId = Guid.NewGuid(),
@@ -62,10 +63,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
             country = _cachedQueue.CountryCode,
-            // TOdo we need to set this to the correct procsesing version
-            // We can try to just have the assembly version set by Nerdbank.GitVersion.
-            // Or do it like we do in the localization v1 and pass it in through the queue bootstrapper https://github.com/fiskaltrust/middleware/blob/a1c14a66fd3519756a313c50f02de8de7d33ee19/queue/src/fiskaltrust.Middleware.Queue/Bootstrapper/QueueBootstrapper.cs#L35
-            // ProcessingVersion = _middlewareConfiguration.ProcessingVersion,
+            ProcessingVersion = ThisAssembly.AssemblyInformationalVersion,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
