@@ -87,16 +87,8 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
             LastReceipt = lastReceipt,
         };
 
-        // Generate series identifier if not set
-        // Is there a convention for the fkt prefix?
-        // Why 1000?
-
         // We'll have to check the supported length of the numseriesfactura in verifactu.
-
-        // That should not be initialized here but during the first initialization of the queue. Maybe in the bootstrapper or maybe in the start receipt.
-
-        // What is the cashboxidentification of the queue for if we don't use it here?
-        var serieFactura = queueES.InvoiceSeries ?? $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}1000";
+        var serieFactura = queueES.InvoiceSeries;
         var numFactura = queueES.InvoiceNumerator + 1;
 
         request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";
