@@ -57,16 +57,11 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             IEnumerable<ftQueueFR> queuesFR = null,
             IEnumerable<ftQueueIT> queuesIT = null,
             IEnumerable<ftQueueME> queuesME = null,
-            IEnumerable<ftQueueBE> queuesBE = null,
-            IEnumerable<ftQueueGR> queuesGR = null,
             IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null,
             IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null,
-            IEnumerable<ftSignaturCreationUnitES> signatureCreateUnitsES = null,
             IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null,
             IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null,
-            IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null,
-            IEnumerable<ftSignaturCreationUnitBE> signatureCreateUnitsBE = null,
-            IEnumerable<ftSignaturCreationUnitGR> signatureCreateUnitsGR = null)
+            IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             _cashBoxRepository = new InMemoryCashBoxRepository(cashBoxes);
             _queueRepository = new InMemoryQueueRepository(queues);
@@ -75,13 +70,8 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             _queueFRRepository = new InMemoryQueueFRRepository(queuesFR);
             _queueITRepository = new InMemoryQueueITRepository(queuesIT);
             _queueMERepository = new InMemoryQueueMERepository(queuesME);
-            _queueBERepository = new InMemoryQueueBERepository(queuesBE);
-            _queueGRRepository = new InMemoryQueueGRRepository(queuesGR);
             _signaturCreationUnitATRepository = new InMemorySignaturCreationUnitATRepository(signatureCreateUnitsAT);
-            _signaturCreationUnitBERepository = new InMemorySignaturCreationUnitBERepository(signatureCreateUnitsBE);
-            _signaturCreationUnitGRRepository = new InMemorySignaturCreationUnitGRRepository(signatureCreateUnitsGR);
             _signaturCreationUnitDERepository = new InMemorySignaturCreationUnitDERepository(signatureCreateUnitsDE);
-            _signaturCreationUnitESRepository = new InMemorySignaturCreationUnitESRepository(signatureCreateUnitsES);
             _signaturCreationUnitFRRepository = new InMemorySignaturCreationUnitFRRepository(signatureCreateUnitsFR);
             _signaturCreationUnitITRepository = new InMemorySignaturCreationUnitITRepository(signatureCreateUnitsIT);
             _signaturCreationUnitMERepository = new InMemorySignaturCreationUnitMERepository(signatureCreateUnitsME);
