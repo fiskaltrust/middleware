@@ -6,20 +6,20 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.gr;
-using fiskaltrust.Middleware.Localization.QueueGR.Logic;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class InvoiceCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queueStorageProvider) : IInvoiceCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
     {
-        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,

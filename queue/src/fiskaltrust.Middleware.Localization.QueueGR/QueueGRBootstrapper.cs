@@ -1,11 +1,9 @@
 ﻿using System.IO.Pipelines;
 using System.Net.Mime;
-using System.Text.Json;
 using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
@@ -30,7 +28,7 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorGR(queueStorageProvider), new ReceiptCommandProcessorGR(grSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorGR(grSSCD));
+        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorGR(queueStorageProvider), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider), new ProtocolCommandProcessorGR(grSSCD));
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorGR.ProcessAsync, new(() => Task.FromResult(queueGR.CashBoxIdentification)), middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorGR(storageProvider, GetFromConfig(configuration) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

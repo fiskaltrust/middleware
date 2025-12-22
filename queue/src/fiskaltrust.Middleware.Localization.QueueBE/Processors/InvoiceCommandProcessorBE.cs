@@ -15,11 +15,11 @@ public class InvoiceCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
     private readonly IBESSCD _sscd = sscd;
 #pragma warning restore
 
-    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await FallBackOperations.NotYetImplemented(request);
 
-    public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => await FallBackOperations.NotYetImplemented(request);
 
-    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await FallBackOperations.NotYetImplemented(request);
 
-    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await FallBackOperations.NotYetImplemented(request);
 }

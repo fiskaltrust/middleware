@@ -7,23 +7,23 @@ using fiskaltrust.storage.V0;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueGR.Logic;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queueStorageProvider) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -34,7 +34,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
 
     public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request)
     {
-        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -51,7 +51,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
-            var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+            var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,

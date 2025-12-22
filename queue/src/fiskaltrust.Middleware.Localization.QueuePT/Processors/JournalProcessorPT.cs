@@ -1,8 +1,5 @@
-﻿using System.Buffers;
-using System.IO.Pipelines;
-using System.Net.Mime;
+﻿using System.Net.Mime;
 using System.Text;
-using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2;
@@ -24,7 +21,6 @@ public class JournalProcessorPT : IJournalProcessor
 
     public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); // I think this only needs to be done once in the application.
         return (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.GetEncoding("windows-1252").WebName }, ProcessSAFTAsync(request));
     }
 

@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 
@@ -11,13 +12,14 @@ namespace fiskaltrust.Middleware.Localization.v2.Storage
         Task FinishQueueItem(ftQueueItem queueItem, ReceiptResponse receiptResponse);
         Task<long> GetCurrentRow();
         Task<ftQueueItem?> GetExistingQueueItemOrNullAsync(ReceiptRequest data);
-        // should use Result<List<Receipt>?, string>>
-        Task<(List<Receipt>?, string? error)> GetReferencedReceiptsAsync(ReceiptRequest data);
+        Task<Result<List<Receipt>?, string>> GetReferencedReceiptsAsync(ReceiptRequest data);
         Task<long> IncrementQueueRow();
         Task<ftQueue> GetQueueAsync();
         Task<long> GetReceiptNumerator();
         Task<ftReceiptJournal> InsertReceiptJournal(ftQueueItem queueItem, ReceiptRequest receiptrequest);
         Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest);
+        Task<List<(ReceiptRequest, ReceiptResponse)>> GetReceiptReferencesIfNecessaryAsync(ProcessCommandRequest request);
+
     }
 
     public interface ILocalizedQueueStorageProvider

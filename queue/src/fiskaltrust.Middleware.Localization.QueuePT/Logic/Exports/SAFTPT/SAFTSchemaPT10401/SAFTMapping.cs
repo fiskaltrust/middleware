@@ -1,12 +1,8 @@
-﻿using System.Globalization;
-using System.Reflection.Metadata;
-using System.Security.Cryptography;
-using System.ServiceModel.Channels;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
@@ -14,7 +10,6 @@ using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchem
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation;
-using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
