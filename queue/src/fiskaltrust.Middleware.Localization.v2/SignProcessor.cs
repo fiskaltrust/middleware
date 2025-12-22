@@ -20,15 +20,13 @@ public class SignProcessor : ISignProcessor
     private readonly bool _isSandbox;
     private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
-    private readonly string _fallBackCountryCode;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
         IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
-        MiddlewareConfiguration configuration,
-        string fallBackCountryCode = "")
+        MiddlewareConfiguration configuration)
     {
         _logger = logger;
         _processRequest = processRequest;
@@ -38,7 +36,6 @@ public class SignProcessor : ISignProcessor
         _isSandbox = configuration.IsSandbox;
         _queueStorageProvider = queueStorageProvider;
         _receiptRequestMode = configuration.ReceiptRequestMode;
-        _fallBackCountryCode = fallBackCountryCode;
     }
 
     public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
@@ -169,8 +166,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            // Should we not take this from the `queue.CountryCode` and is there ever a valid case where this can be empty?
-            ftState = State.Success.WithCountry(queueItem.country?.ToUpper() ?? _fallBackCountryCode).WithVersion(0x2),
+            ftState = State.Success.WithCountry(queueItem.country?.ToUpper()).WithVersion(0x2),
             ftReceiptIdentification = "",
         };
     }
