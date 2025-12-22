@@ -38,10 +38,10 @@ jobs:
         fetchDepth: 0
 
       - task: UseDotNet@2
-        displayName: "Use .NET 8 SDK"
+        displayName: "Use .NET 6 SDK"
         inputs:
           packageType: "sdk"
-          version: "8.x"
+          version: "6.x"
 
       - task: DotNetCoreCLI@2
         inputs:
@@ -65,6 +65,12 @@ jobs:
           projects: "storage/**/*.UnitTest.csproj"
           arguments: "--configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*"
         displayName: "Run unit tests"
+
+      - task: UseDotNet@2
+        displayName: "Use .NET 8 SDK"
+        inputs:
+          packageType: "sdk"
+          version: "8.x"
 
       - pwsh: dotnet tool install --global AzureSignTool
         condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/storage/v')
