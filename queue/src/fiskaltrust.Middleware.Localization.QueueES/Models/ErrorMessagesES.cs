@@ -113,6 +113,7 @@ public static class ErrorMessagesES
     public static string EEEE_CustomerZipMissing = "EEEE_Customer zip code is mandatory and cannot be null or empty.";
 
     public static string EEEE_CustomerStreetMissing = "EEEE_Customer street is mandatory and cannot be null or empty.";
-
+    public static string EEEE_ChargeItemsMissing = "EEEE_ChargeItems must not be null.";
+    public static string EEEE_PayItemsMissing = "EEEE_PayItems must not be null.";
     public static string EEEE_CustomerRequiredForInvoice = "EEEE_Customer information is mandatory for Invoice receipts and cannot be null. Make sure to fill the field cbCustomer";
 }

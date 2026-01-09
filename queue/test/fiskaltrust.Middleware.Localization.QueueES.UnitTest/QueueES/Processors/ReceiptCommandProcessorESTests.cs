@@ -318,7 +318,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var previousReceiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001
+                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES"),
+                cbChargeItems = [],
+                cbPayItems = [],
             };
             var previousReceiptResponse = new ReceiptResponse
             {
@@ -335,7 +337,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var queueES = new ftQueueES()
             {
-                SSCDSignQueueItemId = previousQueueItem.ftQueueItemId
+                LastSimplifiedInvoiceQueueItemId = previousQueueItem.ftQueueItemId,
+                SimplifiedInvoiceNumerator = 1,
+                SimplifiedInvoiceSeries = "S"
             };
 
             var configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -365,7 +369,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001
+                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES"),
+                cbChargeItems = [],
+                cbPayItems = [],
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -389,7 +395,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             // Assert
             result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options.Excluding(x => x.ftStateData).Excluding(x => x.ftReceiptIdentification));
-            result.receiptResponse.ftReceiptIdentification.Should().BeEquivalentTo(receiptResponse.ftReceiptIdentification + "test/S/1");
+            result.receiptResponse.ftReceiptIdentification.Should().BeEquivalentTo(receiptResponse.ftReceiptIdentification + "S-2");
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
 
@@ -398,7 +404,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             stateData.Should().NotBeNull();
             stateData!.ES.Should().NotBeNull();
             stateData.ES!.LastReceipt.Should().NotBeNull();
-            stateData.ES!.LastReceipt!.Request.ftReceiptCase.Should().Be(ReceiptCase.PointOfSaleReceipt0x0001);
+            stateData.ES!.LastReceipt!.Request.ftReceiptCase.Should().Be(ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES"));
             stateData.ES!.LastReceipt!.Response.ftReceiptIdentification.Should().Be("prev#");
         }
 
@@ -411,7 +417,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var queueES = new ftQueueES()
             {
-                SSCDSignQueueItemId = null
+                SimplifiedInvoiceSeries = "S"
             };
 
             var configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -440,7 +446,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001
+                ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES"),
+                cbChargeItems = [],
+                cbPayItems = [],
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -466,7 +474,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             result.receiptResponse.Should().BeEquivalentTo(receiptResponse, options => options
                 .Excluding(x => x.ftStateData)
                 .Excluding(x => x.ftReceiptIdentification));
-            result.receiptResponse.ftReceiptIdentification.Should().BeEquivalentTo(receiptResponse.ftReceiptIdentification + "test/S/1");
+            result.receiptResponse.ftReceiptIdentification.Should().BeEquivalentTo(receiptResponse.ftReceiptIdentification + "S-1");
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
 

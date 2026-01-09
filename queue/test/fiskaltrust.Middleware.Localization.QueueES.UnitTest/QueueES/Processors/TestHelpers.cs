@@ -11,6 +11,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             return new ftQueue
             {
                 ftQueueId = Guid.NewGuid(),
+                CountryCode = "ES"
             };
         }
 
