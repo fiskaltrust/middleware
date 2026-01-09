@@ -50,11 +50,11 @@ public class InvoiceCommandProcessorRefundTests
                 }
             }
         };
-        
+
         _mockQueueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
-        
+
         var asyncLazy = new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(_mockQueueItemRepository.Object));
-        
+
         _processor = new InvoiceCommandProcessorPT(
             _mockSscd.Object,
             _queuePT,
@@ -76,11 +76,12 @@ public class InvoiceCommandProcessorRefundTests
     {
         return new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = receiptReference,
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
-            cbChargeItems = chargeItems.ToList()
+            cbChargeItems = chargeItems.ToList(),
+            cbPayItems = []
         };
     }
 
@@ -93,7 +94,7 @@ public class InvoiceCommandProcessorRefundTests
             ftQueueRow = 1,
             ftReceiptIdentification = "receipt-id",
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)0x5054_0000_0000_0000
+            ftState = (State) 0x5054_0000_0000_0000
         };
     }
 
@@ -109,7 +110,7 @@ public class InvoiceCommandProcessorRefundTests
                 }
                 return matchingItems.ToAsyncEnumerable();
             });
-            
+
         _mockQueueItemRepository.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
             .Returns(items.ToAsyncEnumerable());
     }
@@ -128,7 +129,7 @@ public class InvoiceCommandProcessorRefundTests
                 Quantity = 2,
                 Amount = 100,
                 VATRate = 23m,
-                ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
+                ftChargeItemCase = ((ChargeItemCase) PTVATRates.NormalCase).WithCountry("PT")
             });
 
         var queueItems = new List<ftQueueItem>
@@ -148,7 +149,7 @@ public class InvoiceCommandProcessorRefundTests
         // Create full refund request
         var refundRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase)((long)ReceiptCase.InvoiceB2C0x1001 | (long)ReceiptCaseFlags.Refund),
+            ftReceiptCase = ((ReceiptCase) ((long) ReceiptCase.InvoiceB2C0x1001 | (long) ReceiptCaseFlags.Refund)).WithCountry("PT"),
             cbPreviousReceiptReference = "INV-001",
             cbReceiptReference = "REF-001",
             cbTerminalID = "TERM-001",
@@ -164,7 +165,8 @@ public class InvoiceCommandProcessorRefundTests
                     VATRate = 23m,
                     ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
                 }
-            ]
+            ],
+            cbPayItems = []
         };
 
         var refundResponse = CreateReceiptResponse();
@@ -175,7 +177,7 @@ public class InvoiceCommandProcessorRefundTests
 
         // Assert
         result.receiptResponse.Should().NotBeNull();
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE);
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE);
     }
 
     [Fact]
@@ -190,7 +192,7 @@ public class InvoiceCommandProcessorRefundTests
                 Quantity = 2,
                 Amount = 100,
                 VATRate = 23m,
-                ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase
             },
             new ChargeItem
             {
@@ -199,7 +201,7 @@ public class InvoiceCommandProcessorRefundTests
                 Quantity = 1,
                 Amount = 50,
                 VATRate = 23m,
-                ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase
             });
 
         var queueItems = new List<ftQueueItem>
@@ -219,7 +221,7 @@ public class InvoiceCommandProcessorRefundTests
         // Create full refund request with only 1 product (missing PROD-002)
         var refundRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase)((long)ReceiptCase.InvoiceB2C0x1001 | (long)ReceiptCaseFlags.Refund),
+            ftReceiptCase = (ReceiptCase) ((long) ReceiptCase.InvoiceB2C0x1001 | (long) ReceiptCaseFlags.Refund),
             cbPreviousReceiptReference = "INV-002",
             cbReceiptReference = "REF-002",
             cbTerminalID = "TERM-001",
@@ -245,7 +247,7 @@ public class InvoiceCommandProcessorRefundTests
         var result = await _processor.InvoiceB2C0x1001Async(request);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE);
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE);
         result.receiptResponse.ftStateData.ToString().Should().Contain(ErrorMessagesPT.EEEE_FullRefundItemsMismatch("INV-002"));
     }
 
@@ -261,13 +263,13 @@ public class InvoiceCommandProcessorRefundTests
                 Quantity = 2,
                 Amount = 100,
                 VATRate = 23m,
-                ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase
             });
 
         // Store first refund
         var firstRefund = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase)((long)ReceiptCase.InvoiceB2C0x1001 | (long)ReceiptCaseFlags.Refund),
+            ftReceiptCase = (ReceiptCase) ((long) ReceiptCase.InvoiceB2C0x1001 | (long) ReceiptCaseFlags.Refund),
             cbPreviousReceiptReference = "INV-003",
             cbReceiptReference = "REF-003-1",
             cbTerminalID = "TERM-001",
@@ -310,7 +312,7 @@ public class InvoiceCommandProcessorRefundTests
         // Attempt second refund
         var secondRefund = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase)((long)ReceiptCase.InvoiceB2C0x1001 | (long)ReceiptCaseFlags.Refund),
+            ftReceiptCase = (ReceiptCase) ((long) ReceiptCase.InvoiceB2C0x1001 | (long) ReceiptCaseFlags.Refund),
             cbPreviousReceiptReference = "INV-003",
             cbReceiptReference = "REF-003-2",
             cbTerminalID = "TERM-001",
@@ -335,7 +337,7 @@ public class InvoiceCommandProcessorRefundTests
         var result = await _processor.InvoiceB2C0x1001Async(request);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE);
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE);
         result.receiptResponse.ftStateData.ToString().Should().Contain(ErrorMessagesPT.EEEE_RefundAlreadyExists("INV-003"));
     }
 
@@ -355,7 +357,7 @@ public class InvoiceCommandProcessorRefundTests
                 Quantity = 5,
                 Amount = 250,
                 VATRate = 23m,
-                ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase
             });
 
         var queueItems = new List<ftQueueItem>
@@ -402,7 +404,7 @@ public class InvoiceCommandProcessorRefundTests
 
         // Assert
         result.receiptResponse.Should().NotBeNull();
-        result.receiptResponse.ftState.Should().NotBe((State)0x5054_0000_EEEE_EEEE);
+        result.receiptResponse.ftState.Should().NotBe((State) 0x5054_0000_EEEE_EEEE);
     }
 
     [Fact]
@@ -417,7 +419,7 @@ public class InvoiceCommandProcessorRefundTests
                 Quantity = 5,
                 Amount = 250,
                 VATRate = 23m,
-                ftChargeItemCase = (ChargeItemCase)PTVATRates.NormalCase
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase
             });
 
         var queueItems = new List<ftQueueItem>
@@ -472,7 +474,7 @@ public class InvoiceCommandProcessorRefundTests
         var result = await _processor.InvoiceB2C0x1001Async(request);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE);
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE);
         result.receiptResponse.ftStateData.ToString().Should().Contain(ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed);
     }
 
@@ -481,7 +483,7 @@ public class InvoiceCommandProcessorRefundTests
     {
         // Arrange - Create partial refund without cbPreviousReceiptReference
         SetupQueueItemRepository(new List<ftQueueItem>());
-        
+
         var partialRefundRequest = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
@@ -510,7 +512,7 @@ public class InvoiceCommandProcessorRefundTests
         var result = await _processor.InvoiceB2C0x1001Async(request);
 
         // Assert
-        result.receiptResponse.ftState.Should().Be((State)0x5054_0000_EEEE_EEEE);
+        result.receiptResponse.ftState.Should().Be((State) 0x5054_0000_EEEE_EEEE);
         result.receiptResponse.ftStateData.ToString().Should().Contain(ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed);
     }
 

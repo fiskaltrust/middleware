@@ -147,7 +147,11 @@ public class ProtocolCommandProcessorPTTests
     {
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = receiptCase
+            ftReceiptCase = receiptCase.WithCountry("PT"),
+            cbChargeItems = [],
+            cbPayItems = [],
+            cbUser = "asdf",
+            cbReceiptMoment = DateTime.UtcNow
         };
         var receiptResponse = new ReceiptResponse
         {
@@ -174,7 +178,9 @@ public class ProtocolCommandProcessorPTTests
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase) 0
+            ftReceiptCase = ((ReceiptCase) 0).WithCountry("PT"),
+            cbChargeItems = [],
+            cbPayItems = []
         };
         var receiptResponse = new ReceiptResponse
         {
