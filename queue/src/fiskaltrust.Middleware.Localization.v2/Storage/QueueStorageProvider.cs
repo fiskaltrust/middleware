@@ -1,11 +1,6 @@
-﻿using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
-using System.Text.Json;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
@@ -50,8 +45,6 @@ public class QueueStorageProvider : IQueueStorageProvider
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
-        var theeisAssembly = ThisAssembly.IsPrerelease;
-        var tehisAssembly = ThisAssembly.IsPublicRelease;
         var queueItem = new ftQueueItem
         {
             ftQueueItemId = Guid.NewGuid(),
@@ -200,7 +193,7 @@ public class QueueStorageProvider : IQueueStorageProvider
     {
         if (data.cbPreviousReceiptReference is null)
         {
-            return null;
+            return new Result<List<Receipt>?, string>.Ok(null);
         }
         var queueItemRepository = await _storageProvider.CreateMiddlewareQueueItemRepository();
 
