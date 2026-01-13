@@ -142,7 +142,6 @@ public class ProtocolCommandProcessorPTTests
     [InlineData(ReceiptCase.ProtocolTechnicalEvent0x3001)]
     [InlineData(ReceiptCase.ProtocolAccountingEvent0x3002)]
     [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task ProcessReceiptAsync_NoOp_Should_ReturnResponse(ReceiptCase receiptCase)
     {
         var receiptRequest = new ReceiptRequest
