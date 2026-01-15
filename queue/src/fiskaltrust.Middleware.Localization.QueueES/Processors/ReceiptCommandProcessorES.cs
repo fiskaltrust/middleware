@@ -79,9 +79,9 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
         {
             LastReceipt = lastReceipt,
         };
-        
+
         // Generate series identifier if not set
-        var serieFactura = queueES.SimplifiedInvoiceSeries ?? $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}0000";
+        var serieFactura = queueES.SimplifiedInvoiceSeries;
         var numFactura = queueES.SimplifiedInvoiceNumerator + 1;
 
         request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";

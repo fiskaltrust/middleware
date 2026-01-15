@@ -22,7 +22,7 @@ public class MiddlewareStateData : v2.Models.MiddlewareStateData
         var data = v2.Models.MiddlewareStateData.FromReceiptResponse(receiptResponse);
         if (data != null)
         {
-            var middlewareStateData = new MiddlewareStateData(data);
+            return new MiddlewareStateData(data);
         }
         return new MiddlewareStateData(new v2.Models.MiddlewareStateData
         {

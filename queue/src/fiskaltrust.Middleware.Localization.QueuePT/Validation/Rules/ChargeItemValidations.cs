@@ -268,7 +268,7 @@ public static class ChargeItemValidations
     /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_Amount_Quantity_NegativeAmountsAndQuantities(ReceiptRequest request, bool isRefund)
     {
-        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0 || isRefund || request.IsPartialRefundReceipt() || request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0 || isRefund || request.IsPartialRefundReceipt() || request.ftReceiptCase.IsFlag(ifPOS.v2.Cases.ReceiptCaseFlags.Void))
         {
             yield break;
         }
@@ -319,7 +319,7 @@ public static class ChargeItemValidations
         for (var i = 0; i < request.cbChargeItems.Count; i++)
         {
             var chargeItem = request.cbChargeItems[i];
-            if(chargeItem.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Receivable)
+            if (chargeItem.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Receivable)
             {
                 continue;
             }
@@ -409,7 +409,7 @@ public static class ChargeItemValidations
                 {
                     // Find the index of the main item for better error reporting
                     var mainItemIndex = request.cbChargeItems.IndexOf(mainItem);
-                    
+
                     yield return ValidationResult.Failed(new ValidationError(
                         ErrorMessagesPT.EEEE_DiscountExceedsArticleAmount(
                             mainItemIndex,

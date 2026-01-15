@@ -1,11 +1,6 @@
-﻿using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
-using System.Text.Json;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
@@ -18,7 +13,6 @@ public class QueueStorageProvider : IQueueStorageProvider
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
     private readonly CryptoHelper _cryptoHelper;
-    private readonly string _processingVersion;
     private ftQueue? _cachedQueue;
 
     public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
@@ -62,8 +56,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
             country = _cachedQueue.CountryCode,
-            // TOdo we need to set this to the correct procsesing version
-            // ProcessingVersion = _middlewareConfiguration.ProcessingVersion,
+            ProcessingVersion = ThisAssembly.AssemblyInformationalVersion,
             version = "v2",
             request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
@@ -196,11 +189,11 @@ public class QueueStorageProvider : IQueueStorageProvider
         return null;
     }
 
-    public async Task<(List<Receipt>?, string? error)> GetReferencedReceiptsAsync(ReceiptRequest data)
+    public async Task<Result<List<Receipt>?, string>> GetReferencedReceiptsAsync(ReceiptRequest data)
     {
         if (data.cbPreviousReceiptReference is null)
         {
-            return (null, null);
+            return new Result<List<Receipt>?, string>.Ok(null);
         }
         var queueItemRepository = await _storageProvider.CreateMiddlewareQueueItemRepository();
 
@@ -224,11 +217,11 @@ public class QueueStorageProvider : IQueueStorageProvider
 
             if (receipts.Count == 0)
             {
-                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' didn't match with any of the items in the Queue or the items referenced are invalid.");
+                return $"The given cbPreviousReceiptReference '{previousReceiptReference}' didn't match with any of the items in the Queue or the items referenced are invalid.";
             }
             if (receipts.Count > 1)
             {
-                return (null, $"The given cbPreviousReceiptReference '{previousReceiptReference}' did match with more than one item in the Queue.");
+                return $"The given cbPreviousReceiptReference '{previousReceiptReference}' did match with more than one item in the Queue.";
             }
 
             var receipt = receipts.First();
@@ -236,6 +229,65 @@ public class QueueStorageProvider : IQueueStorageProvider
             previousReceiptReferenceReceipts.Add(receipt);
         }
 
-        return (previousReceiptReferenceReceipts, null);
+        return previousReceiptReferenceReceipts;
+    }
+
+
+    public async Task<List<(ReceiptRequest, ReceiptResponse)>> GetReceiptReferencesIfNecessaryAsync(ProcessCommandRequest request)
+    {
+        List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        {
+            receiptReferences = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
+        }
+        return receiptReferences;
+    }
+
+    private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
+    {
+        if (request.cbPreviousReceiptReference is null)
+        {
+            return new List<(ReceiptRequest, ReceiptResponse)>();
+        }
+
+        return await request.cbPreviousReceiptReference.MatchAsync(
+            async single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
+            async group =>
+            {
+                var references = new List<(ReceiptRequest, ReceiptResponse)>();
+                foreach (var reference in group)
+                {
+                    var item = await LoadReceiptReferencesToResponse(request, receiptResponse, reference);
+                    references.Add(item);
+                }
+                return references;
+            }
+        );
+
+    }
+
+    private async Task<(ReceiptRequest, ReceiptResponse)> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse, string cbPreviousReceiptReferenceString)
+    {
+        var queueItems = (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
+        await foreach (var existingQueueItem in queueItems)
+        {
+            if (string.IsNullOrEmpty(existingQueueItem.response))
+            {
+                continue;
+            }
+
+            var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(existingQueueItem.request);
+            var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
+            if (referencedResponse != null && referencedRequest != null)
+            {
+
+                return (referencedRequest, referencedResponse);
+            }
+            else
+            {
+                throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
+            }
+        }
+        throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
     }
 }

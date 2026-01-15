@@ -2,6 +2,7 @@ using fiskaltrust.Middleware.Localization.QueueBE.Factories;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueBE.Processors;
 
@@ -28,7 +29,7 @@ public class LifecycleCommandProcessorBE(ILocalizedQueueStorageProvider localize
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
 
-    public async Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 }

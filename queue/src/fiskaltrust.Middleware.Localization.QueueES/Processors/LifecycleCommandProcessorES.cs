@@ -7,18 +7,30 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class LifecycleCommandProcessorES(ILocalizedQueueStorageProvider queueStorageProvider) : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorES(ILocalizedQueueStorageProvider queueStorageProvider, AsyncLazy<IConfigurationRepository> configurationRepository) : ILifecycleCommandProcessor
 {
     private readonly ILocalizedQueueStorageProvider _queueStorageProvider = queueStorageProvider;
-
+    private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _queueStorageProvider.ActivateQueueAsync();
+        var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
+        if (string.IsNullOrEmpty(queueES.InvoiceSeries))
+        {
+            queueES.InvoiceSeries = $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}1000";
+        }
+        if (string.IsNullOrEmpty(queueES.SimplifiedInvoiceSeries))
+        {
+            queueES.SimplifiedInvoiceSeries = $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}0000";
+        }
+
+        await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
 
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);

@@ -224,6 +224,8 @@ public static class ErrorMessagesPT
     public static string EEEE_TransportationIsNotSupported = "EEEE_TransportationIsNotSupported with Flag TransportInformation is not supported in Portugal.";
 
     public static string EEEE_InvalidCountryCodeForPT = "EEEE_Invalid country code for Portugal. Only 'PT' is accepted as valid country code.";
+    public static string EEEE_ChargeItemsMissing = "EEEE_ChargeItems must not be null.";
+    public static string EEEE_PayItemsMissing = "EEEE_PayItems must not be null.";
 
     public static string EEEE_InvalidCountryCodeInChargeItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
     public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";

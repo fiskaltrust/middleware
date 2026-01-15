@@ -86,9 +86,9 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
         {
             LastReceipt = lastReceipt,
         };
-        
-        // Generate series identifier if not set
-        var serieFactura = queueES.InvoiceSeries ?? $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}1000";
+
+        // We'll have to check the supported length of the numseriesfactura in verifactu.
+        var serieFactura = queueES.InvoiceSeries;
         var numFactura = queueES.InvoiceNumerator + 1;
 
         request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";
@@ -135,6 +135,9 @@ public class Helper
 {
     public static string ShortGuid(Guid guid, int bytes = 8)
     {
+        // https://datatracker.ietf.org/doc/html/rfc4122#section-4.4
+        // "Set the four most significant bits (bits 12 through 15) of the time_hi_and_version field to the 4-bit version number from Section 4.1.3."
+        // According to the standard and my tests the first half of the last byte we get is always "0x4". So we gain no information by including it here.
         var guidBytes = guid.ToByteArray();
         var slice = new byte[bytes];
         Array.Copy(guidBytes, slice, bytes);

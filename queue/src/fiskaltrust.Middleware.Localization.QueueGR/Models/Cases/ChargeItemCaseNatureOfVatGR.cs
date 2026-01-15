@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.Models.NewFolder;
+namespace fiskaltrust.Middleware.Localization.QueueGR.Models;
 
 public enum ChargeItemCaseNatureOfVatGR
 {
@@ -20,7 +20,7 @@ public enum ChargeItemCaseNatureOfVatGR
     ExemptArticle25CustomsRegimes = 0x3200,              // [32] (mydata:9) article 30 It concerns the exemptions ap-plied under special customs regimes. Goods placed in special customs re-gimes (e.g., cus-toms warehousing, active processing, etc.) are exempt from VAT. Χωρίς ΦΠΑ - άρθρο 30 του Κώδικα ΦΠΑ
     ExemptArticle39SmallBusinesses = 0x3300,             // [33] (mydata:15) Article 44 It con-cerns the special regime for small businesses(below 10K invoices). Χωρίς ΦΠΑ - άρθρο 44 του Κώδικα ΦΠΑ
 
-    MarginSChemeTaxableResellers =  0x4100,              // [41] (my-data:22) Article52 Special taxa-tion regime for tax-able resellers who deliver second-hand goods and objects of artistic, collector's or ar-chaeological value Χωρίς ΦΠΑ εμπεριεχόμενος - άρθρο 52 του Κώδικα ΦΠΑ
+    MarginSChemeTaxableResellers = 0x4100,              // [41] (my-data:22) Article52 Special taxa-tion regime for tax-able resellers who deliver second-hand goods and objects of artistic, collector's or ar-chaeological value Χωρίς ΦΠΑ εμπεριεχόμενος - άρθρο 52 του Κώδικα ΦΠΑ
 
     ReverseChargeIntraCommunityDeliveries = 0x5100,     // [51] (my-data:19) Article54 The delivery, intra-Community acquisition and im-port of investment gold, including in-vestment gold for which there are certificates, by type or by type or which is the sub-ject of a transac-tion between gold accounts, includ-ing, in particular, gold loans and swaps, with a right of ownership or claim to invest-ment gold, as well as investment gold transactions with futures and for-ward contracts, which cause a change of owner-ship or claim to in-vestment gold, Χωρίς ΦΠΑ - άρθρο 54 του Κώδικα ΦΠΑ
 

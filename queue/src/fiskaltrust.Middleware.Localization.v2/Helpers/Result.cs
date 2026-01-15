@@ -1,6 +1,4 @@
-using System.Security.Cryptography;
-
-namespace fiskaltrust.Middleware.SCU.EU.Helpers;
+﻿namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
 public record Result<T, E>
 {

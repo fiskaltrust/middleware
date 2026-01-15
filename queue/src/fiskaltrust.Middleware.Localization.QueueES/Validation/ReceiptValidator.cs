@@ -40,8 +40,25 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
             yield break;
         }
-
-        if(_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.Country() != "ES"))
+        if (_receiptRequest.cbChargeItems is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesES.EEEE_ChargeItemsMissing,
+                   "EEEE_ChargeItemsMissing",
+                   "cbChargeItems"
+               ));
+            yield break;
+        }
+        if (_receiptRequest.cbPayItems is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesES.EEEE_PayItemsMissing,
+                   "EEEE_PayItemsMissing",
+                   "cbPayItems"
+               ));
+            yield break;
+        }
+        if (_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.Country() != "ES"))
         {
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesES.EEEE_InvalidCountryCodeInChargeItemsForES,
@@ -115,14 +132,14 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
 
         if (context.IsRefund)
-        { 
+        {
             foreach (var result in ReceiptRequestValidations.ValidateRefundHasPreviousReference(_receiptRequest))
             {
                 yield return result;
             }
         }
 
-        if(_receiptRequest.Currency != Currency.EUR)
+        if (_receiptRequest.Currency != Currency.EUR)
         {
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesES.EEEE_OnlyEuroCurrencySupported,

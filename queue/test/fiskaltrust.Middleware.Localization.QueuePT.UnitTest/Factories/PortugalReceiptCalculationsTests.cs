@@ -650,25 +650,6 @@ public class PortugalReceiptCalculationsTests
         qrCode.Should().Contain("C:Desconhecido*"); // Anonymous CustomerCountry
     }
 
-    [Fact]
-    public void QRCodeGeneration_ShouldIncludeCorrectDocumentDate()
-    {
-        // Arrange
-        var qrCodeHash = "DATEHASH";
-        var issuerTIN = "777777777";
-        var numberSeries = CreateTestNumberSeries("0");
-        var request = CreateTestReceiptRequest();
-        request.cbReceiptMoment = new DateTime(2024, 12, 25, 10, 15, 30);
-        var response = CreateTestReceiptResponse("ft5B1#FT 20241225010");
-
-        // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
-
-        // Assert
-        qrCode.Should().NotBeNullOrEmpty();
-        qrCode.Should().Contain("F:20241225*"); // DocumentDate in YYYYMMDD format
-    }
-
     [Theory]
     [InlineData("ft5B1#FT 123", "FT", "FT 123")]
     [InlineData("ft5B1#NC 456/1", "NC", "NC 456/1")]

@@ -48,8 +48,25 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
             yield break;
         }
-
-        if(_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.Country() != "PT"))
+        if (_receiptRequest.cbChargeItems is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_ChargeItemsMissing,
+                   "EEEE_ChargeItemsMissing",
+                   "cbChargeItems"
+               ));
+            yield break;
+        }
+        if (_receiptRequest.cbPayItems is null)
+        {
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_PayItemsMissing,
+                   "EEEE_PayItemsMissing",
+                   "cbPayItems"
+               ));
+            yield break;
+        }
+        if (_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.Country() != "PT"))
         {
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_InvalidCountryCodeInChargeItemsForPT,
@@ -165,7 +182,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             }
         }
 
-        if(_receiptRequest.Currency != Currency.EUR)
+        if (_receiptRequest.Currency != Currency.EUR)
         {
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_OnlyEuroCurrencySupported,
