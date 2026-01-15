@@ -21,8 +21,14 @@ public class LifecycleCommandProcessorES(ILocalizedQueueStorageProvider queueSto
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _queueStorageProvider.ActivateQueueAsync();
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
-        queueES.InvoiceSeries = $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}1000";
-        queueES.SimplifiedInvoiceSeries = $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}0000";
+        if (string.IsNullOrEmpty(queueES.InvoiceSeries))
+        {
+            queueES.InvoiceSeries = $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}1000";
+        }
+        if (string.IsNullOrEmpty(queueES.SimplifiedInvoiceSeries))
+        {
+            queueES.SimplifiedInvoiceSeries = $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}0000";
+        }
 
         await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
 
