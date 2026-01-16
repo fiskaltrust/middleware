@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
+using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
 
 #nullable enable
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
@@ -88,20 +89,32 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 (int) response.StatusCode, $"GET tss/{tssId}/tx?states[]=ACTIVE");
         }
 
-        public async Task<ExportStateInformationDto?> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
+        public async Task<(ExportStateInformationDto?, int)>  GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
         {
             var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
             var responseContent = await response.Content.ReadAsStringAsync();
+            ExportStateInformationDto? exportStateInformationDto = null;
             if (response.IsSuccessStatusCode)
             {
-                return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
+                exportStateInformationDto = JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
+                if (exportStateInformationDto != null && exportStateInformationDto.IsExportDone())
+                {
+                    return (exportStateInformationDto, 0);
+                }
             }
-            if ((int) response.StatusCode == 429 /* System.Net.HttpStatusCode.TooManyRequests */)
+
+            var retryAfterSeconds = 60;
+
+            if (response.Headers.TryGetValues("Retry-After", out var values))
             {
-                return null;
+                var value = values.FirstOrDefault();
+                if (int.TryParse(value, out var seconds))
+                {
+                    retryAfterSeconds = seconds;
+                }
             }
-            throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{exportId}). Response: {responseContent}",
-            (int) response.StatusCode, $"GET tss/{tssId}/export/{exportId}");
+            return (exportStateInformationDto, retryAfterSeconds);
+
         }
 
         public async Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId)
@@ -222,18 +235,19 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             {
                 try
                 {
-                    var exportStateInformation = await GetExportStateInformationByIdAsync(tssId, exportId);
-                    if (exportStateInformation?.State == "ERROR" || exportStateInformation?.State == "COMPLETED")
+
+                    (var exportStateInformation, var retryaftersec) = await GetExportStateInformationByIdAsync(tssId, exportId);
+                    if (exportStateInformation != null && exportStateInformation.IsExportDone())
                     {
                         return exportStateInformation;
                     }
-                    await Task.Delay(backoff);
+                    await Task.Delay(retryaftersec * 1000);
+
                 }
                 catch (Exception)
                 {
                     throw;
                 }
-                backoff = TimeSpan.FromMilliseconds(Math.Min(backoff.TotalMilliseconds * 1.5, TimeSpan.FromSeconds(30).TotalMilliseconds));
             } while (sw.ElapsedMilliseconds < EXPORT_TIMEOUT_MS);
 
             throw new TimeoutException($"Timeout of {EXPORT_TIMEOUT_MS}ms was reached while exporting the backup {exportId}.");
