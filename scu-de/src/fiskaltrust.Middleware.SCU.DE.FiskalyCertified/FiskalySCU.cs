@@ -603,7 +603,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 else
                 {
 #nullable enable
-                    var exportStateInformation = await _fiskalyApiProvider.GetExportStateInformationByIdAsync(_configuration.TssId, Guid.Parse(request.TokenId));
+                    (var exportStateInformation, _) = await _fiskalyApiProvider.GetExportStateInformationByIdAsync(_configuration.TssId, Guid.Parse(request.TokenId));
                     if (exportStateInformation?.State == "ERROR")
                     {
                         throw new FiskalyException($"The export failed with a fiskaly internal error: {exportStateInformation.Exception}");

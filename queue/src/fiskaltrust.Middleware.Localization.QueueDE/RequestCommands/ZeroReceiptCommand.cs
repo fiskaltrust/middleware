@@ -1,20 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.ServiceModel.Channels;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueDE.Models;
-using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
-using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.ifPOS.v1.de;
-using System.Linq;
-using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Data;
+using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
+using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
+using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
-using fiskaltrust.Middleware.Contracts.Data;
+using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
@@ -45,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, processReceiptResponse.TransactionNumber);
 
                 var actionJournals = new List<ftActionJournal>();
-
+                TseInfo tseInfo = null;
                 if (queueDE.SSCDFailCount > 0)
                 {
                     _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (queueDE.SSCDFailCount > 0) [enter].");
@@ -55,7 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     if (request.IsRemoveOpenTransactionsWhichAreNotOnTse())
                     {
                         _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsRemoveOpenTransactionsWhichAreNotOnTse) [enter].");
-                        var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                        tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                         var failedFinishTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
                             ? failedFinishTransactions.Where(ft => ft != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((FailedFinishTransaction) ft).TransactionNumber))
                             : failedFinishTransactions;
@@ -164,7 +166,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 if (request.IsTseInfoRequest())
                 {
                     await UpdateTseInfoAsync(queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
-                    receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
+                    (receiptResponse.ftStateData, tseInfo)= await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
                     receiptResponse.ftStateData = StateDataFactory.ApendOpenTransactionState(await _openTransactionRepo.GetAsync().ConfigureAwait(false), receiptResponse.ftStateData);
                 }
 
@@ -179,6 +181,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 {
                     processReceiptResponse.Signatures.Add(_signatureFactory.GetSignatureForTraining());
                 }
+                string datajson = JsonConvert.SerializeObject(tseInfo);
+
+                actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, $"{0x0002:X}", $"Zero receipt was processed.", datajson));
 
                 receiptResponse.ftSignatures = processReceiptResponse.Signatures.ToArray();
                 return new RequestCommandResponse()

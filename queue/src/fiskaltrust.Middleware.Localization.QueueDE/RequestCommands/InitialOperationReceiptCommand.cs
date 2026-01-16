@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                     receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, transactionNumber);
                     receiptResponse.ftSignatures = signatures.ToArray();
-                    receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
+                    (receiptResponse.ftStateData,_) = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
                     queue.StartMoment = DateTime.UtcNow;
                     return new RequestCommandResponse()
                     {

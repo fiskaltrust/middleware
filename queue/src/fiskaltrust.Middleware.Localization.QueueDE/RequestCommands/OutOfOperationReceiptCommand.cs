@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     }
                 );
 
-                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
+                (receiptResponse.ftStateData, _) = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

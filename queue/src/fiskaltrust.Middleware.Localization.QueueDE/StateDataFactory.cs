@@ -12,14 +12,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 {
     public class StateDataFactory
     {
-        public static async Task<string> AppendTseInfoAsync(IDESSCD client, string currentStateDataJson = null)
+        public static async Task<(string, TseInfo)> AppendTseInfoAsync(IDESSCD client, string currentStateDataJson = null)
         {
             var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
 
             var currentStateData = ParseCurrentStateData(currentStateDataJson);
             currentStateData.Add("TseInfo", JToken.FromObject(tseInfo));
 
-            return JsonConvert.SerializeObject(currentStateData);
+            return (JsonConvert.SerializeObject(currentStateData), tseInfo);
         }
 
         public static string ApendOpenTransactionState(IEnumerable<OpenTransaction> openTransactions, string currentStateDataJson = null)

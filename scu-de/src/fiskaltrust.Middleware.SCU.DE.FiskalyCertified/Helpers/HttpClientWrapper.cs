@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -70,7 +71,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content, int currentTry = 0)
         {
             var response = await WrapCall(_httpClient.PutAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+            if (DoRetry(response, currentTry))
             {
                 currentTry++;
                 await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
@@ -83,11 +84,11 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public async Task<HttpResponseMessage> GetAsync(string requestUri, int currentTry = 0)
         {
             var response = await WrapCall(_httpClient.GetAsync(requestUri), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+            if (DoRetry(response, currentTry))
             {
                 currentTry++;
-                await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                var retryAfterMs = RetryAfterMs(response);
+                await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await GetAsync(requestUri, currentTry).ConfigureAwait(false);
             }
             return response;
@@ -100,11 +101,11 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
             };
             var response = await WrapCall(_httpClient.SendAsync(request), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+            if (DoRetry(response, currentTry))
             {
                 currentTry++;
-                await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                var retryAfterMs = RetryAfterMs(response);
+                await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await SendAsync(httpMethod, requestUri, jsonPayload, currentTry).ConfigureAwait(false);
             }
             return response;
@@ -113,14 +114,38 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, int currentTry = 0)
         {
             var response = await WrapCall(_httpClient.PostAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+            if (DoRetry(response, currentTry))
             {
                 currentTry++;
-                await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                var retryAfterMs = RetryAfterMs(response);
+                await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await PostAsync(requestUri, content, currentTry).ConfigureAwait(false);
             }
             return response;
+        }
+
+        private bool DoRetry(HttpResponseMessage response, int currentTry)
+        {
+            if ((((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599) || (int) response.StatusCode == 429) && _configuration.RetriesOn5xxError > currentTry)
+            {
+                _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}"); 
+                return true;
+            }
+            return false;
+        }
+
+        private int RetryAfterMs(HttpResponseMessage response)
+        {
+            var retryAfterMs = _configuration.DelayOnRetriesInMs;
+            if (response.Headers.TryGetValues("Retry-After", out var values))
+            {
+                var value = values.FirstOrDefault();
+                if (int.TryParse(value, out var seconds))
+                {
+                    retryAfterMs = seconds*1000;
+                }
+            }
+            return retryAfterMs;
         }
 
         public void Dispose()
