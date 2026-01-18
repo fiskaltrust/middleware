@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.MyData.UnitTest", "test\fiskaltrust.Middleware.SCU.GR.MyData.UnitTest\fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.csproj", "{77811328-6B61-4F31-BE0E-DD6C4D322F3F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.storage", "..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj", "{8924BF56-C9C8-2AD1-F614-3551B3B03EF0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,6 +54,7 @@ Global
 		{94946668-08ED-4AF7-B331-1774A2E94C99} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{B530EACC-2000-45E9-BE23-DFF022FA5883} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{77811328-6B61-4F31-BE0E-DD6C4D322F3F} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0} = {D3735F43-830E-4992-8663-7182B6970DA2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1855DFED-93D8-4A05-B062-5958E4B3114E}
