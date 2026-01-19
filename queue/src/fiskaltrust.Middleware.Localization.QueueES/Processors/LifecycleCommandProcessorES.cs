@@ -51,3 +51,17 @@ public class LifecycleCommandProcessorES(ILocalizedQueueStorageProvider queueSto
 
     public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 }
+
+public class Helper
+{
+    public static string ShortGuid(Guid guid, int length = 11)
+    {
+        var guidBytes = guid.ToByteArray();
+        var first = guidBytes.Take(7);
+        var second = guidBytes.Skip(8);
+        return Convert.ToBase64String(first.Concat(second).ToArray())
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .Substring(0, length);
+    }
+}
