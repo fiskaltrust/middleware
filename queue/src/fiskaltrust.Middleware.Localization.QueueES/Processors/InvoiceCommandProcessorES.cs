@@ -133,17 +133,14 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
 
 public class Helper
 {
-    public static string ShortGuid(Guid guid, int bytes = 8)
+    public static string ShortGuid(Guid guid, int length = 11)
     {
-        // https://datatracker.ietf.org/doc/html/rfc4122#section-4.4
-        // "Set the four most significant bits (bits 12 through 15) of the time_hi_and_version field to the 4-bit version number from Section 4.1.3."
-        // According to the standard and my tests the first half of the last byte we get is always "0x4". So we gain no information by including it here.
         var guidBytes = guid.ToByteArray();
-        var slice = new byte[bytes];
-        Array.Copy(guidBytes, slice, bytes);
-        return Convert.ToBase64String(slice)
+        var first = guidBytes.Take(7);
+        var second = guidBytes.Skip(8);
+        return Convert.ToBase64String(first.Concat(second).ToArray())
             .Replace("+", "-")
             .Replace("/", "_")
-            .Replace("=", "");
+            .Substring(0, length);
     }
 }
