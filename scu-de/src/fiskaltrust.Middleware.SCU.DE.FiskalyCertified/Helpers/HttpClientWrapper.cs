@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -75,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             {
                 currentTry++;
                 var retryAfterMs = RetryAfterMs(response);
-                LogRetry(currentTry, (int) response.StatusCode, retryAfterMs);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs);
                 await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await PutAsync(requestUri, content, currentTry).ConfigureAwait(false);
             }
@@ -89,7 +90,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             {
                 currentTry++;
                 var retryAfterMs = RetryAfterMs(response);
-                LogRetry(currentTry, (int) response.StatusCode, retryAfterMs);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs);
                 await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await GetAsync(requestUri, currentTry).ConfigureAwait(false);
             }
@@ -107,7 +108,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             {
                 currentTry++;
                 var retryAfterMs = RetryAfterMs(response);
-                LogRetry(currentTry, (int) response.StatusCode, retryAfterMs);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs);
                 await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await SendAsync(httpMethod, requestUri, jsonPayload, currentTry).ConfigureAwait(false);
             }
@@ -121,7 +122,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             {
                 currentTry++;
                 var retryAfterMs = RetryAfterMs(response);
-                LogRetry(currentTry, (int)response.StatusCode, retryAfterMs);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs);
                 await Task.Delay(retryAfterMs).ConfigureAwait(false);
                 return await PostAsync(requestUri, content, currentTry).ConfigureAwait(false);
             }
@@ -137,7 +138,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             return false;
         }
 
-        private void LogRetry(int statusCode, int currentTry, int retryAfterMs)
+        private void LogRetry(HttpStatusCode statusCode, int currentTry, int retryAfterMs)
         {
             _logger.LogWarning($"HttpStatusCode {statusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: {retryAfterMs}.");
 
