@@ -58,6 +58,35 @@ public static class ChargeItemValidations
                 ).WithContext("Amount", chargeItem.Amount));
             }
         }
+
+        // end mandatory fields validation
+    }
+
+    /// <summary>
+    /// Validates that charge items do not have zero quantity.
+    /// Returns one ValidationResult per validation error found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_Quantity_NotZero(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        for (var i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            if (chargeItem.Quantity == 0)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_ChargeItemQuantityZeroNotAllowed,
+                    "EEEE_ChargeItemQuantityZeroNotAllowed",
+                    "cbChargeItems.Quantity",
+                    i
+                ).WithContext("Quantity", chargeItem.Quantity));
+            }
+        }
     }
 
     /// <summary>

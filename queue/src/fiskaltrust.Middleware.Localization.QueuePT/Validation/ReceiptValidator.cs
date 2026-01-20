@@ -103,6 +103,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield return result;
         }
 
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_Quantity_NotZero(_receiptRequest))
+        {
+            yield return result;
+        }
+
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_VATRate_SupportedVatRates(_receiptRequest))
         {
             yield return result;
