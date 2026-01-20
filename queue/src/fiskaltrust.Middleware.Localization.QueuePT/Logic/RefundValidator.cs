@@ -40,6 +40,11 @@ public class RefundValidator
             return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
         }
 
+        if (refundRequest.cbPayItems == null || originalRequest.cbPayItems == null)
+        {
+            return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);
+        }
+
         if (refundRequest.cbPayItems.Count != originalRequest.cbPayItems.Count)
         {
             return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference);

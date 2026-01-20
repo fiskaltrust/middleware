@@ -24,6 +24,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
@@ -495,7 +496,7 @@ public class RefundScenarios : AbstractScenarioTests
 
         voidResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: , Index: )");
     }
-    
+
     #endregion
 
     #region Scenario 8: Transactions with Refund for already voided receipt should fail

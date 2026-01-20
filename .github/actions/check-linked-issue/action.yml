@@ -1,0 +1,58 @@
+name: "Check Linked Issues"
+description: "Checks if a pull request has linked issues from the fiskaltrust organization"
+inputs:
+  pr-number:
+    description: "Pull request number"
+    required: true
+  repository:
+    description: "Repository in owner/repo format"
+    required: true
+  skip:
+    description: "Whether to skip the check (true/false)"
+    required: true
+  github-token:
+    description: "GitHub token with read access to issues"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check for linked fiskaltrust issues
+      if: ${{ inputs.skip != 'true' }}
+      id: check_issues
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        PR_NUMBER=${{ inputs.pr-number }}
+        REPO=${{ inputs.repository }}
+
+        echo "Checking linked issues for PR #${PR_NUMBER}"
+
+        # Get linked issues from the PR
+        LINKED_ISSUES=$(gh pr -R "${REPO}" view "${PR_NUMBER}" --json closingIssuesReferences -q '.closingIssuesReferences')
+        if [ $? -ne 0 ]; then
+          echo "::error::Failed to fetch linked issues using GitHub CLI. Please check authentication and network connectivity."
+          exit 1
+        fi
+
+        # Check if any linked issue is from fiskaltrust organization
+        if [[ "${LINKED_ISSUES}" == "[]" || "${LINKED_ISSUES}" == "null" ]]; then
+          echo "No linked issues found"
+          echo "has_fiskaltrust_issue=false" >> $GITHUB_OUTPUT
+        else
+          HAS_FISKALTRUST_ISSUE=$(echo "${LINKED_ISSUES}" | jq -r 'map(select(.repository.owner.login == "fiskaltrust")) | length > 0')
+          echo "has_fiskaltrust_issue=${HAS_FISKALTRUST_ISSUE}" >> $GITHUB_OUTPUT
+          echo "Found fiskaltrust issue: ${HAS_FISKALTRUST_ISSUE}"
+        fi
+
+    - name: Fail if no fiskaltrust issue is linked
+      if: |
+        inputs.skip != 'true' &&
+        steps.check_issues.outcome == 'success' &&
+        steps.check_issues.outputs.has_fiskaltrust_issue == 'false'
+      shell: bash
+      run: |
+        echo "::error::No linked issue from fiskaltrust organization found"
+        echo "::warning::Please link an issue from a fiskaltrust repository to this pull request or add the 'meta-no-issue' label if no issue is needed."
+        exit 1

@@ -1,11 +1,12 @@
-name: "Build"
+name: "Package"
 inputs:
   path:
     required: true
-    type: string
   project:
     required: true
-    type: string
+  targetFramework:
+    required: false
+    default: net6
 
 outputs:
   version:
@@ -74,7 +75,7 @@ runs:
           exit 1
         }
 
-        dotnet publish $csprojFile --configuration Release -f net6 --no-build --output ./publish/raw/package-v2-${{ inputs.project }} /p:DebugType=None /p:DebugSymbols=false
+        dotnet publish $csprojFile --configuration Release -f ${{ inputs.targetFramework }} --no-build --output ./publish/raw/package-v2-${{ inputs.project }} /p:DebugType=None /p:DebugSymbols=false
         Compress-Archive -Path ./publish/raw/package-v2-${{ inputs.project }}/* -DestinationPath ./publish/package-v2-${{ inputs.project }}/$version.zip
 
         $hash = Get-FileHash ./publish/package-v2-${{ inputs.project }}/$version.zip -Algorithm SHA256

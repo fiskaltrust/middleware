@@ -12,7 +12,6 @@ public class ReceiptCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
 {
 #pragma warning disable
     private readonly IBESSCD _sscd = sscd;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(queueItemRepository);
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
@@ -20,24 +19,23 @@ public class ReceiptCommandProcessorBE(IBESSCD sscd, AsyncLazy<IMiddlewareQueueI
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        var queueItemRepository = await _queueItemRepository;
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse
         });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        return new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>());
     }
 
-    public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => await BEFallBackOperations.NoOp(request);
+    public async Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => await FallBackOperations.NoOp(request);
 }
