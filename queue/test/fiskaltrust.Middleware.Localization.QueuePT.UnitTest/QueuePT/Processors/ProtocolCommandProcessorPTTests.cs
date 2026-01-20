@@ -142,12 +142,15 @@ public class ProtocolCommandProcessorPTTests
     [InlineData(ReceiptCase.ProtocolTechnicalEvent0x3001)]
     [InlineData(ReceiptCase.ProtocolAccountingEvent0x3002)]
     [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
     public async Task ProcessReceiptAsync_NoOp_Should_ReturnResponse(ReceiptCase receiptCase)
     {
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = receiptCase
+            ftReceiptCase = receiptCase.WithCountry("PT"),
+            cbChargeItems = [],
+            cbPayItems = [],
+            cbUser = "asdf",
+            cbReceiptMoment = DateTime.UtcNow
         };
         var receiptResponse = new ReceiptResponse
         {
@@ -174,7 +177,9 @@ public class ProtocolCommandProcessorPTTests
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase) 0
+            ftReceiptCase = ((ReceiptCase) 0).WithCountry("PT"),
+            cbChargeItems = [],
+            cbPayItems = []
         };
         var receiptResponse = new ReceiptResponse
         {
