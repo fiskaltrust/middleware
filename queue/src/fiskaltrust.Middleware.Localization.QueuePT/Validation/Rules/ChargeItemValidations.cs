@@ -263,6 +263,33 @@ public static class ChargeItemValidations
     }
 
     /// <summary>
+    /// Validates that discounts/extras are not positive (Portugal does not allow positive discounts).
+    /// Returns one ValidationResult per offending charge item.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_DiscountOrExtra_NotPositive(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        for (var i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            if (chargeItem.IsDiscountOrExtra() && chargeItem.Amount > 0)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_PositiveDiscountNotAllowed(i, chargeItem.Amount),
+                    "EEEE_PositiveDiscountNotAllowed",
+                    "cbChargeItems.Amount",
+                    i
+                ).WithContext("Amount", chargeItem.Amount));
+            }
+        }
+    }
+
+    /// <summary>
     /// Validates that non-refund receipts do not have negative quantities or amounts.
     /// Returns one ValidationResult per validation error found.
     /// </summary>

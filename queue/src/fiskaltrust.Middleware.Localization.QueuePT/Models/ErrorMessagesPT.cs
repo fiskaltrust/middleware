@@ -34,6 +34,8 @@ public static class ErrorMessagesPT
 
     public const string EEEE_ChargeItemAmountMissing = "EEEE_Charge item amount (price) is mandatory and must be set.";
 
+    public const string EEEE_ChargeItemQuantityZeroNotAllowed = "EEEE_Charge item quantity cannot be zero.";
+
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
     public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
@@ -196,6 +198,12 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_DiscountExceedsArticleAmount(int position, string description, decimal discountAmount, decimal articleAmount) =>
         $"EEEE_Charge item at position {position} ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
+
+    /// <summary>
+    /// Error message for discounts/extras that are positive (not allowed in PT)
+    /// </summary>
+    public static string EEEE_PositiveDiscountNotAllowed(int position, decimal amount) =>
+        $"EEEE_Charge item at position {position}: Positive discounts/extras are not allowed in Portugal. Amount was {amount:F2}.";
 
     /// <summary>
     /// Error message for attempting to create multiple voids for the same receipt

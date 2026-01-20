@@ -130,6 +130,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield return result;
         }
 
+        // Validate that discounts/extras are never positive (PT rule)
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountOrExtra_NotPositive(_receiptRequest))
+        {
+            yield return result;
+        }
+
         if (!context.IsRefund)
         {
             foreach (var result in ChargeItemValidations.Validate_ChargeItems_Amount_Quantity_NegativeAmountsAndQuantities(_receiptRequest, context.IsRefund))
