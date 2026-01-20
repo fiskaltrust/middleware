@@ -30,7 +30,11 @@ public class ReceiptCommandProcessorPTTests
     {
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = receiptCase
+            ftReceiptCase = receiptCase.WithCountry("PT"),
+            cbChargeItems = [],
+            cbPayItems = [],
+            cbUser = "asdf",
+            cbReceiptMoment = DateTime.UtcNow
         };
         var receiptResponse = new ReceiptResponse
         {

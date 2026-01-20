@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11312.151 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D3735F43-830E-4992-8663-7182B6970DA2}"
 	ProjectSection(SolutionItems) = preProject
@@ -18,6 +18,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.GR.MyData.UnitTest", "test\fiskaltrust.Middleware.SCU.GR.MyData.UnitTest\fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.csproj", "{77811328-6B61-4F31-BE0E-DD6C4D322F3F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.storage", "..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj", "{8924BF56-C9C8-2AD1-F614-3551B3B03EF0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "storage", "storage", "{0BD7A43E-503B-40F7-86CE-15D728D103FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,7 +56,7 @@ Global
 		{94946668-08ED-4AF7-B331-1774A2E94C99} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{B530EACC-2000-45E9-BE23-DFF022FA5883} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{77811328-6B61-4F31-BE0E-DD6C4D322F3F} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
-		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{8924BF56-C9C8-2AD1-F614-3551B3B03EF0} = {0BD7A43E-503B-40F7-86CE-15D728D103FE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1855DFED-93D8-4A05-B062-5958E4B3114E}

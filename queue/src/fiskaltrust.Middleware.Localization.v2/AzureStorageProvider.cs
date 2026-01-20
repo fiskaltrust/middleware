@@ -11,7 +11,6 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;

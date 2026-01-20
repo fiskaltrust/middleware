@@ -86,9 +86,9 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
         {
             LastReceipt = lastReceipt,
         };
-        
-        // Generate series identifier if not set
-        var serieFactura = queueES.InvoiceSeries ?? $"fkt{Helper.ShortGuid(request.queue.ftQueueId)}1000";
+
+        // We'll have to check the supported length of the numseriesfactura in verifactu.
+        var serieFactura = queueES.InvoiceSeries;
         var numFactura = queueES.InvoiceNumerator + 1;
 
         request.ReceiptResponse.ftReceiptIdentification += $"{serieFactura}-{numFactura}";
@@ -128,19 +128,5 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
             await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);
         }
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
-}
-
-public class Helper
-{
-    public static string ShortGuid(Guid guid, int bytes = 8)
-    {
-        var guidBytes = guid.ToByteArray();
-        var slice = new byte[bytes];
-        Array.Copy(guidBytes, slice, bytes);
-        return Convert.ToBase64String(slice)
-            .Replace("+", "-")
-            .Replace("/", "_")
-            .Replace("=", "");
     }
 }
