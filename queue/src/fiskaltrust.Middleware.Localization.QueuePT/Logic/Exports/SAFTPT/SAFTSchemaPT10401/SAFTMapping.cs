@@ -508,7 +508,7 @@ public class SaftExporter
                     Reason = "Anulado"
                 };
             }
-            else
+            else if(references.Any(x => GetItemTypeFromReceipt(x) == "FT" || GetItemTypeFromReceipt(x) == "FS")) // Only FT and FS types of invoices 
             {
                 var invoicedProforma = references.OrderBy(x => x.Item2.ftReceiptMoment).LastOrDefault();
                 var referencedPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(invoicedProforma.Item2.ftReceiptMoment);
