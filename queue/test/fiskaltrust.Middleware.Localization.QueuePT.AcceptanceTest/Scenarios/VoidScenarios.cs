@@ -20,6 +20,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Validation;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.AcceptanceTest.Scenarios;
 
@@ -72,7 +73,7 @@ public class VoidScenarios : AbstractScenarioTests
 
         response.ftSignatures[0].Data.Should().EndWith("Validation error [EEEE_PreviousReceiptReference]: EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt. (Field: cbPreviousReceiptReference, Index: )");
         // also check the signaturedata if the returned error is included
-        
+
 
     }
 

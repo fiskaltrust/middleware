@@ -1,12 +1,8 @@
-﻿using System.Globalization;
-using System.Reflection.Metadata;
-using System.Security.Cryptography;
-using System.ServiceModel.Channels;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
@@ -14,13 +10,13 @@ using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchem
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation;
-using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using static System.Net.Mime.MediaTypeNames;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
@@ -197,12 +193,12 @@ public class SaftExporter
         var invoices = invoiceReceiptRequests.Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
         var workingDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007) || x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
         var paymentDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
-        
+
         // Filter out documents with status "A" (cancelled) or "F" (invoiced) for total calculations per Portuguese SAF-T specification
         var invoicesForTotals = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A" && x.DocumentStatus.InvoiceStatus != "F").ToList();
         var workingDocumentsForTotals = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A" && x.DocumentStatus.WorkStatus != "F").ToList();
         var paymentDocumentsForTotals = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != "A").ToList();
-        
+
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
