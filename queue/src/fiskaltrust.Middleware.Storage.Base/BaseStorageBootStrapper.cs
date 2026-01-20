@@ -135,7 +135,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 InitCashBoxIfNecessaryAsync(config, configurationRepository, dbCashBox),
                 InitFtQueueAsync(config.Queues, configurationRepository),
                 InitQueueATAsync(config.QueuesAT, configurationRepository),
-                InitQueueBEAsync(config.QueuesBE, configurationRepository),
+                //InitQueueBEAsync(config.QueuesBE, configurationRepository),
                 InitQueueDEAsync(config.QueuesDE, configurationRepository, logger),
                 InitQueueESAsync(config.QueuesES, configurationRepository),
                 InitQueueFRAsync(config.QueuesFR, configurationRepository),
