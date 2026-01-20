@@ -276,6 +276,9 @@ namespace fiskaltrust.Middleware.Storage.Base
         }
         private async Task InitQueueBEAsync(List<ftQueueBE> queuesBE, IConfigurationRepository configurationRepository)
         {
+            if (queuesBE == null)
+                return;
+
             foreach (var item in queuesBE)
             {
                 var dbQueueBe = await configurationRepository.GetQueueBEAsync(item.ftQueueBEId).ConfigureAwait(false);
@@ -315,6 +318,9 @@ namespace fiskaltrust.Middleware.Storage.Base
         }
         private async Task InitQueueESAsync(List<ftQueueES> queuesES, IConfigurationRepository configurationRepository)
         {
+            if (queuesES == null)
+                return;
+
             foreach (var item in queuesES)
             {
                 var dbQueueEs = await configurationRepository.GetQueueESAsync(item.ftQueueESId).ConfigureAwait(false);
@@ -326,6 +332,9 @@ namespace fiskaltrust.Middleware.Storage.Base
         }
         private async Task InitQueueGRAsync(List<ftQueueGR> queuesGR, IConfigurationRepository configurationRepository)
         {
+            if (queuesGR == null)
+                return;
+
             foreach (var item in queuesGR)
             {
                 var dbQueueGr = await configurationRepository.GetQueueGRAsync(item.ftQueueGRId).ConfigureAwait(false);
