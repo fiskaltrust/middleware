@@ -154,7 +154,7 @@ public class JournalProcessor
             CashBoxList = await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false),
             QueueList = await configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
-            QueueBEList = await configurationRepository.GetQueueBEListAsync().ConfigureAwait(false),
+            // QueueBEList = await configurationRepository.GetQueueBEListAsync().ConfigureAwait(false),
             QueueDEList = await configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
             QueueESList = await configurationRepository.GetQueueESListAsync().ConfigureAwait(false),
             QueueEUList = await configurationRepository.GetQueueEUListAsync().ConfigureAwait(false),
