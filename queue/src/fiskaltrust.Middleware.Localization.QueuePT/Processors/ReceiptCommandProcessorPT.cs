@@ -159,6 +159,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        {
+            var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
+            AddOrigemReferenceSignature(response, receiptReferences);
+        }
+
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
@@ -198,6 +205,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        {
+            var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
+            AddOrigemReferenceSignature(response, receiptReferences);
+        }
+
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
