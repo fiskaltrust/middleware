@@ -72,12 +72,11 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content, int currentTry = 0)
         {
             var response = await WrapCall(_httpClient.PutAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if (DoRetry(response, currentTry))
+            if (DoRetry(response, currentTry, out var retryAfterMs))
             {
                 currentTry++;
-                var retryAfterMs = RetryAfterMs(response);
-                LogRetry(response.StatusCode, currentTry, retryAfterMs);
-                await Task.Delay(retryAfterMs).ConfigureAwait(false);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs.Value);
+                await Task.Delay(retryAfterMs.Value).ConfigureAwait(false);
                 return await PutAsync(requestUri, content, currentTry).ConfigureAwait(false);
             }
             return response;
@@ -86,12 +85,11 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public async Task<HttpResponseMessage> GetAsync(string requestUri, int currentTry = 0)
         {
             var response = await WrapCall(_httpClient.GetAsync(requestUri), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if (DoRetry(response, currentTry))
+            if (DoRetry(response, currentTry, out var retryAfterMs))
             {
                 currentTry++;
-                var retryAfterMs = RetryAfterMs(response);
-                LogRetry(response.StatusCode, currentTry, retryAfterMs);
-                await Task.Delay(retryAfterMs).ConfigureAwait(false);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs.Value);
+                await Task.Delay(retryAfterMs.Value).ConfigureAwait(false);
                 return await GetAsync(requestUri, currentTry).ConfigureAwait(false);
             }
             return response;
@@ -104,12 +102,11 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
             };
             var response = await WrapCall(_httpClient.SendAsync(request), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if (DoRetry(response, currentTry))
+            if (DoRetry(response, currentTry, out var retryAfterMs))
             {
                 currentTry++;
-                var retryAfterMs = RetryAfterMs(response);
-                LogRetry(response.StatusCode, currentTry, retryAfterMs);
-                await Task.Delay(retryAfterMs).ConfigureAwait(false);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs.Value);
+                await Task.Delay(retryAfterMs.Value).ConfigureAwait(false);
                 return await SendAsync(httpMethod, requestUri, jsonPayload, currentTry).ConfigureAwait(false);
             }
             return response;
@@ -118,22 +115,31 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, int currentTry = 0)
         {
             var response = await WrapCall(_httpClient.PostAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
-            if (DoRetry(response, currentTry))
+            if (DoRetry(response, currentTry, out var retryAfterMs))
             {
                 currentTry++;
-                var retryAfterMs = RetryAfterMs(response);
-                LogRetry(response.StatusCode, currentTry, retryAfterMs);
-                await Task.Delay(retryAfterMs).ConfigureAwait(false);
+                LogRetry(response.StatusCode, currentTry, retryAfterMs.Value);
+                await Task.Delay(retryAfterMs.Value).ConfigureAwait(false);
                 return await PostAsync(requestUri, content, currentTry).ConfigureAwait(false);
             }
             return response;
         }
 
-        private bool DoRetry(HttpResponseMessage response, int currentTry)
+        private bool DoRetry(HttpResponseMessage response, int currentTry, out int? retryAfterMs)
         {
+            retryAfterMs = null;
             if (!((int) response.StatusCode >= 200 && (int) response.StatusCode <= 299)  && _configuration.RetriesOn5xxError > currentTry)
             {
-                return true;
+                retryAfterMs = RetryAfterMs(response);
+                if (retryAfterMs.HasValue)
+                {
+                    return true;
+                }
+                if (((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599) || (int) response.StatusCode >= 429)
+                {
+                    retryAfterMs = _configuration.DelayOnRetriesInMs;
+                    return true;
+                }
             }
             return false;
         }
@@ -144,18 +150,17 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
 
         }
 
-        private int RetryAfterMs(HttpResponseMessage response)
+        private int? RetryAfterMs(HttpResponseMessage response)
         {
-            var retryAfterMs = _configuration.DelayOnRetriesInMs;
             if (response.Headers.TryGetValues("Retry-After", out var values))
             {
                 var value = values.FirstOrDefault();
                 if (int.TryParse(value, out var seconds))
                 {
-                    retryAfterMs = seconds*1000;
+                    return seconds*1000;
                 }
             }
-            return retryAfterMs;
+            return null;
         }
 
         public void Dispose()
