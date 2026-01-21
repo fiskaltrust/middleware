@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 }
             }
 
-            var retryAfterSeconds = 60;
+            var retryAfterSeconds = 60; //default value on export of Fiskaly
 
             if (response.Headers.TryGetValues("Retry-After", out var values))
             {
