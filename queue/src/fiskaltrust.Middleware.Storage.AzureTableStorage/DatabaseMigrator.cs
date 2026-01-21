@@ -38,6 +38,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 new Migration_003_QueueEU(_tableServiceClient, queueConfiguration),
                 new Migration_004_SignaturCreationUnitES(_tableServiceClient, queueConfiguration),
                 new Migration_005_JournalES(_tableServiceClient, queueConfiguration),
+                new Migration_006_GR(_tableServiceClient, queueConfiguration),
+                new Migration_007_BE(_tableServiceClient, queueConfiguration),
             };
         }
 
