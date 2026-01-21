@@ -69,6 +69,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 {
                     ftCashBoxId = CASHBOXID,
                     ftQueueId = QUEUEID,
+                    CountryCode = "DE",
                     ftReceiptNumerator = 10,
                     ftQueuedRow = 1200,
                     StartMoment = startMoment,

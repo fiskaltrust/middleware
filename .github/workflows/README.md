@@ -22,13 +22,13 @@
 - manually
 - from `/run queue acceptance-tests` comment
 
+## Enforce All Status Checks
+- on pull_request update
+- from `/check` comment
+
 ## Tag
 
-
-
 ## Version
-
-
 
 ## Release (`release.yml`)
 
