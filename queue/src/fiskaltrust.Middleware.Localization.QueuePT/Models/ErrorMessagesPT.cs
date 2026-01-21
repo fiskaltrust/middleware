@@ -160,8 +160,8 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for full refund not matching original invoice items
     /// </summary>
-    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference) =>
-        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts.";
+    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: {diffField})";
 
     public static string EEEE_VoidItemsMismatch(string originalReceiptReference) =>
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
