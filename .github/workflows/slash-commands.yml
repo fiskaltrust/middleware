@@ -3,7 +3,7 @@ name: Slash Command Dispatch
 on:
   issue_comment:
     types: [created]
-  
+
 permissions:
   issues: write
   pull-requests: write
@@ -26,3 +26,4 @@ jobs:
             deploy
             release
             version
+            check
