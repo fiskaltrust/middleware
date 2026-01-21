@@ -5,35 +5,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Models;
 
 public static class ErrorMessagesES
 {
-    public static string UnknownReceiptCase(long caseCode) => $"The given ftReceiptCase 0x{caseCode:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.";
-
-    public static string NotSupportedReceiptCase(ReceiptCase caseCode, string name) => $"The ftReceiptCase {name} - 0x{caseCode:x} is not supported in the QueuePT implementation.";
-
-    public const string PreviousReceiptReferenceNotFound = "The given cbPreviousReceiptReference didn't match with any of the items in the Queue.";
-
-    public const string PreviousReceiptMissing = "The receipt referenced by cbPreviousReceiptReference could not be found in the Queue.";
-
     public const string MultipleReceiptReferencesNotSupported = "Multiple receipt references are currently not supported.";
-
-    public const string VoidNotSupported = "Void is not supported";
-
-    public const string CopyReceiptRequestMismatch = "The incoming ReceiptRequest does not match the referenced receipt's ReceiptRequest. Both must be identical for a copy receipt operation.";
-
-    public static string CopyReceiptRequestMismatchDetails(string differences) =>
-        $"The incoming ReceiptRequest does not match the referenced receipt's ReceiptRequest. Differences found:\n{differences}";
-
-    public const string EEEE_ChargeItemDescriptionTooShort = "EEEE_Charge item description must be at least 3 characters long.";
-
-    public const string EEEE_ChargeItemDescriptionMissing = "EEEE_Charge item description is mandatory and cannot be null or empty.";
-
-    public const string EEEE_ChargeItemVATRateMissing = "EEEE_Charge item VAT rate is mandatory and must be set.";
-
-    public const string EEEE_ChargeItemAmountMissing = "EEEE_Charge item amount (price) is mandatory and must be set.";
-
-    public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
-
-    public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
-
     public const string EEEE_CustomerInvalid = "EEEE_cbCustomer definition is invalid";
 
     public const string EEEE_PreviousReceiptReference = "EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt.";
@@ -41,7 +13,7 @@ public static class ErrorMessagesES
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 
     /// <summary>
-    /// Error message for invalid Portuguese Tax Identification Number (NIF)
+    /// Error message for invalid Spanish Tax Identification Number (NIF)
     /// </summary>
     /// <param name="taxId">The invalid tax ID that was provided</param>
     /// <returns>A descriptive error message</returns>
@@ -62,12 +34,6 @@ public static class ErrorMessagesES
     /// </summary>
     public static string EEEE_UnsupportedVatRate(int position, ChargeItemCase vatRate) =>
         $"EEEE_Charge item at position {position} uses unsupported VAT rate '{vatRate}' (0x{(long) vatRate:X}).";
-
-    /// <summary>
-    /// Error message for unsupported receipt type for copy receipt operation
-    /// </summary>
-    public static string CopyReceiptNotSupportedForType(ReceiptCase receiptCase) =>
-        $"CopyReceipt (0x3010) is only supported for PosReceipt (0x0001) and Invoice types (0x100x). The receipt type 0x{(long) receiptCase:X} is not supported for this operation.";
 
     /// <summary>
     /// Error message for VAT rate category not matching the specified VAT rate percentage
@@ -98,17 +64,6 @@ public static class ErrorMessagesES
     /// </summary>
     public static string EEEE_ReceiptNotBalanced(decimal chargeItemsSum, decimal payItemsSum, decimal difference) =>
         $"EEEE_Receipt is not balanced: Sum of charge items ({chargeItemsSum:F2}) does not match sum of pay items ({payItemsSum:F2}). Difference: {difference:F2}.";
-
-    /// <summary>
-    /// Error message for invalid cbUser structure
-    /// </summary>
-    public static string EEEE_InvalidUserStructure(string reason) =>
-        $"EEEE_cbUser must follow the PTUserObject structure (UserId, UserDisplayName, UserEmail). {reason}";
-
-    /// <summary>
-    /// Error message for missing cbUser in receipts that generate signatures
-    /// </summary>
-    public const string EEEE_UserRequiredForSignatures = "EEEE_cbUser is mandatory for all receipts that generate signatures. Please provide a valid PTUserObject with UserId.";
 
     /// <summary>
     /// Error message for unsupported charge item service type
@@ -146,25 +101,7 @@ public static class ErrorMessagesES
     public static string EEEE_VoidAlreadyExists(string receiptReference) =>
         $"EEEE_A void for receipt '{receiptReference}' already exists. Multiple voids for the same receipt are not allowed.";
 
-    /// <summary>
-    /// Error message for void receipts that contain charge items
-    /// </summary>
-    public const string EEEE_VoidMustHaveEmptyChargeItems = "EEEE_Void receipts must have empty charge items. Voiding a receipt is only supported with single references and requires no items in the request.";
-
-    /// <summary>
-    /// Error message for void receipts that contain pay items
-    /// </summary>
-    public const string EEEE_VoidMustHaveEmptyPayItems = "EEEE_Void receipts must have empty pay items. Voiding a receipt is only supported with single references and requires no items in the request.";
-
-    public const string EEEE_HandwrittenReceiptsNotSupported = "EEEE_Handwritten receipts must not be used in combination with void/refund or other connections.";
-
-    public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
-
-    public static string EEEE_PaymentTransferRequiresAccountReceivableItem = "EEEE_PaymentTransfer pay items require at least one accounts receivable charge item in the receipt.";
-
     public static string EEEE_OnlyEuroCurrencySupported = "EEEE_Only Euro (EUR) currency is supported for receipts in Spain.";
-
-    public static string EEEE_TransportationIsNotSupported = "EEEE_TransportationIsNotSupported with Flag TransportInformation is not supported in Spain.";
 
     public static string EEEE_InvalidCountryCodeForES = "EEEE_Invalid country code for Spain. Only 'ES' is accepted as valid country code.";
 
@@ -176,8 +113,7 @@ public static class ErrorMessagesES
     public static string EEEE_CustomerZipMissing = "EEEE_Customer zip code is mandatory and cannot be null or empty.";
 
     public static string EEEE_CustomerStreetMissing = "EEEE_Customer street is mandatory and cannot be null or empty.";
-
-    public static string EEEE_CustomerVATIdMissing = "EEEE_Customer VAT ID is mandatory and cannot be null or empty.";
-
+    public static string EEEE_ChargeItemsMissing = "EEEE_ChargeItems must not be null.";
+    public static string EEEE_PayItemsMissing = "EEEE_PayItems must not be null.";
     public static string EEEE_CustomerRequiredForInvoice = "EEEE_Customer information is mandatory for Invoice receipts and cannot be null. Make sure to fill the field cbCustomer";
 }

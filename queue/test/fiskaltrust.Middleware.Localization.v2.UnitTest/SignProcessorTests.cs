@@ -52,7 +52,8 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
                 ftQueueId = configuration.QueueId,
                 Timeout = 300,
                 StartMoment = DateTime.MinValue,
-                StopMoment = null
+                StopMoment = null,
+                CountryCode = "EU"
             });
 
             storageProviderMock.Setup(x => x.CreateConfigurationRepository()).Returns(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configurationRepositoryMock.Object)));
@@ -75,7 +76,9 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             {
                 cbReceiptReference = reference,
                 request = JsonSerializer.Serialize(req),
-                response = JsonSerializer.Serialize(resp)
+                response = JsonSerializer.Serialize(resp),
+                ftDoneMoment = DateTime.Now,
+                responseHash = "test"
             };
         }
 
@@ -87,7 +90,9 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                cbPreviousReceiptReference = previousRef
+                cbPreviousReceiptReference = previousRef,
+                cbChargeItems = [],
+                cbPayItems = []
             };
             var expectedPrevRequest = new ReceiptRequest { ftCashBoxID = receiptRequest.ftCashBoxID };
             var expectedPrevResponse = new ReceiptResponse { ftCashBoxIdentification = "Test" };
@@ -120,7 +125,9 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                cbPreviousReceiptReference = previousRefs
+                cbPreviousReceiptReference = previousRefs,
+                cbChargeItems = [],
+                cbPayItems = []
             };
 
             var queueItems = new List<ftQueueItem>();
@@ -158,7 +165,9 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
             // Arrange
             var receiptRequest = new ReceiptRequest
             {
-                ftCashBoxID = Guid.NewGuid()
+                ftCashBoxID = Guid.NewGuid(),
+                cbChargeItems = [],
+                cbPayItems = []
             };
 
             var repoMock = new Mock<IMiddlewareQueueItemRepository>();
@@ -169,9 +178,7 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest
 
             // Assert
             response.Should().NotBeNull();
-            response!.ftStateData.Should().NotBeNull();
-            var middlewareStateData = (MiddlewareStateData) response.ftStateData!;
-            middlewareStateData.PreviousReceiptReference.Should().BeNull();
+            response!.ftStateData.Should().BeNull();
         }
     }
 }

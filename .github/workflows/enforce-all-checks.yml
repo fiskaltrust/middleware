@@ -1,10 +1,11 @@
 name: Summary
 on:
-  check_run:
   pull_request:
+  repository_dispatch:
+    types: [check-command]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -14,7 +15,7 @@ jobs:
       checks: read
     steps:
       - name: GitHub Checks
-        uses: poseidon/wait-for-status-checks@v0.6.0
+        uses: poseidon/wait-for-status-checks@7edf5f0713401872da70b3a69eac93ed16edc97b
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           delay: 30

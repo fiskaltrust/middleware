@@ -12,6 +12,9 @@ namespace fiskaltrust.storage.V0
         Task<IEnumerable<ftSignaturCreationUnitAT>> GetSignaturCreationUnitATListAsync();
         Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid signaturCreationUnitATId);
 
+        Task<IEnumerable<ftSignaturCreationUnitBE>> GetSignaturCreationUnitBEListAsync();
+        Task<ftSignaturCreationUnitBE> GetSignaturCreationUnitBEAsync(Guid signaturCreationUnitBEId);
+
         Task<IEnumerable<ftSignaturCreationUnitDE>> GetSignaturCreationUnitDEListAsync();
         Task<ftSignaturCreationUnitDE> GetSignaturCreationUnitDEAsync(Guid signaturCreationUnitDEId);
 
@@ -20,6 +23,9 @@ namespace fiskaltrust.storage.V0
 
         Task<IEnumerable<ftSignaturCreationUnitFR>> GetSignaturCreationUnitFRListAsync();
         Task<ftSignaturCreationUnitFR> GetSignaturCreationUnitFRAsync(Guid signaturCreationUnitFRId);
+
+        Task<IEnumerable<ftSignaturCreationUnitGR>> GetSignaturCreationUnitGRListAsync();
+        Task<ftSignaturCreationUnitGR> GetSignaturCreationUnitGRAsync(Guid signaturCreationUnitGRId);
 
         Task<IEnumerable<ftSignaturCreationUnitIT>> GetSignaturCreationUnitITListAsync();
         Task<ftSignaturCreationUnitIT> GetSignaturCreationUnitITAsync(Guid signaturCreationUnitITId);
@@ -33,6 +39,9 @@ namespace fiskaltrust.storage.V0
         Task<IEnumerable<ftQueueAT>> GetQueueATListAsync();
         Task<ftQueueAT> GetQueueATAsync(Guid queueATId);
 
+        Task<IEnumerable<ftQueueBE>> GetQueueBEListAsync();
+        Task<ftQueueBE> GetQueueBEAsync(Guid queueBEId);
+
         Task<IEnumerable<ftQueueDE>> GetQueueDEListAsync();
         Task<ftQueueDE> GetQueueDEAsync(Guid queueDEId);
 
@@ -44,6 +53,9 @@ namespace fiskaltrust.storage.V0
 
         Task<IEnumerable<ftQueueFR>> GetQueueFRListAsync();
         Task<ftQueueFR> GetQueueFRAsync(Guid queueFRId);
+
+        Task<IEnumerable<ftQueueGR>> GetQueueGRListAsync();
+        Task<ftQueueGR> GetQueueGRAsync(Guid queueGRId);
 
         Task<IEnumerable<ftQueueIT>> GetQueueITListAsync();
         Task<ftQueueIT> GetQueueITAsync(Guid queueITId);
