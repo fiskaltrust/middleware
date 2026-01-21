@@ -65,14 +65,12 @@ public class SaftExporter
     {
         if (!string.IsNullOrEmpty(middlewareCustomer.CustomerCountry))
         {
-            return middlewareCustomer.CustomerCountry;
+            return middlewareCustomer.CustomerCountry.Trim();
         }
-
-        if (!string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) && IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
+        else
         {
-            return "PT";
+            return "Desconhecido";
         }
-        return "Desconhecido";
     }
 
     public string GetSourceID(ReceiptRequest receiptRequest)
@@ -94,6 +92,11 @@ public class SaftExporter
             return _anonymousCustomer;
         }
         var middlewareCustomer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer))!;
+        if (!string.IsNullOrEmpty(middlewareCustomer.CustomerName))
+        {
+            middlewareCustomer.CustomerName = middlewareCustomer.CustomerName.Trim();
+        }
+
         if (string.IsNullOrEmpty(middlewareCustomer.CustomerId))
         {
             if (string.IsNullOrEmpty(middlewareCustomer.CustomerVATId))
@@ -109,13 +112,13 @@ public class SaftExporter
         {
             CustomerID = middlewareCustomer.CustomerId,
             AccountID = "Desconhecido",
-            CompanyName = string.IsNullOrEmpty(middlewareCustomer.CustomerName) ? "Desconhecido" : middlewareCustomer.CustomerName,
-            CustomerTaxID = string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) ? "999999990" : middlewareCustomer.CustomerVATId,
+            CompanyName = string.IsNullOrEmpty(middlewareCustomer.CustomerName) ? "Desconhecido" : middlewareCustomer.CustomerName.Trim(),
+            CustomerTaxID = string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) ? "999999990" : middlewareCustomer.CustomerVATId.Trim(),
             BillingAddress = new BillingAddress
             {
-                AddressDetail = string.IsNullOrEmpty(middlewareCustomer.CustomerStreet) ? "Desconhecido" : middlewareCustomer.CustomerStreet,
-                City = string.IsNullOrEmpty(middlewareCustomer.CustomerCity) ? "Desconhecido" : middlewareCustomer.CustomerCity,
-                PostalCode = string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip,
+                AddressDetail = string.IsNullOrEmpty(middlewareCustomer.CustomerStreet) ? "Desconhecido" : middlewareCustomer.CustomerStreet.Trim(),
+                City = string.IsNullOrEmpty(middlewareCustomer.CustomerCity) ? "Desconhecido" : middlewareCustomer.CustomerCity.Trim(),
+                PostalCode = string.IsNullOrEmpty(middlewareCustomer.CustomerZip) ? "Desconhecido" : middlewareCustomer.CustomerZip.Trim(),
                 Country = GetCustomerCountry(middlewareCustomer)
             }
         };
@@ -252,8 +255,8 @@ public class SaftExporter
             {
                 ProductType = PTMappings.GetProductType(x),
                 ProductCode = GenerateUniqueProductIdentifier(x),
-                ProductGroup = x.ProductGroup,
-                ProductDescription = x.Description,
+                ProductGroup = x.ProductGroup?.Trim(),
+                ProductDescription = x.Description?.Trim(),
                 ProductNumberCode = GenerateUniqueProductIdentifier(x),
             };
         }).DistinctBy(x => x.ProductCode).ToList();
@@ -264,6 +267,11 @@ public class SaftExporter
         if (x.ProductNumber != null && x.ProductNumber.Length >= 3)
         {
             return x.ProductNumber;
+        }
+
+        if (!string.IsNullOrEmpty(x.Description))
+        {
+            x.Description = x.Description.Trim();
         }
 
         return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description)));
