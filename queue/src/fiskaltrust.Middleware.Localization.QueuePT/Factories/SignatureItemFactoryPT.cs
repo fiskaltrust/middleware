@@ -162,7 +162,8 @@ public static class SignatureItemFactoryPT
 
     public static void AddCustomerSignaturesIfNecessary(ProcessCommandRequest request, ProcessResponse response)
     {
-        if (request.ReceiptRequest.cbCustomer is null)
+        var cbCustomer = request.ReceiptRequest.GetCustomerOrNull();
+        if (cbCustomer is null || cbCustomer.CustomerVATId == "999999990")
         {
             response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
         }
