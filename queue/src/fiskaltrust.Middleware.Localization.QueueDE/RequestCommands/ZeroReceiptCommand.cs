@@ -181,7 +181,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 {
                     processReceiptResponse.Signatures.Add(_signatureFactory.GetSignatureForTraining());
                 }
-                string datajson = JsonConvert.SerializeObject(tseInfo);
+                string datajson = JsonConvert.SerializeObject(new { TseInfo = tseInfo});
 
                 actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, $"{0x0002:X}", $"Zero receipt was processed.", datajson));
 
