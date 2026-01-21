@@ -111,7 +111,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
             AddOrigemReferenceSignature(response, receiptReferences);
         }
-
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
@@ -165,7 +164,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
             AddOrigemReferenceSignature(response, receiptReferences);
         }
-
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
@@ -211,7 +210,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
             AddOrigemReferenceSignature(response, receiptReferences);
         }
-
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
