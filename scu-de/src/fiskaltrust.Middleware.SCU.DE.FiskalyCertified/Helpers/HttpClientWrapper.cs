@@ -131,7 +131,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
 
         private bool DoRetry(HttpResponseMessage response, int currentTry)
         {
-            if ((((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599) || (int) response.StatusCode == 429) && _configuration.RetriesOn5xxError > currentTry)
+            if (!((int) response.StatusCode >= 200 && (int) response.StatusCode <= 299)  && _configuration.RetriesOn5xxError > currentTry)
             {
                 return true;
             }
