@@ -506,6 +506,18 @@ public static class AADEMappings
         }
     }
 
+    public static DateTime GetLocalTime(ReceiptRequest receiptRequest)
+    {
+        //option 1
+        return receiptRequest.cbReceiptMoment.ToLocalTime();
+        
+        //option 2
+        /*
+        var gtbZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
+        return TimeZoneInfo.ConvertTimeFromUtc(receiptRequest.cbReceiptMoment, gtbZone);
+        */
+    }
+
     public static bool RequiresCustomerInfo(InvoiceType invoiceType)
     {
         return invoiceType switch
