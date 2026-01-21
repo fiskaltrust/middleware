@@ -57,6 +57,15 @@ public static class CustomerValidations
                     "cbCustomer.CustomerVATId"
                 ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
             }
+
+            if (string.IsNullOrEmpty(middlewareCustomer.CustomerCountry))
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_CustomerCountryRequiredForTaxId,
+                    "EEEE_CustomerCountryRequiredForTaxId",
+                    "cbCustomer.CustomerCountry"
+                ));
+            }
         }
     }
 }
