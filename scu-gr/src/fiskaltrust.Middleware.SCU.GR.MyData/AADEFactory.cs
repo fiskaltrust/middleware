@@ -246,10 +246,19 @@ public class AADEFactory
                 {
                     inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
                 }
+                else
+                {
+                    // Retail refunds (11.4) use multipleConnectedMarks
+                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
             }
             else
             {
-                inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                // NON-REFUNDS
+                if (AADEMappings.SupportsMultipleConnectedMarks(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
             }
         }
 

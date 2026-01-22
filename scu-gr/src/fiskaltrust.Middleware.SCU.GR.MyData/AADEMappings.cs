@@ -527,6 +527,11 @@ public static class AADEMappings
         InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
         _ => true
     };
+    public static bool SupportsMultipleConnectedMarks(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item16 or InvoiceType.Item24 or InvoiceType.Item51 => false,
+        _ => true
+    };
 
     /// <summary>
     /// Maps ChargeItemCase Nature of VAT to MyData VAT exemption category.
