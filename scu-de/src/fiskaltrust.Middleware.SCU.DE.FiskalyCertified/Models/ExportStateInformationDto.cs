@@ -34,5 +34,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models
 
         [JsonProperty("tss_id")]
         public Guid TssId { get; set; }
+
+        public bool IsExportDone() =>  State == "COMPLETED" || State == "ERROR" || State == "CANCELLED" || State == "EXPIRED" || State == "DELETED";
     }
 }

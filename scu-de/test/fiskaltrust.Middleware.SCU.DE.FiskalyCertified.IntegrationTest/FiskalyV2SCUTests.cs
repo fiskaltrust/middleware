@@ -348,7 +348,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
 
             do
             {
-                await Task.Delay(1000);
+                await Task.Delay(60000);
                 exportDataResponse = await sut.ExportDataAsync(new ExportDataRequest
                 {
                     TokenId = exportSession.TokenId,
