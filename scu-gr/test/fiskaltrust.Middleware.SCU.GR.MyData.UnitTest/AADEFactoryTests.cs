@@ -98,7 +98,6 @@ public class AADEFactoryTests
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().NotBeNull();
     }
-
     [Fact]
     public void MapToInvoicesDoc_ShouldThrowException_IfHandwritten_FieldsAreDefined_HashPayloadMatches_EverythingGreen()
     {
@@ -1117,7 +1116,7 @@ public class AADEFactoryTests
         incomeClassification1.amount.Should().Be(124);
         // Based on the actual mapping behavior - for unknown service types only category is set
         incomeClassification1.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_1);
-
+        
         incomeClassification1.classificationTypeSpecified.Should().BeTrue(); // For unknown services
         incomeClassification1.classificationType.Should().Be(IncomeClassificationValueType.E3_561_002);
 
@@ -1285,5 +1284,317 @@ public class AADEFactoryTests
         var invoice = invoiceDoc.invoice[0];
         invoice.invoiceHeader.Should().NotBeNull();
         invoice.invoiceHeader.isDeliveryNoteSpecified.Should().BeFalse("isDeliveryNoteSpecified should not be set when flag is not present");
+    }
+    [Fact]
+    public void MapToInvoicesDoc_B2BInvoice_WithPreviousReference_UsesCorrelatedInvoices()
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Amount = -100,
+                    ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24
+                }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = -100 }
+            },
+            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.InvoiceB2B0x1002)
+                .WithFlag(ReceiptCaseFlags.Refund),
+            cbPreviousReceiptReference = "PREV-B2B-123",
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "123456789",
+                CustomerCountry = "GR"
+            }
+        };
+        
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123ABC#",
+            ftCashBoxIdentification = "CB-TEST",
+            ftSignatures = new List<SignatureItem>
+            {
+                new SignatureItem { Caption = "invoiceMark", Data = "400001958034189" }
+            }
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
+        {
+            (receiptRequest, receiptResponse)
+        });
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        
+        // B2B invoices should use correlatedInvoices, NOT multipleConnectedMarks
+        header.correlatedInvoices.Should().NotBeNull();
+        header.correlatedInvoices.Should().Contain(400001958034189);
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+    [Fact]
+    public void MapToInvoicesDoc_B2BInvoice_11_NonRefund_WithPreviousReference_SetsMultipleConnectedMarks()
+    {
+        // Arrange - B2B Invoice (Type 1.1) non-refund with previous reference
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 100 }
+        },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbPreviousReceiptReference = "PREV-B2B-123",
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "123456789",
+                CustomerCountry = "GR" // Domestic customer
+            }
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123ABC#",
+            ftCashBoxIdentification = "CB-TEST",
+            ftSignatures = new List<SignatureItem>
+        {
+            new SignatureItem { Caption = "invoiceMark", Data = "400001958034189" }
+        }
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
+    {
+        (receiptRequest, receiptResponse)
+    });
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+
+        // Invoice 1.1 non-refund with previous reference SHOULD use multipleConnectedMarks
+        header.invoiceType.Should().Be(InvoiceType.Item11);
+        header.multipleConnectedMarks.Should().NotBeNull();
+        header.multipleConnectedMarks.Should().Contain(400001958034189);
+        header.correlatedInvoices.Should().BeNull();
+    }
+    [Fact]
+    public void MapToInvoicesDoc_B2BInvoice_12_NonRefund_WithPreviousReference_SetsMultipleConnectedMarks()
+    {
+        // Arrange - B2B Invoice (Type 1.2) non-refund with previous reference to EU customer
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 100 }
+        },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbPreviousReceiptReference = "PREV-B2B-EU-123",
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "DE123456789",
+                CustomerCountry = "DE" // EU customer generates 1.2
+            }
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123DEF#",
+            ftCashBoxIdentification = "CB-TEST",
+            ftSignatures = new List<SignatureItem>
+        {
+            new SignatureItem { Caption = "invoiceMark", Data = "400002958034190" }
+        }
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
+    {
+        (receiptRequest, receiptResponse)
+    });
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+
+        // Invoice 1.2 non-refund with previous reference SHOULD use multipleConnectedMarks
+        header.invoiceType.Should().Be(InvoiceType.Item12);
+        header.multipleConnectedMarks.Should().NotBeNull();
+        header.multipleConnectedMarks.Should().Contain(400002958034190);
+        header.correlatedInvoices.Should().BeNull();
+    }
+    [Fact]
+    public void MapToInvoicesDoc_RetailCreditNote_WithPreviousReference_SetsMultipleConnectedMarks()
+    {
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = -10,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Amount = -10
+            }
+        },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
+                .WithFlag(ReceiptCaseFlags.Refund),
+            cbPreviousReceiptReference = "400001958034189"
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB-TEST",
+            ftSignatures = new List<SignatureItem>
+        {
+            new SignatureItem { Caption = "invoiceMark", Data = "400001958034189" }
+        }
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
+    {
+        (receiptRequest, receiptResponse)
+    });
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.multipleConnectedMarks.Should().NotBeNull();
+        header.multipleConnectedMarks.Should().Contain(400001958034189);
+    }
+    [Fact]
+    public void MapToInvoicesDoc_RetailCreditNote_WithoutReference_DoesNotSetMultipleConnectedMarks()
+    {
+        // Arrange
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = -10,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Amount = -10
+            }
+        },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
+                .WithFlag(ReceiptCaseFlags.Refund)
+            // No cbPreviousReceiptReference
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB-TEST"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.multipleConnectedMarks.Should().BeNull();
     }
 }
