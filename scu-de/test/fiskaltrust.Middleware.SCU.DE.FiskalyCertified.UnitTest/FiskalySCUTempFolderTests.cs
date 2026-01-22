@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.UnitTest
             
             SetupMocksForExport();
             _apiProviderMock.Setup(x => x.GetExportStateInformationByIdAsync(_tssId, exportId))
-                .ReturnsAsync(new ExportStateInformationDto { State = "COMPLETED" });
+                .ReturnsAsync((new ExportStateInformationDto { State = "COMPLETED" }, 0));
 
             var sut = new FiskalySCU(_loggerMock.Object, _apiProviderMock.Object, _clientCache, _configuration);
             
@@ -243,8 +243,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.UnitTest
                 .ReturnsAsync(() => new MemoryStream(testData));
             
             _apiProviderMock.Setup(x => x.GetExportStateInformationByIdAsync(_tssId, It.IsAny<Guid>()))
-                .ReturnsAsync(new ExportStateInformationDto { State = "COMPLETED" });
-            
+                .ReturnsAsync((new ExportStateInformationDto { State = "COMPLETED" }, 0));
+
             _apiProviderMock.Setup(x => x.GetStartedTransactionsAsync(_tssId))
                 .ReturnsAsync(new List<TransactionDto>());
             _apiProviderMock.Setup(x => x.GetExportMetadataAsync(_tssId, It.IsAny<Guid>()))
@@ -318,7 +318,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.UnitTest
                 .ReturnsAsync(() => new MemoryStream(testData));
             
             _apiProviderMock.Setup(x => x.GetExportStateInformationByIdAsync(_tssId, It.IsAny<Guid>()))
-                .ReturnsAsync(new ExportStateInformationDto { State = "COMPLETED" });
+                .ReturnsAsync((new ExportStateInformationDto { State = "COMPLETED" }, 0));
             
             _apiProviderMock.Setup(x => x.GetStartedTransactionsAsync(_tssId))
                 .ReturnsAsync(new List<TransactionDto>());
@@ -430,7 +430,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.UnitTest
                 .ReturnsAsync(() => new MemoryStream(testData));
             
             _apiProviderMock.Setup(x => x.GetExportStateInformationByIdAsync(_tssId, It.IsAny<Guid>()))
-                .ReturnsAsync(new ExportStateInformationDto { State = "COMPLETED" });
+                .ReturnsAsync((new ExportStateInformationDto { State = "COMPLETED" }, 0));
             
             var sut = new FiskalySCU(_loggerMock.Object, _apiProviderMock.Object, _clientCache, _configuration);
 
