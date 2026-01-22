@@ -65,10 +65,12 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
-
-                request.EnsureV1Tagging();
-
                 var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
+
+                if (queue.CountryCode == "AT" || queue.CountryCode == "DE" || queue.CountryCode == "FR")
+                {
+                    request.EnsureV1Tagging();
+                }
 
                 var response = await InternalSign(queue, request).ConfigureAwait(false);
 
@@ -211,7 +213,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(encodedCountry | 0x2000_EEEE_EEEE)
+                        ftState = (long) (encodedCountry | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
