@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Storage.EF
 
         public int MigrationsTimeoutSec { get; set; } = 30 * 60;
 
-        public int CommandTimeoutSeconds { get; set; } = 3 * 60;
+        public int SqlCommandTimeoutSec { get; set; } = 3 * 60;
 
         public static EfStorageConfiguration FromConfigurationDictionary(Dictionary<string, object> configuration) => JsonConvert.DeserializeObject<EfStorageConfiguration>(JsonConvert.SerializeObject(configuration));
     }
