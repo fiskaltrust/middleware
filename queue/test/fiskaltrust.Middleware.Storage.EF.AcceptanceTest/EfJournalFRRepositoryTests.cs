@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
         public override async Task<IJournalFRRepository> CreateRepository(IEnumerable<ftJournalFR> entries)
         {
             var queueId = Guid.NewGuid();
-            var repository = new EfJournalFRRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId));
+            var repository = new EfJournalFRRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId, 60));
             EfStorageBootstrapper.Update(EfConnectionStringFixture.DatabaseConnectionString, 30 * 60, queueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
 
             foreach (var item in entries)

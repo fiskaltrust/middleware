@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
             {
                 _connectionString += ";MultipleActiveResultSets=true";
             }
-            var context = new MiddlewareDbContext(_connectionString, _queueId);
+            var context = new MiddlewareDbContext(_connectionString, _queueId, _efStorageConfiguration.SqlCommandTimeoutSec);
             var configurationRepository = new EfConfigurationRepository(context);
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
@@ -101,12 +101,12 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
         private void AddRepositories(IServiceCollection services)
         {
-            services.AddTransient(x => new MiddlewareDbContext(_connectionString, _queueId));
+            services.AddTransient(x => new MiddlewareDbContext(_connectionString, _queueId, _efStorageConfiguration.SqlCommandTimeoutSec));
 
             services.AddSingleton<IConfigurationRepository>(_ =>
-                new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
+                new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId, _efStorageConfiguration.SqlCommandTimeoutSec)));
             services.AddTransient<IReadOnlyConfigurationRepository>(_ =>
-                new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
+                new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId, _efStorageConfiguration.SqlCommandTimeoutSec)));
 
             services.AddTransient<IQueueItemRepository, EfQueueItemRepository>();
             services.AddTransient<IReadOnlyQueueItemRepository, EfQueueItemRepository>();
