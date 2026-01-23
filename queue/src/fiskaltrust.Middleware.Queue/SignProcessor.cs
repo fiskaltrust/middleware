@@ -12,6 +12,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
+
 namespace fiskaltrust.Middleware.Queue
 {
     public class SignProcessor : ISignProcessor
@@ -26,6 +27,7 @@ namespace fiskaltrust.Middleware.Queue
 
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly SignatureFactory _signatureFactory;
+        //private readonly Action<string> _onMessage;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -45,6 +47,7 @@ namespace fiskaltrust.Middleware.Queue
             _actionJournalRepository = actionJournalRepository;
             _cryptoHelper = cryptoHelper;
             _middlewareConfiguration = middlewareConfiguration;
+            //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
         }
 
@@ -65,8 +68,6 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
-
-                request.EnsureV1Tagging();
 
                 var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
@@ -127,6 +128,7 @@ namespace fiskaltrust.Middleware.Queue
                     await CreateActionJournalAsync(message, "", null).ConfigureAwait(false);
                 }
 
+
                 if (_middlewareConfiguration.ReceiptRequestMode == 1)
                 {
                     //try to sign, remove receiptrequest-flag
@@ -157,12 +159,7 @@ namespace fiskaltrust.Middleware.Queue
                 queueItem.ftQueueTimeout = 15000;
             }
 
-            if (string.IsNullOrWhiteSpace(queue.CountryCode))
-            {
-                throw new InvalidOperationException($"Queue '{queue.ftQueueId}' has no CountryCode configured. For localization v1 the queue CountryCode must be set.");
-            }
-
-            queueItem.country = queue.CountryCode;
+            queueItem.country = ReceiptRequestHelper.GetCountry(data);
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
             queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
@@ -188,9 +185,6 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     exception = e;
                     countrySpecificActionJournals = new();
-
-                    var encodedCountry = EncodeCountry(queue.CountryCode);
-
                     receiptResponse = new ReceiptResponse
                     {
                         ftCashBoxID = queue.ftCashBoxId.ToString(),
@@ -201,17 +195,15 @@ namespace fiskaltrust.Middleware.Queue
                         cbReceiptReference = data.cbReceiptReference,
                         ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
                         ftReceiptMoment = DateTime.UtcNow,
-                        ftSignatures = new[]
-                        {
-                            new SignaturItem
-                            {
+                        ftSignatures = new SignaturItem[] {
+                            new SignaturItem() {
                                 ftSignatureFormat = 0x1,
-                                ftSignatureType = (long)(encodedCountry | 0x2000_0000_3000),
+                                ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
                                 Caption = "uncaught-exeption",
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(encodedCountry | 0x2000_EEEE_EEEE)
+                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
@@ -398,24 +390,6 @@ namespace fiskaltrust.Middleware.Queue
             queue.ftReceiptHash = receiptJournal.ftReceiptHash;
             queue.ftReceiptTotalizer += receiptJournal.ftReceiptTotal;
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
-        }
-
-        private static ulong EncodeCountry(string? countryCode)
-        {
-            if (string.IsNullOrWhiteSpace(countryCode))
-            {
-                throw new ArgumentException("Country code must not be null or empty.", nameof(countryCode));
-            }
-
-            return countryCode.ToUpperInvariant() switch
-            {
-                "DE" => 0x4445000000000000,
-                "FR" => 0x4652000000000000,
-                "ME" => 0x4D45000000000000,
-                "IT" => 0x4954000000000000,
-                "AT" => 0x4154000000000000,
-                _ => throw new NotSupportedException($"Country code '{countryCode}' is not supported for v1.")
-            };
         }
     }
 }

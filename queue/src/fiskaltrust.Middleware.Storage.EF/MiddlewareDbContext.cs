@@ -16,6 +16,8 @@ namespace fiskaltrust.Middleware.Storage.EF
         private readonly string _schemaString = null;
 #pragma warning restore IDE0032 // Use auto property
 
+        public int CommandTimeoutSeconds { get; set; } = 180;
+
         public DbSet<ftCashBox> CashBoxList { get; set; }
 
         public DbSet<ftQueue> QueueList { get; set; }
@@ -79,10 +81,11 @@ namespace fiskaltrust.Middleware.Storage.EF
             Database.SetInitializer<MiddlewareDbContext>(null);
         }
 
-        public MiddlewareDbContext(string connectionString, Guid queueId) : base(connectionString)
+        public MiddlewareDbContext(string connectionString, Guid queueId, int CommandTimeoutSeconds) : base(connectionString)
         {
             Database.SetInitializer<MiddlewareDbContext>(null);
             _schemaString = queueId.ToString("D");
+            Database.CommandTimeout = CommandTimeoutSeconds;
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
