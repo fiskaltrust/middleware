@@ -622,7 +622,8 @@ public class AADEFactory
         }
 
         var chargeItems = receiptRequest.GetGroupedChargeItems()
-            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem) 
+                              && !grouped.chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Tip))
             .ToList();
 
         var nextPosition = 1;
@@ -778,21 +779,41 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        // what is payitemcase 99?
-        return receiptRequest.cbPayItems.Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
+        // Calculate total tip amount from Tip ChargeItems (these are excluded from the invoice)
+        // Tips go to employees and should NOT be reported as company revenue to MyData
+        var tipFromChargeItems = receiptRequest.cbChargeItems
+            .Where(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Tip))
+            .Sum(x => x.Amount);
+
+        // Filter out tip PayItems
+        var nonTipPayItems = receiptRequest.cbPayItems
+            .Where(x => !x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))
+            .ToList();
+
+        if (nonTipPayItems.Count == 0)
         {
+            return new List<PaymentMethodDetailType>();
+        }
+
+        // Calculate total payment amount (excluding tip PayItems)
+        var totalNonTipPayment = nonTipPayItems.Sum(x => x.Amount);
+
+        return nonTipPayItems.Select(x =>
+        {
+            // Calculate this payment's share of the tip reduction (proportional distribution)
+            var paymentShare = totalNonTipPayment != 0 ? x.Amount / totalNonTipPayment : 0;
+            var tipReduction = tipFromChargeItems * paymentShare;
+            var adjustedAmount = x.Amount - tipReduction;
+
             var payment = new PaymentMethodDetailType
             {
                 type = AADEMappings.GetPaymentType(x),
-                amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
+                amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -adjustedAmount : adjustedAmount,
                 paymentMethodInfo = x.Description,
             };
-            var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip));
-            if (tipPayment != null)
-            {
-                payment.tipAmount = tipPayment.Amount;
-                payment.tipAmountSpecified = true;
-            }
+
+            // Tips should NOT be sent to MyData - they are not company revenue
+            // The tip goes to the employee who will be taxed separately
 
             if (x.ftPayItemCaseData != null)
             {

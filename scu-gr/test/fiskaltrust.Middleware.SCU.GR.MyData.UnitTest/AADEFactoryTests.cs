@@ -1597,4 +1597,176 @@ public class AADEFactoryTests
         var header = doc!.invoice[0].invoiceHeader;
         header.multipleConnectedMarks.Should().BeNull();
     }
+    [Fact]
+    public void MapToInvoicesDoc_WithTipAsChargeItem_ShouldExcludeTipFromMyDataPayload()
+    {
+        // Arrange
+        var receiptMoment = DateTime.Parse("2025-01-24T10:00:00.000Z").ToUniversalTime();
+        var cbReceiptReference = Guid.NewGuid().ToString();
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = receiptMoment,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 124,
+                Description = "Food",
+                Quantity = 1,
+                VATRate = 24,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                Position = 1,
+                VATAmount = 24
+            },
+            new ChargeItem
+            {
+                Amount = 4,
+                Description = "Tip",
+                Quantity = 1,
+                VATRate = 0,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
+                    .WithTypeOfService(ChargeItemCaseTypeOfService.Tip),
+                Position = 2,
+                VATAmount = 0
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Amount = 128, // 124 Food + 4 Tip
+                Description = "Card Payment",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 1
+            }
+        },
+            cbReceiptAmount = 128
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB-001"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "123456789"
+            }
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        var invoice = invoiceDoc!.invoice[0];
+
+        invoice.invoiceDetails.Should().HaveCount(1, "tips should be excluded from invoice details");
+
+        invoice.invoiceDetails[0].lineNumber.Should().Be(1);
+        invoice.invoiceDetails[0].netValue.Should().Be(100);
+        invoice.invoiceDetails[0].vatAmount.Should().Be(24);
+
+        invoice.invoiceSummary.totalNetValue.Should().Be(100, "tip should not be included in net value");
+        invoice.invoiceSummary.totalVatAmount.Should().Be(24, "tip should not be included in VAT");
+        invoice.invoiceSummary.totalGrossValue.Should().Be(124, "tip should not be included in gross value");
+
+        invoice.paymentMethods.Should().HaveCount(1);
+        invoice.paymentMethods[0].amount.Should().Be(124, "payment reported to myDATA must exclude tip");
+        invoice.paymentMethods[0].tipAmountSpecified.Should().BeFalse("tip field must be null/false in XML");
+    }
+    [Fact]
+    public void MapToInvoicesDoc_WithTipAsPayItem_ShouldExcludeTipFromMyDataPayload()
+    {
+        // Arrange  
+        var receiptMoment = DateTime.Parse("2025-01-24T10:00:00.000Z").ToUniversalTime();
+        var cbReceiptReference = Guid.NewGuid().ToString();
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = receiptMoment,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 124,
+                Description = "Food",
+                Quantity = 1,
+                VATRate = 24,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                Position = 1,
+                VATAmount = 24
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Amount = 124,
+                Description = "Card Payment",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 1
+            },
+            new PayItem
+            {
+                Amount = 4,
+                Description = "Tip",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000)
+                    .WithCase(PayItemCase.DebitCardPayment)
+                    .WithFlag(PayItemCaseFlags.Tip),
+                Position = 2
+            }
+        },
+            cbReceiptAmount = 128 // Total 124 + 4
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB-001"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "123456789"
+            }
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        var invoice = invoiceDoc!.invoice[0];
+
+        invoice.invoiceSummary.totalGrossValue.Should().Be(124);
+
+        var totalReportedPayment = invoice.paymentMethods.Sum(p => p.amount);
+        totalReportedPayment.Should().Be(124, "only non-tip payment amounts should be sent to myDATA");
+
+        foreach (var payment in invoice.paymentMethods)
+        {
+            payment.tipAmountSpecified.Should().BeFalse("tips must not be sent to myDATA");
+        }
+    }
 }
