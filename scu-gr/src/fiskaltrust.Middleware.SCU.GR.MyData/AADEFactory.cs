@@ -779,13 +779,10 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        // Calculate total tip amount from Tip ChargeItems (these are excluded from the invoice)
-        // Tips go to employees and should NOT be reported as company revenue to MyData
         var tipFromChargeItems = receiptRequest.cbChargeItems
             .Where(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Tip))
             .Sum(x => x.Amount);
 
-        // Filter out tip PayItems
         var nonTipPayItems = receiptRequest.cbPayItems
             .Where(x => !x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))
             .ToList();
@@ -795,15 +792,18 @@ public class AADEFactory
             return new List<PaymentMethodDetailType>();
         }
 
-        // Calculate total payment amount (excluding tip PayItems)
-        var totalNonTipPayment = nonTipPayItems.Sum(x => x.Amount);
+        var largestPaymentForTipDeduction = nonTipPayItems
+            .Where(x => x.Amount >= tipFromChargeItems)
+            .OrderByDescending(x => x.Amount)
+            .FirstOrDefault();
 
         return nonTipPayItems.Select(x =>
         {
-            // Calculate this payment's share of the tip reduction (proportional distribution)
-            var paymentShare = totalNonTipPayment != 0 ? x.Amount / totalNonTipPayment : 0;
-            var tipReduction = tipFromChargeItems * paymentShare;
-            var adjustedAmount = x.Amount - tipReduction;
+            var adjustedAmount = x.Amount;
+            if (tipFromChargeItems > 0 && largestPaymentForTipDeduction != null && x == largestPaymentForTipDeduction)
+            {
+                adjustedAmount = x.Amount - tipFromChargeItems;
+            }
 
             var payment = new PaymentMethodDetailType
             {
@@ -811,10 +811,6 @@ public class AADEFactory
                 amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -adjustedAmount : adjustedAmount,
                 paymentMethodInfo = x.Description,
             };
-
-            // Tips should NOT be sent to MyData - they are not company revenue
-            // The tip goes to the employee who will be taxed separately
-
             if (x.ftPayItemCaseData != null)
             {
                 var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
