@@ -1769,13 +1769,10 @@ public class AADEFactoryTests
             payment.tipAmountSpecified.Should().BeFalse("tips must not be sent to myDATA");
         }
     }
-
     [Fact]
-    public void MapToInvoicesDoc_WithTipAsChargeItem_MultiplePaymentMethods_ShouldSubtractTipFromLargestPayment()
+    public void MapToInvoicesDoc_WithTipAsChargeItem_MultiplePaymentMethods_ShouldDistributeTipProportionally()
     {
         // Arrange -
-        // Restaurant scenario: €300 bill + €30 tip, paid with €200 card + €130 cash
-        // Tip should be subtracted from the largest payment (card) to avoid working with decimal values
         var receiptMoment = DateTime.Parse("2025-01-24T10:00:00.000Z").ToUniversalTime();
         var cbReceiptReference = Guid.NewGuid().ToString();
 
@@ -1788,46 +1785,46 @@ public class AADEFactoryTests
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
             cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
             {
-                new ChargeItem
-                {
-                    Amount = 300,
-                    Description = "Food & Drinks",
-                    Quantity = 1,
-                    VATRate = 24,
-                    ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
-                    Position = 1,
-                    VATAmount = 58.06m
-                },
-                new ChargeItem
-                {
-                    Amount = 30,
-                    Description = "Tip",
-                    Quantity = 1,
-                    VATRate = 0,
-                    ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
-                        .WithTypeOfService(ChargeItemCaseTypeOfService.Tip),
-                    Position = 2,
-                    VATAmount = 0
-                }
+                Amount = 300,
+                Description = "Food & Drinks",
+                Quantity = 1,
+                VATRate = 24,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                Position = 1,
+                VATAmount = 58.06m
             },
+            new ChargeItem
+            {
+                Amount = 30,
+                Description = "Tip",
+                Quantity = 1,
+                VATRate = 0,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
+                    .WithTypeOfService(ChargeItemCaseTypeOfService.Tip),
+                Position = 2,
+                VATAmount = 0
+            }
+        },
             cbPayItems = new List<PayItem>
+        {
+            new PayItem
             {
-                new PayItem
-                {
-                    Amount = 200,
-                    Description = "Card Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
-                    Position = 1
-                },
-                new PayItem
-                {
-                    Amount = 130,
-                    Description = "Cash Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
-                    Position = 2
-                }
+                Amount = 200,
+                Description = "Card Payment",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 1
             },
+            new PayItem
+            {
+                Amount = 130,
+                Description = "Cash Payment",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
+                Position = 2
+            }
+        },
             cbReceiptAmount = 330 // 300 (bill) + 30 (tip)
         };
 
@@ -1864,17 +1861,253 @@ public class AADEFactoryTests
         invoice.invoiceSummary.totalGrossValue.Should().Be(300, "tip should not be included in gross value");
 
         invoice.paymentMethods.Should().HaveCount(2, "both payment methods should be reported");
-        
+
         var cardPayment = invoice.paymentMethods.FirstOrDefault(p => p.paymentMethodInfo == "Card Payment");
         cardPayment.Should().NotBeNull();
-        cardPayment!.amount.Should().Be(170, "card payment (largest) has tip subtracted: 200 - 30 = 170");
+        cardPayment!.amount.Should().Be(181.82m, "card payment: 200 - (30 × 200/330) ≈ 181.82");
 
         var cashPayment = invoice.paymentMethods.FirstOrDefault(p => p.paymentMethodInfo == "Cash Payment");
         cashPayment.Should().NotBeNull();
-        cashPayment!.amount.Should().Be(130, "cash payment stays as-is");
+        cashPayment!.amount.Should().Be(118.18m, "cash payment: 130 - (30 × 130/330) ≈ 118.18");
 
         var totalReportedPayment = invoice.paymentMethods.Sum(p => p.amount);
-        totalReportedPayment.Should().Be(300, "total payments should match invoice gross value (tip excluded)");
+        totalReportedPayment.Should().Be(300m, "total payments should match invoice gross value (tip excluded)");
+
+        foreach (var payment in invoice.paymentMethods)
+        {
+            payment.tipAmountSpecified.Should().BeFalse("tip field must be null/false in XML");
+        }
+    }
+    [Fact]
+    public void MapToInvoicesDoc_WithTipLargerThanAnyIndividualPayment_ShouldDistributeTipProportionally()
+    {
+        // Arrange
+        var receiptMoment = DateTime.Parse("2025-01-24T10:00:00.000Z").ToUniversalTime();
+        var cbReceiptReference = Guid.NewGuid().ToString();
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = receiptMoment,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 30,
+                Description = "Coffee",
+                Quantity = 1,
+                VATRate = 24,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                Position = 1,
+                VATAmount = 5.81m
+            },
+            new ChargeItem
+            {
+                Amount = 30,
+                Description = "Tip",
+                Quantity = 1,
+                VATRate = 0,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
+                    .WithTypeOfService(ChargeItemCaseTypeOfService.Tip),
+                Position = 2,
+                VATAmount = 0
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Amount = 20,
+                Description = "Card Payment 1",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 1
+            },
+            new PayItem
+            {
+                Amount = 20,
+                Description = "Card Payment 2",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 2
+            },
+            new PayItem
+            {
+                Amount = 20,
+                Description = "Cash Payment",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
+                Position = 3
+            }
+        },
+            cbReceiptAmount = 60 // 30 (bill) + 30 (tip)
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB-001"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "123456789"
+            }
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        var invoice = invoiceDoc!.invoice[0];
+
+        invoice.invoiceDetails.Should().HaveCount(1, "tips should be excluded from invoice details");
+        invoice.invoiceDetails[0].netValue.Should().Be(24.19m);
+        invoice.invoiceDetails[0].vatAmount.Should().Be(5.81m);
+
+        invoice.invoiceSummary.totalNetValue.Should().Be(24.19m, "tip should not be included in net value");
+        invoice.invoiceSummary.totalVatAmount.Should().Be(5.81m, "tip should not be included in VAT");
+        invoice.invoiceSummary.totalGrossValue.Should().Be(30, "tip should not be included in gross value");
+
+        invoice.paymentMethods.Should().HaveCount(3, "all three payment methods should be reported");
+
+        var cardPayment1 = invoice.paymentMethods.FirstOrDefault(p => p.paymentMethodInfo == "Card Payment 1");
+        cardPayment1.Should().NotBeNull();
+        cardPayment1!.amount.Should().Be(10m, "card payment 1: 20 - (30 × 20/60) = 10");
+
+        var cardPayment2 = invoice.paymentMethods.FirstOrDefault(p => p.paymentMethodInfo == "Card Payment 2");
+        cardPayment2.Should().NotBeNull();
+        cardPayment2!.amount.Should().Be(10m, "card payment 2: 20 - (30 × 20/60) = 10");
+
+        var cashPayment = invoice.paymentMethods.FirstOrDefault(p => p.paymentMethodInfo == "Cash Payment");
+        cashPayment.Should().NotBeNull();
+        cashPayment!.amount.Should().Be(10m, "cash payment: 20 - (30 × 20/60) = 10");
+
+        var totalReportedPayment = invoice.paymentMethods.Sum(p => p.amount);
+        totalReportedPayment.Should().Be(30m, "total payments should match invoice gross value (tip excluded)");
+
+        foreach (var payment in invoice.paymentMethods)
+        {
+            payment.tipAmountSpecified.Should().BeFalse("tip field must be null/false in XML");
+        }
+    }
+    [Fact]
+    public void MapToInvoicesDoc_WithTipDistribution_ShouldHandleRoundingRemainder()
+    {
+        // Arrange
+        var receiptMoment = DateTime.Parse("2025-01-24T10:00:00.000Z").ToUniversalTime();
+        var cbReceiptReference = Guid.NewGuid().ToString();
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = receiptMoment,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 29,
+                Description = "Meal",
+                Quantity = 1,
+                VATRate = 24,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                Position = 1,
+                VATAmount = 5.61m
+            },
+            new ChargeItem
+            {
+                Amount = 1,
+                Description = "Tip",
+                Quantity = 1,
+                VATRate = 0,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
+                    .WithTypeOfService(ChargeItemCaseTypeOfService.Tip),
+                Position = 2,
+                VATAmount = 0
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Amount = 10,
+                Description = "Card Payment 1",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 1
+            },
+            new PayItem
+            {
+                Amount = 10,
+                Description = "Card Payment 2",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                Position = 2
+            },
+            new PayItem
+            {
+                Amount = 10,
+                Description = "Cash Payment",
+                ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
+                Position = 3
+            }
+        },
+            cbReceiptAmount = 30 // 29 (bill) + 1 (tip)
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "CB-001"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "123456789"
+            }
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        var invoice = invoiceDoc!.invoice[0];
+
+        invoice.invoiceDetails.Should().HaveCount(1, "tips should be excluded from invoice details");
+        invoice.invoiceDetails[0].netValue.Should().Be(23.39m);
+        invoice.invoiceDetails[0].vatAmount.Should().Be(5.61m);
+
+        invoice.invoiceSummary.totalNetValue.Should().Be(23.39m);
+        invoice.invoiceSummary.totalVatAmount.Should().Be(5.61m);
+        invoice.invoiceSummary.totalGrossValue.Should().Be(29m);
+
+        invoice.paymentMethods.Should().HaveCount(3, "all three payment methods should be reported");
+
+        var payments = invoice.paymentMethods.OrderBy(p => p.paymentMethodInfo).ToList();
+        var payment966 = payments.Where(p => p.amount == 9.66m).ToList();
+        var payment967 = payments.Where(p => p.amount == 9.67m).ToList();
+
+        payment966.Should().HaveCount(1, "exactly one payment should receive the -1 cent remainder correction");
+        payment967.Should().HaveCount(2, "the other two payments should remain at 9.67");
+
+        var totalReportedPayment = invoice.paymentMethods.Sum(p => p.amount);
+        totalReportedPayment.Should().Be(29.00m, "remainder handling ensures exact total match - this is critical for MyData validation!");
+
+        var sum = 9.66m + 9.67m + 9.67m;
+        sum.Should().Be(29.00m, "manual verification: 9.66 + 9.67 + 9.67 = 29.00");
 
         foreach (var payment in invoice.paymentMethods)
         {

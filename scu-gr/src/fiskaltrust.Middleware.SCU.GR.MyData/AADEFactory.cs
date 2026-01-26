@@ -792,34 +792,57 @@ public class AADEFactory
             return new List<PaymentMethodDetailType>();
         }
 
-        var largestPaymentForTipDeduction = nonTipPayItems
-            .Where(x => x.Amount >= tipFromChargeItems)
-            .OrderByDescending(x => x.Amount)
-            .FirstOrDefault();
+        var tipCents = (long)Math.Round(tipFromChargeItems * 100);
+        var totalPaymentCents = (long)Math.Round(nonTipPayItems.Sum(x => x.Amount) * 100);
 
-        return nonTipPayItems.Select(x =>
+        var adjustedPayments = new List<(PayItem payItem, long adjustedCents)>();
+        long totalAdjustedCents = 0;
+
+        foreach (var payItem in nonTipPayItems)
         {
-            var adjustedAmount = x.Amount;
-            if (tipFromChargeItems > 0 && largestPaymentForTipDeduction != null && x == largestPaymentForTipDeduction)
-            {
-                adjustedAmount = x.Amount - tipFromChargeItems;
-            }
+            var paymentCents = (long)Math.Round(payItem.Amount * 100);
+            
+            var tipReductionCents = totalPaymentCents > 0 
+                ? (tipCents * paymentCents) / totalPaymentCents 
+                : 0;
+            
+            var adjustedCents = paymentCents - tipReductionCents;
+            adjustedPayments.Add((payItem, adjustedCents));
+            totalAdjustedCents += adjustedCents;
+        }
+        var remainder = totalPaymentCents - tipCents - totalAdjustedCents;
+        if (remainder != 0)
+        {
+            var largestIndex = adjustedPayments
+                .Select((p, i) => (payment: p, index: i))
+                .OrderByDescending(x => x.payment.adjustedCents)
+                .First()
+                .index;
+            
+            var (payItem, adjustedCents) = adjustedPayments[largestIndex];
+            adjustedPayments[largestIndex] = (payItem, adjustedCents + remainder);
+        }
+
+        return adjustedPayments.Select(x =>
+        {
+            var adjustedAmount = x.adjustedCents / 100m;
 
             var payment = new PaymentMethodDetailType
             {
-                type = AADEMappings.GetPaymentType(x),
+                type = AADEMappings.GetPaymentType(x.payItem),
                 amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -adjustedAmount : adjustedAmount,
-                paymentMethodInfo = x.Description,
+                paymentMethodInfo = x.payItem.Description,
             };
-            if (x.ftPayItemCaseData != null)
+
+            if (x.payItem.ftPayItemCaseData != null)
             {
-                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.payItem.ftPayItemCaseData), new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
                 if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement dat && dat.ValueKind == JsonValueKind.String)
                 {
-                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.payItem.ftPayItemCaseData), new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     })!;
@@ -838,7 +861,7 @@ public class AADEFactory
                 }
                 else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
                 {
-                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.payItem.ftPayItemCaseData), new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     })!;
@@ -857,7 +880,7 @@ public class AADEFactory
                 {
                     try
                     {
-                        var payItemCaseDataJson = JsonSerializer.Serialize(x.ftPayItemCaseData);
+                        var payItemCaseDataJson = JsonSerializer.Serialize(x.payItem.ftPayItemCaseData);
                         using var jsonDoc = JsonDocument.Parse(payItemCaseDataJson);
                         if (jsonDoc.RootElement.TryGetProperty("aadeSignatureData", out var aadeSignatureDataElement))
                         {
