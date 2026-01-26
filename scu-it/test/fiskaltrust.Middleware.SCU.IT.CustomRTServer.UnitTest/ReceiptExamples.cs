@@ -429,5 +429,24 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 """;
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
+
+        public static ReceiptRequest GetProtocolUnspecifiedWithBarcodeFlag()
+        {
+            var current_moment = DateTime.UtcNow;
+            var receipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "Protocol-Unspecified-With-Barcode",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [],
+    "cbPayItems": [],
+    "ftReceiptCase": {{0x4954_2003_0000_3000}},
+    "cbUser": "Admin"
+}
+""";
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
     }
 }
