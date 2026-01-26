@@ -11,5 +11,5 @@ jobs:
   noop:
     runs-on: ubuntu-latest
     steps:
-      - name: No-op placeholder step
+      - name: No-op step
         run: echo 'No-op job'
