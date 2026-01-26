@@ -1,0 +1,12 @@
+name: Manual merging
+
+on:
+  pull_request_target:
+    branches-ignore: "release/v*"
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op placeholder step
+        run: echo 'No-op job'

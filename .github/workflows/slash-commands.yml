@@ -27,3 +27,4 @@ jobs:
             release
             version
             check
+            merge
