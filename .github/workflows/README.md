@@ -205,7 +205,7 @@ Contributor License Agreement checking.
 
 ### Manual Merging (`manual-merging.yml`)
 
-Handles manual merge scenarios.
+Makes sure that release PRs can not be merged manually.
 
 ### Remove No Issue Label (`remove-no-issue-label.yml`)
 
