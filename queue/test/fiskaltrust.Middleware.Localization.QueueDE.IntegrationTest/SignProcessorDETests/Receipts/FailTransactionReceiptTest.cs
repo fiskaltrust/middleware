@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task FailTransaction_IsNoImplicitFlowOnMulti_ExpectArgumentException()
         {
-            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "", 0x444500000000000b);
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "", 0x44450000000000b);
             receiptRequest.ftReceiptCaseData = "{\"CurrentStartedTransactionNumbers\": [8, 9]}";
             await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, "ReceiptCase {0:X} (fail-transaction-receipt) must use implicit-flow flag when multiple transactions should be failed.").ConfigureAwait(false);
         }
