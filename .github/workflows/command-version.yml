@@ -64,10 +64,6 @@ jobs:
           comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
           reactions: hooray
           reactions-edit-mode: replace
-          edit-mode: replace
-          body: |
-            /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
-            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ needs.version.outputs.new-version }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
   failure:
     needs:
