@@ -17,6 +17,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public AbstractEFRepostiory(MiddlewareDbContext dbContext)
         {
             DbContext = dbContext;
+            DbContext.Database.CommandTimeout = dbContext.CommandTimeoutSeconds;
         }
 
         protected abstract TKey GetIdForEntity(T entity);

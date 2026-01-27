@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
         public override async Task<IMiddlewareQueueItemRepository> CreateRepository(IEnumerable<ftQueueItem> entries)
         {
             var queueId = Guid.NewGuid();
-            var repository = new EfQueueItemRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId));
+            var repository = new EfQueueItemRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId, 60));
             EfStorageBootstrapper.Update(EfConnectionStringFixture.DatabaseConnectionString, 30 * 60, queueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await SetQueueRowAndTimeStamp(entries.ToList());
             foreach (var item in entries)
