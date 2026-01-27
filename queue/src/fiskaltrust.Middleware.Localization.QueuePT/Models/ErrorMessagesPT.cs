@@ -167,6 +167,12 @@ public static class ErrorMessagesPT
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
 
     /// <summary>
+    /// Error message for voiding working documents that have already been invoiced
+    /// </summary>
+    public static string EEEE_WorkingDocumentAlreadyInvoiced(string receiptReference) =>
+        $"EEEE_Working document '{receiptReference}' has already been invoiced and cannot be voided.";
+
+    /// <summary>
     /// Error message for mixed refund and non-refund items in partial refund
     /// </summary>
     public const string EEEE_MixedRefundItemsNotAllowed = "EEEE_Partial refund contains mixed refund and non-refund items. In Portugal, it is not allowed to mix refunds with non-refunds in the same receipt. All charge items must have the refund flag set for partial refunds.";
@@ -198,6 +204,12 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_DiscountExceedsArticleAmount(int position, string description, decimal discountAmount, decimal articleAmount) =>
         $"EEEE_Charge item at position {position} ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
+
+    /// <summary>
+    /// Error message for invalid positions sequence.
+    /// </summary>
+    public static string EEEE_InvalidPositions(string itemType) =>
+        $"EEEE_{itemType} positions must start at 1 and be strictly increasing without gaps when provided.";
 
     /// <summary>
     /// Error message for discounts/extras that are positive (not allowed in PT)

@@ -86,6 +86,10 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield break;
         }
 
+        foreach (var result in ReceiptRequestValidations.ValidatePositions(_receiptRequest))
+        {
+            yield return result;
+        }
 
         foreach (var result in CustomerValidations.ValidateCustomerTaxId(_receiptRequest))
         {
@@ -437,6 +441,19 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         var originalRequest = receiptReferences[0].Request;
+        if (IsWorkingDocument(originalRequest))
+        {
+            var hasExistingInvoice = await _receiptReferenceProvider.HasExistingInvoiceForWorkingDocumentAsync(previousReceiptRef);
+            if (hasExistingInvoice)
+            {
+                return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_WorkingDocumentAlreadyInvoiced(previousReceiptRef),
+                    "EEEE_WorkingDocumentAlreadyInvoiced",
+                    "cbPreviousReceiptReference"
+                ));
+            }
+        }
+
         var validationError = await _voidValidator.ValidateVoidAsync(
             receiptRequest,
             originalRequest,
@@ -451,6 +468,10 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             return ValidationResult.Success();
         }
     }
+
+    private static bool IsWorkingDocument(ReceiptRequest receiptRequest) =>
+        receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006) ||
+        receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007);
 
     private async Task<ValidationResult> ValidatePartialRefundAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {

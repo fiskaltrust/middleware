@@ -165,4 +165,61 @@ public class ReceiptRequestValidations
             ));
         }
     }
+
+    /// <summary>
+    /// Validates that item positions, if provided, start at 1 and are strictly increasing without gaps.
+    /// </summary>
+    public static IEnumerable<ValidationResult> ValidatePositions(ReceiptRequest request)
+    {
+        foreach (var result in ValidatePositionsCore(request.cbChargeItems, "ChargeItems", "cbChargeItems"))
+        {
+            yield return result;
+        }
+
+        foreach (var result in ValidatePositionsCore(request.cbPayItems, "PayItems", "cbPayItems"))
+        {
+            yield return result;
+        }
+    }
+
+    private static IEnumerable<ValidationResult> ValidatePositionsCore<T>(IList<T>? items, string itemType, string fieldName) where T : class
+    {
+        if (items is null || items.Count == 0)
+        {
+            yield break;
+        }
+
+        var positions = items.Select(GetPosition).ToList();
+        if (!positions.Any(p => p > 0))
+        {
+            yield break;
+        }
+
+        var expected = 1L;
+        foreach (var position in positions)
+        {
+            if (position != expected)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_InvalidPositions(itemType),
+                    "EEEE_InvalidPositions",
+                    fieldName
+                )
+                .WithContext("ExpectedPosition", expected)
+                .WithContext("ActualPosition", position));
+                yield break;
+            }
+            expected++;
+        }
+    }
+
+    private static decimal GetPosition<T>(T item) where T : class
+    {
+        return item switch
+        {
+            ChargeItem chargeItem => chargeItem.Position,
+            PayItem payItem => payItem.Position,
+            _ => 0
+        };
+    }
 }

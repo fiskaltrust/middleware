@@ -58,7 +58,9 @@ public static class PortugalReceiptCalculations
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
-        var customerCountry = customer.BillingAddress.Country;
+        var customerCountry = string.IsNullOrWhiteSpace(customer.BillingAddress.Country)
+            ? "Desconhecido"
+            : customer.BillingAddress.Country;
         
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
@@ -102,7 +104,9 @@ public static class PortugalReceiptCalculations
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
-        var customerCountry = customer.BillingAddress.Country;
+        var customerCountry = string.IsNullOrWhiteSpace(customer.BillingAddress.Country)
+            ? "Desconhecido"
+            : customer.BillingAddress.Country;
 
         var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 

@@ -103,20 +103,9 @@ public class RefundValidator
             return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "cbArea"));
         }
         
-        if(originalItem.cbCustomer is string originalCustomer && refundItem.cbCustomer is string refundCustomer)
+        if (!CustomersMatch(originalItem.cbCustomer, refundItem.cbCustomer))
         {
-            if (originalCustomer != refundCustomer)
-            {
-                return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "cbCustomer"));
-            }
-        }
-
-        if (originalItem.cbCustomer is JsonElement originalJsonCustomer && refundItem.cbCustomer is JsonElement refundJsonCustomer)
-        {
-            if (!JsonSerializer.Serialize(originalJsonCustomer).Equals(JsonSerializer.Serialize(refundJsonCustomer), StringComparison.Ordinal))
-            {
-                return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "cbCustomer"));
-            }
+            return (flowControl: false, value: ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "cbCustomer"));
         }
 
         if (originalItem.cbSettlement != refundItem.cbSettlement)
@@ -135,6 +124,66 @@ public class RefundValidator
         }
 
         return (flowControl: true, value: null);
+    }
+
+    private static bool CustomersMatch(object? originalCustomer, object? refundCustomer)
+    {
+        if (originalCustomer == null && refundCustomer == null)
+        {
+            return true;
+        }
+
+        if (originalCustomer == null || refundCustomer == null)
+        {
+            return false;
+        }
+
+        if (originalCustomer is string originalCustomerString && refundCustomer is string refundCustomerString)
+        {
+            return string.Equals(originalCustomerString, refundCustomerString, StringComparison.Ordinal);
+        }
+
+        if (originalCustomer is string || refundCustomer is string)
+        {
+            return false;
+        }
+
+        try
+        {
+            var originalElement = CreateJsonElement(originalCustomer, out var originalDocument);
+            var refundElement = CreateJsonElement(refundCustomer, out var refundDocument);
+
+            using (originalDocument)
+            using (refundDocument)
+            {
+                return JsonElement.DeepEquals(originalElement, refundElement);
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static JsonElement CreateJsonElement(object customer, out JsonDocument? document)
+    {
+        document = null;
+
+        if (customer is JsonElement element)
+        {
+            return element;
+        }
+
+        if (customer is JToken token)
+        {
+            var json = token.ToString(Newtonsoft.Json.Formatting.None);
+            document = JsonDocument.Parse(json);
+            return document.RootElement;
+        }
+
+        var serialized = JsonSerializer.Serialize(customer);
+        document = JsonDocument.Parse(serialized);
+        return document.RootElement;
     }
 
     public static (bool flowControl, string? value) CompareChargeItems(string originalReceiptReference, ChargeItem refundItem, ChargeItem originalItem)

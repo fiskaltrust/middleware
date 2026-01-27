@@ -168,4 +168,89 @@ public class ReceiptReferenceProvider
         return false;
     }
 
+    public async Task<bool> HasExistingInvoiceForWorkingDocumentAsync(string cbPreviousReceiptReference)
+    {
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+
+        var lastItem = await queueItemRepository.GetLastQueueItemAsync();
+        if (lastItem == null)
+        {
+            return false;
+        }
+
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            try
+            {
+                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+                if (referencedRequest == null || referencedResponse == null)
+                {
+                    continue;
+                }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (!HasPreviousReceiptReference(referencedRequest, cbPreviousReceiptReference))
+                {
+                    continue;
+                }
+
+                if (IsInvoiceReceipt(referencedResponse))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Ignore deserialization errors and continue
+                continue;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasPreviousReceiptReference(ReceiptRequest request, string cbPreviousReceiptReference)
+    {
+        if (request.cbPreviousReceiptReference == null)
+        {
+            return false;
+        }
+
+        if (request.cbPreviousReceiptReference.IsSingle)
+        {
+            return request.cbPreviousReceiptReference.SingleValue == cbPreviousReceiptReference;
+        }
+
+        if (request.cbPreviousReceiptReference.IsGroup)
+        {
+            return request.cbPreviousReceiptReference.GroupValue.Contains(cbPreviousReceiptReference);
+        }
+
+        return false;
+    }
+
+    private static bool IsInvoiceReceipt(ReceiptResponse response)
+    {
+        if (string.IsNullOrWhiteSpace(response.ftReceiptIdentification))
+        {
+            return false;
+        }
+
+        var idParts = response.ftReceiptIdentification.Split('#');
+        var idTail = idParts.Length == 0 ? string.Empty : idParts[^1];
+        var typeParts = idTail.Split(' ');
+        var type = typeParts.Length == 0 ? string.Empty : typeParts[0];
+        return type == "FT" || type == "FS";
+    }
+
 }
