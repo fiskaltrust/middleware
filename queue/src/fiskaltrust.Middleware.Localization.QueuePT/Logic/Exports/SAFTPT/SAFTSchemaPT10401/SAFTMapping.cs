@@ -198,8 +198,8 @@ public class SaftExporter
         var paymentDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
 
         // Filter out documents with status "A" (cancelled) or "F" (invoiced) for total calculations per Portuguese SAF-T specification
-        var invoicesForTotals = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A" && x.DocumentStatus.InvoiceStatus != "F").ToList();
-        var workingDocumentsForTotals = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A" && x.DocumentStatus.WorkStatus != "F").ToList();
+        var invoicesForTotals = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A").ToList();
+        var workingDocumentsForTotals = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A").ToList();
         var paymentDocumentsForTotals = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != "A").ToList();
 
         return new AuditFile
@@ -262,7 +262,7 @@ public class SaftExporter
         }).DistinctBy(x => x.ProductCode).ToList();
     }
 
-    private static string GenerateUniqueProductIdentifier(ChargeItem x)
+    public static string GenerateUniqueProductIdentifier(ChargeItem x)
     {
         if (x.ProductNumber != null && x.ProductNumber.Length >= 3)
         {
@@ -549,7 +549,7 @@ public class SaftExporter
             {
                 TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
                 NetTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount),
-                GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
+                GrossTotal = Helpers.CreateTwoDigitMonetaryValue(taxable) + Helpers.CreateTwoDigitMonetaryValue(netAmount)
             }
         };
 

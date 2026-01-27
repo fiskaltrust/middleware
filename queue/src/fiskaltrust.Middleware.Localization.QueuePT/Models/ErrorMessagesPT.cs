@@ -44,6 +44,8 @@ public static class ErrorMessagesPT
 
     public const string EEEE_PreviousReceiptReference = "EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt.";
 
+    public const string EEEE_PreviousReceiptLineItemMismatch = "EEEE_cbPreviousReceiptReference must point to a receipt that shares at least one matching line item.";
+
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 
     /// <summary>

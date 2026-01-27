@@ -1,16 +1,20 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using Currency = fiskaltrust.ifPOS.v2.Currency;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation;
 
@@ -228,6 +232,23 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         if (_receiptRequest.IsPartialRefundReceipt())
         {
             yield return await ValidatePartialRefundAsync(_receiptRequest, _receiptResponse);
+        }
+
+        if (ShouldValidatePreviousReceiptLineItems(_receiptRequest))
+        {
+            var receiptReferences = _receiptResponse.GetPreviousReceiptReference();
+            var hasConnectableItem = receiptReferences != null &&
+                receiptReferences.Count > 0 &&
+                receiptReferences.Any(reference => HasConnectableChargeItem(_receiptRequest, reference.Request));
+
+            if (!hasConnectableItem)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                       ErrorMessagesPT.EEEE_PreviousReceiptLineItemMismatch,
+                       "EEEE_PreviousReceiptLineItemMismatch",
+                       "cbPreviousReceiptReference"
+                   ));
+            }
         }
 
         if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
@@ -528,4 +549,63 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     /// Helper method to get all validation results as a list and check if any failed.
     /// </summary>
     public async Task<ValidationResultCollection> ValidateAndCollectAsync(ReceiptValidationContext context) => new ValidationResultCollection(await Validate(context).ToListAsync());
+
+    private static bool ShouldValidatePreviousReceiptLineItems(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbPreviousReceiptReference is null)
+        {
+            return false;
+        }
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ||
+            receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) ||
+            receiptRequest.IsPartialRefundReceipt())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasConnectableChargeItem(ReceiptRequest currentRequest, ReceiptRequest originalRequest)
+    {
+        if (currentRequest.cbChargeItems is null || currentRequest.cbChargeItems.Count == 0 ||
+            originalRequest.cbChargeItems is null || originalRequest.cbChargeItems.Count == 0)
+        {
+            return false;
+        }
+
+        var currentIdentifiers = currentRequest.cbChargeItems
+            .Where(IsProductChargeItem)
+            .Select(SaftExporter.GenerateUniqueProductIdentifier)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (currentIdentifiers.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var originalItem in originalRequest.cbChargeItems.Where(IsProductChargeItem))
+        {
+            var originalIdentifier = SaftExporter.GenerateUniqueProductIdentifier(originalItem);
+            if (!string.IsNullOrEmpty(originalIdentifier) && currentIdentifiers.Contains(originalIdentifier))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsProductChargeItem(ChargeItem chargeItem)
+    {
+        if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount) ||
+            chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }
