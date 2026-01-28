@@ -107,6 +107,17 @@ The deployed version will have a `-ci` prerelease label based on your branch.
 
 This section describes how a new Middleware release is performed.
 
+```
+┌─────────────┐    ┌─────────────┐    ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   trigger   │    │   /deploy   │    ┊  test &     ┊    │  /version   │    │  /release   │    │   /merge    │
+│   prepare   │───►│ <component> │───►┊    fix      ┊───►│             │───►│ <component> │───►│             │
+│   release   │    │  <package>  │    ┊             ┊    │             │    │  <package>  │    │             │
+└─────────────┘    └─────────────┘    └┄┄┄┄┄┄┄┄┄┄┄┄┄┘    └─────────────┘    └─────────────┘    └─────────────┘
+                          ▲                  │
+                          └──────────────────┘
+                            (repeat if needed)
+```
+
 ### Phase 1: Preparation
 
 #### 1.1 Fill GitHub Milestone
