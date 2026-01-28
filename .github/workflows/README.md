@@ -214,3 +214,165 @@ Automatically removes `no-issue` label when an issue is linked.
 ### Smoketests (`smoketests.yml`)
 
 Runs smoke tests for release verification.
+
+## Workflow Dependencies
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    SLASH COMMANDS                                       │
+│                                                                                         │
+│    Triggered by: issue_comment on pull requests                                         │
+│    Dispatched via: slash-commands.yml                                                   │
+│                                                                                         │
+│      /run      ──► command-run.yml ──► queue-build.yml                                  │
+│                                        queue-acceptance-tests.yml                       │
+│                                        scu-at-build.yml                                 │
+│                                        scu-de-build.yml                                 │
+│                                        scu-es-build.yml                                 │
+│                                        scu-it-build.yml                                 │
+│                                                                                         │
+│      /package  ──► command-package.yml ──► package.yml                                  │
+│      /deploy   ──► command-package.yml ──► package.yml ──► deploy.yml                   │
+│                                                                                         │
+│      /release  ──► command-release.yml                                                  │
+│      /version  ──► command-version.yml                                                  │
+│      /merge    ──► command-merge.yml                                                    │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    BUILD WORKFLOWS                                      │
+│                                                                                         │
+│    Triggered by: pull_request, workflow_dispatch, workflow_call                         │
+│    Called by: command-run.yml, release.yml                                              │
+│                                                                                         │
+│      queue-build.yml              (paths: queue/**)                                     │
+│      queue-acceptance-tests.yml   (paths: queue/**, branches: main, release/v*)         │
+│      scu-at-build.yml             (paths: scu-at/**)                                    │
+│      scu-de-build.yml             (paths: scu-de/**)                                    │
+│      scu-es-build.yml             (paths: scu-es/**)                                    │
+│      scu-it-build.yml             (paths: scu-it/**)                                    │
+│      scu-be-build.yml             (paths: scu-be/**)                                    │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   PACKAGE WORKFLOWS                                     │
+│                                                                                         │
+│    Triggered by: workflow_dispatch, workflow_call                                       │
+│    Called by: command-package.yml, release.yml                                          │
+│                                                                                         │
+│      queue-package.yml ───────┐                                                         │
+│      scu-at-package.yml ──────┤                                                         │
+│      scu-de-package.yml ──────┼──► package.yml ──► deploy.yml (optional)                │
+│      scu-es-package.yml ──────┤                                                         │
+│      scu-it-package.yml ──────┤                                                         │
+│      scu-be-package.yml ──────┘                                                         │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   RELEASE WORKFLOW                                      │
+│                                                                                         │
+│    Triggered by: GitHub release published (tag: <component>/<package>/v*)               │
+│                                                                                         │
+│      release.yml                                                                        │
+│           │                                                                             │
+│           ├──► queue-build.yml ────────┐                                                │
+│           ├──► scu-at-build.yml ───────┤                                                │
+│           ├──► scu-de-build.yml ───────┼──► queue-acceptance-tests.yml                  │
+│           ├──► scu-es-build.yml ───────┤              │                                 │
+│           └──► scu-it-build.yml ───────┘              │                                 │
+│                                                       ▼                                 │
+│                                                 package.yml                             │
+│                                                       │                                 │
+│                                                       ▼                                 │
+│                                                 deploy.yml (sandbox)                    │
+│                                                       │                                 │
+│                                                       ▼                                 │
+│                                                 deploy.yml (production)                 │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  STANDALONE WORKFLOWS                                   │
+│                                                                                         │
+│    Triggered by: workflow_dispatch, repository_dispatch                                 │
+│                                                                                         │
+│      prepare-release.yml   - Creates release branches                                   │
+│      command-release.yml   - Creates tags and GitHub releases                           │
+│      command-version.yml   - Updates version.json                                       │
+│      command-merge.yml     - Merges release PRs                                         │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+> | Trigger types | description |
+> |---|---|
+> | [workflow_call](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_call) | Called by another workflow |
+> | [workflow_dispatch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch) | Manual trigger through the github ui |
+> | [repository_dispatch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#repository_dispatch) | Triggered by a slash command |
+
+
+### Composite Actions
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   COMPOSITE ACTIONS                                     │
+│                                                                                         │
+│    Located in: .github/actions/                                                         │
+│                                                                                         │
+│      build                  - Restores and builds .NET projects                         │
+│      test                   - Runs tests and uploads results                            │
+│      sign                   - Signs DLLs with Azure Key Vault                           │
+│      package                - Creates v1 (NuGet) and v2 (zip) packages                  │
+│      deploy-v1-packages     - Deploys NuGet packages to Azure Storage                   │
+│      deploy-v2-packages     - Deploys zip packages to Azure Storage                     │
+│      check-linked-issue     - Validates PR has linked issue                             │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              WORKFLOW → ACTION USAGE                                    │
+│                                                                                         │
+│    Build Workflows:                                                                     │
+│                                                                                         │
+│      queue-build.yml ─────────────► build, test                                         │
+│      queue-acceptance-tests.yml ──► test                                                │
+│      scu-at-build.yml ────────────► build, test                                         │
+│      scu-de-build.yml ────────────► build, test                                         │
+│      scu-es-build.yml ────────────► build, test                                         │
+│      scu-it-build.yml ────────────► build, test                                         │
+│      scu-be-build.yml ────────────► build, test                                         │
+│                                                                                         │
+│    Package/Deploy Workflows:                                                            │
+│                                                                                         │
+│      package.yml ─────────────────► build, sign, package                                │
+│      deploy.yml ──────────────────► deploy-v1-packages, deploy-v2-packages              │
+│                                                                                         │
+│    Utility Workflows:                                                                   │
+│                                                                                         │
+│      check-linked-issue.yml ──────► check-linked-issue                                  │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Workflow Call Summary
+
+| Caller Workflow       | Calls                                                                                                                                                        |
+|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `slash-commands.yml`  | Dispatches: `command-run`, `command-package`, `command-release`, `command-version`, `command-merge`                                                          |
+| `command-run.yml`     | `queue-build.yml`, `queue-acceptance-tests.yml`, `scu-at-build.yml`, `scu-de-build.yml`, `scu-es-build.yml`, `scu-it-build.yml`                              |
+| `command-package.yml` | `package.yml`, `deploy.yml`                                                                                                                                  |
+| `command-release.yml` | _(standalone - creates tags/releases)_                                                                                                                       |
+| `command-version.yml` | _(standalone - updates version.json)_                                                                                                                        |
+| `command-merge.yml`   | _(standalone - merges PRs)_                                                                                                                                  |
+| `queue-package.yml`   | `package.yml`                                                                                                                                                |
+| `scu-at-package.yml`  | `package.yml`                                                                                                                                                |
+| `scu-de-package.yml`  | `package.yml`                                                                                                                                                |
+| `scu-es-package.yml`  | `package.yml`                                                                                                                                                |
+| `scu-it-package.yml`  | `package.yml`                                                                                                                                                |
+| `scu-be-package.yml`  | `package.yml`                                                                                                                                                |
+| `package.yml`         | `deploy.yml` (when `deploySandbox: true`)                                                                                                                    |
+| `release.yml`         | `queue-build.yml`, `scu-at-build.yml`, `scu-de-build.yml`, `scu-es-build.yml`, `scu-it-build.yml`, `queue-acceptance-tests.yml`, `package.yml`, `deploy.yml` |
+| `prepare-release.yml` | _(standalone - creates release branches)_                                                                                                                    |

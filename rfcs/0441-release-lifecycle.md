@@ -123,7 +123,44 @@ The releases are grouped by version in the table.
 The release can be published for whole group or separatley for for single packages (when it's not the same for all packages a `-` is shown in the group checkbox).  
 Overrides for markets and accounts can be set.
 The release can be yanked through a separate confirmation dialog. It's then yanked in sandbox _and_ production.
-![](./assets/0441-release-lifecycle-ui-mockup.svg)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                      │
+│  ┌────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ v vX.Y.Z                              [-] Public                        [...]  │  │
+│  ├────────────────────────────────────────────────────────────────────────────────┤  │
+│  │                                                                         [...]  │  │
+│  │  fiskaltrust.Middleware.Queue.XXX     [x] Public                               │  │
+│  │                                                                                │  │
+│  │┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│  │
+│  │                                                                         [...]  │  │
+│  │  fiskaltrust.Middleware.Queue.YYY     [-] Public   Markets: at                 │  │
+│  │                                                    Accounts: a@b.c, d@e.f      │  │
+│  │                                                                                │  │
+│  │┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄│  │
+│  │                                                      ┌──────────────────[...]  │  │
+│  │  fiskaltrust.Middleware.SCU.DE.XXX    [ ] Public     │                      │  │  │
+│  │                                                      │ Set Market Overrides │  │  │
+│  │                                                      │ Set Account Overrides│  │  │
+│  │                                                      │ Yank release         │  │  │
+│  │                                                      └──────────────────────┘  │  │
+│  └────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+│  ┌────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ > vX.Y.W                              [x] Public                        [...]  │  │
+│  └────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+
+Legend:
+  v vX.Y.Z    - Expanded version group (showing packages)
+  > vX.Y.W    - Collapsed version group
+  [-] Public  - Mixed state (some packages public, some not)
+  [x] Public  - Published
+  [ ] Public  - Not published
+  [...]       - Context menu (Set Market/Account Overrides, Yank release)
+```
 (this is just a ui mockup to demonstrate the functionality ux and layout will be designed properly when implementing the RFC)
 
 # Reference-level explanation
