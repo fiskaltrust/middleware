@@ -77,7 +77,6 @@ All slash commands are triggered by commenting on a Pull Request. The following 
 | `/release <component> <package>` | Create a tag and GitHub release                    | `/release scu-de SwissbitCloudV2`              |
 | `/version`                       | Remove `-rc` suffix (release branches only)        | `/version`                                     |
 | `/merge`                         | Merge release PR (resolves version.json conflicts) | `/merge`                                       |
-| `/check`                         | Re-run all status checks                           | `/check`                                       |
 
 **Component values:** `queue`, `scu-at`, `scu-de`, `scu-es`, `scu-it`, `scu-be`, `scu-gr`, `scu-me`, `scu-pt`
 
