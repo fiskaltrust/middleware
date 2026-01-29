@@ -18,42 +18,13 @@ jobs:
         with:
           token: ${{ secrets.SLASH_COMMAND }}
           reaction-token: ${{ secrets.GITHUB_TOKEN }}
-          config: >
-            [
-              {
-                "command": "run",
-                "permission": "write",
-                "issue_type": "pull-request"
-              },
-              {
-                "command": "package",
-                "permission": "write",
-                "issue_type": "pull-request"
-              },
-              {
-                "command": "deploy",
-                "permission": "write",
-                "issue_type": "pull-request"
-              },
-              {
-                "command": "version",
-                "permission": "write",
-                "issue_type": "pull-request"
-              },
-              {
-                "command": "release",
-                "permission": "write",
-                "issue_type": "pull-request"
-              },
-              {
-                "command": "merge",
-                "permission": "write",
-                "issue_type": "pull-request"
-              },
-              {
-                "command": "release-notes",
-                "permission": "write",
-                "issue_type": "pull-request",
-                "repository": "fiskaltrust/release-notes"
-              }
-            ]
+          issue-type: pull-request
+          permission: write
+          commands: |
+            run
+            package
+            deploy
+            release
+            version
+            check
+            merge
