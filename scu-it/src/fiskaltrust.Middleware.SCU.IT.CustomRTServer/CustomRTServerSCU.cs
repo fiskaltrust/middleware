@@ -88,6 +88,13 @@ public sealed class CustomRTServerSCU : LegacySCU
                 return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
             }
 
+            // Handle ProtocolUnspecified0x3000 with RT-Printer specific flags (like barcode flags)
+            // RT-Server doesn't support these printer-specific features, so return NoOp
+            if (receiptCase == (long)ITReceiptCases.ProtocolUnspecified0x3000)
+            {
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
+            }
+
             if (!CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
             {
                 await ReloadCashUUID(request.ReceiptResponse);
