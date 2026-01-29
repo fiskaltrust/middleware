@@ -23,37 +23,37 @@ jobs:
               {
                 "command": "run",
                 "permission": "write",
-                "issue_type": "pull-request",
+                "issue_type": "pull-request"
               },
               {
                 "command": "package",
                 "permission": "write",
-                "issue_type": "pull-request",
+                "issue_type": "pull-request"
               },
               {
                 "command": "deploy",
                 "permission": "write",
-                "issue_type": "pull-request",
+                "issue_type": "pull-request"
               },
               {
                 "command": "version",
                 "permission": "write",
-                "issue_type": "pull-request",
+                "issue_type": "pull-request"
               },
               {
                 "command": "release",
                 "permission": "write",
-                "issue_type": "pull-request",
+                "issue_type": "pull-request"
               },
               {
                 "command": "merge",
                 "permission": "write",
-                "issue_type": "pull-request",
+                "issue_type": "pull-request"
               },
               {
                 "command": "release-notes",
                 "permission": "write",
                 "issue_type": "pull-request",
                 "repository": "fiskaltrust/release-notes"
-              },
+              }
             ]
