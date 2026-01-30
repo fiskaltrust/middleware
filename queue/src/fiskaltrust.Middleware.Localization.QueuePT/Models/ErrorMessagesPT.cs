@@ -224,6 +224,7 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_VoidAlreadyExists(string receiptReference) =>
         $"EEEE_A void for receipt '{receiptReference}' already exists. Multiple voids for the same receipt are not allowed.";
+    internal static string EEEE_CannotVoidInvoicedDocument(string previousReceiptRef) => throw new NotImplementedException();
 
     /// <summary>
     /// Error message for void receipts that contain charge items

@@ -27,6 +27,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     private readonly ReceiptRequest _receiptRequest = request;
     readonly ReceiptResponse _receiptResponse = receiptResponse;
     private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly DocumentStatusProvider _documentStatusProvider = new(readOnlyQueueItemRepository);
     private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
     private readonly VoidValidator _voidValidator = new(readOnlyQueueItemRepository);
 
@@ -468,8 +469,8 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-        var hasExistingVoid = await _voidValidator.HasExistingVoidAsync(previousReceiptRef);
-        if (hasExistingVoid)
+        var documentStatus = await _documentStatusProvider.GetDocumentStatusStateAsync((receiptRequest, receiptResponse));
+        if (documentStatus.Status == DocumentStatus.Voided)
         {
             receiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_VoidAlreadyExists(previousReceiptRef));
             var rule = PortugalValidationRules.VoidAlreadyExists;
@@ -480,21 +481,18 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             ));
         }
 
-        var originalRequest = receiptReferences[0].Request;
-        if (IsWorkingDocument(originalRequest))
+        if (documentStatus.Status == DocumentStatus.Invoiced)
         {
-            var hasExistingInvoice = await _receiptReferenceProvider.HasExistingInvoiceForWorkingDocumentAsync(previousReceiptRef);
-            if (hasExistingInvoice)
-            {
-                var rule = PortugalValidationRules.WorkingDocumentAlreadyInvoiced;
-                return ValidationResult.Failed(new ValidationError(
-                    ErrorMessagesPT.EEEE_WorkingDocumentAlreadyInvoiced(previousReceiptRef),
-                    rule.Code,
-                    rule.Field
-                ));
-            }
+            var rule = PortugalValidationRules.CannotVoidInvoicedDocument;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_CannotVoidInvoicedDocument(previousReceiptRef),
+                rule.Code,
+                rule.Field
+            ));           
         }
 
+
+        var originalRequest = receiptReferences[0].Request;
         var validationError = await _voidValidator.ValidateVoidAsync(
             receiptRequest,
             originalRequest,
@@ -509,10 +507,6 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             return ValidationResult.Success();
         }
     }
-
-    private static bool IsWorkingDocument(ReceiptRequest receiptRequest) =>
-        receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006) ||
-        receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007);
 
     private async Task<ValidationResult> ValidatePartialRefundAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {

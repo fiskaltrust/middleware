@@ -13,6 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 public class ReceiptReferenceProvider
 {
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository;
+
     public ReceiptReferenceProvider(AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository)
     {
         _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
