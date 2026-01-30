@@ -1,14 +1,14 @@
-﻿using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.v2;
-using System.Text.Json;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Contracts.Repositories;
+﻿using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.storage.V0;
+using static fiskaltrust.Middleware.Localization.QueuePT.Logic.ReceiptReferenceProvider;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
-
-
 
 public class ReceiptReferenceProvider
 {

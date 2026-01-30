@@ -6,6 +6,50 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTS
 
 public static class PTMappings
 {
+    public static List<string> InvoiceTypes = new()
+    {
+        "FT", // Invoice
+        "FS", // Simplified Invoice issued according to article 40 of the VAT code
+        "FR", // Invoice-receipt
+        "ND", // Debit note
+        "NC", // Credit note
+        "VD", // Sale for cash and invoice/sales ticket (a) For data up to 2012-12-31.
+        "TV", // Sale ticket (a) For data up to 2012-12-31.
+        "TD", // Devolution ticket (a) For data up to 2012-12-31.
+        "AA", // Assets sales (a) For data up to 2012-12-31.
+        "DA", // Assets returns (a) For data up to 2012-12-31.
+        "RP", // Premium or premium receipt
+        "RE", //Return insurance or receipt of return insurance
+        "CS", // Imputation to co-insurance companies
+        "LD", // Imputation to a leader co-insurance company
+        "RA", // Accepted reinsurance
+    };
+
+    public static List<string> WorkTypes = new()
+    {
+        "CM", // Table checks
+        "CC", // Consignement credit note
+        "FC", // Consignment invoice according to art. 38 of the Portuguese VAT Code;
+        "FO", // Worksheets
+        "NE", // Purchase Order
+        "OU", // Others
+        "OR", // Budgets,
+        "PF", // Pro forma invoice,
+        "DC", // Issued documents 
+        "DC", // Issued documents likely to be presented to the customer for the purpose of checking goods or provision of services (for data until 2017-06-30). For the insurance sector as to the types of documents identified below must also exist in table 4.1. - SalesInvoices the corresponding invoice or invoice amending document, can also be filled with:
+        "RP", // Premium or Premium receipt;
+        "RE", //  Return insurance or receipt of return insurance;
+        "CS", // Imputation to co-insurance companies;
+        "LD", // Imputation to a leader co-insurance company;
+        "RA", // Accepted reinsurance.
+    };
+
+    public static List<string> PaymentTypes = new()
+    {
+        "RC", // Receipt issued according to the Cash VAT regime (including advance payments in this regime);
+        "RG", // Other issued receipts.
+    };
+
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
     public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
     {
@@ -24,7 +68,7 @@ public static class PTMappings
     public static string GetTaxExemptionCode(ChargeItem chargeItem)
     {
         var taxExemptCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-        if(Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
+        if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
         {
             return Constants.TaxExemptionDictionary.TaxExemptionTable[((Constants.TaxExemptionCode) taxExemptCode)].Code;
         }

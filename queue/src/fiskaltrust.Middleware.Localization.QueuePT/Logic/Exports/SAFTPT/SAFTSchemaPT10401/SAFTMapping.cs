@@ -1,6 +1,8 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
@@ -44,18 +46,8 @@ public class SaftExporter
             Country = "Desconhecido"
         }
     };
+    private readonly DocumentStatusProvider? _documentStatusProvider;
 
-    private Dictionary<string, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> InvoicedProformas { get; } = new Dictionary<string, (ReceiptRequest, ReceiptResponse)>();
-
-    private Dictionary<string, List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>> References { get; } = new Dictionary<string, List<(ReceiptRequest, ReceiptResponse)>>();
-
-
-    /// <summary>
-    /// Validates a Portuguese Tax Identification Number (NIF - Número de Identificação Fiscal).
-    /// This method delegates to the centralized validation in ReceiptRequestValidatorPT.
-    /// </summary>
-    /// <param name="taxId">The tax ID to validate</param>
-    /// <returns>True if the tax ID is valid, false otherwise</returns>
     public static bool IsValidPortugueseTaxId(string taxId)
     {
         return PortugalValidationHelpers.IsValidPortugueseTaxId(taxId);
@@ -72,6 +64,13 @@ public class SaftExporter
             return "Desconhecido";
         }
     }
+
+    public SaftExporter(DocumentStatusProvider? documentStatusProvider = null)
+    {
+        _documentStatusProvider = documentStatusProvider;
+    }
+
+    private DocumentStatusProvider DocumentStatusProvider => _documentStatusProvider ?? throw new InvalidOperationException("DocumentStatusProvider is required for this operation.");
 
     public string GetSourceID(ReceiptRequest receiptRequest)
     {
@@ -142,65 +141,68 @@ public class SaftExporter
         return memoryStream.ToArray();
     }
 
+    public bool ShouldBeExported(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            // Void is a status, not a document that should be exported
+            return false;
+        }
+
+        // maybe we should change this to checking for the response
+        if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Lifecycle)
+            || receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.DailyOperations)
+            || receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Log))
+        {
+            return false;
+        }
+        return true;
+    }
+
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
-        foreach (var queueItem in queueItems)
-        {
-            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request)!;
-            var receiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-            if (receiptRequest.cbPreviousReceiptReference is not null && receiptResponse.ftState.IsState(State.Success))
-            {
-                if (receiptRequest.cbPreviousReceiptReference.IsSingle)
-                {
-                    if (!References.ContainsKey(receiptRequest.cbPreviousReceiptReference.SingleValue))
-                    {
-                        References[receiptRequest.cbPreviousReceiptReference.SingleValue] = new List<(ReceiptRequest, ReceiptResponse)>();
-                    }
-                    References[receiptRequest.cbPreviousReceiptReference.SingleValue].Add((receiptRequest, receiptResponse));
-                }
-
-                if (receiptRequest.cbPreviousReceiptReference.IsGroup)
-                {
-                    foreach (var previous in receiptRequest.cbPreviousReceiptReference.GroupValue)
-                    {
-                        if (!References.ContainsKey(previous))
-                        {
-                            References[previous] = new List<(ReceiptRequest, ReceiptResponse)>();
-                        }
-                        References[previous].Add((receiptRequest, receiptResponse));
-                    }
-                }
-            }
-        }
-
-        var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
-        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00 &&
-            !x.receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Lifecycle)
-            && !x.receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.DailyOperations)
-            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolUnspecified0x3000)
-            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolTechnicalEvent0x3001)
-            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolAccountingEvent0x3002)).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+        var receipts = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
+        receipts = receipts.Where(x => x.receiptRequest != null && x.receiptResponse != null && x.receiptResponse.ftState.IsState(State.Success)).ToList();
         if (to < 0)
         {
-            actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
+            receipts = receipts.Take(-to).ToList();
         }
-        actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptResponse.ftReceiptMoment).ToList();
+        return CreateAuditFile(accountMasterData, receipts);
+    }
 
-        var invoiceReceiptRequests = actualReceiptRequests
-            .Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
-            .Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ProtocolAccountingEvent0x3002)
-            && !x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007)
-            && !x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)
-            && !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).ToList();
+    public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipts)
+    {
+        var actualReceiptRequests = receipts.Where(x => ShouldBeExported(x.receiptRequest)).OrderBy(x => x.receiptResponse.ftReceiptMoment).ToList();
 
-        var invoices = invoiceReceiptRequests.Select(x => GetInvoiceForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.InvoiceNo.Split("/")[0]).ThenBy(x => int.Parse(x.InvoiceNo.Split("/")[1])).ToList();
-        var workingDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0007) || x.receiptRequest.ftReceiptCase.IsCase((ReceiptCase) 0x0006)).Select(x => GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.DocumentNumber.Split("/")[0]).ThenBy(x => int.Parse(x.DocumentNumber.Split("/")[1])).ToList();
-        var paymentDocuments = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)).Select(x => GetPaymentForReceiptRequest(x)).Where(x => x != null).OrderBy(x => x.PaymentRefNo.Split("/")[0]).ThenBy(x => int.Parse(x.PaymentRefNo.Split("/")[1])).ToList();
+        var invoiceTasks = actualReceiptRequests
+            .Where(x => PTMappings.InvoiceTypes.Contains(GetItemTypeFromReceipt(x)))
+            .Select(x => GetInvoiceForReceiptRequest(x))
+            .ToList();
+        var invoices = Task.WhenAll(invoiceTasks).GetAwaiter().GetResult()
+            .Where(x => x != null)
+            .OrderBy(x => x!.InvoiceNo.Split("/")[0])
+            .ThenBy(x => int.Parse(x!.InvoiceNo.Split("/")[1]))
+            .ToList();
 
-        // Filter out documents with status "A" (cancelled) or "F" (invoiced) for total calculations per Portuguese SAF-T specification
-        var invoicesForTotals = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A").ToList();
-        var workingDocumentsForTotals = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A").ToList();
-        var paymentDocumentsForTotals = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != "A").ToList();
+        var workTasks = actualReceiptRequests
+            .Where(x => PTMappings.WorkTypes.Contains(GetItemTypeFromReceipt(x)))
+            .Select(x => GetWorkDocumentForReceiptRequest(x))
+            .ToList();
+        var workingDocuments = Task.WhenAll(workTasks).GetAwaiter().GetResult()
+            .Where(x => x != null)
+            .OrderBy(x => x!.DocumentNumber.Split("/")[0])
+            .ThenBy(x => int.Parse(x!.DocumentNumber.Split("/")[1]))
+            .ToList();
+
+        var paymentTasks = actualReceiptRequests
+            .Where(x => PTMappings.PaymentTypes.Contains(GetItemTypeFromReceipt(x)))
+            .Select(x => GetPaymentForReceiptRequest(x))
+            .ToList();
+        var paymentDocuments = Task.WhenAll(paymentTasks).GetAwaiter().GetResult()
+            .Where(x => x != null)
+            .OrderBy(x => x!.PaymentRefNo.Split("/")[0])
+            .ThenBy(x => int.Parse(x!.PaymentRefNo.Split("/")[1]))
+            .ToList();
 
         return new AuditFile
         {
@@ -216,22 +218,22 @@ public class SaftExporter
                 SalesInvoices = new SalesInvoices
                 {
                     NumberOfEntries = invoices.Count,
-                    TotalDebit = invoicesForTotals.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = invoicesForTotals.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalDebit = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A").SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A").SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Invoice = invoices!
                 },
                 WorkingDocuments = new WorkingDocuments
                 {
                     NumberOfEntries = workingDocuments.Count,
-                    TotalDebit = workingDocumentsForTotals.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = workingDocumentsForTotals.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalDebit = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A").SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A").SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     WorkDocument = workingDocuments!
                 },
                 Payments = new Payments
                 {
                     NumberOfEntries = paymentDocuments.Count,
                     TotalDebit = 0,
-                    TotalCredit = paymentDocumentsForTotals.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalCredit = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != "A").SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Payment = paymentDocuments!,
                 }
             }
@@ -470,7 +472,7 @@ public class SaftExporter
         };
     }
 
-    public WorkDocument? GetWorkDocumentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    public async Task<WorkDocument?> GetWorkDocumentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
         var lines = receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
@@ -493,49 +495,11 @@ public class SaftExporter
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment);
         var customer = GetCustomerData(receiptRequest);
-
-        var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
-        var workStatus = new WorkDocumentStatus
-        {
-            WorkStatus = "N",
-            WorkStatusDate = portugalTime,
-            SourceID = GetSourceID(receiptRequest),
-            SourceBilling = GetSourceBilling(receiptRequest),
-        };
-        if (references.Count > 0)
-        {
-            if (references.Any(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)))
-            {
-                var request = references.Where(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).First();
-                workStatus = new WorkDocumentStatus
-                {
-                    WorkStatus = "A",
-                    WorkStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item2.ftReceiptMoment),
-                    SourceID = GetSourceID(request.Item1),
-                    SourceBilling = GetSourceBilling(request.Item1),
-                    Reason = "Anulado"
-                };
-            }
-            else if(references.Any(x => GetItemTypeFromReceipt(x) == "FT" || GetItemTypeFromReceipt(x) == "FS")) // Only FT and FS types of invoices 
-            {
-                var invoicedProforma = references.OrderBy(x => x.Item2.ftReceiptMoment).LastOrDefault();
-                var referencedPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(invoicedProforma.Item2.ftReceiptMoment);
-                workStatus = new WorkDocumentStatus
-                {
-                    WorkStatus = "F",
-                    WorkStatusDate = referencedPortugalTime,
-                    SourceID = GetSourceID(invoicedProforma.Item1),
-                    SourceBilling = GetSourceBilling(invoicedProforma.Item1),
-                    Reason = "Faturado"
-                };
-            }
-        }
-
         var workDocument = new WorkDocument
         {
             DocumentNumber = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
-            DocumentStatus = workStatus,
+            DocumentStatus = await GetWorkStatusForDocument(receipt),
             Hash = hashSignature.Data,
             HashControl = 1,
             Period = portugalTime.Month,
@@ -552,11 +516,10 @@ public class SaftExporter
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(taxable) + Helpers.CreateTwoDigitMonetaryValue(netAmount)
             }
         };
-
         return workDocument;
     }
 
-    private static string GetItemTypeFromReceipt((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    public static string GetItemTypeFromReceipt((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var type = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last().Split(" ").First();
         // Let's check if we need this
@@ -567,7 +530,7 @@ public class SaftExporter
         return type;
     }
 
-    public PaymentDocument? GetPaymentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    public async Task<PaymentDocument?> GetPaymentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
         var payItem = receiptRequest.cbPayItems.First();
@@ -584,41 +547,12 @@ public class SaftExporter
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment);
-
-        var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
-        var paymentStatus = new PaymentDocumentStatus
-        {
-            PaymentStatus = "N",
-            PaymentStatusDate = portugalTime,
-            SourceID = GetSourceID(receiptRequest),
-            SourcePayment = GetSourcePayment(receiptRequest)
-        };
-        if (references.Count > 0)
-        {
-            if (references.Any(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)))
-            {
-                var request = references.Where(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).First();
-                paymentStatus = new PaymentDocumentStatus
-                {
-                    PaymentStatus = "A",
-                    PaymentStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item2.ftReceiptMoment),
-                    SourceID = GetSourceID(request.Item1),
-                    SourcePayment = GetSourcePayment(request.Item1),
-                    Reason = "Anulado"
-                };
-            }
-            else
-            {
-                // This should not happen
-            }
-        }
-
         var customer = GetCustomerData(receiptRequest);
         var workDocument = new PaymentDocument
         {
             PaymentRefNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
             ATCUD = atcudSignature.Data,
-            DocumentStatus = paymentStatus,
+            DocumentStatus = await GetPaymentStatusForDocument(receipt),
             Period = portugalTime.Month,
             TransactionDate = portugalTime,
             PaymentType = GetItemTypeFromReceipt(receipt),
@@ -659,7 +593,7 @@ public class SaftExporter
         return workDocument;
     }
 
-    public Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    public async Task<Invoice?> GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         try
         {
@@ -684,42 +618,11 @@ public class SaftExporter
 
             // Convert UTC time to Portugal local time
             var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
-            var references = References.ContainsKey(receipt.receiptRequest.cbReceiptReference) ? References[receipt.receiptRequest.cbReceiptReference] : new List<(ReceiptRequest, ReceiptResponse)>();
-            var invoiceStatus = new InvoiceDocumentStatus
-            {
-                InvoiceStatus = "N",
-                InvoiceStatusDate = portugalTime,
-                SourceID = GetSourceID(receiptRequest),
-                SourceBilling = GetSourceBilling(receiptRequest),
-            };
-            if (references.Count > 0)
-            {
-                if (references.Any(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)))
-                {
-                    var request = references.Where(x => x.Item1.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)).First();
-                    invoiceStatus = new InvoiceDocumentStatus
-                    {
-                        InvoiceStatus = "A",
-                        InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(request.Item2.ftReceiptMoment),
-                        SourceID = GetSourceID(request.Item1),
-                        SourceBilling = GetSourceBilling(request.Item1),
-                        Reason = "Anulado"
-                    };
-                }
-                else
-                {
-                    // This should not happen
-                    // “S” -Self - billing;
-                    // “R” -Summary document for other documents created in other applications and generated in this application;
-                    // “F” -Invoiced document.
-                }
-            }
-
             var invoice = new Invoice
             {
                 InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
                 ATCUD = atcudSignature?.Data ?? "",
-                DocumentStatus = invoiceStatus,
+                DocumentStatus = await GetInvoiceDocumentStatusForDocument(receipt),
                 Hash = hashSignature?.Data ?? "",
                 HashControl = "1",
                 Period = portugalTime.Month,
@@ -816,7 +719,6 @@ public class SaftExporter
                 TaxPercentage = Helpers.CreateMonetaryValue(chargeItemData.VATRate)
             };
 
-
             var grossAmount = chargeItemData.Amount;
             var vatAmount = chargeItem.chargeItem.GetVATAmount();
             var netAmount = grossAmount - vatAmount;
@@ -856,7 +758,6 @@ public class SaftExporter
                 UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
                 TaxPointDate = chargeItemData.Moment ?? receiptResponse.ftReceiptMoment,
                 Description = chargeItemData.Description,
-
                 Tax = tax
             };
 
@@ -875,32 +776,17 @@ public class SaftExporter
                 line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
             }
 
-            if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
+            if (receiptRequest.cbPreviousReceiptReference != null && PTMappings.InvoiceTypes.Contains(GetItemTypeFromReceipt((receiptRequest, receiptResponse))))
             {
-                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
-                line.OrderReferences = new OrderReferences
+                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First();
+                var matchingChargeItem = referencedReceiptResponse.Request.cbChargeItems.Where(x => GenerateUniqueProductIdentifier(x) == line.ProductCode).FirstOrDefault();
+                if (matchingChargeItem != null)
                 {
-                    OriginatingON = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
-                    OrderDate = referencedReceiptResponse!.ftReceiptMoment
-                };
-                if (!InvoicedProformas.ContainsKey(referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last()))
-                {
-                    InvoicedProformas.Add(referencedReceiptResponse.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
-                }
-            }
-
-
-            if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "FS" && receiptRequest.cbPreviousReceiptReference != null)
-            {
-                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
-                line.OrderReferences = new OrderReferences
-                {
-                    OriginatingON = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
-                    OrderDate = referencedReceiptResponse!.ftReceiptMoment
-                };
-                if (!InvoicedProformas.ContainsKey(referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last()))
-                {
-                    InvoicedProformas.Add(referencedReceiptResponse.ftReceiptIdentification.Split("#").Last(), (receiptRequest, receiptResponse));
+                    line.OrderReferences = new OrderReferences
+                    {
+                        OriginatingON = referencedReceiptResponse!.Response.ftReceiptIdentification.Split("#").Last(),
+                        OrderDate = referencedReceiptResponse!.Response.ftReceiptMoment
+                    };
                 }
             }
 
@@ -919,6 +805,116 @@ public class SaftExporter
         {
             throw new Exception("An error occurred while generating the line for the receipt request.", ex);
         }
+    }
 
+    private async Task<InvoiceDocumentStatus> GetInvoiceDocumentStatusForDocument((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    {
+        // Supported States
+        // N, S,A, R, F
+        var documentStatus = await DocumentStatusProvider.GetDocumentStatusStateAsync(receipt);
+        if (documentStatus.Status == DocumentStatus.Voided)
+        {
+            var voidProforma = documentStatus.SourceReceipt.Value;
+            return new InvoiceDocumentStatus
+            {
+                InvoiceStatus = "A",
+                InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(voidProforma.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(voidProforma.receiptRequest),
+                SourceBilling = GetSourceBilling(voidProforma.receiptRequest),
+                Reason = "Anulado"
+            };
+        }
+        else if (documentStatus.Status == DocumentStatus.Invoiced)
+        {
+            var invoicedProforma = documentStatus.SourceReceipt.Value;
+            return new InvoiceDocumentStatus
+            {
+                InvoiceStatus = "F",
+                InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(invoicedProforma.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(invoicedProforma.receiptRequest),
+                SourceBilling = GetSourceBilling(invoicedProforma.receiptRequest),
+                Reason = "Faturado"
+            };
+        }
+        else
+        {
+            return new InvoiceDocumentStatus
+            {
+                InvoiceStatus = "N",
+                InvoiceStatusDate = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(receipt.receiptRequest),
+                SourceBilling = GetSourceBilling(receipt.receiptRequest),
+            };
+        }
+    }
+
+    private async Task<WorkDocumentStatus> GetWorkStatusForDocument((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    {
+        // Supported States
+        // N, A, F
+        var workDocumentStatus = await DocumentStatusProvider.GetDocumentStatusStateAsync(receipt);
+        if (workDocumentStatus.Status == DocumentStatus.Voided)
+        {
+            var voidProforma = workDocumentStatus.SourceReceipt.Value;
+            return new WorkDocumentStatus
+            {
+                WorkStatus = "A",
+                WorkStatusDate = PortugalTimeHelper.ConvertToPortugalTime(voidProforma.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(voidProforma.receiptRequest),
+                SourceBilling = GetSourceBilling(voidProforma.receiptRequest),
+                Reason = "Anulado"
+            };
+        }
+        else if (workDocumentStatus.Status == DocumentStatus.Invoiced)
+        {
+            var invoicedProforma = workDocumentStatus.SourceReceipt.Value;
+            return new WorkDocumentStatus
+            {
+                WorkStatus = "F",
+                WorkStatusDate = PortugalTimeHelper.ConvertToPortugalTime(invoicedProforma.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(invoicedProforma.receiptRequest),
+                SourceBilling = GetSourceBilling(invoicedProforma.receiptRequest),
+                Reason = "Faturado"
+            };
+        }
+        else
+        {
+            return new WorkDocumentStatus
+            {
+                WorkStatus = "N",
+                WorkStatusDate = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(receipt.receiptRequest),
+                SourceBilling = GetSourceBilling(receipt.receiptRequest),
+            };
+        }
+    }
+
+    private async Task<PaymentDocumentStatus> GetPaymentStatusForDocument((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    {
+        // Supported States
+        // A, N
+        var documentStatus = await DocumentStatusProvider.GetDocumentStatusStateAsync(receipt);
+        if (documentStatus.Status == DocumentStatus.Voided)
+        {
+            var voidProforma = documentStatus.SourceReceipt.Value;
+            return new PaymentDocumentStatus
+            {
+                PaymentStatus = "A",
+                PaymentStatusDate = PortugalTimeHelper.ConvertToPortugalTime(voidProforma.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(voidProforma.receiptRequest),
+                SourcePayment = GetSourcePayment(voidProforma.receiptRequest),
+                Reason = "Anulado"
+            };
+        }
+        else
+        {
+            return new PaymentDocumentStatus
+            {
+                PaymentStatus = "N",
+                PaymentStatusDate = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment),
+                SourceID = GetSourceID(receipt.receiptRequest),
+                SourcePayment = GetSourcePayment(receipt.receiptRequest),
+            };
+        }
     }
 }
