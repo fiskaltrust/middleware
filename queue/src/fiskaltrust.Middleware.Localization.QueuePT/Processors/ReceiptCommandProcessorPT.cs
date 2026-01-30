@@ -111,7 +111,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
             AddOrigemReferenceSignature(response, receiptReferences);
         }
-
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
@@ -123,10 +122,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
+            var rule = PortugalValidationRules.TransportationIsNotSupported;
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_TransportationIsNotSupported,
-                   "EEEE_TransportationIsNotSupported",
-                   "ftReceiptCaseFlags"
+                   rule.Code,
+                   rule.Field
                ));
             request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
             return new ProcessCommandResponse(request.ReceiptResponse, []);
@@ -159,6 +159,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        {
+            var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
+            AddOrigemReferenceSignature(response, receiptReferences);
+        }
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 
@@ -166,10 +173,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
+            var rule = PortugalValidationRules.TransportationIsNotSupported;
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_TransportationIsNotSupported,
-                   "EEEE_TransportationIsNotSupported",
-                   "ftReceiptCaseFlags"
+                   rule.Code,
+                   rule.Field
                ));
             request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
             return new ProcessCommandResponse(request.ReceiptResponse, []);
@@ -198,6 +206,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         series.LastCbReceiptMoment = request.ReceiptRequest.cbReceiptMoment;
+
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        {
+            var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
+            AddOrigemReferenceSignature(response, receiptReferences);
+        }
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     });
 

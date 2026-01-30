@@ -103,8 +103,9 @@ public class StaticNumeratorStorage
                     continue;
                 }
 
+                var lastReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
                 var lastReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-                if (lastReceiptResponse == null)
+                if (lastReceiptResponse == null || lastReceiptRequest == null)
                 {
                     continue;
                 }
@@ -114,6 +115,10 @@ public class StaticNumeratorStorage
                     continue;
                 }
 
+                if (lastReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+                {
+                    continue;
+                }
 
                 if (lastReceiptResponse.ftReceiptIdentification.Split("#").Last().StartsWith(series.Identifier))
                 {

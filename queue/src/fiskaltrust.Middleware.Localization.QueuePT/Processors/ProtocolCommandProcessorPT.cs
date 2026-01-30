@@ -62,10 +62,11 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
     {
         if (request.ReceiptRequest.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.PreviousReceiptReference;
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
+                   rule.Code,
+                   rule.Field
                ));
             request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
             return new ProcessCommandResponse(request.ReceiptResponse, []);

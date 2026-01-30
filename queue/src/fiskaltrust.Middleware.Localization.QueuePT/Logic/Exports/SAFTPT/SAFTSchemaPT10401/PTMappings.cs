@@ -1,11 +1,93 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using Microsoft.Identity.Client;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
 public static class PTMappings
 {
+    public static readonly Customer AnonymousCustomer = new()
+    {
+        CustomerID = "0",
+        AccountID = "Desconhecido",
+        CustomerTaxID = "999999990",
+        CompanyName = "Consumidor final",
+        BillingAddress = new BillingAddress
+        {
+            AddressDetail = "Desconhecido",
+            City = "Desconhecido",
+            PostalCode = "Desconhecido",
+            Country = "Desconhecido"
+        }
+    };
+
+    public class InvoiceStatus
+    {
+        public const string Normal = "N";
+        public const string Cancelled = "A";
+        public const string SelfBilling = "S";
+        public const string SummaryDocumentForOtherDocuments = "R";
+        public const string InvoicedDocument = "F";
+    }
+
+    public static List<string> InvoiceTypes = new()
+    {
+        "FT", // Invoice
+        "FS", // Simplified Invoice issued according to article 40 of the VAT code
+        "FR", // Invoice-receipt
+        "ND", // Debit note
+        "NC", // Credit note
+        "VD", // Sale for cash and invoice/sales ticket (a) For data up to 2012-12-31.
+        "TV", // Sale ticket (a) For data up to 2012-12-31.
+        "TD", // Devolution ticket (a) For data up to 2012-12-31.
+        "AA", // Assets sales (a) For data up to 2012-12-31.
+        "DA", // Assets returns (a) For data up to 2012-12-31.
+        "RP", // Premium or premium receipt
+        "RE", //Return insurance or receipt of return insurance
+        "CS", // Imputation to co-insurance companies
+        "LD", // Imputation to a leader co-insurance company
+        "RA", // Accepted reinsurance
+    };
+
+    public static List<string> WorkTypes = new()
+    {
+        "CM", // Table checks
+        "CC", // Consignement credit note
+        "FC", // Consignment invoice according to art. 38 of the Portuguese VAT Code;
+        "FO", // Worksheets
+        "NE", // Purchase Order
+        "OU", // Others
+        "OR", // Budgets,
+        "PF", // Pro forma invoice,
+        "DC", // Issued documents 
+        "DC", // Issued documents likely to be presented to the customer for the purpose of checking goods or provision of services (for data until 2017-06-30). For the insurance sector as to the types of documents identified below must also exist in table 4.1. - SalesInvoices the corresponding invoice or invoice amending document, can also be filled with:
+        "RP", // Premium or Premium receipt;
+        "RE", //  Return insurance or receipt of return insurance;
+        "CS", // Imputation to co-insurance companies;
+        "LD", // Imputation to a leader co-insurance company;
+        "RA", // Accepted reinsurance.
+    };
+
+    public class WorkStatus
+    {
+        public const string Normal = "N";
+        public const string Cancelled = "A";
+        public const string InvoicedDocument = "F";
+    }
+
+    public static List<string> PaymentTypes = new()
+    {
+        "RC", // Receipt issued according to the Cash VAT regime (including advance payments in this regime);
+        "RG", // Other issued receipts.
+    };
+
+    public class PaymentStatus
+    {
+        public const string Normal = "N";
+        public const string Cancelled = "A";
+    }
+
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
     public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
     {
@@ -24,7 +106,7 @@ public static class PTMappings
     public static string GetTaxExemptionCode(ChargeItem chargeItem)
     {
         var taxExemptCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-        if(Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
+        if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
         {
             return Constants.TaxExemptionDictionary.TaxExemptionTable[((Constants.TaxExemptionCode) taxExemptCode)].Code;
         }
@@ -71,4 +153,35 @@ public static class PTMappings
         ChargeItemCaseTypeOfService.CashTransfer => "O", // Receivable / ???
         _ => throw new NotImplementedException($"The given ChargeItemCase {chargeItem.ftChargeItemCase} type is not supported"),
     };
+
+    public static class CertificationPosSystem
+    {
+        public const string ProductCompanyTaxID = "980833310";
+        public const string SoftwareCertificateNumber = "9999";
+        public const string ProductID = "fiskaltrust.CloudCashBox/FISKALTRUST CONSULTING GMBH - Sucursal em Portugal";
+        public const string ProductVersion = "2.0";
+    }
+
+    public static (string documentType, string uniqueIdentification) ExtractDocumentTypeAndUniqueIdentification(string ftReceiptIdentification)
+    {
+        if (string.IsNullOrEmpty(ftReceiptIdentification))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var localPart = ftReceiptIdentification.Split("#").Last();
+        var spaceIndex = localPart.IndexOf(' ');
+
+        // The unique identification is always everything after the hash (the localPart)
+        var uniqueIdentification = localPart;
+
+        // Document type is only extracted if there's a proper space separation and content after the space
+        if (spaceIndex > 0 && spaceIndex < localPart.Length - 1)
+        {
+            var documentType = localPart.Substring(0, spaceIndex);
+            return (documentType, uniqueIdentification);
+        }
+
+        return (string.Empty, uniqueIdentification);
+    }
 }

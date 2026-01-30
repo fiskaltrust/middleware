@@ -37,9 +37,10 @@ public class ReceiptRequestValidations
 
         if (difference > roundingTolerance)
         {
+            var rule = PortugalValidationRules.ReceiptNotBalanced;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_ReceiptNotBalanced(chargeItemsSum, payItemsSum, difference),
-                "EEEE_ReceiptNotBalanced"
+                rule.Code
             )
             .WithContext("ChargeItemsSum", chargeItemsSum)
             .WithContext("PayItemsSum", payItemsSum)
@@ -64,10 +65,11 @@ public class ReceiptRequestValidations
 
         if (otherServiceNetAmount > 100m)
         {
+            var rule = PortugalValidationRules.OtherServiceNetAmountExceedsLimit;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_OtherServiceNetAmountExceedsLimit,
-                "EEEE_OtherServiceNetAmountExceedsLimit",
-                "cbChargeItems"
+                rule.Code,
+                rule.Field
             ).WithContext("OtherServiceNetAmount", otherServiceNetAmount)
              .WithContext("Limit", 100m));
         }
@@ -81,10 +83,11 @@ public class ReceiptRequestValidations
     {
         if (request.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.RefundMissingPreviousReceiptReference;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_RefundMissingPreviousReceiptReference,
-                "EEEE_RefundMissingPreviousReceiptReference",
-                "cbPreviousReceiptReference"
+                rule.Code,
+                rule.Field
             ));
         }
     }
@@ -103,10 +106,11 @@ public class ReceiptRequestValidations
         // Check if receipt moment is in the future - this is always invalid
         if (receiptMomentUtc > serverTime)
         {
+            var rule = PortugalValidationRules.CbReceiptMomentInFuture;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_CbReceiptMomentInFuture(request.cbReceiptMoment, serverTime),
-                "EEEE_CbReceiptMomentInFuture",
-                "cbReceiptMoment"
+                rule.Code,
+                rule.Field
             )
             .WithContext("ServerTime", serverTime)
             .WithContext("CbReceiptMoment", request.cbReceiptMoment));
@@ -127,10 +131,11 @@ public class ReceiptRequestValidations
 
         if (timeDifference > maxAllowedDifferenceMinutes)
         {
+            var rule = PortugalValidationRules.CbReceiptMomentDeviationExceeded;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_CbReceiptMomentDeviationExceeded(request.cbReceiptMoment, serverTime, timeDifference),
-                "EEEE_CbReceiptMomentDeviationExceeded",
-                "cbReceiptMoment"
+                rule.Code,
+                rule.Field
             )
             .WithContext("ServerTime", serverTime)
             .WithContext("CbReceiptMoment", request.cbReceiptMoment)
@@ -147,10 +152,11 @@ public class ReceiptRequestValidations
     {
         if(request.cbReceiptMoment.Kind != DateTimeKind.Utc)
         {
+           var rule = PortugalValidationRules.CbReceiptMomentNotUtc;
            yield return ValidationResult.Failed(new ValidationError(
                 "cbReceiptMoment must be in UTC format for time difference validation.",
-                "EEEE_CbReceiptMomentNotUtc",
-                "cbReceiptMoment"
+                rule.Code,
+                rule.Field
             ));
         }
 
@@ -158,11 +164,70 @@ public class ReceiptRequestValidations
         
         if (timeDifference > TimeSpan.FromMinutes(1))
         {
+            var rule = PortugalValidationRules.ReceiptMomentTimeDifferenceExceeded;
             yield return ValidationResult.Failed(new ValidationError(
                 $"The time difference between cbReceiptMoment ({request.cbReceiptMoment:yyyy-MM-dd HH:mm:ss}) and ftReceiptMoment ({receiptResponse.ftReceiptMoment:yyyy-MM-dd HH:mm:ss}) is {timeDifference.TotalMinutes:F2} minutes, which exceeds the maximum allowed difference of 2 minutes.",
-                "EEEE_ReceiptMomentTimeDifferenceExceeded",
-                "cbReceiptMoment,ftReceiptMoment"
+                rule.Code,
+                rule.Field
             ));
         }
+    }
+
+    /// <summary>
+    /// Validates that item positions, if provided, start at 1 and are strictly increasing without gaps.
+    /// </summary>
+    public static IEnumerable<ValidationResult> ValidatePositions(ReceiptRequest request)
+    {
+        foreach (var result in ValidatePositionsCore(request.cbChargeItems, "ChargeItems", PortugalValidationFields.ChargeItems))
+        {
+            yield return result;
+        }
+
+        foreach (var result in ValidatePositionsCore(request.cbPayItems, "PayItems", PortugalValidationFields.PayItems))
+        {
+            yield return result;
+        }
+    }
+
+    private static IEnumerable<ValidationResult> ValidatePositionsCore<T>(IList<T>? items, string itemType, string fieldName) where T : class
+    {
+        if (items is null || items.Count == 0)
+        {
+            yield break;
+        }
+
+        var positions = items.Select(GetPosition).ToList();
+        if (!positions.Any(p => p > 0))
+        {
+            yield break;
+        }
+
+        var expected = 1L;
+        foreach (var position in positions)
+        {
+            if (position != expected)
+            {
+                var rule = PortugalValidationRules.InvalidPositions;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_InvalidPositions(itemType),
+                    rule.Code,
+                    fieldName
+                )
+                .WithContext("ExpectedPosition", expected)
+                .WithContext("ActualPosition", position));
+                yield break;
+            }
+            expected++;
+        }
+    }
+
+    private static decimal GetPosition<T>(T item) where T : class
+    {
+        return item switch
+        {
+            ChargeItem chargeItem => chargeItem.Position,
+            PayItem payItem => payItem.Position,
+            _ => 0
+        };
     }
 }

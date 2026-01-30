@@ -5,15 +5,10 @@ using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 
-public static class CustomerValidations
+public static class cbCustomerValidations
 {
-    /// <summary>
-    /// Validates the Portuguese customer tax ID (NIF) if provided.
-    /// Returns a single ValidationResult if validation fails.
-    /// </summary>
     public static IEnumerable<ValidationResult> ValidateCustomerTaxId(ReceiptRequest request)
     {
-        // Skip validation if no customer data is provided
         if (request.cbCustomer == null)
         {
             yield break;
@@ -33,10 +28,11 @@ public static class CustomerValidations
 
         if (customerDeserializationFailed)
         {
+            var rule = PortugalValidationRules.CustomerInvalid;
             yield return ValidationResult.Failed(new ValidationError(
                   ErrorMessagesPT.EEEE_CustomerInvalid,
-                  "EEEE_CustomerInvalid",
-                  "cbCustomer"
+                  rule.Code,
+                  rule.Field
               ));
             yield break;
         }
@@ -46,15 +42,15 @@ public static class CustomerValidations
             yield break;
         }
 
-        // If customer tax ID is provided, validate it
         if (!string.IsNullOrWhiteSpace(middlewareCustomer.CustomerVATId))
         {
             if (!PortugalValidationHelpers.IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
             {
+                var rule = PortugalValidationRules.InvalidPortugueseTaxId;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_InvalidPortugueseTaxId(middlewareCustomer.CustomerVATId),
-                    "EEEE_InvalidPortugueseTaxId",
-                    "cbCustomer.CustomerVATId"
+                    rule.Code,
+                    rule.Field
                 ).WithContext("ProvidedTaxId", middlewareCustomer.CustomerVATId));
             }
         }

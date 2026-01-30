@@ -34,6 +34,8 @@ public static class ErrorMessagesPT
 
     public const string EEEE_ChargeItemAmountMissing = "EEEE_Charge item amount (price) is mandatory and must be set.";
 
+    public const string EEEE_ChargeItemQuantityZeroNotAllowed = "EEEE_Charge item quantity cannot be zero.";
+
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
     public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
@@ -41,6 +43,8 @@ public static class ErrorMessagesPT
     public const string EEEE_CustomerInvalid = "EEEE_cbCustomer definition is invalid";
 
     public const string EEEE_PreviousReceiptReference = "EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt.";
+
+    public const string EEEE_PreviousReceiptLineItemMismatch = "EEEE_cbPreviousReceiptReference must point to a receipt that shares at least one matching line item.";
 
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 
@@ -158,11 +162,17 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for full refund not matching original invoice items
     /// </summary>
-    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference) =>
-        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts.";
+    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: {diffField})";
 
     public static string EEEE_VoidItemsMismatch(string originalReceiptReference) =>
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
+
+    /// <summary>
+    /// Error message for voiding working documents that have already been invoiced
+    /// </summary>
+    public static string EEEE_WorkingDocumentAlreadyInvoiced(string receiptReference) =>
+        $"EEEE_Working document '{receiptReference}' has already been invoiced and cannot be voided.";
 
     /// <summary>
     /// Error message for mixed refund and non-refund items in partial refund
@@ -198,10 +208,23 @@ public static class ErrorMessagesPT
         $"EEEE_Charge item at position {position} ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
 
     /// <summary>
+    /// Error message for invalid positions sequence.
+    /// </summary>
+    public static string EEEE_InvalidPositions(string itemType) =>
+        $"EEEE_{itemType} positions must start at 1 and be strictly increasing without gaps when provided.";
+
+    /// <summary>
+    /// Error message for discounts/extras that are positive (not allowed in PT)
+    /// </summary>
+    public static string EEEE_PositiveDiscountNotAllowed(int position, decimal amount) =>
+        $"EEEE_Charge item at position {position}: Positive discounts/extras are not allowed in Portugal. Amount was {amount:F2}.";
+
+    /// <summary>
     /// Error message for attempting to create multiple voids for the same receipt
     /// </summary>
     public static string EEEE_VoidAlreadyExists(string receiptReference) =>
         $"EEEE_A void for receipt '{receiptReference}' already exists. Multiple voids for the same receipt are not allowed.";
+    internal static string EEEE_CannotVoidInvoicedDocument(string previousReceiptRef) => throw new NotImplementedException();
 
     /// <summary>
     /// Error message for void receipts that contain charge items
@@ -229,4 +252,6 @@ public static class ErrorMessagesPT
 
     public static string EEEE_InvalidCountryCodeInChargeItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
     public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
+
+    public static string EEEE_CustomerCountryRequiredForTaxId = "EEEE_Customer country is required when CustomerVATId is provided.";
 }

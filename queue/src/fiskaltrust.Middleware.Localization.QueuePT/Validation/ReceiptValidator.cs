@@ -1,16 +1,20 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using Currency = fiskaltrust.ifPOS.v2.Currency;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation;
 
@@ -23,6 +27,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     private readonly ReceiptRequest _receiptRequest = request;
     readonly ReceiptResponse _receiptResponse = receiptResponse;
     private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly DocumentStatusProvider _documentStatusProvider = new(readOnlyQueueItemRepository);
     private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
     private readonly VoidValidator _voidValidator = new(readOnlyQueueItemRepository);
 
@@ -41,53 +46,62 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (_receiptRequest.ftReceiptCase.Country() != "PT")
         {
+            var rule = PortugalValidationRules.InvalidCountryCodeForPT;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_InvalidCountryCodeForPT,
-                   "EEEE_InvalidCountryCodeForPT",
-                   "ftReceiptCase"
+                   rule.Code,
+                   rule.Field
                ));
             yield break;
         }
         if (_receiptRequest.cbChargeItems is null)
         {
+            var rule = PortugalValidationRules.ChargeItemsMissing;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_ChargeItemsMissing,
-                   "EEEE_ChargeItemsMissing",
-                   "cbChargeItems"
+                   rule.Code,
+                   rule.Field
                ));
             yield break;
         }
         if (_receiptRequest.cbPayItems is null)
         {
+            var rule = PortugalValidationRules.PayItemsMissing;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PayItemsMissing,
-                   "EEEE_PayItemsMissing",
-                   "cbPayItems"
+                   rule.Code,
+                   rule.Field
                ));
             yield break;
         }
         if (_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.Country() != "PT"))
         {
+            var rule = PortugalValidationRules.InvalidCountryCodeInChargeItemsForPT;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_InvalidCountryCodeInChargeItemsForPT,
-                   "EEEE_InvalidCountryCodeInChargeItemsForPT",
-                   "cbChargeItems"
+                   rule.Code,
+                   rule.Field
                ));
             yield break;
         }
 
         if (_receiptRequest.cbPayItems.Any(ci => ci.ftPayItemCase.Country() != "PT"))
         {
+            var rule = PortugalValidationRules.InvalidCountryCodeInPayItemsForPT;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_InvalidCountryCodeInPayItemsForPT,
-                   "EEEE_InvalidCountryCodeInPayItemsForPT",
-                   "cbPayItems"
+                   rule.Code,
+                   rule.Field
                ));
             yield break;
         }
 
+        foreach (var result in ReceiptRequestValidations.ValidatePositions(_receiptRequest))
+        {
+            yield return result;
+        }
 
-        foreach (var result in CustomerValidations.ValidateCustomerTaxId(_receiptRequest))
+        foreach (var result in cbCustomerValidations.ValidateCustomerTaxId(_receiptRequest))
         {
             yield return result;
         }
@@ -99,6 +113,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_Description_Length(_receiptRequest))
+        {
+            yield return result;
+        }
+
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_Quantity_NotZero(_receiptRequest))
         {
             yield return result;
         }
@@ -126,6 +145,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         // Validate that discounts do not exceed article amounts
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(_receiptRequest))
+        {
+            yield return result;
+        }
+
+        // Validate that discounts/extras are never positive (PT rule)
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountOrExtra_NotPositive(_receiptRequest))
         {
             yield return result;
         }
@@ -184,19 +209,21 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (_receiptRequest.Currency != Currency.EUR)
         {
+            var rule = PortugalValidationRules.OnlyEuroCurrencySupported;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_OnlyEuroCurrencySupported,
-                   "EEEE_OnlyEuroCurrencySupported",
-                   "Currency"
+                   rule.Code,
+                   rule.Field
                ));
         }
 
         if (_receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && _receiptRequest.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.PreviousReceiptReference;
             yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
+                   rule.Code,
+                   rule.Field
                ));
         }
 
@@ -215,14 +242,33 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield return await ValidatePartialRefundAsync(_receiptRequest, _receiptResponse);
         }
 
+        if (ShouldValidatePreviousReceiptLineItems(_receiptRequest))
+        {
+            var receiptReferences = _receiptResponse.GetPreviousReceiptReference();
+            var hasConnectableItem = receiptReferences != null &&
+                receiptReferences.Count > 0 &&
+                receiptReferences.Any(reference => HasConnectableChargeItem(_receiptRequest, reference.Request));
+
+            if (!hasConnectableItem)
+            {
+                var rule = PortugalValidationRules.PreviousReceiptLineItemMismatch;
+                yield return ValidationResult.Failed(new ValidationError(
+                       ErrorMessagesPT.EEEE_PreviousReceiptLineItemMismatch,
+                       rule.Code,
+                       rule.Field
+                   ));
+            }
+        }
+
         if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
         {
             if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || _receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) || _receiptRequest.IsPartialRefundReceipt())
             {
+                var rule = PortugalValidationRules.HandwrittenReceiptsNotSupported;
                 yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_HandwrittenReceiptsNotSupported,
-                   "EEEE_HandwrittenReceiptsNotSupported",
-                   "ftReceiptCase"
+                   rule.Code,
+                   rule.Field
                ));
             }
         }
@@ -231,10 +277,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         {
             if (!_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) || data.PT is null || data.PT.Series is null || !data.PT.Number.HasValue)
             {
+                var rule = PortugalValidationRules.HandwrittenReceiptSeriesAndNumberMandatory;
                 yield return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_HandwrittenReceiptSeriesAndNumberMandatory,
-                   "EEEE_HandwrittenReceiptSeriesAndNumberMandatory",
-                   "ftReceiptCaseData"
+                   rule.Code,
+                   rule.Field
                ));
             }
         }
@@ -246,10 +293,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                 var status = await _receiptReferenceProvider.HasExistingVoidAsync(_receiptRequest.cbPreviousReceiptReference.SingleValue!);
                 if (status)
                 {
+                    var rule = PortugalValidationRules.PreviousReceiptIsVoided;
                     yield return ValidationResult.Failed(new ValidationError(
                        ErrorMessagesPT.EEEE_HasBeenVoidedAlready(_receiptRequest.cbPreviousReceiptReference.SingleValue!),
-                       "EEEE_PreviousReceiptIsVoided",
-                       "cbPreviousReceiptReference"
+                       rule.Code,
+                       rule.Field
                    ));
                 }
             }
@@ -260,10 +308,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                     var status = await _receiptReferenceProvider.HasExistingVoidAsync(reference);
                     if (status)
                     {
+                        var rule = PortugalValidationRules.PreviousReceiptIsVoided;
                         yield return ValidationResult.Failed(new ValidationError(
                            ErrorMessagesPT.EEEE_HasBeenVoidedAlready(reference),
-                           "EEEE_PreviousReceiptIsVoided",
-                           "cbPreviousReceiptReference"
+                           rule.Code,
+                           rule.Field
                        ));
                     }
                 }
@@ -280,10 +329,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     {
         if (_receiptRequest.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.PreviousReceiptReference;
             return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
+                   rule.Code,
+                   rule.Field
                ));
         }
 
@@ -296,10 +346,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (_receiptRequest.cbChargeItems == null || !_receiptRequest.cbChargeItems.Any(ci => ci.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
         {
+            var rule = PortugalValidationRules.PaymentTransferRequiresAccountReceivableItem;
             return ValidationResult.Failed(new ValidationError(
                ErrorMessagesPT.EEEE_PaymentTransferRequiresAccountReceivableItem,
-               "EEEE_PaymentTransferRequiresAccountReceivableItem",
-               "cbChargeItems"
+               rule.Code,
+               rule.Field
            ));
         }
 
@@ -307,10 +358,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var hasExistingRefund = await _receiptReferenceProvider.HasExistingPaymentTransferAsync(previousReceiptRef);
         if (hasExistingRefund)
         {
+            var rule = PortugalValidationRules.RefundAlreadyExists;
             return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef),
-                "EEEE_RefundAlreadyExists",
-                "cbPreviousReceiptReference"
+                rule.Code,
+                rule.Field
             ));
         }
 
@@ -355,10 +407,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     {
         if (_receiptRequest.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.PreviousReceiptReference;
             return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
+                   rule.Code,
+                   rule.Field
                ));
         }
 
@@ -372,10 +425,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
         if (hasExistingRefund)
         {
+            var rule = PortugalValidationRules.RefundAlreadyExists;
             return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef),
-                "EEEE_RefundAlreadyExists",
-                "cbPreviousReceiptReference"
+                rule.Code,
+                rule.Field
             ));
         }
 
@@ -400,10 +454,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     {
         if (_receiptRequest.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.PreviousReceiptReference;
             return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
+                   rule.Code,
+                   rule.Field
                ));
         }
 
@@ -414,16 +469,28 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-        var hasExistingVoid = await _voidValidator.HasExistingVoidAsync(previousReceiptRef);
-        if (hasExistingVoid)
+        var documentStatus = await _documentStatusProvider.GetDocumentStatusStateAsync((receiptRequest, receiptResponse));
+        if (documentStatus.Status == DocumentStatus.Voided)
         {
             receiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_VoidAlreadyExists(previousReceiptRef));
+            var rule = PortugalValidationRules.VoidAlreadyExists;
             return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_VoidAlreadyExists(previousReceiptRef),
-                "EEEE_VoidAlreadyExists",
-                "cbPreviousReceiptReference"
+                rule.Code,
+                rule.Field
             ));
         }
+
+        if (documentStatus.Status == DocumentStatus.Invoiced)
+        {
+            var rule = PortugalValidationRules.CannotVoidInvoicedDocument;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_CannotVoidInvoicedDocument(previousReceiptRef),
+                rule.Code,
+                rule.Field
+            ));           
+        }
+
 
         var originalRequest = receiptReferences[0].Request;
         var validationError = await _voidValidator.ValidateVoidAsync(
@@ -445,10 +512,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     {
         if (_receiptRequest.cbPreviousReceiptReference is null)
         {
+            var rule = PortugalValidationRules.PreviousReceiptReference;
             return ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_PreviousReceiptReference,
-                   "EEEE_PreviousReceiptReference",
-                   "cbPreviousReceiptReference"
+                   rule.Code,
+                   rule.Field
                ));
         }
 
@@ -460,7 +528,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (receiptRequest.cbChargeItems?.Any(item => !item.IsRefund()) == true)
         {
-            return ValidationResult.Failed(ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed);
+            var rule = PortugalValidationRules.MixedRefundItemsNotAllowed;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_MixedRefundItemsNotAllowed,
+                rule.Code,
+                rule.Field
+            ));
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
@@ -469,10 +542,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
         if (hasExistingRefund)
         {
+            var rule = PortugalValidationRules.RefundAlreadyExists;
             return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_RefundAlreadyExists(previousReceiptRef),
-                "EEEE_RefundAlreadyExists",
-                "cbPreviousReceiptReference"
+                rule.Code,
+                rule.Field
             ));
         }
 
@@ -496,4 +570,63 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     /// Helper method to get all validation results as a list and check if any failed.
     /// </summary>
     public async Task<ValidationResultCollection> ValidateAndCollectAsync(ReceiptValidationContext context) => new ValidationResultCollection(await Validate(context).ToListAsync());
+
+    private static bool ShouldValidatePreviousReceiptLineItems(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbPreviousReceiptReference is null)
+        {
+            return false;
+        }
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ||
+            receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) ||
+            receiptRequest.IsPartialRefundReceipt())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasConnectableChargeItem(ReceiptRequest currentRequest, ReceiptRequest originalRequest)
+    {
+        if (currentRequest.cbChargeItems is null || currentRequest.cbChargeItems.Count == 0 ||
+            originalRequest.cbChargeItems is null || originalRequest.cbChargeItems.Count == 0)
+        {
+            return false;
+        }
+
+        var currentIdentifiers = currentRequest.cbChargeItems
+            .Where(IsProductChargeItem)
+            .Select(SaftExporter.GenerateUniqueProductIdentifier)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (currentIdentifiers.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var originalItem in originalRequest.cbChargeItems.Where(IsProductChargeItem))
+        {
+            var originalIdentifier = SaftExporter.GenerateUniqueProductIdentifier(originalItem);
+            if (!string.IsNullOrEmpty(originalIdentifier) && currentIdentifiers.Contains(originalIdentifier))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsProductChargeItem(ChargeItem chargeItem)
+    {
+        if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount) ||
+            chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }
