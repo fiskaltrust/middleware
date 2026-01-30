@@ -1,8 +1,6 @@
-﻿using System.Diagnostics;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
@@ -17,35 +15,13 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using static System.Net.Mime.MediaTypeNames;
 using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
-public static class CertificationPosSystem
-{
-    public const string ProductCompanyTaxID = "980833310";
-    public const string SoftwareCertificateNumber = "9999";
-    public const string ProductID = "fiskaltrust.CloudCashBox/FISKALTRUST CONSULTING GMBH - Sucursal em Portugal";
-    public const string ProductVersion = "2.0";
-}
-
 public class SaftExporter
 {
-    private static readonly Customer _anonymousCustomer = new Customer
-    {
-        CustomerID = "0",
-        AccountID = "Desconhecido",
-        CustomerTaxID = "999999990",
-        CompanyName = "Consumidor final",
-        BillingAddress = new BillingAddress
-        {
-            AddressDetail = "Desconhecido",
-            City = "Desconhecido",
-            PostalCode = "Desconhecido",
-            Country = "Desconhecido"
-        }
-    };
+
     private readonly DocumentStatusProvider? _documentStatusProvider;
 
     public static bool IsValidPortugueseTaxId(string taxId)
@@ -88,8 +64,9 @@ public class SaftExporter
     {
         if (receiptRequest.cbCustomer == null)
         {
-            return _anonymousCustomer;
+            return PTMappings.AnonymousCustomer;
         }
+
         var middlewareCustomer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer))!;
         if (!string.IsNullOrEmpty(middlewareCustomer.CustomerName))
         {
@@ -175,7 +152,7 @@ public class SaftExporter
         var actualReceiptRequests = receipts.Where(x => ShouldBeExported(x.receiptRequest)).OrderBy(x => x.receiptResponse.ftReceiptMoment).ToList();
 
         var invoiceTasks = actualReceiptRequests
-            .Where(x => PTMappings.InvoiceTypes.Contains(GetItemTypeFromReceipt(x)))
+            .Where(x => PTMappings.InvoiceTypes.Contains(PTMappings.ExtractDocumentTypeAndUniqueIdentification(x.receiptResponse.ftReceiptIdentification).documentType))
             .Select(x => GetInvoiceForReceiptRequest(x))
             .ToList();
         var invoices = Task.WhenAll(invoiceTasks).GetAwaiter().GetResult()
@@ -185,7 +162,7 @@ public class SaftExporter
             .ToList();
 
         var workTasks = actualReceiptRequests
-            .Where(x => PTMappings.WorkTypes.Contains(GetItemTypeFromReceipt(x)))
+            .Where(x => PTMappings.WorkTypes.Contains(PTMappings.ExtractDocumentTypeAndUniqueIdentification(x.receiptResponse.ftReceiptIdentification).documentType))
             .Select(x => GetWorkDocumentForReceiptRequest(x))
             .ToList();
         var workingDocuments = Task.WhenAll(workTasks).GetAwaiter().GetResult()
@@ -195,7 +172,7 @@ public class SaftExporter
             .ToList();
 
         var paymentTasks = actualReceiptRequests
-            .Where(x => PTMappings.PaymentTypes.Contains(GetItemTypeFromReceipt(x)))
+            .Where(x => PTMappings.PaymentTypes.Contains(PTMappings.ExtractDocumentTypeAndUniqueIdentification(x.receiptResponse.ftReceiptIdentification).documentType))
             .Select(x => GetPaymentForReceiptRequest(x))
             .ToList();
         var paymentDocuments = Task.WhenAll(paymentTasks).GetAwaiter().GetResult()
@@ -218,22 +195,22 @@ public class SaftExporter
                 SalesInvoices = new SalesInvoices
                 {
                     NumberOfEntries = invoices.Count,
-                    TotalDebit = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A").SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != "A").SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalDebit = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != PTMappings.InvoiceStatus.Cancelled).SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = invoices.Where(x => x!.DocumentStatus.InvoiceStatus != PTMappings.InvoiceStatus.Cancelled).SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Invoice = invoices!
                 },
                 WorkingDocuments = new WorkingDocuments
                 {
                     NumberOfEntries = workingDocuments.Count,
-                    TotalDebit = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A").SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != "A").SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalDebit = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != PTMappings.WorkStatus.Cancelled).SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = workingDocuments.Where(x => x!.DocumentStatus.WorkStatus != PTMappings.WorkStatus.Cancelled).SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     WorkDocument = workingDocuments!
                 },
                 Payments = new Payments
                 {
                     NumberOfEntries = paymentDocuments.Count,
                     TotalDebit = 0,
-                    TotalCredit = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != "A").SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    TotalCredit = paymentDocuments.Where(x => x!.DocumentStatus.PaymentStatus != PTMappings.PaymentStatus.Cancelled).SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Payment = paymentDocuments!,
                 }
             }
@@ -264,20 +241,7 @@ public class SaftExporter
         }).DistinctBy(x => x.ProductCode).ToList();
     }
 
-    public static string GenerateUniqueProductIdentifier(ChargeItem x)
-    {
-        if (x.ProductNumber != null && x.ProductNumber.Length >= 3)
-        {
-            return x.ProductNumber;
-        }
-
-        if (!string.IsNullOrEmpty(x.Description))
-        {
-            x.Description = x.Description.Trim();
-        }
-
-        return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description)));
-    }
+    public static string GenerateUniqueProductIdentifier(ChargeItem x) => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description.Trim())));
 
     private TaxTable GetTaxTable(List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipt)
     {
@@ -465,10 +429,10 @@ public class SaftExporter
             CurrencyCode = "EUR",
             DateCreated = DateTime.UtcNow,
             TaxEntity = "GLOBAL",
-            ProductCompanyTaxID = CertificationPosSystem.ProductCompanyTaxID,
-            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            ProductID = CertificationPosSystem.ProductID,
-            ProductVersion = CertificationPosSystem.ProductVersion,
+            ProductCompanyTaxID = PTMappings.CertificationPosSystem.ProductCompanyTaxID,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
+            ProductID = PTMappings.CertificationPosSystem.ProductID,
+            ProductVersion = PTMappings.CertificationPosSystem.ProductVersion,
         };
     }
 
@@ -483,8 +447,8 @@ public class SaftExporter
 
         var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
-        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
-        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
+        var hashSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.Hash));
+        var atcudSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD))!;
         atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
         var netAmount = grossAmount - taxable;
         if (hashSignature == null || atcudSignature == null)
@@ -504,7 +468,7 @@ public class SaftExporter
             HashControl = 1,
             Period = portugalTime.Month,
             WorkDate = portugalTime,
-            WorkType = GetItemTypeFromReceipt(receipt),
+            WorkType = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receipt.receiptResponse.ftReceiptIdentification).documentType,
             SourceID = GetSourceID(receiptRequest),
             SystemEntryDate = portugalTime,
             Line = lines,
@@ -519,25 +483,14 @@ public class SaftExporter
         return workDocument;
     }
 
-    public static string GetItemTypeFromReceipt((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
-    {
-        var type = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last().Split(" ").First();
-        // Let's check if we need this
-        //if (receipt.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && includeHandwritten)
-        //{
-        //    return type + "M";
-        //}
-        return type;
-    }
-
     public async Task<PaymentDocument?> GetPaymentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
         var payItem = receiptRequest.cbPayItems.First();
         var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
-        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
-        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
+        var hashSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.Hash));
+        var atcudSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD))!;
         atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
         var netAmount = grossAmount - taxable;
         if (hashSignature == null || atcudSignature == null)
@@ -555,7 +508,7 @@ public class SaftExporter
             DocumentStatus = await GetPaymentStatusForDocument(receipt),
             Period = portugalTime.Month,
             TransactionDate = portugalTime,
-            PaymentType = GetItemTypeFromReceipt(receipt),
+            PaymentType = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receipt.receiptResponse.ftReceiptIdentification).documentType,
             PaymentMethod = new PaymentMethod
             {
                 PaymentMechanism = PTMappings.GetPaymentMecahnism(payItem),
@@ -607,8 +560,8 @@ public class SaftExporter
 
             var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
             var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
-            var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
-            var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault()!;
+            var hashSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.Hash));
+            var atcudSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD))!;
             if (atcudSignature != null)
             {
                 atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
@@ -627,7 +580,7 @@ public class SaftExporter
                 HashControl = "1",
                 Period = portugalTime.Month,
                 InvoiceDate = portugalTime,
-                InvoiceType = GetItemTypeFromReceipt(receipt),
+                InvoiceType = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receipt.receiptResponse.ftReceiptIdentification).documentType,
                 SpecialRegimes = new SpecialRegimes
                 {
                     SelfBillingIndicator = 0,
@@ -655,7 +608,7 @@ public class SaftExporter
 
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
             {
-                invoice.HashControl = invoice.HashControl + "-" + GetItemTypeFromReceipt((receiptRequest, receiptResponse)) + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
+                invoice.HashControl = invoice.HashControl + "-" + PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification).documentType + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
             }
             //if (lines.Any(x => x.SettlementAmount.HasValue))
             //{
@@ -664,7 +617,7 @@ public class SaftExporter
             //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
             //    };
             //}
-            invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptRequest, receiptResponse, x)).ToList();
+            invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).Select(x => GetPayment(receiptResponse, x)).ToList();
             return invoice;
         }
         catch (Exception ex)
@@ -673,35 +626,16 @@ public class SaftExporter
         }
     }
 
-    private static string GetSourcePayment(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            return "M";
-        }
-        return "P";
-    }
+    private static string GetSourcePayment(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) ? "M" : "P";
 
-    private static string GetSourceBilling(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            return "M";
-        }
-        return "P";
-    }
+    private static string GetSourceBilling(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) ? "M" : "P";
 
-    public Payment GetPayment(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, PayItem payItem)
+    public Payment GetPayment(ReceiptResponse receiptResponse, PayItem payItem)
     {
-        var amount = payItem.Amount;
-        if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-        {
-            amount *= -1;
-        }
         return new Payment
         {
-            PaymentAmount = amount,
-            PaymentDate = payItem.Moment ?? receiptResponse.ftReceiptMoment,
+            PaymentAmount = Math.Abs(payItem.Amount),
+            PaymentDate = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment),
             PaymentMechanism = PTMappings.GetPaymentMecahnism(payItem),
         };
     }
@@ -761,14 +695,8 @@ public class SaftExporter
                 Tax = tax
             };
 
-            if (GetItemTypeFromReceipt((receiptRequest, receiptResponse)) == "NC")
+            if (PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification).documentType == "NC")
             {
-                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
-                line.References = new References
-                {
-                    Reference = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
-                    Reason = "Devolução"
-                };
                 line.DebitAmount = Helpers.CreateMonetaryValue(netLinePrice);
             }
             else
@@ -776,17 +704,29 @@ public class SaftExporter
                 line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
             }
 
-            if (receiptRequest.cbPreviousReceiptReference != null && PTMappings.InvoiceTypes.Contains(GetItemTypeFromReceipt((receiptRequest, receiptResponse))))
+            if (receiptRequest.cbPreviousReceiptReference != null)
             {
-                var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First();
-                var matchingChargeItem = referencedReceiptResponse.Request.cbChargeItems.Where(x => GenerateUniqueProductIdentifier(x) == line.ProductCode).FirstOrDefault();
-                if (matchingChargeItem != null)
+                if (PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification).documentType == "NC")
                 {
-                    line.OrderReferences = new OrderReferences
+                    var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First().Response;
+                    line.References = new References
                     {
-                        OriginatingON = referencedReceiptResponse!.Response.ftReceiptIdentification.Split("#").Last(),
-                        OrderDate = referencedReceiptResponse!.Response.ftReceiptMoment
+                        Reference = referencedReceiptResponse!.ftReceiptIdentification.Split("#").Last(),
+                        Reason = "Devolução"
                     };
+                }
+                else
+                {
+                    var referencedReceiptResponse = receiptResponse.GetRequiredPreviousReceiptReference().First();
+                    var matchingChargeItem = referencedReceiptResponse.Request.cbChargeItems.FirstOrDefault(x => GenerateUniqueProductIdentifier(x) == line.ProductCode);
+                    if (matchingChargeItem != null)
+                    {
+                        line.OrderReferences = new OrderReferences
+                        {
+                            OriginatingON = referencedReceiptResponse!.Response.ftReceiptIdentification.Split("#").Last(),
+                            OrderDate = referencedReceiptResponse!.Response.ftReceiptMoment
+                        };
+                    }
                 }
             }
 

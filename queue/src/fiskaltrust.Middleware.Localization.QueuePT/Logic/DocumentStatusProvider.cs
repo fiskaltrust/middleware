@@ -52,7 +52,7 @@ public class DocumentStatusProvider
             return new DocumentStatusState(DocumentStatus.Refunded, refundReceipt, references);
         }
 
-        if (SaftExporter.GetItemTypeFromReceipt(lastReference) == "FT" || SaftExporter.GetItemTypeFromReceipt(lastReference) == "FS")
+        if (PTMappings.ExtractDocumentTypeAndUniqueIdentification(lastReference.receiptResponse.ftReceiptIdentification).documentType == "FT" || PTMappings.ExtractDocumentTypeAndUniqueIdentification(lastReference.receiptResponse.ftReceiptIdentification).documentType == "FS")
         {
             var invoicedReceipt = references.OrderBy(x => x.receiptResponse.ftReceiptMoment).LastOrDefault();
             return new DocumentStatusState(DocumentStatus.Invoiced, invoicedReceipt, references);
