@@ -122,10 +122,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
+            var rule = PortugalValidationRules.TransportationIsNotSupported;
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_TransportationIsNotSupported,
-                   "EEEE_TransportationIsNotSupported",
-                   "ftReceiptCaseFlags"
+                   rule.Code,
+                   rule.Field
                ));
             request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
             return new ProcessCommandResponse(request.ReceiptResponse, []);
@@ -172,10 +173,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
+            var rule = PortugalValidationRules.TransportationIsNotSupported;
             var validationResult = ValidationResult.Failed(new ValidationError(
                    ErrorMessagesPT.EEEE_TransportationIsNotSupported,
-                   "EEEE_TransportationIsNotSupported",
-                   "ftReceiptCaseFlags"
+                   rule.Code,
+                   rule.Field
                ));
             request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
             return new ProcessCommandResponse(request.ReceiptResponse, []);
