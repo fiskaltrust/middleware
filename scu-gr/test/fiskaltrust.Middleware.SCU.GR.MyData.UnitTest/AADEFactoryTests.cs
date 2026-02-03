@@ -1,14 +1,15 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using FluentAssertions;
+using NodaTime;
 using Xunit;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Linq;
-using System;
-using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 
@@ -356,6 +357,7 @@ public class AADEFactoryTests
     {
         var cbReceiptReference = "8-1752270167120";
         var receiptMoment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime();
+        int offset = 3; // Summer time offset for Greece using UTC+3
         var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
         var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
 
@@ -429,7 +431,7 @@ public class AADEFactoryTests
         });
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
-        
+
         // Verify no error occurred
         error.Should().BeNull();
 
@@ -438,11 +440,12 @@ public class AADEFactoryTests
         action!.invoice.Should().HaveCount(1);
         
         var invoice = action.invoice[0];
-        
+        var expectedIssueDate = DateTime.SpecifyKind(receiptMoment.AddHours(offset), DateTimeKind.Unspecified); // Kind = Unspecified
+                                                                           
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(AADEMappings.GetLocalTime(receiptRequest));
+        invoice.invoiceHeader.issueDate.Should().Be(expectedIssueDate);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
         
         // Verify customer information
@@ -487,6 +490,7 @@ public class AADEFactoryTests
     {
         var cbReceiptReference = "8-1752270167120";
         var receiptMoment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime();
+        int offset = 3; // Summer time offset for Greece using UTC+3
         var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
         var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
 
@@ -569,11 +573,12 @@ public class AADEFactoryTests
         action!.invoice.Should().HaveCount(1);
 
         var invoice = action.invoice[0];
+        var expectedIssueDate = DateTime.SpecifyKind(receiptMoment.AddHours(offset), DateTimeKind.Unspecified); // Kind = Unspecified
 
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(AADEMappings.GetLocalTime(receiptRequest));
+        invoice.invoiceHeader.issueDate.Should().Be(expectedIssueDate);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify invoice details
@@ -611,6 +616,7 @@ public class AADEFactoryTests
     {
         var cbReceiptReference = "8-1752270167120";
         var receiptMoment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime();
+        int offset = 3; // Summer time offset for Greece using UTC+3
         var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
         var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
 
@@ -694,10 +700,12 @@ public class AADEFactoryTests
 
         var invoice = action.invoice[0];
 
+        var expectedIssueDate = DateTime.SpecifyKind(receiptMoment.AddHours(offset), DateTimeKind.Unspecified); // Kind = Unspecified
+
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(AADEMappings.GetLocalTime(receiptRequest));
+        invoice.invoiceHeader.issueDate.Should().Be(expectedIssueDate);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify customer information
@@ -1753,4 +1761,46 @@ public class AADEFactoryTests
     }
 
 
+    [Theory]
+    // Summer (UTC+3)
+    [InlineData("2025-07-25T07:05:21.392Z", 3)]   // Summer normal daytime
+    [InlineData("2025-07-24T23:11:15.000Z", 3)]   // Summer, 1 hour before midnight UTC → next day local
+
+    // Winter (UTC+2)
+    [InlineData("2025-01-25T07:05:22.392Z", 2)]   // Winter normal daytime
+    [InlineData("2025-01-24T23:11:16.000Z", 2)]   // Winter, 1 hour before midnight UTC → next day local
+    [InlineData("2025-12-31T23:24:00.000Z", 2)]   // Winter, end-of-year, one hour before midnight UTC
+
+    // DST evening transitions – Winter → Summer
+    // Greece UTC+2 before DST, UTC+3 after DST
+    [InlineData("2025-03-30T00:59:00.000Z", 2)] // 1 minute BEFORE DST starts → winter (UTC+2)
+    [InlineData("2025-03-29T23:16:40.000Z", 2)] // Original test, evening UTC → still winter time (UTC+2)
+    [InlineData("2025-03-30T01:01:00.000Z", 3)] // 1 minute AFTER DST starts → summer (UTC+3)
+
+    // DST evening transitions – Summer → Winter
+    // Greece UTC+3 before DST ends, UTC+2 after DST ends
+    [InlineData("2025-10-25T23:12:26.000Z", 3)] // 1 minute before evening UTC → still summer time (UTC+3)
+    [InlineData("2025-10-25T23:13:26.000Z", 3)] // Original test, evening UTC → still summer time (UTC+3)
+    [InlineData("2025-10-26T01:01:26.000Z", 2)] // 1 minute AFTER DST ended → winter (UTC+2)
+    public void GetLocalTime_FromUTCTime_ShouldReturnLocalTime(string utcString, int offset)
+    {
+        // Arrange
+        var utcDate = DateTime.Parse(utcString).ToUniversalTime();
+        var receiptRequest = new ReceiptRequest
+        {
+            cbReceiptMoment = utcDate
+        };
+
+        // Add the offset (hours) for summer/winter → automatically handles day/month/year rollover
+        var expectedIssueDateTime = utcDate.AddHours(offset);
+
+        // Convert to Kind = Unspecified to match GetLocalTime() output
+        var expectedIssueDate = DateTime.SpecifyKind(expectedIssueDateTime, DateTimeKind.Unspecified);
+
+        // Act
+        var actualLocalTime = AADEMappings.GetLocalTime(receiptRequest);
+
+        // Assert
+        Assert.Equal(expectedIssueDate, actualLocalTime);
+    }
 }
