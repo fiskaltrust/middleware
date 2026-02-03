@@ -442,7 +442,7 @@ public class AADEFactoryTests
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
+        invoice.invoiceHeader.issueDate.Should().Be(AADEMappings.GetLocalTime(receiptRequest));
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
         
         // Verify customer information
@@ -573,7 +573,7 @@ public class AADEFactoryTests
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
+        invoice.invoiceHeader.issueDate.Should().Be(AADEMappings.GetLocalTime(receiptRequest));
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify invoice details
@@ -697,7 +697,7 @@ public class AADEFactoryTests
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
+        invoice.invoiceHeader.issueDate.Should().Be(AADEMappings.GetLocalTime(receiptRequest));
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify customer information
@@ -1597,4 +1597,160 @@ public class AADEFactoryTests
         var header = doc!.invoice[0].invoiceHeader;
         header.multipleConnectedMarks.Should().BeNull();
     }
+
+
+    // Winter tests (UTC+2)
+    [Theory]
+    [InlineData(10)] // Normal daytime
+    [InlineData(23)] // One hour before midnight → next day
+    public void MapToInvoicesDoc_ForReceiptWithReceiptMomentUtcInWinter_ShouldSetLocalTime(int utcHour)
+    {
+        int winterOffset = 2; // UTC+2 for Greek winter
+
+        // Arrange
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Description = "Test Item",
+                Quantity = 1,
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        };
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 01, 23, utcHour, 15, 30, DateTimeKind.Utc),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100,
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                }
+            ],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "TEST-123"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        invoiceDoc!.invoice.Should().HaveCount(1);
+
+        var issueDate = invoiceDoc.invoice[0].invoiceHeader.issueDate;
+        // Calculate expected local date/time dynamically
+        var expectedDateTime = receiptRequest.cbReceiptMoment.AddHours(winterOffset);
+
+        // Check hour
+        issueDate.Hour.Should().Be(expectedDateTime.Hour, "UTC hour should be converted to Greek local time (UTC+2 winter / DST)");
+
+        // Check day rollover
+        issueDate.Date.Should().Be(expectedDateTime.Date, "Greek local time should handle day rollover correctly");
+
+        // Check serialization safety
+        issueDate.Kind.Should().Be(DateTimeKind.Unspecified, "Unspecified prevents server-based timezone adjustments");
+    }
+
+    // Summer tests (UTC+3)
+    [Theory]
+    [InlineData(10)] // Normal daytime
+    [InlineData(23)] // One hour before midnight → next day
+    public void MapToInvoicesDoc_ForReceiptWithReceiptMomentUtcInSummer_ShouldSetLocalTime(int utcHour)
+    {
+        int summerOffset = 3; // UTC+3 for Greek summer (DST)
+
+        // Arrange
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Description = "Test Item",
+                Quantity = 1,
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        };
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 06, 23, utcHour, 15, 30, DateTimeKind.Utc),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100,
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                }
+            ],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "TEST-123"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        invoiceDoc!.invoice.Should().HaveCount(1);
+
+        var issueDate = invoiceDoc.invoice[0].invoiceHeader.issueDate;
+
+        // Calculate expected local date/time dynamically
+        var expectedDateTime = receiptRequest.cbReceiptMoment.AddHours(summerOffset);
+
+        // Check hour
+        issueDate.Hour.Should().Be(expectedDateTime.Hour, "UTC hour should be converted to Greek local time (UTC+3 summer / DST)");
+
+        // Check day rollover
+        issueDate.Date.Should().Be(expectedDateTime.Date, "Greek local time should handle day rollover correctly");
+
+        // Check serialization safety
+        issueDate.Kind.Should().Be(DateTimeKind.Unspecified, "Unspecified prevents server-based timezone adjustments");
+    }
+
+
 }
