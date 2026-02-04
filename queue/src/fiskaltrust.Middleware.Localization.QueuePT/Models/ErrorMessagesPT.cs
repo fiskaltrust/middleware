@@ -186,6 +186,16 @@ public static class ErrorMessagesPT
     public const string EEEE_MixedRefundItemsNotAllowed = "EEEE_Partial refund contains mixed refund and non-refund items. In Portugal, it is not allowed to mix refunds with non-refunds in the same receipt. All charge items must have the refund flag set for partial refunds.";
 
     /// <summary>
+    /// Error message for mixed refund and non-refund pay items in partial refund
+    /// </summary>
+    public const string EEEE_MixedRefundPayItemsNotAllowed = "EEEE_Partial refund contains mixed refund and non-refund pay items. All pay items must have the refund flag set for partial refunds.";
+
+    /// <summary>
+    /// Error message when pay items are missing while refunding charge items
+    /// </summary>
+    public const string EEEE_PayItemsMissingForRefund = "EEEE_Partial refund with charge items must include pay items representing the refund amounts.";
+
+    /// <summary>
     /// Error message for partial refund exceeding original quantity
     /// </summary>
     public static string EEEE_PartialRefundExceedsOriginalQuantity(string productNumber, decimal refundedQuantity, decimal originalQuantity) =>

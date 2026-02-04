@@ -170,6 +170,12 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition MixedRefundItemsNotAllowed =
         new("EEEE_MixedRefundItemsNotAllowed", "Partial refunds must not mix refund and non-refund items.");
 
+    public static readonly ValidationRuleDefinition MixedRefundPayItemsNotAllowed =
+        new("EEEE_MixedRefundPayItemsNotAllowed", "Partial refunds must not mix refund and non-refund pay items.", PortugalValidationFields.PayItems);
+
+    public static readonly ValidationRuleDefinition PayItemsMissingForRefund =
+        new("EEEE_PayItemsMissingForRefund", "Partial refunds with charge items must include pay items.", PortugalValidationFields.PayItems);
+
     public static readonly ValidationRuleDefinition TransportationIsNotSupported =
         new("EEEE_TransportationIsNotSupported", "TransportInformation is not supported in Portugal.", PortugalValidationFields.ReceiptCaseFlags);
 
@@ -220,6 +226,8 @@ public static class PortugalValidationRules
         WorkingDocumentAlreadyInvoiced,
         VoidAlreadyExists,
         MixedRefundItemsNotAllowed,
+        MixedRefundPayItemsNotAllowed,
+        PayItemsMissingForRefund,
         TransportationIsNotSupported
     };
 

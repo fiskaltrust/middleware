@@ -3,6 +3,7 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -391,34 +392,36 @@ public class RefundValidator
             return value;
         }
 
-        var chargeItemsAvailable = originalRequest.cbChargeItems;
-        foreach(var existingRefund in existingRefunds.SelectMany(x => x.cbChargeItems))
+        foreach(var refundItem in refundRequest.cbChargeItems)
         {
-            var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
-                (Math.Abs(item.Amount - Math.Abs(existingRefund.Amount)) < 0.01m) &&
-                item.Description == existingRefund.Description &&
-                (Math.Abs(item.VATRate - existingRefund.VATRate) < 0.01m));
-            if(matchingItem != null)
-            {
-                chargeItemsAvailable.Remove(matchingItem);
-            }
-        }
+            var existingRefundItems = existingRefunds.SelectMany(x => x.cbChargeItems).Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == SaftExporter.GenerateUniqueProductIdentifier(refundItem));
+            var originalItems = originalRequest.cbChargeItems.Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == SaftExporter.GenerateUniqueProductIdentifier(refundItem));
 
-        for (int i = 0; i < refundRequest.cbChargeItems.Count; i++)
-        {
-            var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
-                (Math.Abs(item.Amount - Math.Abs(refundRequest.cbChargeItems[i].Amount)) < 0.01m) &&
-                item.Description == refundRequest.cbChargeItems[i].Description &&
-                (Math.Abs(item.VATRate - refundRequest.cbChargeItems[i].VATRate) < 0.01m));
-            if (matchingItem == null)
+            var originalTotalQuantity = originalItems.Sum(x => x.Quantity);
+            var existingRefundedQuantity = existingRefundItems.Sum(x => x.Quantity);
+            if (refundItem.Quantity + existingRefundedQuantity > originalTotalQuantity + 0.001m)
             {
-                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "No Matching Item");
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "Quantity Exceeded");
             }
 
-            (flowControl, value) = CompareChargeItems(originalReceiptReference, refundRequest.cbChargeItems[i], matchingItem, isPartial: true);
-            if (!flowControl)
+            var originalTotalAmount = originalItems.Sum(x => x.Amount);
+            var existingRefundedAmount = existingRefundItems.Sum(x => x.Amount);
+            if (refundItem.Amount + existingRefundedAmount > originalTotalAmount + 0.01m)
             {
-                return value;
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "Amount Exceeded");
+            }
+
+            var referenceItem = originalItems.First();
+            if (Math.Abs(referenceItem.VATRate - refundItem.VATRate) > 0.001m)
+            {
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "VATRate");
+            }
+
+            var originalCase = ((long) referenceItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+            var refundCase = ((long) refundItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+            if (originalCase != refundCase)
+            {
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "ChargeItemCase");
             }
         }
         return null; // Validation passed

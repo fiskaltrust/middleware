@@ -536,6 +536,16 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             ));
         }
 
+        if (receiptRequest.cbPayItems?.Any(item => !item.IsRefund()) == true)
+        {
+            var rule = PortugalValidationRules.MixedRefundPayItemsNotAllowed;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_MixedRefundPayItemsNotAllowed,
+                rule.Code,
+                rule.Field
+            ));
+        }
+
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
         var originalRequest = receiptReferences[0].Request;
 
