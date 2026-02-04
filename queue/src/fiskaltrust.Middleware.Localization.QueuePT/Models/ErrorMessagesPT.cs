@@ -165,6 +165,12 @@ public static class ErrorMessagesPT
     public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference, string diffField) =>
         $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: {diffField})";
 
+    /// <summary>
+    /// Error message for partial refund not matching original invoice items
+    /// </summary>
+    public static string EEEE_PartialRefundItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Partial refund does not match the original invoice '{originalReceiptReference}'. Items must not exceed original quantities or amounts. (Field: {diffField})";
+
     public static string EEEE_VoidItemsMismatch(string originalReceiptReference) =>
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
 
