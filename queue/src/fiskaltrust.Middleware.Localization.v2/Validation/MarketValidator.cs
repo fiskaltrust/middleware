@@ -16,17 +16,4 @@ public abstract class MarketValidator
             opts.IncludeRulesNotInRuleSet()          // Global rules
                 .IncludeRuleSets(RuleSetName));       // Market rules
     }
-
-    public void ValidateAndThrow(ReceiptRequest request)
-    {
-        var result = Validate(request);
-        if (!result.IsValid)
-            throw new ValidationException(result.Errors);
-    }
-
-    public IEnumerable<string> GetErrorMessages(ReceiptRequest request)
-    {
-        var result = Validate(request);
-        return result.Errors.Select(e => $"[{e.ErrorCode}] {e.PropertyName}: {e.ErrorMessage}");
-    }
 }
