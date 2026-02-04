@@ -439,6 +439,64 @@ public static class ChargeItemValidations
     }
 
     /// <summary>
+    /// Validates that discounts/extras use the same VAT rate and VAT case as their related line item.
+    /// Returns one ValidationResult per mismatch found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_DiscountVatRateAndCaseAlignment(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        var groupedItems = request.GetGroupedChargeItems();
+
+        for (var groupIndex = 0; groupIndex < groupedItems.Count; groupIndex++)
+        {
+            var group = groupedItems[groupIndex];
+            var mainItem = group.chargeItem;
+            var modifiers = group.modifiers;
+
+            if (modifiers == null || modifiers.Count == 0)
+            {
+                continue;
+            }
+
+            var mainVatRate = mainItem.VATRate;
+            var mainVatCase = mainItem.ftChargeItemCase.Vat();
+            var mainItemIndex = request.cbChargeItems.IndexOf(mainItem);
+
+            foreach (var modifier in modifiers.Where(x => x.IsDiscountOrExtra()))
+            {
+                var modifierVatCase = modifier.ftChargeItemCase.Vat();
+                var modifierIndex = request.cbChargeItems.IndexOf(modifier);
+
+                var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
+                var vatCaseMismatch = modifierVatCase != mainVatCase;
+
+                if (!vatRateMismatch && !vatCaseMismatch)
+                {
+                    continue;
+                }
+
+                var rule = PortugalValidationRules.DiscountVatRateOrCaseMismatch;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_DiscountVatRateOrCaseMismatch(mainItemIndex, modifierIndex, mainVatRate, modifier.VATRate, mainVatCase, modifierVatCase),
+                    rule.Code,
+                    rule.Field,
+                    modifierIndex
+                )
+                .WithContext("MainItemIndex", mainItemIndex)
+                .WithContext("ModifierIndex", modifierIndex)
+                .WithContext("MainVatRate", mainVatRate)
+                .WithContext("ModifierVatRate", modifier.VATRate)
+                .WithContext("MainVatCase", mainVatCase.ToString())
+                .WithContext("ModifierVatCase", modifierVatCase.ToString()));
+            }
+        }
+    }
+
+    /// <summary>
     /// Validates that discounts and extras do not exceed the amount of their associated article.
     /// Groups charge items similar to SAFT export: main items with their modifiers (discounts/extras).
     /// Returns one ValidationResult per validation error found.

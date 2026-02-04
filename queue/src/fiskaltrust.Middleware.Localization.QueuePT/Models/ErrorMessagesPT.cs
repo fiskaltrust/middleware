@@ -125,6 +125,12 @@ public static class ErrorMessagesPT
         $"EEEE_Charge item at position {position}: VATAmount {providedVatAmount:F2} does not match the calculated VAT amount {calculatedVatAmount:F2} (difference: {difference:F2}). The difference exceeds the acceptable rounding tolerance of 0.01.";
 
     /// <summary>
+    /// Error message for discounts/extras whose VAT configuration does not match the related line item
+    /// </summary>
+    public static string EEEE_DiscountVatRateOrCaseMismatch(int mainItemPosition, int discountPosition, decimal mainVatRate, decimal discountVatRate, ChargeItemCase mainVatCase, ChargeItemCase discountVatCase) =>
+        $"EEEE_Discount/extra at position {discountPosition} must use the same VAT rate ({mainVatRate}%) and VAT case '{mainVatCase}' as its related line item at position {mainItemPosition}, but VAT rate is {discountVatRate}% and VAT case is '{discountVatCase}'.";
+
+    /// <summary>
     /// Error message for negative quantity in non-refund receipts
     /// </summary>
     public static string EEEE_NegativeQuantityNotAllowed(int position, decimal quantity) =>

@@ -143,6 +143,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield return result;
         }
 
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountVatRateAndCaseAlignment(_receiptRequest))
+        {
+            yield return result;
+        }
+
         // Validate that discounts do not exceed article amounts
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(_receiptRequest))
         {

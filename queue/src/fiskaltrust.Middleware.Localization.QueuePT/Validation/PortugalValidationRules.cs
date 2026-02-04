@@ -92,6 +92,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition VatAmountMismatch =
         new("EEEE_VatAmountMismatch", "VATAmount must match the calculated VAT amount within tolerance.", PortugalValidationFields.ChargeItemsVatAmount);
 
+    public static readonly ValidationRuleDefinition DiscountVatRateOrCaseMismatch =
+        new("EEEE_DiscountVatRateOrCaseMismatch", "Discounts/extras must use the same VAT rate and VAT case as their related line item.", PortugalValidationFields.ChargeItemsCase);
+
     public static readonly ValidationRuleDefinition PositiveDiscountNotAllowed =
         new("EEEE_PositiveDiscountNotAllowed", "Discounts/extras must not be positive.", PortugalValidationFields.ChargeItemsAmount);
 
@@ -201,6 +204,7 @@ public static class PortugalValidationRules
         UnsupportedChargeItemServiceType,
         VatRateMismatch,
         VatAmountMismatch,
+        DiscountVatRateOrCaseMismatch,
         PositiveDiscountNotAllowed,
         NegativeQuantityNotAllowed,
         NegativeAmountNotAllowed,
