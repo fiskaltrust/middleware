@@ -61,8 +61,7 @@ jobs:
       - name: Merge Pull Request
         run: |
           gh auth login --with-token <<< "${{ secrets.REPOSITORY_WRITE_PAT }}"
-          gh pr review ${{ github.event.client_payload.pull_request.number }} --approve
-          gh pr merge ${{ github.event.client_payload.pull_request.number }} --merge --auto
+          gh pr merge ${{ github.event.client_payload.pull_request.number }} --merge --auto --admin
 
   success:
     needs:
