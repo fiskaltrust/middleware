@@ -10,7 +10,6 @@ using fiskaltrust.Middleware.Localization.QueueES.Validation.Rules;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using V2Validation = fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Validation;
 
@@ -86,19 +85,9 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         // Run all applicable validations and collect results (one per error)
-        // REPLACED: ChargeItemValidations.Validate_ChargeItems_MandatoryFields with V2 ValidationRunner
-        var v2Runner = new V2Validation.ValidationRunner();
-        foreach (var v2Result in v2Runner.Validate(_receiptRequest, V2Validation.RuleSetNames.Always, V2Validation.RuleSetNames.ES))
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_MandatoryFields(_receiptRequest))
         {
-            foreach (var error in v2Result.Errors)
-            {
-                yield return ValidationResult.Failed(new ValidationError(
-                    error.Message,
-                    error.Code,
-                    error.Field,
-                    error.ItemIndex
-                ));
-            }
+            yield return result;
         }
 
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_VATRate_SupportedVatRates(_receiptRequest))

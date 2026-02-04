@@ -1,6 +1,8 @@
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.v2.Validation.Rules;
 using FluentValidation;
+using GlobalValidations = fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
+using ESValidations = fiskaltrust.Middleware.Localization.v2.Validation.Rules.ES;
+using PTValidations = fiskaltrust.Middleware.Localization.v2.Validation.Rules.PT;
 
 namespace fiskaltrust.Middleware.Localization.v2.Validation;
 
@@ -8,33 +10,26 @@ public class ReceiptRequestValidator : AbstractValidator<ReceiptRequest>
 {
     public ReceiptRequestValidator()
     {
-        RuleSet(RuleSetNames.Always, () =>
-        {
-            RuleFor(x => x).Custom((request, context) =>
-            {
-                ExecuteRule(GlobalRules.ChargeItemsMandatoryFields(request), context);
-            });
-        });
+        // Global rules (apply to all markets)
+        Include(new GlobalValidations.ChargeItemValidations());
+        Include(new GlobalValidations.ReceiptValidations());
 
-
+        // ES-specific rules
         RuleSet(RuleSetNames.ES, () =>
         {
-            RuleFor(x => x).Custom((request, context) =>
-            {
-                ExecuteRule(ESRules.ChargeItemsVATAmountRequired(request), context);
-            });
+            Include(new ESValidations.ChargeItemValidations());
+        });
+
+        // PT-specific rules
+        RuleSet(RuleSetNames.PT, () =>
+        {
+            Include(new PTValidations.ChargeItemValidations());
         });
     }
+}
 
-    /// Helper to execute a domain rule and add failures to FV context.
-    private static void ExecuteRule(IEnumerable<ValidationResult> results, ValidationContext<ReceiptRequest> context)
-    {
-        foreach (var result in results)
-        {
-            foreach (var error in result.Errors)
-            {
-                context.AddFailure(error.Field ?? "", error.Message);
-            }
-        }
-    }
+public static class RuleSetNames
+{
+    public const string ES = "ES";
+    public const string PT = "PT";
 }
