@@ -31,9 +31,9 @@ public class AADEFactory
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
 
     private readonly MasterDataConfiguration _masterDataConfiguration;
-    private readonly string? _receiptBaseAddress;
+    private readonly string _receiptBaseAddress;
 
-    public AADEFactory(MasterDataConfiguration masterDataConfiguration, string? receiptBaseAddress = null)
+    public AADEFactory(MasterDataConfiguration masterDataConfiguration, string receiptBaseAddress)
     {
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
@@ -321,11 +321,8 @@ public class AADEFactory
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
 
-        // Set downloadingInvoiceUrl using the same URL generator as the QR code
-        if (!string.IsNullOrEmpty(_receiptBaseAddress) && receiptResponse.ftQueueID != Guid.Empty && receiptResponse.ftQueueItemID != Guid.Empty)
-        {
-            inv.downloadingInvoiceUrl = GetReceiptUrl(_receiptBaseAddress, receiptResponse.ftQueueID, receiptResponse.ftQueueItemID);
-        }
+        // Set downloadingInvoiceUrl (always required)
+        inv.downloadingInvoiceUrl = GetReceiptUrl(_receiptBaseAddress, receiptResponse.ftQueueID, receiptResponse.ftQueueItemID);
 
         // Set isDeliveryNote if HasTransportInformation flag is set
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) && !receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))

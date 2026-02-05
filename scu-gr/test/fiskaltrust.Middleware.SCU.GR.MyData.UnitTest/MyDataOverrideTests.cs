@@ -28,7 +28,7 @@ public class MyDataOverrideTests
             {
                 LocationId = "0"
             }
-        });
+        }, "https://receipts.example.com");
     }
 
     private ReceiptRequest CreateBasicReceiptRequest()
@@ -663,24 +663,5 @@ public class MyDataOverrideTests
         error.Should().BeNull();
         doc.Should().NotBeNull();
         doc!.invoice[0].downloadingInvoiceUrl.Should().Be("https://receipts.example.com/12345678-1234-1234-1234-123456789012/87654321-4321-4321-4321-210987654321");
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithoutReceiptBaseAddress_ShouldNotSetDownloadingInvoiceUrl()
-    {
-        // Arrange
-        var factory = CreateFactory(); // No receiptBaseAddress
-        var request = CreateBasicReceiptRequest();
-        var response = CreateBasicReceiptResponse(request);
-        response.ftQueueID = Guid.Parse("12345678-1234-1234-1234-123456789012");
-        response.ftQueueItemID = Guid.Parse("87654321-4321-4321-4321-210987654321");
-
-        // Act
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        // Assert
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-        doc!.invoice[0].downloadingInvoiceUrl.Should().BeNull();
     }
 }
