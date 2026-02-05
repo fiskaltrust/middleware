@@ -31,10 +31,12 @@ public class AADEFactory
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
 
     private readonly MasterDataConfiguration _masterDataConfiguration;
+    private readonly string? _receiptBaseAddress;
 
-    public AADEFactory(MasterDataConfiguration masterDataConfiguration)
+    public AADEFactory(MasterDataConfiguration masterDataConfiguration, string? receiptBaseAddress = null)
     {
         _masterDataConfiguration = masterDataConfiguration;
+        _receiptBaseAddress = receiptBaseAddress;
     }
 
     public InvoicesDoc LoadInvoiceDocsFromQueueItems(List<ftQueueItem> queueItems)
@@ -314,6 +316,12 @@ public class AADEFactory
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
 
+        // Set downloadingInvoiceUrl if receiptBaseAddress is available
+        if (!string.IsNullOrEmpty(_receiptBaseAddress) && receiptResponse.ftQueueID != Guid.Empty && receiptResponse.ftQueueItemID != Guid.Empty)
+        {
+            inv.downloadingInvoiceUrl = $"{_receiptBaseAddress}/{receiptResponse.ftQueueID}/{receiptResponse.ftQueueItemID}";
+        }
+
         // Set isDeliveryNote if HasTransportInformation flag is set
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) && !receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
         {
@@ -332,6 +340,12 @@ public class AADEFactory
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, MyDataOverride overrideData)
     {
+        // Apply downloadingInvoiceUrl override if provided
+        if (!string.IsNullOrEmpty(overrideData?.Invoice?.DownloadingInvoiceUrl))
+        {
+            invoice.downloadingInvoiceUrl = overrideData.Invoice.DownloadingInvoiceUrl;
+        }
+
         if (overrideData?.Invoice?.InvoiceHeader == null)
         {
             return;

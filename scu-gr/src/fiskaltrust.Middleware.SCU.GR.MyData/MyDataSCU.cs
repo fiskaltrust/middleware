@@ -56,6 +56,13 @@ public class InvoiceOverride
     /// </summary>
     [JsonPropertyName("invoiceHeader")]
     public InvoiceHeaderOverride? InvoiceHeader { get; set; }
+    
+    /// <summary>
+    /// URL through which the recipient can download the invoice
+    /// (myDATA v1.0.12 downloadingInvoiceUrl field)
+    /// </summary>
+    [JsonPropertyName("downloadingInvoiceUrl")]
+    public string? DownloadingInvoiceUrl { get; set; }
 }
 
 public class InvoiceHeaderOverride
@@ -241,7 +248,7 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-        var aadFactory = new AADEFactory(_masterDataConfiguration);
+        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
         {
