@@ -352,7 +352,8 @@ public class MyDataSCU : IGRSSCD
                             }
                         }
 
-                        var receiptUrl = GetReceiptUrl(request.ReceiptResponse.ftQueueID, request.ReceiptResponse.ftQueueItemID);
+                        // Use the downloadingInvoiceUrl from the invoice for the QR code to avoid recalculating
+                        var receiptUrl = doc.invoice[0].downloadingInvoiceUrl ?? GetReceiptUrl(request.ReceiptResponse.ftQueueID, request.ReceiptResponse.ftQueueItemID);
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(receiptUrl));
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
