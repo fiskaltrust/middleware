@@ -1,0 +1,15 @@
+name: Manual merging
+
+on:
+  pull_request_target:
+    branches-ignore: "release/v*"
+
+# This action will only run on non release branches
+# We have setup this check as a requirement for merging
+# That way release branches can not be manually merged because this check will always be in the waiting state
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op step
+        run: echo 'No-op job'

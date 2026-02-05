@@ -1,12 +1,9 @@
-name: 'Release'
+name: "Release"
 on:
-  push:
-    tags:
-      - queue/**/v*
-      - scu-at/**/v*
-      - scu-de/**/v*
-      - scu-es/**/v*
-      - scu-it/**/v*
+  release:
+    types: [published]
+
+run-name: Release ${{ github.event.release.tag_name }}
 
 permissions:
   checks: write
@@ -15,33 +12,51 @@ permissions:
   contents: read
 
 jobs:
+  check-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate tag format
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [[ "$TAG" =~ ^(queue|scu-at|scu-de|scu-es|scu-it)/.+/v.* ]]; then
+            echo "✅ Tag '$TAG' matches expected pattern"
+          else
+            echo "❌ Tag '$TAG' does not match expected pattern (queue|scu-at|scu-de|scu-es|scu-it)/<package>/v*"
+            exit 1
+          fi
+
   test-queue:
-    if: startsWith(github.ref, 'refs/tags/queue/')
+    needs: [check-tag]
+    if: startsWith(github.event.release.tag_name, 'queue/')
     uses: ./.github/workflows/queue-build.yml
     secrets: inherit
 
   test-scu-at:
-    if: startsWith(github.ref, 'refs/tags/scu-at/')
+    needs: [check-tag]
+    if: startsWith(github.event.release.tag_name, 'scu-at/')
     uses: ./.github/workflows/scu-at-build.yml
     secrets: inherit
 
   test-scu-de:
-    if: startsWith(github.ref, 'refs/tags/scu-de/')
+    needs: [check-tag]
+    if: startsWith(github.event.release.tag_name, 'scu-de/')
     uses: ./.github/workflows/scu-de-build.yml
     secrets: inherit
 
   test-scu-es:
-    if: startsWith(github.ref, 'refs/tags/scu-es/')
+    needs: [check-tag]
+    if: startsWith(github.event.release.tag_name, 'scu-es/')
     uses: ./.github/workflows/scu-es-build.yml
     secrets: inherit
 
   test-scu-it:
-    if: startsWith(github.ref, 'refs/tags/scu-it/')
+    needs: [check-tag]
+    if: startsWith(github.event.release.tag_name, 'scu-it/')
     uses: ./.github/workflows/scu-it-build.yml
     secrets: inherit
 
   meta:
-    needs: []
+    needs: [check-tag]
     runs-on: windows-latest
     outputs:
       project: ${{ steps.meta.outputs.project }}
@@ -53,7 +68,7 @@ jobs:
       - id: meta
         shell: pwsh
         run: |
-          if(!("${{ github.ref }}" -match "refs/tags/([a-z-]+)/([^/]+)/v.*")) {
+          if(!("${{ github.event.release.tag_name }}" -match "([a-z-]+)/([^/]+)/v.*")) {
             throw "Invalid tag format"
           }
           $directory = $matches[1]
@@ -73,7 +88,7 @@ jobs:
           Write-Output "project=$project" >> $env:GITHUB_OUTPUT
 
   test-queue-acceptance:
-    if: startsWith(github.ref, 'refs/tags/queue/')
+    if: startsWith(github.event.release.tag_name, 'queue/')
     concurrency:
       group: queue-acceptance-tests
     needs: [meta, test-queue]
@@ -82,9 +97,17 @@ jobs:
     with:
       only: fiskaltrust.Middleware.Storage.${{ needs.meta.outputs.package }}.AcceptanceTest
 
-
   package:
-    needs: [meta, test-queue, test-queue-acceptance, test-scu-at, test-scu-de, test-scu-es, test-scu-it]
+    needs:
+      [
+        meta,
+        test-queue,
+        test-queue-acceptance,
+        test-scu-at,
+        test-scu-de,
+        test-scu-es,
+        test-scu-it,
+      ]
     if: (!failure())
     secrets: inherit
     uses: ./.github/workflows/package.yml

@@ -26,8 +26,6 @@
 - on pull_request update
 - from `/check` comment
 
-## Tag
-
 ## Version
 
 ## Release (`release.yml`)
