@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             _logger = logger;
         }
 
-        public bool IsInstalled(string fccDirectory) => File.Exists(Path.Combine(fccDirectory, ".fccdata\\install\\fcc-version.dat"));
+        public bool IsInstalled(string fccDirectory) => File.Exists(Path.Combine(fccDirectory, ".fccdata\\install\\fcc-version.dat")) || File.Exists(Path.Combine(fccDirectory, ".fccdata\\fcc-version.dat"));
         public bool IsDownloaded(string fccDirectory) => File.Exists(GetCloudConnectorPath(fccDirectory));
         public bool IsLatestVersion(string fccDirectory, Version latestVersion)
         {
@@ -58,8 +58,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
         public bool IsLatestVersionDat(string fccDirectory, Version latestVersion)
         {
-            var text = File.ReadAllText(Path.Combine(fccDirectory, ".fccdata", "install", "fcc-version.dat"));
-            var versionInDat = new Version(text);
+            string version;
+
+            if(File.Exists(Path.Combine(fccDirectory, ".fccdata\\install\\fcc-version.dat")))
+            {
+                version = File.ReadAllText(Path.Combine(fccDirectory, ".fccdata", "install", "fcc-version.dat"));
+            }
+            else
+            {
+                version = File.ReadAllText(Path.Combine(fccDirectory, ".fccdata", "fcc-version.dat"));
+            }
+
+            var versionInDat = new Version(version);
             return versionInDat >= latestVersion;
         }
 
