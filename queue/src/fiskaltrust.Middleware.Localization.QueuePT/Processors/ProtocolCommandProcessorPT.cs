@@ -27,29 +27,9 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await ProcessLogMessageAsync(request);
 
-    private async Task<ProcessCommandResponse> ProcessLogMessageAsync(ProcessCommandRequest request)
+    private Task<ProcessCommandResponse> ProcessLogMessageAsync(ProcessCommandRequest request)
     {
-        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, readOnlyQueueItemRepository);
-        var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
-        {
-            IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
-            GeneratesSignature = true,
-            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
-            //NumberSeries = series  // Include series for moment order validation
-        });
-        if (!validationResults.IsValid)
-        {
-            foreach (var result in validationResults.Results)
-            {
-                foreach (var error in result.Errors)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-                }
-            }
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-        await Task.CompletedTask;
-        return new ProcessCommandResponse(request.ReceiptResponse, []);
+        return Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, []));
     }
 
     public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
