@@ -683,45 +683,4 @@ public class MyDataOverrideTests
         doc.Should().NotBeNull();
         doc!.invoice[0].downloadingInvoiceUrl.Should().BeNull();
     }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithDownloadingInvoiceUrlOverride_ShouldUseCustomUrl()
-    {
-        // Arrange
-        var factory = new AADEFactory(
-            new MasterDataConfiguration
-            {
-                Account = new AccountMasterData { VatId = "123456789" },
-                Outlet = new OutletMasterData { LocationId = "0" }
-            },
-            "https://receipts.example.com");
-
-        var request = CreateBasicReceiptRequest();
-        request.ftReceiptCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoice = new
-                    {
-                        downloadingInvoiceUrl = "https://custom.example.com/invoice/12345"
-                    }
-                }
-            }
-        };
-
-        var response = CreateBasicReceiptResponse(request);
-        response.ftQueueID = Guid.Parse("12345678-1234-1234-1234-123456789012");
-        response.ftQueueItemID = Guid.Parse("87654321-4321-4321-4321-210987654321");
-
-        // Act
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        // Assert
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-        // Override should take precedence over auto-generated URL
-        doc!.invoice[0].downloadingInvoiceUrl.Should().Be("https://custom.example.com/invoice/12345");
-    }
 }

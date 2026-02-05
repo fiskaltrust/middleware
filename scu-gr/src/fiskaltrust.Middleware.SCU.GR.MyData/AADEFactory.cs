@@ -340,12 +340,6 @@ public class AADEFactory
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, MyDataOverride overrideData)
     {
-        // Apply downloadingInvoiceUrl override if provided
-        if (!string.IsNullOrEmpty(overrideData?.Invoice?.DownloadingInvoiceUrl))
-        {
-            invoice.downloadingInvoiceUrl = overrideData.Invoice.DownloadingInvoiceUrl;
-        }
-
         if (overrideData?.Invoice?.InvoiceHeader == null)
         {
             return;
