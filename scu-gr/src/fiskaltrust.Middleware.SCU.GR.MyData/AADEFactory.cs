@@ -35,6 +35,10 @@ public class AADEFactory
 
     public AADEFactory(MasterDataConfiguration masterDataConfiguration, string receiptBaseAddress)
     {
+        if (string.IsNullOrWhiteSpace(receiptBaseAddress))
+        {
+            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+        }
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
     }
