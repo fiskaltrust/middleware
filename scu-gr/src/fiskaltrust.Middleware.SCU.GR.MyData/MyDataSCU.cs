@@ -218,6 +218,11 @@ public class MyDataSCU : IGRSSCD
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
     
+    private string GetReceiptUrl(Guid ftQueueID, Guid ftQueueItemID)
+    {
+        return $"{_receiptBaseAddress}/{ftQueueID}/{ftQueueItemID}";
+    }
+    
     public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
     {
         return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
@@ -241,7 +246,7 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
+        var aadFactory = new AADEFactory(_masterDataConfiguration, GetReceiptUrl);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
         {
@@ -347,7 +352,8 @@ public class MyDataSCU : IGRSSCD
                             }
                         }
 
-                        request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                        var receiptUrl = GetReceiptUrl(request.ReceiptResponse.ftQueueID, request.ReceiptResponse.ftQueueItemID);
+                        request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(receiptUrl));
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {

@@ -649,7 +649,7 @@ public class MyDataOverrideTests
                 Account = new AccountMasterData { VatId = "123456789" },
                 Outlet = new OutletMasterData { LocationId = "0" }
             },
-            "https://receipts.example.com");
+            (queueId, queueItemId) => $"https://receipts.example.com/{queueId}/{queueItemId}");
 
         var request = CreateBasicReceiptRequest();
         var response = CreateBasicReceiptResponse(request);
