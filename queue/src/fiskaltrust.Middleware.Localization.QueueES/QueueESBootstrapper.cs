@@ -53,6 +53,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
+            new ValidationFV.ReceiptValidator(),
             new LifecycleCommandProcessorES(
                 queueStorageProvider,
                 storageProvider.CreateConfigurationRepository()
