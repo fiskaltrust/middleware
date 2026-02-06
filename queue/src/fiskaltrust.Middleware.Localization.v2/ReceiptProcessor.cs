@@ -33,9 +33,17 @@ public class ReceiptProcessor : IReceiptProcessor
         var validationResult = _validator.Validate(request);
         if (!validationResult.IsValid)
         {
+            receiptResponse.MarkAsFailed();
+            receiptResponse.ftSignatures = [];
             foreach (var error in validationResult.Errors)
             {
-                receiptResponse.SetReceiptResponseError($"Validation error [{error.ErrorCode}]: {error.ErrorMessage} (Property: {error.PropertyName})");
+                receiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = "FAILURE",
+                    Data = $"Validation error [{error.ErrorCode}]: {error.ErrorMessage} (Property: {error.PropertyName})",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure)
+                });
             }
             return (receiptResponse, new List<ftActionJournal>());
         }
