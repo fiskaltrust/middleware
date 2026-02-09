@@ -117,6 +117,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield return result;
         }
 
+        foreach (var result in ChargeItemValidations.Validate_ChargeItems_Description_Encoding(_receiptRequest))
+        {
+            yield return result;
+        }
+
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_Quantity_NotZero(_receiptRequest))
         {
             yield return result;
@@ -595,6 +600,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ||
             receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) ||
+            receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) ||
             receiptRequest.IsPartialRefundReceipt())
         {
             return false;

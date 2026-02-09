@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using System.Text;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 
@@ -62,7 +63,51 @@ public static class ChargeItemValidations
             }
         }
 
-        // end mandatory fields validation
+    }
+
+    /// <summary>
+    /// Validates that charge item descriptions can be encoded using Windows-1252.
+    /// Returns one ValidationResult per validation error found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_Description_Encoding(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        var encoding = Encoding.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+
+        for (var i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            if (string.IsNullOrEmpty(chargeItem.Description))
+            {
+                continue;
+            }
+
+            var hasEncodingIssue = false;
+            try
+            {
+                _ = encoding.GetBytes(chargeItem.Description);
+            }
+            catch (EncoderFallbackException)
+            {
+                hasEncodingIssue = true;
+            }
+
+            if (hasEncodingIssue)
+            {
+                var rule = PortugalValidationRules.ChargeItemDescriptionEncodingInvalid;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_ChargeItemDescriptionEncodingInvalid(i),
+                    rule.Code,
+                    rule.Field,
+                    i
+                ).WithContext("Description", chargeItem.Description));
+            }
+        }
     }
 
     /// <summary>

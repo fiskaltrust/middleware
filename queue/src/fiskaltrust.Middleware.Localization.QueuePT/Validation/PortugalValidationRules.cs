@@ -65,6 +65,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition ChargeItemDescriptionMissing =
         new("EEEE_ChargeItemDescriptionMissing", "Charge item description is mandatory.", PortugalValidationFields.ChargeItemsDescription);
 
+    public static readonly ValidationRuleDefinition ChargeItemDescriptionEncodingInvalid =
+        new("EEEE_ChargeItemDescriptionEncodingInvalid", "Charge item description must be representable in Windows-1252 encoding.", PortugalValidationFields.ChargeItemsDescription);
+
     public static readonly ValidationRuleDefinition ChargeItemVatRateMissing =
         new("EEEE_ChargeItemVATRateMissing", "Charge item VAT rate is mandatory.", PortugalValidationFields.ChargeItemsVatRate);
 
@@ -195,6 +198,7 @@ public static class PortugalValidationRules
         CustomerInvalid,
         InvalidPortugueseTaxId,
         ChargeItemDescriptionMissing,
+        ChargeItemDescriptionEncodingInvalid,
         ChargeItemVatRateMissing,
         ChargeItemAmountMissing,
         ChargeItemQuantityZeroNotAllowed,

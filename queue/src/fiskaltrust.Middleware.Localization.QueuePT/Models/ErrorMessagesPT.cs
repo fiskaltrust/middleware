@@ -49,6 +49,12 @@ public static class ErrorMessagesPT
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
 
     /// <summary>
+    /// Error message when charge item description contains characters not representable in Windows-1252
+    /// </summary>
+    public static string EEEE_ChargeItemDescriptionEncodingInvalid(int position) =>
+        $"EEEE_Charge item at position {position}: Description contains characters that cannot be encoded with Windows-1252.";
+
+    /// <summary>
     /// Error message for invalid Portuguese Tax Identification Number (NIF)
     /// </summary>
     /// <param name="taxId">The invalid tax ID that was provided</param>
