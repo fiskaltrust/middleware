@@ -380,14 +380,14 @@ public class RefundValidator
 
             var originalTotalQuantity = originalItems.Sum(x => x.Quantity);
             var existingRefundedQuantity = existingRefundItems.Sum(x => x.Quantity);
-            if (refundItem.Quantity + existingRefundedQuantity > originalTotalQuantity + 0.001m)
+            if (Math.Abs(refundItem.Quantity) + existingRefundedQuantity > originalTotalQuantity + 0.001m)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "Quantity Exceeded");
             }
 
             var originalTotalAmount = originalItems.Sum(x => x.Amount);
             var existingRefundedAmount = existingRefundItems.Sum(x => x.Amount);
-            if (refundItem.Amount + existingRefundedAmount > originalTotalAmount + 0.01m)
+            if (Math.Abs(refundItem.Amount) + existingRefundedAmount > originalTotalAmount + 0.01m)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "Amount Exceeded");
             }
