@@ -294,4 +294,10 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_PaymentTransferCustomerMismatch(string receiptReference, string differences) =>
         $"EEEE_Customer data in payment transfer does not match the original invoice '{receiptReference}'. {differences}";
+
+    /// <summary>
+    /// Error message for payment transfer amount exceeding remaining amount after partial refunds
+    /// </summary>
+    public static string EEEE_PaymentTransferExceedsRemainingAmount(string receiptReference, decimal paymentAmount, decimal remainingAmount, decimal alreadyRefundedAmount) =>
+        $"EEEE_Payment transfer amount ({paymentAmount:F2}€) exceeds the remaining amount ({remainingAmount:F2}€) for invoice '{receiptReference}'. Already refunded: {alreadyRefundedAmount:F2}€.";
 }

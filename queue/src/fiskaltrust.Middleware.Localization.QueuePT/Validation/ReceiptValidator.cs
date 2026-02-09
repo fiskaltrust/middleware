@@ -404,10 +404,14 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             ));
         }
 
+        // Load existing partial refunds to calculate remaining amount
+        var existingPartialRefunds = await _receiptReferenceProvider.GetExistingPartialRefundsAsync(previousReceiptRef);
+
         var validationError = await ValidatePaymentTransferAsync(
             receiptRequest,
             originalRequest,
-            previousReceiptRef);
+            previousReceiptRef,
+            existingPartialRefunds);
 
         if (validationError != null)
         {
@@ -420,9 +424,10 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     }
 
     public async Task<string?> ValidatePaymentTransferAsync(
-     ReceiptRequest refundRequest,
+     ReceiptRequest paymentTransferRequest,
      ReceiptRequest originalRequest,
-     string originalReceiptReference)
+     string originalReceiptReference,
+     List<ReceiptRequest> existingPartialRefunds)
     {
         if (originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceUnknown0x1000 &&
            originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2C0x1001 &&
@@ -432,10 +437,32 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             return $"The original receipt '{originalReceiptReference}' is not a valid receipt for payment transfer. Only Invoices are allowed.";
         }
 
-        if (originalRequest.cbPayItems.Where(x => x.ftPayItemCase.Case() == PayItemCase.AccountsReceivable).Sum(x => x.Amount) != refundRequest.cbPayItems.Sum(x => x.Amount))
+        // Calculate original accounts receivable amount
+        var originalReceivableAmount = originalRequest.cbPayItems
+            .Where(x => x.ftPayItemCase.Case() == PayItemCase.AccountsReceivable)
+            .Sum(x => x.Amount);
+
+        // Calculate already refunded amount from partial refunds (pay items are negative in refunds)
+        var alreadyRefundedAmount = existingPartialRefunds
+            .SelectMany(r => r.cbPayItems ?? [])
+            .Sum(x => Math.Abs(x.Amount));
+
+        // Calculate remaining amount to be paid
+        var remainingAmount = originalReceivableAmount - alreadyRefundedAmount;
+
+        // Get payment transfer amount
+        var paymentTransferAmount = paymentTransferRequest.cbPayItems.Sum(x => x.Amount);
+
+        // Validate payment transfer amount doesn't exceed remaining amount
+        if (paymentTransferAmount > remainingAmount + 0.01m)
         {
-            return $"The total amount of pay items in the payment transfer receipt must match the total amount of pay items in the original invoice receipt '{originalReceiptReference}'.";
+            return ErrorMessagesPT.EEEE_PaymentTransferExceedsRemainingAmount(
+                originalReceiptReference,
+                paymentTransferAmount,
+                remainingAmount,
+                alreadyRefundedAmount);
         }
+
         return null; // Validation passed
     }
 

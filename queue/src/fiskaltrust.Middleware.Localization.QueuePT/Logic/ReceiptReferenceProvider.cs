@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 using static fiskaltrust.Middleware.Localization.QueuePT.Logic.ReceiptReferenceProvider;
@@ -67,6 +68,55 @@ public class ReceiptReferenceProvider
     public async Task<bool> HasExistingRefundAsync(string cbPreviousReceiptReference) => await HasExistingElementByConditionAsync(cbPreviousReceiptReference, request => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund));
 
     public async Task<bool> HasExistingVoidAsync(string cbPreviousReceiptReference) => await HasExistingElementByConditionAsync(cbPreviousReceiptReference, request => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void));
+
+    /// <summary>
+    /// Gets all partial refunds for a given receipt reference
+    /// </summary>
+    public async Task<List<ReceiptRequest>> GetExistingPartialRefundsAsync(string cbPreviousReceiptReference)
+    {
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+        var partialRefunds = new List<ReceiptRequest>();
+
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            try
+            {
+                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+
+                if (referencedRequest == null || referencedResponse == null)
+                {
+                    continue;
+                }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (referencedRequest.cbPreviousReceiptReference == null || referencedRequest.cbPreviousReceiptReference.SingleValue != cbPreviousReceiptReference)
+                {
+                    continue;
+                }
+
+                if (referencedRequest.IsPartialRefundReceipt())
+                {
+                    partialRefunds.Add(referencedRequest);
+                }
+            }
+            catch
+            {
+                continue;
+            }
+        }
+
+        return partialRefunds;
+    }
 
     public async Task<bool> HasExistingInvoiceForWorkingDocumentAsync(string cbPreviousReceiptReference)
     {

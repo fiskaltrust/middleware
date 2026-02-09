@@ -191,6 +191,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition PaymentTransferCustomerMismatch =
         new("EEEE_PaymentTransferCustomerMismatch", "Customer data must match between payment transfer and original invoice.", PortugalValidationFields.Customer);
 
+    public static readonly ValidationRuleDefinition PaymentTransferExceedsRemainingAmount =
+        new("EEEE_PaymentTransferExceedsRemainingAmount", "Payment transfer amount exceeds the remaining amount after partial refunds.", PortugalValidationFields.PayItems);
+
     public static readonly IReadOnlyList<ValidationRuleDefinition> All = new[]
     {
         ReceiptNotBalanced,
