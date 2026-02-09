@@ -369,8 +369,14 @@ public class RefundValidator
 
         foreach(var refundItem in refundRequest.cbChargeItems)
         {
-            var existingRefundItems = existingRefunds.SelectMany(x => x.cbChargeItems).Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == SaftExporter.GenerateUniqueProductIdentifier(refundItem));
-            var originalItems = originalRequest.cbChargeItems.Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == SaftExporter.GenerateUniqueProductIdentifier(refundItem));
+            var refundItemIdentifier = SaftExporter.GenerateUniqueProductIdentifier(refundItem);
+            var existingRefundItems = existingRefunds.SelectMany(x => x.cbChargeItems).Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == refundItemIdentifier);
+            var originalItems = originalRequest.cbChargeItems.Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == refundItemIdentifier).ToList();
+
+            if (originalItems.Count == 0)
+            {
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"No matching item found for product identifier '{refundItemIdentifier}'");
+            }
 
             var originalTotalQuantity = originalItems.Sum(x => x.Quantity);
             var existingRefundedQuantity = existingRefundItems.Sum(x => x.Quantity);
