@@ -365,8 +365,8 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-        var hasExistingRefund = await _receiptReferenceProvider.HasExistingPaymentTransferAsync(previousReceiptRef);
-        if (hasExistingRefund)
+        var hasExistingPaymentTransfer = await _receiptReferenceProvider.HasExistingPaymentTransferAsync(previousReceiptRef);
+        if (hasExistingPaymentTransfer)
         {
             var rule = PortugalValidationRules.RefundAlreadyExists;
             return ValidationResult.Failed(new ValidationError(
@@ -376,8 +376,34 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             ));
         }
 
+        // Check if the receipt has been refunded - don't allow payment transfer for refunded receipts
+        var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
+        if (hasExistingRefund)
+        {
+            var rule = PortugalValidationRules.PaymentTransferForRefundedReceipt;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_PaymentTransferForRefundedReceipt(previousReceiptRef),
+                rule.Code,
+                rule.Field
+            ));
+        }
+
         // Validate full refund: check if all articles from original invoice are properly refunded
         var originalRequest = receiptReferences[0].Request;
+
+        // Validate that customer data matches between payment transfer and original invoice
+        var (customersMatch, customerDiff) = RefundValidator.CustomersMatch(originalRequest.GetCustomerOrNull(), receiptRequest.GetCustomerOrNull());
+        if (!customersMatch)
+        {
+            var rule = PortugalValidationRules.PaymentTransferCustomerMismatch;
+            var details = string.IsNullOrEmpty(customerDiff) ? string.Empty : $" Different fields: {customerDiff}";
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_PaymentTransferCustomerMismatch(previousReceiptRef, details),
+                rule.Code,
+                rule.Field
+            ));
+        }
+
         var validationError = await ValidatePaymentTransferAsync(
             receiptRequest,
             originalRequest,

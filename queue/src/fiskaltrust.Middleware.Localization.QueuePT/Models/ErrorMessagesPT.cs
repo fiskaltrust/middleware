@@ -282,4 +282,16 @@ public static class ErrorMessagesPT
     public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
 
     public static string EEEE_CustomerCountryRequiredForTaxId = "EEEE_Customer country is required when CustomerVATId is provided.";
+
+    /// <summary>
+    /// Error message for attempting to create payment transfer for a refunded receipt
+    /// </summary>
+    public static string EEEE_PaymentTransferForRefundedReceipt(string receiptReference) =>
+        $"EEEE_Payment transfer cannot be created for receipt '{receiptReference}' because it has already been refunded.";
+
+    /// <summary>
+    /// Error message for customer mismatch in payment transfer
+    /// </summary>
+    public static string EEEE_PaymentTransferCustomerMismatch(string receiptReference, string differences) =>
+        $"EEEE_Customer data in payment transfer does not match the original invoice '{receiptReference}'. {differences}";
 }

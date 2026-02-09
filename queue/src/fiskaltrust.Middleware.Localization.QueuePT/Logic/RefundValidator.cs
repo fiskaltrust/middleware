@@ -131,7 +131,7 @@ public class RefundValidator
         return (flowControl: true, value: null);
     }
 
-    private static (bool matches, string? differences) CustomersMatch(MiddlewareCustomer? originalCustomer, MiddlewareCustomer? refundCustomer)
+    public static (bool matches, string? differences) CustomersMatch(MiddlewareCustomer? originalCustomer, MiddlewareCustomer? refundCustomer)
     {
         if (originalCustomer == null && refundCustomer == null)
         {

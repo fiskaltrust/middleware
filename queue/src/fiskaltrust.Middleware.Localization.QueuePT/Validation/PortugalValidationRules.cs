@@ -185,6 +185,12 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition TransportationIsNotSupported =
         new("EEEE_TransportationIsNotSupported", "TransportInformation is not supported in Portugal.", PortugalValidationFields.ReceiptCaseFlags);
 
+    public static readonly ValidationRuleDefinition PaymentTransferForRefundedReceipt =
+        new("EEEE_PaymentTransferForRefundedReceipt", "Payment transfer cannot be created for a receipt that has been refunded.", PortugalValidationFields.PreviousReceiptReference);
+
+    public static readonly ValidationRuleDefinition PaymentTransferCustomerMismatch =
+        new("EEEE_PaymentTransferCustomerMismatch", "Customer data must match between payment transfer and original invoice.", PortugalValidationFields.Customer);
+
     public static readonly IReadOnlyList<ValidationRuleDefinition> All = new[]
     {
         ReceiptNotBalanced,
