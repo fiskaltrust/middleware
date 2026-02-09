@@ -375,7 +375,7 @@ public class RefundValidator
 
             if (originalItems.Count == 0)
             {
-                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"No matching item found for product identifier '{refundItemIdentifier}'");
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"No matching item found for product identifier '{refundItem.Description?.Trim()}'");
             }
 
             var originalTotalQuantity = originalItems.Sum(x => x.Quantity);
