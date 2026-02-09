@@ -1,5 +1,4 @@
-﻿using System.Reflection.Emit;
-using System.Text.Json;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -8,7 +7,6 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -145,94 +143,26 @@ public class RefundValidator
             return (false, "cbCustomer is null on one side");
         }
 
-        try
-        {
-            var originalToken = ToJToken(originalCustomer);
-            var refundToken = ToJToken(refundCustomer);
+        var differences = new List<string>();
 
-            var differences = new List<string>();
-            CompareTokens(originalToken, refundToken, string.Empty, differences);
-
-            return (differences.Count == 0, differences.Count == 0 ? null : string.Join(", ", differences));
-        }
-        catch
+        void Compare(string? a, string? b, string field)
         {
-            return (false, "cbCustomer comparison failed");
-        }
-    }
-
-    private static JToken ToJToken(object value)
-    {
-        return value switch
-        {
-            JToken token => token,
-            JsonElement element => JToken.Parse(element.GetRawText()),
-            _ => JToken.FromObject(value)
-        };
-    }
-
-    private static void CompareTokens(JToken original, JToken refund, string path, List<string> differences)
-    {
-        if (JToken.DeepEquals(original, refund))
-        {
-            return;
+            if (!string.Equals(a, b, StringComparison.Ordinal))
+            {
+                differences.Add(field);
+            }
         }
 
-        if (original.Type != refund.Type)
-        {
-            differences.Add(path == string.Empty ? "$type" : path);
-            return;
-        }
+        Compare(originalCustomer.CustomerName, refundCustomer.CustomerName, nameof(MiddlewareCustomer.CustomerName));
+        Compare(originalCustomer.CustomerId, refundCustomer.CustomerId, nameof(MiddlewareCustomer.CustomerId));
+        Compare(originalCustomer.CustomerType, refundCustomer.CustomerType, nameof(MiddlewareCustomer.CustomerType));
+        Compare(originalCustomer.CustomerStreet, refundCustomer.CustomerStreet, nameof(MiddlewareCustomer.CustomerStreet));
+        Compare(originalCustomer.CustomerZip, refundCustomer.CustomerZip, nameof(MiddlewareCustomer.CustomerZip));
+        Compare(originalCustomer.CustomerCity, refundCustomer.CustomerCity, nameof(MiddlewareCustomer.CustomerCity));
+        Compare(originalCustomer.CustomerCountry, refundCustomer.CustomerCountry, nameof(MiddlewareCustomer.CustomerCountry));
+        Compare(originalCustomer.CustomerVATId, refundCustomer.CustomerVATId, nameof(MiddlewareCustomer.CustomerVATId));
 
-        switch (original.Type)
-        {
-            case JTokenType.Object:
-                var originalProperties = ((JObject) original).Properties().ToDictionary(p => p.Name, p => p.Value);
-                var refundProperties = ((JObject) refund).Properties().ToDictionary(p => p.Name, p => p.Value);
-                var allKeys = new HashSet<string>(originalProperties.Keys.Concat(refundProperties.Keys));
-                foreach (var key in allKeys)
-                {
-                    var nextPath = string.IsNullOrEmpty(path) ? key : $"{path}.{key}";
-                    if (!originalProperties.TryGetValue(key, out var originalValue))
-                    {
-                        differences.Add(nextPath);
-                        continue;
-                    }
-
-                    if (!refundProperties.TryGetValue(key, out var refundValue))
-                    {
-                        differences.Add(nextPath);
-                        continue;
-                    }
-
-                    CompareTokens(originalValue, refundValue, nextPath, differences);
-                }
-                break;
-            case JTokenType.Array:
-                var originalArray = original as JArray;
-                var refundArray = refund as JArray;
-                if (originalArray == null || refundArray == null)
-                {
-                    differences.Add(path);
-                    break;
-                }
-
-                var maxLength = Math.Max(originalArray.Count, refundArray.Count);
-                for (var i = 0; i < maxLength; i++)
-                {
-                    var nextPath = string.IsNullOrEmpty(path) ? i.ToString() : $"{path}[{i}]";
-                    if (i >= originalArray.Count || i >= refundArray.Count)
-                    {
-                        differences.Add(nextPath);
-                        continue;
-                    }
-                    CompareTokens(originalArray[i], refundArray[i], nextPath, differences);
-                }
-                break;
-            default:
-                differences.Add(path);
-                break;
-        }
+        return (differences.Count == 0, differences.Count == 0 ? null : string.Join(", ", differences));
     }
 
     public static (bool flowControl, string? value) CompareChargeItems(string originalReceiptReference, ChargeItem refundItem, ChargeItem originalItem, bool isPartial = false)
