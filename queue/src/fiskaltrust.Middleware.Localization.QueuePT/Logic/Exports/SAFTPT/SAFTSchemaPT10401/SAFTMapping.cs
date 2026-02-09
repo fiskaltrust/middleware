@@ -686,12 +686,12 @@ public class SaftExporter
             {
                 LineNumber = (long) chargeItemData.Position,
                 ProductCode = GenerateUniqueProductIdentifier(chargeItemData),
-                ProductDescription = chargeItemData.Description,
+                ProductDescription = chargeItemData.Description?.Trim(),
                 Quantity = Helpers.CreateMonetaryValue(quantity),
                 UnitOfMeasure = chargeItemData.Unit ?? "Unit",
                 UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
                 TaxPointDate = chargeItemData.Moment ?? receiptResponse.ftReceiptMoment,
-                Description = chargeItemData.Description,
+                Description = chargeItemData.Description?.Trim(),
                 Tax = tax
             };
 
