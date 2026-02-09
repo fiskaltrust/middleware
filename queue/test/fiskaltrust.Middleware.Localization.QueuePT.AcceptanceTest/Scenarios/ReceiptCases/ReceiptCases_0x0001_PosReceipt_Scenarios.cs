@@ -104,10 +104,10 @@ public class ReceiptCases_0x0001_PosReceipt_Scenarios : AbstractScenarioTests
 
     #endregion
 
-    #region Scenario 21: Transactions with net amount > 1000 € should fail
+    #region Scenario 21: Transactions with net amount > 100 € should fail
 
     [Fact]
-    public async Task Scenario21_TransactionWithNetAmountGreaterThan1000_ShouldFail()
+    public async Task Scenario21_TransactionWithNetAmountGreaterThan100_ShouldFail()
     {
         var originalReceipt = """
             {
@@ -118,7 +118,7 @@ public class ReceiptCases_0x0001_PosReceipt_Scenarios : AbstractScenarioTests
                 "cbChargeItems": [
                     {
                         "Quantity": 1,
-                        "Amount": 1300,
+                        "Amount": 150,
                         "Description": "Test",
                         "VATRate": 23,
                         "ftChargeItemCase": 3
@@ -126,7 +126,7 @@ public class ReceiptCases_0x0001_PosReceipt_Scenarios : AbstractScenarioTests
                 ],
                 "cbPayItems": [
                     {
-                        "Amount": 1300,
+                        "Amount": 150,
                         "Description": "Cash"
                     }
                 ],

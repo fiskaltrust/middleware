@@ -124,7 +124,7 @@ public static class ChargeItemValidations
     }
 
     /// <summary>
-    /// Validates that POS receipt net amount does not exceed 1000€.
+    /// Validates that POS receipt net amount does not exceed 100€.
     /// Returns a single ValidationResult if validation fails.
     /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_NetAmountLimit(ReceiptRequest request)
@@ -142,7 +142,7 @@ public static class ChargeItemValidations
         var totalNetAmount = request.cbChargeItems
             .Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount());
 
-        if (totalNetAmount > 1000m)
+        if (totalNetAmount > 100m)
         {
             var rule = PortugalValidationRules.PosReceiptNetAmountExceedsLimit;
             yield return ValidationResult.Failed(new ValidationError(
@@ -150,7 +150,7 @@ public static class ChargeItemValidations
                 rule.Code,
                 rule.Field
             ).WithContext("TotalNetAmount", totalNetAmount)
-             .WithContext("Limit", 1000m));
+             .WithContext("Limit", 100m));
         }
     }
 
