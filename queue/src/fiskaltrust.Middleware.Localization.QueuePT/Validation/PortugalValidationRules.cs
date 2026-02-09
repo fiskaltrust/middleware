@@ -155,6 +155,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition HandwrittenReceiptSeriesAndNumberMandatory =
         new("EEEE_HandwrittenReceiptSeriesAndNumberMandatory", "Handwritten receipts require Series and Number in ftReceiptCaseData.", PortugalValidationFields.ReceiptCaseData);
 
+    public static readonly ValidationRuleDefinition HandwrittenReceiptSeriesInvalidCharacter =
+        new("EEEE_HandwrittenReceiptSeriesInvalidCharacter", "Handwritten receipt series contains invalid characters.", PortugalValidationFields.ReceiptCaseData);
+
     public static readonly ValidationRuleDefinition PreviousReceiptIsVoided =
         new("EEEE_PreviousReceiptIsVoided", "Referenced receipt has already been voided.", PortugalValidationFields.PreviousReceiptReference);
 

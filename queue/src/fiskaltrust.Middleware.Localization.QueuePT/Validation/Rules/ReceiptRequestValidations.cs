@@ -160,6 +160,13 @@ public class ReceiptRequestValidations
             ));
         }
 
+        if(request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            // Skip validation for handwritten receipts which may have backdated ftReceiptMoment
+            yield break;
+        }
+
+
         var timeDifference = (receiptResponse.ftReceiptMoment - request.cbReceiptMoment).Duration();
         
         if (timeDifference > TimeSpan.FromMinutes(1))

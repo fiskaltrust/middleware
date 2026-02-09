@@ -37,6 +37,44 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     /// </summary>
     public async IAsyncEnumerable<ValidationResult> Validate(ReceiptValidationContext context)
     {
+        if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || _receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) || _receiptRequest.IsPartialRefundReceipt())
+            {
+                var rule = PortugalValidationRules.HandwrittenReceiptsNotSupported;
+                yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_HandwrittenReceiptsNotSupported,
+                   rule.Code,
+                   rule.Field
+               ));
+            }
+
+            if (!_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) || data is null || data.PT is null || data.PT.Series is null || !data.PT.Number.HasValue)
+            {
+                var rule = PortugalValidationRules.HandwrittenReceiptSeriesAndNumberMandatory;
+                yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_HandwrittenReceiptSeriesAndNumberMandatory,
+                   rule.Code,
+                   rule.Field
+               ));
+            }
+
+            if (_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var seriesData) && seriesData != null && seriesData.PT != null && seriesData.PT.Series != null)
+            {
+                if (seriesData.PT.Series.Contains(" "))
+                {
+                    var rule = PortugalValidationRules.HandwrittenReceiptSeriesInvalidCharacter;
+                    yield return ValidationResult.Failed(new ValidationError(
+                       ErrorMessagesPT.EEEE_HandwrittenReceiptsSeriesInvalidCharacters,
+                       rule.Code,
+                       rule.Field
+                   ));
+                }
+            }
+        }
+
+
+
         // Validate time difference between cbReceiptMoment and ftReceiptMoment
         foreach (var result in ReceiptRequestValidations.ValidateReceiptMomentTimeDifference(_receiptRequest, _receiptResponse))
         {
@@ -267,32 +305,6 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                        rule.Code,
                        rule.Field
                    ));
-            }
-        }
-
-        if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || _receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) || _receiptRequest.IsPartialRefundReceipt())
-            {
-                var rule = PortugalValidationRules.HandwrittenReceiptsNotSupported;
-                yield return ValidationResult.Failed(new ValidationError(
-                   ErrorMessagesPT.EEEE_HandwrittenReceiptsNotSupported,
-                   rule.Code,
-                   rule.Field
-               ));
-            }
-        }
-
-        if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-        {
-            if (!_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) || data.PT is null || data.PT.Series is null || !data.PT.Number.HasValue)
-            {
-                var rule = PortugalValidationRules.HandwrittenReceiptSeriesAndNumberMandatory;
-                yield return ValidationResult.Failed(new ValidationError(
-                   ErrorMessagesPT.EEEE_HandwrittenReceiptSeriesAndNumberMandatory,
-                   rule.Code,
-                   rule.Field
-               ));
             }
         }
 
