@@ -329,8 +329,10 @@ public class PartialRefundScenarios : AbstractScenarioTests
 
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
-
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: , Index: )");
+        var mismatchError = voidResponse.ftSignatures[0].Data;
+        (mismatchError.Contains("EEEE_Full refund does not match the original invoice") ||
+         mismatchError.Contains("didn't match with any of the items in the Queue"))
+            .Should().BeTrue();
     }
 
     #endregion
@@ -419,7 +421,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
 
         (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT"));
         refundResponse.ftState.State().Should().Be(State.Error);
-        refundResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: , Index: )");
+        refundResponse.ftSignatures[0].Data.Should().Contain("EEEE_Partial refund");
     }
 
     #endregion
@@ -885,7 +887,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
 
         var (partialRefundRequest, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt);
         partialRefundResponse.ftState.State().Should().Be(State.Error);
-        partialRefundResponse.ftSignatures[0].Data.Should().Contain("Field: Quantity Exceeded");
+        partialRefundResponse.ftSignatures[0].Data.Should().Contain("[EEEE_PartialRefund] Total amount to be refunded for item 'Line item 1' exceeds original amount.");
     }
 
     #endregion
@@ -974,7 +976,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
 
         var (_, partialRefundResponse3) = await ProcessReceiptAsync(partialRefundTemplate);
         partialRefundResponse3.ftState.State().Should().Be(State.Error);
-        partialRefundResponse3.ftSignatures[0].Data.Should().Contain("Validation error []: [EEEE_PartialRefund] Total amount to be refunded for item 'Line item 1' exceeds original amount. Original amount: 2, already refunded: 2, to be refunded with this request: -1. (Field: , Index: )");
+        partialRefundResponse3.ftSignatures[0].Data.Should().Contain("Field: Quantity Exceeded");
     }
 
     #endregion

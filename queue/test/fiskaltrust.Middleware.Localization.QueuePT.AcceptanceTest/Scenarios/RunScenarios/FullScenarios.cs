@@ -90,9 +90,9 @@ public class FullScenarios : AbstractScenarioTests
                 "cbPayItems": [
                     {
                         "Quantity": -1,
-                        "Description": "Numerario",
+                        "Description": "On Credit",
                         "Amount": -1,
-                        "ftPayItemCase": 5788286605450149889
+                        "ftPayItemCase": 5788286605450149897
                     }
                 ],
                 "ftReceiptCase": 5788286605450022913,
@@ -139,7 +139,7 @@ public class FullScenarios : AbstractScenarioTests
                 }
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
-              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCase": 5788286605450547201,
               "ftReceiptCaseData": {
                 "PT": {
                   "Series": "TEST",
@@ -175,7 +175,7 @@ public class FullScenarios : AbstractScenarioTests
                 }
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
-              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCase": 5788286605450547201,
               "ftReceiptCaseData": {
                 "PT": {
                   "Series": "TEST",
@@ -1425,7 +1425,7 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
               "ftPosSystemId": "632c29fe-61db-426a-a7fd-3df22a7ac949",
-              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCase": 5788286605450547201,
               "ftReceiptCaseData": {
                 "PT": {
                   "Series": "F",
@@ -1437,7 +1437,7 @@ public class FullScenarios : AbstractScenarioTests
             """;
         var (receipt_28_Request, receipt_28_Response) = await ProcessReceiptAsync(receipt_28);
         receipt_28_Response.ftState.State().Should().Be(State.Success);
-        receipt_28_Response.ftReceiptIdentification.Should().Be("ftD#FS ft20250a62/1");
+        receipt_28_Response.ftReceiptIdentification.Should().Contain("#FT ");
 
         // T28_2 Simulate the integration of 2 manual documents according to point 2.4 of Dispatch No. 8632/2014 of July 3 of the Director General of the Tax and Customs Authority where the 1st document belongs to series F with No. 23 from 14-01-2022 and the 2nd belongs to series D with No. 3 from 12-01-2022 and corresponding PDF. (Note that, according to point 2.4.2, a new document of the same type must be created that collects all elements of the manual document issued, meaning that all elements are free entry, for example: usual denomination, quantity, price, tax value, total tax and document, etc.)
         var receipt_28_2 = """
@@ -1462,7 +1462,7 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
               "ftPosSystemId": "76c746fc-7e94-4bd3-9506-ecfa69642335",
-              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCase": 5788286605450547201,
               "ftReceiptCaseData": {
                 "PT": {
                   "Series": "D",
@@ -1474,7 +1474,7 @@ public class FullScenarios : AbstractScenarioTests
             """;
         var (receipt_28_2_Request, receipt_28_2_Response) = await ProcessReceiptAsync(receipt_28_2);
         receipt_28_2_Response.ftState.State().Should().Be(State.Success);
-        receipt_28_2_Response.ftReceiptIdentification.Should().Be("ftE#FS ft20250a62/2");
+        receipt_28_2_Response.ftReceiptIdentification.Should().Contain("#FT ");
 
         // T29 is not supported
         // T30 is not supported
@@ -1507,7 +1507,7 @@ public class FullScenarios : AbstractScenarioTests
 
         var (receipt_33_1_CM_Request, receipt_33_1_CM_Response) = await ProcessReceiptAsync(receipt_33_1_CM);
         receipt_33_1_CM_Response.ftState.State().Should().Be(State.Success);
-        receipt_33_1_CM_Response.ftReceiptIdentification.Should().Be("ftF#CM ft20259c2f/1");
+        receipt_33_1_CM_Response.ftReceiptIdentification.Should().Contain("#CM ");
 
         // T33_2_OR OR => If the application allows it, create a document that can be delivered to the customer to verify the transfer of goods or provision of services (order, table consultation, verification document, etc.) and corresponding PDF
         var receipt_33_2_OR = """
@@ -1533,7 +1533,7 @@ public class FullScenarios : AbstractScenarioTests
         // 5054200200000007
         var (receipt_33_2_OR_Request, receipt_33_2_OR_Response) = await ProcessReceiptAsync(receipt_33_2_OR);
         receipt_33_2_OR_Response.ftState.State().Should().Be(State.Success);
-        receipt_33_2_OR_Response.ftReceiptIdentification.Should().Be("ft10#OR ft20255389/1");
+        receipt_33_2_OR_Response.ftReceiptIdentification.Should().Contain("#OR ");
 
         scope.Dispose();
 

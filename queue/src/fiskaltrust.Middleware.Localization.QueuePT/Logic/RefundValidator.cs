@@ -381,8 +381,8 @@ public class RefundValidator
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"No matching item found for product identifier '{refundItem.chargeItem.Description?.Trim()}'");
             }
 
-            var refundItemSingleItemPrice = fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(refundRequest, refundItem));
-            var originalItemSingleItemPrice = fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(originalRequest, originalItems.First()));
+            var refundItemSingleItemPrice = Math.Abs(fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(refundRequest, refundItem)));
+            var originalItemSingleItemPrice = Math.Abs(fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(originalRequest, originalItems.First())));
             if (Math.Abs(refundItemSingleItemPrice - originalItemSingleItemPrice) > 0.01m)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"Unit price of refund item ({refundItemSingleItemPrice}) is different from the original unit price ({originalItemSingleItemPrice}).");

@@ -282,9 +282,13 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             }
             else
             {
-                foreach (var result in ReceiptRequestValidations.ValidateRefundHasPreviousReference(_receiptRequest))
+                // PaymentTransfer has its own dedicated missing-reference validation message.
+                if (!_receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 {
-                    yield return result;
+                    foreach (var result in ReceiptRequestValidations.ValidateRefundHasPreviousReference(_receiptRequest))
+                    {
+                        yield return result;
+                    }
                 }
             }
 

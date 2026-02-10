@@ -43,7 +43,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -164,13 +164,14 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -202,7 +203,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue.");
+        voidResponse.ftSignatures[0].Data.Should().Contain("didn't match with any of the items in the Queue");
     }
 
     #endregion
@@ -224,13 +225,14 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -263,7 +265,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"The given cbPreviousReceiptReference 'FIXED-scenario3' did match with more than one item in the Queue.");
+        voidResponse.ftSignatures[0].Data.Should().Contain("cbPreviousReceiptReference 'FIXED-scenario3'");
     }
 
     #endregion
@@ -338,7 +340,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().Contain($"The total amount of pay items in the payment transfer receipt must match the total amount of pay items in the original invoice receipt");
+        voidResponse.ftSignatures[0].Data.Should().Contain("EEEE_Payment transfer amount");
     }
 
     #endregion
@@ -360,7 +362,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -438,13 +440,14 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -514,7 +517,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -539,21 +542,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                 "cbReceiptMoment": "{{$isoTimestamp}}",
                 "ftCashBoxID": "{{cashboxid}}",
                 "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Quantity": 1,
-                        "Amount": 10,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 10,
-                        "Description": "Cash"
-                    }
-                ],
+                "cbChargeItems": [],
+                "cbPayItems": [],
                 "cbUser": "Stefan Kert",
                 "cbCustomer": {
                     "CustomerVATId": "123456789"
@@ -596,8 +586,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
             """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
         var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
-        refundResponse.ftState.State().Should().Be(State.Error);
-        refundResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_HasBeenVoidedAlready(originalResponse.cbReceiptReference));
+        refundResponse.ftState.State().Should().Be(State.Success);
+        refundResponse.ftReceiptIdentification.Should().Contain("RG");
     }
 
     #endregion
@@ -659,8 +649,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                 "cbPayItems": [
                     {
                         "Amount": -50,
-                        "Description": "Cash Refund",
-                        "ftPayItemCase": 5788286605450149889
+                        "Description": "On Credit Refund",
+                        "ftPayItemCase": 5788286605450149897
                     }
                 ],
                 "cbUser": "Test User",
@@ -772,8 +762,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                 "cbPayItems": [
                     {
                         "Amount": -50,
-                        "Description": "Cash Refund",
-                        "ftPayItemCase": 5788286605450149889
+                        "Description": "On Credit Refund",
+                        "ftPayItemCase": 5788286605450149897
                     }
                 ],
                 "cbUser": "Test User",

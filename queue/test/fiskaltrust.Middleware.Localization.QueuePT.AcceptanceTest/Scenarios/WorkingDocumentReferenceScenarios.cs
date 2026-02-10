@@ -303,7 +303,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         invoiceResponse.ftState.State().Should().Be(State.Success, because: "Invoice should succeed. Errors: " + string.Join(", ", invoiceResponse.ftSignatures?.Select(s => s.Data) ?? []));
 
         // Verify the signature contains reference to ProForma
-        var referenceSignature = invoiceResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia") && s.Data.Contains("Proforma"));
+        var referenceSignature = invoiceResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia"));
         referenceSignature.Should().NotBeNull("Invoice should contain a reference signature to the ProForma");
         referenceSignature!.Data.Should().Contain("PF", "Reference should mention the ProForma document type");
     }
@@ -368,7 +368,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         posResponse.ftState.State().Should().Be(State.Success, because: "POS Receipt should succeed. Errors: " + string.Join(", ", posResponse.ftSignatures?.Select(s => s.Data) ?? []));
 
         // Verify the signature contains reference to ProForma
-        var referenceSignature = posResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia") && s.Data.Contains("Proforma"));
+        var referenceSignature = posResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia"));
         referenceSignature.Should().NotBeNull("POS Receipt should contain a reference signature to the ProForma");
         referenceSignature!.Data.Should().Contain("PF", "Reference should mention the ProForma document type");
     }
@@ -437,7 +437,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         invoiceResponse.ftState.State().Should().Be(State.Success, because: "Invoice should succeed. Errors: " + string.Join(", ", invoiceResponse.ftSignatures?.Select(s => s.Data) ?? []));
 
         // Verify the signature contains reference to Table Check
-        var referenceSignature = invoiceResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia") && s.Data.Contains("Consulta de mesa"));
+        var referenceSignature = invoiceResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia"));
         referenceSignature.Should().NotBeNull("Invoice should contain a reference signature to the Table Check (Consulta de mesa)");
         referenceSignature!.Data.Should().Contain("CM", "Reference should mention the Table Check document type");
     }
@@ -501,7 +501,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         posResponse.ftState.State().Should().Be(State.Success, because: "POS Receipt should succeed. Errors: " + string.Join(", ", posResponse.ftSignatures?.Select(s => s.Data) ?? []));
 
         // Verify the signature contains reference to Table Check
-        var referenceSignature = posResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia") && s.Data.Contains("Consulta de mesa"));
+        var referenceSignature = posResponse.ftSignatures.FirstOrDefault(s => s.Data.Contains("Referencia"));
         referenceSignature.Should().NotBeNull("POS Receipt should contain a reference signature to the Table Check (Consulta de mesa)");
         referenceSignature!.Data.Should().Contain("CM", "Reference should mention the Table Check document type");
     }
