@@ -421,7 +421,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
 
         (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT"));
         refundResponse.ftState.State().Should().Be(State.Error);
-        refundResponse.ftSignatures[0].Data.Should().Contain("EEEE_Partial refund");
+        refundResponse.ftSignatures[0].Data.Should().Contain("[EEEE_PartialRefund]");
     }
 
     #endregion
