@@ -74,7 +74,7 @@ public class RefundScenarios : AbstractScenarioTests
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
         response.ftState.State().Should().Be(State.Error);
 
-        response.ftSignatures[0].Data.Should().EndWith("Validation error [EEEE_PreviousReceiptReference]: EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt. (Field: cbPreviousReceiptReference, Index: )");
+        response.ftSignatures[0].Data.Should().Contain("Validation error [EEEE_RefundMissingPreviousReceiptReference]: EEEE_Refunds must have a cbPreviousReceiptReference set to identify the original receipt being refunded. (Field: cbPreviousReceiptReference, Index: )");
         // also check the signaturedata if the returned error is included
     }
 
@@ -143,7 +143,7 @@ public class RefundScenarios : AbstractScenarioTests
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue.");
+        voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue or the items referenced are invalid.");
     }
 
     #endregion
@@ -259,10 +259,10 @@ public class RefundScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
-            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
-            // Arrange
-            var copyReceipt = """       
+        // Arrange
+        var copyReceipt = """       
                 {
                     "cbReceiptReference": "{{$guid}}",
                     "cbReceiptMoment": "{{$isoTimestamp}}",
@@ -292,15 +292,14 @@ public class RefundScenarios : AbstractScenarioTests
                 }
                 """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
-            var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
-            voidResponse.ftState.State().Should().Be(State.Error);
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        voidResponse.ftState.State().Should().Be(State.Error);
+        voidResponse.ftSignatures[0].Data.Should().EndWith($"Validation error []: EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: Amount) (Field: , Index: )");
+    }
 
-            voidResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: , Index: )");
-        }
+    #endregion
 
-        #endregion
-
-        #region Scenario 5: Transactions with Refund for already refunded receipt should fail
+    #region Scenario 5: Transactions with Refund for already refunded receipt should fail
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
@@ -341,10 +340,10 @@ public class RefundScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
-            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
-            // Arrange
-            var copyReceipt = """       
+        // Arrange
+        var copyReceipt = """       
                 {
                     "cbReceiptReference": "{{$guid}}",
                     "cbReceiptMoment": "{{$isoTimestamp}}",
@@ -374,18 +373,18 @@ public class RefundScenarios : AbstractScenarioTests
                 }
                 """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
-            var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
-            refundResponse.ftState.State().Should().Be(State.Success);
+        var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        refundResponse.ftState.State().Should().Be(State.Success);
 
 
-            (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
-            refundResponse.ftState.State().Should().Be(State.Error);
-            refundResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_A refund for receipt '{originalResponse.cbReceiptReference}' already exists. Multiple refunds for the same receipt are not allowed. (Field: cbPreviousReceiptReference, Index: )");
-        }
+        (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        refundResponse.ftState.State().Should().Be(State.Error);
+        refundResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_A refund for receipt '{originalResponse.cbReceiptReference}' already exists. Multiple refunds for the same receipt are not allowed. (Field: cbPreviousReceiptReference, Index: )");
+    }
 
-        #endregion
+    #endregion
 
-        #region Scenario 6: Transactions with Refund with multiple references should be rejected
+    #region Scenario 6: Transactions with Refund with multiple references should be rejected
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
@@ -462,10 +461,10 @@ public class RefundScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
-            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
-            // Arrange
-            var copyReceipt = """       
+        // Arrange
+        var copyReceipt = """       
                 {
                     "cbReceiptReference": "{{$guid}}",
                     "cbReceiptMoment": "{{$isoTimestamp}}",
@@ -497,15 +496,15 @@ public class RefundScenarios : AbstractScenarioTests
                 }
                 """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
-            var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
-            voidResponse.ftState.State().Should().Be(State.Error);
+        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
+        voidResponse.ftState.State().Should().Be(State.Error);
 
-            voidResponse.ftSignatures[0].Data.Should().EndWith($"EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: , Index: )");
-        }
+        voidResponse.ftSignatures[0].Data.Should().EndWith($"Validation error []: EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: cbCustomer). Different fields: CustomerName (Field: , Index: )");
+    }
 
-        #endregion
+    #endregion
 
-        #region Scenario 8: Transactions with Refund for already voided receipt should fail
+    #region Scenario 8: Transactions with Refund for already voided receipt should fail
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]

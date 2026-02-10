@@ -82,7 +82,7 @@ public class FullScenarios : AbstractScenarioTests
                     {
                         "Quantity": -1,
                         "Description": "Line item 1",
-                        "Amount": -30,
+                        "Amount": -1,
                         "VATRate": 6,
                         "ftChargeItemCase": 5788286605450149905
                     }
@@ -91,7 +91,7 @@ public class FullScenarios : AbstractScenarioTests
                     {
                         "Quantity": -1,
                         "Description": "Numerario",
-                        "Amount": -30,
+                        "Amount": -1,
                         "ftPayItemCase": 5788286605450149889
                     }
                 ],
@@ -464,32 +464,28 @@ public class FullScenarios : AbstractScenarioTests
                   "Description": "Line item 1",
                   "Amount": 55.00,
                   "VATRate": 23,
-                  "ftChargeItemCase": 5788286605450018835,
-                  "Position": 1
+                  "ftChargeItemCase": 5788286605450018835
                 },
                 {
                   "Quantity": 1,
                   "Description": "Discount Line item 1",
                   "Amount": -4.84000,
                   "VATRate": 23,
-                  "ftChargeItemCase": 5788286605450280979,
-                  "Position": 1
+                  "ftChargeItemCase": 5788286605450280979
                 },
                 {
                   "Quantity": 1,
                   "Description": "Line item 1",
                   "Amount": 12.5,
                   "VATRate": 23,
-                  "ftChargeItemCase": 5788286605450018835,
-                  "Position": 2
+                  "ftChargeItemCase": 5788286605450018835
                 }
               ],
               "cbPayItems": [
                 {
                   "Description": "Numerario",
                   "Amount": 62.66,
-                  "ftPayItemCase": 5788286605450018817,
-                  "Position": 1
+                  "ftPayItemCase": 5788286605450018817
                 }
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
@@ -599,7 +595,7 @@ public class FullScenarios : AbstractScenarioTests
                 {
                   "Quantity": 1,
                   "Description": "Line item 1",
-                  "Amount": 150,
+                  "Amount": 123,
                   "VATRate": 23,
                   "ftChargeItemCase": 5788286605450018835
                 }
@@ -607,7 +603,7 @@ public class FullScenarios : AbstractScenarioTests
               "cbPayItems": [
                 {
                   "Description": "Numerario",
-                  "Amount": 150,
+                  "Amount": 123,
                   "ftPayItemCase": 5788286605450018817
                 }
               ],
@@ -616,13 +612,9 @@ public class FullScenarios : AbstractScenarioTests
               "cbUser": "Stefan Kert",
               "cbCustomer": {
                 "CustomerName": "Stefan Kert",
-                "CustomerId": null,
-                "CustomerType": null,
                 "CustomerStreet": "Demo street",
                 "CustomerZip": "1050-190",
-                "CustomerCity": "Lissbon",
-                "CustomerCountry": null,
-                "CustomerVATId": null
+                "CustomerCity": "Lissbon"
               }
             }
             """;
@@ -768,7 +760,14 @@ public class FullScenarios : AbstractScenarioTests
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
               "ftReceiptCase": 5788286605450018818,
               "cbPreviousReceiptReference": "2f480b2f-fe1b-4b18-9603-d21a7e2b2094",
-              "cbUser": "Stefan Kert"
+              "cbUser": "Stefan Kert",
+              "cbCustomer": {
+                "CustomerName": "Nuno Cazeiro",
+                "CustomerStreet": "Demo street",
+                "CustomerZip": "1050-189",
+                "CustomerCity": "Lissbon",
+                "CustomerVATId": "199998132"
+              }
             }
             """;
         var (receipt_5_13_2_Request, receipt_5_13_2_Response) = await ProcessReceiptAsync(receipt_5_13_2);

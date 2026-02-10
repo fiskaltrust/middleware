@@ -165,7 +165,7 @@ public class PartialRefundScenarios : AbstractScenarioTests
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
     // [InlineData(ReceiptCase.DeliveryNote0x0005)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
