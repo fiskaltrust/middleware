@@ -978,4 +978,264 @@ public class PartialRefundScenarios : AbstractScenarioTests
     }
 
     #endregion
+
+    #region Scenario 12: AccountsReceivable in original cannot be refunded with other payment methods
+
+    [Fact]
+    public async Task Scenario12_PartialRefundAccountsReceivableWithCash_ShouldFail()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Description": "Line item 1",
+                        "Amount": 1,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "On Credit",
+                        "Amount": 1,
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt);
+        originalResponse.ftState.State().Should().Be(State.Success);
+
+        var partialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -1,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450149905
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Cash",
+                        "Amount": -1,
+                        "ftPayItemCase": 5788286605450149889
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (_, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt);
+        partialRefundResponse.ftState.State().Should().Be(State.Error);
+        partialRefundResponse.ftSignatures[0].Data.Should().Contain("Field: PayItem OtherPayments Exceeded");
+    }
+
+    #endregion
+
+    #region Scenario 13: Other payments in original cannot be refunded with AccountsReceivable
+
+    [Fact]
+    public async Task Scenario13_PartialRefundCashWithAccountsReceivable_ShouldFail()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Description": "Line item 1",
+                        "Amount": 1,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "Cash",
+                        "Amount": 1,
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt);
+        originalResponse.ftState.State().Should().Be(State.Success);
+
+        var partialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -1,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450149905
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "On Credit",
+                        "Amount": -1,
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (_, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt);
+        partialRefundResponse.ftState.State().Should().Be(State.Error);
+        partialRefundResponse.ftSignatures[0].Data.Should().Contain("Field: PayItem AccountsReceivable Exceeded");
+    }
+
+    #endregion
+
+    #region Scenario 14: Mixed payments must respect original payment type buckets
+
+    [Fact]
+    public async Task Scenario14_PartialRefundWithMixedPayments_AccountsReceivablePartExceeds_ShouldFail()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Description": "Line item 1",
+                        "Amount": 30,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "Cash",
+                        "Amount": 10,
+                        "ftPayItemCase": 5788286605450018817
+                    },
+                    {
+                        "Description": "On Credit",
+                        "Amount": 20,
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt);
+        originalResponse.ftState.State().Should().Be(State.Success);
+
+        var partialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -30,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450149905
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Cash",
+                        "Amount": -5,
+                        "ftPayItemCase": 5788286605450149889
+                    },
+                    {
+                        "Quantity": -1,
+                        "Description": "On Credit",
+                        "Amount": -25,
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (_, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt);
+        partialRefundResponse.ftState.State().Should().Be(State.Error);
+        partialRefundResponse.ftSignatures[0].Data.Should().Contain("Field: PayItem AccountsReceivable Exceeded");
+    }
+
+    #endregion
 }

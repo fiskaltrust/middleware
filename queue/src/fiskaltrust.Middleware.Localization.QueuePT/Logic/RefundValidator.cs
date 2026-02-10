@@ -383,7 +383,7 @@ public class RefundValidator
 
             var refundItemSingleItemPrice = fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(refundRequest, refundItem));
             var originalItemSingleItemPrice = fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(originalRequest, originalItems.First()));
-            if(Math.Abs(refundItemSingleItemPrice - originalItemSingleItemPrice) > 0.01m)
+            if (Math.Abs(refundItemSingleItemPrice - originalItemSingleItemPrice) > 0.01m)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"Unit price of refund item ({refundItemSingleItemPrice}) is different from the original unit price ({originalItemSingleItemPrice}).");
             }
@@ -404,10 +404,42 @@ public class RefundValidator
             var totalAmountAlreadyRefunded = existingRefundItems.Sum(x => Math.Abs(x.chargeItem.Amount));
             var totalAmountToBeRefunded = totalAmountAlreadyRefunded + Math.Abs(refundItem.chargeItem.Amount);
             var totalAmountAvailableForRefund = Math.Abs(referenceItem.Amount);
-            if(totalAmountToBeRefunded - totalAmountAvailableForRefund > 0.01m)
+            if (totalAmountToBeRefunded - totalAmountAvailableForRefund > 0.01m)
             {
                 return $"[EEEE_PartialRefund] Total amount to be refunded for item '{refundItem.chargeItem.Description?.Trim()}' exceeds original amount. Original amount: {referenceItem.Amount}, already refunded: {totalAmountAlreadyRefunded}, to be refunded with this request: {Math.Abs(refundItem.chargeItem.Amount)}.";
             }
+        }
+
+        // For payments we only sum up the payments because we only care about total amount not quantity and nothign else. Accountsreceivable can only be refunded with accountsreceivable
+        var paymentsAvailableForRefund = originalRequest.cbPayItems;
+        var paymentsAlreadyRefunded = existingRefunds.SelectMany(x => x.cbPayItems).ToList();
+        var paymentsInRefund = refundRequest.cbPayItems;
+
+        var accountsReceivableInOriginal = paymentsAvailableForRefund?.Where(x => x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).ToList() ?? new List<PayItem>();
+        var otherPaymentsInOriginal = paymentsAvailableForRefund?.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).ToList() ?? new List<PayItem>();
+
+        var accountsReceivableAlreadyRefunded = paymentsAlreadyRefunded?.Where(x => x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).ToList() ?? new List<PayItem>();
+        var otherPaymentsAlreadyRefunded = paymentsAlreadyRefunded?.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).ToList() ?? new List<PayItem>();
+
+        var accountsReceivableInRefund = paymentsInRefund?.Where(x => x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).ToList() ?? new List<PayItem>();
+        var otherPaymentsInRefund = paymentsInRefund?.Where(x => !x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable)).ToList() ?? new List<PayItem>();
+
+        var accountsReceivableOriginalAmount = accountsReceivableInOriginal.Sum(x => Math.Abs(x.Amount));
+        var otherPaymentsOriginalAmount = otherPaymentsInOriginal.Sum(x => Math.Abs(x.Amount));
+
+        var accountsReceivableRefundedAmount = accountsReceivableAlreadyRefunded.Sum(x => Math.Abs(x.Amount)) + accountsReceivableInRefund.Sum(x => Math.Abs(x.Amount));
+        var otherPaymentsRefundedAmount = otherPaymentsAlreadyRefunded.Sum(x => Math.Abs(x.Amount)) + otherPaymentsInRefund.Sum(x => Math.Abs(x.Amount));
+
+        // AccountsReceivable can only refund AccountsReceivable amounts from the original receipt.
+        if (accountsReceivableRefundedAmount - accountsReceivableOriginalAmount > 0.01m)
+        {
+            return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "PayItem AccountsReceivable Exceeded");
+        }
+
+        // Non-AccountsReceivable payment methods can only refund non-AccountsReceivable amounts.
+        if (otherPaymentsRefundedAmount - otherPaymentsOriginalAmount > 0.01m)
+        {
+            return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "PayItem OtherPayments Exceeded");
         }
         return null; // Validation passed
     }
