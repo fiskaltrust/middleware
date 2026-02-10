@@ -81,7 +81,7 @@ public static class PortugalValidationRules
         new("EEEE_ChargeItemDescriptionTooShort", "Charge item description must be at least 3 characters long.", PortugalValidationFields.ChargeItemsDescription);
 
     public static readonly ValidationRuleDefinition PosReceiptNetAmountExceedsLimit =
-        new("EEEE_PosReceiptNetAmountExceedsLimit", "Point of sale receipt net amount must not exceed 1000 EUR.", PortugalValidationFields.ChargeItems);
+        new("EEEE_PosReceiptNetAmountExceedsLimit", "Point of sale receipt net amount must not exceed 100 EUR.", PortugalValidationFields.ChargeItems);
 
     public static readonly ValidationRuleDefinition UnsupportedVatRate =
         new("EEEE_UnsupportedVatRate", "Only supported VAT rates may be used in charge items.", PortugalValidationFields.ChargeItems);
