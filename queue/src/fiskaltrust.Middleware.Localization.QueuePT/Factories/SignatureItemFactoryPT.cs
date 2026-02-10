@@ -107,37 +107,13 @@ public static class SignatureItemFactoryPT
 
     public static SignatureItem AddReferenciaSignature(List<Receipt> receiptReferences)
     {
-        var invoice = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptReferences[0].Response.ftReceiptIdentification);
-        if (invoice.documentType == "CM")
+        return new SignatureItem
         {
-            return new SignatureItem
-            {
-                Caption = $"",
-                Data = $"Referencia: Consulta de mesa {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            };
-        }
-        else if (invoice.documentType == "PF")
-        {
-            return new SignatureItem
-            {
-                Caption = $"",
-                Data = $"Referencia: Proforma {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            };
-        }
-        else
-        {
-            return new SignatureItem
-            {
-                Caption = $"",
-                Data = $"Referencia: {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            };
-        }
+            Caption = $"",
+            Data = $"Referencia: {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+        };
     }
 
     public static SignatureItem AddReferenceSignature(List<Receipt> receiptReferences)
@@ -167,7 +143,7 @@ public static class SignatureItemFactoryPT
         return new SignatureItem
         {
             Caption = "",
-            Data = $"Cópia do documento original - FSM {series}/{number:D4}",
+            Data = $"Cópia do documento original - FTM {series}/{number:D4}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };
