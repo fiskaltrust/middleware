@@ -816,4 +816,114 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
     }
 
     #endregion
+
+    #region Scenario 11: Invoice on credit -> Failed Partial Refund -> Payment Transfer full amount should succeed
+
+    [Fact]
+    public async Task Scenario11_InvoiceOnCredit_FailedPartialRefund_MustNotReduceRemainingAmount_ShouldSucceed()
+    {
+        // Step 1: Create an invoice on credit for 100 EUR.
+        var invoiceReceipt = """
+            {
+                "cbReceiptReference": "invoice-partial-refund-failed-001",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Amount": 100,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "On Credit",
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (_, invoiceResponse) = await ProcessReceiptAsync(invoiceReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        invoiceResponse.ftState.State().Should().Be(State.Success, because: "Invoice on credit should succeed. Errors: " + string.Join(", ", invoiceResponse.ftSignatures?.Select(s => s.Data) ?? []));
+
+        // Step 2: Send an invalid partial refund (wrong sign) that must fail.
+        var failedPartialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": -50,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450149907
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": -50,
+                        "Description": "On Credit Refund",
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-failed-001"
+            }
+            """;
+
+        var (_, failedPartialRefundResponse) = await ProcessReceiptAsync(failedPartialRefundReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        failedPartialRefundResponse.ftState.State().Should().Be(State.Error, because: "Invalid partial refund must fail.");
+
+        // Step 3: Payment transfer for full amount should still succeed because failed partial refunds must not reduce remaining amount.
+        var paymentTransferReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 100,
+                        "Description": "Payment for Invoice",
+                        "VATRate": 0,
+                        "ftChargeItemCase": 5788286605450018968
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "Cash Payment",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-failed-001"
+            }
+            """;
+
+        var (_, paymentTransferResponse) = await ProcessReceiptAsync(paymentTransferReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
+        paymentTransferResponse.ftState.State().Should().Be(State.Success, because: "Failed partial refunds must not be considered in payment transfer remaining amount calculation.");
+        paymentTransferResponse.ftReceiptIdentification.Should().Contain("RG", "Payment transfer should generate an RG document");
+    }
+
+    #endregion
 }

@@ -45,9 +45,10 @@ public class RefundValidator
             return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "Mismatch PayItems");
         }
 
-        if (refundRequest.cbPayItems.Count != originalRequest.cbPayItems.Count)
+        var paymentValidationError = ValidateFullRefundPayments(refundRequest, originalRequest, originalReceiptReference);
+        if (paymentValidationError != null)
         {
-            return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "Mismatch PayItems Count");
+            return paymentValidationError;
         }
 
         var (flowControl, value) = CompareReceiptRequest(originalReceiptReference, refundRequest, originalRequest, isPartial: false);
@@ -68,6 +69,25 @@ public class RefundValidator
             }
         }
         return null; // Validation passed
+    }
+
+    private static string? ValidateFullRefundPayments(ReceiptRequest refundRequest, ReceiptRequest originalRequest, string originalReceiptReference)
+    {
+        var originalAccountsReceivableAmount = originalRequest.cbPayItems!
+            .Where(x => x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable))
+            .Sum(x => Math.Abs(x.Amount));
+
+        var refundAccountsReceivableAmount = refundRequest.cbPayItems!
+            .Where(x => x.ftPayItemCase.IsCase(PayItemCase.AccountsReceivable))
+            .Sum(x => Math.Abs(x.Amount));
+
+        // AccountsReceivable can only be refunded with AccountsReceivable in full refunds.
+        if (Math.Abs(originalAccountsReceivableAmount - refundAccountsReceivableAmount) > 0.01m)
+        {
+            return ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, "PayItem AccountsReceivable Amount");
+        }
+
+        return null;
     }
 
     public static (bool flowControl, string? value) CompareReceiptRequest(string originalReceiptReference, ReceiptRequest refundItem, ReceiptRequest originalItem, bool isPartial = false)
