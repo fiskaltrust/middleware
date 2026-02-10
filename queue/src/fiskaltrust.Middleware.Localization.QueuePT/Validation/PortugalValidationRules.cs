@@ -200,6 +200,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition HandwrittenReceiptSeriesNumberAlreadyLinked =
         new("EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked", "A handwritten receipt with the same series and number has already been linked.", PortugalValidationFields.ReceiptCaseData);
 
+    public static readonly ValidationRuleDefinition TrainingModeNotSupported =
+        new("EEEE_TrainingModeNotSupported", "Training mode is not enabled for this queue.", PortugalValidationFields.ReceiptCaseFlags);
+
     public static readonly IReadOnlyList<ValidationRuleDefinition> All = new[]
     {
         ReceiptNotBalanced,
@@ -252,7 +255,8 @@ public static class PortugalValidationRules
         MixedRefundPayItemsNotAllowed,
         PayItemsMissingForRefund,
         TransportationIsNotSupported,
-        HandwrittenReceiptSeriesNumberAlreadyLinked
+        HandwrittenReceiptSeriesNumberAlreadyLinked,
+        TrainingModeNotSupported
     };
 
 

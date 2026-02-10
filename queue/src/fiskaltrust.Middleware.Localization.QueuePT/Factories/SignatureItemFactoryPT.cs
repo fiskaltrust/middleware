@@ -105,15 +105,39 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem AddProformaReference(List<Receipt> receiptReferences)
+    public static SignatureItem AddReferenciaSignature(List<Receipt> receiptReferences)
     {
-        return new SignatureItem
+        var invoice = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptReferences[0].Response.ftReceiptIdentification);
+        if (invoice.documentType == "CM")
         {
-            Caption = $"",
-            Data = $"Referencia: Proforma {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-        };
+            return new SignatureItem
+            {
+                Caption = $"",
+                Data = $"Referencia: Consulta de mesa {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+            };
+        }
+        else if (invoice.documentType == "PF")
+        {
+            return new SignatureItem
+            {
+                Caption = $"",
+                Data = $"Referencia: Proforma {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+            };
+        }
+        else
+        {
+            return new SignatureItem
+            {
+                Caption = $"",
+                Data = $"Referencia: {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+            };
+        }
     }
 
     public static SignatureItem AddReferenceSignature(List<Receipt> receiptReferences)

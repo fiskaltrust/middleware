@@ -308,4 +308,9 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked(string series, long number) =>
         $"EEEE_A handwritten receipt with series '{series}' and number '{number}' has already been linked. Each handwritten receipt series and number combination can only be used once.";
+
+    /// <summary>
+    /// Error message for training mode not being enabled for this queue
+    /// </summary>
+    public const string EEEE_TrainingModeNotSupported = "EEEE_Training mode is not enabled for this queue.";
 }

@@ -100,6 +100,17 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
         }
 
+        if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+        {
+            var rule = PortugalValidationRules.TrainingModeNotSupported;
+            yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_TrainingModeNotSupported,
+                   rule.Code,
+                   rule.Field
+               ));
+            yield break;
+        }
+
         foreach (var result in cbUserValidations.Validate_cbUser_Structure(_receiptRequest))
         {
             yield return result;

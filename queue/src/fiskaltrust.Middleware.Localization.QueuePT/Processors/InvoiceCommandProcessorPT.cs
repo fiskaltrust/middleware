@@ -59,7 +59,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
                 var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
-                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenciaSignature(receiptReferences));
             }
         }
 

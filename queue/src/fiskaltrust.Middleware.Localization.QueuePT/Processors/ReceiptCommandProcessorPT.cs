@@ -64,7 +64,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
                 List<Receipt> receiptReferences = response.ReceiptResponse.GetPreviousReceiptReference();
-                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenciaSignature(receiptReferences));
             }
         }
 
