@@ -191,6 +191,47 @@ public class FullScenarios : AbstractScenarioTests
     }
 
     [Fact]
+    public async Task HandwrittenReceiptWithNumberZero_ShouldReturnError()
+    {
+        var handwrittenReceipt = """
+            {
+              "cbReceiptReference": "handwritten-test-zero",
+              "cbReceiptMoment": "2022-01-14T00:00:00Z",
+              "cbChargeItems": [
+                {
+                  "Quantity": 1,
+                  "Description": "Manual document TEST/0 - Product item",
+                  "Amount": 50,
+                  "VATRate": 23,
+                  "ftChargeItemCase": 5788286605450018835
+                }
+              ],
+              "cbPayItems": [
+                {
+                  "Description": "Numerario",
+                  "Amount": 50,
+                  "ftPayItemCase": 5788286605450018817
+                }
+              ],
+              "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+              "ftReceiptCase": {{ftReceiptCase}},
+              "ftReceiptCaseData": {
+                "PT": {
+                  "Series": "TEST",
+                  "Number": 0
+                }
+              },
+              "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var result = await ProcessReceiptAsync(handwrittenReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT").WithFlag(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.HandWritten));
+        var response = result.response;
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain("EEEE_When using Handwritten flag, ftReceiptCaseData.PT.Series and ftReceiptCaseData.PT.Number are mandatory, and Number must be greater than or equal to 1.");
+    }
+
+    [Fact]
     public async Task RunScenario()
     {
         using var scope = new AssertionScope();

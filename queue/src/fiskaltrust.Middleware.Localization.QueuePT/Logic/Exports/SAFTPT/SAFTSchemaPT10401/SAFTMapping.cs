@@ -601,14 +601,21 @@ public class SaftExporter
 
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
             {
-                var handwrittenPortugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
-                invoice.DocumentStatus.InvoiceStatusDate = handwrittenPortugalTime;
-                invoice.SystemEntryDate = handwrittenPortugalTime;
+                // For recovered manual documents:
+                // - InvoiceDate must reflect the original manual document date (cbReceiptMoment)
+                // - SystemEntryDate and status date must reflect system entry time (ftReceiptMoment)
+                var handwrittenInvoiceDate = PortugalTimeHelper.ConvertToPortugalTime(receiptRequest.cbReceiptMoment);
+                var handwrittenSystemEntryDate = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+
+                invoice.InvoiceDate = handwrittenInvoiceDate;
+                invoice.DocumentStatus.InvoiceStatusDate = handwrittenSystemEntryDate;
+                invoice.SystemEntryDate = handwrittenSystemEntryDate;
             }
 
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
             {
-                invoice.HashControl = invoice.HashControl + "-" + PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification).documentType + "M " + data.PT.Series + "/" + data.PT.Number!.ToString()!.PadLeft(4, '0');
+                var documentType = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification).documentType;
+                invoice.HashControl = $"{invoice.HashControl}-{documentType} M {data.PT.Series}/{data.PT.Number!.Value}";
             }
             //if (lines.Any(x => x.SettlementAmount.HasValue))
             //{

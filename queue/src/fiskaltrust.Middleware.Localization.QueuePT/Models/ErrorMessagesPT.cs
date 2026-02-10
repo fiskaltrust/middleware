@@ -268,9 +268,9 @@ public static class ErrorMessagesPT
 
     public const string EEEE_HandwrittenReceiptOnlyForInvoices = "EEEE_Handwritten receipts are only supported for Invoice document types (InvoiceUnknown, InvoiceB2C, InvoiceB2B, InvoiceB2G).";
 
-    public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
+    public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "EEEE_When using Handwritten flag, ftReceiptCaseData.PT.Series and ftReceiptCaseData.PT.Number are mandatory, and Number must be greater than or equal to 1.";
 
-    public const string EEEE_HandwrittenReceiptsSeriesInvalidCharacters = "EEEE_Handwritten Handwritten receipt series contains invalid characters.";
+    public const string EEEE_HandwrittenReceiptsSeriesInvalidCharacters = "EEEE_Handwritten receipt series contains invalid characters.";
 
     public static string EEEE_PaymentTransferRequiresAccountReceivableItem = "EEEE_PaymentTransfer pay items require at least one accounts receivable charge item in the receipt.";
 

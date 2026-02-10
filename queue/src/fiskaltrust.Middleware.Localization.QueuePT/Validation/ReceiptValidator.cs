@@ -142,7 +142,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
             }
 
-            if (!_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) || data is null || data.PT is null || data.PT.Series is null || !data.PT.Number.HasValue)
+            if (!_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) ||
+                data is null ||
+                data.PT is null ||
+                string.IsNullOrWhiteSpace(data.PT.Series) ||
+                !data.PT.Number.HasValue ||
+                data.PT.Number.Value < 1)
             {
                 var rule = PortugalValidationRules.HandwrittenReceiptSeriesAndNumberMandatory;
                 yield return ValidationResult.Failed(new ValidationError(
