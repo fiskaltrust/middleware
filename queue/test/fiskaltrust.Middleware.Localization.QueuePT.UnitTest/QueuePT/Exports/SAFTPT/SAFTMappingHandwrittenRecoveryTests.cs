@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
@@ -87,7 +87,7 @@ public class SAFTMappingHandwrittenRecoveryTests
 
         var invoice = auditFile.SourceDocuments.SalesInvoices.Invoice.Should().ContainSingle().Subject;
         invoice.DocumentStatus.SourceBilling.Should().Be("M");
-        invoice.HashControl.Should().Be("1-FTM A/105");
+        invoice.HashControl.Should().Be("1-FTM A/0105");
         invoice.InvoiceDate.Should().Be(manualDocumentDate);
         invoice.SystemEntryDate.Should().Be(systemEntryDate);
     }

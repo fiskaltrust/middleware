@@ -615,7 +615,8 @@ public class SaftExporter
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
             {
                 var documentType = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification).documentType;
-                invoice.HashControl = $"{invoice.HashControl}-{documentType}M {data.PT.Series}/{data.PT.Number!.Value}";
+                var manualNumber = data.PT.Number!.Value.ToString().PadLeft(4, '0');
+                invoice.HashControl = $"{invoice.HashControl}-{documentType}M {data.PT.Series}/{manualNumber}";
             }
             //if (lines.Any(x => x.SettlementAmount.HasValue))
             //{

@@ -1438,6 +1438,9 @@ public class FullScenarios : AbstractScenarioTests
         var (receipt_28_Request, receipt_28_Response) = await ProcessReceiptAsync(receipt_28);
         receipt_28_Response.ftState.State().Should().Be(State.Success);
         receipt_28_Response.ftReceiptIdentification.Should().Contain("#FT ");
+        receipt_28_Response.ftSignatures.Should().Contain(s =>
+            s.ftSignatureType.IsType(SignatureTypePT.PTAdditional) &&
+            s.Data == "Cópia do documento original - FTM F/0023");
 
         // T28_2 Simulate the integration of 2 manual documents according to point 2.4 of Dispatch No. 8632/2014 of July 3 of the Director General of the Tax and Customs Authority where the 1st document belongs to series F with No. 23 from 14-01-2022 and the 2nd belongs to series D with No. 3 from 12-01-2022 and corresponding PDF. (Note that, according to point 2.4.2, a new document of the same type must be created that collects all elements of the manual document issued, meaning that all elements are free entry, for example: usual denomination, quantity, price, tax value, total tax and document, etc.)
         var receipt_28_2 = """
@@ -1475,6 +1478,9 @@ public class FullScenarios : AbstractScenarioTests
         var (receipt_28_2_Request, receipt_28_2_Response) = await ProcessReceiptAsync(receipt_28_2);
         receipt_28_2_Response.ftState.State().Should().Be(State.Success);
         receipt_28_2_Response.ftReceiptIdentification.Should().Contain("#FT ");
+        receipt_28_2_Response.ftSignatures.Should().Contain(s =>
+            s.ftSignatureType.IsType(SignatureTypePT.PTAdditional) &&
+            s.Data == "Cópia do documento original - FTM D/0003");
 
         // T29 is not supported
         // T30 is not supported
