@@ -27,7 +27,7 @@ public class StaticNumeratorStorage
             {
                 return numeratorStorage.HandWrittenFSSeries;
             }
-            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2B0x1002) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2G0x1003) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceUnknown0x1000))
             {
                 return numeratorStorage.HandWrittenFTSeries;
             }
