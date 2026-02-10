@@ -22,10 +22,115 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
     [Fact]
     public async Task ProForma_ShouldContain_DocumentoNaoServeFatura_Signature()
     {
-        // Arrange
+        // Arrange - Working documents must not have payment items
         var proFormaReceipt = """
             {
                 "cbReceiptReference": "proforma-doc-signature-001",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 50,
+                        "Description": "Test Product",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [],
+                "cbUser": "Test User"
+            }
+            """;
+
+        // Act
+        var (request, response) = await ProcessReceiptAsync(proFormaReceipt, (long) ((ReceiptCase) 0x0007).WithCountry("PT"));
+
+        // Assert
+        response.ftState.State().Should().Be(State.Success, because: "ProForma receipt should succeed. Errors: " + string.Join(", ", response.ftSignatures?.Select(s => s.Data) ?? []));
+        
+        var documentoNaoSignature = response.ftSignatures.FirstOrDefault(s => s.Data.Contains(DocumentoNaoServeFatura));
+        documentoNaoSignature.Should().NotBeNull($"ProForma (PF) working document should contain the signature '{DocumentoNaoServeFatura}'");
+    }
+
+
+    [Fact]
+    public async Task TableCheck_ShouldContain_DocumentoNaoServeFatura_Signature()
+    {
+        // Arrange - Working documents must not have payment items
+        var tableCheckReceipt = """
+            {
+                "cbReceiptReference": "tablecheck-doc-signature-001",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 45,
+                        "Description": "Test Product",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [],
+                "cbUser": "Test User"
+            }
+            """;
+
+        // Act
+        var (request, response) = await ProcessReceiptAsync(tableCheckReceipt, (long) ((ReceiptCase) 0x0006).WithCountry("PT"));
+
+        // Assert
+        response.ftState.State().Should().Be(State.Success, because: "Table Check receipt should succeed. Errors: " + string.Join(", ", response.ftSignatures?.Select(s => s.Data) ?? []));
+        
+        var documentoNaoSignature = response.ftSignatures.FirstOrDefault(s => s.Data.Contains(DocumentoNaoServeFatura));
+        documentoNaoSignature.Should().NotBeNull($"Table Check (CM) working document should contain the signature '{DocumentoNaoServeFatura}'");
+    }
+
+    [Fact]
+    public async Task Budget_ShouldContain_DocumentoNaoServeFatura_Signature()
+    {
+        // Budget is a sub-case of ProForma (0x0007) with flag 0x0000_0002_0000_0000
+        // Arrange - Working documents must not have payment items
+        var budgetReceipt = """
+            {
+                "cbReceiptReference": "budget-doc-signature-001",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 75,
+                        "Description": "Test Product",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [],
+                "cbUser": "Test User"
+            }
+            """;
+
+        // Act - Budget uses ProForma (0x0007) with Budget flag (0x0000_0002_0000_0000)
+        var budgetReceiptCase = (long) (((ReceiptCase) 0x0007).WithCountry("PT") | (ReceiptCase) 0x0000_0002_0000_0000);
+        var (request, response) = await ProcessReceiptAsync(budgetReceipt, budgetReceiptCase);
+
+        // Assert
+        response.ftState.State().Should().Be(State.Success, because: "Budget (OR) receipt should succeed. Errors: " + string.Join(", ", response.ftSignatures?.Select(s => s.Data) ?? []));
+        
+        var documentoNaoSignature = response.ftSignatures.FirstOrDefault(s => s.Data.Contains(DocumentoNaoServeFatura));
+        documentoNaoSignature.Should().NotBeNull($"Budget (OR) working document should contain the signature '{DocumentoNaoServeFatura}'");
+    }
+
+    [Fact]
+    public async Task ProForma_WithPayItems_ShouldFail()
+    {
+        // Arrange - Working documents must not have payment items
+        var proFormaReceipt = """
+            {
+                "cbReceiptReference": "proforma-with-pay-001",
                 "cbReceiptMoment": "{{$isoTimestamp}}",
                 "ftCashBoxID": "{{cashboxid}}",
                 "ftReceiptCase": {{ftReceiptCase}},
@@ -53,19 +158,17 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         var (request, response) = await ProcessReceiptAsync(proFormaReceipt, (long) ((ReceiptCase) 0x0007).WithCountry("PT"));
 
         // Assert
-        response.ftState.State().Should().Be(State.Success, because: "ProForma receipt should succeed. Errors: " + string.Join(", ", response.ftSignatures?.Select(s => s.Data) ?? []));
-        
-        var documentoNaoSignature = response.ftSignatures.FirstOrDefault(s => s.Data.Contains(DocumentoNaoServeFatura));
-        documentoNaoSignature.Should().NotBeNull($"ProForma (PF) working document should contain the signature '{DocumentoNaoServeFatura}'");
+        response.ftState.State().Should().Be(State.Error, because: "ProForma with payment items should fail");
+        response.ftSignatures.Should().Contain(s => s.Data.Contains("EEEE_WorkingDocumentPayItemsNotAllowed"));
     }
 
     [Fact]
-    public async Task TableCheck_ShouldContain_DocumentoNaoServeFatura_Signature()
+    public async Task TableCheck_WithPayItems_ShouldFail()
     {
-        // Arrange
+        // Arrange - Working documents must not have payment items
         var tableCheckReceipt = """
             {
-                "cbReceiptReference": "tablecheck-doc-signature-001",
+                "cbReceiptReference": "tablecheck-with-pay-001",
                 "cbReceiptMoment": "{{$isoTimestamp}}",
                 "ftCashBoxID": "{{cashboxid}}",
                 "ftReceiptCase": {{ftReceiptCase}},
@@ -93,20 +196,18 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         var (request, response) = await ProcessReceiptAsync(tableCheckReceipt, (long) ((ReceiptCase) 0x0006).WithCountry("PT"));
 
         // Assert
-        response.ftState.State().Should().Be(State.Success, because: "Table Check receipt should succeed. Errors: " + string.Join(", ", response.ftSignatures?.Select(s => s.Data) ?? []));
-        
-        var documentoNaoSignature = response.ftSignatures.FirstOrDefault(s => s.Data.Contains(DocumentoNaoServeFatura));
-        documentoNaoSignature.Should().NotBeNull($"Table Check (CM) working document should contain the signature '{DocumentoNaoServeFatura}'");
+        response.ftState.State().Should().Be(State.Error, because: "Table Check with payment items should fail");
+        response.ftSignatures.Should().Contain(s => s.Data.Contains("EEEE_WorkingDocumentPayItemsNotAllowed"));
     }
 
     [Fact]
-    public async Task Budget_ShouldContain_DocumentoNaoServeFatura_Signature()
+    public async Task Budget_WithPayItems_ShouldFail()
     {
         // Budget is a sub-case of ProForma (0x0007) with flag 0x0000_0002_0000_0000
-        // Arrange
+        // Arrange - Working documents must not have payment items
         var budgetReceipt = """
             {
-                "cbReceiptReference": "budget-doc-signature-001",
+                "cbReceiptReference": "budget-with-pay-001",
                 "cbReceiptMoment": "{{$isoTimestamp}}",
                 "ftCashBoxID": "{{cashboxid}}",
                 "ftReceiptCase": {{ftReceiptCase}},
@@ -135,10 +236,8 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         var (request, response) = await ProcessReceiptAsync(budgetReceipt, budgetReceiptCase);
 
         // Assert
-        response.ftState.State().Should().Be(State.Success, because: "Budget (OR) receipt should succeed. Errors: " + string.Join(", ", response.ftSignatures?.Select(s => s.Data) ?? []));
-        
-        var documentoNaoSignature = response.ftSignatures.FirstOrDefault(s => s.Data.Contains(DocumentoNaoServeFatura));
-        documentoNaoSignature.Should().NotBeNull($"Budget (OR) working document should contain the signature '{DocumentoNaoServeFatura}'");
+        response.ftState.State().Should().Be(State.Error, because: "Budget with payment items should fail");
+        response.ftSignatures.Should().Contain(s => s.Data.Contains("EEEE_WorkingDocumentPayItemsNotAllowed"));
     }
 
     #endregion
@@ -148,7 +247,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
     [Fact]
     public async Task ProForma_ToInvoice_ShouldContainReferenceSignature()
     {
-        // Step 1: Create a ProForma receipt
+        // Step 1: Create a ProForma receipt - Working documents must not have payment items
         var proFormaReceipt = """
             {
                 "cbReceiptReference": "proforma-ref-001",
@@ -164,13 +263,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
                         "ftChargeItemCase": 5788286605450018835
                     }
                 ],
-                "cbPayItems": [
-                    {
-                        "Amount": 50,
-                        "Description": "Cash",
-                        "ftPayItemCase": 5788286605450018817
-                    }
-                ],
+                "cbPayItems": [],
                 "cbUser": "Test User"
             }
             """;
@@ -215,10 +308,11 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         referenceSignature!.Data.Should().Contain("PF", "Reference should mention the ProForma document type");
     }
 
+
     [Fact]
     public async Task ProForma_ToPosReceipt_ShouldContainReferenceSignature()
     {
-        // Step 1: Create a ProForma receipt
+        // Step 1: Create a ProForma receipt - Working documents must not have payment items
         var proFormaReceipt = """
             {
                 "cbReceiptReference": "proforma-ref-002",
@@ -234,13 +328,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
                         "ftChargeItemCase": 5788286605450018835
                     }
                 ],
-                "cbPayItems": [
-                    {
-                        "Amount": 30,
-                        "Description": "Cash",
-                        "ftPayItemCase": 5788286605450018817
-                    }
-                ],
+                "cbPayItems": [],
                 "cbUser": "Test User"
             }
             """;
@@ -285,6 +373,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
         referenceSignature!.Data.Should().Contain("PF", "Reference should mention the ProForma document type");
     }
 
+
     #endregion
 
     #region Table Check (CM) Scenarios
@@ -292,7 +381,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
     [Fact]
     public async Task TableCheck_ToInvoice_ShouldContainReferenceSignature()
     {
-        // Step 1: Create a Table Check receipt
+        // Step 1: Create a Table Check receipt - Working documents must not have payment items
         var tableCheckReceipt = """
             {
                 "cbReceiptReference": "tablecheck-ref-001",
@@ -308,13 +397,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
                         "ftChargeItemCase": 5788286605450018835
                     }
                 ],
-                "cbPayItems": [
-                    {
-                        "Amount": 45,
-                        "Description": "Cash",
-                        "ftPayItemCase": 5788286605450018817
-                    }
-                ],
+                "cbPayItems": [],
                 "cbUser": "Test User"
             }
             """;
@@ -362,7 +445,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
     [Fact]
     public async Task TableCheck_ToPosReceipt_ShouldContainReferenceSignature()
     {
-        // Step 1: Create a Table Check receipt
+        // Step 1: Create a Table Check receipt - Working documents must not have payment items
         var tableCheckReceipt = """
             {
                 "cbReceiptReference": "tablecheck-ref-002",
@@ -378,13 +461,7 @@ public class WorkingDocumentReferenceScenarios : AbstractScenarioTests
                         "ftChargeItemCase": 5788286605450018835
                     }
                 ],
-                "cbPayItems": [
-                    {
-                        "Amount": 25,
-                        "Description": "Cash",
-                        "ftPayItemCase": 5788286605450018817
-                    }
-                ],
+                "cbPayItems": [],
                 "cbUser": "Test User"
             }
             """;

@@ -136,6 +136,19 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        // Validate that working documents do not have payment items
+        if (request.ReceiptRequest.cbPayItems is not null && request.ReceiptRequest.cbPayItems.Count > 0)
+        {
+            var rule = PortugalValidationRules.WorkingDocumentPayItemsNotAllowed;
+            var validationResult = ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_WorkingDocumentPayItemsNotAllowed,
+                   rule.Code,
+                   rule.Field
+               ));
+            request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
             var receiptReference = request.ReceiptResponse.GetRequiredPreviousReceiptReference().First();
@@ -171,6 +184,19 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
+        // Validate that working documents do not have payment items
+        if (request.ReceiptRequest.cbPayItems is not null && request.ReceiptRequest.cbPayItems.Count > 0)
+        {
+            var rule = PortugalValidationRules.WorkingDocumentPayItemsNotAllowed;
+            var validationResult = ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_WorkingDocumentPayItemsNotAllowed,
+                   rule.Code,
+                   rule.Field
+               ));
+            request.ReceiptResponse.SetReceiptResponseError($"Validation error [{validationResult.Errors[0].Code}]: {validationResult.Errors[0].Message} (Field: {validationResult.Errors[0].Field}, Index: {validationResult.Errors[0].ItemIndex})");
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(Models.Cases.ReceiptCaseFlags.HasTransportInformation))
         {
             var rule = PortugalValidationRules.TransportationIsNotSupported;

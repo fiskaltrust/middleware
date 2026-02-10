@@ -203,6 +203,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition TrainingModeNotSupported =
         new("EEEE_TrainingModeNotSupported", "Training mode is not enabled for this queue.", PortugalValidationFields.ReceiptCaseFlags);
 
+    public static readonly ValidationRuleDefinition WorkingDocumentPayItemsNotAllowed =
+        new("EEEE_WorkingDocumentPayItemsNotAllowed", "Working documents (ProForma, Table Check, Budget) must not contain payment items.", PortugalValidationFields.PayItems);
+
     public static readonly IReadOnlyList<ValidationRuleDefinition> All = new[]
     {
         ReceiptNotBalanced,
@@ -256,7 +259,8 @@ public static class PortugalValidationRules
         PayItemsMissingForRefund,
         TransportationIsNotSupported,
         HandwrittenReceiptSeriesNumberAlreadyLinked,
-        TrainingModeNotSupported
+        TrainingModeNotSupported,
+        WorkingDocumentPayItemsNotAllowed
     };
 
 

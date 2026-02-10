@@ -303,6 +303,7 @@ public static class ErrorMessagesPT
     public static string EEEE_PaymentTransferExceedsRemainingAmount(string receiptReference, decimal paymentAmount, decimal remainingAmount, decimal alreadyRefundedAmount) =>
         $"EEEE_Payment transfer amount ({paymentAmount:F2}€) exceeds the remaining amount ({remainingAmount:F2}€) for invoice '{receiptReference}'. Already refunded: {alreadyRefundedAmount:F2}€.";
 
+
     /// <summary>
     /// Error message for handwritten receipt with duplicate series and number
     /// </summary>
@@ -313,4 +314,9 @@ public static class ErrorMessagesPT
     /// Error message for training mode not being enabled for this queue
     /// </summary>
     public const string EEEE_TrainingModeNotSupported = "EEEE_Training mode is not enabled for this queue.";
+
+    /// <summary>
+    /// Error message for working documents containing payment items
+    /// </summary>
+    public const string EEEE_WorkingDocumentPayItemsNotAllowed = "EEEE_Working documents (ProForma, Table Check, Budget) must not contain payment items. These documents do not support defining payments.";
 }
