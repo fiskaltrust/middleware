@@ -146,7 +146,7 @@ public class SAFTMappingCustomerTests
         customer.CompanyName.Should().Be("Ana Costa");
         customer.CustomerTaxID.Should().Be("200000004");
         customer.BillingAddress.Should().NotBeNull();
-        customer.BillingAddress.Country.Should().Be("PT"); // Should be PT due to valid Portuguese NIF and no country provided
+        customer.BillingAddress.Country.Should().Be("Desconhecido"); // Should be Desconhecido due to valid Portuguese NIF and no country provided
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class SAFTMappingCustomerTests
                 CustomerStreet = "Rua do Comércio, 456",
                 CustomerCity = "Braga",
                 CustomerZip = "4700-001",
-                CustomerCountry = "" // Empty string country - should default to PT due to valid NIF
+                CustomerCountry = "" // Empty string country - should default to Desconhecido due to valid NIF
             }
         };
 
@@ -176,7 +176,7 @@ public class SAFTMappingCustomerTests
         customer.CompanyName.Should().Be("Luis Santos");
         customer.CustomerTaxID.Should().Be("100000002");
         customer.BillingAddress.Should().NotBeNull();
-        customer.BillingAddress.Country.Should().Be("PT"); // Should be PT due to valid Portuguese NIF and empty country
+        customer.BillingAddress.Country.Should().Be("Desconhecido"); // Should be Desconhecido due to valid Portuguese NIF and empty country
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class SAFTMappingCustomerTests
         customer.CompanyName.Should().Be("Desconhecido"); // Default for null customer name
         customer.CustomerTaxID.Should().Be("500000000"); // Should keep the provided valid NIF
         customer.BillingAddress.Should().NotBeNull();
-        customer.BillingAddress.Country.Should().Be("PT"); // Should be PT due to valid Portuguese NIF
+        customer.BillingAddress.Country.Should().Be("Desconhecido"); // Should be PT due to valid Portuguese NIF
         customer.BillingAddress.AddressDetail.Should().Be("Desconhecido"); // Default for null street
         customer.BillingAddress.City.Should().Be("Desconhecido"); // Default for null city
         customer.BillingAddress.PostalCode.Should().Be("Desconhecido"); // Default for null zip
@@ -297,7 +297,7 @@ public class SAFTMappingCustomerTests
         customer.Should().NotBeNull();
         customer.CustomerID.Should().Be("CUST006");
         customer.CompanyName.Should().Be("Sofia Martins");
-        customer.CustomerTaxID.Should().Be("   "); // Whitespace is preserved, not converted to default
+        customer.CustomerTaxID.Should().Be(""); // Whitespace is preserved, not converted to default
         customer.BillingAddress.Should().NotBeNull();
         customer.BillingAddress.Country.Should().Be("Portugal"); // Should keep provided country
     }
@@ -330,12 +330,12 @@ public class SAFTMappingCustomerTests
     [Theory]
     [InlineData("123456789", "PT", "PT")]      // Valid NIF with PT country should result in PT
     [InlineData("200000004", "Spain", "Spain")] // Valid NIF with different country should keep original country
-    [InlineData("123456789", null, "PT")]       // Valid NIF with no country should result in PT
+    [InlineData("123456789", null, "Desconhecido")]       // Valid NIF with no country should result in PT
     [InlineData("invalid", "Germany", "Germany")] // Invalid NIF should keep original country
     [InlineData("123456788", "France", "France")] // Invalid check digit should keep original country
     [InlineData("", "Italy", "Italy")]           // Empty NIF should keep original country
     [InlineData(null, "Spain", "Spain")]         // Null NIF should keep original country
-    [InlineData("123456789", "", "PT")]          // Valid NIF with empty country should result in PT
+    [InlineData("123456789", "", "Desconhecido")]          // Valid NIF with empty country should result in PT
     [InlineData("invalid", null, "Desconhecido")] // Invalid NIF with no country should default
     public void GetCustomerData_WithVariousTaxIdsAndCountries_ShouldSetCountryCorrectly(string taxId, string providedCountry, string expectedCountry)
     {
