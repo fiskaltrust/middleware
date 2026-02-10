@@ -640,7 +640,42 @@ public class SaftExporter
         };
     }
 
-    public Line GetLine(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
+    public static decimal GetUnitPrice(ReceiptRequest receiptRequest, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
+    {
+        var chargeItemData = chargeItem.chargeItem;
+        var grossAmount = chargeItemData.Amount;
+        var vatAmount = chargeItem.chargeItem.GetVATAmount();
+        var netAmount = grossAmount - vatAmount;
+
+        var grossAmountModifiers = chargeItem.modifiers.Sum(x => x.Amount);
+        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.GetVATAmount());
+        var netAmountModifiers = grossAmountModifiers - vatAmountModifiers;
+        if (netAmountModifiers < 0)
+        {
+            netAmountModifiers *= -1;
+        }
+        var netLinePrice = netAmount - netAmountModifiers;
+        var quantity = chargeItemData.Quantity;
+        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        {
+            netLinePrice *= -1;
+            quantity *= -1;
+        }
+
+        var unitPrice = 0m;
+        if (chargeItemData.Amount == 0 || quantity == 0)
+        {
+            unitPrice = 0m;
+        }
+        else
+        {
+            // calculate 5 digits after digit
+            unitPrice = netLinePrice / quantity;
+        }
+        return unitPrice;
+    }
+
+    public static Line GetLine(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
     {
         try
         {
@@ -690,7 +725,7 @@ public class SaftExporter
                 Quantity = Helpers.CreateMonetaryValue(quantity),
                 UnitOfMeasure = chargeItemData.Unit ?? "Unit",
                 UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
-                TaxPointDate = chargeItemData.Moment ?? receiptResponse.ftReceiptMoment,
+                TaxPointDate = receiptResponse.ftReceiptMoment,
                 Description = chargeItemData.Description?.Trim(),
                 Tax = tax
             };

@@ -367,42 +367,46 @@ public class RefundValidator
             return value;
         }
 
-        foreach(var refundItem in refundRequest.cbChargeItems)
+        var refundChargeItems = refundRequest.GetGroupedChargeItemsModifyPositionsIfNotSet();
+        var originalChargeItems = originalRequest.GetGroupedChargeItemsModifyPositionsIfNotSet();
+
+        foreach (var refundItem in refundChargeItems)
         {
-            var refundItemIdentifier = SaftExporter.GenerateUniqueProductIdentifier(refundItem);
-            var existingRefundItems = existingRefunds.SelectMany(x => x.cbChargeItems).Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == refundItemIdentifier);
-            var originalItems = originalRequest.cbChargeItems.Where(x => SaftExporter.GenerateUniqueProductIdentifier(x) == refundItemIdentifier).ToList();
+            var refundItemIdentifier = SaftExporter.GenerateUniqueProductIdentifier(refundItem.chargeItem);
+            var existingRefundItems = existingRefunds.SelectMany(x => x.GetGroupedChargeItemsModifyPositionsIfNotSet()).Where(x => SaftExporter.GenerateUniqueProductIdentifier(x.chargeItem) == refundItemIdentifier);
+            var originalItems = originalChargeItems.Where(x => SaftExporter.GenerateUniqueProductIdentifier(x.chargeItem) == refundItemIdentifier).ToList();
 
             if (originalItems.Count == 0)
             {
-                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"No matching item found for product identifier '{refundItem.Description?.Trim()}'");
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"No matching item found for product identifier '{refundItem.chargeItem.Description?.Trim()}'");
             }
 
-            var originalTotalQuantity = originalItems.Sum(x => x.Quantity);
-            var existingRefundedQuantity = existingRefundItems.Sum(x => x.Quantity);
-            if (Math.Abs(refundItem.Quantity) + existingRefundedQuantity > originalTotalQuantity + 0.001m)
+            var refundItemSingleItemPrice = fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(refundRequest, refundItem));
+            var originalItemSingleItemPrice = fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.Helpers.CreateMonetaryValue(SaftExporter.GetUnitPrice(originalRequest, originalItems.First()));
+            if(Math.Abs(refundItemSingleItemPrice - originalItemSingleItemPrice) > 0.01m)
             {
-                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "Quantity Exceeded");
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, $"Unit price of refund item ({refundItemSingleItemPrice}) is different from the original unit price ({originalItemSingleItemPrice}).");
             }
 
-            var originalTotalAmount = originalItems.Sum(x => x.Amount);
-            var existingRefundedAmount = existingRefundItems.Sum(x => x.Amount);
-            if (Math.Abs(refundItem.Amount) + existingRefundedAmount > originalTotalAmount + 0.01m)
-            {
-                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "Amount Exceeded");
-            }
-
-            var referenceItem = originalItems.First();
-            if (Math.Abs(referenceItem.VATRate - refundItem.VATRate) > 0.001m)
+            var referenceItem = originalItems.First().chargeItem;
+            if (Math.Abs(referenceItem.VATRate - refundItem.chargeItem.VATRate) > 0.001m)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "VATRate");
             }
 
             var originalCase = ((long) referenceItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
-            var refundCase = ((long) refundItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+            var refundCase = ((long) refundItem.chargeItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
             if (originalCase != refundCase)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "ChargeItemCase");
+            }
+
+            var totalAmountAlreadyRefunded = existingRefundItems.Sum(x => Math.Abs(x.chargeItem.Amount));
+            var totalAmountToBeRefunded = totalAmountAlreadyRefunded + Math.Abs(refundItem.chargeItem.Amount);
+            var totalAmountAvailableForRefund = Math.Abs(referenceItem.Amount);
+            if(totalAmountToBeRefunded - totalAmountAvailableForRefund > 0.01m)
+            {
+                return $"[EEEE_PartialRefund] Total amount to be refunded for item '{refundItem.chargeItem.Description?.Trim()}' exceeds original amount. Original amount: {referenceItem.Amount}, already refunded: {totalAmountAlreadyRefunded}, to be refunded with this request: {Math.Abs(refundItem.chargeItem.Amount)}.";
             }
         }
         return null; // Validation passed
