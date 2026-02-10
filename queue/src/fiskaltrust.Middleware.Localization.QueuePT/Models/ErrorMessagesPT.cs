@@ -290,7 +290,7 @@ public static class ErrorMessagesPT
     public static string EEEE_PayItemsMissing = "EEEE_PayItems must not be null.";
 
     public static string EEEE_InvalidCountryCodeInChargeItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
-    public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
+    public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in pay items for Portugal. Only 'PT' is accepted as valid country code in pay items.";
 
     public static string EEEE_CustomerCountryRequiredForTaxId = "EEEE_Customer country is required when CustomerVATId is provided.";
 
