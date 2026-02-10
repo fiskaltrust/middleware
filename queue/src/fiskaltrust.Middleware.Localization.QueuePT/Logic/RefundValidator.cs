@@ -171,7 +171,7 @@ public class RefundValidator
             ? ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, field)
             : ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, field);
 
-        if (Math.Abs(originalItem.Quantity - Math.Abs(refundItem.Quantity)) > 0.001m)
+        if (Math.Abs(Math.Abs(originalItem.Quantity) - Math.Abs(refundItem.Quantity)) > 0.001m)
         {
             return (flowControl: false, value: Mismatch("Quantity"));
         }
@@ -181,9 +181,20 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("Description"));
         }
 
-        if (Math.Abs(originalItem.Amount - Math.Abs(refundItem.Amount)) > 0.01m)
+        if (Math.Abs(Math.Abs(originalItem.Amount) - Math.Abs(refundItem.Amount)) > 0.01m)
         {
             return (flowControl: false, value: Mismatch("Amount"));
+        }
+
+        // Full refunds must use opposite signs compared to the original item.
+        if (!isPartial)
+        {
+            var quantitySignMismatch = !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
+            var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
+            if (quantitySignMismatch || amountSignMismatch)
+            {
+                return (flowControl: false, value: Mismatch(BuildSignMismatchField("ChargeItem", quantitySignMismatch, amountSignMismatch)));
+            }
         }
 
         if (Math.Abs(originalItem.VATRate - refundItem.VATRate) > 0.001m)
@@ -203,7 +214,7 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("cbCustomer"));
         }
 
-        if (Math.Abs(originalItem.GetVATAmount() - Math.Abs(refundItem.GetVATAmount())) > 0.001m)
+        if (Math.Abs(Math.Abs(originalItem.GetVATAmount()) - Math.Abs(refundItem.GetVATAmount())) > 0.001m)
         {
             return (flowControl: false, value: Mismatch("VATAmount"));
         }
@@ -249,12 +260,12 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("Unit"));
         }
 
-        if (Math.Abs(originalItem.UnitQuantity ?? 0.0m - Math.Abs(refundItem.UnitQuantity ?? 0.0m)) > 0.001m)
+        if (Math.Abs(Math.Abs(originalItem.UnitQuantity ?? 0.0m) - Math.Abs(refundItem.UnitQuantity ?? 0.0m)) > 0.001m)
         {
             return (flowControl: false, value: Mismatch("UnitQuantity"));
         }
 
-        if (Math.Abs(originalItem.UnitPrice ?? 0.0m - Math.Abs(refundItem.UnitPrice ?? 0.0m)) > 0.001m)
+        if (Math.Abs(Math.Abs(originalItem.UnitPrice ?? 0.0m) - Math.Abs(refundItem.UnitPrice ?? 0.0m)) > 0.001m)
         {
             return (flowControl: false, value: Mismatch("UnitPrice"));
         }
@@ -278,7 +289,7 @@ public class RefundValidator
             ? ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, field)
             : ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, field);
 
-        if (Math.Abs(originalItem.Quantity - Math.Abs(refundItem.Quantity)) > 0.001m)
+        if (Math.Abs(Math.Abs(originalItem.Quantity) - Math.Abs(refundItem.Quantity)) > 0.001m)
         {
             return (flowControl: false, value: Mismatch("Quantity"));
         }
@@ -288,9 +299,19 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("Description"));
         }
 
-        if (Math.Abs(originalItem.Amount - Math.Abs(refundItem.Amount)) > 0.01m)
+        if (Math.Abs(Math.Abs(originalItem.Amount) - Math.Abs(refundItem.Amount)) > 0.01m)
         {
             return (flowControl: false, value: Mismatch("Amount"));
+        }
+
+        if (!isPartial)
+        {
+            var quantitySignMismatch = !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
+            var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
+            if (quantitySignMismatch || amountSignMismatch)
+            {
+                return (flowControl: false, value: Mismatch(BuildSignMismatchField("PayItem", quantitySignMismatch, amountSignMismatch)));
+            }
         }
 
         var originalCase = ((long) originalItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
@@ -408,6 +429,15 @@ public class RefundValidator
             {
                 return $"[EEEE_PartialRefund] Total amount to be refunded for item '{refundItem.chargeItem.Description?.Trim()}' exceeds original amount. Original amount: {referenceItem.Amount}, already refunded: {totalAmountAlreadyRefunded}, to be refunded with this request: {Math.Abs(refundItem.chargeItem.Amount)}.";
             }
+
+            var quantitySignMismatch = !AreOppositeWithTolerance(referenceItem.Quantity, refundItem.chargeItem.Quantity, 0.001m);
+            var amountSignMismatch = !AreOppositeWithTolerance(referenceItem.Amount, refundItem.chargeItem.Amount, 0.01m);
+            if (quantitySignMismatch || amountSignMismatch)
+            {
+                return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(
+                    originalReceiptReference,
+                    BuildSignMismatchField("ChargeItem", quantitySignMismatch, amountSignMismatch));
+            }
         }
 
         // For payments we only sum up the payments because we only care about total amount not quantity and nothign else. Accountsreceivable can only be refunded with accountsreceivable
@@ -442,6 +472,36 @@ public class RefundValidator
             return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "PayItem OtherPayments Exceeded");
         }
         return null; // Validation passed
+    }
+
+    private static bool AreOppositeWithTolerance(decimal original, decimal refundValue, decimal tolerance)
+    {
+        if (Math.Abs(original) <= tolerance)
+        {
+            return Math.Abs(refundValue) <= tolerance;
+        }
+
+        if (Math.Abs(refundValue) <= tolerance)
+        {
+            return false;
+        }
+
+        return Math.Sign(original) != Math.Sign(refundValue);
+    }
+
+    private static string BuildSignMismatchField(string itemType, bool quantityMismatch, bool amountMismatch)
+    {
+        if (quantityMismatch && amountMismatch)
+        {
+            return $"{itemType}.QuantitySign, {itemType}.AmountSign";
+        }
+
+        if (quantityMismatch)
+        {
+            return $"{itemType}.QuantitySign";
+        }
+
+        return $"{itemType}.AmountSign";
     }
 
     /// <summary>

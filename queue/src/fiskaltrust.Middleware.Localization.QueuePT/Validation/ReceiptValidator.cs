@@ -661,6 +661,17 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
         var originalRequest = receiptReferences[0].Request;
 
+        var hasExistingVoid = await _receiptReferenceProvider.HasExistingVoidAsync(previousReceiptRef);
+        if (hasExistingVoid)
+        {
+            var rule = PortugalValidationRules.PreviousReceiptIsVoided;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_HasBeenVoidedAlready(previousReceiptRef),
+                rule.Code,
+                rule.Field
+            ));
+        }
+
         var hasExistingRefund = await _receiptReferenceProvider.HasExistingRefundAsync(previousReceiptRef);
         if (hasExistingRefund)
         {

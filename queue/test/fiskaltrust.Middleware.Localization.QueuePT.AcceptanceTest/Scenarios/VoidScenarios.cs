@@ -344,4 +344,179 @@ public class VoidScenarios : AbstractScenarioTests
     }
 
     #endregion
+
+    #region Scenario 7: Void items must have opposite signs
+
+    [Theory]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    public async Task Scenario7_VoidWithSameSignAmountsAndQuantities_ShouldFail(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
+
+        var invalidVoidReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Amount": 20,
+                        "Description": "Test",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 20,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (_, invalidVoidResponse) = await ProcessReceiptAsync(invalidVoidReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+        invalidVoidResponse.ftState.State().Should().Be(State.Error);
+        invalidVoidResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VoidItemsMismatch(originalResponse.cbReceiptReference));
+    }
+
+    #endregion
+
+    #region Scenario 8: Void invoice with discount should succeed
+
+    [Theory]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+    public async Task Scenario8_VoidInvoiceWithDiscount_ShouldSucceed(ReceiptCase receiptCase)
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 10,
+                        "Description": "Line item 1",
+                        "Amount": 120,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833
+                    },
+                    {
+                        "Quantity": 1,
+                        "Description": "Discount Line item 1",
+                        "Amount": -20,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450280977
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "Cash",
+                        "Amount": 100,
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success);
+
+        var voidReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": -10,
+                        "Description": "Line item 1",
+                        "Amount": -120,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833
+                    },
+                    {
+                        "Quantity": -1,
+                        "Description": "Discount Line item 1",
+                        "Amount": 20,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450280977
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Cash",
+                        "Amount": -100,
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (_, voidResponse) = await ProcessReceiptAsync(voidReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+        voidResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, voidResponse.ftSignatures.Select(x => x.Data)));
+    }
+
+    #endregion
 }

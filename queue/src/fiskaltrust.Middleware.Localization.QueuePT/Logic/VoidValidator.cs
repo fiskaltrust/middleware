@@ -54,6 +54,14 @@ public class VoidValidator
             var refundItem = voidRequest.cbChargeItems[i];
             var originalItem = originalRequest.cbChargeItems[i];
 
+            // For void operations, quantity and amount must be the exact opposite sign of the original.
+            var quantitySignMismatch = !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
+            var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
+            if (quantitySignMismatch || amountSignMismatch)
+            {
+                return $"{ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference)} (Field: {BuildSignMismatchField("ChargeItem", quantitySignMismatch, amountSignMismatch)})";
+            }
+
             (flowControl, value) = RefundValidator.CompareChargeItems(originalReceiptReference, refundItem, originalItem);
             if (!flowControl)
             {
@@ -66,6 +74,13 @@ public class VoidValidator
             var refundItem = voidRequest.cbPayItems[i];
             var originalItem = originalRequest.cbPayItems[i];
 
+            var quantitySignMismatch = !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
+            var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
+            if (quantitySignMismatch || amountSignMismatch)
+            {
+                return $"{ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference)} (Field: {BuildSignMismatchField("PayItem", quantitySignMismatch, amountSignMismatch)})";
+            }
+
             (flowControl, value) = RefundValidator.ComparePayItems(originalReceiptReference, refundItem, originalItem);
             if (!flowControl)
             {
@@ -73,6 +88,31 @@ public class VoidValidator
             }
         }
         return null; // Validation passed
+    }
+
+    private static bool AreOppositeWithTolerance(decimal original, decimal candidate, decimal tolerance)
+    {
+        if (Math.Abs(original) <= tolerance)
+        {
+            return Math.Abs(candidate) <= tolerance;
+        }
+
+        return Math.Abs(original + candidate) <= tolerance;
+    }
+
+    private static string BuildSignMismatchField(string itemType, bool quantityMismatch, bool amountMismatch)
+    {
+        if (quantityMismatch && amountMismatch)
+        {
+            return $"{itemType}.QuantitySign, {itemType}.AmountSign";
+        }
+
+        if (quantityMismatch)
+        {
+            return $"{itemType}.QuantitySign";
+        }
+
+        return $"{itemType}.AmountSign";
     }
 
     /// <summary>

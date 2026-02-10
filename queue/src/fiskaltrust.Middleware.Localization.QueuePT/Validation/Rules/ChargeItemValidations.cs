@@ -357,11 +357,16 @@ public static class ChargeItemValidations
             yield break;
         }
 
+        var isCorrespondingOperation =
+            request.ftReceiptCase.IsFlag(ifPOS.v2.Cases.ReceiptCaseFlags.Refund) ||
+            request.ftReceiptCase.IsFlag(ifPOS.v2.Cases.ReceiptCaseFlags.Void) ||
+            request.IsPartialRefundReceipt();
+
         for (var i = 0; i < request.cbChargeItems.Count; i++)
         {
             var chargeItem = request.cbChargeItems[i];
 
-            if (chargeItem.IsDiscountOrExtra() && chargeItem.Amount > 0)
+            if (chargeItem.IsDiscountOrExtra() && chargeItem.Amount > 0 && !isCorrespondingOperation)
             {
                 var rule = PortugalValidationRules.PositiveDiscountNotAllowed;
                 yield return ValidationResult.Failed(new ValidationError(
