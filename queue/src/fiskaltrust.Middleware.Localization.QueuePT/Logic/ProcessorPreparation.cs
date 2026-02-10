@@ -16,7 +16,6 @@ public abstract class ProcessorPreparation
     }
 
     protected abstract AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; }
-    protected virtual bool IsTrainingModeEnabled => false;
 
     public async Task<ProcessCommandResponse> WithPreparations(ProcessCommandRequest request, Func<Task<ProcessCommandResponse>> process)
     {
@@ -31,7 +30,7 @@ public abstract class ProcessorPreparation
 
         // Perform all validations using the new validator (returns one ValidationResult per error)
         // Now includes receipt moment order validation with the series
-        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _readOnlyQueueItemRepository, IsTrainingModeEnabled);
+        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _readOnlyQueueItemRepository);
         var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
         {
             IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),

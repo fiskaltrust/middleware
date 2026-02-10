@@ -87,7 +87,7 @@ public class SAFTMappingHandwrittenRecoveryTests
 
         var invoice = auditFile.SourceDocuments.SalesInvoices.Invoice.Should().ContainSingle().Subject;
         invoice.DocumentStatus.SourceBilling.Should().Be("M");
-        invoice.HashControl.Should().Be("1-FT M A/105");
+        invoice.HashControl.Should().Be("1-FTM A/105");
         invoice.InvoiceDate.Should().Be(manualDocumentDate);
         invoice.SystemEntryDate.Should().Be(systemEntryDate);
     }
