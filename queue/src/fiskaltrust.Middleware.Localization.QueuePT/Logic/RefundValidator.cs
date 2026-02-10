@@ -381,7 +381,7 @@ public class RefundValidator
         ReceiptRequest originalRequest,
         string originalReceiptReference)
     {
-        var existingRefunds = await LoadExistingRefundsAsync(refundRequest);
+        var existingRefunds = await LoadExistingPartialRefundsAsync(refundRequest);
         var (flowControl, value) = CompareReceiptRequest(originalReceiptReference, refundRequest, originalRequest, isPartial: true);
         if (!flowControl)
         {
@@ -507,14 +507,14 @@ public class RefundValidator
     /// <summary>
     /// Loads all existing refunds for a given receipt reference
     /// </summary>
-    private async Task<List<ReceiptRequest>> LoadExistingRefundsAsync(ReceiptRequest refundRequest)
+    private async Task<List<ReceiptRequest>> LoadExistingPartialRefundsAsync(ReceiptRequest refundRequest)
     {
         var queueItemRepository = await _readOnlyQueueItemRepository.Value;
         var existingRefunds = new List<ReceiptRequest>();
 
         await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
         {
-            if (string.IsNullOrEmpty(queueItem.request))
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
             {
                 continue;
             }
@@ -522,9 +522,15 @@ public class RefundValidator
             try
             {
                 var request = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                var response = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+
+                if (response == null || !response.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
                 if (request != null && request.cbPreviousReceiptReference != null && request.cbReceiptReference != refundRequest.cbReceiptReference)
                 {
-                    var isFullRefund = request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund);
                     var previousRef = request.cbPreviousReceiptReference;
                     if (request.IsPartialRefundReceipt() && previousRef.SingleValue == refundRequest.cbPreviousReceiptReference.SingleValue)
                     {
