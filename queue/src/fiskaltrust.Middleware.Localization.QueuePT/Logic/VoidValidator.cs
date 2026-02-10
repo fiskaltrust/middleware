@@ -74,12 +74,10 @@ public class VoidValidator
             var refundItem = voidRequest.cbPayItems[i];
             var originalItem = originalRequest.cbPayItems[i];
 
-            var quantitySignMismatch = !ShouldIgnoreQuantityValidation(originalItem.Quantity, refundItem.Quantity, 0.001m) &&
-                                       !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
             var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
-            if (quantitySignMismatch || amountSignMismatch)
+            if (amountSignMismatch)
             {
-                return $"{ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference)} (Field: {BuildSignMismatchField("PayItem", quantitySignMismatch, amountSignMismatch)})";
+                return $"{ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference)} (Field: {BuildSignMismatchField("PayItem", false, amountSignMismatch)})";
             }
 
             (flowControl, value) = RefundValidator.ComparePayItems(originalReceiptReference, refundItem, originalItem);
@@ -100,9 +98,6 @@ public class VoidValidator
 
         return Math.Abs(original + candidate) <= tolerance;
     }
-
-    private static bool ShouldIgnoreQuantityValidation(decimal original, decimal candidate, decimal tolerance)
-        => Math.Abs(original) <= tolerance && Math.Abs(candidate) <= tolerance;
 
     private static string BuildSignMismatchField(string itemType, bool quantityMismatch, bool amountMismatch)
     {

@@ -736,4 +736,71 @@ public class VoidScenarios : AbstractScenarioTests
     }
 
     #endregion
+
+    #region Scenario 11: Void with provided sample payloads should succeed
+
+    [Fact]
+    public async Task Scenario11_VoidWithProvidedPayloads_ShouldSucceed()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "5154d79e-f7e2-4aba-b480-9832ef54b445",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Description": "Line item 1",
+                        "Amount": 100,
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "Numerario",
+                        "Amount": 100,
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "ftReceiptCase": 5788286605450018817,
+                "cbUser": "AT1"
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt);
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
+
+        var voidReceipt = """
+            {
+                "cbReceiptReference": "bd3acc24-5871-4ea8-a94a-564ecd31ed5c",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "cbPreviousReceiptReference": "5154d79e-f7e2-4aba-b480-9832ef54b445",
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -100,
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "Numerario",
+                        "Amount": -100,
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "ftReceiptCase": 5788286605450280961,
+                "cbUser": "AT2"
+            }
+            """;
+
+        var (_, voidResponse) = await ProcessReceiptAsync(voidReceipt);
+        voidResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, voidResponse.ftSignatures.Select(x => x.Data)));
+    }
+
+    #endregion
 }
