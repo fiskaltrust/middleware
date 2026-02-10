@@ -179,6 +179,12 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition CannotVoidInvoicedDocument =
         new("EEEE_CannotVoidInvoicedDocument", "A invoiced document cannot be voided.", PortugalValidationFields.PreviousReceiptReference);
 
+    public static readonly ValidationRuleDefinition CannotVoidRefundedDocument =
+        new("EEEE_CannotVoidRefundedDocument", "A refunded document cannot be voided.", PortugalValidationFields.PreviousReceiptReference);
+
+    public static readonly ValidationRuleDefinition CannotVoidPartiallyRefundedDocument =
+        new("EEEE_CannotVoidPartiallyRefundedDocument", "A partially refunded document cannot be voided.", PortugalValidationFields.PreviousReceiptReference);
+
     public static readonly ValidationRuleDefinition MixedRefundItemsNotAllowed =
         new("EEEE_MixedRefundItemsNotAllowed", "Partial refunds must not mix refund and non-refund items.");
 
@@ -257,6 +263,9 @@ public static class PortugalValidationRules
         RefundAlreadyExists,
         WorkingDocumentAlreadyInvoiced,
         VoidAlreadyExists,
+        CannotVoidInvoicedDocument,
+        CannotVoidRefundedDocument,
+        CannotVoidPartiallyRefundedDocument,
         MixedRefundItemsNotAllowed,
         MixedRefundPayItemsNotAllowed,
         PayItemsMissingForRefund,

@@ -581,7 +581,8 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
-        var documentStatus = await _documentStatusProvider.GetDocumentStatusStateAsync((receiptRequest, receiptResponse));
+        var originalReceipt = receiptReferences[0];
+        var documentStatus = await _documentStatusProvider.GetDocumentStatusStateAsync((originalReceipt.Request, originalReceipt.Response));
         if (documentStatus.Status == DocumentStatus.Voided)
         {
             receiptResponse.SetReceiptResponseError(ErrorMessagesPT.EEEE_VoidAlreadyExists(previousReceiptRef));
@@ -601,6 +602,26 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                 rule.Code,
                 rule.Field
             ));           
+        }
+
+        if (documentStatus.Status == DocumentStatus.Refunded)
+        {
+            var rule = PortugalValidationRules.CannotVoidRefundedDocument;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_CannotVoidRefundedDocument(previousReceiptRef),
+                rule.Code,
+                rule.Field
+            ));
+        }
+
+        if (documentStatus.Status == DocumentStatus.PartiallyRefunded)
+        {
+            var rule = PortugalValidationRules.CannotVoidPartiallyRefundedDocument;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_CannotVoidPartiallyRefundedDocument(previousReceiptRef),
+                rule.Code,
+                rule.Field
+            ));
         }
 
 

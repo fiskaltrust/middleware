@@ -1765,4 +1765,77 @@ public class PartialRefundScenarios : AbstractScenarioTests
     }
 
     #endregion
+
+    #region Scenario 20: Partial refund should succeed when PayItem quantity is not set
+
+    [Fact]
+    public async Task Scenario20_PartialRefundWithPayItemQuantityNotSet_ShouldSucceed()
+    {
+        var originalReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Description": "Line item 1",
+                        "Amount": 20,
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 20,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (_, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success);
+
+        var partialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -10,
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450149907
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": -10,
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450149889
+                    }
+                ],
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+
+        var (_, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        partialRefundResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, partialRefundResponse.ftSignatures.Select(x => x.Data)));
+    }
+
+    #endregion
 }

@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -50,6 +51,15 @@ public class DocumentStatusProvider
         {
             var refundReceipt = references.First(x => x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund));
             return new DocumentStatusState(DocumentStatus.Refunded, refundReceipt, references);
+        }
+
+        if (references.Any(x => x.receiptRequest.IsPartialRefundReceipt()))
+        {
+            var partialRefundReceipt = references
+                .Where(x => x.receiptRequest.IsPartialRefundReceipt())
+                .OrderBy(x => x.receiptResponse.ftReceiptMoment)
+                .Last();
+            return new DocumentStatusState(DocumentStatus.PartiallyRefunded, partialRefundReceipt, references);
         }
 
         if (PTMappings.ExtractDocumentTypeAndUniqueIdentification(lastReference.receiptResponse.ftReceiptIdentification).documentType == "FT" || PTMappings.ExtractDocumentTypeAndUniqueIdentification(lastReference.receiptResponse.ftReceiptIdentification).documentType == "FS")

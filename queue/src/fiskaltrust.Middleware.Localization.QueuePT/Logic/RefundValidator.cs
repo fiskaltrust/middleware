@@ -309,7 +309,8 @@ public class RefundValidator
             ? ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, field)
             : ErrorMessagesPT.EEEE_FullRefundItemsMismatch(originalReceiptReference, field);
 
-        if (Math.Abs(Math.Abs(originalItem.Quantity) - Math.Abs(refundItem.Quantity)) > 0.001m)
+        if (!ShouldIgnoreQuantityValidation(originalItem.Quantity, refundItem.Quantity, 0.001m) &&
+            Math.Abs(Math.Abs(originalItem.Quantity) - Math.Abs(refundItem.Quantity)) > 0.001m)
         {
             return (flowControl: false, value: Mismatch("Quantity"));
         }
@@ -326,7 +327,8 @@ public class RefundValidator
 
         if (!isPartial)
         {
-            var quantitySignMismatch = !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
+            var quantitySignMismatch = !ShouldIgnoreQuantityValidation(originalItem.Quantity, refundItem.Quantity, 0.001m) &&
+                                       !AreOppositeWithTolerance(originalItem.Quantity, refundItem.Quantity, 0.001m);
             var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
             if (quantitySignMismatch || amountSignMismatch)
             {
@@ -508,6 +510,9 @@ public class RefundValidator
 
         return Math.Sign(original) != Math.Sign(refundValue);
     }
+
+    private static bool ShouldIgnoreQuantityValidation(decimal original, decimal refundValue, decimal tolerance)
+        => Math.Abs(original) <= tolerance && Math.Abs(refundValue) <= tolerance;
 
     private static string BuildSignMismatchField(string itemType, bool quantityMismatch, bool amountMismatch)
     {
