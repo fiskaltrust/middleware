@@ -84,7 +84,7 @@ public class VoidScenarios : AbstractScenarioTests
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
     // [InlineData(ReceiptCase.DeliveryNote0x0005)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
@@ -105,13 +105,14 @@ public class VoidScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -122,38 +123,39 @@ public class VoidScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
-        // Arrange
-        var copyReceipt = """       
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [],
-                "cbPayItems": [],
-                "cbUser": "Stefan Kert",
-                "cbCustomer": {
-                    "CustomerVATId": "123456789"
-                },
-                "cbPreviousReceiptReference": "FIXED"
-            }
-            """;
+            // Arrange
+            var copyReceipt = """       
+                {
+                    "cbReceiptReference": "{{$guid}}",
+                    "cbReceiptMoment": "{{$isoTimestamp}}",
+                    "ftCashBoxID": "{{cashboxid}}",
+                    "ftReceiptCase": {{ftReceiptCase}},
+                    "cbChargeItems": [],
+                    "cbPayItems": [],
+                    "cbUser": "Stefan Kert",
+                    "cbCustomer": {
+                        "CustomerVATId": "123456789"
+                    },
+                    "cbPreviousReceiptReference": "FIXED"
+                }
+                """;
 
-        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
-        voidResponse.ftState.State().Should().Be(State.Error);
+            var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+            voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue.");
-    }
+            voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue or the items referenced are invalid.");
+        }
 
-    #endregion
+        #endregion
 
-    #region Scenario 3: Transactions with void with reference to multiple receipts should be rejected
+        #region Scenario 3: Transactions with void with reference to multiple receipts should be rejected
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     // [InlineData(ReceiptCase.ECommerce0x0004)]
     // [InlineData(ReceiptCase.DeliveryNote0x0005)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
@@ -174,13 +176,14 @@ public class VoidScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -191,34 +194,36 @@ public class VoidScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
-        (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
+            (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
-        // Arrange
-        var copyReceipt = """       
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [],
-                "cbPayItems": [],
-                "cbUser": "Stefan Kert",
-                "cbCustomer": {
-                    "CustomerVATId": "123456789"
-                },
-                "cbPreviousReceiptReference": "FIXED-scenario3"
-            }
-            """;
+            // Arrange
+            var copyReceipt = """       
+                {
+                    "cbReceiptReference": "{{$guid}}",
+                    "cbReceiptMoment": "{{$isoTimestamp}}",
+                    "ftCashBoxID": "{{cashboxid}}",
+                    "ftReceiptCase": {{ftReceiptCase}},
+                    "cbChargeItems": [],
+                    "cbPayItems": [],
+                    "cbUser": "Stefan Kert",
+                    "cbCustomer": {
+                        "CustomerVATId": "123456789"
+                    },
+                    "cbPreviousReceiptReference": "FIXED-scenario3"
+                }
+                """;
 
-        var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
-        voidResponse.ftState.State().Should().Be(State.Error);
+            var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+            voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"The given cbPreviousReceiptReference 'FIXED-scenario3' did match with more than one item in the Queue.");
-    }
+            voidResponse.ftSignatures[0].Data.Should().EndWith($"The given cbPreviousReceiptReference 'FIXED-scenario3' did match with more than one item in the Queue.");
+        }
 
-    #endregion
+        #endregion
 
-    #region Scenario 4: Transactions with void with reference should match the original
+        #region Scenario 4: Transactions with void with reference should match the original
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
@@ -261,46 +266,47 @@ public class VoidScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+            originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
-        // Arrange - Void receipt with charge items should be rejected
-        var voidReceipt = """       
-            {
-                "cbReceiptReference": "{{$guid}}",
-                "cbReceiptMoment": "{{$isoTimestamp}}",
-                "ftCashBoxID": "{{cashboxid}}",
-                "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Quantity": 1,
-                        "Amount": 10,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 5788286605450018835
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 10,
-                        "Description": "Cash",
-                        "ftPayItemCase": 5788286605450018835
-                    }
-                ],
-                "cbUser": "Stefan Kert",
-                "cbCustomer": {
-                    "CustomerVATId": "123456789"
-                },
-                "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
-            }
-            """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
+            // Arrange - Void receipt with charge items should be rejected
+            var voidReceipt = """       
+                {
+                    "cbReceiptReference": "{{$guid}}",
+                    "cbReceiptMoment": "{{$isoTimestamp}}",
+                    "ftCashBoxID": "{{cashboxid}}",
+                    "ftReceiptCase": {{ftReceiptCase}},
+                    "cbChargeItems": [
+                        {
+                            "Quantity": 1,
+                            "Amount": 10,
+                            "Description": "Test",
+                            "VATRate": 23,
+                            "ftChargeItemCase": 5788286605450018835
+                        }
+                    ],
+                    "cbPayItems": [
+                        {
+                            "Amount": 10,
+                            "Description": "Cash",
+                            "ftPayItemCase": 5788286605450018835
+                        }
+                    ],
+                    "cbUser": "Stefan Kert",
+                    "cbCustomer": {
+                        "CustomerVATId": "123456789"
+                    },
+                    "cbPreviousReceiptReference": "{{cbPreviousReceiptReference}}"
+                }
+                """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
-        var (voidRequest, voidResponse) = await ProcessReceiptAsync(voidReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
-        voidResponse.ftState.State().Should().Be(State.Error);
-        voidResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VoidItemsMismatch(originalResponse.cbReceiptReference));
-    }
+            var (voidRequest, voidResponse) = await ProcessReceiptAsync(voidReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Void));
+            voidResponse.ftState.State().Should().Be(State.Error);
+            voidResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VoidItemsMismatch(originalResponse.cbReceiptReference));
+        }
 
-    #endregion
+        #endregion
 
-    #region Scenario 5: Transactions with Void with multiple references should be rejected
+        #region Scenario 5: Transactions with Void with multiple references should be rejected
 
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]

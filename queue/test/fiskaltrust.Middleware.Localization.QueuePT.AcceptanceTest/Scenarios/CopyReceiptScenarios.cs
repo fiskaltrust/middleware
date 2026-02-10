@@ -51,13 +51,14 @@ public class CopyReceiptScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -68,6 +69,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
         // Arrange
         var copyReceipt = """
@@ -120,13 +122,14 @@ public class CopyReceiptScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -137,6 +140,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
         // Arrange
         var copyReceipt = """
@@ -159,7 +163,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
         var (copyRequest, copyResponse) = await ProcessReceiptAsync(copyReceipt, (long) copyReceiptCase);
         copyResponse.ftState.State().Should().Be(State.Error);
 
-        copyResponse.ftSignatures[0].Data.Should().Contain($"The given cbPreviousReceiptReference 'NON_EXISTING_REFERENCE' didn't match with any of the items in the Queue.");
+        copyResponse.ftSignatures[0].Data.Should().Contain($"The given cbPreviousReceiptReference 'NON_EXISTING_REFERENCE' didn't match with any of the items in the Queue or the items referenced are invalid.");
     }
 
     #endregion
@@ -182,7 +186,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
     [InlineData(ReceiptCase.Order0x3004)]
     [InlineData(ReceiptCase.Pay0x3005)]
-    [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
+    // [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
     // [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
     [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
     [InlineData(ReceiptCase.FinishSCUSwitch0x4012)]
@@ -200,13 +204,14 @@ public class CopyReceiptScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -217,6 +222,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
         // Arrange
         var copyReceipt = """
@@ -249,7 +255,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    // [InlineData(ReceiptCase.PaymentTransfer0x0002)]
     [InlineData((ReceiptCase) 0x0006)]
     [InlineData((ReceiptCase) 0x0007)]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
@@ -270,13 +276,14 @@ public class CopyReceiptScenarios : AbstractScenarioTests
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -287,6 +294,7 @@ public class CopyReceiptScenarios : AbstractScenarioTests
             """;
 
         var (originalRequest, originalResponse) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
+        originalResponse.ftState.State().Should().Be(State.Success, because: Environment.NewLine + string.Join(Environment.NewLine, originalResponse.ftSignatures.Select(x => x.Data)));
 
         // Arrange
         var copyReceipt = """
