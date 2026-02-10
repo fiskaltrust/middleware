@@ -25,6 +25,11 @@ public class StaticNumeratorStorage
         {
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2B0x1002) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2G0x1003) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceUnknown0x1000))
             {
+                if(numeratorStorage.HandWrittenFTSeries == null)
+                {
+                    throw new NotSupportedException("HandWritten series is not correctly configured.");
+                }
+
                 return numeratorStorage.HandWrittenFTSeries;
             }
             else
@@ -85,7 +90,10 @@ public class StaticNumeratorStorage
         ReloadSeries(numeratorStorage.PaymentSeries, queueItems);
         ReloadSeries(numeratorStorage.BudgetSeries, queueItems);
         ReloadSeries(numeratorStorage.TableChecqueSeries, queueItems);
-        ReloadSeries(numeratorStorage.HandWrittenFTSeries, queueItems);
+        if (numeratorStorage.HandWrittenFTSeries != null)
+        {
+            ReloadSeries(numeratorStorage.HandWrittenFTSeries, queueItems);
+        }
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
