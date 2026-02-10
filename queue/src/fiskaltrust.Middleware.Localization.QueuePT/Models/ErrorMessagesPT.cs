@@ -302,4 +302,10 @@ public static class ErrorMessagesPT
     /// </summary>
     public static string EEEE_PaymentTransferExceedsRemainingAmount(string receiptReference, decimal paymentAmount, decimal remainingAmount, decimal alreadyRefundedAmount) =>
         $"EEEE_Payment transfer amount ({paymentAmount:F2}€) exceeds the remaining amount ({remainingAmount:F2}€) for invoice '{receiptReference}'. Already refunded: {alreadyRefundedAmount:F2}€.";
+
+    /// <summary>
+    /// Error message for handwritten receipt with duplicate series and number
+    /// </summary>
+    public static string EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked(string series, long number) =>
+        $"EEEE_A handwritten receipt with series '{series}' and number '{number}' has already been linked. Each handwritten receipt series and number combination can only be used once.";
 }

@@ -44,7 +44,8 @@ public class AbstractScenarioTests
                 {
                     ftQueueId = _queueId,
                     ftCashBoxId = _cashBoxId,
-                    StartMoment = DateTime.UtcNow
+                    StartMoment = DateTime.UtcNow,
+                    CountryCode = "PT"
                 }
             })
             },

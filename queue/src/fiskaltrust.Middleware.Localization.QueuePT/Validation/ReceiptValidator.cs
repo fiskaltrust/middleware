@@ -71,6 +71,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                    ));
                 }
             }
+
+            // Validate that handwritten receipt series+number is not already linked
+            await foreach (var result in ReceiptRequestValidations.ValidateHandwrittenReceiptSeriesNumberNotAlreadyLinkedAsync(_receiptRequest, readOnlyQueueItemRepository))
+            {
+                yield return result;
+            }
         }
 
 

@@ -32,6 +32,163 @@ public class FullScenarios : AbstractScenarioTests
     {
 
     }
+    [Fact]
+    public async Task RunPartialRefund()
+    {
+        using var scope = new AssertionScope();
+        // 5_1 A simplified invoice (Article 40 of the CIVA) for a customer who has provided their VAT number
+        var receipt_5_1 = """
+            {
+                "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+                "cbReceiptReference": "ab863596-dbf3-453a-960d-38a805de2047",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": 10,
+                        "Description": "Line item 1",
+                        "Amount": 10,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833 
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "On Credit",
+                        "Amount": 10,
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """;
+
+        var (receipt_5_1_Request, receipt_5_1_Response) = await ProcessReceiptAsync(receipt_5_1);
+        receipt_5_1_Response.ftState.State().Should().Be(State.Success);
+
+        var partialRefund = """
+            {
+                "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -30,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450149905
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Numerario",
+                        "Amount": -30,
+                        "ftPayItemCase": 5788286605450149889
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                },
+                "cbPreviousReceiptReference": "ab863596-dbf3-453a-960d-38a805de2047"
+            }
+            """;
+
+        var (receipt_5_2_Request, receipt_5_2_Response) = await ProcessReceiptAsync(partialRefund);
+        receipt_5_2_Response.ftState.State().Should().Be(State.Success);
+    }
+
+    [Fact]
+    public async Task DuplicateHandwrittenReceiptSeriesNumber_ShouldReturnError()
+    {
+        using var scope = new AssertionScope();
+
+        // First handwritten receipt with series "TEST" and number 1
+        var handwrittenReceipt1 = """
+            {
+              "cbReceiptReference": "handwritten-test-1",
+              "cbReceiptMoment": "2022-01-14T00:00:00Z",
+              "cbChargeItems": [
+                {
+                  "Quantity": 1,
+                  "Description": "Manual document TEST/1 - Product item",
+                  "Amount": 50,
+                  "VATRate": 23,
+                  "ftChargeItemCase": 5788286605450018835
+                }
+              ],
+              "cbPayItems": [
+                {
+                  "Description": "Numerario",
+                  "Amount": 50,
+                  "ftPayItemCase": 5788286605450018817
+                }
+              ],
+              "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCaseData": {
+                "PT": {
+                  "Series": "TEST",
+                  "Number": 1
+                }
+              },
+              "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var (receipt1Request, receipt1Response) = await ProcessReceiptAsync(handwrittenReceipt1);
+        receipt1Response.ftState.State().Should().Be(State.Success, "First handwritten receipt should succeed");
+
+        // Second handwritten receipt with the SAME series "TEST" and number 1 - should fail
+        var handwrittenReceipt2 = """
+            {
+              "cbReceiptReference": "handwritten-test-2",
+              "cbReceiptMoment": "2022-01-15T00:00:00Z",
+              "cbChargeItems": [
+                {
+                  "Quantity": 2,
+                  "Description": "Manual document TEST/1 - Another product",
+                  "Amount": 75,
+                  "VATRate": 23,
+                  "ftChargeItemCase": 5788286605450018835
+                }
+              ],
+              "cbPayItems": [
+                {
+                  "Description": "Numerario",
+                  "Amount": 75,
+                  "ftPayItemCase": 5788286605450018817
+                }
+              ],
+              "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCaseData": {
+                "PT": {
+                  "Series": "TEST",
+                  "Number": 1
+                }
+              },
+              "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var (receipt2Request, receipt2Response) = await ProcessReceiptAsync(handwrittenReceipt2);
+        receipt2Response.ftState.State().Should().Be(State.Error, "Second handwritten receipt with same series and number should fail");
+    }
 
     [Fact]
     public async Task RunScenario()

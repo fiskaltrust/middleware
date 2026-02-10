@@ -197,6 +197,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition PaymentTransferExceedsRemainingAmount =
         new("EEEE_PaymentTransferExceedsRemainingAmount", "Payment transfer amount exceeds the remaining amount after partial refunds.", PortugalValidationFields.PayItems);
 
+    public static readonly ValidationRuleDefinition HandwrittenReceiptSeriesNumberAlreadyLinked =
+        new("EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked", "A handwritten receipt with the same series and number has already been linked.", PortugalValidationFields.ReceiptCaseData);
+
     public static readonly IReadOnlyList<ValidationRuleDefinition> All = new[]
     {
         ReceiptNotBalanced,
@@ -248,7 +251,8 @@ public static class PortugalValidationRules
         MixedRefundItemsNotAllowed,
         MixedRefundPayItemsNotAllowed,
         PayItemsMissingForRefund,
-        TransportationIsNotSupported
+        TransportationIsNotSupported,
+        HandwrittenReceiptSeriesNumberAlreadyLinked
     };
 
 

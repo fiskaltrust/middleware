@@ -1,7 +1,9 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 
@@ -236,5 +238,95 @@ public class ReceiptRequestValidations
             PayItem payItem => payItem.Position,
             _ => 0
         };
+    }
+
+    /// <summary>
+    /// Validates that a handwritten receipt with the same series and number has not already been linked.
+    /// Returns a single ValidationResult if validation fails.
+    /// </summary>
+    public static async IAsyncEnumerable<ValidationResult> ValidateHandwrittenReceiptSeriesNumberNotAlreadyLinkedAsync(
+        ReceiptRequest request,
+        AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository)
+    {
+        if (!request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            yield break;
+        }
+
+        if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) ||
+            data?.PT?.Series is null ||
+            !data.PT.Number.HasValue)
+        {
+            yield break;
+        }
+
+        var series = data.PT.Series;
+        var number = data.PT.Number.Value;
+
+        var queueItemRepository = await readOnlyQueueItemRepository.Value;
+        var foundDuplicate = false;
+
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            if (CheckForDuplicateHandwrittenReceipt(queueItem, series, number))
+            {
+                foundDuplicate = true;
+                break;
+            }
+        }
+
+        if (foundDuplicate)
+        {
+            var rule = PortugalValidationRules.HandwrittenReceiptSeriesNumberAlreadyLinked;
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked(series, number),
+                rule.Code,
+                rule.Field
+            )
+            .WithContext("Series", series)
+            .WithContext("Number", number));
+        }
+    }
+
+    private static bool CheckForDuplicateHandwrittenReceipt(storage.V0.ftQueueItem queueItem, string series, long number)
+    {
+        try
+        {
+            var existingRequest = System.Text.Json.JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+            var existingResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+
+            if (existingRequest == null || existingResponse == null)
+            {
+                return false;
+            }
+
+            if (!existingResponse.ftState.IsState(State.Success))
+            {
+                return false;
+            }
+
+            if (!existingRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+            {
+                return false;
+            }
+
+            if (!existingRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var existingData) ||
+                existingData?.PT?.Series is null ||
+                !existingData.PT.Number.HasValue)
+            {
+                return false;
+            }
+
+            return existingData.PT.Series == series && existingData.PT.Number.Value == number;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
