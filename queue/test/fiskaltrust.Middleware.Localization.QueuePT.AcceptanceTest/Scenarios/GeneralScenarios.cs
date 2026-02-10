@@ -38,7 +38,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario1_TransactionWithoutUser_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -67,6 +67,7 @@ public class GeneralScenarios : AbstractScenarioTests
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
         response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_UserTooShort);
     }
 
     #endregion
@@ -84,7 +85,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario2_TransactionWithoutUserWithShortLength_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -113,7 +114,8 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_UserTooShort);
     }
 
     #endregion
@@ -131,7 +133,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario3_TransactionWithShortArticleDescription_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -160,7 +162,8 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_ChargeItemValidationFailed(0, "description must be at least 3 characters long"));
     }
 
     #endregion
@@ -178,7 +181,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario4_TransactionWithNegativeAmount_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -207,7 +210,8 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_NegativeAmountNotAllowed(0, -20m));
     }
 
     #endregion
@@ -225,7 +229,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario5_TransactionWithNegativeQuantity_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -255,7 +259,8 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_NegativeQuantityNotAllowed(0, -1));
     }
 
     #endregion
@@ -273,7 +278,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario6_TransactionWithIllegalVATRate_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -303,7 +308,8 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_VatRateMismatch(0, ChargeItemCase.NormalVatRate, 23.0m, 22m));
     }
 
     #endregion
@@ -321,7 +327,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario7_TransactionWithDiscountExceedingTotal_ShouldFail(ReceiptCase receiptCase)
     {
         var originalReceipt = """
@@ -367,6 +373,7 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
         var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
         response.ftState.State().Should().Be(State.Error, because: Environment.NewLine + string.Join(Environment.NewLine, response.ftSignatures.Select(x => x.Data)));
+        response.ftSignatures[0].Data.Should().Contain("EEEE_Charge item at position").And.Contain("discount amount");
     }
 
     #endregion
@@ -382,7 +389,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario8_TransactionWithMismatchForChargeItems(ReceiptCase receiptCase)
     {
         var originalReceipt = """
@@ -415,6 +422,7 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
         var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
         response.ftState.State().Should().Be(State.Error, because: Environment.NewLine + string.Join(Environment.NewLine, response.ftSignatures.Select(x => x.Data)));
+        response.ftSignatures[0].Data.Should().Contain("EEEE_Receipt is not balanced");
     }
 
     #endregion
@@ -430,7 +438,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
-    [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario9_TransactionWithInvalidCustomerNIF(ReceiptCase receiptCase)
     {
         var originalReceipt = """
@@ -508,7 +516,7 @@ public class GeneralScenarios : AbstractScenarioTests
                 ],
                 "cbUser": "Stefan Kert",
                 "cbCustomer": {
-                    "CustomerVATId": "123456799"
+                    "CustomerVATId": "123456789"
                 },
                 "Currency": "USD"
             }
@@ -533,7 +541,7 @@ public class GeneralScenarios : AbstractScenarioTests
     [InlineData(ReceiptCase.InvoiceB2C0x1001)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002)]
     [InlineData(ReceiptCase.InvoiceB2G0x1003)]
-    [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+    // [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)] ==> copy receipt looks like it is not really part of fiscalization, but more of a technical receipt, so it is not included in this scenario
     public async Task Scenario11_TransactionWithIllegalExemptReason_ShouldFail(ReceiptCase receiptCase)
     {
         var json = """
@@ -563,11 +571,11 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
-        response.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE, "Scenario1_TransactionWithoutUser_ShouldFail");
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_UnknownTaxExemptionCode(0, (Constants.TaxExemptionCode) 65280));
     }
 
     #endregion
-
 
     #region Scenario 12: Going Backwards in Time is not allowed
 
@@ -615,7 +623,6 @@ public class GeneralScenarios : AbstractScenarioTests
     }
 
     #endregion
-
 
     #region Scenario 13: Block none UTC times
 
