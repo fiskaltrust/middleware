@@ -9,6 +9,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTests.Factories;
 
@@ -16,17 +17,7 @@ public class PortugalReceiptCalculationsTests
 {
     private static (string documentType, string uniqueIdentification) CallExtractDocumentTypeAndUniqueIdentification(string ftReceiptIdentification)
     {
-        // Use reflection to access the private method
-        var method = typeof(PortugalReceiptCalculations).GetMethod(
-            "ExtractDocumentTypeAndUniqueIdentification",
-            BindingFlags.NonPublic | BindingFlags.Static);
-
-        if (method == null)
-        {
-            throw new InvalidOperationException("Method ExtractDocumentTypeAndUniqueIdentification not found");
-        }
-
-        return ((string, string))method.Invoke(null, new object[] { ftReceiptIdentification })!;
+        return PTMappings.ExtractDocumentTypeAndUniqueIdentification(ftReceiptIdentification);
     }
 
     private static NumberSeries CreateTestNumberSeries(string atcud, string typeCode = "FT", string series = "A")

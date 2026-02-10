@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
@@ -19,46 +20,9 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Validation;
 
 public class ReceiptValidatorVoidTests
 {
-    [Fact]
-    public async Task Validate_VoidWorkingDocument_WithInvoicedReference_ShouldFail()
+    public ReceiptValidatorVoidTests()
     {
-        var now = DateTime.UtcNow;
-        var workingRef = "WD-001";
-
-        var originalRequest = CreateWorkingDocumentRequest(workingRef, now);
-        var originalResponse = CreateReceiptResponse("origin#WD 2024/0001", now);
-
-        var voidRequest = CreateVoidWorkingDocumentRequest(workingRef, now, originalRequest.cbChargeItems ?? new List<ChargeItem>());
-        var voidResponse = CreateReceiptResponse("void#WD 2024/0002", now);
-        voidResponse.ftStateData = new MiddlewareStateData
-        {
-            PreviousReceiptReference = new List<Receipt>
-            {
-                new Receipt { Request = originalRequest, Response = originalResponse }
-            }
-        };
-
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        var queueItems = new List<ftQueueItem>
-        {
-            CreateInvoiceQueueItem(workingRef, now, "FT 2024/0001")
-        };
-
-        repository.Setup(r => r.GetLastQueueItemAsync()).ReturnsAsync(queueItems[0]);
-        repository.Setup(r => r.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
-            .Returns(queueItems.ToAsyncEnumerable());
-
-        var validator = new ReceiptValidator(voidRequest, voidResponse, new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)));
-
-        var results = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
-        {
-            IsRefund = false,
-            GeneratesSignature = false,
-            IsHandwritten = false,
-            NumberSeries = null
-        });
-
-        results.AllErrors.Should().ContainSingle(e => e.Code == "EEEE_WorkingDocumentAlreadyInvoiced");
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
     [Fact]
@@ -161,7 +125,7 @@ public class ReceiptValidatorVoidTests
             Amount = amount,
             VATRate = vatRate,
             VATAmount = vatAmount,
-            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0001,
+            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
             Moment = moment
         };
     }

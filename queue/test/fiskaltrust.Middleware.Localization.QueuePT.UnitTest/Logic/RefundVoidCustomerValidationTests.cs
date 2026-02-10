@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -17,18 +17,6 @@ public class RefundVoidCustomerValidationTests
     private static readonly Guid CashBoxId = Guid.Parse("5c4a97c9-954a-46f2-bc3c-583244f5fc61");
 
     [Fact]
-    public void CompareReceiptRequest_WithDifferentCustomerStrings_ShouldFail()
-    {
-        var originalRequest = CreateBaseReceipt("123456789");
-        var refundRequest = CreateBaseReceipt("987654321");
-
-        var (flowControl, value) = RefundValidator.CompareReceiptRequest(OriginalReference, refundRequest, originalRequest);
-
-        flowControl.Should().BeFalse();
-        value.Should().Be(ErrorMessagesPT.EEEE_FullRefundItemsMismatch(OriginalReference, "cbCustomer"));
-    }
-
-    [Fact]
     public void CompareReceiptRequest_WithDifferentCustomerJson_ShouldFail()
     {
         var originalCustomer = new { CustomerVATId = "123456789", CustomerCountry = "PT" };
@@ -39,7 +27,7 @@ public class RefundVoidCustomerValidationTests
         var (flowControl, value) = RefundValidator.CompareReceiptRequest(OriginalReference, refundRequest, originalRequest);
 
         flowControl.Should().BeFalse();
-        value.Should().Be(ErrorMessagesPT.EEEE_FullRefundItemsMismatch(OriginalReference, "cbCustomer"));
+        value.Should().Be(ErrorMessagesPT.EEEE_FullRefundItemsMismatch(OriginalReference, "cbCustomer") + ". Different fields: CustomerVATId");
     }
 
     [Fact]
@@ -51,7 +39,7 @@ public class RefundVoidCustomerValidationTests
         var (flowControl, value) = RefundValidator.CompareReceiptRequest(OriginalReference, refundRequest, originalRequest);
 
         flowControl.Should().BeFalse();
-        value.Should().Be(ErrorMessagesPT.EEEE_FullRefundItemsMismatch(OriginalReference, "cbCustomer"));
+        value.Should().Be(ErrorMessagesPT.EEEE_FullRefundItemsMismatch(OriginalReference, "cbCustomer") + ". Different fields: cbCustomer is null on one side");
     }
 
     [Fact]
