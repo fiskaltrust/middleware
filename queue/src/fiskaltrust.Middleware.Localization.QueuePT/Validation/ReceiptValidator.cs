@@ -128,6 +128,20 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                ));
             }
 
+            var receiptCase = _receiptRequest.ftReceiptCase.Case();
+            if (receiptCase != ReceiptCase.InvoiceUnknown0x1000 &&
+                receiptCase != ReceiptCase.InvoiceB2C0x1001 &&
+                receiptCase != ReceiptCase.InvoiceB2B0x1002 &&
+                receiptCase != ReceiptCase.InvoiceB2G0x1003)
+            {
+                var rule = PortugalValidationRules.HandwrittenReceiptOnlyForInvoices;
+                yield return ValidationResult.Failed(new ValidationError(
+                   ErrorMessagesPT.EEEE_HandwrittenReceiptOnlyForInvoices,
+                   rule.Code,
+                   rule.Field
+               ));
+            }
+
             if (!_receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) || data is null || data.PT is null || data.PT.Series is null || !data.PT.Number.HasValue)
             {
                 var rule = PortugalValidationRules.HandwrittenReceiptSeriesAndNumberMandatory;

@@ -53,11 +53,6 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
                 "ATCUD": "AAJFJ6K6J5",
                 "Series": "ft2025128b"
               },
-              "HandWrittenFSSeries": {
-                "TypeCode": "FS",
-                "ATCUD": "AAJFJHK6J6",
-                "Series": "ft20250a62"
-              },
               "HandWrittenFTSeries": {
                 "TypeCode": "FT",
                 "ATCUD": "AAJFJHK6J6",

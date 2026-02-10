@@ -152,6 +152,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition HandwrittenReceiptsNotSupported =
         new("EEEE_HandwrittenReceiptsNotSupported", "Handwritten receipts cannot be used with refund/void/partial refund.", PortugalValidationFields.ReceiptCase);
 
+    public static readonly ValidationRuleDefinition HandwrittenReceiptOnlyForInvoices =
+        new("EEEE_HandwrittenReceiptOnlyForInvoices", "Handwritten receipts are only supported for Invoice document types.", PortugalValidationFields.ReceiptCase);
+
     public static readonly ValidationRuleDefinition HandwrittenReceiptSeriesAndNumberMandatory =
         new("EEEE_HandwrittenReceiptSeriesAndNumberMandatory", "Handwritten receipts require Series and Number in ftReceiptCaseData.", PortugalValidationFields.ReceiptCaseData);
 

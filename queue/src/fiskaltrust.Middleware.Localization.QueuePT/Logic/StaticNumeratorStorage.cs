@@ -23,11 +23,7 @@ public class StaticNumeratorStorage
         }
         else if (isHandwritten)
         {
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
-            {
-                return numeratorStorage.HandWrittenFSSeries;
-            }
-            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2B0x1002) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2G0x1003) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceUnknown0x1000))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2B0x1002) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2G0x1003) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceUnknown0x1000))
             {
                 return numeratorStorage.HandWrittenFTSeries;
             }
@@ -89,7 +85,7 @@ public class StaticNumeratorStorage
         ReloadSeries(numeratorStorage.PaymentSeries, queueItems);
         ReloadSeries(numeratorStorage.BudgetSeries, queueItems);
         ReloadSeries(numeratorStorage.TableChecqueSeries, queueItems);
-        ReloadSeries(numeratorStorage.HandWrittenFSSeries, queueItems);
+        ReloadSeries(numeratorStorage.HandWrittenFTSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)

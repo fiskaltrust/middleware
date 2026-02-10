@@ -266,6 +266,8 @@ public static class ErrorMessagesPT
 
     public const string EEEE_HandwrittenReceiptsNotSupported = "EEEE_Handwritten receipts must not be used in combination with void/refund or other connections.";
 
+    public const string EEEE_HandwrittenReceiptOnlyForInvoices = "EEEE_Handwritten receipts are only supported for Invoice document types (InvoiceUnknown, InvoiceB2C, InvoiceB2B, InvoiceB2G).";
+
     public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
 
     public const string EEEE_HandwrittenReceiptsSeriesInvalidCharacters = "EEEE_Handwritten Handwritten receipt series contains invalid characters.";
