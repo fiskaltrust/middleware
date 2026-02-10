@@ -1,37 +1,28 @@
-﻿using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.v2;
-using System.Text.Json;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Contracts.Repositories;
+﻿using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.storage.V0;
+using static fiskaltrust.Middleware.Localization.QueuePT.Logic.ReceiptReferenceProvider;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
 public class ReceiptReferenceProvider
 {
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository;
+
     public ReceiptReferenceProvider(AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository)
     {
         _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
     }
 
-    public async Task<bool> HasExistingPaymentTransferAsync(string cbPreviousReceiptReference)
+    public async Task<bool> HasExistingElementByConditionAsync(string cbPreviousReceiptReference, Func<ReceiptRequest, bool> condition)
     {
         var queueItemRepository = await _readOnlyQueueItemRepository.Value;
-
-        // Unfortunately, there's no direct way to query by cbPreviousReceiptReference,
-        // so we need to check queue items that might reference this receipt.
-        // We use GetQueueItemsForReceiptReferenceAsync which returns items with this cbReceiptReference
-        // but we actually need to check all items to find refunds that reference it via cbPreviousReceiptReference
-
-        // A more efficient approach: check recent items (assuming refunds come after original receipts)
-        var lastItem = await queueItemRepository.GetLastQueueItemAsync();
-        if (lastItem == null)
-        {
-            return false;
-        }
-
-        // Search through queue items to find any refund that references this receipt
         await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
         {
             if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
@@ -43,17 +34,129 @@ public class ReceiptReferenceProvider
             {
                 var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
                 var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-                if (referencedRequest != null && referencedResponse != null &&
-                    referencedRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-                    referencedRequest.cbPreviousReceiptReference != null
-                    && referencedResponse.ftState.IsState(State.Success))
+
+                if (referencedRequest == null || referencedResponse == null)
                 {
-                    // Check if this refund references the receipt we're checking for
-                    var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
-                    if (previousRef == cbPreviousReceiptReference)
-                    {
-                        return true;
-                    }
+                    continue;
+                }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (referencedRequest.cbPreviousReceiptReference == null || referencedRequest.cbPreviousReceiptReference.SingleValue != cbPreviousReceiptReference)
+                {
+                    continue;
+                }
+
+                if (condition(referencedRequest))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                continue;
+            }
+        }
+        return false;
+    }
+
+    public async Task<bool> HasExistingPaymentTransferAsync(string cbPreviousReceiptReference) => await HasExistingElementByConditionAsync(cbPreviousReceiptReference, request => request.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002));
+
+    public async Task<bool> HasExistingRefundAsync(string cbPreviousReceiptReference) => await HasExistingElementByConditionAsync(cbPreviousReceiptReference, request => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund));
+
+    public async Task<bool> HasExistingVoidAsync(string cbPreviousReceiptReference) => await HasExistingElementByConditionAsync(cbPreviousReceiptReference, request => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void));
+
+    /// <summary>
+    /// Gets all partial refunds for a given receipt reference
+    /// </summary>
+    public async Task<List<ReceiptRequest>> GetExistingPartialRefundsAsync(string cbPreviousReceiptReference)
+    {
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+        var partialRefunds = new List<ReceiptRequest>();
+
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            try
+            {
+                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+
+                if (referencedRequest == null || referencedResponse == null)
+                {
+                    continue;
+                }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (referencedRequest.cbPreviousReceiptReference == null || referencedRequest.cbPreviousReceiptReference.SingleValue != cbPreviousReceiptReference)
+                {
+                    continue;
+                }
+
+                if (referencedRequest.IsPartialRefundReceipt())
+                {
+                    partialRefunds.Add(referencedRequest);
+                }
+            }
+            catch
+            {
+                continue;
+            }
+        }
+
+        return partialRefunds;
+    }
+
+    public async Task<bool> HasExistingInvoiceForWorkingDocumentAsync(string cbPreviousReceiptReference)
+    {
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+
+        var lastItem = await queueItemRepository.GetLastQueueItemAsync();
+        if (lastItem == null)
+        {
+            return false;
+        }
+
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            try
+            {
+                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+                if (referencedRequest == null || referencedResponse == null)
+                {
+                    continue;
+                }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (!HasPreviousReceiptReference(referencedRequest, cbPreviousReceiptReference))
+                {
+                    continue;
+                }
+
+                if (IsInvoiceReceipt(referencedResponse))
+                {
+                    return true;
                 }
             }
             catch
@@ -66,23 +169,30 @@ public class ReceiptReferenceProvider
         return false;
     }
 
-    public async Task<bool> HasExistingRefundAsync(string cbPreviousReceiptReference)
+    public async Task<List<ReceiptChargeItemMatch>> GetChargeItemMatchesForPreviousReferenceAsync(
+        string cbPreviousReceiptReference,
+        IEnumerable<ChargeItem> chargeItems)
     {
-        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
-
-        // Unfortunately, there's no direct way to query by cbPreviousReceiptReference,
-        // so we need to check queue items that might reference this receipt.
-        // We use GetQueueItemsForReceiptReferenceAsync which returns items with this cbReceiptReference
-        // but we actually need to check all items to find refunds that reference it via cbPreviousReceiptReference
-
-        // A more efficient approach: check recent items (assuming refunds come after original receipts)
-        var lastItem = await queueItemRepository.GetLastQueueItemAsync();
-        if (lastItem == null)
+        if (string.IsNullOrWhiteSpace(cbPreviousReceiptReference) || chargeItems == null)
         {
-            return false;
+            return [];
         }
 
-        // Search through queue items to find any refund that references this receipt
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+        var results = new List<ReceiptChargeItemMatch>();
+        var descriptionMatches = chargeItems
+            .Select(item => item.Description)
+            .Where(description => !string.IsNullOrWhiteSpace(description))
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (descriptionMatches.Count == 0)
+        {
+            return results;
+        }
+
+        Receipt? referencedReceipt = null;
+
         await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
         {
             if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
@@ -94,78 +204,91 @@ public class ReceiptReferenceProvider
             {
                 var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
                 var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-                if (referencedRequest != null && referencedResponse != null &&
-                    referencedRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) &&
-                    referencedRequest.cbPreviousReceiptReference != null
-                    && referencedResponse.ftState.IsState(State.Success))
+                if (referencedRequest == null || referencedResponse == null)
                 {
-                    // Check if this refund references the receipt we're checking for
-                    var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
-                    if (previousRef == cbPreviousReceiptReference)
-                    {
-                        return true;
-                    }
+                    continue;
                 }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (!string.Equals(referencedRequest.cbReceiptReference, cbPreviousReceiptReference, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                referencedReceipt = new Receipt
+                {
+                    Request = referencedRequest,
+                    Response = referencedResponse
+                };
+                break;
             }
             catch
             {
-                // Ignore deserialization errors and continue
                 continue;
             }
+        }
+
+        if (referencedReceipt?.Request.cbChargeItems == null || referencedReceipt.Request.cbChargeItems.Count == 0)
+        {
+            return results;
+        }
+
+        foreach (var chargeItem in referencedReceipt.Request.cbChargeItems)
+        {
+            if (string.IsNullOrWhiteSpace(chargeItem.Description))
+            {
+                continue;
+            }
+
+            if (!descriptionMatches.Contains(chargeItem.Description))
+            {
+                continue;
+            }
+
+            results.Add(new ReceiptChargeItemMatch(referencedReceipt, chargeItem));
+        }
+
+        return results;
+    }
+
+    private static bool HasPreviousReceiptReference(ReceiptRequest request, string cbPreviousReceiptReference)
+    {
+        if (request.cbPreviousReceiptReference == null)
+        {
+            return false;
+        }
+
+        if (request.cbPreviousReceiptReference.IsSingle)
+        {
+            return request.cbPreviousReceiptReference.SingleValue == cbPreviousReceiptReference;
+        }
+
+        if (request.cbPreviousReceiptReference.IsGroup)
+        {
+            return request.cbPreviousReceiptReference.GroupValue.Contains(cbPreviousReceiptReference);
         }
 
         return false;
     }
 
-    public async Task<bool> HasExistingVoidAsync(string cbPreviousReceiptReference)
+    private static bool IsInvoiceReceipt(ReceiptResponse response)
     {
-        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
-
-        // Unfortunately, there's no direct way to query by cbPreviousReceiptReference,
-        // so we need to check queue items that might reference this receipt.
-        // We use GetQueueItemsForReceiptReferenceAsync which returns items with this cbReceiptReference
-        // but we actually need to check all items to find refunds that reference it via cbPreviousReceiptReference
-
-        // A more efficient approach: check recent items (assuming refunds come after original receipts)
-        var lastItem = await queueItemRepository.GetLastQueueItemAsync();
-        if (lastItem == null)
+        if (string.IsNullOrWhiteSpace(response.ftReceiptIdentification))
         {
             return false;
         }
 
-        // Search through queue items to find any refund that references this receipt
-        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
-        {
-            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
-            {
-                continue;
-            }
-
-            try
-            {
-                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
-                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-                if (referencedRequest != null && referencedResponse != null &&
-                    referencedRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) &&
-                    referencedRequest.cbPreviousReceiptReference != null
-                    && referencedResponse.ftState.IsState(State.Success))
-                {
-                    // Check if this void references the receipt we're checking for
-                    var previousRef = referencedRequest.cbPreviousReceiptReference.SingleValue;
-                    if (previousRef == cbPreviousReceiptReference)
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-                // Ignore deserialization errors and continue
-                continue;
-            }
-        }
-
-        return false;
+        var idParts = response.ftReceiptIdentification.Split('#');
+        var idTail = idParts.Length == 0 ? string.Empty : idParts[^1];
+        var typeParts = idTail.Split(' ');
+        var type = typeParts.Length == 0 ? string.Empty : typeParts[0];
+        return type == "FT" || type == "FS";
     }
 
 }
+
+public sealed record ReceiptChargeItemMatch(Receipt ReferencedReceipt, ChargeItem ReferencedChargeItem);

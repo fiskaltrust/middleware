@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
-public abstract class ProcessorPreparation 
+public abstract class ProcessorPreparation
 {
     public static class VATHelpers
     {
@@ -40,13 +40,23 @@ public abstract class ProcessorPreparation
         });
         if (!validationResults.IsValid)
         {
-            foreach (var result in validationResults.Results)
+
+            var error = validationResults.Results.SelectMany(r => r.Errors).FirstOrDefault();
+            if (error != null)
             {
-                foreach (var error in result.Errors)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-                }
+                request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
             }
+            else
+            {
+                request.ReceiptResponse.SetReceiptResponseError($"Validation error [UNKNOWN]: An unknown validation error has occurred.");
+            }
+            //foreach (var result in validationResults.Results)
+            //{
+            //    foreach (var error in result.Errors)
+            //    {
+            //        request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
+            //    }
+            //}
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 

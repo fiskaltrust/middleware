@@ -23,12 +23,13 @@ public class StaticNumeratorStorage
         }
         else if (isHandwritten)
         {
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2B0x1002) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2G0x1003) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceUnknown0x1000))
             {
-                return numeratorStorage.HandWrittenFSSeries;
-            }
-            else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
-            {
+                if(numeratorStorage.HandWrittenFTSeries == null)
+                {
+                    throw new NotSupportedException("HandWritten series is not correctly configured.");
+                }
+
                 return numeratorStorage.HandWrittenFTSeries;
             }
             else
@@ -89,7 +90,10 @@ public class StaticNumeratorStorage
         ReloadSeries(numeratorStorage.PaymentSeries, queueItems);
         ReloadSeries(numeratorStorage.BudgetSeries, queueItems);
         ReloadSeries(numeratorStorage.TableChecqueSeries, queueItems);
-        ReloadSeries(numeratorStorage.HandWrittenFSSeries, queueItems);
+        if (numeratorStorage.HandWrittenFTSeries != null)
+        {
+            ReloadSeries(numeratorStorage.HandWrittenFTSeries, queueItems);
+        }
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
@@ -103,8 +107,9 @@ public class StaticNumeratorStorage
                     continue;
                 }
 
+                var lastReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
                 var lastReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-                if (lastReceiptResponse == null)
+                if (lastReceiptResponse == null || lastReceiptRequest == null)
                 {
                     continue;
                 }
@@ -114,6 +119,10 @@ public class StaticNumeratorStorage
                     continue;
                 }
 
+                if (lastReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+                {
+                    continue;
+                }
 
                 if (lastReceiptResponse.ftReceiptIdentification.Split("#").Last().StartsWith(series.Identifier))
                 {

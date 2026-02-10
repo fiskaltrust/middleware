@@ -23,10 +23,11 @@ public static class PayItemValidations
 
         if (totalCashAmount > 3000m)
         {
+            var rule = PortugalValidationRules.CashPaymentExceedsLimit;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_CashPaymentExceedsLimit,
-                "EEEE_CashPaymentExceedsLimit",
-                "cbPayItems"
+                rule.Code,
+                rule.Field
             ).WithContext("TotalCashAmount", totalCashAmount)
              .WithContext("Limit", 3000m));
         }
