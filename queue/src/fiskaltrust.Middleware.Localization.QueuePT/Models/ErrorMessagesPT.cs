@@ -186,6 +186,9 @@ public static class ErrorMessagesPT
     public static string EEEE_VoidItemsMismatch(string originalReceiptReference) =>
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
 
+    public static string EEEE_VoidItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts. (Field: {diffField})";
+
     /// <summary>
     /// Error message for voiding working documents that have already been invoiced
     /// </summary>

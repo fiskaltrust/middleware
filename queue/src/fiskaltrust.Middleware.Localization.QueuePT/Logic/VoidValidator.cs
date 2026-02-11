@@ -30,23 +30,23 @@ public class VoidValidator
     {
         if (voidRequest.cbChargeItems == null || originalRequest.cbChargeItems == null)
         {
-            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, "ChargeItems");
         }
 
         if (voidRequest.cbChargeItems.Count != originalRequest.cbChargeItems.Count)
         {
-            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, "ChargeItems Count");
         }
 
         if (voidRequest.cbPayItems.Count != originalRequest.cbPayItems.Count)
         {
-            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, "PayItems Count");
         }
 
         var (flowControl, value) = RefundValidator.CompareReceiptRequest(originalReceiptReference, voidRequest, originalRequest);
         if (!flowControl)
         {
-            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+            return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, ExtractDiffField(value, "ReceiptRequest"));
         }
 
         for (int i = 0; i < voidRequest.cbChargeItems.Count; i++)
@@ -59,13 +59,13 @@ public class VoidValidator
             var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
             if (quantitySignMismatch || amountSignMismatch)
             {
-                return $"{ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference)} (Field: {BuildSignMismatchField("ChargeItem", quantitySignMismatch, amountSignMismatch)})";
+                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, BuildSignMismatchField("ChargeItem", i, quantitySignMismatch, amountSignMismatch));
             }
 
             (flowControl, value) = RefundValidator.CompareChargeItems(originalReceiptReference, refundItem, originalItem);
             if (!flowControl)
             {
-                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, $"ChargeItem[{i}].{ExtractDiffField(value, "Unknown")}");
             }
         }
 
@@ -77,13 +77,13 @@ public class VoidValidator
             var amountSignMismatch = !AreOppositeWithTolerance(originalItem.Amount, refundItem.Amount, 0.01m);
             if (amountSignMismatch)
             {
-                return $"{ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference)} (Field: {BuildSignMismatchField("PayItem", false, amountSignMismatch)})";
+                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, BuildSignMismatchField("PayItem", i, false, amountSignMismatch));
             }
 
             (flowControl, value) = RefundValidator.ComparePayItems(originalReceiptReference, refundItem, originalItem);
             if (!flowControl)
             {
-                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference);
+                return ErrorMessagesPT.EEEE_VoidItemsMismatch(originalReceiptReference, $"PayItem[{i}].{ExtractDiffField(value, "Unknown")}");
             }
         }
         return null; // Validation passed
@@ -99,19 +99,44 @@ public class VoidValidator
         return Math.Abs(original + candidate) <= tolerance;
     }
 
-    private static string BuildSignMismatchField(string itemType, bool quantityMismatch, bool amountMismatch)
+    private static string BuildSignMismatchField(string itemType, int index, bool quantityMismatch, bool amountMismatch)
     {
         if (quantityMismatch && amountMismatch)
         {
-            return $"{itemType}.QuantitySign, {itemType}.AmountSign";
+            return $"{itemType}[{index}].QuantitySign, {itemType}[{index}].AmountSign";
         }
 
         if (quantityMismatch)
         {
-            return $"{itemType}.QuantitySign";
+            return $"{itemType}[{index}].QuantitySign";
         }
 
-        return $"{itemType}.AmountSign";
+        return $"{itemType}[{index}].AmountSign";
+    }
+
+    private static string ExtractDiffField(string? validationMessage, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(validationMessage))
+        {
+            return fallback;
+        }
+
+        const string marker = "(Field: ";
+        var markerIndex = validationMessage.IndexOf(marker, StringComparison.Ordinal);
+        if (markerIndex < 0)
+        {
+            return fallback;
+        }
+
+        var start = markerIndex + marker.Length;
+        var end = validationMessage.IndexOf(')', start);
+        if (end < 0 || end <= start)
+        {
+            return fallback;
+        }
+
+        var field = validationMessage[start..end].Trim();
+        return string.IsNullOrEmpty(field) ? fallback : field;
     }
 
     /// <summary>
