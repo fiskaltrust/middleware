@@ -43,6 +43,10 @@ public static class PortugalReceiptCalculations
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        }
 
         return new PTQrCode
         {
@@ -89,6 +93,10 @@ public static class PortugalReceiptCalculations
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        }
 
         return new PTQrCode
         {
@@ -134,6 +142,10 @@ public static class PortugalReceiptCalculations
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        }
 
         return new PTQrCode
         {
