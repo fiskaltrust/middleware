@@ -149,6 +149,9 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition PreviousReceiptLineItemMismatch =
         new("EEEE_PreviousReceiptLineItemMismatch", "Previous receipt must share at least one matching line item.", PortugalValidationFields.PreviousReceiptReference);
 
+    public static readonly ValidationRuleDefinition ReceiptReferenceAlreadyUsed =
+        new("EEEE_ReceiptReferenceAlreadyUsed", "cbReceiptReference has already been used by a successfully processed receipt.", nameof(ReceiptRequest.cbReceiptReference));
+
     public static readonly ValidationRuleDefinition HandwrittenReceiptsNotSupported =
         new("EEEE_HandwrittenReceiptsNotSupported", "Handwritten receipts cannot be used with refund/void/partial refund.", PortugalValidationFields.ReceiptCase);
 
@@ -256,6 +259,7 @@ public static class PortugalValidationRules
         OnlyEuroCurrencySupported,
         PreviousReceiptReference,
         PreviousReceiptLineItemMismatch,
+        ReceiptReferenceAlreadyUsed,
         HandwrittenReceiptsNotSupported,
         HandwrittenReceiptSeriesAndNumberMandatory,
         PreviousReceiptIsVoided,

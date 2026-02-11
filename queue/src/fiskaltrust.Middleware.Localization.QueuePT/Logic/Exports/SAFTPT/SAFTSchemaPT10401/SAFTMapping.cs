@@ -75,7 +75,8 @@ public class SaftExporter
 
         if (string.IsNullOrEmpty(middlewareCustomer.CustomerId))
         {
-            if (string.IsNullOrEmpty(middlewareCustomer.CustomerVATId))
+            // For empty or anonymous cases we should fall back to using the customername as the base for the hash, to avoid having too many different customers in the SAFT with only one invoice each due to different random guids as customer id. The same applies for invalid VAT IDs (like the default 999999990), which should not be used to generate the customer id.
+            if (string.IsNullOrEmpty(middlewareCustomer.CustomerVATId) || middlewareCustomer.CustomerVATId == "999999990")
             {
                 middlewareCustomer.CustomerId = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(middlewareCustomer.CustomerName)));
             }

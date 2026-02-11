@@ -111,6 +111,18 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield break;
         }
 
+        var hasExistingReceiptReference = await _receiptReferenceProvider.HasExistingSuccessfulReceiptReferenceAsync(_receiptRequest.cbReceiptReference);
+        if (hasExistingReceiptReference)
+        {
+            var rule = PortugalValidationRules.ReceiptReferenceAlreadyUsed;
+            yield return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.EEEE_ReceiptReferenceAlreadyUsed(_receiptRequest.cbReceiptReference),
+                rule.Code,
+                rule.Field
+            ));
+            yield break;
+        }
+
         foreach (var result in cbUserValidations.Validate_cbUser_Structure(_receiptRequest))
         {
             yield return result;

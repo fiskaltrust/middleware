@@ -69,6 +69,50 @@ public class ReceiptReferenceProvider
 
     public async Task<bool> HasExistingVoidAsync(string cbPreviousReceiptReference) => await HasExistingElementByConditionAsync(cbPreviousReceiptReference, request => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void));
 
+    public async Task<bool> HasExistingSuccessfulReceiptReferenceAsync(string cbReceiptReference)
+    {
+        if (string.IsNullOrWhiteSpace(cbReceiptReference))
+        {
+            return false;
+        }
+
+        var queueItemRepository = await _readOnlyQueueItemRepository.Value;
+        await foreach (var queueItem in queueItemRepository.GetEntriesOnOrAfterTimeStampAsync(0))
+        {
+            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
+            {
+                continue;
+            }
+
+            try
+            {
+                var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+
+                if (referencedRequest == null || referencedResponse == null)
+                {
+                    continue;
+                }
+
+                if (!referencedResponse.ftState.IsState(State.Success))
+                {
+                    continue;
+                }
+
+                if (string.Equals(referencedRequest.cbReceiptReference, cbReceiptReference, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                continue;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Gets all partial refunds for a given receipt reference
     /// </summary>

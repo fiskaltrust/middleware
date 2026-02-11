@@ -319,6 +319,9 @@ public static class ErrorMessagesPT
     public static string EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked(string series, long number) =>
         $"EEEE_A handwritten receipt with series '{series}' and number '{number}' has already been linked. Each handwritten receipt series and number combination can only be used once.";
 
+    public static string EEEE_ReceiptReferenceAlreadyUsed(string receiptReference) =>
+        $"EEEE_cbReceiptReference '{receiptReference}' has already been used by a successfully processed receipt. cbReceiptReference must be unique.";
+
     /// <summary>
     /// Error message for training mode not being enabled for this queue
     /// </summary>
