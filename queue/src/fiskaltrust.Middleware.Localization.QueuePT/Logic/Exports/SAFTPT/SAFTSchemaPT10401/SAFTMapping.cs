@@ -466,6 +466,7 @@ public class SaftExporter
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment);
         var customer = GetCustomerData(receiptRequest);
+        var (taxPayable, netTotal, grossTotal) = GetRoundedTotals(grossAmount, netAmount);
         var workDocument = new WorkDocument
         {
             DocumentNumber = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
@@ -482,9 +483,9 @@ public class SaftExporter
             CustomerID = customer.CustomerID,
             DocumentTotals = new WorkDocumentTotals
             {
-                TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
-                NetTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount),
-                GrossTotal = Helpers.CreateTwoDigitMonetaryValue(taxable) + Helpers.CreateTwoDigitMonetaryValue(netAmount)
+                TaxPayable = taxPayable,
+                NetTotal = netTotal,
+                GrossTotal = grossTotal
             }
         };
         return workDocument;
@@ -494,12 +495,9 @@ public class SaftExporter
     {
         var receiptRequest = receipt.receiptRequest;
         var payItem = receiptRequest.cbPayItems.First();
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.GetVATAmount() * -1 : x.GetVATAmount());
-        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.Hash));
         var atcudSignature = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD))!;
         atcudSignature.Data = atcudSignature.Data.Replace("ATCUD: ", "");
-        var netAmount = grossAmount - taxable;
         if (hashSignature == null || atcudSignature == null)
         {
             return null;
@@ -508,6 +506,7 @@ public class SaftExporter
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receipt.receiptResponse.ftReceiptMoment);
         var customer = GetCustomerData(receiptRequest);
+        var (paymentTaxPayable, paymentNetTotal, paymentGrossTotal) = GetRoundedTotals(payItem.Amount, payItem.Amount);
         var workDocument = new PaymentDocument
         {
             PaymentRefNo = receipt.receiptResponse.ftReceiptIdentification.Split("#").Last(),
@@ -534,9 +533,9 @@ public class SaftExporter
             CustomerID = customer.CustomerID,
             DocumentTotals = new PaymentTotals
             {
-                TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
-                NetTotal = Helpers.CreateTwoDigitMonetaryValue(payItem.Amount),
-                GrossTotal = Helpers.CreateTwoDigitMonetaryValue(payItem.Amount),
+                TaxPayable = paymentTaxPayable,
+                NetTotal = paymentNetTotal,
+                GrossTotal = paymentGrossTotal,
             }
         };
 
@@ -575,6 +574,7 @@ public class SaftExporter
             }
             var netAmount = grossAmount - taxable;
             var customer = GetCustomerData(receiptRequest);
+            var (taxPayable, netTotal, grossTotal) = GetRoundedTotals(grossAmount, netAmount);
 
             // Convert UTC time to Portugal local time
             var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
@@ -600,9 +600,9 @@ public class SaftExporter
                 CustomerID = customer.CustomerID,
                 DocumentTotals = new DocumentTotals
                 {
-                    TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
-                    NetTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount),
-                    GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
+                    TaxPayable = taxPayable,
+                    NetTotal = netTotal,
+                    GrossTotal = grossTotal,
                 }
             };
 
@@ -639,6 +639,14 @@ public class SaftExporter
         {
             throw new Exception("An error occurred while generating the invoice for the receipt request.", ex);
         }
+    }
+
+    private static (decimal taxPayable, decimal netTotal, decimal grossTotal) GetRoundedTotals(decimal grossAmount, decimal netAmount)
+    {
+        var grossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount);
+        var netTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount);
+        var taxPayable = Helpers.CreateTwoDigitMonetaryValue(grossTotal - netTotal);
+        return (taxPayable, netTotal, grossTotal);
     }
 
     private static string GetSourcePayment(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) ? "M" : "P";
