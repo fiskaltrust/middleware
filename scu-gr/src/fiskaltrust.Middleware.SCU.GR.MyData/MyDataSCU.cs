@@ -197,6 +197,11 @@ public class MyDataSCU : IGRSSCD
 
     public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration)
     {
+        if (string.IsNullOrWhiteSpace(receiptBaseAddress))
+        {
+            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+        }
+        
         _receiptBaseAddress = receiptBaseAddress;
         _sandbox = sandbox;
         _masterDataConfiguration = masterDataConfiguration;
