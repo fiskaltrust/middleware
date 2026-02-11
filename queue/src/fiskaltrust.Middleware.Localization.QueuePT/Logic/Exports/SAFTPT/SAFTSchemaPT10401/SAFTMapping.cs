@@ -73,6 +73,12 @@ public class SaftExporter
             middlewareCustomer.CustomerName = middlewareCustomer.CustomerName.Trim();
         }
 
+        if(middlewareCustomer.CustomerVATId == "999999990" && string.IsNullOrEmpty(middlewareCustomer.CustomerName))
+        {
+            // For scenarios where we have no customername and only the anonymous VAT we consider the customer to be anonymous
+            return PTMappings.AnonymousCustomer;
+        }
+
         if (string.IsNullOrEmpty(middlewareCustomer.CustomerId))
         {
             // For empty or anonymous cases we should fall back to using the customername as the base for the hash, to avoid having too many different customers in the SAFT with only one invoice each due to different random guids as customer id. The same applies for invalid VAT IDs (like the default 999999990), which should not be used to generate the customer id.
