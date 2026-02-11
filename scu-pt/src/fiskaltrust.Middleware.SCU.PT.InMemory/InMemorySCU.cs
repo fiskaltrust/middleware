@@ -31,10 +31,15 @@ public class InMemorySCU : IPTSSCD
 
     public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
+        var portugalTime = receiptResponse.ftReceiptMoment;
+        if (receipt.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = receipt.cbReceiptMoment;
+        }
         // TODO: We will need to convert the ftReceiptMoment to PT localtime zone
         var element = new PTInvoiceElement
         {
-            InvoiceDate = receiptResponse.ftReceiptMoment,
+            InvoiceDate = portugalTime,
             SystemEntryDate = receiptResponse.ftReceiptMoment,
             InvoiceNo = receiptResponse.ftReceiptIdentification.Split("#").Last(),
             GrossTotal = Math.Abs(receipt.cbChargeItems.Sum(x => x.Amount)),
