@@ -218,7 +218,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
             foreach (var dir in baseDir.EnumerateDirectories())
             {
-                if (dir.Name.ToLower() != ".fccdata")
+                if (dir.Name.ToLower() != ".fccdata" && dir.Name.ToLower() != ".install")
                 {
                     Directory.Delete(dir.FullName, true);
                 }
