@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Collections.Generic;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
@@ -96,5 +97,107 @@ public static class SignatureItemFactoryGR
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
         });
+    }
+
+    /// <summary>
+    /// Adds delivery note specific signatures due to missing printing details
+    /// Adds: dispatch date/time, vehicle number, move purpose, loading and delivery addresses.
+    /// Handles the "is it actually a delivery note?" check.
+    /// </summary>
+    public static void AddDeliveryNoteSignatures(ProcessRequest request, InvoicesDoc doc)
+    {
+        var invoice = doc.invoice[0];
+        var header = invoice.invoiceHeader;
+
+        if (!(header.isDeliveryNoteSpecified && header.isDeliveryNote) && header.otherDeliveryNoteHeader == null)
+        {
+            return;
+        }
+
+        if (header.dispatchDateSpecified)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = header.dispatchDate.ToString("dd/MM/yyyy"),
+                Caption = "Ημ/νία έναρξης μεταφοράς",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            });
+        }
+
+        if (header.dispatchTimeSpecified)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = header.dispatchTime.ToString("HH:mm:ss"),
+                Caption = "Ώρα έναρξης μεταφοράς",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(header.vehicleNumber))
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = header.vehicleNumber,
+                Caption = "Αρ. Κυκλοφορίας Οχήματος",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            });
+        }
+
+        if (header.movePurposeSpecified)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = MyDataTranslationHelper.GetMovePurposeDescription(header.movePurpose),
+                Caption = "Σκοπός διακίνησης",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            });
+        }
+        else if (!string.IsNullOrWhiteSpace(header.otherMovePurposeTitle))
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = header.otherMovePurposeTitle,
+                Caption = "Σκοπός διακίνησης",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            });
+        }
+
+        if (header.otherDeliveryNoteHeader?.loadingAddress != null)
+        {
+            var address = header.otherDeliveryNoteHeader.loadingAddress;
+            var formattedAddress = MyDataTranslationHelper.FormatAddress(address);
+            if (!string.IsNullOrWhiteSpace(formattedAddress))
+            {
+                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Data = formattedAddress,
+                    Caption = "Τόπος φόρτωσης",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+                });
+            }
+        }
+
+        if (header.otherDeliveryNoteHeader?.deliveryAddress != null)
+        {
+            var address = header.otherDeliveryNoteHeader.deliveryAddress;
+            var formattedAddress = MyDataTranslationHelper.FormatAddress(address);
+            if (!string.IsNullOrWhiteSpace(formattedAddress))
+            {
+                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Data = formattedAddress,
+                    Caption = "Τόπος παράδοσης",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+                });
+            }
+        }
     }
 }
