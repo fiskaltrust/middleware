@@ -60,7 +60,8 @@ public class ChargeItemValidationAcceptanceTests
                 { 
                     ftQueueId = _queueId,
                     ftCashBoxId = _cashBoxId,
-                    StartMoment = DateTime.UtcNow
+                    StartMoment = DateTime.UtcNow,
+                    CountryCode = "PT"
                 } 
             }) },
             { "init_ftQueuePT", JsonSerializer.Serialize(new List<ftQueuePT> 
@@ -105,7 +106,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-001",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -126,7 +127,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 39.98m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1",
@@ -157,7 +158,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-002",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -178,7 +179,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 5.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -205,7 +206,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-003",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -244,7 +245,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 13.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -275,7 +276,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-004",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -296,7 +297,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 10.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -328,7 +329,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-005",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -349,7 +350,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 10.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -381,7 +382,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-006",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -402,7 +403,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 10.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -434,7 +435,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-007",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -455,7 +456,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 10.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -491,7 +492,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-008",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -512,7 +513,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -544,7 +545,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-009",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -565,7 +566,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = -100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -597,7 +598,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-010",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -626,7 +627,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 90.00m, // 100 - 10 discount
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -657,7 +658,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-011",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -678,7 +679,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 0m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -710,7 +711,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-012",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -731,7 +732,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -772,7 +773,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-013",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -793,7 +794,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 2.50m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -820,7 +821,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-014",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -841,7 +842,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 3.50m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -872,7 +873,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-015",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -893,7 +894,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 123.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -920,7 +921,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-016",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -941,7 +942,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 10.60m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -968,7 +969,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-017",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -989,7 +990,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 11.30m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1016,7 +1017,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-018",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1037,7 +1038,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 50.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1052,7 +1053,7 @@ public class ChargeItemValidationAcceptanceTests
 
         // Verify that proper signatures are present
         receiptResponse.ftSignatures.Should().NotBeNullOrEmpty("Receipt should have signatures");
-        receiptResponse.ftSignatures.Should().Contain(s => s.Caption == "[www.fiskaltrust.pt]",
+        receiptResponse.ftSignatures.Should().Contain(s => s.ftSignatureFormat == SignatureFormat.QRCode,
             "Receipt should have QR code signature");
         receiptResponse.ftSignatures.Should().Contain(s => s.Data.StartsWith("ATCUD:"),
             "Receipt should have ATCUD signature");
@@ -1071,7 +1072,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-019",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1092,7 +1093,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 50.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1123,7 +1124,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-020",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1144,7 +1145,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 11.30m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1176,7 +1177,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-021",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1224,7 +1225,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 71.50m, // Sum of all amounts
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1251,7 +1252,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-022",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1272,7 +1273,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1308,7 +1309,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-023",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1329,7 +1330,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1356,7 +1357,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-024",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1377,7 +1378,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 250.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1404,7 +1405,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-025",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1425,7 +1426,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1457,7 +1458,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-026",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1496,7 +1497,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 400.00m, // Total under 1000€ net limit
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1523,7 +1524,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-027",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1553,7 +1554,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 175.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1587,7 +1588,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-028",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1608,7 +1609,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 100.00m,
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"
@@ -1638,7 +1639,7 @@ public class ChargeItemValidationAcceptanceTests
         // Arrange
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"),
             cbReceiptReference = "INV-CI-029",
             cbTerminalID = "TERM-001",
             cbReceiptMoment = DateTime.UtcNow,
@@ -1686,7 +1687,7 @@ public class ChargeItemValidationAcceptanceTests
                 new PayItem
                 {
                     Amount = 934.50m, // Total under 1000€ net limit
-                    ftPayItemCase = (PayItemCase)0x4445_0000_0000_1000 // Cash
+                    ftPayItemCase = (PayItemCase)0x5054_0000_0000_0001
                 }
             },
             cbUser = "Cashier 1"

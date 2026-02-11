@@ -43,7 +43,6 @@ namespace fiskaltrust.storage.V0
         public NumberSeries InvoiceSeries { get; set; }
         public NumberSeries SimplifiedInvoiceSeries { get; set; }
         public NumberSeries CreditNoteSeries { get; set; }
-        public NumberSeries HandWrittenFSSeries { get; set; }
         public NumberSeries HandWrittenFTSeries { get; set; }
         public NumberSeries ProFormaSeries { get; set; }
         public NumberSeries PaymentSeries { get; set; }

@@ -2,8 +2,10 @@
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -46,7 +48,8 @@ public class JournalProcessorPT : IJournalProcessor
         {
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
-        var data = new SaftExporter().SerializeAuditFile(masterData, queueItems, (int) request.To);
+        var documentStatusProvider = new DocumentStatusProvider(_storageProvider.CreateMiddlewareQueueItemRepository());
+        var data = new SaftExporter(documentStatusProvider).SerializeAuditFile(masterData, queueItems, (int) request.To);
         yield return data;
     }
 }

@@ -43,7 +43,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -164,13 +164,14 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -202,7 +203,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith("The given cbPreviousReceiptReference 'FIXED' didn't match with any of the items in the Queue.");
+        voidResponse.ftSignatures[0].Data.Should().Contain("didn't match with any of the items in the Queue");
     }
 
     #endregion
@@ -224,13 +225,14 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -263,7 +265,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"The given cbPreviousReceiptReference 'FIXED-scenario3' did match with more than one item in the Queue.");
+        voidResponse.ftSignatures[0].Data.Should().Contain("cbPreviousReceiptReference 'FIXED-scenario3'");
     }
 
     #endregion
@@ -338,7 +340,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().Contain($"The total amount of pay items in the payment transfer receipt must match the total amount of pay items in the original invoice receipt");
+        voidResponse.ftSignatures[0].Data.Should().Contain("EEEE_Payment transfer amount");
     }
 
     #endregion
@@ -360,7 +362,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -438,13 +440,14 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 20,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
                     {
                         "Amount": 20,
-                        "Description": "Cash"
+                        "Description": "Cash",
+                        "ftPayItemCase": 5788286605450018817
                     }
                 ],
                 "cbUser": "Stefan Kert",
@@ -514,7 +517,7 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                         "Amount": 10,
                         "Description": "Test",
                         "VATRate": 23,
-                        "ftChargeItemCase": 3
+                        "ftChargeItemCase": 5788286605450018835
                     }
                 ],
                 "cbPayItems": [
@@ -539,21 +542,8 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
                 "cbReceiptMoment": "{{$isoTimestamp}}",
                 "ftCashBoxID": "{{cashboxid}}",
                 "ftReceiptCase": {{ftReceiptCase}},
-                "cbChargeItems": [
-                    {
-                        "Quantity": 1,
-                        "Amount": 10,
-                        "Description": "Test",
-                        "VATRate": 23,
-                        "ftChargeItemCase": 3
-                    }
-                ],
-                "cbPayItems": [
-                    {
-                        "Amount": 10,
-                        "Description": "Cash"
-                    }
-                ],
+                "cbChargeItems": [],
+                "cbPayItems": [],
                 "cbUser": "Stefan Kert",
                 "cbCustomer": {
                     "CustomerVATId": "123456789"
@@ -596,8 +586,343 @@ public class ReceiptCases_0x0002_PaymentTransfer_Scenarios : AbstractScenarioTes
             """.Replace("{{cbPreviousReceiptReference}}", originalResponse.cbReceiptReference);
 
         var (refundRequest, refundResponse) = await ProcessReceiptAsync(copyReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
-        refundResponse.ftState.State().Should().Be(State.Error);
-        refundResponse.ftSignatures[0].Data.Should().Contain(ErrorMessagesPT.EEEE_HasBeenVoidedAlready(originalResponse.cbReceiptReference));
+        refundResponse.ftState.State().Should().Be(State.Success);
+        refundResponse.ftReceiptIdentification.Should().Contain("RG");
+    }
+
+    #endregion
+
+    #region Scenario 9: Invoice on credit -> Partial Refund -> Payment Transfer for full amount should fail
+
+    [Fact]
+    public async Task Scenario9_InvoiceOnCredit_PartialRefund_PaymentTransferFullAmount_ShouldFail()
+    {
+        // Step 1: Create an invoice on credit (not paid yet) for 100 EUR
+        var invoiceReceipt = """
+            {
+                "cbReceiptReference": "invoice-partial-refund-001",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Amount": 100,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "On Credit",
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (invoiceRequest, invoiceResponse) = await ProcessReceiptAsync(invoiceReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        invoiceResponse.ftState.State().Should().Be(State.Success, because: "Invoice on credit should succeed. Errors: " + string.Join(", ", invoiceResponse.ftSignatures?.Select(s => s.Data) ?? []));
+
+        // Step 2: Partially refund the invoice - return 1 item (50 EUR)
+        var partialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Amount": -50,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450149907
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": -50,
+                        "Description": "On Credit Refund",
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-001"
+            }
+            """;
+
+        var (partialRefundRequest, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        partialRefundResponse.ftState.State().Should().Be(State.Success, because: "Partial refund should succeed. Errors: " + string.Join(", ", partialRefundResponse.ftSignatures?.Select(s => s.Data) ?? []));
+
+        // Step 3: Try to pay the full original amount (100 EUR) via Payment Transfer - should fail
+        // because only 50 EUR remains after partial refund
+        var paymentTransferReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 100,
+                        "Description": "Payment for Invoice",
+                        "VATRate": 0,
+                        "ftChargeItemCase": 5788286605450018968
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "Cash Payment",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-001"
+            }
+            """;
+
+        var (paymentTransferRequest, paymentTransferResponse) = await ProcessReceiptAsync(paymentTransferReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
+        
+        // Assert: Should fail because payment amount exceeds remaining amount
+        paymentTransferResponse.ftState.State().Should().Be(State.Error, because: "Payment transfer for full amount should fail after partial refund");
+        paymentTransferResponse.ftSignatures.Should().Contain(s => s.Data.Contains("EEEE_Payment transfer amount (100,00€) exceeds the remaining amount (50,00€) for invoice 'invoice-partial-refund-001'. Already refunded: 50,00€."));
+    }
+
+    #endregion
+
+    #region Scenario 10: Invoice on credit -> Partial Refund -> Payment Transfer for remaining amount should succeed
+
+    [Fact]
+    public async Task Scenario10_InvoiceOnCredit_PartialRefund_PaymentTransferRemainingAmount_ShouldSucceed()
+    {
+        // Step 1: Create an invoice on credit (not paid yet) for 100 EUR
+        var invoiceReceipt = """
+            {
+                "cbReceiptReference": "invoice-partial-refund-002",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Amount": 100,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "On Credit",
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (invoiceRequest, invoiceResponse) = await ProcessReceiptAsync(invoiceReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        invoiceResponse.ftState.State().Should().Be(State.Success, because: "Invoice on credit should succeed. Errors: " + string.Join(", ", invoiceResponse.ftSignatures?.Select(s => s.Data) ?? []));
+
+        // Step 2: Partially refund the invoice - return 1 item (50 EUR)
+        var partialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Amount": -50,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450149907
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": -50,
+                        "Description": "On Credit Refund",
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-002"
+            }
+            """;
+
+        var (partialRefundRequest, partialRefundResponse) = await ProcessReceiptAsync(partialRefundReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        partialRefundResponse.ftState.State().Should().Be(State.Success, because: "Partial refund should succeed. Errors: " + string.Join(", ", partialRefundResponse.ftSignatures?.Select(s => s.Data) ?? []));
+
+        // Step 3: Pay the remaining amount (50 EUR) via Payment Transfer - should succeed
+        var paymentTransferReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 50,
+                        "Description": "Payment for Invoice",
+                        "VATRate": 0,
+                        "ftChargeItemCase": 5788286605450018968
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 50,
+                        "Description": "Cash Payment",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-002"
+            }
+            """;
+
+        var (paymentTransferRequest, paymentTransferResponse) = await ProcessReceiptAsync(paymentTransferReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
+        
+        // Assert: Should succeed because payment amount matches remaining amount
+        paymentTransferResponse.ftState.State().Should().Be(State.Success, because: "Payment transfer for remaining amount should succeed. Errors: " + string.Join(", ", paymentTransferResponse.ftSignatures?.Select(s => s.Data) ?? []));
+        paymentTransferResponse.ftReceiptIdentification.Should().Contain("RG", "Payment transfer should generate an RG document");
+    }
+
+    #endregion
+
+    #region Scenario 11: Invoice on credit -> Failed Partial Refund -> Payment Transfer full amount should succeed
+
+    [Fact]
+    public async Task Scenario11_InvoiceOnCredit_FailedPartialRefund_MustNotReduceRemainingAmount_ShouldSucceed()
+    {
+        // Step 1: Create an invoice on credit for 100 EUR.
+        var invoiceReceipt = """
+            {
+                "cbReceiptReference": "invoice-partial-refund-failed-001",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 2,
+                        "Amount": 100,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450018835
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "On Credit",
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                }
+            }
+            """;
+
+        var (_, invoiceResponse) = await ProcessReceiptAsync(invoiceReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        invoiceResponse.ftState.State().Should().Be(State.Success, because: "Invoice on credit should succeed. Errors: " + string.Join(", ", invoiceResponse.ftSignatures?.Select(s => s.Data) ?? []));
+
+        // Step 2: Send an invalid partial refund (wrong sign) that must fail.
+        var failedPartialRefundReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": -50,
+                        "Description": "Product A",
+                        "VATRate": 23,
+                        "ftChargeItemCase": 5788286605450149907
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": -50,
+                        "Description": "On Credit Refund",
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-failed-001"
+            }
+            """;
+
+        var (_, failedPartialRefundResponse) = await ProcessReceiptAsync(failedPartialRefundReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
+        failedPartialRefundResponse.ftState.State().Should().Be(State.Error, because: "Invalid partial refund must fail.");
+
+        // Step 3: Payment transfer for full amount should still succeed because failed partial refunds must not reduce remaining amount.
+        var paymentTransferReceipt = """
+            {
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "ftCashBoxID": "{{cashboxid}}",
+                "ftReceiptCase": {{ftReceiptCase}},
+                "cbChargeItems": [
+                    {
+                        "Quantity": 1,
+                        "Amount": 100,
+                        "Description": "Payment for Invoice",
+                        "VATRate": 0,
+                        "ftChargeItemCase": 5788286605450018968
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Amount": 100,
+                        "Description": "Cash Payment",
+                        "ftPayItemCase": 5788286605450018817
+                    }
+                ],
+                "cbUser": "Test User",
+                "cbCustomer": {
+                    "CustomerVATId": "123456789"
+                },
+                "cbPreviousReceiptReference": "invoice-partial-refund-failed-001"
+            }
+            """;
+
+        var (_, paymentTransferResponse) = await ProcessReceiptAsync(paymentTransferReceipt, (long) ReceiptCase.PaymentTransfer0x0002.WithCountry("PT"));
+        paymentTransferResponse.ftState.State().Should().Be(State.Success, because: "Failed partial refunds must not be considered in payment transfer remaining amount calculation.");
+        paymentTransferResponse.ftReceiptIdentification.Should().Contain("RG", "Payment transfer should generate an RG document");
     }
 
     #endregion

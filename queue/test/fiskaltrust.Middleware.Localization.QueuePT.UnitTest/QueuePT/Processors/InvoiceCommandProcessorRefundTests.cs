@@ -58,7 +58,8 @@ public class InvoiceCommandProcessorRefundTests
         _processor = new InvoiceCommandProcessorPT(
             _mockSscd.Object,
             _queuePT,
-            asyncLazy
+            asyncLazy,
+            true
         );
 
         // Setup mock SSCD to return valid response
