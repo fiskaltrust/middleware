@@ -88,7 +88,7 @@ public static class SignatureItemFactoryPT
         return new SignatureItem
         {
             Caption = $"-----",
-            Data = $"{printHash} - Processado por programa certificado" + $" No {fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PTMappings.CertificationPosSystem.SoftwareCertificateNumber}/AT",
+            Data = $"{printHash} - Processado por programa certificado " + $" n.º {fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PTMappings.CertificationPosSystem.SoftwareCertificateNumber}/AT",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
         };
