@@ -363,6 +363,7 @@ public class MyDataSCU : IGRSSCD
                         {
                             SignatureItemFactoryGR.AddMarksForConnectedMarks(request, doc);
                         }
+                        SignatureItemFactoryGR.AddDeliveryNoteSignatures(request, doc);
                         SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
                         SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
                     }
