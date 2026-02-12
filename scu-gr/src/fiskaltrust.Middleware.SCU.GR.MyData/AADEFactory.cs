@@ -656,22 +656,9 @@ public class AADEFactory
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.itemDescr = x.Description;
-                if (x.Unit == "Litres")
-                {
-                    invoiceRow.measurementUnit = 3;
-                    invoiceRow.measurementUnitSpecified = true;
-                }
-                else if (x.Unit == "Kg")
-                {
-                    invoiceRow.measurementUnit = 2;
-                    invoiceRow.measurementUnitSpecified = true;
-                }
-                else
-                {
-                    invoiceRow.measurementUnit = 1;
-                    invoiceRow.measurementUnitSpecified = true;
-                }
-
+                
+                invoiceRow.measurementUnit = AADEMappings.GetMeasurementUnit(x);
+                invoiceRow.measurementUnitSpecified = true;
             }
 
             if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
