@@ -193,7 +193,7 @@ public class AADEFactory
             {
                 series = receiptResponse.ftCashBoxIdentification,
                 aa = identification.ToString(),
-                issueDate = receiptRequest.cbReceiptMoment,
+                issueDate = AADEMappings.GetLocalTime(receiptRequest),
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
                 currency = CurrencyType.EUR,
                 currencySpecified = true
