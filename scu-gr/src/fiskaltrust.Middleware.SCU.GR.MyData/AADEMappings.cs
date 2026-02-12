@@ -11,6 +11,7 @@ using NodaTime;
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public static class AADEMappings
 {
+    private static readonly DateTimeZone _athensZone = DateTimeZoneProviders.Tzdb["Europe/Athens"];
     public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var vatAmount = chargeItem.GetVATAmount();
@@ -234,60 +235,20 @@ public static class AADEMappings
 
     public static DateTime GetLocalTime(ReceiptRequest receiptRequest)
     {
-        // Get the UTC DateTime from receiptRequest
         var iniDateTime = receiptRequest.cbReceiptMoment;
 
-        // Ensure it's marked as UTC
-        if (iniDateTime.Kind != DateTimeKind.Utc)
+        if (iniDateTime.Kind == DateTimeKind.Local)
+        {
+            iniDateTime = iniDateTime.ToUniversalTime();
+        }
+        else if (iniDateTime.Kind == DateTimeKind.Unspecified)
         {
             iniDateTime = DateTime.SpecifyKind(iniDateTime, DateTimeKind.Utc);
         }
 
-        /*
-        Convert the UTC DateTime to a NodaTime Instant
-            Why we do this:
-              1.Instant represents an exact point in time on the UTC timeline(absolute UTC).
-              2.ZonedDateTime requires an Instant to calculate the local time in any time zone correctly.
-              3.Ensures that DST offsets and historical changes in the time zone are applied correctly.
-              4.Avoids errors that could occur if you tried to interpret the DateTime as "local" directly.
-              5.Provides a cross-platform, unambiguous starting point for time zone conversions.
-        */
         Instant utcInstant = Instant.FromDateTimeUtc(iniDateTime);
-
-        /*
-         Get Greek timezone (IANA)
-            Why we do this:
-              1. "Europe/Athens" is the IANA time zone identifier for Greece.
-              2. Using IANA ensures correct handling of Daylight Saving Time (DST),
-                  including historical and future changes to offsets (+2/+3).
-              3. NodaTime uses DateTimeZone objects to represent time zones in a
-                  cross-platform and unambiguous way, unlike Windows-only TimeZoneInfo.
-              4. This allows safe conversion from UTC Instants to local Greek time
-                  on any operating system (Windows, Linux, macOS).
-        */
-        DateTimeZone zone = DateTimeZoneProviders.Tzdb["Europe/Athens"];
-
-        /*
-        Convert UTC instant to Greek local time(ZonedDateTime)
-            Why we do this:
-              1.utcInstant represents an absolute point in time in UTC.
-              2.InZone(zone) maps that instant to the local time in the specified time zone("Europe/Athens").
-              3.Automatically applies the correct UTC offset(+02:00 in winter, +03:00 in summer) based on DST rules.
-              4.Ensures that the resulting ZonedDateTime reflects the correct local Greek time regardless of the server's local timezone.
-              5.This is the step where the UTC timestamp becomes "real Greek time" safely and accurately.
-        */
-        ZonedDateTime zoned = utcInstant.InZone(zone);
-
-        /*
-        Convert ZonedDateTime to a .NET DateTime with Kind = Unspecified
-            Why we do this:
-              1. The local Greek time (with correct DST offset) is preserved exactly
-              2. Serialization (System.Text.Json, XML, etc.) will NOT adjust the time based on the server's local time zone or UTC settings
-              3. Prevents accidental hour/date shifts if the code runs on a server in a different time zone
-        */
-        DateTime finalDateTime = zoned.ToDateTimeUnspecified();
-
-        return finalDateTime;
+        ZonedDateTime zoned = utcInstant.InZone(_athensZone);
+        return zoned.ToDateTimeUnspecified();
     }
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
