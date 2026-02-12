@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
 
         public async Task<SelfCheckResponseDto> GetSelfCheckResultAsync()
         {
-            using var client = GetOAuthAdminClient();
+            using var client = GetBasicAuthAdminRestrictedClient();
             var response = await client.GetAsync("selfcheck");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
@@ -117,7 +117,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
 
         public async Task<TssDetailsResponseDto> GetTssDetailsAsync()
         {
-            using var client = GetOAuthAdminClient();
+            using var client = GetBasicAuthAdminRestrictedClient();
             var response = await client.GetAsync("tssdetails");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
@@ -131,7 +131,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
 
         public async Task<byte[]> ExportSingleTransactionAsync(ulong transactionNumber)
         {
-            using var client = GetOAuthAdminClient();
+            using var client = GetBasicAuthAdminRestrictedClient();
             var response = await client.GetAsync($"export/transactions/{transactionNumber}");
             var responseContent = await response.Content.ReadAsStringAsync();
 
@@ -152,7 +152,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 url += $"&clientId={clientId}";
             }
 
-            var response = await GetOAuthAdminClient().GetAsync(url);
+            var response = await GetBasicAuthAdminRestrictedClient().GetAsync(url);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 if (!isSplit)
@@ -257,7 +257,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 url += $"&clientId={clientId}";
             }
 
-            var response = await GetOAuthAdminClient().PostAsync(url, new StringContent("ACK", Encoding.UTF8, "text/plain"));
+            var response = await GetBasicAuthAdminRestrictedClient().PostAsync(url, new StringContent("ACK", Encoding.UTF8, "text/plain"));
             var responseContent = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
             {
@@ -284,25 +284,13 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             return client;
         }
 
-        public HttpClient GetOAuthAdminClient()
+        public HttpClient GetBasicAuthAdminRestrictedClient()
         {
-            var clientConfig = new ClientConfiguration
-            {
-                BaseAddress = _baseAddress,
-                UserName = "admin-auth-client-id",
-                Password = "admin-auth-client-secret",
-                GrantType = "password",
-                AdditionalProperties = new Dictionary<string, string>
-                {
-                    { "username", "admin" },
-                    { "password", _configuration.ErsCode },
-                },
-                Timeout = _configuration.FCCTimeoutSec
-            };
-            return new HttpClient(new AuthenticatedHttpClientHandler(clientConfig))
-            {
-                BaseAddress = _baseAddress
-            };
+            var client = new HttpClient { BaseAddress = _baseAddress, Timeout = TimeSpan.FromSeconds(_configuration.FCCTimeoutSec) };
+            var credentials = Encoding.ASCII.GetBytes($"admin_restricted:{_configuration.ErsCode}");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
+
+            return client;
         }
     }
 }
