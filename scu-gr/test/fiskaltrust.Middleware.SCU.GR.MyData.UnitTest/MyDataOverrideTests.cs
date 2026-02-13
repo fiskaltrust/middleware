@@ -28,7 +28,7 @@ public class MyDataOverrideTests
             {
                 LocationId = "0"
             }
-        });
+        }, "https://receipts.example.com");
     }
 
     private ReceiptRequest CreateBasicReceiptRequest()
@@ -637,5 +637,31 @@ public class MyDataOverrideTests
         // Assert
         error.Should().BeNull();
         doc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithReceiptBaseAddress_ShouldSetDownloadingInvoiceUrl()
+    {
+        // Arrange
+        var factory = new AADEFactory(
+            new MasterDataConfiguration
+            {
+                Account = new AccountMasterData { VatId = "123456789" },
+                Outlet = new OutletMasterData { LocationId = "0" }
+            },
+            "https://receipts.example.com");
+
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+        response.ftQueueID = Guid.Parse("12345678-1234-1234-1234-123456789012");
+        response.ftQueueItemID = Guid.Parse("87654321-4321-4321-4321-210987654321");
+
+        // Act
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].downloadingInvoiceUrl.Should().Be("https://receipts.example.com/12345678-1234-1234-1234-123456789012/87654321-4321-4321-4321-210987654321");
     }
 }

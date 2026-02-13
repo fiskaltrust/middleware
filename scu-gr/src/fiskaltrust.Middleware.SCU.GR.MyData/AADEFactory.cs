@@ -31,10 +31,21 @@ public class AADEFactory
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
 
     private readonly MasterDataConfiguration _masterDataConfiguration;
+    private readonly string _receiptBaseAddress;
 
-    public AADEFactory(MasterDataConfiguration masterDataConfiguration)
+    public AADEFactory(MasterDataConfiguration masterDataConfiguration, string receiptBaseAddress)
     {
+        if (string.IsNullOrWhiteSpace(receiptBaseAddress))
+        {
+            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+        }
         _masterDataConfiguration = masterDataConfiguration;
+        _receiptBaseAddress = receiptBaseAddress;
+    }
+    
+    public static string GetReceiptUrl(string receiptBaseAddress, Guid ftQueueID, Guid ftQueueItemID)
+    {
+        return $"{receiptBaseAddress}/{ftQueueID}/{ftQueueItemID}";
     }
 
     public InvoicesDoc LoadInvoiceDocsFromQueueItems(List<ftQueueItem> queueItems)
@@ -313,6 +324,9 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
+
+        // Set downloadingInvoiceUrl (always required)
+        inv.downloadingInvoiceUrl = GetReceiptUrl(_receiptBaseAddress, receiptResponse.ftQueueID, receiptResponse.ftQueueItemID);
 
         // Set isDeliveryNote if HasTransportInformation flag is set
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) && !receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))

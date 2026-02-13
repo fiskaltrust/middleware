@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests
                 {
                     LocationId = "0"
                 }
-            });
+            }, "https://test.receipts.example.com");
         }
 
         private ReceiptResponse CreateExampleResponse()
