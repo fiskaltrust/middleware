@@ -622,7 +622,8 @@ public class AADEFactory
         }
 
         var chargeItems = receiptRequest.GetGroupedChargeItems()
-            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem) 
+                              && !grouped.chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Tip))
             .ToList();
 
         var nextPosition = 1;
@@ -778,31 +779,70 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        // what is payitemcase 99?
-        return receiptRequest.cbPayItems.Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
+        var tipFromChargeItems = receiptRequest.cbChargeItems
+            .Where(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Tip))
+            .Sum(x => x.Amount);
+
+        var nonTipPayItems = receiptRequest.cbPayItems
+            .Where(x => !x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))
+            .ToList();
+
+        if (nonTipPayItems.Count == 0)
         {
+            return new List<PaymentMethodDetailType>();
+        }
+
+        var tipCents = (long)Math.Round(tipFromChargeItems * 100);
+        var totalPaymentCents = (long)Math.Round(nonTipPayItems.Sum(x => x.Amount) * 100);
+
+        var adjustedPayments = new List<(PayItem payItem, long adjustedCents)>();
+        long totalAdjustedCents = 0;
+
+        foreach (var payItem in nonTipPayItems)
+        {
+            var paymentCents = (long)Math.Round(payItem.Amount * 100);
+            
+            var tipReductionCents = totalPaymentCents > 0 
+                ? (tipCents * paymentCents) / totalPaymentCents 
+                : 0;
+            
+            var adjustedCents = paymentCents - tipReductionCents;
+            adjustedPayments.Add((payItem, adjustedCents));
+            totalAdjustedCents += adjustedCents;
+        }
+        var remainder = totalPaymentCents - tipCents - totalAdjustedCents;
+        if (remainder != 0)
+        {
+            var largestIndex = adjustedPayments
+                .Select((p, i) => (payment: p, index: i))
+                .OrderByDescending(x => x.payment.adjustedCents)
+                .First()
+                .index;
+            
+            var (payItem, adjustedCents) = adjustedPayments[largestIndex];
+            adjustedPayments[largestIndex] = (payItem, adjustedCents + remainder);
+        }
+
+        return adjustedPayments.Select(x =>
+        {
+            var adjustedAmount = x.adjustedCents / 100m;
+
             var payment = new PaymentMethodDetailType
             {
-                type = AADEMappings.GetPaymentType(x),
-                amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
-                paymentMethodInfo = x.Description,
+                type = AADEMappings.GetPaymentType(x.payItem),
+                amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -adjustedAmount : adjustedAmount,
+                paymentMethodInfo = x.payItem.Description,
             };
-            var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip));
-            if (tipPayment != null)
-            {
-                payment.tipAmount = tipPayment.Amount;
-                payment.tipAmountSpecified = true;
-            }
 
-            if (x.ftPayItemCaseData != null)
+            if (x.payItem.ftPayItemCaseData != null)
             {
-                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.payItem.ftPayItemCaseData), new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
                 if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement dat && dat.ValueKind == JsonValueKind.String)
                 {
-                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.payItem.ftPayItemCaseData), new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     })!;
@@ -821,7 +861,7 @@ public class AADEFactory
                 }
                 else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
                 {
-                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.payItem.ftPayItemCaseData), new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     })!;
@@ -840,7 +880,7 @@ public class AADEFactory
                 {
                     try
                     {
-                        var payItemCaseDataJson = JsonSerializer.Serialize(x.ftPayItemCaseData);
+                        var payItemCaseDataJson = JsonSerializer.Serialize(x.payItem.ftPayItemCaseData);
                         using var jsonDoc = JsonDocument.Parse(payItemCaseDataJson);
                         if (jsonDoc.RootElement.TryGetProperty("aadeSignatureData", out var aadeSignatureDataElement))
                         {
