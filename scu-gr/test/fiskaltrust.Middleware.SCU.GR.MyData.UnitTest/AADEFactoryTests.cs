@@ -1334,7 +1334,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1399,7 +1399,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1465,7 +1465,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1529,7 +1529,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1586,7 +1586,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
