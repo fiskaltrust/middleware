@@ -7,9 +7,17 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 {
     public ChargeItemValidations()
     {
-        RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+        Include(new VatAmountRequired());
+    }
+
+    public class VatAmountRequired : AbstractValidator<ReceiptRequest>
+    {
+        public VatAmountRequired()
         {
-            chargeItem.RuleFor(x => x.VATAmount).NotNull();
-        });
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.VATAmount).NotNull();
+            });
+        }
     }
 }
