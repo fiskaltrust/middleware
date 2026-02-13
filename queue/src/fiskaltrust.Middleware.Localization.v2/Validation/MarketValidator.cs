@@ -9,8 +9,8 @@ public abstract class MarketValidator
 {
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetGlobalValidators()
     {
-        yield return new GlobalValidations.ChargeItemValidations();
         yield return new GlobalValidations.ReceiptValidations();
+        yield return new GlobalValidations.ChargeItemValidations();
     }
 
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators() => [];
