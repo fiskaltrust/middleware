@@ -241,6 +241,26 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && 
+            request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) &&
+            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) &&
+            receiptReferences != null && receiptReferences.Count > 0)
+        {
+            var previousReceipt = receiptReferences[0];
+            var mark = previousReceipt.Item2.ftSignatures?.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+            
+            if (string.IsNullOrEmpty(mark))
+            {
+                request.ReceiptResponse.SetReceiptResponseError("Cannot void delivery note: The mark of the delivery note to cancel is missing. Please provide the mark in the cbPreviousReceiptReference.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+
+            return await CancelDeliveryNoteAsync(request, mark);
+        }
+
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
@@ -416,6 +436,105 @@ public class MyDataSCU : IGRSSCD
         var xmlSerializer = new XmlSerializer(typeof(ResponseDoc));
         using var stringReader = new StringReader(xmlContent);
         return (ResponseDoc) xmlSerializer.Deserialize(stringReader)!;
+    }
+
+    public async Task<ProcessResponse> CancelDeliveryNoteAsync(ProcessRequest request, string mark)
+    {
+        var vatNumber = new string(_masterDataConfiguration.Account.VatId.Where(char.IsDigit).ToArray());
+        var url = $"/myDataProvider/CancelDeliveryNote?mark={mark}&entityVatNumber={vatNumber}";
+
+        var response = await _httpClient.PostAsync(url, null);
+        var content = await response.Content.ReadAsStringAsync();
+
+        var governmentApiResponse = new GovernmentApiData
+        {
+            Protocol = "mydata",
+            ProtocolVersion = "1.0",
+            Action = response.RequestMessage!.RequestUri!.ToString(),
+            ProtocolRequest = "",
+            ProtocolResponse = content
+        };
+
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governmentApiResponse
+                }
+            };
+        }
+
+        if ((int) response.StatusCode >= 500)
+        {
+            request.ReceiptResponse.SetReceiptResponseError("Error while sending the cancel request to MyData API.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            var result = GetResponse(content);
+            if (result != null && result.response?.Length > 0)
+            {
+                var data = result.response[0];
+                if (data == null)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    return new ProcessResponse
+                    {
+                        ReceiptResponse = request.ReceiptResponse
+                    };
+                }
+
+                if (data.statusCode.ToLower() == "success")
+                {
+                    if (data.Items != null && data.ItemsElementName != null)
+                    {
+                        for (var i = 0; i < data.ItemsElementName.Length; i++)
+                        {
+                            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                            {
+                                Data = data.Items[i].ToString() ?? "",
+                                Caption = data.ItemsElementName[i].ToString(),
+                                ftSignatureFormat = SignatureFormat.Text,
+                                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                            });
+                        }
+                    }
+
+                    request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                }
+                else
+                {
+                    var errors = data.Items?.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
+                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    {
+                        AADEError = data.statusCode,
+                        Errors = errors?.ToList() ?? new List<ErrorType>()
+                    }, options: new JsonSerializerOptions
+                    {
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    }));
+                }
+            }
+            else
+            {
+                request.ReceiptResponse.SetReceiptResponseError(content);
+            }
+        }
+        else
+        {
+            request.ReceiptResponse.SetReceiptResponseError(content);
+        }
+
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
     }
 
 }
