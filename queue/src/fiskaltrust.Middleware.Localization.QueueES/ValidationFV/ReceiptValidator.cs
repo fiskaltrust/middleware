@@ -10,5 +10,6 @@ public class ReceiptValidator : MarketValidator
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators()
     {
         yield return new ESValidations.ChargeItemValidations();
+        yield return new ESValidations.CustomerValidations();
     }
 }
