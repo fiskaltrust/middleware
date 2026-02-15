@@ -10,5 +10,8 @@ public class ReceiptValidator : MarketValidator
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators()
     {
         yield return new PTValidations.ChargeItemValidations();
+        yield return new PTValidations.PayItemValidations();
+        yield return new PTValidations.UserValidations();
+        yield return new PTValidations.CustomerValidations();
     }
 }
