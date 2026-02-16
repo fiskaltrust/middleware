@@ -605,4 +605,29 @@ public static class AADEMappings
             _ => throw new NotSupportedException($"The ChargeItemCase 0x{chargeItem.ftChargeItemCase:x} contains a not supported Nature NN.") // Unknown nature, no exemption category
         };
     }
+
+
+    public static int GetMeasurementUnit(ChargeItem? chargeItem)
+    {
+        if (chargeItem == null)
+        {
+            return MyDataMeasurementUnit.Pieces;
+        }
+        if (string.IsNullOrWhiteSpace(chargeItem?.Unit))
+        {
+            return MyDataMeasurementUnit.Pieces;
+        }
+
+        return chargeItem.Unit.ToLowerInvariant() switch
+        {
+            "pieces" => MyDataMeasurementUnit.Pieces,
+            "kg" => MyDataMeasurementUnit.Kg,
+            "litres" => MyDataMeasurementUnit.Litres,
+            "meters" => MyDataMeasurementUnit.Meters,
+            "squaremeters" => MyDataMeasurementUnit.SquareMeters,
+            "cubicmeters" => MyDataMeasurementUnit.CubicMeters,
+            "otherpieces" => MyDataMeasurementUnit.OtherPieces,
+            _ => MyDataMeasurementUnit.Pieces
+        };
+    }
 }
