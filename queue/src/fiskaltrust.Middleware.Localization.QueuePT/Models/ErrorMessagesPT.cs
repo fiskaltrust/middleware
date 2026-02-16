@@ -34,6 +34,8 @@ public static class ErrorMessagesPT
 
     public const string EEEE_ChargeItemAmountMissing = "EEEE_Charge item amount (price) is mandatory and must be set.";
 
+    public const string EEEE_ChargeItemQuantityZeroNotAllowed = "EEEE_Charge item quantity cannot be zero.";
+
     public const string EEEE_UserMissing = "EEEE_cbUser is mandatory and must be set for this receipt.";
 
     public const string EEEE_UserTooShort = "EEEE_cbUser must have at least 3 characters.";
@@ -42,7 +44,15 @@ public static class ErrorMessagesPT
 
     public const string EEEE_PreviousReceiptReference = "EEEE_cbPreviousReceiptReference is mandatory and must be set for this receipt.";
 
+    public const string EEEE_PreviousReceiptLineItemMismatch = "EEEE_cbPreviousReceiptReference must point to a receipt that shares at least one matching line item.";
+
     public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
+
+    /// <summary>
+    /// Error message when charge item description contains characters not representable in Windows-1252
+    /// </summary>
+    public static string EEEE_ChargeItemDescriptionEncodingInvalid(int position) =>
+        $"EEEE_Charge item at position {position}: Description contains characters that cannot be encoded with Windows-1252.";
 
     /// <summary>
     /// Error message for invalid Portuguese Tax Identification Number (NIF)
@@ -58,9 +68,9 @@ public static class ErrorMessagesPT
     public const string EEEE_CashPaymentExceedsLimit = "EEEE_Individual cash payment exceeds the legal limit of 3000€. No single cash payment can exceed this amount in Portugal.";
 
     /// <summary>
-    /// Error message for POS receipt exceeding 1000€ net amount limit
+    /// Error message for POS receipt exceeding 100€ net amount limit
     /// </summary>
-    public const string EEEE_PosReceiptNetAmountExceedsLimit = "EEEE_Point of Sale receipt net amount exceeds the legal limit of 1000€. Receipts with net amounts above this limit require a different document type.";
+    public const string EEEE_PosReceiptNetAmountExceedsLimit = "EEEE_Point of Sale receipt net amount exceeds the legal limit of 100€. Receipts with net amounts above this limit require a different document type.";
 
     /// <summary>
     /// Error message for OtherService charge items exceeding 100€ net amount limit
@@ -121,6 +131,12 @@ public static class ErrorMessagesPT
         $"EEEE_Charge item at position {position}: VATAmount {providedVatAmount:F2} does not match the calculated VAT amount {calculatedVatAmount:F2} (difference: {difference:F2}). The difference exceeds the acceptable rounding tolerance of 0.01.";
 
     /// <summary>
+    /// Error message for discounts/extras whose VAT configuration does not match the related line item
+    /// </summary>
+    public static string EEEE_DiscountVatRateOrCaseMismatch(int mainItemPosition, int discountPosition, decimal mainVatRate, decimal discountVatRate, ChargeItemCase mainVatCase, ChargeItemCase discountVatCase) =>
+        $"EEEE_Discount/extra at position {discountPosition} must use the same VAT rate ({mainVatRate}%) and VAT case '{mainVatCase}' as its related line item at position {mainItemPosition}, but VAT rate is {discountVatRate}% and VAT case is '{discountVatCase}'.";
+
+    /// <summary>
     /// Error message for negative quantity in non-refund receipts
     /// </summary>
     public static string EEEE_NegativeQuantityNotAllowed(int position, decimal quantity) =>
@@ -158,16 +174,41 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for full refund not matching original invoice items
     /// </summary>
-    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference) =>
-        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts.";
+    public static string EEEE_FullRefundItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Full refund does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: {diffField})";
+
+    /// <summary>
+    /// Error message for partial refund not matching original invoice items
+    /// </summary>
+    public static string EEEE_PartialRefundItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Partial refund does not match the original invoice '{originalReceiptReference}'. Items must not exceed original quantities or amounts. (Field: {diffField})";
 
     public static string EEEE_VoidItemsMismatch(string originalReceiptReference) =>
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
+
+    public static string EEEE_VoidItemsMismatch(string originalReceiptReference, string diffField) =>
+        $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts. (Field: {diffField})";
+
+    /// <summary>
+    /// Error message for voiding working documents that have already been invoiced
+    /// </summary>
+    public static string EEEE_WorkingDocumentAlreadyInvoiced(string receiptReference) =>
+        $"EEEE_Working document '{receiptReference}' has already been invoiced and cannot be voided.";
 
     /// <summary>
     /// Error message for mixed refund and non-refund items in partial refund
     /// </summary>
     public const string EEEE_MixedRefundItemsNotAllowed = "EEEE_Partial refund contains mixed refund and non-refund items. In Portugal, it is not allowed to mix refunds with non-refunds in the same receipt. All charge items must have the refund flag set for partial refunds.";
+
+    /// <summary>
+    /// Error message for mixed refund and non-refund pay items in partial refund
+    /// </summary>
+    public const string EEEE_MixedRefundPayItemsNotAllowed = "EEEE_Partial refund contains mixed refund and non-refund pay items. All pay items must have the refund flag set for partial refunds.";
+
+    /// <summary>
+    /// Error message when pay items are missing while refunding charge items
+    /// </summary>
+    public const string EEEE_PayItemsMissingForRefund = "EEEE_Partial refund with charge items must include pay items representing the refund amounts.";
 
     /// <summary>
     /// Error message for partial refund exceeding original quantity
@@ -198,10 +239,30 @@ public static class ErrorMessagesPT
         $"EEEE_Charge item at position {position} ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
 
     /// <summary>
+    /// Error message for invalid positions sequence.
+    /// </summary>
+    public static string EEEE_InvalidPositions(string itemType) =>
+        $"EEEE_{itemType} positions must start at 1 and be strictly increasing without gaps when provided.";
+
+    /// <summary>
+    /// Error message for discounts/extras that are positive (not allowed in PT)
+    /// </summary>
+    public static string EEEE_PositiveDiscountNotAllowed(int position, decimal amount) =>
+        $"EEEE_Charge item at position {position}: Positive discounts/extras are not allowed in Portugal. Amount was {amount:F2}.";
+
+    /// <summary>
     /// Error message for attempting to create multiple voids for the same receipt
     /// </summary>
     public static string EEEE_VoidAlreadyExists(string receiptReference) =>
         $"EEEE_A void for receipt '{receiptReference}' already exists. Multiple voids for the same receipt are not allowed.";
+    internal static string EEEE_CannotVoidInvoicedDocument(string previousReceiptRef) =>
+        $"EEEE_Document '{previousReceiptRef}' is already invoiced and cannot be voided.";
+
+    public static string EEEE_CannotVoidRefundedDocument(string previousReceiptRef) =>
+        $"EEEE_Document '{previousReceiptRef}' is already refunded and cannot be voided.";
+
+    public static string EEEE_CannotVoidPartiallyRefundedDocument(string previousReceiptRef) =>
+        $"EEEE_Document '{previousReceiptRef}' is already partially refunded and cannot be voided.";
 
     /// <summary>
     /// Error message for void receipts that contain charge items
@@ -215,7 +276,11 @@ public static class ErrorMessagesPT
 
     public const string EEEE_HandwrittenReceiptsNotSupported = "EEEE_Handwritten receipts must not be used in combination with void/refund or other connections.";
 
-    public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "When using Handwritten flag, ftReceiptCaseData with Series and Number must not be set.";
+    public const string EEEE_HandwrittenReceiptOnlyForInvoices = "EEEE_Handwritten receipts are only supported for Invoice document types (InvoiceUnknown, InvoiceB2C, InvoiceB2B, InvoiceB2G).";
+
+    public const string EEEE_HandwrittenReceiptSeriesAndNumberMandatory = "EEEE_When using Handwritten flag, ftReceiptCaseData.PT.Series and ftReceiptCaseData.PT.Number are mandatory, and Number must be greater than or equal to 1.";
+
+    public const string EEEE_HandwrittenReceiptsSeriesInvalidCharacters = "EEEE_Handwritten receipt series contains invalid characters.";
 
     public static string EEEE_PaymentTransferRequiresAccountReceivableItem = "EEEE_PaymentTransfer pay items require at least one accounts receivable charge item in the receipt.";
 
@@ -228,5 +293,45 @@ public static class ErrorMessagesPT
     public static string EEEE_PayItemsMissing = "EEEE_PayItems must not be null.";
 
     public static string EEEE_InvalidCountryCodeInChargeItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
-    public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in charge items for Portugal. Only 'PT' is accepted as valid country code in charge items.";
+    public static string EEEE_InvalidCountryCodeInPayItemsForPT = "EEEE_Invalid country code in pay items for Portugal. Only 'PT' is accepted as valid country code in pay items.";
+
+    public static string EEEE_CustomerCountryRequiredForTaxId = "EEEE_Customer country is required when CustomerVATId is provided.";
+
+    /// <summary>
+    /// Error message for attempting to create payment transfer for a refunded receipt
+    /// </summary>
+    public static string EEEE_PaymentTransferForRefundedReceipt(string receiptReference) =>
+        $"EEEE_Payment transfer cannot be created for receipt '{receiptReference}' because it has already been refunded.";
+
+    /// <summary>
+    /// Error message for customer mismatch in payment transfer
+    /// </summary>
+    public static string EEEE_PaymentTransferCustomerMismatch(string receiptReference, string differences) =>
+        $"EEEE_Customer data in payment transfer does not match the original invoice '{receiptReference}'. {differences}";
+
+    /// <summary>
+    /// Error message for payment transfer amount exceeding remaining amount after partial refunds
+    /// </summary>
+    public static string EEEE_PaymentTransferExceedsRemainingAmount(string receiptReference, decimal paymentAmount, decimal remainingAmount, decimal alreadyRefundedAmount) =>
+        $"EEEE_Payment transfer amount ({paymentAmount:F2}€) exceeds the remaining amount ({remainingAmount:F2}€) for invoice '{receiptReference}'. Already refunded: {alreadyRefundedAmount:F2}€.";
+
+
+    /// <summary>
+    /// Error message for handwritten receipt with duplicate series and number
+    /// </summary>
+    public static string EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked(string series, long number) =>
+        $"EEEE_A handwritten receipt with series '{series}' and number '{number}' has already been linked. Each handwritten receipt series and number combination can only be used once.";
+
+    public static string EEEE_ReceiptReferenceAlreadyUsed(string receiptReference) =>
+        $"EEEE_cbReceiptReference '{receiptReference}' has already been used by a successfully processed receipt. cbReceiptReference must be unique.";
+
+    /// <summary>
+    /// Error message for training mode not being enabled for this queue
+    /// </summary>
+    public const string EEEE_TrainingModeNotSupported = "EEEE_Training mode is not enabled for this queue.";
+
+    /// <summary>
+    /// Error message for working documents containing payment items
+    /// </summary>
+    public const string EEEE_WorkingDocumentPayItemsNotAllowed = "EEEE_Working documents (ProForma, Table Check, Budget) must not contain payment items. These documents do not support defining payments.";
 }

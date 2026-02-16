@@ -24,29 +24,6 @@ public static class PortugalReceiptCalculations
 {
     public static string GetPrintHash(string hash) => new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
 
-    private static (string documentType, string uniqueIdentification) ExtractDocumentTypeAndUniqueIdentification(string ftReceiptIdentification)
-    {
-        if (string.IsNullOrEmpty(ftReceiptIdentification))
-        {
-            return (string.Empty, string.Empty);
-        }
-
-        var localPart = ftReceiptIdentification.Split("#").Last();
-        var spaceIndex = localPart.IndexOf(' ');
-        
-        // The unique identification is always everything after the hash (the localPart)
-        var uniqueIdentification = localPart;
-        
-        // Document type is only extracted if there's a proper space separation and content after the space
-        if (spaceIndex > 0 && spaceIndex < localPart.Length - 1)
-        {
-            var documentType = localPart.Substring(0, spaceIndex);
-            return (documentType, uniqueIdentification);
-        }
-        
-        return (string.Empty, uniqueIdentification);
-    }
-
     public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
@@ -58,12 +35,18 @@ public static class PortugalReceiptCalculations
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
-        var customerCountry = customer.BillingAddress.Country;
+        var customerCountry = string.IsNullOrWhiteSpace(customer.BillingAddress.Country)
+            ? "Desconhecido"
+            : customer.BillingAddress.Country;
         
-        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        var (extractedDocumentType, uniqueIdentification) = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        }
 
         return new PTQrCode
         {
@@ -86,7 +69,7 @@ public static class PortugalReceiptCalculations
             TotalTaxes = request.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
-            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
             OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
@@ -102,12 +85,18 @@ public static class PortugalReceiptCalculations
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
-        var customerCountry = customer.BillingAddress.Country;
+        var customerCountry = string.IsNullOrWhiteSpace(customer.BillingAddress.Country)
+            ? "Desconhecido"
+            : customer.BillingAddress.Country;
 
-        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        var (extractedDocumentType, uniqueIdentification) = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        }
 
         return new PTQrCode
         {
@@ -131,7 +120,7 @@ public static class PortugalReceiptCalculations
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
-            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
             OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
@@ -149,10 +138,14 @@ public static class PortugalReceiptCalculations
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
 
-        var (extractedDocumentType, uniqueIdentification) = ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
+        var (extractedDocumentType, uniqueIdentification) = PTMappings.ExtractDocumentTypeAndUniqueIdentification(receiptResponse.ftReceiptIdentification);
 
         // Convert UTC time to Portugal local time
         var portugalTime = PortugalTimeHelper.ConvertToPortugalTime(receiptResponse.ftReceiptMoment);
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        {
+            portugalTime = PortugalTimeHelper.ConvertToPortugalTime(request.cbReceiptMoment);
+        }
 
         return new PTQrCode
         {
@@ -175,7 +168,7 @@ public static class PortugalReceiptCalculations
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
-            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
             OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }

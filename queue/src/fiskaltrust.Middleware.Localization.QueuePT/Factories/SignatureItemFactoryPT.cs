@@ -88,7 +88,7 @@ public static class SignatureItemFactoryPT
         return new SignatureItem
         {
             Caption = $"-----",
-            Data = $"{printHash} - Processado por programa certificado" + $" No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
+            Data = $"{printHash} - Processado por programa certificado " + $" n.º {fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PTMappings.CertificationPosSystem.SoftwareCertificateNumber}/AT",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
         };
@@ -105,12 +105,12 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem AddProformaReference(List<Receipt> receiptReferences)
+    public static SignatureItem AddReferenciaSignature(List<Receipt> receiptReferences)
     {
         return new SignatureItem
         {
             Caption = $"",
-            Data = $"Referencia: Proforma {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
+            Data = $"Referencia: {receiptReferences[0].Response.ftReceiptIdentification.Split("#").Last()}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
         };
@@ -143,7 +143,7 @@ public static class SignatureItemFactoryPT
         return new SignatureItem
         {
             Caption = "",
-            Data = $"Cópia do documento original - FSM {series}/{number:D4}",
+            Data = $"Cópia do documento original - FTM {series}/{number:D4}",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
         };
@@ -162,7 +162,8 @@ public static class SignatureItemFactoryPT
 
     public static void AddCustomerSignaturesIfNecessary(ProcessCommandRequest request, ProcessResponse response)
     {
-        if (request.ReceiptRequest.cbCustomer is null)
+        var cbCustomer = request.ReceiptRequest.GetCustomerOrNull();
+        if (cbCustomer is null || cbCustomer.CustomerVATId == "999999990")
         {
             response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddConsumidorFinal());
         }

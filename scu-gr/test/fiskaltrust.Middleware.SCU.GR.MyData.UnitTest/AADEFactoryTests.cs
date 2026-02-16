@@ -1,14 +1,15 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using FluentAssertions;
+using NodaTime;
 using Xunit;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Linq;
-using System;
-using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 
@@ -47,7 +48,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error!.Exception.Message.Should().Be("When using Handwritten receipts the Series must be provided in the ftReceiptCaseData payload.");
@@ -93,7 +94,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().NotBeNull();
@@ -157,7 +158,7 @@ public class AADEFactoryTests
             {
                 VatId = merchantId // This should match the MerchantVATID
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().BeNull();
@@ -226,7 +227,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().BeNull();
@@ -276,7 +277,7 @@ public class AADEFactoryTests
             {
                 VatId = "WRONG_VAT_ID" 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error!.Exception.Message.Should().Be("When using Handwritten receipts the MerchantVATID that is provided must match with the one configured in the Account.");
@@ -341,7 +342,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().BeNull();
@@ -356,6 +357,7 @@ public class AADEFactoryTests
     {
         var cbReceiptReference = "8-1752270167120";
         var receiptMoment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime();
+        int offset = 3; // Summer time offset for Greece using UTC+3
         var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
         var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
 
@@ -426,10 +428,10 @@ public class AADEFactoryTests
             {
                 VatId = "112545020"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
-        
+
         // Verify no error occurred
         error.Should().BeNull();
 
@@ -438,11 +440,12 @@ public class AADEFactoryTests
         action!.invoice.Should().HaveCount(1);
         
         var invoice = action.invoice[0];
-        
+        var expectedIssueDate = DateTime.SpecifyKind(receiptMoment.AddHours(offset), DateTimeKind.Unspecified); // Kind = Unspecified
+                                                                           
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
+        invoice.invoiceHeader.issueDate.Should().Be(expectedIssueDate);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
         
         // Verify customer information
@@ -487,6 +490,7 @@ public class AADEFactoryTests
     {
         var cbReceiptReference = "8-1752270167120";
         var receiptMoment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime();
+        int offset = 3; // Summer time offset for Greece using UTC+3
         var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
         var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
 
@@ -557,7 +561,7 @@ public class AADEFactoryTests
             {
                 VatId = "112545020"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
 
@@ -569,11 +573,12 @@ public class AADEFactoryTests
         action!.invoice.Should().HaveCount(1);
 
         var invoice = action.invoice[0];
+        var expectedIssueDate = DateTime.SpecifyKind(receiptMoment.AddHours(offset), DateTimeKind.Unspecified); // Kind = Unspecified
 
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
+        invoice.invoiceHeader.issueDate.Should().Be(expectedIssueDate);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify invoice details
@@ -611,6 +616,7 @@ public class AADEFactoryTests
     {
         var cbReceiptReference = "8-1752270167120";
         var receiptMoment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime();
+        int offset = 3; // Summer time offset for Greece using UTC+3
         var ftPosSystemId = Guid.Parse("7b5955e3-4944-4ff3-8df9-46166b70132a");
         var ftCashBoxID = Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4");
 
@@ -681,7 +687,7 @@ public class AADEFactoryTests
             {
                 VatId = "112545020"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
 
@@ -694,10 +700,12 @@ public class AADEFactoryTests
 
         var invoice = action.invoice[0];
 
+        var expectedIssueDate = DateTime.SpecifyKind(receiptMoment.AddHours(offset), DateTimeKind.Unspecified); // Kind = Unspecified
+
         // Verify basic invoice header
         invoice.invoiceHeader.series.Should().Be(receiptResponse.ftCashBoxIdentification);
         invoice.invoiceHeader.aa.Should().Be("291"); // This is based on the hexadecimal conversion
-        invoice.invoiceHeader.issueDate.Should().Be(receiptMoment);
+        invoice.invoiceHeader.issueDate.Should().Be(expectedIssueDate);
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify customer information
@@ -824,7 +832,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -965,7 +973,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1086,7 +1094,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1197,7 +1205,7 @@ public class AADEFactoryTests
                 City = "Athens",
                 Zip = "12345"
             }
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1271,7 +1279,7 @@ public class AADEFactoryTests
                 City = "Athens",
                 Zip = "12345"
             }
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1334,7 +1342,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1399,7 +1407,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1465,7 +1473,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1529,7 +1537,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1586,7 +1594,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
@@ -1596,5 +1604,286 @@ public class AADEFactoryTests
         doc.Should().NotBeNull();
         var header = doc!.invoice[0].invoiceHeader;
         header.multipleConnectedMarks.Should().BeNull();
+    }
+
+
+    // Winter tests (UTC+2)
+    [Theory]
+    [InlineData(10)] // Normal daytime
+    [InlineData(23)] // One hour before midnight → next day
+    public void MapToInvoicesDoc_ForReceiptWithReceiptMomentUtcInWinter_ShouldSetLocalTime(int utcHour)
+    {
+        int winterOffset = 2; // UTC+2 for Greek winter
+
+        // Arrange
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Description = "Test Item",
+                Quantity = 1,
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        };
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 01, 23, utcHour, 15, 30, DateTimeKind.Utc),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100,
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                }
+            ],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "TEST-123"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        invoiceDoc!.invoice.Should().HaveCount(1);
+
+        var issueDate = invoiceDoc.invoice[0].invoiceHeader.issueDate;
+        // Calculate expected local date/time dynamically
+        var expectedDateTime = receiptRequest.cbReceiptMoment.AddHours(winterOffset);
+
+        // Check hour
+        issueDate.Hour.Should().Be(expectedDateTime.Hour, "UTC hour should be converted to Greek local time (UTC+2 winter / DST)");
+
+        // Check day rollover
+        issueDate.Date.Should().Be(expectedDateTime.Date, "Greek local time should handle day rollover correctly");
+
+        // Check serialization safety
+        issueDate.Kind.Should().Be(DateTimeKind.Unspecified, "Unspecified prevents server-based timezone adjustments");
+    }
+
+    // Summer tests (UTC+3)
+    [Theory]
+    [InlineData(10)] // Normal daytime
+    [InlineData(23)] // One hour before midnight → next day
+    public void MapToInvoicesDoc_ForReceiptWithReceiptMomentUtcInSummer_ShouldSetLocalTime(int utcHour)
+    {
+        int summerOffset = 3; // UTC+3 for Greek summer (DST)
+
+        // Arrange
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Description = "Test Item",
+                Quantity = 1,
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24
+            }
+        };
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 06, 23, utcHour, 15, 30, DateTimeKind.Utc),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100,
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                }
+            ],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "TEST-123"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        });
+
+        // Act
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull();
+        invoiceDoc.Should().NotBeNull();
+        invoiceDoc!.invoice.Should().HaveCount(1);
+
+        var issueDate = invoiceDoc.invoice[0].invoiceHeader.issueDate;
+
+        // Calculate expected local date/time dynamically
+        var expectedDateTime = receiptRequest.cbReceiptMoment.AddHours(summerOffset);
+
+        // Check hour
+        issueDate.Hour.Should().Be(expectedDateTime.Hour, "UTC hour should be converted to Greek local time (UTC+3 summer / DST)");
+
+        // Check day rollover
+        issueDate.Date.Should().Be(expectedDateTime.Date, "Greek local time should handle day rollover correctly");
+
+        // Check serialization safety
+        issueDate.Kind.Should().Be(DateTimeKind.Unspecified, "Unspecified prevents server-based timezone adjustments");
+    }
+
+
+    [Theory]
+    // Summer (UTC+3)
+    [InlineData("2025-07-25T07:05:21.392Z", 3)]   // Summer normal daytime
+    [InlineData("2025-07-24T23:11:15.000Z", 3)]   // Summer, 1 hour before midnight UTC → next day local
+
+    // Winter (UTC+2)
+    [InlineData("2025-01-25T07:05:22.392Z", 2)]   // Winter normal daytime
+    [InlineData("2025-01-24T23:11:16.000Z", 2)]   // Winter, 1 hour before midnight UTC → next day local
+    [InlineData("2025-12-31T23:24:00.000Z", 2)]   // Winter, end-of-year, one hour before midnight UTC
+
+    // DST evening transitions – Winter → Summer
+    // Greece UTC+2 before DST, UTC+3 after DST
+    [InlineData("2025-03-30T00:59:00.000Z", 2)] // 1 minute BEFORE DST starts → winter (UTC+2)
+    [InlineData("2025-03-29T23:16:40.000Z", 2)] // Original test, evening UTC → still winter time (UTC+2)
+    [InlineData("2025-03-30T01:01:00.000Z", 3)] // 1 minute AFTER DST starts → summer (UTC+3)
+
+    // DST evening transitions – Summer → Winter
+    // Greece UTC+3 before DST ends, UTC+2 after DST ends
+    [InlineData("2025-10-25T23:12:26.000Z", 3)] // 1 minute before evening UTC → still summer time (UTC+3)
+    [InlineData("2025-10-25T23:13:26.000Z", 3)] // Original test, evening UTC → still summer time (UTC+3)
+    [InlineData("2025-10-26T01:01:26.000Z", 2)] // 1 minute AFTER DST ended → winter (UTC+2)
+    public void GetLocalTime_FromUTCTime_ShouldReturnLocalTime(string utcString, int offset)
+    {
+        // Arrange
+        var utcDate = DateTime.Parse(utcString).ToUniversalTime();
+        var receiptRequest = new ReceiptRequest
+        {
+            cbReceiptMoment = utcDate
+        };
+
+        // Add the offset (hours) for summer/winter → automatically handles day/month/year rollover
+        var expectedIssueDateTime = utcDate.AddHours(offset);
+
+        // Convert to Kind = Unspecified to match GetLocalTime() output
+        var expectedIssueDate = DateTime.SpecifyKind(expectedIssueDateTime, DateTimeKind.Unspecified);
+
+        // Act
+        var actualLocalTime = AADEMappings.GetLocalTime(receiptRequest);
+
+        // Assert
+        Assert.Equal(expectedIssueDate, actualLocalTime);
+    }
+    [Fact]
+    public void MapToInvoicesDoc_ForInvoiceSentAt_00_02_LocalTime_ShouldSetCorrectIssueDate()
+    {
+        // Arrange - Real-world scenario from ISV
+        // ISV sent invoice at 09/01/2026 00:02 Greek Local Time
+        // UTC time: 08/01/2026 22:02:32 (UTC+2 in winter)
+        var utcMoment = DateTime.Parse("2026-01-08T22:02:32.0000000Z").ToUniversalTime();
+        int winterOffset = 2; // January = winter in Greece (UTC+2)
+
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "POS001",
+            Currency = Currency.EUR,
+            cbReceiptMoment = utcMoment, // UTC time from ISV
+            cbReceiptReference = "ftAD#MF111-73",
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 50.32m,
+                Description = "Product",
+                Quantity = 1,
+                VATRate = 24,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate)
+            }
+        },
+            cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 62.40m, ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) }
+        },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "123456789",
+                CustomerCountry = "GR"
+            },
+            cbReceiptAmount = 62.40m
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "MF111"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "999123456"
+            }
+        });
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        // Assert
+        error.Should().BeNull("invoice should be created successfully");
+        doc.Should().NotBeNull();
+        doc!.invoice.Should().HaveCount(1);
+
+        var invoice = doc.invoice[0];
+        var issueDate = invoice.invoiceHeader.issueDate;
+
+        // Expected: 2026-01-09 00:02:32 (UTC+2 = +2 hours from UTC)
+        var expectedLocalTime = utcMoment.AddHours(winterOffset);
+        var expectedIssueDate = DateTime.SpecifyKind(expectedLocalTime, DateTimeKind.Unspecified);
+
+        // Verify the date rolled over to next day
+        issueDate.Date.Should().Be(new DateTime(2026, 1, 9),
+            "UTC 2026-01-08 22:02 should convert to Greek local 2026-01-09 00:02");
+
+        issueDate.Hour.Should().Be(0, "22:02 UTC + 2 hours = 00:02 local");
+        issueDate.Minute.Should().Be(2, "minutes should be preserved");
+
+        issueDate.Should().Be(expectedIssueDate,
+            "issue date should match Greek local time with proper day rollover");
+
+        issueDate.Kind.Should().Be(DateTimeKind.Unspecified,
+            "Kind must be Unspecified to prevent myDATA serialization issues");
     }
 }

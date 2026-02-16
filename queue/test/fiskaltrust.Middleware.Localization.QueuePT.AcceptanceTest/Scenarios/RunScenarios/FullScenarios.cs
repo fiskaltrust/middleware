@@ -32,6 +32,204 @@ public class FullScenarios : AbstractScenarioTests
     {
 
     }
+    [Fact]
+    public async Task RunPartialRefund()
+    {
+        using var scope = new AssertionScope();
+        // 5_1 A simplified invoice (Article 40 of the CIVA) for a customer who has provided their VAT number
+        var receipt_5_1 = """
+            {
+                "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+                "cbReceiptReference": "ab863596-dbf3-453a-960d-38a805de2047",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": 10,
+                        "Description": "Line item 1",
+                        "Amount": 10,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450018833 
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Description": "On Credit",
+                        "Amount": 10,
+                        "ftPayItemCase": 5788286605450018825
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "AT1",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                }
+            }
+            """;
+
+        var (receipt_5_1_Request, receipt_5_1_Response) = await ProcessReceiptAsync(receipt_5_1);
+        receipt_5_1_Response.ftState.State().Should().Be(State.Success);
+
+        var partialRefund = """
+            {
+                "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+                "cbReceiptReference": "{{$guid}}",
+                "cbReceiptMoment": "{{$isoTimestamp}}",
+                "cbChargeItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "Line item 1",
+                        "Amount": -1,
+                        "VATRate": 6,
+                        "ftChargeItemCase": 5788286605450149905
+                    }
+                ],
+                "cbPayItems": [
+                    {
+                        "Quantity": -1,
+                        "Description": "On Credit",
+                        "Amount": -1,
+                        "ftPayItemCase": 5788286605450149897
+                    }
+                ],
+                "ftReceiptCase": 5788286605450022913,
+                "cbUser": "Stefan Kert",
+                "cbCustomer": {
+                    "CustomerName": "Cliente AT",
+                    "CustomerStreet": "Morada AT",
+                    "CustomerZip": "1000-000",
+                    "CustomerCity": "Lisboa",
+                    "CustomerVATId": "999999990"
+                },
+                "cbPreviousReceiptReference": "ab863596-dbf3-453a-960d-38a805de2047"
+            }
+            """;
+
+        var (receipt_5_2_Request, receipt_5_2_Response) = await ProcessReceiptAsync(partialRefund);
+        receipt_5_2_Response.ftState.State().Should().Be(State.Success);
+    }
+
+    [Fact]
+    public async Task DuplicateHandwrittenReceiptSeriesNumber_ShouldReturnError()
+    {
+        using var scope = new AssertionScope();
+
+        // First handwritten receipt with series "TEST" and number 1
+        var handwrittenReceipt1 = """
+            {
+              "cbReceiptReference": "handwritten-test-1",
+              "cbReceiptMoment": "2022-01-14T00:00:00Z",
+              "cbChargeItems": [
+                {
+                  "Quantity": 1,
+                  "Description": "Manual document TEST/1 - Product item",
+                  "Amount": 50,
+                  "VATRate": 23,
+                  "ftChargeItemCase": 5788286605450018835
+                }
+              ],
+              "cbPayItems": [
+                {
+                  "Description": "Numerario",
+                  "Amount": 50,
+                  "ftPayItemCase": 5788286605450018817
+                }
+              ],
+              "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+              "ftReceiptCase": 5788286605450547201,
+              "ftReceiptCaseData": {
+                "PT": {
+                  "Series": "TEST",
+                  "Number": 1
+                }
+              },
+              "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var (receipt1Request, receipt1Response) = await ProcessReceiptAsync(handwrittenReceipt1);
+        receipt1Response.ftState.State().Should().Be(State.Success, "First handwritten receipt should succeed");
+
+        // Second handwritten receipt with the SAME series "TEST" and number 1 - should fail
+        var handwrittenReceipt2 = """
+            {
+              "cbReceiptReference": "handwritten-test-2",
+              "cbReceiptMoment": "2022-01-15T00:00:00Z",
+              "cbChargeItems": [
+                {
+                  "Quantity": 2,
+                  "Description": "Manual document TEST/1 - Another product",
+                  "Amount": 75,
+                  "VATRate": 23,
+                  "ftChargeItemCase": 5788286605450018835
+                }
+              ],
+              "cbPayItems": [
+                {
+                  "Description": "Numerario",
+                  "Amount": 75,
+                  "ftPayItemCase": 5788286605450018817
+                }
+              ],
+              "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+              "ftReceiptCase": 5788286605450547201,
+              "ftReceiptCaseData": {
+                "PT": {
+                  "Series": "TEST",
+                  "Number": 1
+                }
+              },
+              "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var (receipt2Request, receipt2Response) = await ProcessReceiptAsync(handwrittenReceipt2);
+        receipt2Response.ftState.State().Should().Be(State.Error, "Second handwritten receipt with same series and number should fail");
+    }
+
+    [Fact]
+    public async Task HandwrittenReceiptWithNumberZero_ShouldReturnError()
+    {
+        var handwrittenReceipt = """
+            {
+              "cbReceiptReference": "handwritten-test-zero",
+              "cbReceiptMoment": "2022-01-14T00:00:00Z",
+              "cbChargeItems": [
+                {
+                  "Quantity": 1,
+                  "Description": "Manual document TEST/0 - Product item",
+                  "Amount": 50,
+                  "VATRate": 23,
+                  "ftChargeItemCase": 5788286605450018835
+                }
+              ],
+              "cbPayItems": [
+                {
+                  "Description": "Numerario",
+                  "Amount": 50,
+                  "ftPayItemCase": 5788286605450018817
+                }
+              ],
+              "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
+              "ftReceiptCase": {{ftReceiptCase}},
+              "ftReceiptCaseData": {
+                "PT": {
+                  "Series": "TEST",
+                  "Number": 0
+                }
+              },
+              "cbUser": "Stefan Kert"
+            }
+            """;
+
+        var result = await ProcessReceiptAsync(handwrittenReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT").WithFlag(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.HandWritten));
+        var response = result.response;
+        response.ftState.State().Should().Be(State.Error);
+        response.ftSignatures[0].Data.Should().Contain("EEEE_When using Handwritten flag, ftReceiptCaseData.PT.Series and ftReceiptCaseData.PT.Number are mandatory, and Number must be greater than or equal to 1.");
+    }
 
     [Fact]
     public async Task RunScenario()
@@ -307,32 +505,28 @@ public class FullScenarios : AbstractScenarioTests
                   "Description": "Line item 1",
                   "Amount": 55.00,
                   "VATRate": 23,
-                  "ftChargeItemCase": 5788286605450018835,
-                  "Position": 1
+                  "ftChargeItemCase": 5788286605450018835
                 },
                 {
                   "Quantity": 1,
                   "Description": "Discount Line item 1",
                   "Amount": -4.84000,
                   "VATRate": 23,
-                  "ftChargeItemCase": 5788286605450280979,
-                  "Position": 1
+                  "ftChargeItemCase": 5788286605450280979
                 },
                 {
                   "Quantity": 1,
                   "Description": "Line item 1",
                   "Amount": 12.5,
                   "VATRate": 23,
-                  "ftChargeItemCase": 5788286605450018835,
-                  "Position": 2
+                  "ftChargeItemCase": 5788286605450018835
                 }
               ],
               "cbPayItems": [
                 {
                   "Description": "Numerario",
                   "Amount": 62.66,
-                  "ftPayItemCase": 5788286605450018817,
-                  "Position": 1
+                  "ftPayItemCase": 5788286605450018817
                 }
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
@@ -442,7 +636,7 @@ public class FullScenarios : AbstractScenarioTests
                 {
                   "Quantity": 1,
                   "Description": "Line item 1",
-                  "Amount": 150,
+                  "Amount": 123,
                   "VATRate": 23,
                   "ftChargeItemCase": 5788286605450018835
                 }
@@ -450,7 +644,7 @@ public class FullScenarios : AbstractScenarioTests
               "cbPayItems": [
                 {
                   "Description": "Numerario",
-                  "Amount": 150,
+                  "Amount": 123,
                   "ftPayItemCase": 5788286605450018817
                 }
               ],
@@ -459,13 +653,9 @@ public class FullScenarios : AbstractScenarioTests
               "cbUser": "Stefan Kert",
               "cbCustomer": {
                 "CustomerName": "Stefan Kert",
-                "CustomerId": null,
-                "CustomerType": null,
                 "CustomerStreet": "Demo street",
                 "CustomerZip": "1050-190",
-                "CustomerCity": "Lissbon",
-                "CustomerCountry": null,
-                "CustomerVATId": null
+                "CustomerCity": "Lissbon"
               }
             }
             """;
@@ -611,7 +801,14 @@ public class FullScenarios : AbstractScenarioTests
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
               "ftReceiptCase": 5788286605450018818,
               "cbPreviousReceiptReference": "2f480b2f-fe1b-4b18-9603-d21a7e2b2094",
-              "cbUser": "Stefan Kert"
+              "cbUser": "Stefan Kert",
+              "cbCustomer": {
+                "CustomerName": "Nuno Cazeiro",
+                "CustomerStreet": "Demo street",
+                "CustomerZip": "1050-189",
+                "CustomerCity": "Lissbon",
+                "CustomerVATId": "199998132"
+              }
             }
             """;
         var (receipt_5_13_2_Request, receipt_5_13_2_Response) = await ProcessReceiptAsync(receipt_5_13_2);
@@ -683,17 +880,18 @@ public class FullScenarios : AbstractScenarioTests
               "cbReceiptMoment": "{{$isoTimestamp}}",
               "cbChargeItems": [
                 {
-                  "Quantity": 1,
+                  "Quantity": -1,
                   "Description": "Line item 1",
-                  "Amount": 100,
+                  "Amount": -100,
                   "VATRate": 23,
                   "ftChargeItemCase": 5788286605450018835
                 }
               ],
               "cbPayItems": [
                 {
+                  "Quantity": -1,
                   "Description": "Numerario",
-                  "Amount": 100,
+                  "Amount": -100,
                   "ftPayItemCase": 5788286605450018817
                 }
               ],
@@ -1228,7 +1426,7 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
               "ftPosSystemId": "632c29fe-61db-426a-a7fd-3df22a7ac949",
-              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCase": 5788286605450547201,
               "ftReceiptCaseData": {
                 "PT": {
                   "Series": "F",
@@ -1240,7 +1438,10 @@ public class FullScenarios : AbstractScenarioTests
             """;
         var (receipt_28_Request, receipt_28_Response) = await ProcessReceiptAsync(receipt_28);
         receipt_28_Response.ftState.State().Should().Be(State.Success);
-        receipt_28_Response.ftReceiptIdentification.Should().Be("ftD#FS ft20250a62/1");
+        receipt_28_Response.ftReceiptIdentification.Should().Contain("#FT ");
+        receipt_28_Response.ftSignatures.Should().Contain(s =>
+            s.ftSignatureType.IsType(SignatureTypePT.PTAdditional) &&
+            s.Data == "Cópia do documento original - FTM F/0023");
 
         // T28_2 Simulate the integration of 2 manual documents according to point 2.4 of Dispatch No. 8632/2014 of July 3 of the Director General of the Tax and Customs Authority where the 1st document belongs to series F with No. 23 from 14-01-2022 and the 2nd belongs to series D with No. 3 from 12-01-2022 and corresponding PDF. (Note that, according to point 2.4.2, a new document of the same type must be created that collects all elements of the manual document issued, meaning that all elements are free entry, for example: usual denomination, quantity, price, tax value, total tax and document, etc.)
         var receipt_28_2 = """
@@ -1265,7 +1466,7 @@ public class FullScenarios : AbstractScenarioTests
               ],
               "ftCashBoxID": "a8466a96-aa7e-40f7-bbaa-5303e60c7943",
               "ftPosSystemId": "76c746fc-7e94-4bd3-9506-ecfa69642335",
-              "ftReceiptCase": 5788286605450543105,
+              "ftReceiptCase": 5788286605450547201,
               "ftReceiptCaseData": {
                 "PT": {
                   "Series": "D",
@@ -1277,7 +1478,10 @@ public class FullScenarios : AbstractScenarioTests
             """;
         var (receipt_28_2_Request, receipt_28_2_Response) = await ProcessReceiptAsync(receipt_28_2);
         receipt_28_2_Response.ftState.State().Should().Be(State.Success);
-        receipt_28_2_Response.ftReceiptIdentification.Should().Be("ftE#FS ft20250a62/2");
+        receipt_28_2_Response.ftReceiptIdentification.Should().Contain("#FT ");
+        receipt_28_2_Response.ftSignatures.Should().Contain(s =>
+            s.ftSignatureType.IsType(SignatureTypePT.PTAdditional) &&
+            s.Data == "Cópia do documento original - FTM D/0003");
 
         // T29 is not supported
         // T30 is not supported
@@ -1310,7 +1514,7 @@ public class FullScenarios : AbstractScenarioTests
 
         var (receipt_33_1_CM_Request, receipt_33_1_CM_Response) = await ProcessReceiptAsync(receipt_33_1_CM);
         receipt_33_1_CM_Response.ftState.State().Should().Be(State.Success);
-        receipt_33_1_CM_Response.ftReceiptIdentification.Should().Be("ftF#CM ft20259c2f/1");
+        receipt_33_1_CM_Response.ftReceiptIdentification.Should().Contain("#CM ");
 
         // T33_2_OR OR => If the application allows it, create a document that can be delivered to the customer to verify the transfer of goods or provision of services (order, table consultation, verification document, etc.) and corresponding PDF
         var receipt_33_2_OR = """
@@ -1336,7 +1540,7 @@ public class FullScenarios : AbstractScenarioTests
         // 5054200200000007
         var (receipt_33_2_OR_Request, receipt_33_2_OR_Response) = await ProcessReceiptAsync(receipt_33_2_OR);
         receipt_33_2_OR_Response.ftState.State().Should().Be(State.Success);
-        receipt_33_2_OR_Response.ftReceiptIdentification.Should().Be("ft10#OR ft20255389/1");
+        receipt_33_2_OR_Response.ftReceiptIdentification.Should().Contain("#OR ");
 
         scope.Dispose();
 

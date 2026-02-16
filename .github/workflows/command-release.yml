@@ -51,6 +51,7 @@ jobs:
     needs: [meta]
     outputs:
       version: ${{ steps.create-release.outputs.version }}
+      tag: ${{ steps.create-release.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -129,7 +130,7 @@ jobs:
           edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
-            ![](https://badgen.net/static/release%20${{ needs.release.outputs.version }}/success/green)
+            [![](https://badgen.net/static/release%20${{ needs.release.outputs.version }}/success/green)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.release.outputs.tag }})
 
   failure:
     needs:

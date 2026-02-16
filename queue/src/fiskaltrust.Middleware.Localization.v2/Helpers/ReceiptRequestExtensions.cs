@@ -108,10 +108,17 @@ public static class ReceiptRequestExtensions
     {
         if (receiptRequest.cbCustomer != null)
         {
-            return JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer), new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                return JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
         return null;
     }

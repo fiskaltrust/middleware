@@ -145,7 +145,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     MaxNumberOfStartedTransactions = tseResult.MaxNumberOfStartedTransactions,
                     CertificatesBase64 = new List<string>
                     {
-                        Convert.ToBase64String(Encoding.ASCII.GetBytes(tseResult.CertificateChain))
+                        tseResult.CertificateChain
                     },
                     CurrentClientIds = clientDto,
                     SignatureAlgorithm = algorithm,

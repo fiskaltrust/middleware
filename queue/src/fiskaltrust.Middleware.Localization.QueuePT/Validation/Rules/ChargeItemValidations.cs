@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using System.Text;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 
@@ -28,10 +29,11 @@ public static class ChargeItemValidations
             // Description validation
             if (string.IsNullOrWhiteSpace(chargeItem.Description))
             {
+                var rule = PortugalValidationRules.ChargeItemDescriptionMissing;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_ChargeItemValidationFailed(i, "description is missing"),
-                    "EEEE_ChargeItemDescriptionMissing",
-                    "cbChargeItems.Description",
+                    rule.Code,
+                    rule.Field,
                     i
                 ));
             }
@@ -39,10 +41,11 @@ public static class ChargeItemValidations
             // VAT Rate validation
             if (chargeItem.VATRate < 0)
             {
+                var rule = PortugalValidationRules.ChargeItemVatRateMissing;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_ChargeItemValidationFailed(i, "VAT rate is missing or invalid"),
-                    "EEEE_ChargeItemVATRateMissing",
-                    "cbChargeItems.VATRate",
+                    rule.Code,
+                    rule.Field,
                     i
                 ).WithContext("VATRate", chargeItem.VATRate));
             }
@@ -50,12 +53,87 @@ public static class ChargeItemValidations
             // Amount (price) validation
             if (chargeItem.Amount == 0)
             {
+                var rule = PortugalValidationRules.ChargeItemAmountMissing;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_ChargeItemValidationFailed(i, "amount (price) is missing or zero"),
-                    "EEEE_ChargeItemAmountMissing",
-                    "cbChargeItems.Amount",
+                    rule.Code,
+                    rule.Field,
                     i
                 ).WithContext("Amount", chargeItem.Amount));
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// Validates that charge item descriptions can be encoded using Windows-1252.
+    /// Returns one ValidationResult per validation error found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_Description_Encoding(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        var encoding = Encoding.GetEncoding(1252, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+
+        for (var i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            if (string.IsNullOrEmpty(chargeItem.Description))
+            {
+                continue;
+            }
+
+            var hasEncodingIssue = false;
+            try
+            {
+                _ = encoding.GetBytes(chargeItem.Description);
+            }
+            catch (EncoderFallbackException)
+            {
+                hasEncodingIssue = true;
+            }
+
+            if (hasEncodingIssue)
+            {
+                var rule = PortugalValidationRules.ChargeItemDescriptionEncodingInvalid;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_ChargeItemDescriptionEncodingInvalid(i),
+                    rule.Code,
+                    rule.Field,
+                    i
+                ).WithContext("Description", chargeItem.Description));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that charge items do not have zero quantity.
+    /// Returns one ValidationResult per validation error found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_Quantity_NotZero(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        for (var i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            if (chargeItem.Quantity == 0)
+            {
+                var rule = PortugalValidationRules.ChargeItemQuantityZeroNotAllowed;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_ChargeItemQuantityZeroNotAllowed,
+                    rule.Code,
+                    rule.Field,
+                    i
+                ).WithContext("Quantity", chargeItem.Quantity));
             }
         }
     }
@@ -77,10 +155,11 @@ public static class ChargeItemValidations
 
             if (!string.IsNullOrWhiteSpace(chargeItem.Description) && chargeItem.Description.Length < 3)
             {
+                var rule = PortugalValidationRules.ChargeItemDescriptionTooShort;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_ChargeItemValidationFailed(i, "description must be at least 3 characters long"),
-                    "EEEE_ChargeItemDescriptionTooShort",
-                    "cbChargeItems.Description",
+                    rule.Code,
+                    rule.Field,
                     i
                 )
                 .WithContext("DescriptionLength", chargeItem.Description.Length)
@@ -90,7 +169,7 @@ public static class ChargeItemValidations
     }
 
     /// <summary>
-    /// Validates that POS receipt net amount does not exceed 1000€.
+    /// Validates that POS receipt net amount does not exceed 100€.
     /// Returns a single ValidationResult if validation fails.
     /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_NetAmountLimit(ReceiptRequest request)
@@ -108,14 +187,15 @@ public static class ChargeItemValidations
         var totalNetAmount = request.cbChargeItems
             .Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount());
 
-        if (totalNetAmount > 1000m)
+        if (totalNetAmount > 100m)
         {
+            var rule = PortugalValidationRules.PosReceiptNetAmountExceedsLimit;
             yield return ValidationResult.Failed(new ValidationError(
                 ErrorMessagesPT.EEEE_PosReceiptNetAmountExceedsLimit,
-                "EEEE_PosReceiptNetAmountExceedsLimit",
-                "cbChargeItems"
+                rule.Code,
+                rule.Field
             ).WithContext("TotalNetAmount", totalNetAmount)
-             .WithContext("Limit", 1000m));
+             .WithContext("Limit", 100m));
         }
     }
 
@@ -146,10 +226,11 @@ public static class ChargeItemValidations
 
             if (unsupportedVatRates.Contains(vatRate))
             {
+                var rule = PortugalValidationRules.UnsupportedVatRate;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_UnsupportedVatRate(i, vatRate),
-                    "EEEE_UnsupportedVatRate",
-                    "cbChargeItems",
+                    rule.Code,
+                    rule.Field,
                     i
                 ).WithContext("VatRate", vatRate.ToString()));
             }
@@ -184,10 +265,11 @@ public static class ChargeItemValidations
 
             if (!supportedServiceTypes.Contains(serviceType))
             {
+                var rule = PortugalValidationRules.UnsupportedChargeItemServiceType;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_UnsupportedChargeItemServiceType(i, serviceType),
-                    "EEEE_UnsupportedChargeItemServiceType",
-                    "cbChargeItems",
+                    rule.Code,
+                    rule.Field,
                     i
                 ).WithContext("ServiceType", serviceType.ToString()));
             }
@@ -230,10 +312,11 @@ public static class ChargeItemValidations
 
             if (Math.Abs(chargeItem.VATRate - expectedVatRatePercentage) > 0.001m)
             {
+                var rule = PortugalValidationRules.VatRateMismatch;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_VatRateMismatch(i, vatRateCategory, expectedVatRatePercentage, chargeItem.VATRate),
-                    "EEEE_VatRateMismatch",
-                    "cbChargeItems.VATRate",
+                    rule.Code,
+                    rule.Field,
                     i
                 )
                 .WithContext("VatRateCategory", vatRateCategory.ToString())
@@ -248,16 +331,50 @@ public static class ChargeItemValidations
 
                 if (difference > roundingTolerance)
                 {
+                    var rule = PortugalValidationRules.VatAmountMismatch;
                     yield return ValidationResult.Failed(new ValidationError(
                         ErrorMessagesPT.EEEE_VatAmountMismatch(i, chargeItem.VATAmount.Value, calculatedVatAmount, difference),
-                        "EEEE_VatAmountMismatch",
-                        "cbChargeItems.VATAmount",
+                        rule.Code,
+                        rule.Field,
                     i
                     )
                     .WithContext("ProvidedVatAmount", chargeItem.VATAmount.Value)
                     .WithContext("CalculatedVatAmount", calculatedVatAmount)
                     .WithContext("Difference", difference));
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that discounts/extras are not positive (Portugal does not allow positive discounts).
+    /// Returns one ValidationResult per offending charge item.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_DiscountOrExtra_NotPositive(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        var isCorrespondingOperation =
+            request.ftReceiptCase.IsFlag(ifPOS.v2.Cases.ReceiptCaseFlags.Refund) ||
+            request.ftReceiptCase.IsFlag(ifPOS.v2.Cases.ReceiptCaseFlags.Void) ||
+            request.IsPartialRefundReceipt();
+
+        for (var i = 0; i < request.cbChargeItems.Count; i++)
+        {
+            var chargeItem = request.cbChargeItems[i];
+
+            if (chargeItem.IsDiscountOrExtra() && chargeItem.Amount > 0 && !isCorrespondingOperation)
+            {
+                var rule = PortugalValidationRules.PositiveDiscountNotAllowed;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_PositiveDiscountNotAllowed(i, chargeItem.Amount),
+                    rule.Code,
+                    rule.Field,
+                    i
+                ).WithContext("Amount", chargeItem.Amount));
             }
         }
     }
@@ -284,20 +401,22 @@ public static class ChargeItemValidations
 
             if (chargeItem.Quantity < 0)
             {
+                var rule = PortugalValidationRules.NegativeQuantityNotAllowed;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_NegativeQuantityNotAllowed(i, chargeItem.Quantity),
-                    "EEEE_NegativeQuantityNotAllowed",
-                    "cbChargeItems.Quantity",
+                    rule.Code,
+                    rule.Field,
                     i
                 ).WithContext("Quantity", chargeItem.Quantity));
             }
 
             if (chargeItem.Amount < 0)
             {
+                var rule = PortugalValidationRules.NegativeAmountNotAllowed;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_NegativeAmountNotAllowed(i, chargeItem.Amount),
-                    "EEEE_NegativeAmountNotAllowed",
-                    "cbChargeItems.Amount",
+                    rule.Code,
+                    rule.Field,
                     i
                 ).WithContext("Amount", chargeItem.Amount));
             }
@@ -333,10 +452,11 @@ public static class ChargeItemValidations
                 // UsualVatApplies (0x0000) is not valid for zero VAT rate
                 if (natureOfVat == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                 {
+                    var rule = PortugalValidationRules.ZeroVatRateMissingNature;
                     yield return ValidationResult.Failed(new ValidationError(
                         ErrorMessagesPT.EEEE_ZeroVatRateMissingNature(i),
-                        "EEEE_ZeroVatRateMissingNature",
-                        "cbChargeItems.ftChargeItemCase",
+                        rule.Code,
+                        rule.Field,
                         i
                     )
                     .WithContext("VATRate", chargeItem.VATRate)
@@ -351,10 +471,11 @@ public static class ChargeItemValidations
                     }
                     else
                     {
+                        var rule = PortugalValidationRules.UnknownTaxExemptionCode;
                         yield return ValidationResult.Failed(new ValidationError(
                               ErrorMessagesPT.EEEE_UnknownTaxExemptionCode(i, (Constants.TaxExemptionCode) exemptionCode),
-                              "EEEE_UnknownTaxExemptionCode",
-                              "cbChargeItems.ftChargeItemCase",
+                              rule.Code,
+                              rule.Field,
                               i
                           )
                           .WithContext("VATRate", chargeItem.VATRate)
@@ -363,6 +484,64 @@ public static class ChargeItemValidations
                           .WithContext("ExemptionCode", exemptionCode.ToString()));
                     }
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that discounts/extras use the same VAT rate and VAT case as their related line item.
+    /// Returns one ValidationResult per mismatch found.
+    /// </summary>
+    public static IEnumerable<ValidationResult> Validate_ChargeItems_DiscountVatRateAndCaseAlignment(ReceiptRequest request)
+    {
+        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
+        {
+            yield break;
+        }
+
+        var groupedItems = request.GetGroupedChargeItems();
+
+        for (var groupIndex = 0; groupIndex < groupedItems.Count; groupIndex++)
+        {
+            var group = groupedItems[groupIndex];
+            var mainItem = group.chargeItem;
+            var modifiers = group.modifiers;
+
+            if (modifiers == null || modifiers.Count == 0)
+            {
+                continue;
+            }
+
+            var mainVatRate = mainItem.VATRate;
+            var mainVatCase = mainItem.ftChargeItemCase.Vat();
+            var mainItemIndex = request.cbChargeItems.IndexOf(mainItem);
+
+            foreach (var modifier in modifiers.Where(x => x.IsDiscountOrExtra()))
+            {
+                var modifierVatCase = modifier.ftChargeItemCase.Vat();
+                var modifierIndex = request.cbChargeItems.IndexOf(modifier);
+
+                var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
+                var vatCaseMismatch = modifierVatCase != mainVatCase;
+
+                if (!vatRateMismatch && !vatCaseMismatch)
+                {
+                    continue;
+                }
+
+                var rule = PortugalValidationRules.DiscountVatRateOrCaseMismatch;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_DiscountVatRateOrCaseMismatch(mainItemIndex, modifierIndex, mainVatRate, modifier.VATRate, mainVatCase, modifierVatCase),
+                    rule.Code,
+                    rule.Field,
+                    modifierIndex
+                )
+                .WithContext("MainItemIndex", mainItemIndex)
+                .WithContext("ModifierIndex", modifierIndex)
+                .WithContext("MainVatRate", mainVatRate)
+                .WithContext("ModifierVatRate", modifier.VATRate)
+                .WithContext("MainVatCase", mainVatCase.ToString())
+                .WithContext("ModifierVatCase", modifierVatCase.ToString()));
             }
         }
     }
@@ -407,6 +586,7 @@ public static class ChargeItemValidations
 
                 if (absoluteDiscountAmount > absoluteMainItemNetAmount)
                 {
+                    var rule = PortugalValidationRules.DiscountExceedsArticleAmount;
                     // Find the index of the main item for better error reporting
                     var mainItemIndex = request.cbChargeItems.IndexOf(mainItem);
 
@@ -417,8 +597,8 @@ public static class ChargeItemValidations
                             absoluteDiscountAmount,
                             absoluteMainItemNetAmount
                         ),
-                        "EEEE_DiscountExceedsArticleAmount",
-                        "cbChargeItems",
+                        rule.Code,
+                        rule.Field,
                         mainItemIndex
                     )
                     .WithContext("MainItemNetAmount", absoluteMainItemNetAmount)

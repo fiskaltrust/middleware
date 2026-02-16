@@ -114,7 +114,7 @@ public class ProtocolCommandProcessorPTTests
                 Numerator = 0,
                 LastHash = ""
             },
-            HandWrittenFSSeries = new NumberSeries
+            HandWrittenFTSeries = new NumberSeries
             {
                 TypeCode = "FSV",
                 ATCUD = "AAJFJ9VC33",
