@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -31,10 +30,6 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
 
     public class CustomerTaxId : AbstractValidator<ReceiptRequest>
     {
-        private static readonly Regex SpanishNifRegex = new(
-            @"^([a-zA-Z]\d{7}[a-zA-Z]|\d{8}[a-zA-Z]|[a-zA-Z]\d{8})$",
-            RegexOptions.Compiled);
-
         public CustomerTaxId()
         {
             RuleFor(x => x)
@@ -50,7 +45,7 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
                     if (customer.CustomerCountry != "ES" && !string.IsNullOrEmpty(customer.CustomerCountry))
                         return;
 
-                    if (!SpanishNifRegex.IsMatch(customer.CustomerVATId))
+                    if (!TaxIdValidation.IsValidSpanishNif(customer.CustomerVATId))
                     {
                         context.AddFailure("cbCustomer.CustomerVATId",
                             $"Invalid Spanish tax ID (NIF): '{customer.CustomerVATId}'");
