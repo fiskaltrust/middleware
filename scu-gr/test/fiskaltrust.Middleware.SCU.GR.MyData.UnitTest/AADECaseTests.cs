@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.IntegrationTest.MyDataSCU
                 {
                     VatId = "112545020"
                 }
-            });
+            }, "https://test.receipts.example.com");
         }
 
         private void ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType? expectedValueType)
