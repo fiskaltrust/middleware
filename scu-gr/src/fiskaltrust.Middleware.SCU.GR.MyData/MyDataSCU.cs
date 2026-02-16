@@ -197,6 +197,11 @@ public class MyDataSCU : IGRSSCD
 
     public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration)
     {
+        if (string.IsNullOrWhiteSpace(receiptBaseAddress))
+        {
+            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+        }
+        
         _receiptBaseAddress = receiptBaseAddress;
         _sandbox = sandbox;
         _masterDataConfiguration = masterDataConfiguration;
@@ -241,7 +246,7 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-        var aadFactory = new AADEFactory(_masterDataConfiguration);
+        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
         {
@@ -347,7 +352,8 @@ public class MyDataSCU : IGRSSCD
                             }
                         }
 
-                        request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                        // Use the downloadingInvoiceUrl from the invoice for the QR code
+                        request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {

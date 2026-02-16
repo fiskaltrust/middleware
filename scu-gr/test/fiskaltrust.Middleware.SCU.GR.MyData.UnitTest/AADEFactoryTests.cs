@@ -48,7 +48,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error!.Exception.Message.Should().Be("When using Handwritten receipts the Series must be provided in the ftReceiptCaseData payload.");
@@ -94,7 +94,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().NotBeNull();
@@ -158,7 +158,7 @@ public class AADEFactoryTests
             {
                 VatId = merchantId // This should match the MerchantVATID
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().BeNull();
@@ -227,7 +227,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().BeNull();
@@ -277,7 +277,7 @@ public class AADEFactoryTests
             {
                 VatId = "WRONG_VAT_ID" 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error!.Exception.Message.Should().Be("When using Handwritten receipts the MerchantVATID that is provided must match with the one configured in the Account.");
@@ -342,7 +342,7 @@ public class AADEFactoryTests
             {
 
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
         error.Should().BeNull();
@@ -428,7 +428,7 @@ public class AADEFactoryTests
             {
                 VatId = "112545020"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
 
@@ -561,7 +561,7 @@ public class AADEFactoryTests
             {
                 VatId = "112545020"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
 
@@ -687,7 +687,7 @@ public class AADEFactoryTests
             {
                 VatId = "112545020"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
 
@@ -832,7 +832,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -973,7 +973,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1094,7 +1094,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             },
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1205,7 +1205,7 @@ public class AADEFactoryTests
                 City = "Athens",
                 Zip = "12345"
             }
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1279,7 +1279,7 @@ public class AADEFactoryTests
                 City = "Athens",
                 Zip = "12345"
             }
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1342,7 +1342,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1407,7 +1407,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1473,7 +1473,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1537,7 +1537,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
@@ -1594,7 +1594,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://test.receipts.example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);

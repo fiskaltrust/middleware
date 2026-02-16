@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.SCU.GR.IntegrationTest.MyDataSCU
                 {
                     VatId = "112545020"
                 }
-            });
+            }, "https://test.receipts.example.com");
         }
 
         public ResponseDoc? GetResponse(string xmlContent)

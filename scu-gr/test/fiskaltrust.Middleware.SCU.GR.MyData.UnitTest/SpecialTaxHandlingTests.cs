@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldProcessPercentageWithholdingTax()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -110,7 +110,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldThrowException_WhenWithholdingTaxDescriptionNotMapped()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -169,7 +169,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleFixedAmountWithholdingTax()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -245,7 +245,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleMultipleWithholdingTaxes()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -336,7 +336,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldProcessPercentageFee()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -414,7 +414,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleFixedAmountFee()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -489,7 +489,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleMixedWithholdingTaxAndFees()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -581,7 +581,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleMultipleFees()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -674,7 +674,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldProcessPercentageStampDuty()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -752,7 +752,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleFixedAmountStampDuty()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -827,7 +827,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleMultipleStampDuties()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -916,7 +916,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleMixedWithholdingTaxFeesAndStampDuties()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -1036,7 +1036,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldThrowException_WhenOtherTaxDescriptionNotMapped()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -1095,7 +1095,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleZeroPercentageOtherTax()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -1168,7 +1168,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleLuxuryTaxOtherTax()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -1241,7 +1241,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleCasinoTaxOtherTax()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
@@ -1314,7 +1314,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         public void MapToInvoicesDoc_ShouldHandleShortTermRentalTaxOtherTax()
         {
             // Arrange
-            var factory = new AADEFactory(_masterDataConfiguration);
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
             
             var receiptRequest = new ReceiptRequest
             {
