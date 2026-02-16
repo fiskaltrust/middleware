@@ -505,8 +505,6 @@ public class MyDataSCU : IGRSSCD
                             });
                         }
                     }
-
-                    request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                 }
                 else
                 {
