@@ -6,10 +6,12 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using fiskaltrust.Middleware.SCU.GR.MyData.Models;
+using NodaTime;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public static class AADEMappings
 {
+    private static readonly DateTimeZone _athensZone = DateTimeZoneProviders.Tzdb["Europe/Athens"];
     public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var vatAmount = chargeItem.GetVATAmount();
@@ -228,6 +230,25 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
             _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
         };
+    }
+
+
+    public static DateTime GetLocalTime(ReceiptRequest receiptRequest)
+    {
+        var iniDateTime = receiptRequest.cbReceiptMoment;
+
+        if (iniDateTime.Kind == DateTimeKind.Local)
+        {
+            iniDateTime = iniDateTime.ToUniversalTime();
+        }
+        else if (iniDateTime.Kind == DateTimeKind.Unspecified)
+        {
+            iniDateTime = DateTime.SpecifyKind(iniDateTime, DateTimeKind.Utc);
+        }
+
+        Instant utcInstant = Instant.FromDateTimeUtc(iniDateTime);
+        ZonedDateTime zoned = utcInstant.InZone(_athensZone);
+        return zoned.ToDateTimeUnspecified();
     }
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
