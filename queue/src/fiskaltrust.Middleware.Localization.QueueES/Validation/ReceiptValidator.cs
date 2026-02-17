@@ -33,7 +33,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     public async IAsyncEnumerable<ValidationResult> Validate(ReceiptValidationContext context)
     {
         // FluentValidation rules (Global + ES)
-        foreach (var error in new FVValidator().Validate(_receiptRequest).Errors)
+        foreach (var error in (await new FVValidator().ValidateAsync(_receiptRequest)).Errors)
         {
             yield return ValidationResult.Failed(new ValidationError(error.ErrorMessage, error.ErrorCode, error.PropertyName));
         }

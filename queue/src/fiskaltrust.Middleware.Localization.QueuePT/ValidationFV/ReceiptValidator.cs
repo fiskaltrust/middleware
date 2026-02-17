@@ -7,11 +7,19 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV;
 
 public class ReceiptValidator : MarketValidator
 {
+    private readonly ReceiptReferenceProvider _receiptReferenceProvider;
+
+    public ReceiptValidator(ReceiptReferenceProvider receiptReferenceProvider)
+    {
+        _receiptReferenceProvider = receiptReferenceProvider;
+    }
+
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators()
     {
         yield return new PTValidations.ChargeItemValidations();
         yield return new PTValidations.PayItemValidations();
         yield return new PTValidations.UserValidations();
         yield return new PTValidations.CustomerValidations();
+        yield return new PTValidations.ReceiptValidations(_receiptReferenceProvider);
     }
 }

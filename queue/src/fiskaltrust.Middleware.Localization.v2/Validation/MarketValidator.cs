@@ -15,18 +15,18 @@ public abstract class MarketValidator
 
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators() => [];
 
-    public ValidationResult Validate(ReceiptRequest request)
+    public async Task<ValidationResult> ValidateAsync(ReceiptRequest request)
     {
         var result = new ValidationResult();
 
         foreach (var validator in GetGlobalValidators())
         {
-            result.Errors.AddRange(validator.Validate(request).Errors);
+            result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
         }
 
         foreach (var validator in GetMarketValidators())
         {
-            result.Errors.AddRange(validator.Validate(request).Errors);
+            result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
         }
 
         return result;
