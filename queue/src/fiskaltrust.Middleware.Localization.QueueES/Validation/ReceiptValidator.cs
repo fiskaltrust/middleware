@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using FVValidator = fiskaltrust.Middleware.Localization.QueueES.ValidationFV.ReceiptValidator;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using V2ReceiptReferenceProvider = fiskaltrust.Middleware.Localization.v2.Validation.ReceiptReferenceProvider;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Validation;
 
@@ -33,7 +34,8 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
     public async IAsyncEnumerable<ValidationResult> Validate(ReceiptValidationContext context)
     {
         // FluentValidation rules (Global + ES)
-        foreach (var error in (await new FVValidator().ValidateAsync(_receiptRequest)).Errors)
+        var v2ReceiptReferenceProvider = new V2ReceiptReferenceProvider(readOnlyQueueItemRepository);
+        foreach (var error in (await new FVValidator(v2ReceiptReferenceProvider).ValidateAsync(_receiptRequest)).Errors)
         {
             yield return ValidationResult.Failed(new ValidationError(error.ErrorMessage, error.ErrorCode, error.PropertyName));
         }
