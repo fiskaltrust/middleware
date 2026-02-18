@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Net;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
+using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Org.BouncyCastle.Utilities.Encoders;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
@@ -143,10 +144,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     CertificationIdentification = _configuration.CertificationId,
                     MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
                     MaxNumberOfStartedTransactions = tseResult.MaxNumberOfStartedTransactions,
-                    CertificatesBase64 = new List<string>
-                    {
-                        tseResult.CertificateChain
-                    },
+                    CertificatesBase64 = ExtractCertificatesFromChain(tseResult.CertificateChain),
                     CurrentClientIds = clientDto,
                     SignatureAlgorithm = algorithm,
                     CurrentLogMemorySize = tseResult.StorageUsed,
@@ -195,6 +193,49 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(SetTseStateAsync), JsonConvert.SerializeObject(request));
                 throw;
             }
+        }
+
+        private static byte[] GetCertificateBytes(string certificateValue)
+        {
+            var trimmed = certificateValue.Trim();
+            if (TryExtractPemCertificate(trimmed, out var base64))
+            {
+                return Convert.FromBase64String(base64);
+            }
+
+            var decoded = Convert.FromBase64String(trimmed);
+            var decodedText = Encoding.ASCII.GetString(decoded);
+            if (TryExtractPemCertificate(decodedText, out var decodedBase64))
+            {
+                return Convert.FromBase64String(decodedBase64);
+            }
+
+            return decoded;
+        }
+
+        private static bool TryExtractPemCertificate(string value, out string base64)
+        {
+            const string pemHeader = "-----BEGIN CERTIFICATE-----";
+            const string pemFooter = "-----END CERTIFICATE-----";
+            base64 = null;
+
+            var start = value.IndexOf(pemHeader, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+            {
+                return false;
+            }
+
+            var end = value.IndexOf(pemFooter, start, StringComparison.OrdinalIgnoreCase);
+            if (end < 0)
+            {
+                return false;
+            }
+
+            var body = value.Substring(start + pemHeader.Length, end - (start + pemHeader.Length));
+            base64 = string.Concat(
+                body.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Where(line => !line.StartsWith("-----", StringComparison.Ordinal)));
+            return !string.IsNullOrWhiteSpace(base64);
         }
 
         public Task ExecuteSetTseTimeAsync() => Task.CompletedTask;
@@ -552,5 +593,42 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         }
 
         public void Dispose() => _swissbitCloudV2Provider.Dispose();
+
+        private List<string> ExtractCertificatesFromChain(string certificateChain)
+        {
+            const string pemHeader = "-----BEGIN CERTIFICATE-----";
+            const string pemFooter = "-----END CERTIFICATE-----";
+            var certificates = new List<string>();
+            
+            var startIndex = 0;
+            while (true)
+            {
+                var headerIndex = certificateChain.IndexOf(pemHeader, startIndex, StringComparison.OrdinalIgnoreCase);
+                if (headerIndex < 0)
+                {
+                    break;
+                }
+                
+                var footerIndex = certificateChain.IndexOf(pemFooter, headerIndex, StringComparison.OrdinalIgnoreCase);
+                if (footerIndex < 0)
+                {
+                    break;
+                }
+                
+                var certStart = headerIndex;
+                var certEnd = footerIndex + pemFooter.Length;
+                var pemCert = certificateChain.Substring(certStart, certEnd - certStart);
+                
+                var base64Body = string.Concat(
+                    pemCert.Substring(pemHeader.Length, pemCert.Length - pemHeader.Length - pemFooter.Length)
+                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Where(line => !line.StartsWith("-----", StringComparison.Ordinal)));
+                
+                certificates.Add(base64Body);
+                startIndex = certEnd;
+            }
+            
+            return certificates;
+        }
     }
 }
