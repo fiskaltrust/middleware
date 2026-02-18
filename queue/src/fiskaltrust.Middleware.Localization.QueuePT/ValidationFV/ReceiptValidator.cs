@@ -10,6 +10,7 @@ public class ReceiptValidator : MarketValidator
     private readonly ReceiptReferenceProvider _receiptReferenceProvider;
 
     public ReceiptValidator(ReceiptReferenceProvider receiptReferenceProvider)
+        : base(receiptReferenceProvider)
     {
         _receiptReferenceProvider = receiptReferenceProvider;
     }

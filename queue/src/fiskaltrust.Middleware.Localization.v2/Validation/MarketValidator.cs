@@ -7,9 +7,16 @@ namespace fiskaltrust.Middleware.Localization.v2.Validation;
 
 public abstract class MarketValidator
 {
+    private readonly ReceiptReferenceProvider _receiptReferenceProvider;
+
+    protected MarketValidator(ReceiptReferenceProvider receiptReferenceProvider)
+    {
+        _receiptReferenceProvider = receiptReferenceProvider;
+    }
+
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetGlobalValidators()
     {
-        yield return new GlobalValidations.ReceiptValidations();
+        yield return new GlobalValidations.ReceiptValidations(_receiptReferenceProvider);
         yield return new GlobalValidations.ChargeItemValidations();
     }
 

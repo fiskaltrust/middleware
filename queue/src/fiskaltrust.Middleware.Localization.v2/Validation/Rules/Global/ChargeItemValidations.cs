@@ -15,6 +15,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         Include(new VatCalculation());
         Include(new NegativeAmounts());
         Include(new DiscountLimit());
+        Include(new ZeroVatRateMustHaveNature());
     }
 
     public class MandatoryFields : AbstractValidator<ReceiptRequest>
@@ -102,6 +103,21 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         .WithMessage(item => $"Negative amount ({item.Amount}) is not allowed for non-refund charge items")
                         .WithErrorCode("NegativeAmountNotAllowed");
                 });
+            });
+        }
+    }
+
+    public class ZeroVatRateMustHaveNature : AbstractValidator<ReceiptRequest>
+    {
+        public ZeroVatRateMustHaveNature()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.ftChargeItemCase)
+                    .Must(caseValue => ((long)caseValue & 0xFF00) != 0x0000)
+                    .When(x => x.VATRate == 0)
+                    .WithMessage("Charge item with zero VAT rate must have a NatureOfVat set (0xFF00 bits must not be 0x0000).")
+                    .WithErrorCode("ZeroVatRateMissingNature");
             });
         }
     }
