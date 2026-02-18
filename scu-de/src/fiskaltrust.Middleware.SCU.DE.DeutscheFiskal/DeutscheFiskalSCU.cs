@@ -81,6 +81,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     _fccInitializationService.Initialize(_fccDirectory);
                     _version = new Version(_configuration.FccVersion);
 
+                }else if (new Version(_configuration.FccVersion) < new Version(4, 4, 0))
+                {
+                    throw new Exception($"The configured FCC version '{_configuration.FccVersion}' is not supported. Please use FCC version 4.4.0 or higher.");
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
