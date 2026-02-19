@@ -555,79 +555,97 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
         private List<string> ExtractCertificatesFromChain(string certificateChain)
         {
-            try
-            {
-                var certificates = new List<string>();
-                
-                // Use BouncyCastle's PemReader to parse the certificate chain
-                using (var stringReader = new StringReader(certificateChain))
-                {
-                    var pemReader = new Org.BouncyCastle.OpenSsl.PemReader(stringReader);
-                    
-                    object pemObject;
-                    while ((pemObject = pemReader.ReadObject()) != null)
-                    {
-                        if (pemObject is Org.BouncyCastle.X509.X509Certificate bcCert)
-                        {
-                            // Convert BouncyCastle certificate to base64
-                            var certBytes = bcCert.GetEncoded();
-                            certificates.Add(Convert.ToBase64String(certBytes));
-                        }
-                        else if (pemObject is Org.BouncyCastle.Asn1.X509.X509CertificateStructure certStructure)
-                        {
-                            // Handle certificate structure
-                            var certBytes = certStructure.GetEncoded();
-                            certificates.Add(Convert.ToBase64String(certBytes));
-                        }
-                    }
-                }
-                
-                return certificates;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to parse certificate chain using BouncyCastle. Falling back to manual parsing.");
-                
-                // Fallback to manual parsing if BouncyCastle fails
-                return ExtractCertificatesFromChainManual(certificateChain);
-            }
-        }
+#if NET5_0_OR_GREATER
+    try
+    {
+        var certCollection = X509Certificate2Collection.CreateFromPem(certificateChain);
+        return certCollection.Cast<X509Certificate2>()
+            .Select(cert => Convert.ToBase64String(cert.RawData))
+            .ToList();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Failed to parse certificate chain using X509Certificate2Collection.CreateFromPem. Falling back to BouncyCastle parsing.");
+        return ExtractCertificatesFromChainBouncyCastle(certificateChain);
+    }
+#else
+    return ExtractCertificatesFromChainBouncyCastle(certificateChain);
+#endif
+}
 
-        private List<string> ExtractCertificatesFromChainManual(string certificateChain)
+private List<string> ExtractCertificatesFromChainBouncyCastle(string certificateChain)
+{
+    try
+    {
+        var certificates = new List<string>();
+        
+        // Use BouncyCastle's PemReader to parse the certificate chain
+        using (var stringReader = new StringReader(certificateChain))
         {
-            const string pemHeader = "-----BEGIN CERTIFICATE-----";
-            const string pemFooter = "-----END CERTIFICATE-----";
-            var certificates = new List<string>();
+            var pemReader = new Org.BouncyCastle.OpenSsl.PemReader(stringReader);
             
-            var startIndex = 0;
-            while (true)
+            object pemObject;
+            while ((pemObject = pemReader.ReadObject()) != null)
             {
-                var headerIndex = certificateChain.IndexOf(pemHeader, startIndex, StringComparison.OrdinalIgnoreCase);
-                if (headerIndex < 0)
+                if (pemObject is Org.BouncyCastle.X509.X509Certificate bcCert)
                 {
-                    break;
+                    // Convert BouncyCastle certificate to base64
+                    var certBytes = bcCert.GetEncoded();
+                    certificates.Add(Convert.ToBase64String(certBytes));
                 }
-                
-                var footerIndex = certificateChain.IndexOf(pemFooter, headerIndex, StringComparison.OrdinalIgnoreCase);
-                if (footerIndex < 0)
+                else if (pemObject is Org.BouncyCastle.Asn1.X509.X509CertificateStructure certStructure)
                 {
-                    break;
+                    // Handle certificate structure
+                    var certBytes = certStructure.GetEncoded();
+                    certificates.Add(Convert.ToBase64String(certBytes));
                 }
-                
-                var certStart = headerIndex;
-                var certEnd = footerIndex + pemFooter.Length;
-                var pemCert = certificateChain.Substring(certStart, certEnd - certStart);
-                
-                var base64Body = string.Concat(
-                    pemCert.Substring(pemHeader.Length, pemCert.Length - pemHeader.Length - pemFooter.Length)
-                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Where(line => !line.StartsWith("-----", StringComparison.Ordinal)));
-                
-                certificates.Add(base64Body);
-                startIndex = certEnd;
             }
-            
-            return certificates;
         }
+        
+        return certificates;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Failed to parse certificate chain using BouncyCastle. Falling back to manual parsing.");
+        return ExtractCertificatesFromChainManual(certificateChain);
+    }
+}
+
+private List<string> ExtractCertificatesFromChainManual(string certificateChain)
+{
+    const string pemHeader = "-----BEGIN CERTIFICATE-----";
+    const string pemFooter = "-----END CERTIFICATE-----";
+    var certificates = new List<string>();
+    
+    var startIndex = 0;
+    while (true)
+    {
+        var headerIndex = certificateChain.IndexOf(pemHeader, startIndex, StringComparison.OrdinalIgnoreCase);
+        if (headerIndex < 0)
+        {
+            break;
+        }
+        
+        var footerIndex = certificateChain.IndexOf(pemFooter, headerIndex, StringComparison.OrdinalIgnoreCase);
+        if (footerIndex < 0)
+        {
+            break;
+        }
+        
+        var certStart = headerIndex;
+        var certEnd = footerIndex + pemFooter.Length;
+        var pemCert = certificateChain.Substring(certStart, certEnd - certStart);
+        
+        var base64Body = string.Concat(
+            pemCert.Substring(pemHeader.Length, pemCert.Length - pemHeader.Length - pemFooter.Length)
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => !line.StartsWith("-----", StringComparison.Ordinal)));
+        
+        certificates.Add(base64Body);
+        startIndex = certEnd;
+    }
+    
+    return certificates;
+}
     }
 }
