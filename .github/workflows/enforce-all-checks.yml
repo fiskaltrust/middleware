@@ -1,13 +1,11 @@
 name: Summary
 on:
-  pull_request:
+  pull_request_target:
   repository_dispatch:
     types: [check-command]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   enforce-all-checks:
     runs-on: ubuntu-latest
