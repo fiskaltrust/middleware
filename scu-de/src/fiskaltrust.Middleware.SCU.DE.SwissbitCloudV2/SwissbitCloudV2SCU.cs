@@ -555,6 +555,46 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
         private List<string> ExtractCertificatesFromChain(string certificateChain)
         {
+            try
+            {
+                var certificates = new List<string>();
+                
+                // Use BouncyCastle's PemReader to parse the certificate chain
+                using (var stringReader = new StringReader(certificateChain))
+                {
+                    var pemReader = new Org.BouncyCastle.OpenSsl.PemReader(stringReader);
+                    
+                    object pemObject;
+                    while ((pemObject = pemReader.ReadObject()) != null)
+                    {
+                        if (pemObject is Org.BouncyCastle.X509.X509Certificate bcCert)
+                        {
+                            // Convert BouncyCastle certificate to base64
+                            var certBytes = bcCert.GetEncoded();
+                            certificates.Add(Convert.ToBase64String(certBytes));
+                        }
+                        else if (pemObject is Org.BouncyCastle.Asn1.X509.X509CertificateStructure certStructure)
+                        {
+                            // Handle certificate structure
+                            var certBytes = certStructure.GetEncoded();
+                            certificates.Add(Convert.ToBase64String(certBytes));
+                        }
+                    }
+                }
+                
+                return certificates;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse certificate chain using BouncyCastle. Falling back to manual parsing.");
+                
+                // Fallback to manual parsing if BouncyCastle fails
+                return ExtractCertificatesFromChainManual(certificateChain);
+            }
+        }
+
+        private List<string> ExtractCertificatesFromChainManual(string certificateChain)
+        {
             const string pemHeader = "-----BEGIN CERTIFICATE-----";
             const string pemFooter = "-----END CERTIFICATE-----";
             var certificates = new List<string>();
