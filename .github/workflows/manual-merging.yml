@@ -2,7 +2,7 @@ name: Manual merging
 
 on:
   pull_request_target:
-    branches-ignore: "release/v*"
+    branches-ignore: ["release/v*"]
 
 # This action will only run on non release branches
 # We have setup this check as a requirement for merging
