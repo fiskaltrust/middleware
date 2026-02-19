@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -331,6 +332,37 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             };
         }
 
-       
+        [Fact]
+        [Trait("TseCategory", "Cloud")]
+        public void ExtractCertificatesFromChain_Should_Parse_Certificate_Chain_Correctly()
+        {
+            // This is the actual certificate chain format returned by SwissbitCloudV2
+            var certificateChain = "-----BEGIN CERTIFICATE-----\nMIIDWDCCAt6gAwIBAgIUewYrgYKabzZzOvi+ugMIgQjAjLgwCgYIKoZIzj0EAwMw\nVjEUMBIGA1UEChMLU3dpc3NiaXQgQUcxHzAdBgNVBAsTFkVtYmVkZGVkIElvVCBT\nb2x1dGlvbnMxHTAbBgNVBAMTFFRTRS1UZXN0LUNBIFN3aXNzYml0MB4XDTI1MDQw\nNzA5MDIwN1oXDTMzMDQwNjIzNTk1OVowgYAxCzAJBgNVBAYTAkRFMUkwRwYDVQQD\nE0A2NTMyYmU4Yzk1M2M2ZGQ1YTUwOTA1ODI3MzRlZDgzNDE0M2JmZDIwNGRjZGYz\nYjVlMGNjZTg2ZWY5YzZjNmFjMSYwJAYJBAB/AAcDCgECMBcCAQETEkJTSS1LLVRS\nLTA2MTItMjAyNDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABEQ57F29an1iZs9p\n3Z7fekAUCEyCyh81ISsDHz1HRN9NcR9sup518X6wF+tsQplKG3xuz9voVaTyROqo\n4PZH5vOjggFdMIIBWTAfBgNVHSMEGDAWgBSshAcY9usz8wtKiKOdFr1JicvL8TAd\nBgNVHQ4EFgQUDwBJHam5vLrJPdvNfihZ9Q2aA2owDAYDVR0TAQH/BAIwADAOBgNV\nHQ8BAf8EBAMCB4AwKwYDVR0QBCQwIoAPMjAyNTA0MDcwOTAyMDdagQ8yMDMzMDQw\nNjIzNTk1OVowegYDVR0gBHMwcTBvBgorBgEEAYOTbwIEMGEwXwYIKwYBBQUHAgEW\nU2h0dHBzOi8vZGEtcnouZGUvZGUvdWViZXItZGFyei91bnRlcm5laG1lbi9wa2kv\ndHNlLXBraS01L3plcnRpZml6aWVydW5nc3JpY2h0bGluaWUvMFAGA1UdHwRJMEcw\nRaBDoEGGP2h0dHA6Ly90c2Utc3dpc3NiaXQtdGVzdC5kYS1yei5uZXQvY3JsL3Rz\nZS10ZXN0LWNhLXN3aXNzYml0LmNybDAKBggqhkjOPQQDAwNoADBlAjAgusgY5FII\nH1i5MBgvV6rRTotnsfMsQ2c4osNiYpxbBQXgdJq42RRmK5T7MofkkLACMQCTq8Wp\noisB0LuZoOLZoyqVmfgzFH/TKbY8RDh6EAREEdaDmVdSdJSIqIJx3Be10n4=\n-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----\nMIIEbjCCA/OgAwIBAgIUF2j87druAH8XzBvKgXDyzIzckwEwCgYIKoZIzj0EAwMw\nWzEUMBIGA1UEChMLU3dpc3NiaXQgQUcxHzAdBgNVBAsTFkVtYmVkZGVkIElvVCBT\nb2x1dGlvbnMxIjAgBgNVBAMTGVRTRS1UZXN0LVJvb3QtQ0EgU3dpc3NiaXQwHhcN\nMjQxMjA0MTE0NTU3WhcNMzQxMjAzMjM1OTU5WjBWMRQwEgYDVQQKEwtTd2lzc2Jp\ndCBBRzEfMB0GA1UECxMWRW1iZWRkZWQgSW9UIFNvbHV0aW9uczEdMBsGA1UEAxMU\nVFNFLVRlc3QtQ0EgU3dpc3NiaXQwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAASdhALr\nd124QzMprsrLI9FDy1jb/ApTvIVkd90Fwb5J85a2Q5KhaCXLh8/3mPNtYixojX+9\nBGUSuTk1nrbw4fNZKFaLIlaw9MVENEOfI8Eu/AQXPuWaLvtOu4Vyt0mtHV6jggJ7\nMIICdzAfBgNVHSMEGDAWgBSvjKbwMHNHl1+nI30dI49ahdLXpjAdBgNVHQ4EFgQU\nrIQHGPbrM/MLSoijnRa9SYnLy/EwEgYDVR0TAQH/BAgwBgEB/wIBADAOBgNVHQ8B\nAf8EBAMCAQYwKwYDVR0QBCQwIoAPMjAyNDEyMDQxMTQ1NTdagQ8yMDI2MTIwMzIz\nNTk1OVowegYDVR0gBHMwcTBvBgorBgEEAYOTbwIEMGEwXwYIKwYBBQUHAgEWU2h0\ndHBzOi8vZGEtcnouZGUvZGUvdWViZXItZGFyei91bnRlcm5laG1lbi9wa2kvdHNl\nLXBraS01L3plcnRpZml6aWVydW5nc3JpY2h0bGluaWUvMFUGA1UdHwROMEwwSqBI\noEaGRGh0dHA6Ly90c2Utc3dpc3NiaXQtdGVzdC5kYS1yei5uZXQvY3JsL3RzZS10\nZXN0LXJvb3QtY2Etc3dpc3NiaXQuY3JsMFYGA1UdEQRPME2BEFRTRS1QS0lAZGEt\ncnouZGWGOWh0dHBzOi8vZGEtcnouZGUvZGUvdWViZXItZGFyei91bnRlcm5laG1l\nbi9wa2kvdHNlLXBraS01LzBWBgNVHRIETzBNgRBUU0UtUEtJQGRhLXJ6LmRlhjlo\ndHRwczovL2RhLXJ6LmRlL2RlL3VlYmVyLWRhcnovdW50ZXJuZWhtZW4vcGtpL3Rz\nZS1wa2ktNS8wYQYIKwYBBQUHAQEEVTBTMFEGCCsGAQUFBzAChkVodHRwOi8vdHNl\nLXN3aXNzYml0LXRlc3QuZGEtcnoubmV0L2NhL3RzZS10ZXN0LXJvb3QtY2Ffc3dp\nc3NiaXRfNC5jcnQwCgYIKoZIzj0EAwMDaQAwZgIxAOqDyi16NhxWFrjclIa6Tv1j\nRr4bA0yZLQbHmRphStU6apYGc1iVz5VEP3jzh2JGEQIxAKvAKO7SPXvJRbbV01kG\n0ZPo8V8vxKCNcUZf/C+KqS7M5ognq92WXvTlWD2UmncwCA==\n-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----\nMIIEUDCCA9egAwIBAgIUHKqnliMla+NrmWOcHVQ0PqHNDcswCgYIKoZIzj0EAwMw\nWzEUMBIGA1UEChMLU3dpc3NiaXQgQUcxHzAdBgNVBAsTFkVtYmVkZGVkIElvVCBT\nb2x1dGlvbnMxIjAgBgNVBAMTGVRTRS1UZXN0LVJvb3QtQ0EgU3dpc3NiaXQwHhcN\nMjQxMjA0MTEzNTExWhcNMzgxMjAzMjM1OTU5WjBbMRQwEgYDVQQKEwtTd2lzc2Jp\ndCBBRzEfMB0GA1UECxMWRW1iZWRkZWQgSW9UIFNvbHV0aW9uczEiMCAGA1UEAxMZ\nVFNFLVRlc3QtUm9vdC1DQSBTd2lzc2JpdDB2MBAGByqGSM49AgEGBSuBBAAiA2IA\nBFkA1MgFCSdsnPrr2XqLrcoXmcbIF5Sjvk3TqHwzI+8QtG7lJLtEW7p/0jao6t/l\nnndBvUVt8BsZ5lAgbVJ60abUmD3VQWtywTGl7F/2I0pxxXJuNlzivL5e5fUZQcm/\njaOCAlowggJWMB0GA1UdDgQWBBSvjKbwMHNHl1+nI30dI49ahdLXpjASBgNVHRMB\nAf8ECDAGAQH/AgEBMA4GA1UdDwEB/wQEAwIBBjArBgNVHRAEJDAigA8yMDI0MTIw\nNDExMzUxMVqBDzIwMjgxMjAzMjM1OTU5WjB6BgNVHSAEczBxMG8GCisGAQQBg5Nv\nAgQwYTBfBggrBgEFBQcCARZTaHR0cHM6Ly9kYS1yei5kZS9kZS91ZWJlci1kYXJ6\nL3VudGVybmVobWVuL3BraS90c2UtcGtpLTUvemVydGlmaXppZXJ1bmdzcmljaHRs\naW5pZS8wVQYDVR0fBE4wTDBKoEigRoZEaHR0cDovL3RzZS1zd2lzc2JpdC10ZXN0\nLmRhLXJ6Lm5ldC9jcmwvdHNlLXRlc3Qtcm9vdC1jYS1zd2lzc2JpdC5jcmwwVgYD\nVR0RBE8wTYEQVFNFLVBLSUBkYS1yei5kZYY5aHR0cHM6Ly9kYS1yei5kZS9kZS91\nZWJlci1kYXJ6L3VudGVybmVobWVuL3BraS90c2UtcGtpLTUvMFYGA1UdEgRPME2B\nEFRTRS1QS0lAZGEtcnouZGWGOWh0dHBzOi8vZGEtcnouZGUvZGUvdWViZXItZGFy\nei91bnRlcm5laG1lbi9wa2kvdHNlLXBraS01LzBhBggrBgEFBQcBAQRVMFMwUQYI\nKwYBBQUHMAKGRWh0dHA6Ly90c2Utc3dpc3NiaXQtdGVzdC5kYS1yei5uZXQvY2Ev\ndHNlLXRlc3Qtcm9vdC1jYV9zd2lzc2JpdF80LmNydDAKBggqhkjOPQQDAwNnADBk\nAjA1Hm3LWdzvjpzZ46CWbkDRR9QRfnvWRdYBy0NlBuY57r+HVwltjamSHYRdtqRg\nghMCMFhROCJO6U7yp1zXNwk0dfoYKv/6XvJ6mLUZSHDaW9XHnu0lw04aTzmC7Xqk\nLZZ8rw==\n-----END CERTIFICATE-----\n";
+
+            var sut = _testFixture.GetNewSut();
+            
+            // Use reflection to call the private method
+            var method = sut.GetType().GetMethod("ExtractCertificatesFromChain", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            var result = method.Invoke(sut, new object[] { certificateChain }) as List<string>;
+
+            // Should extract 3 certificates from the chain
+            result.Should().NotBeNull();
+            result.Should().HaveCount(3);
+            
+            // Each certificate should be valid base64
+            foreach (var cert in result)
+            {
+                cert.Should().NotBeNullOrEmpty();
+                var bytes = Convert.FromBase64String(cert);
+                bytes.Should().NotBeEmpty();
+                
+                // Verify it's a valid X509 certificate
+                var x509Cert = new X509Certificate2(bytes);
+                x509Cert.Should().NotBeNull();
+                x509Cert.Subject.Should().Contain("Swissbit");
+            }
+        }
     }
 }

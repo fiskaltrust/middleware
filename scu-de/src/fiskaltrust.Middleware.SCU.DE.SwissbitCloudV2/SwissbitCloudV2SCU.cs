@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Net;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
+using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Org.BouncyCastle.Utilities.Encoders;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
@@ -143,10 +144,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     CertificationIdentification = _configuration.CertificationId,
                     MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
                     MaxNumberOfStartedTransactions = tseResult.MaxNumberOfStartedTransactions,
-                    CertificatesBase64 = new List<string>
-                    {
-                        tseResult.CertificateChain
-                    },
+                    CertificatesBase64 = ExtractCertificatesFromChain(tseResult.CertificateChain),
                     CurrentClientIds = clientDto,
                     SignatureAlgorithm = algorithm,
                     CurrentLogMemorySize = tseResult.StorageUsed,
@@ -196,6 +194,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 throw;
             }
         }
+
+
 
         public Task ExecuteSetTseTimeAsync() => Task.CompletedTask;
 
@@ -552,5 +552,85 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         }
 
         public void Dispose() => _swissbitCloudV2Provider.Dispose();
+
+        private List<string> ExtractCertificatesFromChain(string certificateChain)
+        {
+            return ExtractCertificatesFromChainBouncyCastle(certificateChain);
+        }
+
+        private List<string> ExtractCertificatesFromChainBouncyCastle(string certificateChain)
+        {
+            try
+            {
+                var certificates = new List<string>();
+                
+                // Use BouncyCastle's PemReader to parse the certificate chain
+                using (var stringReader = new StringReader(certificateChain))
+                {
+                    var pemReader = new Org.BouncyCastle.OpenSsl.PemReader(stringReader);
+                    
+                    object pemObject;
+                    while ((pemObject = pemReader.ReadObject()) != null)
+                    {
+                        if (pemObject is Org.BouncyCastle.X509.X509Certificate bcCert)
+                        {
+                            // Convert BouncyCastle certificate to base64
+                            var certBytes = bcCert.GetEncoded();
+                            certificates.Add(Convert.ToBase64String(certBytes));
+                        }
+                        else if (pemObject is Org.BouncyCastle.Asn1.X509.X509CertificateStructure certStructure)
+                        {
+                            // Handle certificate structure
+                            var certBytes = certStructure.GetEncoded();
+                            certificates.Add(Convert.ToBase64String(certBytes));
+                        }
+                    }
+                }
+                
+                return certificates;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse certificate chain using BouncyCastle. Falling back to manual parsing.");
+                return ExtractCertificatesFromChainManual(certificateChain);
+            }
+        }
+
+        private List<string> ExtractCertificatesFromChainManual(string certificateChain)
+        {
+            const string pemHeader = "-----BEGIN CERTIFICATE-----";
+            const string pemFooter = "-----END CERTIFICATE-----";
+            var certificates = new List<string>();
+            
+            var startIndex = 0;
+            while (true)
+            {
+                var headerIndex = certificateChain.IndexOf(pemHeader, startIndex, StringComparison.OrdinalIgnoreCase);
+                if (headerIndex < 0)
+                {
+                    break;
+                }
+                
+                var footerIndex = certificateChain.IndexOf(pemFooter, headerIndex, StringComparison.OrdinalIgnoreCase);
+                if (footerIndex < 0)
+                {
+                    break;
+                }
+                
+                var certStart = headerIndex;
+                var certEnd = footerIndex + pemFooter.Length;
+                var pemCert = certificateChain.Substring(certStart, certEnd - certStart);
+                
+                var base64Body = string.Concat(
+                    pemCert.Substring(pemHeader.Length, pemCert.Length - pemHeader.Length - pemFooter.Length)
+                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Where(line => !line.StartsWith("-----", StringComparison.Ordinal)));
+                
+                certificates.Add(base64Body);
+                startIndex = certEnd;
+            }
+            
+            return certificates;
+        }
     }
 }
