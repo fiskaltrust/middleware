@@ -195,48 +195,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        private static byte[] GetCertificateBytes(string certificateValue)
-        {
-            var trimmed = certificateValue.Trim();
-            if (TryExtractPemCertificate(trimmed, out var base64))
-            {
-                return Convert.FromBase64String(base64);
-            }
 
-            var decoded = Convert.FromBase64String(trimmed);
-            var decodedText = Encoding.ASCII.GetString(decoded);
-            if (TryExtractPemCertificate(decodedText, out var decodedBase64))
-            {
-                return Convert.FromBase64String(decodedBase64);
-            }
-
-            return decoded;
-        }
-
-        private static bool TryExtractPemCertificate(string value, out string base64)
-        {
-            const string pemHeader = "-----BEGIN CERTIFICATE-----";
-            const string pemFooter = "-----END CERTIFICATE-----";
-            base64 = null;
-
-            var start = value.IndexOf(pemHeader, StringComparison.OrdinalIgnoreCase);
-            if (start < 0)
-            {
-                return false;
-            }
-
-            var end = value.IndexOf(pemFooter, start, StringComparison.OrdinalIgnoreCase);
-            if (end < 0)
-            {
-                return false;
-            }
-
-            var body = value.Substring(start + pemHeader.Length, end - (start + pemHeader.Length));
-            base64 = string.Concat(
-                body.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Where(line => !line.StartsWith("-----", StringComparison.Ordinal)));
-            return !string.IsNullOrWhiteSpace(base64);
-        }
 
         public Task ExecuteSetTseTimeAsync() => Task.CompletedTask;
 
