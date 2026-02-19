@@ -81,6 +81,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     _fccInitializationService.Initialize(_fccDirectory);
                     _version = new Version(_configuration.FccVersion);
 
+                } else if (new Version(_configuration.FccVersion) < new Version(4, 4, 0))
+                {
+                    throw new Exception($"The configured FCC version '{_configuration.FccVersion}' is not supported. Please use FCC version 4.4.0 or higher.");
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
@@ -434,7 +437,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 SetExportState(exportId, ExportState.Running);
                 WriteExportDetails(exportId, endTime, request.ClientId);
-                CacheExportAsync(exportId, _minExportDateTime, endTime, request.ClientId).ExecuteInBackgroundThread();
+                CacheExportAsync(exportId, GetExportStartDateTimeSync(), endTime, request.ClientId).ExecuteInBackgroundThread();
 
                 return new StartExportSessionResponse
                 {
@@ -454,6 +457,20 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(StartExportSessionAsync), JsonConvert.SerializeObject(request));
                 }
                 throw;
+            }
+        }
+
+        private DateTime GetExportStartDateTimeSync()
+        {
+            try
+            {
+                var exportDetail = JsonConvert.DeserializeObject<ExportDetails>(File.ReadAllText(Path.Combine(_fccDirectory, ".fccdata", "_lastexport.log")));
+                return exportDetail?.EndDate ?? _minExportDateTime;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to read last export date. Defaulting to minimum export date.");
+                return _minExportDateTime;
             }
         }
 
@@ -609,18 +626,19 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                                 try
                                 {
                                     var exportDetails = GetExportDetails(request.TokenId);
+                                    // Necessary because of how the DF handles acknowledging transactions.
+                                    // It seems like it's required to go at least one minute back to not return a HTTP 500
+                                    var endDate = exportDetails.EndDate.AddMinutes(-1);
                                     if (_fccAdminApiProvider.IsSplitExport(Guid.Parse(request.TokenId)))
                                     {
                                         await _fccAdminApiProvider.AcknowledgeSplitTransactionsAsync(Guid.Parse(request.TokenId), exportDetails.ClientId).ConfigureAwait(false);
                                     }
                                     else
                                     {
-                                        // Necessary because of how the DF handles acknowledging transactions.
-                                        // It seems like it's required to go at least one minute back to not return a HTTP 500
-                                        var endDate = exportDetails.EndDate.AddMinutes(-1);
                                         await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
                                     }
 
+                                    File.WriteAllText(Path.Combine(_fccDirectory, ".fccdata", "_lastexport.log"), JsonConvert.SerializeObject(new ExportDetails {EndDate = endDate }));
                                     sessionResponse.IsErased = true;
                                 }
                                 catch (Exception e)
