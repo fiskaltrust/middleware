@@ -1,7 +1,10 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -9,10 +12,6 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation.Integration;
 
-/// <summary>
-/// Integration tests that verify ReceiptProcessor calls validation before any processor runs,
-/// returns all errors when validation fails, and routes to the correct processor when validation passes.
-/// </summary>
 public class ReceiptProcessorValidationTests
 {
     private readonly Mock<ILogger<ReceiptProcessor>> _loggerMock = new();
@@ -22,7 +21,20 @@ public class ReceiptProcessorValidationTests
     private readonly Mock<IInvoiceCommandProcessor> _invoiceMock = new();
     private readonly Mock<IProtocolCommandProcessor> _protocolMock = new();
 
-    private ReceiptProcessor CreateProcessor(v2.Validation.MarketValidator validator)
+    private static ReceiptReferenceProvider CreateMockProvider()
+    {
+        var mockRepo = new Mock<IMiddlewareQueueItemRepository>();
+        mockRepo.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
+            .Returns(AsyncEnumerable.Empty<ftQueueItem>());
+        mockRepo.Setup(x => x.GetByReceiptReferenceAsync(It.IsAny<string>(), null))
+            .Returns(AsyncEnumerable.Empty<ftQueueItem>());
+        mockRepo.Setup(x => x.GetLastQueueItemAsync())
+            .ReturnsAsync((ftQueueItem?)null);
+        return new ReceiptReferenceProvider(
+            new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(mockRepo.Object)));
+    }
+
+    private ReceiptProcessor CreateProcessor(MarketValidator validator)
     {
         return new ReceiptProcessor(
             _loggerMock.Object,
@@ -46,13 +58,12 @@ public class ReceiptProcessorValidationTests
     private static ftQueue CreateQueue() => new() { ftQueueId = Guid.NewGuid() };
     private static ftQueueItem CreateQueueItem() => new() { ftQueueItemId = Guid.NewGuid() };
 
-    #region Validation fails → processors never called
+    #region Validation fails -> processors never called
 
     [Fact]
     public async Task InvalidRequest_EmptyDescription_ProcessorsNeverCalled()
     {
-        // Arrange — empty description violates global NotEmpty rule
-        var validator = new QueueES.ValidationFV.ReceiptValidator();
+        var validator = new QueueES.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -62,20 +73,21 @@ public class ReceiptProcessorValidationTests
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem { Description = "", VATRate = 21.0m, Amount = 10.00m, VATAmount = 1.74m }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert — no processor was called
         _receiptMock.VerifyNoOtherCalls();
         _invoiceMock.VerifyNoOtherCalls();
         _protocolMock.VerifyNoOtherCalls();
         _dailyOpsMock.VerifyNoOtherCalls();
         _lifecycleMock.VerifyNoOtherCalls();
 
-        // Assert — response has error signature
         Assert.NotEmpty(response.ftSignatures);
         Assert.Contains(response.ftSignatures, s => s.Caption == "FAILURE" && s.Data.Contains("NotEmptyValidator"));
     }
@@ -83,8 +95,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task InvalidRequest_NegativeVATRate_ProcessorsNeverCalled()
     {
-        // Arrange — negative VAT rate violates global GreaterThanOrEqualTo(0) rule
-        var validator = new QueuePT.ValidationFV.ReceiptValidator();
+        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -94,13 +105,15 @@ public class ReceiptProcessorValidationTests
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem { Description = "Test Product", VATRate = -5m, Amount = 10.00m }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert
         _receiptMock.VerifyNoOtherCalls();
         Assert.NotEmpty(response.ftSignatures);
         Assert.Contains(response.ftSignatures, s => s.Data.Contains("GreaterThanOrEqualValidator"));
@@ -108,13 +121,12 @@ public class ReceiptProcessorValidationTests
 
     #endregion
 
-    #region Multiple errors → all errors in response (bug fix verification)
+    #region Multiple errors -> all errors in response
 
     [Fact]
     public async Task MultipleValidationErrors_AllErrorsReturnedInResponse()
     {
-        // Arrange — 3 violations: empty description, negative VAT rate, zero amount
-        var validator = new QueueES.ValidationFV.ReceiptValidator();
+        var validator = new QueueES.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -124,13 +136,15 @@ public class ReceiptProcessorValidationTests
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem { Description = "", VATRate = -1m, Amount = 0m, VATAmount = 0m }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 0m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert — all 3 errors must be present (before the fix, only the last one survived)
         var failureSignatures = response.ftSignatures.Where(s => s.Caption == "FAILURE").ToList();
         Assert.True(failureSignatures.Count >= 3, $"Expected at least 3 errors, got {failureSignatures.Count}");
         Assert.Contains(failureSignatures, s => s.Data.Contains("NotEmptyValidator"));
@@ -141,8 +155,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task MultipleChargeItems_EachWithErrors_AllErrorsReturned()
     {
-        // Arrange — 2 charge items, each with empty description
-        var validator = new QueuePT.ValidationFV.ReceiptValidator();
+        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -153,13 +166,15 @@ public class ReceiptProcessorValidationTests
             {
                 new ChargeItem { Description = "", VATRate = 23.0m, Amount = 10.00m },
                 new ChargeItem { Description = "", VATRate = 23.0m, Amount = 10.00m }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 20.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert — both charge items should generate errors
         var failureSignatures = response.ftSignatures.Where(s => s.Caption == "FAILURE").ToList();
         Assert.True(failureSignatures.Count >= 2, $"Expected at least 2 errors, got {failureSignatures.Count}");
         Assert.Contains(failureSignatures, s => s.Data.Contains("cbChargeItems[0]"));
@@ -173,8 +188,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task ESMarket_MissingVATAmount_ValidationFails()
     {
-        // Arrange — ES requires VATAmount, null should fail
-        var validator = new QueueES.ValidationFV.ReceiptValidator();
+        var validator = new QueueES.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -184,13 +198,15 @@ public class ReceiptProcessorValidationTests
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem { Description = "Product", VATRate = 21.0m, Amount = 10.00m, VATAmount = null }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert
         _receiptMock.VerifyNoOtherCalls();
         Assert.Contains(response.ftSignatures, s => s.Data.Contains("NotNullValidator"));
     }
@@ -198,8 +214,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task ESMarket_WithVATAmount_ValidationPasses()
     {
-        // Arrange — valid ES request (VATAmount provided)
-        var validator = new QueueES.ValidationFV.ReceiptValidator();
+        var validator = new QueueES.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         _receiptMock
@@ -211,19 +226,20 @@ public class ReceiptProcessorValidationTests
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES"),
             cbReceiptAmount = 10.00m,
+            cbReceiptMoment = DateTime.UtcNow,
             cbChargeItems = new List<ChargeItem>
             {
-                new ChargeItem { Description = "Product", VATRate = 21.0m, Amount = 10.00m, VATAmount = 1.74m }
+                new ChargeItem { Description = "Product", VATRate = 21.0m, Amount = 10.00m, VATAmount = 1.74m, ftChargeItemCase = ChargeItemCase.NormalVatRate }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert — processor was called (validation passed)
         _receiptMock.Verify(x => x.PointOfSaleReceipt0x0001Async(It.IsAny<ProcessCommandRequest>()), Times.Once);
-
-        // Assert — no FAILURE signatures
         Assert.DoesNotContain(response.ftSignatures, s => s.Caption == "FAILURE");
     }
 
@@ -234,24 +250,27 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task PTMarket_ShortDescription_ValidationFails()
     {
-        // Arrange — PT requires description min 3 chars, "AB" should fail
-        var validator = new QueuePT.ValidationFV.ReceiptValidator();
+        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
             cbReceiptAmount = 10.00m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbUser = "Operator1",
             cbChargeItems = new List<ChargeItem>
             {
-                new ChargeItem { Description = "AB", VATRate = 23.0m, Amount = 10.00m }
+                new ChargeItem { Description = "AB", VATRate = 23.0m, Amount = 10.00m, ftChargeItemCase = ChargeItemCase.NormalVatRate }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert
         _receiptMock.VerifyNoOtherCalls();
         Assert.Contains(response.ftSignatures, s => s.Data.Contains("MinimumLengthValidator"));
     }
@@ -259,8 +278,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task PTMarket_ValidDescription_ValidationPasses()
     {
-        // Arrange — valid PT request (description 3+ chars)
-        var validator = new QueuePT.ValidationFV.ReceiptValidator();
+        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
         var processor = CreateProcessor(validator);
 
         _receiptMock
@@ -272,16 +290,20 @@ public class ReceiptProcessorValidationTests
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
             cbReceiptAmount = 10.00m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbUser = "Operator1",
             cbChargeItems = new List<ChargeItem>
             {
-                new ChargeItem { Description = "Product Name", VATRate = 23.0m, Amount = 10.00m }
+                new ChargeItem { Description = "Product Name", VATRate = 23.0m, Amount = 10.00m, ftChargeItemCase = ChargeItemCase.NormalVatRate }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // Act
         var (response, _) = await processor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
 
-        // Assert — processor was called
         _receiptMock.Verify(x => x.PointOfSaleReceipt0x0001Async(It.IsAny<ProcessCommandRequest>()), Times.Once);
         Assert.DoesNotContain(response.ftSignatures, s => s.Caption == "FAILURE");
     }
@@ -293,25 +315,29 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task SameRequest_NullVATAmount_FailsES_PassesPT()
     {
-        // Arrange — null VATAmount: ES requires it (fails), PT does not (passes)
-        var request = new ReceiptRequest
+        // ES - should fail (VATAmount is null, ES requires it)
+        var esRequest = new ReceiptRequest
         {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES"),
             cbReceiptAmount = 10.00m,
+            cbReceiptMoment = DateTime.UtcNow,
             cbChargeItems = new List<ChargeItem>
             {
-                new ChargeItem { Description = "Product", VATRate = 21.0m, Amount = 10.00m, VATAmount = null }
+                new ChargeItem { Description = "Product", VATRate = 21.0m, Amount = 10.00m, VATAmount = null, ftChargeItemCase = ChargeItemCase.NormalVatRate }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
             }
         };
 
-        // ES — should fail
-        var esValidator = new QueueES.ValidationFV.ReceiptValidator();
+        var esValidator = new QueueES.ValidationFV.ReceiptValidator(CreateMockProvider());
         var esProcessor = CreateProcessor(esValidator);
-        request.ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES");
 
-        var (esResponse, _) = await esProcessor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
+        var (esResponse, _) = await esProcessor.ProcessAsync(esRequest, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
         Assert.Contains(esResponse.ftSignatures, s => s.Caption == "FAILURE");
 
-        // PT — should pass (need fresh mocks since ES test may have verified them)
+        // PT - should pass (VATAmount not required in PT)
         var ptReceiptMock = new Mock<IReceiptCommandProcessor>();
         ptReceiptMock
             .Setup(x => x.PointOfSaleReceipt0x0001Async(It.IsAny<ProcessCommandRequest>()))
@@ -320,16 +346,30 @@ public class ReceiptProcessorValidationTests
 
         var ptProcessor = new ReceiptProcessor(
             new Mock<ILogger<ReceiptProcessor>>().Object,
-            new QueuePT.ValidationFV.ReceiptValidator(),
+            new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider()),
             new Mock<ILifecycleCommandProcessor>().Object,
             ptReceiptMock.Object,
             new Mock<IDailyOperationsCommandProcessor>().Object,
             new Mock<IInvoiceCommandProcessor>().Object,
             new Mock<IProtocolCommandProcessor>().Object);
 
-        request.ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
+        var ptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbReceiptAmount = 10.00m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbUser = "Operator1",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { Description = "Product", VATRate = 23.0m, Amount = 10.00m, VATAmount = null, ftChargeItemCase = ChargeItemCase.NormalVatRate }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { Amount = 10.00m }
+            }
+        };
 
-        var (ptResponse, _) = await ptProcessor.ProcessAsync(request, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
+        var (ptResponse, _) = await ptProcessor.ProcessAsync(ptRequest, CreateReceiptResponse(), CreateQueue(), CreateQueueItem());
         Assert.DoesNotContain(ptResponse.ftSignatures, s => s.Caption == "FAILURE");
         ptReceiptMock.Verify(x => x.PointOfSaleReceipt0x0001Async(It.IsAny<ProcessCommandRequest>()), Times.Once);
     }
