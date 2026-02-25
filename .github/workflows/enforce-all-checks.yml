@@ -1,11 +1,9 @@
 name: Summary
 on:
   pull_request:
-  repository_dispatch:
-    types: [check-command]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.client_payload.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
