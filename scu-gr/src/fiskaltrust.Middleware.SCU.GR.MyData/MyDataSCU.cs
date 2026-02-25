@@ -246,7 +246,6 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-<<<<<<< 119-cancel-delivery-note-93-using-a-new-url-endpoint
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && 
             request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) &&
             request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) &&
@@ -267,10 +266,7 @@ public class MyDataSCU : IGRSSCD
             return await CancelDeliveryNoteAsync(request, mark);
         }
 
-        var aadFactory = new AADEFactory(_masterDataConfiguration);
-=======
         var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
->>>>>>> main
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
         {
