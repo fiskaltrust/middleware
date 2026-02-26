@@ -10,7 +10,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
     public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider)
     {
-        // Sync rules
         Include(new MandatoryCollections());
         Include(new CurrencyMustBeEur());
         Include(new ChargeItemsAmountSum());
@@ -18,7 +17,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new RefundReference());
         Include(new PaymentTransferReference());
 
-        // Async rules (need DB lookups)
         Include(new PreviousReceiptMustNotBeVoided(receiptReferenceProvider));
         Include(new VoidMustNotAlreadyExist(receiptReferenceProvider));
         Include(new FullRefundMustMatchOriginal(receiptReferenceProvider));
