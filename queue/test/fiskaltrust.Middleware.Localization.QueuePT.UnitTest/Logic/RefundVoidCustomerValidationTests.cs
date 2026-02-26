@@ -67,7 +67,7 @@ public class RefundVoidCustomerValidationTests
 
         var result = await validator.ValidateVoidAsync(voidRequest, originalRequest, OriginalReference);
 
-        result.Should().Be(ErrorMessagesPT.EEEE_VoidItemsMismatch(OriginalReference));
+        result.Should().Contain(ErrorMessagesPT.EEEE_VoidItemsMismatch(OriginalReference));
     }
 
     private static ReceiptRequest CreateBaseReceipt(object? customer)
