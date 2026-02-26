@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
 
-                if (request.IsModifyClientIdOnlyRequest())
+                if (_queueDEConfiguration.RegisterClient)
                 {
                     await RegisterClient(queueDE, true).ConfigureAwait(false);
                 }

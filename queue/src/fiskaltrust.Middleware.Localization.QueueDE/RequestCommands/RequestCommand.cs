@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected readonly IPersistentTransactionRepository<OpenTransaction> _openTransactionRepo;
         private readonly IJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
-        private readonly QueueDEConfiguration _queueDEConfiguration;
+        protected readonly QueueDEConfiguration _queueDEConfiguration;
         private readonly ITarFileCleanupService _tarFileCleanupService;
         protected readonly IMasterDataService _masterDataService;
 
