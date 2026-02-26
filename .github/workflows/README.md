@@ -1,6 +1,6 @@
 # GitHub Workflows
 
-This document provides an overview of all GitHub Actions workflows in this repository. For the complete release process documentation, see [RELEASE.md](../../RELEASE.md).
+This document provides an overview of all GitHub Actions workflows in this repository.
 
 ---
 
