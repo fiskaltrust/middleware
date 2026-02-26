@@ -26,5 +26,4 @@ jobs:
             deploy
             release
             version
-            check
             merge

@@ -1,8 +1,7 @@
 name: Manual merging
 
 on:
-  pull_request_target:
-    branches-ignore: ["release/v*"]
+  pull_request:
 
 # This action will only run on non release branches
 # We have setup this check as a requirement for merging
@@ -10,6 +9,7 @@ on:
 jobs:
   noop:
     runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.head_ref, 'release/v') }}
     steps:
       - name: No-op step
         run: echo 'No-op job'
