@@ -113,6 +113,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await ProcessPerformReprint(request);
             }
 
+            if (request.ReceiptRequest.IsRebootPrinter())
+            {
+                return Helpers.CreateResponse(await PerformPrinterReboot(request.ReceiptResponse));
+            }
+
             if (receiptCase == (long)ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
@@ -619,6 +624,37 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         var resetCommand = new PrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
         var xml = SoapSerializer.Serialize(resetCommand);
         await _httpClient.SendCommandAsync(xml);
+    }
+
+    //New commands
+    private async Task<ReceiptResponse> PerformPrinterReboot(ReceiptResponse receiptResponse)
+    {
+        try
+        {
+            var directIO = new DirectIO
+            {
+                Command = "4034",
+                Data = "0198"
+            };
+            var printerCommand = new PrinterCommand { DirectIO = directIO };
+            var xml = SoapSerializer.Serialize(printerCommand);
+            var response = await _httpClient.SendCommandAsync(xml);
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
+            if (!(result?.Success ?? false))
+            {
+                var errorInfo = GetErrorInfo(result?.Code, result?.Status, result?.CommandResponse?.PrinterStatus);
+                await ResetPrinter();
+                receiptResponse.SetReceiptResponseErrored(errorInfo.Info);
+                return receiptResponse;
+            }
+            return receiptResponse;
+        }
+        catch (Exception e)
+        {
+            receiptResponse.SetReceiptResponseErrored(e.Message);
+            return receiptResponse;
+        }
     }
 
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptResponse receiptResponse)

@@ -27,6 +27,9 @@ public enum ITReceiptCases : long
     InternalUsageMaterialConsumption0x3003 = 0x3003,
     Order0x3004 = 0x3004,
     Reprint0x3010 = 0x3010,
+    Reboot0x3011 = 0x3011,
+    Reset0x3012 = 0x3012,
+    GetLastReceipt0x3013 = 0x3013,
 
     InitialOperationReceipt0x4001 = 0x4001,
     OutOfOperationReceipt0x4002 = 0x4002,

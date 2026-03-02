@@ -67,6 +67,11 @@ public static class ReceiptCaseHelper
     public static Customer? GetCustomer(this ReceiptRequest receiptRequest) => GetValueOrNull<Customer>(receiptRequest?.cbCustomer);
     public static ReceiptCaseLotteryData? GetLotteryData(this ReceiptRequest receiptRequest) => GetValueOrNull<ReceiptCaseLotteryData>(receiptRequest?.ftReceiptCaseData);
 
+    //New commands
+    public static bool IsRebootPrinter(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.Reboot0x3011;
+    public static bool IsResetPrinter(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.Reset0x3012;
+    public static bool IsGetLastReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.GetLastReceipt0x3013;
+
     private static T? GetValueOrNull<T>(string? data) where T : class
     {
         if (string.IsNullOrEmpty(data))

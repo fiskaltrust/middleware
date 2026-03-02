@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 #pragma warning disable
 
@@ -52,8 +53,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010)
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
 
+            if (receiptCase == (int) ReceiptCases.Reboot0x3011)
+                return await ProtocolDirect30xxAsync(request);
+
             request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
+        }
+
+        public async Task<ProcessCommandResponse> ProtocolDirect30xxAsync(ProcessCommandRequest request)
+        {
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            });
+            return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
         }
 
         public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request)
