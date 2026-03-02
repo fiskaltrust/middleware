@@ -1,7 +1,6 @@
 - Feature Name: `v2_failed_mode`
 - Start Date: 2026-03-02
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
-- Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+- RFC PR: [fiskaltrust/middleware#0630](https://github.com/fiskaltrust/middleware/pull/0630)
 
 # Summary
 
