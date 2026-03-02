@@ -118,6 +118,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return Helpers.CreateResponse(await PerformPrinterReboot(request.ReceiptResponse));
             }
 
+            if (request.ReceiptRequest.IsResetPrinter())
+            {
+                return Helpers.CreateResponse(await PerformPrinterReset(request.ReceiptResponse));
+            }
+
             if (receiptCase == (long)ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
@@ -627,6 +632,29 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     }
 
     //New commands
+    private async Task<ReceiptResponse> PerformPrinterReset(ReceiptResponse receiptResponse)
+    {
+        try
+        {
+            var resetCommand = new PrinterCommand { ResetPrinter = new ResetPrinter { Operator = "" } };
+            var xml = SoapSerializer.Serialize(resetCommand);
+            var response = await _httpClient.SendCommandAsync(xml);
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
+            if (!(result?.Success ?? false))
+            {
+                var errorInfo = GetErrorInfo(result?.Code, result?.Status, result?.CommandResponse?.PrinterStatus);
+                receiptResponse.SetReceiptResponseErrored(errorInfo.Info);
+                return receiptResponse;
+            }
+            return receiptResponse;
+        }
+        catch (Exception e)
+        {
+            receiptResponse.SetReceiptResponseErrored(e.Message);
+            return receiptResponse;
+        }
+    }
     private async Task<ReceiptResponse> PerformPrinterReboot(ReceiptResponse receiptResponse)
     {
         try
