@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010)
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
 
-            if (receiptCase == (int) ReceiptCases.Reboot0x3011 || receiptCase == (int) ReceiptCases.Reset0x3012)
+            if (receiptCase == (int) ReceiptCases.Reboot0x3011 || receiptCase == (int) ReceiptCases.Reset0x3012 || receiptCase == (int) ReceiptCases.GetLastReceipt0x3013)
                 return await ProtocolDirect30xxAsync(request);
 
             request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");

@@ -123,6 +123,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return Helpers.CreateResponse(await PerformPrinterReset(request.ReceiptResponse));
             }
 
+            if (request.ReceiptRequest.IsGetLastReceipt())
+            {
+                return Helpers.CreateResponse(await PerformGetNextReceipt(request.ReceiptResponse));
+            }
+
             if (receiptCase == (long)ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
@@ -632,6 +637,70 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     }
 
     //New commands
+    private async Task<ReceiptResponse> PerformGetNextReceipt(ReceiptResponse receiptResponse)
+    {
+        try
+        {
+            var directIO = new DirectIO
+            {
+                Command = "1070",
+                Data = "01"
+            };
+            var printerCommand = new PrinterCommand { DirectIO = directIO };
+            var xml = SoapSerializer.Serialize(printerCommand);
+            var response = await _httpClient.SendCommandAsync(xml);
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
+            if (receiptResponse.ftSignatures == null)
+            {
+                receiptResponse.ftSignatures = new SignaturItem[] { };
+            }
+            receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new[] { new SignaturItem {
+                    ftSignatureFormat = 0L,
+                    ftSignatureType = 0L,
+                    Caption = "Next doc number",
+                    Data = result.CommandResponse.ResponseData.Substring(2, 4)
+                }
+            }).ToArray();
+            receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new[] { new SignaturItem {
+                    ftSignatureFormat = 0L,
+                    ftSignatureType = 0L,
+                    Caption = "Printer condition",
+                    Data = result.CommandResponse.ResponseData.Substring(6, 1)
+                }
+            }).ToArray();
+            var directIO0 = new DirectIO
+            {
+                Command = "1074",
+                Data = "01"
+            };
+            var printerCommand0 = new PrinterCommand { DirectIO = directIO0 };
+            var xml0 = SoapSerializer.Serialize(printerCommand0);
+            var response0 = await _httpClient.SendCommandAsync(xml0);
+            using var responseContent0 = await response0.Content.ReadAsStreamAsync();
+            var result0 = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent0);
+            receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new[] { new SignaturItem {
+                    ftSignatureFormat = 0L,
+                    ftSignatureType = 0L,
+                    Caption = "Status",
+                    Data = result0.CommandResponse.ResponseData.Substring(12, 5)
+                }
+            }).ToArray();
+            receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new[] { new SignaturItem {
+                    ftSignatureFormat = 0L,
+                    ftSignatureType = 0L,
+                    Caption = "Fiscal memory status",
+                    Data = result0.CommandResponse.ResponseData.Substring(5, 1)
+                }
+            }).ToArray();
+            return receiptResponse;
+        }
+        catch (Exception e)
+        {
+            receiptResponse.SetReceiptResponseErrored(e.Message);
+            return receiptResponse;
+        }
+    }
     private async Task<ReceiptResponse> PerformPrinterReset(ReceiptResponse receiptResponse)
     {
         try
