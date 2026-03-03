@@ -1,13 +1,13 @@
-using System;
+﻿using System;
 using System.Linq;
-using FluentAssertions;
-using Xunit;
-using fiskaltrust.Middleware.SCU.GR.MyData;
-using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.MyData;
+using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using FluentAssertions;
+using Xunit;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
 {
@@ -1385,5 +1385,118 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         }
 
         #endregion
+
+        #region IsVatableSpecialTaxItemTests
+        [Fact]
+        public void MapToInvoicesDoc_ShouldHandleIsVatableSpecialTaxItem()
+        {
+            // Arrange         
+            var factory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+            {
+                Account = new storage.V0.MasterData.AccountMasterData
+                {
+                    VatId = "098000979"
+                }
+            }, "https://test.receipts.example.com");
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbCustomer = new MiddlewareCustomer
+                {
+                    CustomerVATId = "112545020",
+                    CustomerCountry = "GR"
+
+                },
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase) 0x2000_0000_1001,
+                cbChargeItems =
+                [
+                    new ChargeItem
+            {
+                Position = 1,
+                Quantity = 1,
+                Description = "Παροχή υπηρεσιών", //Prestare de servicii
+                Amount = 124m,
+                VATRate = 24,
+                VATAmount = 24m,
+                ftChargeItemCase = (ChargeItemCase) 0x_2000_0000_0013,
+            },
+            new ChargeItem
+            {
+                Position = 2,
+                Quantity = 1,
+                Description = "Περιβαλλοντικό Τέλος & πλαστικής σακούλας ν. 2339/2001 αρ. 6α 0,07 ευρώ ανά τεμάχιο",
+                Amount = 10m,
+                VATRate = 24,
+                VATAmount = 2.4m,
+                ftChargeItemCase = (ChargeItemCase) 0x_2000_0000_00F3,
+            }
+                ],
+                cbPayItems =
+                [
+                    new PayItem
+            {
+                Description = "Cash",
+                ftPayItemCase = (PayItemCase) 35184372088833 , 
+                Amount = 134m,
+            }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State) 0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            var xml = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
+
+            // Assert
+            error.Should().BeNull();
+            invoiceDoc.Should().NotBeNull();
+
+            var invoice = invoiceDoc?.invoice[0];
+            invoice?.invoiceDetails.Should().HaveCount(2, "fees with VAT must be represented as a separate invoice line");
+
+            var feeLines = invoice?.invoiceDetails?.Where(d => d.feesAmount > 0).ToList();
+            feeLines.Should().NotBeNull();
+            feeLines.Should().HaveCount(1);
+            var feeLine = feeLines.Single();
+            feeLine.incomeClassification.Single().classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_1, "special tax items with VAT must be classified as Delivery");
+            feeLine.incomeClassification.Single().classificationType.Should().Be(IncomeClassificationValueType.E3_561_001, "special tax items that accept VAT must be treated as taxable income");
+            feeLine.feesPercentCategory.Should().Be(8);
+
+            feeLine.netValue.Should().Be(7.6m, "fee line netValue must equal the fee amount");
+            feeLine.vatCategory.Should().Be(1, "fees must use standard VAT category");
+            feeLine.vatAmount.Should().Be(2.4m, "VAT for the fee must be calculated at 24%");
+            feeLine.feesAmount.Should().Be(7.6m, "special tax fee must be sent as a separate line with the exact fee amount");
+
+            invoice.taxesTotals.Should().BeNull("fees with VAT must not be reported in taxesTotals");
+
+            var summary = invoice?.invoiceSummary;
+            summary.Should().NotBeNull();
+            summary.totalNetValue.Should().Be(107.6m, "total net value must include both service and fee lines");
+            summary.totalVatAmount.Should().Be(26.4m, "VAT must include VAT from service and fee lines");
+            summary.totalFeesAmount.Should().Be(7.6m, "fee amount must be aggregated into invoice summary");
+            summary.totalGrossValue.Should().Be(141.6m, "gross value must equal net + VAT + fee");
+
+            var header = invoice.invoiceHeader;
+            header.invoiceType.Should().Be(InvoiceType.Item11, "Invoices with VAT-bearing fees must be sent as Sales Invoice type 1.1");
+
+            var payment = invoice?.paymentMethods?.Single();
+            payment.Should().NotBeNull();
+            payment.amount.Should().Be(134m, "payment amount must equal total net value plus VAT, excluding fees");
+
+        }
+        #endregion IsVatableSpecialTaxItemTests
     }
 }

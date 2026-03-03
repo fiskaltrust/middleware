@@ -153,6 +153,11 @@ public static class AADEMappings
                 {
                     return IncomeClassificationValueType.E3_561_002;
                 }
+                
+                if (SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem))
+                {
+                    return IncomeClassificationValueType.E3_561_001;
+                }
 
                 return chargeItem.ftChargeItemCase.TypeOfService() switch
                 {
@@ -219,6 +224,11 @@ public static class AADEMappings
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InternalUsageMaterialConsumption0x3003))
         {
             return IncomeClassificationCategoryType.category1_6;
+        }
+
+        if (SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem))
+        {
+            return IncomeClassificationCategoryType.category1_1;
         }
 
         return chargeItem.ftChargeItemCase.TypeOfService() switch
