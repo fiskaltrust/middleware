@@ -30,7 +30,7 @@ public class ReceiptProcessor : IReceiptProcessor
 
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
-        var validationResult = await _validator.ValidateAsync(request);
+        var validationResult = await _validator.ValidateAsync(request, queue);
         if (!validationResult.IsValid)
         {
             receiptResponse.MarkAsFailed();

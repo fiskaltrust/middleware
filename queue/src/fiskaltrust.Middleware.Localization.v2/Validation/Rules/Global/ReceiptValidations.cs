@@ -2,13 +2,14 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 using FluentValidation;
 
 namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider)
+    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
     {
         Include(new MandatoryCollections());
         Include(new CurrencyMustBeEur());
@@ -22,6 +23,13 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new FullRefundMustMatchOriginal(receiptReferenceProvider));
         Include(new PartialRefundMustMatchOriginal(receiptReferenceProvider));
         Include(new VoidMustMatchOriginal(receiptReferenceProvider));
+
+        Include(new RefundMustUseSingleReference());
+        Include(new PartialRefundMustUseSingleReference());
+        Include(new VoidMustUseSingleReference());
+
+        Include(new CountryConsistency(queue));
+        Include(new PayItemCaseCountryConsistency(queue));
     }
 
     public class MandatoryCollections : AbstractValidator<ReceiptRequest>
@@ -277,6 +285,81 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
                 .WithMessage("Void receipt items do not match the original receipt.")
                 .WithErrorCode("VoidItemsMismatch");
+        }
+    }
+
+    public class RefundMustUseSingleReference : AbstractValidator<ReceiptRequest>
+    {
+        public RefundMustUseSingleReference()
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .Must(pref => !pref!.IsGroup)
+                .When(x => x.ftReceiptCase.Country() != "GR"
+                    && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+                    && x.cbPreviousReceiptReference != null)
+                .WithMessage("Refunding a receipt is only supported with single references.")
+                .WithErrorCode("RefundGroupReferenceNotSupported");
+        }
+    }
+
+    public class PartialRefundMustUseSingleReference : AbstractValidator<ReceiptRequest>
+    {
+        public PartialRefundMustUseSingleReference()
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .Must(pref => !pref!.IsGroup)
+                .When(x => x.ftReceiptCase.Country() != "GR"
+                    && x.IsPartialRefundReceipt()
+                    && x.cbPreviousReceiptReference != null)
+                .WithMessage("Partial refunding a receipt is only supported with single references.")
+                .WithErrorCode("PartialRefundGroupReferenceNotSupported");
+        }
+    }
+
+    public class VoidMustUseSingleReference : AbstractValidator<ReceiptRequest>
+    {
+        public VoidMustUseSingleReference()
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .Must(pref => !pref!.IsGroup)
+                .When(x => x.ftReceiptCase.Country() != "GR"
+                    && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                    && x.cbPreviousReceiptReference != null)
+                .WithMessage("Voiding a receipt is only supported with single references.")
+                .WithErrorCode("VoidGroupReferenceNotSupported");
+        }
+    }
+
+    public class CountryConsistency : AbstractValidator<ReceiptRequest>
+    {
+        public CountryConsistency(ftQueue? queue)
+        {
+            When(_ => queue != null && !string.IsNullOrEmpty(queue.CountryCode), () =>
+            {
+                RuleFor(x => x)
+                    .Must(request => request.ftReceiptCase.Country() == queue!.CountryCode)
+                    .WithMessage(request =>
+                        $"Receipt case country '{request.ftReceiptCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
+                    .WithErrorCode("ReceiptCaseCountryMismatch");
+            });
+        }
+    }
+
+    public class PayItemCaseCountryConsistency : AbstractValidator<ReceiptRequest>
+    {
+        public PayItemCaseCountryConsistency(ftQueue? queue)
+        {
+            When(x => queue != null && !string.IsNullOrEmpty(queue.CountryCode)
+                   && x.cbPayItems != null, () =>
+            {
+                RuleForEach(x => x.cbPayItems).ChildRules(payItem =>
+                {
+                    payItem.RuleFor(x => x.ftPayItemCase)
+                        .Must(c => c.Country() == queue!.CountryCode)
+                        .WithMessage(item => $"Pay item case country '{item.ftPayItemCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
+                        .WithErrorCode("PayItemCaseCountryMismatch");
+                });
+            });
         }
     }
 }
