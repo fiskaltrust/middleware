@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public class ReceiptProcessor : IReceiptProcessor
 {
-    private readonly MarketValidator _validator;
+    private readonly MarketValidator? _validator;
     private readonly ILifecycleCommandProcessor _lifecyclCommandProcessor;
     private readonly IReceiptCommandProcessor _receiptCommandProcessor;
     private readonly IDailyOperationsCommandProcessor _dailyOperationsCommandProcessor;
@@ -28,26 +28,29 @@ public class ReceiptProcessor : IReceiptProcessor
         _logger = logger;
     }
 
-    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor) : this(logger, new NullMarketValidator(), lifecyclCommandProcessor, receiptCommandProcessor, dailyOperationsCommandProcessor, invoiceCommandProcessor, protocolCommandProcessor) { }
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor) : this(logger, null, lifecyclCommandProcessor, receiptCommandProcessor, dailyOperationsCommandProcessor, invoiceCommandProcessor, protocolCommandProcessor) { }
 
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
-        var validationResult = await _validator.ValidateAsync(request, queue);
-        if (!validationResult.IsValid)
+        if (_validator != null)
         {
-            receiptResponse.MarkAsFailed();
-            receiptResponse.ftSignatures = [];
-            foreach (var error in validationResult.Errors)
+            var validationResult = await _validator.ValidateAsync(request, queue);
+            if (!validationResult.IsValid)
             {
-                receiptResponse.AddSignatureItem(new SignatureItem
+                receiptResponse.MarkAsFailed();
+                receiptResponse.ftSignatures = [];
+                foreach (var error in validationResult.Errors)
                 {
-                    Caption = "FAILURE",
-                    Data = $"Validation error [{error.ErrorCode}]: {error.ErrorMessage} (Property: {error.PropertyName})",
-                    ftSignatureFormat = SignatureFormat.Text,
-                    ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure)
-                });
+                    receiptResponse.AddSignatureItem(new SignatureItem
+                    {
+                        Caption = "FAILURE",
+                        Data = $"Validation error [{error.ErrorCode}]: {error.ErrorMessage} (Property: {error.PropertyName})",
+                        ftSignatureFormat = SignatureFormat.Text,
+                        ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure)
+                    });
+                }
+                return (receiptResponse, new List<ftActionJournal>());
             }
-            return (receiptResponse, new List<ftActionJournal>());
         }
 
         var processCommandRequest = new ProcessCommandRequest(queue, request, receiptResponse);
