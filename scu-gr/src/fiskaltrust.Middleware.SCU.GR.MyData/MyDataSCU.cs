@@ -246,9 +246,6 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-<<<<<<< HEAD
-        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
-=======
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && 
             request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) &&
             request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) &&
@@ -269,8 +266,7 @@ public class MyDataSCU : IGRSSCD
             return await CancelDeliveryNoteAsync(request, mark);
         }
 
-        var aadFactory = new AADEFactory(_masterDataConfiguration);
->>>>>>> 65d9eab5 (Cancel Delivery note fix)
+        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
         {
