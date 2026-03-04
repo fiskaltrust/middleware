@@ -1659,7 +1659,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://example.com");
 
         // Act
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1735,7 +1735,7 @@ public class AADEFactoryTests
         var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData()
-        });
+        }, "https://example.com");
 
         // Act
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
@@ -1823,7 +1823,7 @@ public class AADEFactoryTests
         {
             new ChargeItem
             {
-                Amount = 50.32m,
+                Amount = 62.40m,
                 Description = "Product",
                 Quantity = 1,
                 VATRate = 24,
@@ -1856,7 +1856,7 @@ public class AADEFactoryTests
             {
                 VatId = "999123456"
             }
-        });
+        }, "https://example.com");
 
         // Act
         (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
