@@ -764,4 +764,350 @@ public class ReceiptValidationsTests
     }
 
     #endregion
+
+    #region CountryConsistency
+
+    [Fact]
+    public void CountryConsistency_MatchingCountry_ShouldPass()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ReceiptValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT")
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CountryConsistency_MismatchedCountry_ShouldFail()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ReceiptValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES")
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x).WithErrorCode("ReceiptCaseCountryMismatch");
+    }
+
+    [Fact]
+    public void CountryConsistency_NullQueue_ShouldPass()
+    {
+        var validator = new ReceiptValidations.CountryConsistency(null);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES")
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CountryConsistency_EmptyCountryCode_ShouldPass()
+    {
+        var queue = new ftQueue { CountryCode = "" };
+        var validator = new ReceiptValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES")
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    #endregion
+
+    #region PayItemCaseCountryConsistency
+
+    [Fact]
+    public void PayItemCaseCountryConsistency_MatchingCountry_ShouldPass()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { ftPayItemCase = PayItemCase.CashPayment.WithCountry("PT") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void PayItemCaseCountryConsistency_MismatchedCountry_ShouldFail()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { ftPayItemCase = PayItemCase.CashPayment.WithCountry("ES") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveAnyValidationError().WithErrorCode("PayItemCaseCountryMismatch");
+    }
+
+    [Fact]
+    public void PayItemCaseCountryConsistency_NullQueue_ShouldPass()
+    {
+        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(null);
+        var request = new ReceiptRequest
+        {
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { ftPayItemCase = PayItemCase.CashPayment.WithCountry("ES") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void PayItemCaseCountryConsistency_NullPayItems_ShouldPass()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(queue);
+        var request = new ReceiptRequest { cbPayItems = null };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void PayItemCaseCountryConsistency_MultipleItems_OneMismatched_ShouldFail()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem { ftPayItemCase = PayItemCase.CashPayment.WithCountry("PT") },
+                new PayItem { ftPayItemCase = PayItemCase.CashPayment.WithCountry("ES") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveAnyValidationError().WithErrorCode("PayItemCaseCountryMismatch");
+    }
+
+    #endregion
+
+    #region RefundMustUseSingleReference
+
+    [Fact]
+    public void RefundMustUseSingleReference_SingleRef_ShouldPass()
+    {
+        var validator = new ReceiptValidations.RefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT") | (ReceiptCase)(long)ReceiptCaseFlags.Refund,
+            cbPreviousReceiptReference = "REF-001"
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void RefundMustUseSingleReference_GroupRef_ShouldFail()
+    {
+        var validator = new ReceiptValidations.RefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT") | (ReceiptCase)(long)ReceiptCaseFlags.Refund,
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.cbPreviousReceiptReference)
+              .WithErrorCode("RefundGroupReferenceNotSupported");
+    }
+
+    [Fact]
+    public void RefundMustUseSingleReference_GroupRef_GR_ShouldPass()
+    {
+        var validator = new ReceiptValidations.RefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("GR") | (ReceiptCase)(long)ReceiptCaseFlags.Refund,
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void RefundMustUseSingleReference_NoRefundFlag_ShouldPass()
+    {
+        var validator = new ReceiptValidations.RefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void RefundMustUseSingleReference_NullRef_ShouldPass()
+    {
+        var validator = new ReceiptValidations.RefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT") | (ReceiptCase)(long)ReceiptCaseFlags.Refund,
+            cbPreviousReceiptReference = null
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    #endregion
+
+    #region PartialRefundMustUseSingleReference
+
+    [Fact]
+    public void PartialRefundMustUseSingleReference_SingleRef_ShouldPass()
+    {
+        var validator = new ReceiptValidations.PartialRefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbPreviousReceiptReference = "REF-001",
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.Refund) }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void PartialRefundMustUseSingleReference_GroupRef_ShouldFail()
+    {
+        var validator = new ReceiptValidations.PartialRefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" },
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.Refund) }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.cbPreviousReceiptReference)
+              .WithErrorCode("PartialRefundGroupReferenceNotSupported");
+    }
+
+    [Fact]
+    public void PartialRefundMustUseSingleReference_GroupRef_GR_ShouldPass()
+    {
+        var validator = new ReceiptValidations.PartialRefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("GR"),
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" },
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseFlags.Refund) }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void PartialRefundMustUseSingleReference_NoRefundItems_ShouldPass()
+    {
+        var validator = new ReceiptValidations.PartialRefundMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" },
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    #endregion
+
+    #region VoidMustUseSingleReference
+
+    [Fact]
+    public void VoidMustUseSingleReference_SingleRef_ShouldPass()
+    {
+        var validator = new ReceiptValidations.VoidMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT") | (ReceiptCase)(long)ReceiptCaseFlags.Void,
+            cbPreviousReceiptReference = "REF-001"
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void VoidMustUseSingleReference_GroupRef_ShouldFail()
+    {
+        var validator = new ReceiptValidations.VoidMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT") | (ReceiptCase)(long)ReceiptCaseFlags.Void,
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.cbPreviousReceiptReference)
+              .WithErrorCode("VoidGroupReferenceNotSupported");
+    }
+
+    [Fact]
+    public void VoidMustUseSingleReference_GroupRef_GR_ShouldPass()
+    {
+        var validator = new ReceiptValidations.VoidMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("GR") | (ReceiptCase)(long)ReceiptCaseFlags.Void,
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void VoidMustUseSingleReference_NoVoidFlag_ShouldPass()
+    {
+        var validator = new ReceiptValidations.VoidMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbPreviousReceiptReference = new string[] { "REF-001", "REF-002" }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void VoidMustUseSingleReference_NullRef_ShouldPass()
+    {
+        var validator = new ReceiptValidations.VoidMustUseSingleReference();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT") | (ReceiptCase)(long)ReceiptCaseFlags.Void,
+            cbPreviousReceiptReference = null
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    #endregion
 }
