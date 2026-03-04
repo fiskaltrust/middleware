@@ -1,6 +1,7 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
+using fiskaltrust.storage.V0;
 using FluentValidation.TestHelper;
 using Xunit;
 
@@ -366,6 +367,84 @@ public class ChargeItemValidationsTests
         };
         var result = validator.TestValidate(request);
         result.ShouldHaveAnyValidationError();
+    }
+
+    #endregion
+
+    #region CountryConsistency
+
+    [Fact]
+    public void CountryConsistency_MatchingCountry_ShouldPass()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ChargeItemValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CountryConsistency_MismatchedCountry_ShouldFail()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ChargeItemValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveAnyValidationError().WithErrorCode("ChargeItemCaseCountryMismatch");
+    }
+
+    [Fact]
+    public void CountryConsistency_NullQueue_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.CountryConsistency(null);
+        var request = new ReceiptRequest
+        {
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CountryConsistency_NullChargeItems_ShouldPass()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ChargeItemValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest { cbChargeItems = null };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CountryConsistency_MultipleItems_OneMismatched_ShouldFail()
+    {
+        var queue = new ftQueue { CountryCode = "PT" };
+        var validator = new ChargeItemValidations.CountryConsistency(queue);
+        var request = new ReceiptRequest
+        {
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT") },
+                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES") }
+            }
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveAnyValidationError().WithErrorCode("ChargeItemCaseCountryMismatch");
     }
 
     #endregion
