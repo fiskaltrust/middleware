@@ -28,6 +28,8 @@ public class ReceiptProcessor : IReceiptProcessor
         _logger = logger;
     }
 
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor) : this(logger, new NullMarketValidator(), lifecyclCommandProcessor, receiptCommandProcessor, dailyOperationsCommandProcessor, invoiceCommandProcessor, protocolCommandProcessor) { }
+
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
         var validationResult = await _validator.ValidateAsync(request, queue);
