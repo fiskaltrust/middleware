@@ -2,13 +2,14 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 using FluentValidation;
 
 namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 
 public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 {
-    public ChargeItemValidations()
+    public ChargeItemValidations(ftQueue? queue = null)
     {
         Include(new MandatoryFields());
         Include(new ServiceType());
@@ -16,6 +17,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         Include(new NegativeAmounts());
         Include(new DiscountLimit());
         Include(new ZeroVatRateMustHaveNature());
+        Include(new CountryConsistency(queue));
     }
 
     public class MandatoryFields : AbstractValidator<ReceiptRequest>
@@ -158,6 +160,24 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                             }
                         }
                     });
+            });
+        }
+    }
+
+    public class CountryConsistency : AbstractValidator<ReceiptRequest>
+    {
+        public CountryConsistency(ftQueue? queue)
+        {
+            When(x => queue != null && !string.IsNullOrEmpty(queue.CountryCode)
+                   && x.cbChargeItems != null, () =>
+            {
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.ftChargeItemCase)
+                        .Must(c => c.Country() == queue!.CountryCode)
+                        .WithMessage(item => $"Charge item case country '{item.ftChargeItemCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
+                        .WithErrorCode("ChargeItemCaseCountryMismatch");
+                });
             });
         }
     }
