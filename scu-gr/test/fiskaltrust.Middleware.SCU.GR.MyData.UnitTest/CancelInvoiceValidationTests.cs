@@ -399,6 +399,42 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             error.Exception.Message.Should().Contain("at least one charge item");
             doc.Should().BeNull();
         }
+//
+// Test 7: Missing tableAA should cause error for 8.6
+// Validates that AADE VOID (8.6) requires cbArea/tableAA.
+//
+[Fact]
+public void MapToInvoicesDoc_RestaurantOrderVoid_MissingTableAA_ReturnsError()
+{
+    var receiptRequest = new ReceiptRequest
+    {
+        cbPreviousReceiptReference = new[] { "4000019580341891" },
+        ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
+        cbTerminalID = "1",
+        cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
+        Currency = Currency.EUR,
+        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptReference = Guid.NewGuid().ToString(),
+        ftPosSystemId = Guid.NewGuid(),
+        cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1 }
+        },
+        cbPayItems = new List<PayItem>()
+    };
+    var receiptResponse = new ReceiptResponse
+    {
+        cbReceiptReference = receiptRequest.cbReceiptReference,
+        ftCashBoxIdentification = "CB001",
+        ftReceiptIdentification = "ft123#"
+    };
+    var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+    var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+    error.Should().NotBeNull();
+    error.Exception.Message.Should().Contain("TableAA (cbArea) must be provided");
+    doc.Should().BeNull();
+}
 
 
         // Helper for master data setup
