@@ -280,7 +280,7 @@ public class AADEFactory
             }
         }
 
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && inv.invoiceHeader.invoiceType != InvoiceType.Item86)
         {
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
@@ -1098,10 +1098,14 @@ public class AADEFactory
                 }
             );
 
-        // TableAA (optional)
-        invoiceHeader.tableAA = receiptRequest.cbArea != null
-            ? Convert.ToString(receiptRequest.cbArea, CultureInfo.InvariantCulture)
-            : null;
+        // TableAA (mandatory for 8.6)
+        if (receiptRequest.cbArea == null)
+        {
+            throw new ArgumentException("TableAA (cbArea) must be provided for restaurant order VOID (8.6).", nameof(receiptRequest.cbArea));
+        }
+
+        invoiceHeader.tableAA = Convert.ToString(receiptRequest.cbArea, CultureInfo.InvariantCulture);
+
 
         // AADE 8.6: Full cancel flag
         invoiceHeader.totalCancelDeliveryOrders = true;
