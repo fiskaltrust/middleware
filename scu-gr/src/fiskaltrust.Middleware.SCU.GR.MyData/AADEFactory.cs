@@ -478,7 +478,7 @@ public class AADEFactory
         }
 
         var documentTaxes = new List<TaxTotalsType>();
-        foreach (var item in receiptRequest.cbChargeItems.Where(x => SpecialTaxMappings.IsSpecialTaxItem(x)))
+        foreach (var item in receiptRequest.cbChargeItems.Where(x => SpecialTaxMappings.IsSpecialTaxItem(x) && !SpecialTaxMappings.IsVatableSpecialTaxItem(x)))
         {
             var withholdingMapping = SpecialTaxMappings.GetWithholdingTaxMapping(item.Description);
             if (withholdingMapping != null)
@@ -636,7 +636,11 @@ public class AADEFactory
         }
 
         var chargeItems = receiptRequest.GetGroupedChargeItems()
-            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .Where(grouped =>
+                    !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem)
+                    ||
+                    (SpecialTaxMappings.IsVatableSpecialTaxItem(grouped.chargeItem))
+                  )
             .ToList();
 
         var nextPosition = 1;
@@ -747,6 +751,17 @@ public class AADEFactory
                     {
                         invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
                     }
+                }
+            }
+            if (SpecialTaxMappings.IsVatableSpecialTaxItem(x))
+            {
+                var feeMapping = SpecialTaxMappings.GetFeeMapping(x.Description);
+                if (feeMapping != null)
+                {
+                    invoiceRow.feesAmount = Math.Abs(x.Amount - (x.VATAmount ?? 0));
+                    invoiceRow.feesAmountSpecified = true;
+                    invoiceRow.feesPercentCategory = feeMapping.Code;
+                    invoiceRow.feesPercentCategorySpecified = true;
                 }
             }
             if (grouped.modifiers.Count > 0)
