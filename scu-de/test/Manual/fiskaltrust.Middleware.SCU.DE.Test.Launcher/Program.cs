@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.Middleware.SCU.DE.Test.Launcher.Helpers;
@@ -125,18 +124,20 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             Console.WriteLine($"Performing TSE factory reset on device: {devicePath}");
             Console.WriteLine("WARNING: This will erase all data on the TSE. Only works on development TSEs.");
 
+            var nativeFunctions = new Swissbit.Interop.FunctionPointerFactory().LoadLibrary();
+
             var context = IntPtr.Zero;
             var mountPointPtr = Marshal.StringToHGlobalAnsi(devicePath);
             try
             {
-                var initError = Swissbit.Interop.NativeWormAPI.worm_init(ref context, mountPointPtr);
+                var initError = nativeFunctions.func_worm_init(ref context, mountPointPtr);
                 if (initError != Swissbit.Interop.NativeFunctionPointer.WormError.WORM_ERROR_NOERROR)
                 {
                     Console.WriteLine($"ERROR: worm_init failed with error {initError}.");
                     return;
                 }
 
-                var resetError = Swissbit.Interop.NativeWormAPI.worm_tse_factoryReset(context);
+                var resetError = nativeFunctions.func_worm_tse_factoryReset(context);
                 if (resetError != Swissbit.Interop.NativeFunctionPointer.WormError.WORM_ERROR_NOERROR)
                 {
                     Console.WriteLine($"ERROR: worm_tse_factoryReset failed with error {resetError}.");
@@ -149,7 +150,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             {
                 if (context != IntPtr.Zero)
                 {
-                    Swissbit.Interop.NativeWormAPI.worm_cleanup(context);
+                    nativeFunctions.func_worm_cleanup(context);
                 }
                 Marshal.FreeHGlobal(mountPointPtr);
             }
