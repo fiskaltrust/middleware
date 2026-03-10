@@ -310,7 +310,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitV2
 
                 await UpdateTimeAsync(proxy);
 
-                if (await proxy.UpdateFirmwareAsync(_configuration.EnableFirmwareUpdate))
+                var shouldUpdate = _configuration.EnableFirmwareUpdate && !await proxy.IsV2Async();
+                if (await proxy.UpdateFirmwareAsync(shouldUpdate))
                 {
                     await SelftestAsync(proxy);
                 }

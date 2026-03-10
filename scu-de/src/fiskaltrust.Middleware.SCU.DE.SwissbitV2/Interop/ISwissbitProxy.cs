@@ -42,5 +42,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitV2.Interop
         public Task DeleteStoredDataAsync();
 
         public Task TseFactoryReset(bool throwException = true);
+        public Task<bool> IsV2Async();
     }
 }

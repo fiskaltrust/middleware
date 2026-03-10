@@ -916,6 +916,32 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitV2.Interop
             });
         }
 
+        public async Task<bool> IsV2Async()
+        {
+            return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
+                try
+                {
+                    _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
+
+                    // Software version is encoded as: 2 bytes major | 1 byte minor | 1 byte patch
+                    var softwareVersion = _nativeFunctionPointer.func_worm_info_softwareVersion(infoPtr);
+                    var major = (softwareVersion >> 16) & 0xFFFF;
+
+                    // Swissbit V2 TSEs use major version >= 2
+                    return major >= 2;
+                }
+                finally
+                {
+                    if (infoPtr != IntPtr.Zero)
+                    {
+                        _nativeFunctionPointer.func_worm_info_free(infoPtr);
+                    }
+                }
+            });
+        }
+
         public void Dispose()
         {
             try
