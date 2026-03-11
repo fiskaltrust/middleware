@@ -280,7 +280,7 @@ public class AADEFactory
             }
         }
 
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && inv.invoiceHeader.invoiceType != InvoiceType.Item86)
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
         {
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
