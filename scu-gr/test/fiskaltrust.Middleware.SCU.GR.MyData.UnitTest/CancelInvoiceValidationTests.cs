@@ -271,7 +271,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 ftPosSystemId = Guid.NewGuid(),
                 cbChargeItems = new List<ChargeItem>
         {
-            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1 }
+            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1, ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
         },
                 cbPayItems = new List<PayItem>()
             };
@@ -309,7 +309,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 ftPosSystemId = Guid.NewGuid(),
                 cbChargeItems = new List<ChargeItem>
         {
-            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 99.99m, VATRate = 0, VATAmount = 0, Position = 1 }
+            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 99.99m, VATRate = 0, VATAmount = 0, Position = 1, ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
         },
                 cbPayItems = new List<PayItem>()
             };
@@ -347,7 +347,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 ftPosSystemId = Guid.NewGuid(),
                 cbChargeItems = new List<ChargeItem>
         {
-            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1 }
+            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1, ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
         },
                 cbPayItems = new List<PayItem>()
             };
@@ -366,11 +366,11 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         //
-        // Test 6: Missing charge items should cause error
-        // Validates AADE logic: VOID must have at least one charge item present.
+        // Test 7: Missing tableAA should cause error for 8.6
+        // Validates that AADE VOID (8.6) requires cbArea/tableAA.
         //
         [Fact]
-        public void MapToInvoicesDoc_RestaurantOrderVoid_MissingChargeItems_ReturnsError()
+        public void MapToInvoicesDoc_RestaurantOrderVoid_MissingTableAA_ReturnsError()
         {
             var receiptRequest = new ReceiptRequest
             {
@@ -381,9 +381,11 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 Currency = Currency.EUR,
                 cbReceiptMoment = DateTime.UtcNow,
                 cbReceiptReference = Guid.NewGuid().ToString(),
-                cbArea = "105",
                 ftPosSystemId = Guid.NewGuid(),
-                cbChargeItems = new List<ChargeItem>(), // Empty list
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1, ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
+                },
                 cbPayItems = new List<PayItem>()
             };
             var receiptResponse = new ReceiptResponse
@@ -394,48 +396,98 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             };
             var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
             var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
-
+        
             error.Should().NotBeNull();
-            error.Exception.Message.Should().Contain("at least one charge item");
+            error.Exception.Message.Should().Contain("TableAA (cbArea) must be provided");
             doc.Should().BeNull();
         }
-//
-// Test 7: Missing tableAA should cause error for 8.6
-// Validates that AADE VOID (8.6) requires cbArea/tableAA.
-//
-[Fact]
-public void MapToInvoicesDoc_RestaurantOrderVoid_MissingTableAA_ReturnsError()
-{
-    var receiptRequest = new ReceiptRequest
-    {
-        cbPreviousReceiptReference = new[] { "4000019580341891" },
-        ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
-        cbTerminalID = "1",
-        cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
-        Currency = Currency.EUR,
-        cbReceiptMoment = DateTime.UtcNow,
-        cbReceiptReference = Guid.NewGuid().ToString(),
-        ftPosSystemId = Guid.NewGuid(),
-        cbChargeItems = new List<ChargeItem>
+
+        //
+        // Test: Normal restaurant order (8.6) should NOT get VOID headers
+        //
+        [Fact]
+        public void MapToInvoicesDoc_NormalRestaurantOrder86_ShouldNotSetVoidHeaders()
         {
-            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1 }
-        },
-        cbPayItems = new List<PayItem>()
-    };
-    var receiptResponse = new ReceiptResponse
-    {
-        cbReceiptReference = receiptRequest.cbReceiptReference,
-        ftCashBoxIdentification = "CB001",
-        ftReceiptIdentification = "ft123#"
-    };
-    var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
-    var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+            // Arrange — normal HoReCa 8.6 order: real amounts, real VAT, NO void flag
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.Order0x3004),
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbArea = "105",
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+                {
+                    new ChargeItem
+                    {
+                        Quantity = 2,
+                        Description = "Bottle of wine",
+                        Amount = 24.80m,
+                        VATRate = 24m,
+                        VATAmount = 4.80m,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013, // Delivery, normal VAT, NO Void flag
+                        Position = 1
+                    }
+                },
+                cbPayItems = new List<PayItem>()
+            };
 
-    error.Should().NotBeNull();
-    error.Exception.Message.Should().Contain("TableAA (cbArea) must be provided");
-    doc.Should().BeNull();
-}
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
 
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            // Act
+            (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull("a normal 8.6 restaurant order must not produce an error");
+            doc.Should().NotBeNull();
+
+            var invoice = doc!.invoice[0];
+            var header = invoice.invoiceHeader;
+
+            header.invoiceType.Should().Be(InvoiceType.Item86);
+
+            // VOID-specific headers must NOT be set
+            header.multipleConnectedMarks.Should().BeNullOrEmpty(
+                "a normal order must NOT have multipleConnectedMarks");
+            header.totalCancelDeliveryOrders.Should().BeFalse(
+                "totalCancelDeliveryOrders must only be true for VOID orders");
+            header.totalCancelDeliveryOrdersSpecified.Should().BeFalse();
+
+            // tableAA must still be set for normal orders
+            header.tableAA.Should().Be("105");
+
+            // Invoice details must be normal (real values, not zero)
+            invoice.invoiceDetails.Should().HaveCount(1);
+            var line = invoice.invoiceDetails[0];
+            line.netValue.Should().Be(20.00m);
+            line.vatAmount.Should().Be(4.80m);
+            line.vatCategory.Should().Be(1); // 24% VAT
+            line.quantity.Should().Be(2);
+            line.itemDescr.Should().Be("Bottle of wine");
+
+            // Must have income classification
+            line.incomeClassification.Should().NotBeNullOrEmpty();
+            line.incomeClassification[0].classificationCategory
+                .Should().Be(IncomeClassificationCategoryType.category1_95);
+            line.incomeClassification[0].amount.Should().Be(20.00m);
+
+            // Summary must reflect actual values
+            var summary = invoice.invoiceSummary;
+            summary.totalNetValue.Should().Be(20.00m);
+            summary.totalVatAmount.Should().Be(4.80m);
+            summary.totalGrossValue.Should().Be(24.80m);
+            summary.incomeClassification.Should().NotBeNullOrEmpty();
+        }
 
         // Helper for master data setup
         private storage.V0.MasterData.MasterDataConfiguration MockMasterData() =>

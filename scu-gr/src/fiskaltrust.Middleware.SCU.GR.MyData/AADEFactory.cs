@@ -230,8 +230,10 @@ public class AADEFactory
             // It looks like Item93 does NOT allow to specify the currency
             inv.invoiceHeader.currencySpecified = false;
         }
+        
+        var isVoidOrder = receiptRequest.cbChargeItems.Any(ci => ci.IsVoid());
 
-        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86)
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86 && isVoidOrder)
         {
             // set the required header fields for Invoice Type 8.6 (VOID/CANCEL)
             SetInvoiceHeaderFieldsForVoid(inv.invoiceHeader, receiptRequest);
@@ -280,7 +282,7 @@ public class AADEFactory
             }
         }
 
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86 && !isVoidOrder)
         {
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
@@ -683,7 +685,8 @@ public class AADEFactory
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
         }
 
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86
+            && receiptRequest.cbChargeItems.Any(ci => ci.IsVoid()))
         {
             // For Invoice Types of type 8.6 (VOID/CANCEL Restaurant Order), generate a single invoice line with zero values and VAT category 8, as required by AADE for full order cancellation.
             return GetInvoiceDetailsForVoid(receiptRequest);
