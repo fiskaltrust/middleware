@@ -282,7 +282,7 @@ public class AADEFactory
             }
         }
 
-        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86 && !isVoidOrder)
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86)
         {
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
