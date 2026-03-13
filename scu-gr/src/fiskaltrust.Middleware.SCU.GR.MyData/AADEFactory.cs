@@ -1073,68 +1073,47 @@ public class AADEFactory
 
     /// <summary>
     /// Sets AADE-required fields for Invoice Type 8.6 (VOID/cancel) restaurant order:
-    /// - multipleConnectedMarks (MARKs to cancel)
-    /// - tableAA (area/table number, if present)
+    /// - tableAA (area/table number)
     /// - totalCancelDeliveryOrders = true
-    /// Performs input validation and robust parsing of MARKs.
+    /// Note: multipleConnectedMarks are set by the general flow in CreateInvoiceDocType
+    /// using resolved receiptReferences.
     /// </summary>
     public static void SetInvoiceHeaderFieldsForVoid(InvoiceHeaderType invoiceHeader, ReceiptRequest receiptRequest)
     {
-        // Validate cbPreviousReceiptReference is present
+        // Validate cbPreviousReceiptReference is present and not empty
         var refObj = receiptRequest.cbPreviousReceiptReference;
         if (refObj == null)
         {
-            throw new ArgumentException("MultipleConnectedMarks (cbPreviousReceiptReference) must not be null.", nameof(receiptRequest.cbPreviousReceiptReference));
+            throw new ArgumentException("cbPreviousReceiptReference must not be null or empty.", nameof(receiptRequest.cbPreviousReceiptReference));
         }
-        // Use Match: parse to long and validate format
-        invoiceHeader.multipleConnectedMarks =
-            refObj.Match(
-                single =>
+
+        refObj.Match(
+            single =>
+            {
+                if (string.IsNullOrWhiteSpace(single))
                 {
-                    if (string.IsNullOrWhiteSpace(single))
-                    {
-                        throw new ArgumentException("Single MARK value cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
-                    }
-                    if (!long.TryParse(single, out var markVal))
-                    {
-                        throw new ArgumentException($"Invalid MARK format (expected numeric): '{single}'", nameof(receiptRequest.cbPreviousReceiptReference));
-                    }
-                    return new[] { markVal };
-                },
-                group =>
-                {
-                    if (group == null || group.Length == 0)
-                    {
-                        throw new ArgumentException("Group MARKs cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
-                    }
-                    return group.Select(markStr =>
-                    {
-                        if (string.IsNullOrWhiteSpace(markStr))
-                        {
-                            throw new ArgumentException("MARK in group cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
-                        }
-                        if (!long.TryParse(markStr, out var markVal))
-                        {
-                            throw new ArgumentException($"Invalid MARK format in group (expected numeric): '{markStr}'", nameof(receiptRequest.cbPreviousReceiptReference));
-                        }
-                        return markVal;
-                    }).ToArray();
+                    throw new ArgumentException("Single MARK value cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
                 }
-            );
+            },
+            group =>
+            {
+                if (group == null || group.Length == 0)
+                {
+                    throw new ArgumentException("Group MARKs cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+                }
+            }
+        );
 
         // TableAA (mandatory for 8.6)
         if (receiptRequest.cbArea == null)
         {
             throw new ArgumentException("TableAA (cbArea) must be provided for restaurant order VOID (8.6).", nameof(receiptRequest.cbArea));
         }
+
         invoiceHeader.tableAA = Convert.ToString(receiptRequest.cbArea, CultureInfo.InvariantCulture);
-
-
-        // AADE 8.6: Full cancel flag
         invoiceHeader.totalCancelDeliveryOrders = true;
         invoiceHeader.totalCancelDeliveryOrdersSpecified = true;
     }
-
     public string GetUid(AadeBookInvoiceType invoice) => BitConverter.ToString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate.ToString("yyyy-MM-dd")}-{invoice.issuer.branch}-{invoice.invoiceHeader.invoiceType.GetXmlEnumAttributeValueFromEnum() ?? ""}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}"))).Replace("-", "");
 
     public static string GenerateInvoicePayload(InvoicesDoc doc)
