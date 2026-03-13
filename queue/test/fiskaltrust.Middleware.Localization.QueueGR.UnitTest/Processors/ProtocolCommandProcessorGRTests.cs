@@ -56,6 +56,8 @@ public class ProtocolCommandProcessorGRTests
                 ReceiptResponse = scuResponse,
             });
         var queueStorageProviderMock = new Mock<IQueueStorageProvider>();
+        queueStorageProviderMock.Setup(x => x.GetReceiptReferencesIfNecessaryAsync(It.IsAny<ProcessCommandRequest>()))
+            .ReturnsAsync(new List<(ReceiptRequest, ReceiptResponse)>());
         var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
