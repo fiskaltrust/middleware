@@ -35,7 +35,8 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
-                    .WithCase(ReceiptCase.Order0x3004),
+                    .WithCase(ReceiptCase.Order0x3004)
+                    .WithFlag(ReceiptCaseFlags.Void),
 
                 cbTerminalID = "1",
 
@@ -153,8 +154,9 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
-                    .WithCase(ReceiptCase.Order0x3004),
-
+                    .WithCase(ReceiptCase.Order0x3004)
+                    .WithFlag(ReceiptCaseFlags.Void),
+                    
                 cbTerminalID = "1",
 
                 cbCustomer = new MiddlewareCustomer
@@ -261,7 +263,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 // cbPreviousReceiptReference is intentionally missing/null
-                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004).WithFlag(ReceiptCaseFlags.Void),
                 cbTerminalID = "1",
                 cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
                 Currency = Currency.EUR,
@@ -290,18 +292,18 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         //
-        // Test 4: Non-zero amount should cause error
-        // Validates that every VOID charge item must have Amount = 0, per AADE specs.
+        // Test 4:
+        // Void ONLY on ftChargeItemCase, NOT on ftReceiptCase → must behave as a normal order.
+        // Proves: charge-item-level Void flag alone does NOT trigger document VOID.
         //
         [Fact]
-        public void MapToInvoicesDoc_RestaurantOrderVoid_NonZeroChargeItemAmount_ReturnsError()
+        public void MapToInvoicesDoc_VoidFlagOnlyOnChargeItemCase_NotOnReceiptCase_ProducesNormalOrder()
         {
             var receiptRequest = new ReceiptRequest
             {
-                cbPreviousReceiptReference = new[] { "4000019580341891" },
-                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.Order0x3004), // NO Void on receiptCase
                 cbTerminalID = "1",
-                cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
                 Currency = Currency.EUR,
                 cbReceiptMoment = DateTime.UtcNow,
                 cbReceiptReference = Guid.NewGuid().ToString(),
@@ -309,7 +311,17 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 ftPosSystemId = Guid.NewGuid(),
                 cbChargeItems = new List<ChargeItem>
         {
-            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 99.99m, VATRate = 0, VATAmount = 0, Position = 1, ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
+            new ChargeItem
+            {
+                Quantity = 2,
+                Description = "Bottle of wine",
+                Amount = 24.80m,
+                VATRate = 24m,
+                VATAmount = 4.80m,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0013)
+                    .WithFlag(ChargeItemCaseFlags.Void), // Void ONLY on charge item
+                Position = 1
+            }
         },
                 cbPayItems = new List<PayItem>()
             };
@@ -320,11 +332,21 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 ftReceiptIdentification = "ft123#"
             };
             var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
-            var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
 
-            error.Should().NotBeNull();
-            error.Exception.Message.Should().Contain("Amount = 0");
-            doc.Should().BeNull();
+            (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().BeNull("charge-item Void flag alone must NOT trigger document VOID");
+            doc.Should().NotBeNull();
+
+            var header = doc!.invoice[0].invoiceHeader;
+            header.invoiceType.Should().Be(InvoiceType.Item86);
+            header.multipleConnectedMarks.Should().BeNullOrEmpty();
+            header.totalCancelDeliveryOrders.Should().BeFalse();
+            header.totalCancelDeliveryOrdersSpecified.Should().BeFalse();
+
+            var line = doc.invoice[0].invoiceDetails[0];
+            line.netValue.Should().Be(20.00m, "normal amounts must be preserved");
+            line.vatAmount.Should().Be(4.80m);
         }
 
         //
@@ -337,7 +359,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 cbPreviousReceiptReference = new[] { "not_a_number" },
-                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004).WithFlag(ReceiptCaseFlags.Void),
                 cbTerminalID = "1",
                 cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
                 Currency = Currency.EUR,
@@ -366,6 +388,65 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         //
+        // Test 6:
+        // Void on ftReceiptCase, charge items have NO void flag → must still produce full VOID doc.
+        // Proves: ftReceiptCase Void drives the whole document regardless of charge item flags.
+        //
+        [Fact]
+        public void MapToInvoicesDoc_VoidOnReceiptCase_ChargeItemsHaveNoVoidFlag_StillProducesVoidDoc()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.Order0x3004)
+                    .WithFlag(ReceiptCaseFlags.Void),     // Void on receiptCase
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbArea = "105",
+                cbPreviousReceiptReference = new[] { "4000019580341891" },
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Quantity = 1,
+                Description = "Bottle of wine",
+                Amount = 0.0m,
+                VATRate = 0m,
+                VATAmount = 0m,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
+                    .WithVat(ChargeItemCase.NotTaxable), // NO Void flag on charge item
+                Position = 1
+            }
+        },
+                cbPayItems = new List<PayItem>()
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().BeNull("receiptCase Void must produce VOID doc regardless of charge item flags");
+            doc.Should().NotBeNull();
+
+            var header = doc!.invoice[0].invoiceHeader;
+            header.invoiceType.Should().Be(InvoiceType.Item86);
+            header.multipleConnectedMarks.Should().NotBeNullOrEmpty();
+            header.totalCancelDeliveryOrders.Should().BeTrue();
+
+            doc.invoice[0].invoiceDetails.Should().HaveCount(1);
+            doc.invoice[0].invoiceDetails[0].vatCategory.Should().Be(8);
+            doc.invoice[0].invoiceDetails[0].netValue.Should().Be(0.00m);
+        }
+
+        //
         // Test 7: Missing tableAA should cause error for 8.6
         // Validates that AADE VOID (8.6) requires cbArea/tableAA.
         //
@@ -375,7 +456,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             var receiptRequest = new ReceiptRequest
             {
                 cbPreviousReceiptReference = new[] { "4000019580341891" },
-                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004).WithFlag(ReceiptCaseFlags.Void),
                 cbTerminalID = "1",
                 cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
                 Currency = Currency.EUR,
@@ -403,7 +484,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         //
-        // Test: Normal restaurant order (8.6) should NOT get VOID headers
+        // Test 8: Normal restaurant order (8.6) should NOT get VOID headers
         //
         [Fact]
         public void MapToInvoicesDoc_NormalRestaurantOrder86_ShouldNotSetVoidHeaders()
@@ -487,6 +568,269 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             summary.totalVatAmount.Should().Be(4.80m);
             summary.totalGrossValue.Should().Be(24.80m);
             summary.incomeClassification.Should().NotBeNullOrEmpty();
+        }
+
+        //
+        // Test 9:
+        // Void on ftReceiptCase, charge items have real non-zero amounts → output must be all zero.
+        // Proves: receiptCase Void completely overrides whatever amounts are in the line items.
+        //
+        [Fact]
+        public void MapToInvoicesDoc_VoidOnReceiptCase_ChargeItemsWithNonZeroAmounts_OutputIsAllZero()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.Order0x3004)
+                    .WithFlag(ReceiptCaseFlags.Void),
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbArea = "105",
+                cbPreviousReceiptReference = new[] { "4000019580341891" },
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Quantity = 3,
+                Description = "Pizza Margherita",
+                Amount = 36.00m,    // non-zero — must be ignored by VOID
+                VATRate = 13m,
+                VATAmount = 4.16m,  // non-zero — must be ignored by VOID
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000)
+                    .WithFlag(ChargeItemCaseFlags.Void)
+                    .WithVat(ChargeItemCase.NotTaxable),
+                Position = 1
+            }
+        },
+                cbPayItems = new List<PayItem>()
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().BeNull();
+            doc.Should().NotBeNull();
+
+            var line = doc!.invoice[0].invoiceDetails[0];
+            line.netValue.Should().Be(0.00m, "VOID must override charge item amounts to zero");
+            line.vatAmount.Should().Be(0.00m, "VOID must override charge item VAT to zero");
+            line.vatCategory.Should().Be(8);
+            line.quantity.Should().Be(1, "VOID collapses to a single line");
+            line.incomeClassification.Should().BeNullOrEmpty();
+
+            var summary = doc.invoice[0].invoiceSummary;
+            summary.totalNetValue.Should().Be(0.00m);
+            summary.totalVatAmount.Should().Be(0.00m);
+            summary.totalGrossValue.Should().Be(0.00m);
+        }
+
+        //
+        // Test 10:
+        // Empty array for cbPreviousReceiptReference → must return error.
+        // Different from Test 3 (null): this is an empty string[], not null.
+        //
+        [Fact]
+        public void MapToInvoicesDoc_RestaurantOrderVoid_EmptyPreviousMarksArray_ReturnsError()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                cbPreviousReceiptReference = Array.Empty<string>(), // empty array, not null
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.Order0x3004)
+                    .WithFlag(ReceiptCaseFlags.Void),
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbArea = "105",
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem { Quantity = 1, Description = "VOID item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
+        },
+                cbPayItems = new List<PayItem>()
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().NotBeNull("empty marks array must be rejected");
+            error!.Exception.Message.Should().Contain("Group MARKs cannot be empty");
+            doc.Should().BeNull();
+        }
+
+        //
+        // Test 11:
+        // Void on ftReceiptCase for a NON-8.6 invoice type → must return "not supported" error.
+        // Proves: VOID is exclusively allowed for Order0x3004 (type 8.6).
+        //
+        [Fact]
+        public void MapToInvoicesDoc_VoidOnReceiptCase_NonOrder86InvoiceType_ReturnsUnsupportedError()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                // Receipt type (Item111) with Void — not an Order/Log
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithFlag(ReceiptCaseFlags.Void),
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbArea = "105",
+                cbPreviousReceiptReference = new[] { "4000019580341891" },
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem { Quantity = 1, Description = "Item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NotTaxable) }
+        },
+                cbPayItems = new List<PayItem>()
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().NotBeNull("Void is only supported for invoice type 8.6");
+            error!.Exception.Message.Should().Contain("not supported");
+            doc.Should().BeNull();
+        }
+
+        //
+        // Test 12:
+        // Multiple charge items: collapsed single VOID line must take description from the FIRST item.
+        // Proves: item collapse behaviour is deterministic.
+        //
+        [Fact]
+        public void MapToInvoicesDoc_VoidOnReceiptCase_MultipleItems_LineDescriptionTakenFromFirstItem()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.Order0x3004)
+                    .WithFlag(ReceiptCaseFlags.Void),
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbArea = "105",
+                cbPreviousReceiptReference = new[] { "4000019580341891" },
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem { Quantity = 1, Description = "FIRST ITEM",  Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) },
+            new ChargeItem { Quantity = 2, Description = "SECOND ITEM", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 2,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) },
+            new ChargeItem { Quantity = 3, Description = "THIRD ITEM",  Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 3,
+                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithFlag(ChargeItemCaseFlags.Void).WithVat(ChargeItemCase.NotTaxable) }
+        },
+                cbPayItems = new List<PayItem>()
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().BeNull();
+            doc.Should().NotBeNull();
+            doc!.invoice[0].invoiceDetails.Should().HaveCount(1, "all items must collapse to exactly one line");
+            doc.invoice[0].invoiceDetails[0].itemDescr.Should().Be("FIRST ITEM",
+                "description must come from the first charge item");
+        }
+
+        //
+        // Test 13:
+        // VIVA real-world call: raw numeric ftReceiptCase, single-string cbPreviousReceiptReference,
+        // negative Quantity and Amount on charge item → must produce a valid VOID doc with all zeros.
+        //
+        [Fact]
+        public void MapToInvoicesDoc_VivaStyleCall_RawValues_ProducesVoidDoc()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                // 5139205309155520516 = 0x4752_2000_0004_3004 (GR + version2 + Void flag + Order)
+                ftReceiptCase = (ReceiptCase) 5139205309155520516UL,
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = "123456",
+                cbPreviousReceiptReference = "1234", // VIVA sends plain string, not array
+                cbArea = "14",
+                ftPosSystemId = Guid.NewGuid(),
+                cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Quantity = -1,       // VIVA sends negative quantity
+                Description = "Bottle cocal cola",
+                Amount = -10.0m,     // VIVA sends negative amount
+                VATRate = 0m,
+                VATAmount = 0m,
+                // 35184372154376 = 0x0000_2000_0001_0008 (version2 + Void + NotTaxable)
+                ftChargeItemCase = (ChargeItemCase)35184372154376UL,
+                Position = 1
+            }
+        },
+                cbPayItems = new List<PayItem>()
+            };
+            var receiptResponse = new ReceiptResponse
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftCashBoxIdentification = "CB001",
+                ftReceiptIdentification = "ft123#"
+            };
+            var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
+
+            (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            error.Should().BeNull();
+            doc.Should().NotBeNull();
+
+            var header = doc!.invoice[0].invoiceHeader;
+            header.invoiceType.Should().Be(InvoiceType.Item86);
+            header.multipleConnectedMarks.Should().HaveCount(1);
+            header.multipleConnectedMarks![0].Should().Be(1234L);
+            header.totalCancelDeliveryOrders.Should().BeTrue();
+            header.tableAA.Should().Be("14");
+
+            var line = doc.invoice[0].invoiceDetails[0];
+            line.netValue.Should().Be(0.00m, "VOID must override negative amounts to zero");
+            line.vatAmount.Should().Be(0.00m, "VOID must override negative VAT to zero");
+            line.vatCategory.Should().Be(8);
+            line.quantity.Should().Be(1, "VOID always collapses to a single line with quantity 1");
+            line.incomeClassification.Should().BeNullOrEmpty();
+
+            var summary = doc.invoice[0].invoiceSummary;
+            summary.totalNetValue.Should().Be(0.00m);
+            summary.totalVatAmount.Should().Be(0.00m);
+            summary.totalGrossValue.Should().Be(0.00m);
         }
 
         // Helper for master data setup

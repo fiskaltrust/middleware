@@ -230,13 +230,18 @@ public class AADEFactory
             // It looks like Item93 does NOT allow to specify the currency
             inv.invoiceHeader.currencySpecified = false;
         }
-        
-        var isVoidOrder = receiptRequest.cbChargeItems.Any(ci => ci.IsVoid());
 
-        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86 && isVoidOrder)
+        var isVoidFlag = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void);
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86 && isVoidFlag)
         {
-            // set the required header fields for Invoice Type 8.6 (VOID/CANCEL)
+            // set the required header fields for Invoice Type 8.6 with VOID/CANCEL flag
             SetInvoiceHeaderFieldsForVoid(inv.invoiceHeader, receiptRequest);
+        }
+        else if (isVoidFlag)
+        {
+            // For other invoice types, voiding is not supported
+            // we choose to throw an exception
+            throw new Exception("Voiding of documents is not supported for this invoice type. Please use refund.");
         }
 
         // Add withholding taxes to the invoice if any exist
@@ -640,7 +645,6 @@ public class AADEFactory
     /// <summary>
     /// Returns invoice rows for AADE 8.6 VOID restaurant order (multiple/cancel):
     /// - One line (even if multiple charge items provided)
-    /// - Zero values everywhere
     /// - VAT category = 8 (Entries without VAT)
     /// - No expense/income classifications
     /// Fails if no charge items are present.
@@ -654,11 +658,6 @@ public class AADEFactory
             throw new ArgumentException("VOID orders require at least one charge item to describe the canceled item.");
         }
 
-        // Optionally validate that all items have Amount == 0, Quantity >= 1
-        if (receiptRequest.cbChargeItems.Any(ci => ci.Amount != 0))
-        {
-            throw new ArgumentException("VOID order charge items must have Amount = 0.");
-        }
         // Optionally: Only use first item's description, ignore extra items per AADE "one line" requirement
         var row = new InvoiceRowType
         {
@@ -685,11 +684,18 @@ public class AADEFactory
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
         }
 
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86
-            && receiptRequest.cbChargeItems.Any(ci => ci.IsVoid()))
+        var isVoidFlag = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void);
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86 && isVoidFlag)
         {
-            // For Invoice Types of type 8.6 (VOID/CANCEL Restaurant Order), generate a single invoice line with zero values and VAT category 8, as required by AADE for full order cancellation.
+            // for Invoice Type 8.6 with VOID/CANCEL flag
+            // generate a single invoice line with zero values and VAT category 8, as required by AADE for full order cancellation.
             return GetInvoiceDetailsForVoid(receiptRequest);
+        }
+        else if (isVoidFlag)
+        {
+            // For other invoice types, voiding is not supported
+            // we choose to throw an exception
+            throw new Exception("Voiding of documents is not supported for this invoice type. Please use refund.");
         }
 
         var chargeItems = receiptRequest.GetGroupedChargeItems()
@@ -1106,7 +1112,6 @@ public class AADEFactory
         {
             throw new ArgumentException("TableAA (cbArea) must be provided for restaurant order VOID (8.6).", nameof(receiptRequest.cbArea));
         }
-
         invoiceHeader.tableAA = Convert.ToString(receiptRequest.cbArea, CultureInfo.InvariantCulture);
 
 
