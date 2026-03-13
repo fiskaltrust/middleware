@@ -1069,7 +1069,7 @@ public class AADEFactory
         var refObj = receiptRequest.cbPreviousReceiptReference;
         if (refObj == null)
         {
-            throw new ArgumentException("MultipleConnectedMarks (cbPreviousReceiptReference) must not be null or empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+            throw new ArgumentException("cbPreviousReceiptReference must not be null or empty.", nameof(receiptRequest.cbPreviousReceiptReference));
         }
 
         refObj.Match(
