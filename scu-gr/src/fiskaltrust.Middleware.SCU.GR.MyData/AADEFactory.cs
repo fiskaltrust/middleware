@@ -662,7 +662,7 @@ public class AADEFactory
         var row = new InvoiceRowType
         {
             lineNumber = 1,
-            itemDescr = item.Description ?? "VOID Item",
+            itemDescr = "VOID Item",
             quantity = 1.0m,
             quantitySpecified = true,
             measurementUnit = 1,          // usually "pieces" or similar
