@@ -483,6 +483,23 @@ public class AADEFactory
         }
     }
 
+    private static void ApplyInvoiceDetailsOverride(InvoiceRowType invoiceRow, MyDataOverride overrideData)
+    {
+        if (overrideData?.InvoiceDetails == null)
+        {
+            return;
+        }
+
+        var detailsOverride = overrideData.InvoiceDetails;
+
+        // Apply discountOption override (VAT deduction right)
+        if (detailsOverride.DiscountOption.HasValue)
+        {
+            invoiceRow.discountOption = detailsOverride.DiscountOption.Value;
+            invoiceRow.discountOptionSpecified = true;
+        }
+    }
+
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
     {
         if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
@@ -833,6 +850,10 @@ public class AADEFactory
                 invoiceRow.deductionsAmountSpecified = true;
                 invoiceRow.discountOption = true;
                 invoiceRow.discountOptionSpecified = true;
+            }
+            if (x.TryDeserializeftChargeItemCaseData<ftChargeItemCaseDataPayload>(out var chargeItemOverrideData) && chargeItemOverrideData?.GR?.MyDataOverride != null)
+            {
+                ApplyInvoiceDetailsOverride(invoiceRow, chargeItemOverrideData.GR.MyDataOverride);
             }
             return invoiceRow;
         }).ToList();

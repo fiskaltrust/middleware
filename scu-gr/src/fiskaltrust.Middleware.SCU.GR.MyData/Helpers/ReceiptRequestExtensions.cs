@@ -62,6 +62,28 @@ public static class ReceiptRequestExtensions
         }
     }
 
+    public static bool TryDeserializeftChargeItemCaseData<T>(this ChargeItem chargeItem, out T? result) where T : class
+    {
+        result = default;
+        try
+        {
+            if (chargeItem.ftChargeItemCaseData is null)
+            {
+                return false;
+            }
+            result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return result != null;
+        }
+        catch (Exception)
+        {
+            result = default;
+            return false;
+        }
+    }
+
     public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItemsModifyPositionsIfNotSet(this ReceiptRequest receiptRequest)
     {
         var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
