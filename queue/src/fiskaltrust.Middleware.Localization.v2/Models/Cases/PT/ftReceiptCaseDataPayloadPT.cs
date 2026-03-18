@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.v2.Models.Cases;
+namespace fiskaltrust.Middleware.Localization.v2.Models.Cases.PT;
 
 public class ftReceiptCaseDataPayloadPT
 {
