@@ -995,9 +995,68 @@ public class AADEFactory
 
     public string GetUid(AadeBookInvoiceType invoice) => BitConverter.ToString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate.ToString("yyyy-MM-dd")}-{invoice.issuer.branch}-{invoice.invoiceHeader.invoiceType.GetXmlEnumAttributeValueFromEnum() ?? ""}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}"))).Replace("-", "");
 
+    public (PaymentMethodsDoc? paymentMethodsDoc, AADEFactoryError? error) MapToPaymentMethodsDoc(ReceiptRequest receiptRequest, long invoiceMark, string? entityVatNumber = null)
+    {
+        try
+        {
+            foreach (var payItem in receiptRequest.cbPayItems)
+            {
+                payItem.Amount = Math.Round(payItem.Amount, 2);
+                payItem.Quantity = Math.Round(payItem.Quantity, 2);
+            }
+
+            var paymentMethodDetails = GetPayments(receiptRequest);
+            if (paymentMethodDetails == null || paymentMethodDetails.Count == 0)
+            {
+                throw new Exception("At least one payment method detail is required for SendPaymentsMethod.");
+            }
+
+            var paymentMethod = new PaymentMethodType
+            {
+                invoiceMark = invoiceMark,
+                paymentMethodDetails = paymentMethodDetails.ToArray()
+            };
+
+            if (!string.IsNullOrEmpty(entityVatNumber))
+            {
+                paymentMethod.entityVatNumber = entityVatNumber;
+            }
+
+            var doc = new PaymentMethodsDoc
+            {
+                paymentMethods = [paymentMethod]
+            };
+
+            return (doc, null);
+        }
+        catch (Exception ex)
+        {
+            return (null, new AADEFactoryError
+            {
+                Exception = ex
+            });
+        }
+    }
+
     public static string GenerateInvoicePayload(InvoicesDoc doc)
     {
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
+        var settings = new XmlWriterSettings
+        {
+            Indent = false,
+            NewLineHandling = NewLineHandling.None
+        };
+        using (var stringWriter = new StringWriter())
+        using (var xmlWriter = XmlWriter.Create(stringWriter, settings))
+        {
+            xmlSerializer.Serialize(xmlWriter, doc);
+            return stringWriter.ToString();
+        }
+    }
+
+    public static string GeneratePaymentMethodPayload(PaymentMethodsDoc doc)
+    {
+        var xmlSerializer = new XmlSerializer(typeof(PaymentMethodsDoc));
         var settings = new XmlWriterSettings
         {
             Indent = false,
