@@ -1,31 +1,17 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using FluentValidation;
 
-namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.ES;
+namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
 
 public class CustomerValidations : AbstractValidator<ReceiptRequest>
 {
     public CustomerValidations()
     {
-        Include(new CustomerRequiredForInvoice());
+        Include(new fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice());
         Include(new CustomerTaxId());
         Include(new CustomerMandatoryFields());
-    }
-
-    public class CustomerRequiredForInvoice : AbstractValidator<ReceiptRequest>
-    {
-        public CustomerRequiredForInvoice()
-        {
-            When(x => x.ftReceiptCase.IsType(ReceiptCaseType.Invoice), () =>
-            {
-                RuleFor(x => x.cbCustomer)
-                    .NotNull()
-                    .WithMessage("Customer is required for Invoice receipts")
-                    .WithErrorCode("CustomerRequiredForInvoice");
-            });
-        }
     }
 
     public class CustomerTaxId : AbstractValidator<ReceiptRequest>

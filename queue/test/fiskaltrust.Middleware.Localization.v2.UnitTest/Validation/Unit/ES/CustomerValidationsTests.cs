@@ -1,7 +1,7 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.Middleware.Localization.v2.Validation.Rules.ES;
 using FluentValidation.TestHelper;
 using Xunit;
 
@@ -14,7 +14,7 @@ public class CustomerValidationsTests
     [Fact]
     public void Invoice_WithCustomer_ShouldPass()
     {
-        var validator = new CustomerValidations.CustomerRequiredForInvoice();
+        var validator = new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice();
         var request = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
@@ -27,7 +27,7 @@ public class CustomerValidationsTests
     [Fact]
     public void Invoice_WithoutCustomer_ShouldFail()
     {
-        var validator = new CustomerValidations.CustomerRequiredForInvoice();
+        var validator = new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice();
         var request = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
@@ -41,7 +41,7 @@ public class CustomerValidationsTests
     [Fact]
     public void NonInvoice_WithoutCustomer_ShouldPass()
     {
-        var validator = new CustomerValidations.CustomerRequiredForInvoice();
+        var validator = new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice();
         var request = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,

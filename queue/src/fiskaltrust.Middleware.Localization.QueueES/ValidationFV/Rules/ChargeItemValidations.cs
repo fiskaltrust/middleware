@@ -1,9 +1,9 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Models.Cases.ES;
 using FluentValidation;
 
-namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.ES;
+namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
 
 public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 {
@@ -105,7 +105,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         var natureValue = item.ftChargeItemCase.NatureOfVatES();
                         if (natureValue == ChargeItemCaseNatureOfVatES.UsualVatApplies)
                             return "Zero VAT rate requires a valid exemption reason via the Nature of VAT field.";
-                        return $"Unknown tax exemption code '0x{(long)natureValue:X4}'.";
+                        return $"Unknown tax exemption code '0x{(long) natureValue:X4}'.";
                     })
                     .WithErrorCode("ZeroVatNature");
             });
