@@ -1,6 +1,6 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.Middleware.Localization.v2.Validation.Rules.PT;
+using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 using FluentValidation.TestHelper;
 using Xunit;
 

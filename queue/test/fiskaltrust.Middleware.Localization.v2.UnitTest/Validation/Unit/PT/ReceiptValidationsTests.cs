@@ -1,10 +1,11 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Models.Cases.PT;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Validation;
-using fiskaltrust.Middleware.Localization.v2.Validation.Rules.PT;
+using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentValidation.TestHelper;
