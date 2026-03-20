@@ -336,7 +336,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
 
             error.Should().NotBeNull();
-            error.Exception.Message.Should().Contain("MultipleConnectedMarks");
+            error.Exception.Message.Should().Contain("cbPreviousReceiptReference");
             doc.Should().BeNull();
         }
 
