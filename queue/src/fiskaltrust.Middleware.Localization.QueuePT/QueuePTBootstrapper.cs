@@ -86,39 +86,20 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
             """);
         }
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox), new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()));
-
         var fvValidator = new ReceiptValidator(new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()));
         var shadowLogger = loggerFactory.CreateLogger("ShadowValidation.PT");
 
-        Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse, List<ftActionJournal>)>> shadowProcess =
-            async (request, response, queue, queueItem) =>
-            {
-                var fvResult = await fvValidator.ValidateAsync(request, queue);
-                var (actualResponse, journals) = await signProcessorPT.ProcessAsync(request, response, queue, queueItem);
+        var receiptProcessor = new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox);
+        var invoiceProcessor = new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox);
+        var protocolProcessor = new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository());
 
-                var fvSucceeded = fvResult.IsValid;
-                var oldSucceeded = !actualResponse.ftState.IsState(State.Error);
+        receiptProcessor.SetShadowValidation(fvValidator, shadowLogger);
+        invoiceProcessor.SetShadowValidation(fvValidator, shadowLogger);
+        protocolProcessor.SetShadowValidation(fvValidator, shadowLogger);
 
-                if (fvSucceeded != oldSucceeded)
-                {
-                    shadowLogger.LogError(
-                        "Receipt validation mismatch" +
-                        "cbReceiptReference={Ref} ftReceiptCase=0x{Case:X} " +
-                        "OldSuccess={OldSuccess} FVSuccess={FVSuccess} " +
-                        "FVErrors={FVErrors} ftState=0x{State:X}",
-                        request.cbReceiptReference,
-                        request.ftReceiptCase,
-                        oldSucceeded,
-                        fvSucceeded,
-                        string.Join("; ", fvResult.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorMessage}")),
-                        actualResponse.ftState);
-                }
+        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), receiptProcessor, new DailyOperationsCommandProcessorPT(), invoiceProcessor, protocolProcessor);
 
-                return (actualResponse, journals);
-            };
-
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, shadowProcess, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
