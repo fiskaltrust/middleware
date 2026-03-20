@@ -2,12 +2,16 @@
 using System.Net.Mime;
 using System.Security.Cryptography;
 using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pt;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
+using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -53,8 +57,8 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
                 "ATCUD": "AAJFJ6K6J5",
                 "Series": "ft2025128b"
               },
-              "HandWrittenFTSeries": {
-                "TypeCode": "FT",
+              "HandWrittenFSSeries": {
+                "TypeCode": "FS",
                 "ATCUD": "AAJFJHK6J6",
                 "Series": "ft20250a62"
               },
@@ -82,7 +86,19 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
             """);
         }
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox), new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()));
+        var fvValidator = new ReceiptValidator(new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()));
+        var shadowLogger = loggerFactory.CreateLogger("ShadowValidation.PT");
+
+        var receiptProcessor = new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox);
+        var invoiceProcessor = new InvoiceCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository(), middlewareConfiguration.IsSandbox);
+        var protocolProcessor = new ProtocolCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository());
+
+        receiptProcessor.SetShadowValidation(fvValidator, shadowLogger);
+        invoiceProcessor.SetShadowValidation(fvValidator, shadowLogger);
+        protocolProcessor.SetShadowValidation(fvValidator, shadowLogger);
+
+        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), receiptProcessor, new DailyOperationsCommandProcessorPT(), invoiceProcessor, protocolProcessor);
+
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

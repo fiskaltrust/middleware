@@ -192,24 +192,6 @@ public class SignProcessor : ISignProcessor
 
         if (queue.CountryCode != "GR")
         {
-            if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
-            {
-                receiptResponse.SetReceiptResponseError("Refunding a receipt is only supported with single references.");
-                return (receiptResponse, new List<ftActionJournal>());
-            }
-
-            if (request.IsPartialRefundReceipt() && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
-            {
-                receiptResponse.SetReceiptResponseError("Partial refunding a receipt is only supported with single references.");
-                return (receiptResponse, new List<ftActionJournal>());
-            }
-
-            if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
-            {
-                receiptResponse.SetReceiptResponseError("Voiding a receipt is only supported with single references.");
-                return (receiptResponse, new List<ftActionJournal>());
-            }
-
             var receiptReferences = await _queueStorageProvider.GetReferencedReceiptsAsync(request);
             if (receiptReferences.IsErr)
             {
