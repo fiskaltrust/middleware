@@ -16,6 +16,14 @@ public static class AADEMappings
     {
         var vatAmount = chargeItem.GetVATAmount();
         var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
+
+        // Per-item return flag (0x0002) inside an 8.6 order = recType 7
+        // myDATA spec: for recType=7 lines amounts MUST be positive; myDATA itself treats them as cancellations
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && chargeItem.IsRefund())
+        {
+            netAmount = Math.Abs(netAmount);
+        }
+
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
         {
             return new IncomeClassificationType
