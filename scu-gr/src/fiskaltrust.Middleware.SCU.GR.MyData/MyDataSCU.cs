@@ -47,15 +47,45 @@ public class MyDataOverride
     /// </summary>
     [JsonPropertyName("invoice")]
     public InvoiceOverride? Invoice { get; set; }
+
+    /// <summary>
+    /// MyData API endpoint to call (e.g. "/SendPaymentsMethod").
+    /// When set together with Payload on a zero receipt, the middleware bypasses normal invoice processing
+    /// and forwards the raw payload to the specified MyData endpoint.
+    /// </summary>
+    [JsonPropertyName("endpoint")]
+    public string? Endpoint { get; set; }
+
+    /// <summary>
+    /// Raw XML payload to send to the MyData API endpoint.
+    /// Used together with Endpoint on a zero receipt for passthrough API calls.
+    /// </summary>
+    [JsonPropertyName("payload")]
+    public string? Payload { get; set; }
 }
 
 public class InvoiceOverride
 {
     /// <summary>
-    /// Invoice header overrides
+    /// Invoice header overrides (maps to InvoiceHeaderType in the MyData XML)
     /// </summary>
     [JsonPropertyName("invoiceHeader")]
     public InvoiceHeaderOverride? InvoiceHeader { get; set; }
+
+    /// <summary>
+    /// Counterpart (buyer) overrides for fields not mapped from cbCustomer.
+    /// Only documentIdNo, supplyAccountNo, and countryDocumentId can be set.
+    /// </summary>
+    [JsonPropertyName("counterpart")]
+    public PartyUnmappedFieldsOverride? Counterpart { get; set; }
+
+    /// <summary>
+    /// Issuer overrides for fields not mapped from master data.
+    /// Only documentIdNo, supplyAccountNo, and countryDocumentId can be set.
+    /// </summary>
+    [JsonPropertyName("issuer")]
+    public PartyUnmappedFieldsOverride? Issuer { get; set; }
+
 }
 
 public class InvoiceHeaderOverride
@@ -132,6 +162,42 @@ public class InvoiceHeaderOverride
     /// </summary>
     [JsonPropertyName("otherMovePurposeTitle")]
     public string? OtherMovePurposeTitle { get; set; }
+
+    /// <summary>
+    /// Exchange rate when currency is not EUR
+    /// </summary>
+    [JsonPropertyName("exchangeRate")]
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>
+    /// Third party collection indicator
+    /// </summary>
+    [JsonPropertyName("thirdPartyCollection")]
+    public bool? ThirdPartyCollection { get; set; }
+
+    /// <summary>
+    /// Total cancel delivery orders indicator
+    /// </summary>
+    [JsonPropertyName("totalCancelDeliveryOrders")]
+    public bool? TotalCancelDeliveryOrders { get; set; }
+
+    /// <summary>
+    /// Reverse delivery note indicator
+    /// </summary>
+    [JsonPropertyName("reverseDeliveryNote")]
+    public bool? ReverseDeliveryNote { get; set; }
+
+    /// <summary>
+    /// Reverse delivery note purpose code
+    /// </summary>
+    [JsonPropertyName("reverseDeliveryNotePurpose")]
+    public int? ReverseDeliveryNotePurpose { get; set; }
+
+    /// <summary>
+    /// Other correlated entities
+    /// </summary>
+    [JsonPropertyName("otherCorrelatedEntities")]
+    public List<EntityOverride>? OtherCorrelatedEntities { get; set; }
 }
 
 public class OtherDeliveryNoteHeaderOverride
@@ -186,6 +252,237 @@ public class AddressOverride
     /// </summary>
     [JsonPropertyName("city")]
     public string? City { get; set; }
+}
+
+/// <summary>
+/// Override for PartyType fields not mapped from cbCustomer or master data.
+/// Only fields without an existing general interface mapping are available.
+/// </summary>
+public class PartyUnmappedFieldsOverride
+{
+    /// <summary>
+    /// Document ID number (no general interface mapping)
+    /// </summary>
+    [JsonPropertyName("documentIdNo")]
+    public string? DocumentIdNo { get; set; }
+
+    /// <summary>
+    /// Supply account number (no general interface mapping)
+    /// </summary>
+    [JsonPropertyName("supplyAccountNo")]
+    public string? SupplyAccountNo { get; set; }
+
+    /// <summary>
+    /// Country of document ID (ISO 3166-1 alpha-2 code, no general interface mapping)
+    /// </summary>
+    [JsonPropertyName("countryDocumentId")]
+    public string? CountryDocumentId { get; set; }
+}
+
+/// <summary>
+/// Override for EntityType (otherCorrelatedEntities in the MyData XML)
+/// </summary>
+public class EntityOverride
+{
+    [JsonPropertyName("type")]
+    public int? Type { get; set; }
+
+    [JsonPropertyName("entityData")]
+    public PartyOverride? EntityData { get; set; }
+}
+
+/// <summary>
+/// Override for PartyType (issuer/counterpart in the MyData XML)
+/// </summary>
+public class PartyOverride
+{
+    [JsonPropertyName("vatNumber")]
+    public string? VatNumber { get; set; }
+
+    [JsonPropertyName("country")]
+    public string? Country { get; set; }
+
+    [JsonPropertyName("branch")]
+    public int? Branch { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("address")]
+    public AddressOverride? Address { get; set; }
+
+    [JsonPropertyName("documentIdNo")]
+    public string? DocumentIdNo { get; set; }
+
+    [JsonPropertyName("supplyAccountNo")]
+    public string? SupplyAccountNo { get; set; }
+
+    [JsonPropertyName("countryDocumentId")]
+    public string? CountryDocumentId { get; set; }
+}
+
+/// <summary>
+/// Override for IncomeClassificationType (incomeClassification in the MyData XML)
+/// </summary>
+public class IncomeClassificationOverride
+{
+    /// <summary>
+    /// Classification type (e.g. "E3_561_001"). Maps to IncomeClassificationValueType enum.
+    /// </summary>
+    [JsonPropertyName("classificationType")]
+    public string? ClassificationType { get; set; }
+
+    /// <summary>
+    /// Classification category (e.g. "category1_1"). Maps to IncomeClassificationCategoryType enum.
+    /// </summary>
+    [JsonPropertyName("classificationCategory")]
+    public string? ClassificationCategory { get; set; }
+}
+
+/// <summary>
+/// Override for ExpensesClassificationType (expensesClassification in the MyData XML)
+/// </summary>
+public class ExpensesClassificationOverride
+{
+    /// <summary>
+    /// Classification type (e.g. "E3_102_001"). Maps to ExpensesClassificationTypeClassificationType enum.
+    /// </summary>
+    [JsonPropertyName("classificationType")]
+    public string? ClassificationType { get; set; }
+
+    /// <summary>
+    /// Classification category (e.g. "category2_1"). Maps to ExpensesClassificationCategoryType enum.
+    /// </summary>
+    [JsonPropertyName("classificationCategory")]
+    public string? ClassificationCategory { get; set; }
+}
+
+/// <summary>
+/// Line-level override payload, set via ftChargeItemCaseData on each ChargeItem.
+/// JSON structure: { "GR": { "mydataoverride": { "invoiceDetails": { ... } } } }
+/// </summary>
+public class ftChargeItemCaseDataPayload
+{
+    [JsonPropertyName("GR")]
+    public ftChargeItemCaseDataGreekPayload? GR { get; set; }
+}
+
+public class ftChargeItemCaseDataGreekPayload
+{
+    [JsonPropertyName("mydataoverride")]
+    public ChargeItemMyDataOverride? MyDataOverride { get; set; }
+}
+
+public class ChargeItemMyDataOverride
+{
+    /// <summary>
+    /// Invoice detail (line) level overrides (maps to InvoiceRowType in the MyData XML)
+    /// </summary>
+    [JsonPropertyName("invoiceDetails")]
+    public InvoiceDetailOverride? InvoiceDetails { get; set; }
+}
+
+/// <summary>
+/// Override for InvoiceRowType (invoiceDetails in the MyData XML).
+/// Applied per ChargeItem via ftChargeItemCaseData.
+/// Only fields that are NOT already set by the middleware are overridable.
+/// Amounts, VAT categories, tax fields, and other values derived from ChargeItem data cannot be overridden.
+/// Classification arrays (multi-value) CAN be overridden to support categories not covered by the general interface.
+/// </summary>
+public class InvoiceDetailOverride
+{
+    /// <summary>
+    /// TARIC customs code
+    /// </summary>
+    [JsonPropertyName("taricNo")]
+    public string? TaricNo { get; set; }
+
+    /// <summary>
+    /// Item code
+    /// </summary>
+    [JsonPropertyName("itemCode")]
+    public string? ItemCode { get; set; }
+
+    /// <summary>
+    /// Fuel code (maps to FuelCodes enum)
+    /// </summary>
+    [JsonPropertyName("fuelCode")]
+    public int? FuelCode { get; set; }
+
+    /// <summary>
+    /// Invoice detail type (1=Regular line, 2=Settlement/clearance line).
+    /// Required for third-party invoices (1.4, 1.5).
+    /// </summary>
+    [JsonPropertyName("invoiceDetailType")]
+    public int? InvoiceDetailType { get; set; }
+
+    /// <summary>
+    /// Line comments
+    /// </summary>
+    [JsonPropertyName("lineComments")]
+    public string? LineComments { get; set; }
+
+    /// <summary>
+    /// Income classifications override.
+    /// When set, completely replaces the automatically determined income classifications for this line.
+    /// </summary>
+    [JsonPropertyName("incomeClassification")]
+    public List<IncomeClassificationOverride>? IncomeClassification { get; set; }
+
+    /// <summary>
+    /// Expenses classifications override.
+    /// When set, completely replaces the automatically determined expenses classifications for this line.
+    /// </summary>
+    [JsonPropertyName("expensesClassification")]
+    public List<ExpensesClassificationOverride>? ExpensesClassification { get; set; }
+
+    /// <summary>
+    /// Quantity at 15°C (for fuel)
+    /// </summary>
+    [JsonPropertyName("quantity15")]
+    public decimal? Quantity15 { get; set; }
+
+    /// <summary>
+    /// Other measurement unit quantity
+    /// </summary>
+    [JsonPropertyName("otherMeasurementUnitQuantity")]
+    public int? OtherMeasurementUnitQuantity { get; set; }
+
+    /// <summary>
+    /// Other measurement unit title
+    /// </summary>
+    [JsonPropertyName("otherMeasurementUnitTitle")]
+    public string? OtherMeasurementUnitTitle { get; set; }
+
+    /// <summary>
+    /// Not VAT 195 indicator
+    /// </summary>
+    [JsonPropertyName("notVAT195")]
+    public bool? NotVAT195 { get; set; }
+
+    /// <summary>
+    /// Energy/ship details (dienergia)
+    /// </summary>
+    [JsonPropertyName("dienergia")]
+    public ShipOverride? Dienergia { get; set; }
+}
+
+/// <summary>
+/// Override for ShipType (dienergia in the MyData XML)
+/// </summary>
+public class ShipOverride
+{
+    [JsonPropertyName("applicationId")]
+    public string? ApplicationId { get; set; }
+
+    [JsonPropertyName("applicationDate")]
+    public DateTime? ApplicationDate { get; set; }
+
+    [JsonPropertyName("doy")]
+    public string? Doy { get; set; }
+
+    [JsonPropertyName("shipId")]
+    public string? ShipId { get; set; }
 }
 
 public class MyDataSCU : IGRSSCD
@@ -246,7 +543,16 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && 
+        // Handle passthrough MyData API calls via zero receipt
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ZeroReceipt0x2000)
+            && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var passthroughData)
+            && !string.IsNullOrEmpty(passthroughData?.GR?.MyDataOverride?.Endpoint)
+            && !string.IsNullOrEmpty(passthroughData?.GR?.MyDataOverride?.Payload))
+        {
+            return await ProcessPassthroughAsync(request, passthroughData!.GR!.MyDataOverride!.Endpoint!, passthroughData.GR.MyDataOverride.Payload!);
+        }
+
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) &&
             request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) &&
             request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) &&
             receiptReferences != null && receiptReferences.Count > 0)
@@ -531,6 +837,61 @@ public class MyDataSCU : IGRSSCD
             {
                 request.ReceiptResponse.SetReceiptResponseError(content);
             }
+        }
+        else
+        {
+            request.ReceiptResponse.SetReceiptResponseError(content);
+        }
+
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
+    }
+
+    private async Task<ProcessResponse> ProcessPassthroughAsync(ProcessRequest request, string endpoint, string payload)
+    {
+        var response = await _httpClient.PostAsync($"/myDataProvider{endpoint}", new StringContent(payload, Encoding.UTF8, "application/xml"));
+        var content = await response.Content.ReadAsStringAsync();
+
+        var governmentApiResponse = new GovernmentApiData
+        {
+            Protocol = "mydata",
+            ProtocolVersion = "1.0",
+            Action = response.RequestMessage!.RequestUri!.ToString(),
+            ProtocolRequest = payload,
+            ProtocolResponse = content
+        };
+
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governmentApiResponse
+                }
+            };
+        }
+
+        if ((int) response.StatusCode >= 500)
+        {
+            request.ReceiptResponse.SetReceiptResponseError($"Error while sending passthrough request to MyData API endpoint '{endpoint}'.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = content,
+                Caption = $"mydata-passthrough-response",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+            });
         }
         else
         {
