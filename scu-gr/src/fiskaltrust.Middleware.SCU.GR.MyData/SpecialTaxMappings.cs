@@ -450,4 +450,71 @@ public static class SpecialTaxMappings
     {
         return chargeItem.ftChargeItemCase.IsTypeOfService((ChargeItemCaseTypeOfService) 0xF0);
     }
+
+    #region IsVatableSpecialTaxItemTests
+
+    /// <summary>
+    /// The set of fee codes for which VAT must never be applied—these codes represent special fees that are always non-vatable.
+    /// If a ChargeItem's fee mapping has one of these codes, it is explicitly excluded from VAT eligibility.
+    /// </summary>
+    private static readonly HashSet<int> NonVatableFeeCodes = new() { 9, 12, 18, 21 };
+
+    /// <summary>
+    /// Determines if the given ChargeItem represents a special tax item that can have VAT applied (is "vatable").
+    /// </summary>
+    /// <param name="chargeItem">The ChargeItem to evaluate.</param>
+    /// <returns>True if the item is a special tax fee eligible for VAT, otherwise false.</returns>
+    public static bool IsVatableSpecialTaxItem(ChargeItem chargeItem)
+    {
+        // 1. If the item is NOT a special tax item, it cannot be a vatable special tax fee.
+        if (!IsSpecialTaxItem(chargeItem))
+            return false;
+
+        // 2. Check that the VAT code of this special tax item is an accepted, vatable code.
+        // Only proceed for these VAT categories: discounted, normal, super-reduced, or zero rates.
+        var vatCode = chargeItem.ftChargeItemCase.Vat();
+        if (
+            vatCode != ChargeItemCase.DiscountedVatRate1
+            && vatCode != ChargeItemCase.DiscountedVatRate2
+            && vatCode != ChargeItemCase.NormalVatRate
+            && vatCode != ChargeItemCase.SuperReducedVatRate1
+            && vatCode != ChargeItemCase.SuperReducedVatRate2
+            && vatCode != ChargeItemCase.ZeroVatRate)
+        {
+            // VAT code is NOT in the list of allowed types for vatable special taxes.
+            return false;
+        }
+
+        // 3. All conditions met—run extra, fee-specific business logic to make the final determination.
+        return IsVatableSpecialFee(chargeItem);
+    }
+
+    /// <summary>
+    /// Determines at business logic level if a special tax fee described by the ChargeItem can actually accept VAT.
+    /// </summary>
+    /// <param name="chargeItem">The ChargeItem to evaluate.</param>
+    /// <returns>True if the special tax fee is eligible for VAT, otherwise false.</returns>
+    public static bool IsVatableSpecialFee(ChargeItem chargeItem)
+    {
+        // Try to find the business mapping for this fee (typically using its description).
+        var feeMapping = SpecialTaxMappings.GetFeeMapping(chargeItem.Description);
+
+        // If there is no mapping found for this fee, it means the fee type is not eligible for VAT.
+        if (feeMapping == null)
+        {
+            return false;
+        }
+
+        // If the fee code is in the list of non-vatable fee codes, 
+        // this fee is explicitly excluded from VAT eligibility.
+        if (NonVatableFeeCodes.Contains(feeMapping.Code))
+        {
+            return false;
+        }
+
+        // If all checks pass, this fee can accept VAT.
+        return true;
+    }
+
+    #endregion IsVatableSpecialTaxItemTests
 }

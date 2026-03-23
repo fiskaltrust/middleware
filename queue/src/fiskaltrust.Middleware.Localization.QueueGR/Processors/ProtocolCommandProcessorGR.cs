@@ -1,12 +1,14 @@
-﻿using fiskaltrust.Middleware.Localization.v2;
+﻿using fiskaltrust.ifPOS.v2.gr;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
-using fiskaltrust.ifPOS.v2.gr;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ProtocolCommandProcessorGR(IGRSSCD sscd) : IProtocolCommandProcessor
+public class ProtocolCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queueStorageProvider) : IProtocolCommandProcessor
 {
     private readonly IGRSSCD _sscd = sscd;
+    readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 
     public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
@@ -18,11 +20,12 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd) : IProtocolCommandProcesso
 
     public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
     {
+        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
-        }, []);
+        }, receiptReferences);
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

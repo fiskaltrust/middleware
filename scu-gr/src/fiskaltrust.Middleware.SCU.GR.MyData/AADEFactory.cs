@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,13 +13,12 @@ using System.Xml.Serialization;
 using Azure.Core;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueGR.Validation;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
-using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
+using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using fiskaltrust.Middleware.Localization.QueueGR.Validation;
-using System.IO;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
@@ -230,6 +231,19 @@ public class AADEFactory
             inv.invoiceHeader.currencySpecified = false;
         }
 
+        var isVoidFlag = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void);
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86 && isVoidFlag)
+        {
+            // set the required header fields for Invoice Type 8.6 with VOID/CANCEL flag
+            SetInvoiceHeaderFieldsForVoid(inv.invoiceHeader, receiptRequest);
+        }
+        else if (isVoidFlag)
+        {
+            // For other invoice types, voiding is not supported
+            // we choose to throw an exception
+            throw new Exception("Voiding of documents is not supported for this invoice type. Please use refund.");
+        }
+
         // Add withholding taxes to the invoice if any exist
         if (documentLevelTaxes.Count > 0)
         {
@@ -273,7 +287,7 @@ public class AADEFactory
             }
         }
 
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        if (inv.invoiceHeader.invoiceType == InvoiceType.Item86)
         {
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
@@ -495,7 +509,7 @@ public class AADEFactory
         }
 
         var documentTaxes = new List<TaxTotalsType>();
-        foreach (var item in receiptRequest.cbChargeItems.Where(x => SpecialTaxMappings.IsSpecialTaxItem(x)))
+        foreach (var item in receiptRequest.cbChargeItems.Where(x => SpecialTaxMappings.IsSpecialTaxItem(x) && !SpecialTaxMappings.IsVatableSpecialTaxItem(x)))
         {
             var withholdingMapping = SpecialTaxMappings.GetWithholdingTaxMapping(item.Description);
             if (withholdingMapping != null)
@@ -644,6 +658,41 @@ public class AADEFactory
         return invoiceRows;
     }
 
+
+    /// <summary>
+    /// Returns invoice rows for AADE 8.6 VOID restaurant order (multiple/cancel):
+    /// - One line (even if multiple charge items provided)
+    /// - VAT category = 8 (Entries without VAT)
+    /// - No expense/income classifications
+    /// Fails if no charge items are present.
+    /// </summary>
+    private static List<InvoiceRowType> GetInvoiceDetailsForVoid(ReceiptRequest receiptRequest)
+    {
+        // Must have at least one charge item to describe canceled product/service
+        var item = receiptRequest.cbChargeItems?.FirstOrDefault();
+        if (item == null)
+        {
+            throw new ArgumentException("VOID orders require at least one charge item to describe the canceled item.");
+        }
+
+        // Optionally: Only use first item's description, ignore extra items per AADE "one line" requirement
+        var row = new InvoiceRowType
+        {
+            lineNumber = 1,
+            itemDescr = item.Description ?? "VOID Item",
+            quantity = 1.0m,
+            quantitySpecified = true,
+            measurementUnit = 1,          // usually "pieces" or similar
+            measurementUnitSpecified = true,
+            netValue = 0.00m,
+            vatCategory = 8,              // AADE: no VAT
+            vatAmount = 0.00m
+            // No classifications
+        };
+
+        return new List<InvoiceRowType> { row };
+    }
+
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
         if(AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
@@ -652,8 +701,26 @@ public class AADEFactory
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
         }
 
+        var isVoidFlag = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void);
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86 && isVoidFlag)
+        {
+            // for Invoice Type 8.6 with VOID/CANCEL flag
+            // generate a single invoice line with zero values and VAT category 8, as required by AADE for full order cancellation.
+            return GetInvoiceDetailsForVoid(receiptRequest);
+        }
+        else if (isVoidFlag)
+        {
+            // For other invoice types, voiding is not supported
+            // we choose to throw an exception
+            throw new Exception("Voiding of documents is not supported for this invoice type. Please use refund.");
+        }
+
         var chargeItems = receiptRequest.GetGroupedChargeItems()
-            .Where(grouped => !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem))
+            .Where(grouped =>
+                    !SpecialTaxMappings.IsSpecialTaxItem(grouped.chargeItem)
+                    ||
+                    (SpecialTaxMappings.IsVatableSpecialTaxItem(grouped.chargeItem))
+                  )
             .ToList();
 
         var nextPosition = 1;
@@ -764,6 +831,17 @@ public class AADEFactory
                     {
                         invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
                     }
+                }
+            }
+            if (SpecialTaxMappings.IsVatableSpecialTaxItem(x))
+            {
+                var feeMapping = SpecialTaxMappings.GetFeeMapping(x.Description);
+                if (feeMapping != null)
+                {
+                    invoiceRow.feesAmount = Math.Abs(x.Amount - (x.VATAmount ?? 0));
+                    invoiceRow.feesAmountSpecified = true;
+                    invoiceRow.feesPercentCategory = feeMapping.Code;
+                    invoiceRow.feesPercentCategorySpecified = true;
                 }
             }
             if (grouped.modifiers.Count > 0)
@@ -1014,6 +1092,49 @@ public class AADEFactory
         };
     }
 
+    /// <summary>
+    /// Sets AADE-required fields for Invoice Type 8.6 (VOID/cancel) restaurant order:
+    /// - tableAA (area/table number)
+    /// - totalCancelDeliveryOrders = true
+    /// Note: multipleConnectedMarks are set by the general flow in CreateInvoiceDocType
+    /// using resolved receiptReferences.
+    /// </summary>
+    public static void SetInvoiceHeaderFieldsForVoid(InvoiceHeaderType invoiceHeader, ReceiptRequest receiptRequest)
+    {
+        // Validate cbPreviousReceiptReference is present and not empty
+        var refObj = receiptRequest.cbPreviousReceiptReference;
+        if (refObj == null)
+        {
+            throw new ArgumentException("cbPreviousReceiptReference must not be null or empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+        }
+
+        refObj.Match(
+            single =>
+            {
+                if (string.IsNullOrWhiteSpace(single))
+                {
+                    throw new ArgumentException("Single MARK value cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+                }
+            },
+            group =>
+            {
+                if (group == null || group.Length == 0)
+                {
+                    throw new ArgumentException("Group MARKs cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+                }
+            }
+        );
+
+        // TableAA (mandatory for 8.6)
+        if (receiptRequest.cbArea == null)
+        {
+            throw new ArgumentException("TableAA (cbArea) must be provided for restaurant order VOID (8.6).", nameof(receiptRequest.cbArea));
+        }
+
+        invoiceHeader.tableAA = Convert.ToString(receiptRequest.cbArea, CultureInfo.InvariantCulture);
+        invoiceHeader.totalCancelDeliveryOrders = true;
+        invoiceHeader.totalCancelDeliveryOrdersSpecified = true;
+    }
     public string GetUid(AadeBookInvoiceType invoice) => BitConverter.ToString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate.ToString("yyyy-MM-dd")}-{invoice.issuer.branch}-{invoice.invoiceHeader.invoiceType.GetXmlEnumAttributeValueFromEnum() ?? ""}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}"))).Replace("-", "");
 
     public static string GenerateInvoicePayload(InvoicesDoc doc)
