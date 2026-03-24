@@ -22,7 +22,7 @@ public static class SignatureItemFactoryGR
     {
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
-            Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
+            Data = $"Απώλεια Διασύνδεσης Παρόχου - ΑΑΔΕ",
             Caption = "Transmission Failure_2",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
