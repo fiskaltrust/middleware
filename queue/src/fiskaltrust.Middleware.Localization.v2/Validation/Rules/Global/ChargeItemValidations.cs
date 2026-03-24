@@ -24,11 +24,14 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     {
         public MandatoryFields()
         {
-            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
             {
-                chargeItem.RuleFor(x => x.Description).NotEmpty();
-                chargeItem.RuleFor(x => x.VATRate).GreaterThanOrEqualTo(0);
-                chargeItem.RuleFor(x => x.Amount).NotEqual(0m);
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.Description).NotEmpty();
+                    chargeItem.RuleFor(x => x.VATRate).GreaterThanOrEqualTo(0);
+                    chargeItem.RuleFor(x => x.Amount).NotEqual(0m);
+                });
             });
         }
     }
@@ -47,12 +50,15 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 
         public ServiceType()
         {
-            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
             {
-                chargeItem.RuleFor(x => x.ftChargeItemCase)
-                    .Must(caseValue => SupportedServiceTypes.Contains(caseValue.TypeOfService()))
-                    .WithMessage(item => $"Unsupported charge item service type: {item.ftChargeItemCase.TypeOfService()}")
-                    .WithErrorCode("UnsupportedChargeItemServiceType");
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.ftChargeItemCase)
+                        .Must(caseValue => SupportedServiceTypes.Contains(caseValue.TypeOfService()))
+                        .WithMessage(item => $"Unsupported charge item service type: {item.ftChargeItemCase.TypeOfService()}")
+                        .WithErrorCode("UnsupportedChargeItemServiceType");
+                });
             });
         }
     }
@@ -63,21 +69,24 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 
         public VatCalculation()
         {
-            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
             {
-                chargeItem.RuleFor(x => x.VATAmount)
-                    .Must((item, vatAmount) =>
-                    {
-                        var calculated = item.Amount / (100 + item.VATRate) * item.VATRate;
-                        return Math.Abs(vatAmount!.Value - calculated) <= RoundingTolerance;
-                    })
-                    .When(x => x.VATAmount.HasValue && x.VATRate > 0)
-                    .WithMessage(item =>
-                    {
-                        var calculated = item.Amount / (100 + item.VATRate) * item.VATRate;
-                        return $"VATAmount ({item.VATAmount}) does not match calculated value ({calculated:F2}), difference exceeds tolerance of {RoundingTolerance}";
-                    })
-                    .WithErrorCode("VatAmountMismatch");
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.VATAmount)
+                        .Must((item, vatAmount) =>
+                        {
+                            var calculated = item.Amount / (100 + item.VATRate) * item.VATRate;
+                            return Math.Abs(vatAmount!.Value - calculated) <= RoundingTolerance;
+                        })
+                        .When(x => x.VATAmount.HasValue && x.VATRate > 0)
+                        .WithMessage(item =>
+                        {
+                            var calculated = item.Amount / (100 + item.VATRate) * item.VATRate;
+                            return $"VATAmount ({item.VATAmount}) does not match calculated value ({calculated:F2}), difference exceeds tolerance of {RoundingTolerance}";
+                        })
+                        .WithErrorCode("VatAmountMismatch");
+                });
             });
         }
     }
@@ -87,6 +96,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         public NegativeAmounts()
         {
             When(x => x.cbChargeItems != null
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     && !x.IsPartialRefundReceipt(), () =>
@@ -113,13 +123,16 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     {
         public ZeroVatRateMustHaveNature()
         {
-            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
             {
-                chargeItem.RuleFor(x => x.ftChargeItemCase)
-                    .Must(caseValue => ((long)caseValue & 0xFF00) != 0x0000)
-                    .When(x => x.VATRate == 0)
-                    .WithMessage("Charge item with zero VAT rate must have a NatureOfVat set (0xFF00 bits must not be 0x0000).")
-                    .WithErrorCode("ZeroVatRateMissingNature");
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.ftChargeItemCase)
+                        .Must(caseValue => ((long)caseValue & 0xFF00) != 0x0000)
+                        .When(x => x.VATRate == 0)
+                        .WithMessage("Charge item with zero VAT rate must have a NatureOfVat set (0xFF00 bits must not be 0x0000).")
+                        .WithErrorCode("ZeroVatRateMissingNature");
+                });
             });
         }
     }
@@ -128,7 +141,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     {
         public DiscountLimit()
         {
-            When(x => x.cbChargeItems != null && x.cbChargeItems.Count > 0, () =>
+            When(x => x.cbChargeItems != null && x.cbChargeItems.Count > 0
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
             {
                 RuleFor(x => x)
                     .Custom((request, context) =>

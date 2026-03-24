@@ -22,10 +22,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         RefundValidator refundValidator,
         ReceiptResponse? response = null)
     {
-        Include(new CurrencyMustBeEur());
         Include(new TrainingModeNotSupported());
-        Include(new ChargeItemsMustNotBeNull());
-        Include(new PayItemsMustNotBeNull());
         Include(new ReceiptReferenceAlreadyUsed(receiptReferenceProvider));
 
         Include(new RefundMustHavePreviousReference());
@@ -56,7 +53,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new PreviousReceiptLineItemsMatch(receiptReferenceProvider));
 
         // Non-handwritten rules
-        Include(new ReceiptMustBeBalanced());
         Include(new PositionsMustBeSequential());
         Include(new ReceiptMomentMustBeUtc());
         Include(new ReceiptMomentTimeDifference(response));
@@ -300,17 +296,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         }
     }
 
-    public class CurrencyMustBeEur : AbstractValidator<ReceiptRequest>
-    {
-        public CurrencyMustBeEur()
-        {
-            RuleFor(x => x.Currency)
-                .Must(currency => currency == Currency.EUR)
-                .WithMessage("Only EUR currency is supported.")
-                .WithErrorCode("OnlyEuroCurrencySupported");
-        }
-    }
-
     public class TrainingModeNotSupported : AbstractValidator<ReceiptRequest>
     {
         public TrainingModeNotSupported()
@@ -319,54 +304,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Must(request => !request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
                 .WithMessage("Training mode is not supported.")
                 .WithErrorCode("TrainingModeNotSupported");
-        }
-    }
-
-    public class ChargeItemsMustNotBeNull : AbstractValidator<ReceiptRequest>
-    {
-        public ChargeItemsMustNotBeNull()
-        {
-            RuleFor(x => x.cbChargeItems)
-                .NotNull()
-                .WithMessage("cbChargeItems must not be null.")
-                .WithErrorCode("ChargeItemsMissing");
-        }
-    }
-
-    public class PayItemsMustNotBeNull : AbstractValidator<ReceiptRequest>
-    {
-        public PayItemsMustNotBeNull()
-        {
-            RuleFor(x => x.cbPayItems)
-                .NotNull()
-                .WithMessage("cbPayItems must not be null.")
-                .WithErrorCode("PayItemsMissing");
-        }
-    }
-
-    public class ReceiptMustBeBalanced : AbstractValidator<ReceiptRequest>
-    {
-        private const decimal RoundingTolerance = 0.01m;
-
-        public ReceiptMustBeBalanced()
-        {
-            RuleFor(x => x)
-                .Must(request =>
-                {
-                    var chargeItemsSum = request.cbChargeItems?.Sum(ci => ci.Amount) ?? 0m;
-                    var payItemsSum = request.cbPayItems?.Sum(pi => pi.Amount) ?? 0m;
-                    return Math.Abs(chargeItemsSum - payItemsSum) <= RoundingTolerance;
-                })
-                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
-                        && !x.ftReceiptCase.IsCase((ReceiptCase)0x0007)
-                        && !x.ftReceiptCase.IsCase((ReceiptCase)0x0006))
-                .WithMessage(request =>
-                {
-                    var chargeItemsSum = request.cbChargeItems?.Sum(ci => ci.Amount) ?? 0m;
-                    var payItemsSum = request.cbPayItems?.Sum(pi => pi.Amount) ?? 0m;
-                    return $"Receipt is not balanced: chargeItems={chargeItemsSum:F2}, payItems={payItemsSum:F2}, difference={Math.Abs(chargeItemsSum - payItemsSum):F2}.";
-                })
-                .WithErrorCode("ReceiptNotBalanced");
         }
     }
 

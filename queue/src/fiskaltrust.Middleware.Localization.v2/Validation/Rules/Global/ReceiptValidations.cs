@@ -88,7 +88,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
         public ReceiptBalance()
         {
-            When(x => !x.ftReceiptCase.IsCase((ReceiptCase) 0x0006)
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                   && !x.ftReceiptCase.IsCase((ReceiptCase) 0x0006)
                    && !x.ftReceiptCase.IsCase((ReceiptCase) 0x0007), () =>
             {
                 RuleFor(x => x)
