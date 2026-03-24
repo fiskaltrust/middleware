@@ -70,10 +70,6 @@ public class AADEFactory
                 return false;
             }
         }).ToList();
-        var doc = new InvoicesDoc
-        {
-            invoice = actualReceiptRequests.Select(x => CreateInvoiceDocType(x.receiptRequest, x.receiptResponse)).ToArray()
-        };
         var invoices = new List<AadeBookInvoiceType>();
         foreach (var receipt in actualReceiptRequests)
         {
@@ -104,7 +100,10 @@ public class AADEFactory
                 var transmissionFailure1 = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_1")?.Data;
                 if (transmissionFailure1 != null)
                 {
-
+                    //Here there was nothing at all so I assume this would be the way
+                    //to complete it.
+                    inv.transmissionFailureSpecified = true;
+                    inv.transmissionFailure = 1;
                 }
 
                 var transmissionFailure2 = receipt.receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_2")?.Data;
@@ -114,7 +113,12 @@ public class AADEFactory
                     inv.transmissionFailure = 2;
                 }
             }
+            invoices.Add(inv);
         }
+        var doc = new InvoicesDoc
+        {
+            invoice = invoices.ToArray()
+        };
         return doc;
     }
 
