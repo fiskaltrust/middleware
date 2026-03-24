@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
@@ -18,6 +19,7 @@ public abstract class ProcessorPreparation
     }
 
     protected abstract AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; }
+    protected abstract ftQueuePT GetQueuePT();
 
     private MarketValidator? _shadowFvValidator;
     private ILogger? _shadowLogger;
@@ -48,7 +50,11 @@ public abstract class ProcessorPreparation
 
         if (_shadowFvValidator != null && _shadowLogger != null)
         {
-            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue, request.ReceiptResponse);
+            object? numberSeries = null;
+            try { numberSeries = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, GetQueuePT(), await _readOnlyQueueItemRepository); }
+            catch {}
+
+            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue, request.ReceiptResponse, numberSeries);
             var oldSucceeded = validationResults.IsValid;
             var fvSucceeded = fvResult.IsValid;
 

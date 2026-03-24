@@ -117,7 +117,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .NotNull()
-                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                        && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
                 .WithMessage("Refund receipt must have cbPreviousReceiptReference")
                 .WithErrorCode("RefundMissingPreviousReceiptReference");
         }
@@ -129,7 +130,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .NotNull()
-                .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                        && x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 .WithMessage("PaymentTransfer receipt must have cbPreviousReceiptReference")
                 .WithErrorCode("PaymentTransferMissingPreviousReceiptReference");
         }

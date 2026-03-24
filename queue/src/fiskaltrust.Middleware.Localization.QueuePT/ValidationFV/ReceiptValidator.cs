@@ -35,13 +35,13 @@ public class ReceiptValidator : MarketValidator
         yield return new GlobalValidations.ChargeItemValidations(queue);
     }
     
-    protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null)
+    protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null)
     {
         yield return new ChargeItemValidations();
         yield return new PayItemValidations();
         yield return new UserValidations();
         yield return new CustomerValidations();
-        yield return new ReceiptValidations(_receiptReferenceProvider, _documentStatusProvider, _voidValidator, _refundValidator, response);
+        yield return new ReceiptValidations(_receiptReferenceProvider, _documentStatusProvider, _voidValidator, _refundValidator, response, numberSeries);
     }
 
     private class PTGlobalReceiptValidations : AbstractValidator<ReceiptRequest>
@@ -50,7 +50,6 @@ public class ReceiptValidator : MarketValidator
         {
             Include(new GlobalValidations.ReceiptValidations.MandatoryCollections());
             Include(new GlobalValidations.ReceiptValidations.CurrencyMustBeEur());
-            Include(new GlobalValidations.ReceiptValidations.ChargeItemsAmountSum());
             Include(new GlobalValidations.ReceiptValidations.ReceiptBalance());
             Include(new GlobalValidations.ReceiptValidations.RefundReference());
             Include(new GlobalValidations.ReceiptValidations.PaymentTransferReference());

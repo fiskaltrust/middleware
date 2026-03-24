@@ -20,7 +20,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         DocumentStatusProvider documentStatusProvider,
         VoidValidator voidValidator,
         RefundValidator refundValidator,
-        ReceiptResponse? response = null)
+        ReceiptResponse? response = null,
+        object? numberSeries = null)
     {
         Include(new TrainingModeNotSupported());
         Include(new ReceiptReferenceAlreadyUsed(receiptReferenceProvider));
@@ -57,7 +58,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new ReceiptMomentMustBeUtc());
         Include(new ReceiptMomentTimeDifference(response));
 
-        When(_ => false, () =>
+        When(_ => numberSeries != null, () =>
         {
             Include(new ReceiptMomentMustNotBeInFuture());
             Include(new ReceiptMomentDeviationLimit());
@@ -268,7 +269,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbReceiptMoment)
                 .Must(moment => moment.Kind == DateTimeKind.Utc)
-                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage("cbReceiptMoment must be in UTC format.")
                 .WithErrorCode("ReceiptMomentNotUtc");
         }
