@@ -47,6 +47,40 @@ public class MyDataOverride
     /// </summary>
     [JsonPropertyName("invoice")]
     public InvoiceOverride? Invoice { get; set; }
+
+    /// <summary>
+    /// Invoice details (line-item) overrides (applied via ftChargeItemCaseData)
+    /// </summary>
+    [JsonPropertyName("invoicedetails")]
+    public InvoiceDetailsOverride? InvoiceDetails { get; set; }
+}
+
+public class InvoiceDetailsOverride
+{
+    /// <summary>
+    /// Right to deduct VAT for this line.
+    /// In Greek VAT context, "δικαίωμα έκπτωσης" = whether the VAT of that specific line is deductible (input VAT deduction) for the buyer/recipient.
+    /// </summary>
+    [JsonPropertyName("discountOption")]
+    public bool? DiscountOption { get; set; }
+}
+
+/// <summary>
+/// Payload wrapper for ftChargeItemCaseData - mirrors ftReceiptCaseDataPayload but for charge items.
+/// </summary>
+public class ftChargeItemCaseDataPayload
+{
+    [JsonPropertyName("GR")]
+    public ftChargeItemCaseDataGreekPayload? GR { get; set; }
+}
+
+public class ftChargeItemCaseDataGreekPayload
+{
+    /// <summary>
+    /// MyData override configuration allowing direct control of invoice detail properties per charge item
+    /// </summary>
+    [JsonPropertyName("mydataoverride")]
+    public MyDataOverride? MyDataOverride { get; set; }
 }
 
 public class InvoiceOverride
