@@ -1,4 +1,5 @@
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using FluentValidation;
 
@@ -30,7 +31,8 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
                         context.AddFailure("cbCustomer.CustomerVATId",
                             $"Invalid Portuguese tax ID (NIF): '{customer.CustomerVATId}'");
                     }
-                });
+                })
+                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten));
         }
     }
 }

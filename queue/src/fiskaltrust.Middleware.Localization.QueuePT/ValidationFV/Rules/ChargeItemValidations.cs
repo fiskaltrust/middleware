@@ -2,7 +2,10 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using FluentValidation;
+using FluentValidation.Results;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 
@@ -10,12 +13,23 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 {
     public ChargeItemValidations()
     {
+        Include(new DescriptionMustNotBeEmpty());
         Include(new DescriptionMinLength());
+        Include(new DescriptionEncodingWindows1252());
+        Include(new VatRateMustNotBeNegative());
+        Include(new AmountMustNotBeZero());
+        Include(new QuantityMustNotBeZero());
         Include(new PosReceiptNetAmountLimit());
         Include(new OtherServiceNetAmountLimit());
         Include(new SupportedVatRates());
+        Include(new SupportedChargeItemCases());
         Include(new VatRateCategory());
+        Include(new VatAmountCheck());
         Include(new ZeroVatExemption());
+        Include(new NegativeAmountsAndQuantities());
+        Include(new DiscountOrExtraNotPositive());
+        Include(new DiscountVatRateAndCaseAlignment());
+        Include(new DiscountExceedsArticleAmount());
     }
 
     public class DescriptionMinLength : AbstractValidator<ReceiptRequest>
@@ -33,12 +47,13 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 
     public class PosReceiptNetAmountLimit : AbstractValidator<ReceiptRequest>
     {
-        private const decimal Limit = 1000m;
+        private const decimal Limit = 100m;
 
         public PosReceiptNetAmountLimit()
         {
             When(x => x.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001)
-                    && x.cbChargeItems != null && x.cbChargeItems.Count > 0, () =>
+                    && x.cbChargeItems != null && x.cbChargeItems.Count > 0
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund), () =>
             {
                 RuleFor(x => x.cbChargeItems)
                     .Must(chargeItems =>
@@ -62,7 +77,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 
         public OtherServiceNetAmountLimit()
         {
-            When(x => x.cbChargeItems != null && x.cbChargeItems.Count > 0, () =>
+            When(x => x.cbChargeItems != null && x.cbChargeItems.Count > 0
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund), () =>
             {
                 RuleFor(x => x.cbChargeItems)
                     .Must(chargeItems =>
@@ -140,6 +156,32 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         }
     }
 
+    public class VatAmountCheck : AbstractValidator<ReceiptRequest>
+    {
+        private const decimal RoundingTolerance = 0.01m;
+
+        public VatAmountCheck()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.VATAmount)
+                    .Must((item, vatAmount) =>
+                    {
+                        if (!vatAmount.HasValue || item.VATRate <= 0)
+                            return true;
+                        var calculated = item.Amount / (100 + item.VATRate) * item.VATRate;
+                        return Math.Abs(vatAmount.Value - calculated) <= RoundingTolerance;
+                    })
+                    .WithMessage(item =>
+                    {
+                        var calculated = item.Amount / (100 + item.VATRate) * item.VATRate;
+                        return $"VATAmount {item.VATAmount:F4} does not match calculated {calculated:F4} (difference exceeds {RoundingTolerance}€).";
+                    })
+                    .WithErrorCode("VatAmountMismatch");
+            });
+        }
+    }
+
     public class ZeroVatExemption : AbstractValidator<ReceiptRequest>
     {
         public ZeroVatExemption()
@@ -167,6 +209,245 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         return $"Unknown tax exemption code '0x{(int)natureValue:X4}'.";
                     })
                     .WithErrorCode("ZeroVatExemption");
+            });
+        }
+    }
+
+    public class DescriptionMustNotBeEmpty : AbstractValidator<ReceiptRequest>
+    {
+        public DescriptionMustNotBeEmpty()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Description)
+                    .Must(desc => !string.IsNullOrWhiteSpace(desc))
+                    .WithMessage("Description is missing.")
+                    .WithErrorCode("ChargeItemDescriptionMissing");
+            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
+        }
+    }
+
+    public class DescriptionEncodingWindows1252 : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly System.Text.Encoding _encoding =
+            System.Text.Encoding.GetEncoding(1252,
+                System.Text.EncoderFallback.ExceptionFallback,
+                System.Text.DecoderFallback.ReplacementFallback);
+
+        public DescriptionEncodingWindows1252()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Description)
+                    .Must(desc =>
+                    {
+                        if (string.IsNullOrEmpty(desc)) return true;
+                        try { _encoding.GetBytes(desc); return true; }
+                        catch (System.Text.EncoderFallbackException) { return false; }
+                    })
+                    .WithMessage(item => $"Description '{item.Description}' contains characters not encodable in Windows-1252.")
+                    .WithErrorCode("ChargeItemDescriptionEncodingInvalid");
+            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
+        }
+    }
+
+    public class VatRateMustNotBeNegative : AbstractValidator<ReceiptRequest>
+    {
+        public VatRateMustNotBeNegative()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.VATRate)
+                    .Must(rate => rate >= 0)
+                    .WithMessage(item => $"VATRate {item.VATRate} is invalid (must be >= 0).")
+                    .WithErrorCode("ChargeItemVatRateMissing");
+            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
+        }
+    }
+
+    public class AmountMustNotBeZero : AbstractValidator<ReceiptRequest>
+    {
+        public AmountMustNotBeZero()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Amount)
+                    .Must(amount => amount != 0)
+                    .WithMessage(item => $"Amount {item.Amount} is zero.")
+                    .WithErrorCode("ChargeItemAmountMissing");
+            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
+        }
+    }
+
+    public class QuantityMustNotBeZero : AbstractValidator<ReceiptRequest>
+    {
+        public QuantityMustNotBeZero()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Quantity)
+                    .Must(qty => qty != 0)
+                    .WithMessage(item => $"Quantity {item.Quantity} is zero.")
+                    .WithErrorCode("ChargeItemQuantityZeroNotAllowed");
+            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
+        }
+    }
+
+    public class SupportedChargeItemCases : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly ChargeItemCaseTypeOfService[] _supported =
+        [
+            ChargeItemCaseTypeOfService.UnknownService,
+            ChargeItemCaseTypeOfService.Delivery,
+            ChargeItemCaseTypeOfService.OtherService,
+            ChargeItemCaseTypeOfService.Tip,
+            ChargeItemCaseTypeOfService.CatalogService,
+            ChargeItemCaseTypeOfService.Receivable
+        ];
+
+        public SupportedChargeItemCases()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.ftChargeItemCase)
+                    .Must(ftCase => _supported.Contains(ftCase.TypeOfService()))
+                    .WithMessage(item => $"Unsupported ChargeItemCase TypeOfService '{item.ftChargeItemCase.TypeOfService()}'.")
+                    .WithErrorCode("UnsupportedChargeItemServiceType");
+            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
+        }
+    }
+
+    public class NegativeAmountsAndQuantities : AbstractValidator<ReceiptRequest>
+    {
+        public NegativeAmountsAndQuantities()
+        {
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                    && x.cbChargeItems != null && x.cbChargeItems.Count > 0
+                    && !x.IsPartialRefundReceipt(), () =>
+            {
+                RuleFor(x => x)
+                    .Custom((request, context) =>
+                    {
+                        for (var i = 0; i < request.cbChargeItems!.Count; i++)
+                        {
+                            var item = request.cbChargeItems[i];
+                            if (item.IsDiscount() || item.IsRefund() || item.IsVoid())
+                                continue;
+                            if (item.Quantity < 0)
+                                context.AddFailure(new ValidationFailure(
+                                    $"cbChargeItems[{i}].Quantity",
+                                    $"Quantity {item.Quantity} is negative (must be >= 0 for non-refund items).")
+                                { ErrorCode = "NegativeQuantityNotAllowed" });
+                            if (item.Amount < 0)
+                                context.AddFailure(new ValidationFailure(
+                                    $"cbChargeItems[{i}].Amount",
+                                    $"Amount {item.Amount} is negative (must be >= 0 for non-refund items).")
+                                { ErrorCode = "NegativeAmountNotAllowed" });
+                        }
+                    });
+            });
+        }
+    }
+
+    public class DiscountOrExtraNotPositive : AbstractValidator<ReceiptRequest>
+    {
+        public DiscountOrExtraNotPositive()
+        {
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                    && x.cbChargeItems != null && x.cbChargeItems.Count > 0
+                    && !x.IsPartialRefundReceipt(), () =>
+            {
+                RuleFor(x => x)
+                    .Custom((request, context) =>
+                    {
+                        for (var i = 0; i < request.cbChargeItems!.Count; i++)
+                        {
+                            var item = request.cbChargeItems[i];
+                            if (item.IsDiscountOrExtra() && item.Amount > 0)
+                                context.AddFailure(new ValidationFailure(
+                                    $"cbChargeItems[{i}].Amount",
+                                    $"Discount/extra amount {item.Amount} must not be positive.")
+                                { ErrorCode = "PositiveDiscountNotAllowed" });
+                        }
+                    });
+            });
+        }
+    }
+
+    public class DiscountVatRateAndCaseAlignment : AbstractValidator<ReceiptRequest>
+    {
+        public DiscountVatRateAndCaseAlignment()
+        {
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                    && x.cbChargeItems != null && x.cbChargeItems.Count > 0, () =>
+            {
+                RuleFor(x => x)
+                    .Custom((request, context) =>
+                    {
+                        var groupedItems = request.GetGroupedChargeItems();
+                        foreach (var group in groupedItems)
+                        {
+                            var mainItem = group.chargeItem;
+                            var modifiers = group.modifiers;
+                            if (modifiers == null || modifiers.Count == 0) continue;
+                            var mainVatRate = mainItem.VATRate;
+                            var mainVatCase = mainItem.ftChargeItemCase.Vat();
+                            var mainItemIndex = request.cbChargeItems!.IndexOf(mainItem);
+                            foreach (var modifier in modifiers.Where(m => m.IsDiscountOrExtra()))
+                            {
+                                var modifierVatCase = modifier.ftChargeItemCase.Vat();
+                                var modifierIndex = request.cbChargeItems.IndexOf(modifier);
+                                var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
+                                var vatCaseMismatch = modifierVatCase != mainVatCase;
+                                if (!vatRateMismatch && !vatCaseMismatch) continue;
+                                context.AddFailure(new ValidationFailure(
+                                    $"cbChargeItems[{modifierIndex}]",
+                                    $"Discount/extra at index {modifierIndex} has VAT rate {modifier.VATRate} / case '{modifierVatCase}' " +
+                                    $"but main item at index {mainItemIndex} has VAT rate {mainVatRate} / case '{mainVatCase}'.")
+                                { ErrorCode = "DiscountVatRateOrCaseMismatch" });
+                            }
+                        }
+                    });
+            });
+        }
+    }
+
+    public class DiscountExceedsArticleAmount : AbstractValidator<ReceiptRequest>
+    {
+        public DiscountExceedsArticleAmount()
+        {
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                    && x.cbChargeItems != null && x.cbChargeItems.Count > 0, () =>
+            {
+                RuleFor(x => x)
+                    .Custom((request, context) =>
+                    {
+                        var groupedItems = request.GetGroupedChargeItems();
+                        foreach (var group in groupedItems)
+                        {
+                            var mainItem = group.chargeItem;
+                            var modifiers = group.modifiers;
+                            if (modifiers == null || modifiers.Count == 0) continue;
+                            var modifiersGrossAmount = modifiers.Sum(m => m.Amount);
+                            if (modifiersGrossAmount < 0)
+                            {
+                                var absoluteDiscountAmount = Math.Abs(modifiersGrossAmount);
+                                var absoluteMainItemAmount = Math.Abs(mainItem.Amount);
+                                if (absoluteDiscountAmount > absoluteMainItemAmount)
+                                {
+                                    var mainItemIndex = request.cbChargeItems!.IndexOf(mainItem);
+                                    context.AddFailure(new ValidationFailure(
+                                        $"cbChargeItems[{mainItemIndex}]",
+                                        $"Total discount ({absoluteDiscountAmount:F2}) exceeds article amount ({absoluteMainItemAmount:F2}) for charge item [{mainItemIndex}] '{mainItem.Description}'.")
+                                    { ErrorCode = "DiscountExceedsArticleAmount" });
+                                }
+                            }
+                        }
+                    });
             });
         }
     }
