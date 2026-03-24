@@ -737,6 +737,20 @@ public class AADEFactory
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
             };
 
+            // Per-item return flag (0x0002) inside an 8.6 order = recType 7
+            var isPartialReturnItem = AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86
+                                      && x.IsRefund();
+
+            // myDATA spec: for recType=7 lines amounts MUST be positive; myDATA itself treats them as cancellations.
+            if (isPartialReturnItem)
+            {
+                invoiceRow.recType = 7;
+                invoiceRow.recTypeSpecified = true;
+                invoiceRow.quantity = Math.Abs(invoiceRow.quantity);
+                invoiceRow.vatAmount = Math.Abs(invoiceRow.vatAmount);
+                invoiceRow.netValue = Math.Abs(invoiceRow.netValue);
+            }
+
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.quantitySpecified = true;
