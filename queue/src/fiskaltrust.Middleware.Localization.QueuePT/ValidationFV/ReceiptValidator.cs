@@ -15,12 +15,12 @@ public class ReceiptValidator : MarketValidator
         _receiptReferenceProvider = receiptReferenceProvider;
     }
 
-    protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators()
+    protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null)
     {
         yield return new ChargeItemValidations();
         yield return new PayItemValidations();
         yield return new UserValidations();
         yield return new CustomerValidations();
-        yield return new ReceiptValidations(_receiptReferenceProvider);
+        yield return new ReceiptValidations(_receiptReferenceProvider, response);
     }
 }

@@ -21,9 +21,9 @@ public abstract class MarketValidator
         yield return new GlobalValidations.ChargeItemValidations(queue);
     }
 
-    protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators() => [];
+    protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null) => [];
 
-    public async Task<ValidationResult> ValidateAsync(ReceiptRequest request, ftQueue? queue = null)
+    public async Task<ValidationResult> ValidateAsync(ReceiptRequest request, ftQueue? queue = null, ReceiptResponse? response = null)
     {
         var result = new ValidationResult();
 
@@ -32,7 +32,7 @@ public abstract class MarketValidator
             result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
         }
 
-        foreach (var validator in GetMarketValidators())
+        foreach (var validator in GetMarketValidators(response))
         {
             result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
         }

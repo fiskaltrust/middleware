@@ -48,7 +48,7 @@ public abstract class ProcessorPreparation
 
         if (_shadowFvValidator != null && _shadowLogger != null)
         {
-            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue);
+            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue, request.ReceiptResponse);
             var oldSucceeded = validationResults.IsValid;
             var fvSucceeded = fvResult.IsValid;
 

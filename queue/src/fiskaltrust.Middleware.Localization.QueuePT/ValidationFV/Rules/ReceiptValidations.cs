@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider)
+    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ReceiptResponse? response = null)
     {
         Include(new RefundMustNotAlreadyExist(receiptReferenceProvider));
         Include(new PartialRefundMustNotContainNonRefundItems());
@@ -24,9 +24,14 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new PaymentTransferAmountsMustMatch(receiptReferenceProvider));
 
         Include(new ReceiptMomentMustBeUtc());
-        Include(new ReceiptMomentMustNotBeInFuture());
-        Include(new ReceiptMomentDeviationLimit());
-        Include(new ReceiptMomentTimeDifference());
+        Include(new ReceiptMomentTimeDifference(response));
+
+
+        When(_ => false, () =>
+        {
+            Include(new ReceiptMomentMustNotBeInFuture());
+            Include(new ReceiptMomentDeviationLimit());
+        });
     }
 
     public class RefundMustNotAlreadyExist : AbstractValidator<ReceiptRequest>
@@ -158,17 +163,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         }
     }
 
-    public class ReceiptMomentMustBeUtc : AbstractValidator<ReceiptRequest>
-    {
-        public ReceiptMomentMustBeUtc()
-        {
-            RuleFor(x => x.cbReceiptMoment)
-                .Must(moment => moment.Kind == DateTimeKind.Utc)
-                .WithMessage("cbReceiptMoment must be in UTC format.")
-                .WithErrorCode("ReceiptMomentNotUtc");
-        }
-    }
-
     public class ReceiptMomentMustNotBeInFuture : AbstractValidator<ReceiptRequest>
     {
         public ReceiptMomentMustNotBeInFuture()
@@ -191,7 +185,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 {
                     var receiptMomentUtc = moment.ToUniversalTime();
                     var serverTime = DateTime.UtcNow;
-                    if (receiptMomentUtc > serverTime) return true; // handled by ReceiptMomentMustNotBeInFuture
+                    if (receiptMomentUtc > serverTime) return true;
                     var timeDifference = Math.Abs((receiptMomentUtc - serverTime).TotalMinutes);
                     return timeDifference <= MaxAllowedDifferenceMinutes;
                 })
@@ -201,19 +195,34 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         }
     }
 
+    public class ReceiptMomentMustBeUtc : AbstractValidator<ReceiptRequest>
+    {
+        public ReceiptMomentMustBeUtc()
+        {
+            RuleFor(x => x.cbReceiptMoment)
+                .Must(moment => moment.Kind == DateTimeKind.Utc)
+                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+                .WithMessage("cbReceiptMoment must be in UTC format.")
+                .WithErrorCode("ReceiptMomentNotUtc");
+        }
+    }
+
     public class ReceiptMomentTimeDifference : AbstractValidator<ReceiptRequest>
     {
         private const double MaxAllowedDifferenceMinutes = 1.0;
+        private readonly ReceiptResponse? _response;
 
-        public ReceiptMomentTimeDifference()
+        public ReceiptMomentTimeDifference(ReceiptResponse? response = null)
         {
+            _response = response;
             RuleFor(x => x.cbReceiptMoment)
                 .Must(cbReceiptMoment =>
                 {
-                    var timeDifference = (DateTime.UtcNow - cbReceiptMoment).Duration();
+                    var serverMoment = _response?.ftReceiptMoment ?? DateTime.UtcNow;
+                    var timeDifference = (serverMoment - cbReceiptMoment).Duration();
                     return timeDifference <= TimeSpan.FromMinutes(MaxAllowedDifferenceMinutes);
                 })
-                .When(x => x.cbReceiptMoment.Kind == DateTimeKind.Utc)
+                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage(request =>
                     $"The time difference between cbReceiptMoment ({request.cbReceiptMoment:yyyy-MM-dd HH:mm:ss}) and server time exceeds the maximum allowed difference of {MaxAllowedDifferenceMinutes} minute(s).")
                 .WithErrorCode("EEEE_ReceiptMomentTimeDifferenceExceeded");
