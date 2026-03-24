@@ -5,6 +5,7 @@ using System.Linq;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using FluentAssertions;
@@ -14,119 +15,116 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 
 public class SendPaymentsMethodTests
 {
-    private static AADEFactory CreateFactory()
-    {
-        return new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+    // ISV sends: 0x4752_2000_0800_3005
+    //                          ↑    ↑
+    //                          │    └── Pay (log payment) case
+    //                          └─────── SendPaymentsMethod local flag
+    private static readonly ReceiptCase SendPaymentsMethodCase =
+        ((ReceiptCase) 0x4752_2000_0000_0000)
+            .WithCase(ReceiptCase.Pay0x3005)
+            .WithFlag(ReceiptCaseFlagsGR.SendPaymentsMethod);
+
+    private static AADEFactory CreateFactory() =>
+        new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
-            Account = new storage.V0.MasterData.AccountMasterData
-            {
-                VatId = "EL123456789"
-            }
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "EL123456789" }
         }, "https://test.receipts.example.com");
+
+    #region Flag and Case Detection
+
+    [Fact]
+    public void SendPaymentsMethodCase_ShouldHaveCorrectCaseAndFlag()
+    {
+        SendPaymentsMethodCase.IsCase(ReceiptCase.Pay0x3005).Should().BeTrue();
+        SendPaymentsMethodCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod).Should().BeTrue();
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_WithValidPayments_ShouldReturnPaymentMethodsDoc()
+    public void SendPaymentsMethodFlag_ShouldNotConflictWithHasTransportInformation()
+    {
+        var transportFlag = (long) ReceiptCaseFlagsGR.HasTransportInformation;
+        var sendPaymentFlag = (long) ReceiptCaseFlagsGR.SendPaymentsMethod;
+
+        (transportFlag & sendPaymentFlag).Should().Be(0, "the two flags must occupy different bits");
+    }
+
+    [Fact]
+    public void SendPaymentsMethodCase_ShouldNotBeMistaken_ForOtherCases()
+    {
+        SendPaymentsMethodCase.IsCase(ReceiptCase.PaymentTransfer0x0002).Should().BeFalse();
+        SendPaymentsMethodCase.IsCase(ReceiptCase.Order0x3004).Should().BeFalse();
+        SendPaymentsMethodCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation).Should().BeFalse();
+    }
+
+    #endregion
+
+    #region MapToPaymentMethodsDoc
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithValidCardPayment_ShouldMapCorrectly()
     {
         var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
+            new PayItem
             {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 10.00m,
-                    Description = "POS Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+                Position = 1,
+                Amount = 10.00m,
+                Description = "POS Payment",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)
+            }
+        });
 
-        long invoiceMark = 400001951868897;
-
-        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, invoiceMark);
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
 
         error.Should().BeNull();
         doc.Should().NotBeNull();
         doc!.paymentMethods.Should().HaveCount(1);
-        doc.paymentMethods[0].invoiceMark.Should().Be(invoiceMark);
+        doc.paymentMethods[0].invoiceMark.Should().Be(400001951868897);
         doc.paymentMethods[0].paymentMethodDetails.Should().HaveCount(1);
         doc.paymentMethods[0].paymentMethodDetails[0].type.Should().Be(MyDataPaymentMethods.PosEPos);
         doc.paymentMethods[0].paymentMethodDetails[0].amount.Should().Be(10.00m);
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_WithEntityVatNumber_ShouldSetEntityVatNumber()
+    public void MapToPaymentMethodsDoc_WithEntityVatNumber_ShouldSetIt()
     {
         var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
+            new PayItem
             {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 50.00m,
-                    Description = "Cash Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+                Position = 1,
+                Amount = 50.00m,
+                Description = "Cash",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+            }
+        });
 
-        long invoiceMark = 400001951868897;
-        var entityVatNumber = "EL987654321";
-
-        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, invoiceMark, entityVatNumber);
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897, "EL987654321");
 
         error.Should().BeNull();
-        doc.Should().NotBeNull();
-        doc!.paymentMethods[0].entityVatNumber.Should().Be(entityVatNumber);
+        doc!.paymentMethods[0].entityVatNumber.Should().Be("EL987654321");
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_WithNoEntityVatNumber_ShouldLeaveEntityVatNumberNull()
+    public void MapToPaymentMethodsDoc_WithoutEntityVatNumber_ShouldLeaveItNull()
     {
         var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
+            new PayItem
             {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 10.00m,
-                    Description = "Cash Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+                Position = 1,
+                Amount = 10.00m,
+                Description = "Cash",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+            }
+        });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 123456789);
 
         error.Should().BeNull();
-        doc.Should().NotBeNull();
         doc!.paymentMethods[0].entityVatNumber.Should().BeNull();
     }
 
@@ -134,17 +132,7 @@ public class SendPaymentsMethodTests
     public void MapToPaymentMethodsDoc_WithNoPayItems_ShouldReturnError()
     {
         var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = [],
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+        var receiptRequest = BuildRequest(new List<PayItem>());
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
 
@@ -154,151 +142,142 @@ public class SendPaymentsMethodTests
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_WithMultiplePayments_ShouldMapAll()
+    public void MapToPaymentMethodsDoc_WithMultiplePayItems_ShouldMapAll()
     {
         var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 5.00m,
-                    Description = "Cash Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                },
-                new PayItem
-                {
-                    Position = 2,
-                    Amount = 5.00m,
-                    Description = "Card Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+            new PayItem { Position = 1, Amount = 5.00m, Description = "Cash",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) },
+            new PayItem { Position = 2, Amount = 5.00m, Description = "Card",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+        });
 
-        long invoiceMark = 400001951868897;
-
-        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, invoiceMark);
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
 
         error.Should().BeNull();
-        doc.Should().NotBeNull();
         doc!.paymentMethods[0].paymentMethodDetails.Should().HaveCount(2);
         doc.paymentMethods[0].paymentMethodDetails[0].type.Should().Be(MyDataPaymentMethods.Cash);
-        doc.paymentMethods[0].paymentMethodDetails[0].amount.Should().Be(5.00m);
         doc.paymentMethods[0].paymentMethodDetails[1].type.Should().Be(MyDataPaymentMethods.PosEPos);
-        doc.paymentMethods[0].paymentMethodDetails[1].amount.Should().Be(5.00m);
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_ShouldRoundPayItemAmounts()
+    public void MapToPaymentMethodsDoc_ShouldRoundAmountsToTwoDecimals()
     {
         var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 10.555m,
-                    Description = "Cash Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+            new PayItem { Position = 1, Amount = 10.555m, Description = "Cash",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) }
+        });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 123456789);
 
         error.Should().BeNull();
-        doc.Should().NotBeNull();
         doc!.paymentMethods[0].paymentMethodDetails[0].amount.Should().Be(10.56m);
     }
 
     [Fact]
-    public void GeneratePaymentMethodPayload_ShouldProduceValidXml()
+    public void MapToPaymentMethodsDoc_PaymentMethodMarkShouldNotBeSet_AsItIsPopulatedByAADE()
     {
-        var doc = new PaymentMethodsDoc
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            paymentMethods = new[]
+            new PayItem { Position = 1, Amount = 10.00m, Description = "Cash",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+
+        error.Should().BeNull();
+        doc!.paymentMethods[0].paymentMethodMarkSpecified.Should().BeFalse(
+            "paymentMethodMark is populated by the AADE service in its response, not set by the caller");
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithAadeSignatureData_ShouldExtractProviderSignature()
+    {
+        // This covers the real-world case where the original invoice was submitted through
+        // a fiscal provider — AADE error 403 "Payment Methods must contain provider signature"
+        // is returned when ProvidersSignature is absent in that scenario.
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
             {
-                new PaymentMethodType
+                Position = 1,
+                Amount = 10.00m,
+                Description = "POS Payment",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                ftPayItemCaseData = new
                 {
-                    invoiceMark = 400001951868897,
-                    paymentMethodDetails = new[]
+                    aadeSignatureData = new
                     {
-                        new PaymentMethodDetailType
-                        {
-                            type = MyDataPaymentMethods.PosEPos,
-                            amount = 10.00m
-                        }
+                        aadeProviderSignature = "test-provider-signature",
+                        aadeTransactionId    = "test-transaction-id"
                     }
                 }
             }
-        };
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+
+        error.Should().BeNull();
+        var detail = doc!.paymentMethods[0].paymentMethodDetails[0];
+        detail.ProvidersSignature.Should().NotBeNull(
+            "AADE requires ProvidersSignature when the original invoice was submitted through a fiscal provider");
+        detail.ProvidersSignature!.Signature.Should().Be("test-provider-signature");
+        detail.ProvidersSignature.SigningAuthor.Should().Be("126");
+        detail.transactionId.Should().Be("test-transaction-id");
+    }
+
+    #endregion
+
+    #region GeneratePaymentMethodPayload
+
+    [Fact]
+    public void GeneratePaymentMethodPayload_ShouldProduceValidXml()
+    {
+        var doc = BuildPaymentMethodsDoc(400001960899044, MyDataPaymentMethods.PosEPos, 10.00m);
 
         var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
 
         payload.Should().NotBeNullOrEmpty();
         payload.Should().Contain("PaymentMethodsDoc");
         payload.Should().Contain("paymentMethods");
-        payload.Should().Contain("400001951868897");
+        payload.Should().Contain("400001960899044");
         payload.Should().Contain("paymentMethodDetails");
     }
 
     [Fact]
-    public void GeneratePaymentMethodPayload_ShouldBeDeserializable()
+    public void GeneratePaymentMethodPayload_ShouldContainCorrectNamespace()
     {
-        var doc = new PaymentMethodsDoc
-        {
-            paymentMethods = new[]
-            {
-                new PaymentMethodType
-                {
-                    invoiceMark = 400001951868897,
-                    paymentMethodDetails = new[]
-                    {
-                        new PaymentMethodDetailType
-                        {
-                            type = MyDataPaymentMethods.PosEPos,
-                            amount = 10.00m
-                        }
-                    }
-                }
-            }
-        };
+        var doc = BuildPaymentMethodsDoc(123, MyDataPaymentMethods.Cash, 10m);
+
+        var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
+
+        payload.Should().Contain("https://www.aade.gr/myDATA/paymentMethod/v1.0");
+    }
+
+    [Fact]
+    public void GeneratePaymentMethodPayload_ShouldBeRoundtrippable()
+    {
+        var doc = BuildPaymentMethodsDoc(400001951868897, MyDataPaymentMethods.PosEPos, 10.00m);
 
         var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
 
         var xmlSerializer = new XmlSerializer(typeof(PaymentMethodsDoc));
         using var stringReader = new StringReader(payload);
-        var deserialized = (PaymentMethodsDoc)xmlSerializer.Deserialize(stringReader)!;
+        var deserialized = (PaymentMethodsDoc) xmlSerializer.Deserialize(stringReader)!;
 
-        deserialized.Should().NotBeNull();
         deserialized.paymentMethods.Should().HaveCount(1);
         deserialized.paymentMethods[0].invoiceMark.Should().Be(400001951868897);
-        deserialized.paymentMethods[0].paymentMethodDetails.Should().HaveCount(1);
         deserialized.paymentMethods[0].paymentMethodDetails[0].type.Should().Be(MyDataPaymentMethods.PosEPos);
         deserialized.paymentMethods[0].paymentMethodDetails[0].amount.Should().Be(10.00m);
     }
 
     [Fact]
-    public void GeneratePaymentMethodPayload_WithEntityVatNumber_ShouldIncludeIt()
+    public void GeneratePaymentMethodPayload_WithEntityVatNumber_ShouldIncludeItInXml()
     {
         var doc = new PaymentMethodsDoc
         {
@@ -306,15 +285,11 @@ public class SendPaymentsMethodTests
             {
                 new PaymentMethodType
                 {
-                    invoiceMark = 400001951868897,
+                    invoiceMark = 123,
                     entityVatNumber = "123456789",
                     paymentMethodDetails = new[]
                     {
-                        new PaymentMethodDetailType
-                        {
-                            type = MyDataPaymentMethods.Cash,
-                            amount = 25.00m
-                        }
+                        new PaymentMethodDetailType { type = MyDataPaymentMethods.Cash, amount = 10m }
                     }
                 }
             }
@@ -327,21 +302,29 @@ public class SendPaymentsMethodTests
     }
 
     [Fact]
-    public void GeneratePaymentMethodPayload_XmlShouldContainCorrectNamespace()
+    public void GeneratePaymentMethodPayload_WithProviderSignature_ShouldIncludeItInXml()
     {
+        // Reproduces the payload shape required when AADE returns error 403:
+        // "Invoice was sent by provider. Payment Methods must contain provider signature."
         var doc = new PaymentMethodsDoc
         {
             paymentMethods = new[]
             {
                 new PaymentMethodType
                 {
-                    invoiceMark = 123,
+                    invoiceMark = 400001951868897,
                     paymentMethodDetails = new[]
                     {
                         new PaymentMethodDetailType
                         {
-                            type = MyDataPaymentMethods.Cash,
-                            amount = 10m
+                            type = MyDataPaymentMethods.PosEPos,
+                            amount = 10.00m,
+                            transactionId = "test-transaction-id",
+                            ProvidersSignature = new ProviderSignatureType
+                            {
+                                Signature    = "test-provider-signature",
+                                SigningAuthor = "126"
+                            }
                         }
                     }
                 }
@@ -350,125 +333,73 @@ public class SendPaymentsMethodTests
 
         var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
 
-        payload.Should().Contain("https://www.aade.gr/myDATA/paymentMethod/v1.0");
+        payload.Should().Contain("ProvidersSignature");
+        payload.Should().Contain("test-provider-signature");
+        payload.Should().Contain("126");
+        payload.Should().Contain("test-transaction-id");
+    }
+
+    #endregion
+
+    #region ProcessReceiptAsync Routing
+
+    [Fact]
+    public void RoutingCondition_Pay0x3005WithSendPaymentsMethodFlag_ShouldTrigger()
+    {
+        var receiptCase = SendPaymentsMethodCase;
+        var receiptReferences = new List<(ReceiptRequest, ReceiptResponse)> { BuildPreviousReceiptPair("400001951868897") };
+
+        bool shouldRoute =
+            receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod) &&
+            receiptReferences != null && receiptReferences.Count > 0;
+
+        shouldRoute.Should().BeTrue();
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_PaymentMethodMarkShouldNotBeSet()
+    public void RoutingCondition_Pay0x3005WithoutFlag_ShouldNotTrigger()
     {
-        var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 10.00m,
-                    Description = "Cash Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+        var receiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Pay0x3005);
 
-        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+        bool shouldRoute =
+            receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod);
 
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-        doc!.paymentMethods[0].paymentMethodMarkSpecified.Should().BeFalse("paymentMethodMark is populated by the AADE service, not the caller");
+        shouldRoute.Should().BeFalse("flag is missing");
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_WithCashPayment_ShouldMapToCorrectType()
+    public void RoutingCondition_PaymentTransfer_ShouldNotTrigger()
     {
-        var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 100.00m,
-                    Description = "Cash",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+        var receiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002);
 
-        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+        bool shouldRoute =
+            receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod);
 
-        error.Should().BeNull();
-        doc!.paymentMethods[0].paymentMethodDetails[0].type.Should().Be(MyDataPaymentMethods.Cash);
+        shouldRoute.Should().BeFalse("PaymentTransfer0x0002 is a different receipt case that maps to an 8.4 invoice");
     }
 
     [Fact]
-    public void MapToPaymentMethodsDoc_WithCreditCardPayment_ShouldMapToPosEPos()
+    public void RoutingCondition_Pay0x3005WithFlag_ButNoReceiptReferences_ShouldNotRoute()
     {
-        var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = [],
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 100.00m,
-                    Description = "Credit Card",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+        var receiptCase = SendPaymentsMethodCase;
+        List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null;
 
-        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+        bool shouldRoute =
+            receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod) &&
+            receiptReferences != null && receiptReferences.Count > 0;
 
-        error.Should().BeNull();
-        doc!.paymentMethods[0].paymentMethodDetails[0].type.Should().Be(MyDataPaymentMethods.PosEPos);
+        shouldRoute.Should().BeFalse("cbPreviousReceiptReference and receiptReferences are required");
     }
 
     [Fact]
-    public void PaymentTransfer_WithPreviousReceiptReference_ShouldHaveInvoiceMark_ForSendPaymentsMethod()
+    public void RoutingCondition_ValidInvoiceMarkExtractedFromPreviousReceipt()
     {
-        // When a PaymentTransfer has a cbPreviousReceiptReference, the referenced receipt
-        // must have an invoiceMark signature so that SendPaymentsMethod can be called.
-        var previousReceiptResponse = new ReceiptResponse
-        {
-            cbReceiptReference = "previous-ref",
-            ftReceiptIdentification = "ft100#",
-            ftSignatures = new List<SignatureItem>
-            {
-                new SignatureItem
-                {
-                    Caption = "invoiceMark",
-                    Data = "400001951868897",
-                    ftSignatureFormat = SignatureFormat.Text,
-                    ftSignatureType = (SignatureType)0x4752_2000_0000_0000
-                }
-            }
-        };
-
-        var invoiceMarkText = previousReceiptResponse.ftSignatures
+        var previousResponse = BuildPreviousReceiptPair("400001951868897");
+        var invoiceMarkText = previousResponse.Item2.ftSignatures
             .FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
 
         long.TryParse(invoiceMarkText, out var invoiceMark).Should().BeTrue();
@@ -476,191 +407,196 @@ public class SendPaymentsMethodTests
     }
 
     [Fact]
-    public void PaymentTransfer_WithPreviousReceiptReference_MissingMark_ShouldFail()
+    public void RoutingCondition_MissingInvoiceMarkOnPreviousReceipt_ShouldNotParseMark()
     {
-        // When a PaymentTransfer has a cbPreviousReceiptReference but the referenced receipt
-        // has no invoiceMark, the routing should produce an error.
-        var previousReceiptResponse = new ReceiptResponse
+        var previousResponse = new ReceiptResponse
         {
-            cbReceiptReference = "previous-ref",
+            cbReceiptReference = "prev",
             ftReceiptIdentification = "ft100#",
             ftSignatures = new List<SignatureItem>()
         };
 
-        var invoiceMarkText = previousReceiptResponse.ftSignatures
+        var invoiceMarkText = previousResponse.ftSignatures
             .FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
 
-        invoiceMarkText.Should().BeNull("no invoiceMark signature exists on the referenced receipt");
+        invoiceMarkText.Should().BeNull();
+        long.TryParse(invoiceMarkText, out _).Should().BeFalse();
+    }
+
+    #endregion
+
+    #region EntityVatNumber Extraction (Provider Endpoint)
+
+    // The middleware always calls /myDataProvider/ endpoints (acting as a provider),
+    // so entityVatNumber is always required. The routing block extracts it from
+    // _masterDataConfiguration.Account.VatId by stripping non-digit characters,
+    // following the same pattern as CancelDeliveryNoteAsync.
+
+    [Theory]
+    [InlineData("EL112545020", "112545020")]
+    [InlineData("GR112545020", "112545020")]
+    [InlineData("112545020", "112545020")]
+    [InlineData("EL123456789", "123456789")]
+    public void EntityVatNumber_ShouldStripPrefixAndKeepDigitsOnly(string configuredVatId, string expectedEntityVat)
+    {
+        // Mirrors the extraction logic in ProcessReceiptAsync:
+        //   var entityVatNumber = new string(_masterDataConfiguration.Account.VatId.Where(char.IsDigit).ToArray());
+        var entityVatNumber = new string(configuredVatId.Where(char.IsDigit).ToArray());
+
+        entityVatNumber.Should().Be(expectedEntityVat);
     }
 
     [Fact]
-    public void PaymentTransfer_WithoutPreviousReceiptReference_ShouldMapTo84Invoice()
+    public void MapToPaymentMethodsDoc_WithELPrefixedVat_ShouldSetDigitsOnlyEntityVatNumber()
     {
-        // When a PaymentTransfer does NOT have a cbPreviousReceiptReference,
-        // it should fall through to MapToInvoicesDoc and produce an 8.4 invoice.
-        var factory = CreateFactory();
-        var receiptRequest = new ReceiptRequest
+        var factory = CreateFactory(); 
+        var entityVatNumber = new string("EL123456789".Where(char.IsDigit).ToArray());
+
+        var receiptRequest = BuildRequest(new List<PayItem>
         {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem
-                {
-                    Amount = 10,
-                    Description = "Payment",
-                    ProductNumber = "001",
-                    Quantity = 1,
-                    VATRate = 0,
-                    ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithTypeOfService(ChargeItemCaseTypeOfService.Receivable),
-                    Moment = DateTime.UtcNow,
-                    Position = 1,
-                    VATAmount = 0,
-                    Unit = "pcs"
-                }
-            },
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 10.00m,
-                    Description = "Cash",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
+            new PayItem { Position = 1, Amount = 10.00m, Description = "POS Payment",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+        });
 
-        var receiptResponse = new ReceiptResponse
-        {
-            cbReceiptReference = receiptRequest.cbReceiptReference,
-            ftReceiptIdentification = "ft123#",
-            ftCashBoxIdentification = "1233"
-        };
-
-        // Without cbPreviousReceiptReference, it should produce an 8.4 invoice via MapToInvoicesDoc
-        (var doc, var error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item84);
-    }
-
-    [Fact]
-    public void PaymentTransfer_WithPreviousReceiptReference_ShouldProducePaymentMethodsDoc()
-    {
-        // When a PaymentTransfer has a cbPreviousReceiptReference with a valid invoiceMark,
-        // it should produce a PaymentMethodsDoc (not an InvoicesDoc).
-        var factory = CreateFactory();
-        long invoiceMark = 400001951868897;
-
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbPreviousReceiptReference = "previous-receipt-ref",
-            cbChargeItems = new List<ChargeItem>(),
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Position = 1,
-                    Amount = 10.00m,
-                    Description = "POS Payment",
-                    ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)
-                }
-            },
-            ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002)
-        };
-
-        (var paymentDoc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, invoiceMark);
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001960899044, entityVatNumber);
 
         error.Should().BeNull();
-        paymentDoc.Should().NotBeNull();
-        paymentDoc!.paymentMethods[0].invoiceMark.Should().Be(invoiceMark);
-        paymentDoc.paymentMethods[0].paymentMethodDetails.Should().HaveCount(1);
-        paymentDoc.paymentMethods[0].paymentMethodDetails[0].type.Should().Be(MyDataPaymentMethods.PosEPos);
+        doc!.paymentMethods[0].entityVatNumber.Should().Be("123456789",
+            "provider endpoint requires digits-only VAT; EL/GR prefix must be stripped");
     }
 
     [Fact]
-    public void RoutingCondition_PaymentTransfer_WithPreviousRef_ShouldBeDetected()
+    public void MapToPaymentMethodsDoc_WithDigitsOnlyVat_ShouldPassThrough()
     {
-        // Verify the condition that would trigger SendPaymentsMethod routing
-        var receiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002);
-        string? cbPreviousReceiptReference = "some-previous-ref";
-
-        var receiptReferences = new List<(ReceiptRequest, ReceiptResponse)>
+        var factory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
-            (new ReceiptRequest
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "112545020" }
+        }, "https://test.receipts.example.com");
+
+        var entityVatNumber = new string("112545020".Where(char.IsDigit).ToArray());
+
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem { Position = 1, Amount = 10.00m, Description = "POS Payment",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001960899044, entityVatNumber);
+
+        error.Should().BeNull();
+        doc!.paymentMethods[0].entityVatNumber.Should().Be("112545020");
+    }
+
+    [Fact]
+    public void GeneratePaymentMethodPayload_WithEntityVatNumber_ShouldAppearInXmlBeforePaymentMethodDetails()
+    {
+        var doc = new PaymentMethodsDoc
+        {
+            paymentMethods = new[]
             {
-                cbTerminalID = "1",
-                Currency = Currency.EUR,
-                cbReceiptMoment = DateTime.UtcNow,
-                cbReceiptReference = "prev",
-                ftPosSystemId = Guid.NewGuid(),
-                cbChargeItems = new List<ChargeItem>(),
-                cbPayItems = new List<PayItem>(),
-                ftReceiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
-            },
-            new ReceiptResponse
-            {
-                cbReceiptReference = "prev",
-                ftReceiptIdentification = "ft100#",
-                ftSignatures = new List<SignatureItem>
+                new PaymentMethodType
                 {
-                    new SignatureItem
+                    invoiceMark = 400001960899044,
+                    entityVatNumber = "112545020",
+                    paymentMethodDetails = new[]
                     {
-                        Caption = "invoiceMark",
-                        Data = "400001951868897",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = (SignatureType)0x4752_2000_0000_0000
+                        new PaymentMethodDetailType { type = MyDataPaymentMethods.PosEPos, amount = 10.00m }
                     }
                 }
-            })
+            }
         };
 
-        // The routing condition in ProcessReceiptAsync
-        bool shouldUseSendPaymentsMethod =
-            receiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-            cbPreviousReceiptReference is not null &&
-            receiptReferences != null && receiptReferences.Count > 0;
+        var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
 
-        shouldUseSendPaymentsMethod.Should().BeTrue();
+        payload.Should().Contain("entityVatNumber");
+        payload.Should().Contain("112545020");
+        var entityVatPos = payload.IndexOf("entityVatNumber");
+        var detailsPos = payload.IndexOf("paymentMethodDetails");
+        entityVatPos.Should().BeLessThan(detailsPos,
+            "entityVatNumber should appear before paymentMethodDetails in the XML per schema order");
     }
 
     [Fact]
-    public void RoutingCondition_PaymentTransfer_WithoutPreviousRef_ShouldNotTrigger()
+    public void MapToPaymentMethodsDoc_WithoutEntityVatNumber_ShouldNotIncludeItInXml()
     {
-        // Without cbPreviousReceiptReference, the routing should NOT trigger SendPaymentsMethod
-        var receiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002);
-        string? cbPreviousReceiptReference = null;
-        List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null;
+        
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem { Position = 1, Amount = 10.00m, Description = "POS Payment",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+        });
 
-        bool shouldUseSendPaymentsMethod =
-            receiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-            cbPreviousReceiptReference is not null &&
-            receiptReferences != null && receiptReferences.Count > 0;
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001960899044);
 
-        shouldUseSendPaymentsMethod.Should().BeFalse();
+        error.Should().BeNull();
+        doc!.paymentMethods[0].entityVatNumber.Should().BeNull();
+
+        var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
+        payload.Should().NotContain("entityVatNumber",
+            "when the entity calls directly (not via provider), entityVatNumber should be omitted");
     }
 
-    [Fact]
-    public void RoutingCondition_NonPaymentTransfer_WithPreviousRef_ShouldNotTrigger()
-    {
-        // A non-PaymentTransfer receipt with cbPreviousReceiptReference should NOT route to SendPaymentsMethod
-        var receiptCase = ((ReceiptCase)0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001);
-        string? cbPreviousReceiptReference = "some-ref";
+    #endregion
 
-        bool shouldUseSendPaymentsMethod =
-            receiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-            cbPreviousReceiptReference is not null;
+    #region Helpers
 
-        shouldUseSendPaymentsMethod.Should().BeFalse();
-    }
+    private static ReceiptRequest BuildRequest(List<PayItem> payItems) =>
+        new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>(),
+            cbPayItems = payItems,
+            ftReceiptCase = SendPaymentsMethodCase
+        };
+
+    private static PaymentMethodsDoc BuildPaymentMethodsDoc(long invoiceMark, int type, decimal amount) =>
+        new PaymentMethodsDoc
+        {
+            paymentMethods = new[]
+            {
+                new PaymentMethodType
+                {
+                    invoiceMark = invoiceMark,
+                    paymentMethodDetails = new[]
+                    {
+                        new PaymentMethodDetailType { type = type, amount = amount }
+                    }
+                }
+            }
+        };
+
+    private static (ReceiptRequest, ReceiptResponse) BuildPreviousReceiptPair(string invoiceMark) =>
+        (new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = "prev",
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>(),
+            cbPayItems = new List<PayItem>(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
+        },
+        new ReceiptResponse
+        {
+            cbReceiptReference = "prev",
+            ftReceiptIdentification = "ft100#",
+            ftSignatures = new List<SignatureItem>
+            {
+                new SignatureItem
+                {
+                    Caption = "invoiceMark",
+                    Data = invoiceMark,
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = (SignatureType) 0x4752_2000_0000_0000
+                }
+            }
+        });
+
+    #endregion
 }

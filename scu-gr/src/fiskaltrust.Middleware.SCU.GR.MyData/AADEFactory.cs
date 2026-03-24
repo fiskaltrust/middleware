@@ -1016,7 +1016,7 @@ public class AADEFactory
                 invoiceMark = invoiceMark,
                 paymentMethodDetails = paymentMethodDetails.ToArray()
             };
-
+            
             if (!string.IsNullOrEmpty(entityVatNumber))
             {
                 paymentMethod.entityVatNumber = entityVatNumber;

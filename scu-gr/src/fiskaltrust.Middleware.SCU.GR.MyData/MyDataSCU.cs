@@ -266,8 +266,8 @@ public class MyDataSCU : IGRSSCD
             return await CancelDeliveryNoteAsync(request, mark);
         }
 
-        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-            request.ReceiptRequest.cbPreviousReceiptReference is not null &&
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod) &&
             receiptReferences != null && receiptReferences.Count > 0)
         {
             var previousReceipt = receiptReferences[0];
@@ -275,14 +275,15 @@ public class MyDataSCU : IGRSSCD
 
             if (string.IsNullOrEmpty(invoiceMarkText) || !long.TryParse(invoiceMarkText, out var invoiceMark))
             {
-                request.ReceiptResponse.SetReceiptResponseError("Cannot send payment method: The invoiceMark of the referenced invoice is missing or invalid. Please provide a valid cbPreviousReceiptReference.");
+                request.ReceiptResponse.SetReceiptResponseError("Cannot send payment method: The invoiceMark of the referenced invoice is missing or invalid. Please ensure cbPreviousReceiptReference points to a successfully submitted invoice.");
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
                 };
             }
 
-            return await SendPaymentsMethodAsync(request, invoiceMark);
+            var entityVatNumber = new string(_masterDataConfiguration.Account.VatId.Where(char.IsDigit).ToArray());
+            return await SendPaymentsMethodAsync(request, invoiceMark, entityVatNumber);
         }
 
         var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
@@ -577,14 +578,7 @@ public class MyDataSCU : IGRSSCD
         (var doc, var error) = aadFactory.MapToPaymentMethodsDoc(request.ReceiptRequest, invoiceMark, entityVatNumber);
         if (doc == null)
         {
-            if (error != null)
-            {
-                request.ReceiptResponse.SetReceiptResponseError(error.Exception.Message);
-            }
-            else
-            {
-                request.ReceiptResponse.SetReceiptResponseError("Something went wrong while mapping the payment method data. Please check the inbound request.");
-            }
+            request.ReceiptResponse.SetReceiptResponseError(error?.Exception.Message ?? "Something went wrong while mapping the payment method data. Please check the inbound request.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -647,16 +641,13 @@ public class MyDataSCU : IGRSSCD
                         {
                             continue;
                         }
-                        else
+                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
                         {
-                            request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                            {
-                                Data = data.Items[i].ToString() ?? "",
-                                Caption = data.ItemsElementName[i].ToString(),
-                                ftSignatureFormat = SignatureFormat.Text,
-                                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
-                            });
-                        }
+                            Data = data.Items[i].ToString() ?? "",
+                            Caption = data.ItemsElementName[i].ToString(),
+                            ftSignatureFormat = SignatureFormat.Text,
+                            ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                        });
                     }
                 }
                 else
