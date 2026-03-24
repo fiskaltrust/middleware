@@ -18,6 +18,16 @@ public static class SignatureItemFactoryGR
             ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
         });
     }
+    public static void AddTransmissionFailure2Signature(ProcessRequest request)
+    {
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
+            Caption = "Transmission Failure_2",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+        });
+    }
 
     public static void AddMarksForConnectedMarks(ProcessRequest request, InvoicesDoc doc)
     {
