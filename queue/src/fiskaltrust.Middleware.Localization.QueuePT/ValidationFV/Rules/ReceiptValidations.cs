@@ -1,37 +1,59 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using FluentValidation;
+using ReceiptReferenceProvider = fiskaltrust.Middleware.Localization.v2.Validation.ReceiptReferenceProvider;
+using Currency = fiskaltrust.ifPOS.v2.Currency;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ReceiptResponse? response = null)
+    public ReceiptValidations(
+        ReceiptReferenceProvider receiptReferenceProvider,
+        DocumentStatusProvider documentStatusProvider,
+        VoidValidator voidValidator,
+        RefundValidator refundValidator,
+        ReceiptResponse? response = null)
     {
-        // Guards (match old ReceiptValidator early exits)
         Include(new CurrencyMustBeEur());
         Include(new TrainingModeNotSupported());
         Include(new ChargeItemsMustNotBeNull());
         Include(new PayItemsMustNotBeNull());
+        Include(new ReceiptReferenceAlreadyUsed(receiptReferenceProvider));
 
         Include(new RefundMustHavePreviousReference());
         Include(new RefundMustNotAlreadyExist(receiptReferenceProvider));
         Include(new PartialRefundMustNotContainNonRefundItems());
         Include(new MixedRefundPayItemsNotAllowed());
+        Include(new PartialRefundPreviousReceiptMustNotBeVoided(receiptReferenceProvider));
+        Include(new PartialRefundMustNotHaveExistingRefund(receiptReferenceProvider));
         Include(new HandwrittenMustNotBeRefundOrVoid());
         Include(new HandwrittenMustHaveSeriesAndNumber());
         Include(new HandwrittenReceiptOnlyForInvoices());
         Include(new HandwrittenSeriesInvalidCharacter());
+        Include(new HandwrittenSeriesNumberAlreadyLinked(receiptReferenceProvider));
+        Include(new PreviousReceiptMustNotBeVoided(receiptReferenceProvider));
 
         Include(new PaymentTransferMustHaveAccountReceivableItem());
         Include(new PaymentTransferMustNotAlreadyExist(receiptReferenceProvider));
         Include(new PaymentTransferOriginalMustBeInvoice(receiptReferenceProvider));
         Include(new PaymentTransferAmountsMustMatch(receiptReferenceProvider));
+
+        Include(new VoidDocumentStatusCheck(receiptReferenceProvider, documentStatusProvider));
+        Include(new VoidFieldsMatch(receiptReferenceProvider, voidValidator));
+        Include(new FullRefundFieldsMatch(receiptReferenceProvider, refundValidator));
+        Include(new PartialRefundFieldsMatch(receiptReferenceProvider, refundValidator));
+        Include(new PaymentTransferForRefundedReceipt(receiptReferenceProvider));
+        Include(new PaymentTransferCustomerMismatch(receiptReferenceProvider));
+        Include(new PaymentTransferOnlyOneReference());
+        Include(new PreviousReceiptLineItemsMatch(receiptReferenceProvider));
 
         // Non-handwritten rules
         Include(new ReceiptMustBeBalanced());
@@ -382,6 +404,94 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         }
     }
 
+    public class ReceiptReferenceAlreadyUsed : AbstractValidator<ReceiptRequest>
+    {
+        public ReceiptReferenceAlreadyUsed(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x.cbReceiptReference)
+                .MustAsync(async (cbReceiptReference, _) =>
+                    !await receiptReferenceProvider.HasExistingSuccessfulReceiptReferenceAsync(cbReceiptReference))
+                .WithMessage(request => $"Receipt reference '{request.cbReceiptReference}' has already been used in a successful receipt.")
+                .WithErrorCode("ReceiptReferenceAlreadyUsed");
+        }
+    }
+
+    public class PartialRefundPreviousReceiptMustNotBeVoided : AbstractValidator<ReceiptRequest>
+    {
+        public PartialRefundPreviousReceiptMustNotBeVoided(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .MustAsync(async (previousRef, _) =>
+                    !await receiptReferenceProvider.HasExistingVoidAsync(previousRef!.SingleValue!))
+                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() && x.cbPreviousReceiptReference != null)
+                .WithMessage("The original receipt has already been voided and cannot be partially refunded.")
+                .WithErrorCode("PreviousReceiptIsVoided");
+        }
+    }
+
+    public class PartialRefundMustNotHaveExistingRefund : AbstractValidator<ReceiptRequest>
+    {
+        public PartialRefundMustNotHaveExistingRefund(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .MustAsync(async (previousRef, _) =>
+                    !await receiptReferenceProvider.HasExistingRefundAsync(previousRef!.SingleValue!))
+                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() && x.cbPreviousReceiptReference != null)
+                .WithMessage("A full refund for this receipt already exists.")
+                .WithErrorCode("RefundAlreadyExists");
+        }
+    }
+
+    public class HandwrittenSeriesNumberAlreadyLinked : AbstractValidator<ReceiptRequest>
+    {
+        public HandwrittenSeriesNumberAlreadyLinked(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var data) ||
+                        data?.PT?.Series is null || !data.PT.Number.HasValue)
+                        return true;
+                    var series = data.PT.Series;
+                    var number = data.PT.Number.Value;
+                    return !await receiptReferenceProvider.HasMatchingQueueItemAsync(r =>
+                        r.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) &&
+                        r.cbReceiptReference != request.cbReceiptReference &&
+                        r.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var d) &&
+                        d?.PT?.Series == series &&
+                        d.PT.Number.HasValue &&
+                        d.PT.Number.Value == number);
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+                .WithMessage(request =>
+                {
+                    request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var data);
+                    return $"Handwritten receipt with series '{data?.PT?.Series}' and number '{data?.PT?.Number}' has already been linked.";
+                })
+                .WithErrorCode("HandwrittenSeriesNumberAlreadyLinked");
+        }
+    }
+
+    public class PreviousReceiptMustNotBeVoided : AbstractValidator<ReceiptRequest>
+    {
+        public PreviousReceiptMustNotBeVoided(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .MustAsync(async (previousRef, _) =>
+                {
+                    if (previousRef!.IsSingle)
+                        return !await receiptReferenceProvider.HasExistingVoidAsync(previousRef.SingleValue!);
+                    foreach (var reference in previousRef.GroupValue)
+                        if (await receiptReferenceProvider.HasExistingVoidAsync(reference))
+                            return false;
+                    return true;
+                })
+                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbPreviousReceiptReference != null)
+                .WithMessage("The referenced receipt has already been voided.")
+                .WithErrorCode("PreviousReceiptIsVoided");
+        }
+    }
+
     public class HandwrittenReceiptOnlyForInvoices : AbstractValidator<ReceiptRequest>
     {
         private static readonly ReceiptCase[] _invoiceCases =
@@ -417,6 +527,230 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage("Handwritten receipt series must not contain spaces.")
                 .WithErrorCode("HandwrittenSeriesInvalidCharacter");
+        }
+    }
+
+    public class VoidDocumentStatusCheck : AbstractValidator<ReceiptRequest>
+    {
+        public VoidDocumentStatusCheck(ReceiptReferenceProvider receiptReferenceProvider, DocumentStatusProvider documentStatusProvider)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptWithResponseAsync(request.cbPreviousReceiptReference!.SingleValue!);
+                    if (original == null)
+                        return true;
+                    var status = await documentStatusProvider.GetDocumentStatusStateAsync(original.Value);
+                    return status.Status != DocumentStatus.Voided;
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
+                .WithMessage(request => $"The receipt '{request.cbPreviousReceiptReference!.SingleValue}' has already been voided.")
+                .WithErrorCode("VoidAlreadyExists");
+
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptWithResponseAsync(request.cbPreviousReceiptReference!.SingleValue!);
+                    if (original == null)
+                        return true;
+                    var status = await documentStatusProvider.GetDocumentStatusStateAsync(original.Value);
+                    return status.Status != DocumentStatus.Invoiced;
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
+                .WithMessage(request => $"Cannot void receipt '{request.cbPreviousReceiptReference!.SingleValue}' because it has already been invoiced.")
+                .WithErrorCode("CannotVoidInvoicedDocument");
+
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptWithResponseAsync(request.cbPreviousReceiptReference!.SingleValue!);
+                    if (original == null)
+                        return true;
+                    var status = await documentStatusProvider.GetDocumentStatusStateAsync(original.Value);
+                    return status.Status != DocumentStatus.Refunded;
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
+                .WithMessage(request => $"Cannot void receipt '{request.cbPreviousReceiptReference!.SingleValue}' because it has already been refunded.")
+                .WithErrorCode("CannotVoidRefundedDocument");
+
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptWithResponseAsync(request.cbPreviousReceiptReference!.SingleValue!);
+                    if (original == null)
+                        return true;
+                    var status = await documentStatusProvider.GetDocumentStatusStateAsync(original.Value);
+                    return status.Status != DocumentStatus.PartiallyRefunded;
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
+                .WithMessage(request => $"Cannot void receipt '{request.cbPreviousReceiptReference!.SingleValue}' because it has already been partially refunded.")
+                .WithErrorCode("CannotVoidPartiallyRefundedDocument");
+        }
+    }
+
+    public class VoidFieldsMatch : AbstractValidator<ReceiptRequest>
+    {
+        public VoidFieldsMatch(ReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var previousRef = request.cbPreviousReceiptReference!.SingleValue!;
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(previousRef);
+                    if (original == null)
+                        return true;
+                    var error = await voidValidator.ValidateVoidAsync(request, original, previousRef);
+                    return error == null;
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
+                .WithMessage("Void items mismatch with the original receipt.")
+                .WithErrorCode("VoidItemsMismatch");
+        }
+    }
+
+    public class FullRefundFieldsMatch : AbstractValidator<ReceiptRequest>
+    {
+        public FullRefundFieldsMatch(ReceiptReferenceProvider receiptReferenceProvider, RefundValidator refundValidator)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var previousRef = request.cbPreviousReceiptReference!.SingleValue!;
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(previousRef);
+                    if (original == null)
+                        return true;
+                    var error = await refundValidator.ValidateFullRefundAsync(request, original, previousRef);
+                    return error == null;
+                })
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+                        && x.cbChargeItems != null
+                        && !x.IsPartialRefundReceipt()
+                        && x.cbPreviousReceiptReference != null)
+                .WithMessage("Full refund items mismatch with the original receipt.")
+                .WithErrorCode("FullRefundItemsMismatch");
+        }
+    }
+
+    public class PartialRefundFieldsMatch : AbstractValidator<ReceiptRequest>
+    {
+        public PartialRefundFieldsMatch(ReceiptReferenceProvider receiptReferenceProvider, RefundValidator refundValidator)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var previousRef = request.cbPreviousReceiptReference!.SingleValue!;
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(previousRef);
+                    if (original == null)
+                        return true;
+                    var error = await refundValidator.ValidatePartialRefundAsync(request, original, previousRef);
+                    return error == null;
+                })
+                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() && x.cbPreviousReceiptReference != null)
+                .WithMessage("Partial refund items mismatch with the original receipt.")
+                .WithErrorCode("PartialRefundItemsMismatch");
+        }
+    }
+
+    public class PaymentTransferForRefundedReceipt : AbstractValidator<ReceiptRequest>
+    {
+        public PaymentTransferForRefundedReceipt(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .MustAsync(async (previousRef, _) =>
+                    !await receiptReferenceProvider.HasExistingRefundAsync(previousRef!.SingleValue!))
+                .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && x.cbPreviousReceiptReference != null)
+                .WithMessage(request => $"Cannot create a payment transfer for receipt '{request.cbPreviousReceiptReference!.SingleValue}' because it has already been refunded.")
+                .WithErrorCode("PaymentTransferForRefundedReceipt");
+        }
+    }
+
+    public class PaymentTransferCustomerMismatch : AbstractValidator<ReceiptRequest>
+    {
+        public PaymentTransferCustomerMismatch(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(request.cbPreviousReceiptReference!.SingleValue!);
+                    if (original == null)
+                        return true;
+                    var (matches, _) = RefundValidator.CustomersMatch(original.GetCustomerOrNull(), request.GetCustomerOrNull());
+                    return matches;
+                })
+                .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && x.cbPreviousReceiptReference != null)
+                .WithMessage("Customer data mismatch between payment transfer and original invoice.")
+                .WithErrorCode("PaymentTransferCustomerMismatch");
+        }
+    }
+
+    public class PaymentTransferOnlyOneReference : AbstractValidator<ReceiptRequest>
+    {
+        public PaymentTransferOnlyOneReference()
+        {
+            RuleFor(x => x.cbPreviousReceiptReference)
+                .Must(previousRef => previousRef!.IsSingle)
+                .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && x.cbPreviousReceiptReference != null)
+                .WithMessage("Payment transfer must reference exactly one receipt.")
+                .WithErrorCode("PaymentTransferMultipleReferences");
+        }
+    }
+
+    public class PreviousReceiptLineItemsMatch : AbstractValidator<ReceiptRequest>
+    {
+        public PreviousReceiptLineItemsMatch(ReceiptReferenceProvider receiptReferenceProvider)
+        {
+            RuleFor(x => x)
+                .MustAsync(async (request, _) =>
+                {
+                    var previousRef = request.cbPreviousReceiptReference!.IsSingle
+                        ? request.cbPreviousReceiptReference.SingleValue!
+                        : request.cbPreviousReceiptReference.GroupValue[0];
+                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(previousRef);
+                    if (original == null)
+                        return true;
+                    return HasConnectableChargeItem(request, original);
+                })
+                .When(x => x.cbPreviousReceiptReference != null
+                        && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+                        && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                        && !x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002)
+                        && x.cbChargeItems != null
+                        && !x.IsPartialRefundReceipt())
+                .WithMessage("No matching product line items found between the current receipt and the referenced original receipt.")
+                .WithErrorCode("PreviousReceiptLineItemMismatch");
+        }
+
+        private static bool HasConnectableChargeItem(ReceiptRequest currentRequest, ReceiptRequest originalRequest)
+        {
+            if (currentRequest.cbChargeItems is null || currentRequest.cbChargeItems.Count == 0 ||
+                originalRequest.cbChargeItems is null || originalRequest.cbChargeItems.Count == 0)
+                return false;
+
+            var currentIdentifiers = currentRequest.cbChargeItems
+                .Where(IsProductChargeItem)
+                .Select(SaftExporter.GenerateUniqueProductIdentifier)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToHashSet(StringComparer.Ordinal);
+
+            if (currentIdentifiers.Count == 0)
+                return false;
+
+            foreach (var originalItem in originalRequest.cbChargeItems.Where(IsProductChargeItem))
+            {
+                var originalIdentifier = SaftExporter.GenerateUniqueProductIdentifier(originalItem);
+                if (!string.IsNullOrEmpty(originalIdentifier) && currentIdentifiers.Contains(originalIdentifier))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsProductChargeItem(ChargeItem chargeItem)
+        {
+            if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount) ||
+                chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
+                return false;
+            return true;
         }
     }
 }
