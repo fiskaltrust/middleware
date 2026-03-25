@@ -23,6 +23,12 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         ReceiptResponse? response = null,
         object? numberSeries = null)
     {
+        // DEMO: always fail in FV to show shadow mismatch 
+        RuleFor(x => x.cbReceiptReference)
+            .Must(_ => false)
+            .WithMessage("Shadow validation demo — FV intentionally failing.")
+            .WithErrorCode("DEMO_ShadowMismatch");
+
         Include(new TrainingModeNotSupported());
         Include(new ReceiptReferenceAlreadyUsed(receiptReferenceProvider));
 
