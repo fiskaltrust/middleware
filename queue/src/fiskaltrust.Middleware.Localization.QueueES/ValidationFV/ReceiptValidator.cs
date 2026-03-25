@@ -12,7 +12,7 @@ public class ReceiptValidator : MarketValidator
     {
     }
 
-    protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators()
+    protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null)
     {
         yield return new ChargeItemValidations();
         yield return new CustomerValidations();
