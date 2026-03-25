@@ -229,6 +229,13 @@ public class AADEFactory
         {
             // It looks like Item93 does NOT allow to specify the currency
             inv.invoiceHeader.currencySpecified = false;
+
+            // Reverse delivery note: 9.3 + ReceiptCaseFlags.Refund on the receipt case
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                inv.invoiceHeader.reverseDeliveryNote = true;
+                inv.invoiceHeader.reverseDeliveryNoteSpecified = true;
+            }
         }
 
         var isVoidFlag = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void);
@@ -480,6 +487,22 @@ public class AADEFactory
                 invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranch = headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.Value;
                 invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranchSpecified = true;
             }
+        }
+
+        // Apply reverse delivery note purpose only when reverseDeliveryNote is already set (9.3 + Refund flag was set earlier in CreateInvoiceDocType)
+        if (invoice.invoiceHeader.invoiceType == InvoiceType.Item93
+            && invoice.invoiceHeader.reverseDeliveryNote)
+        { 
+            if (!headerOverride.ReverseDeliveryNotePurpose.HasValue)
+            {
+                throw new ArgumentException(
+                    "reverseDeliveryNotePurpose is mandatory for reverse delivery note ",
+                    nameof(headerOverride.ReverseDeliveryNotePurpose));
+            }
+
+            invoice.invoiceHeader.reverseDeliveryNotePurpose =
+               AADEMappings.GetReverseDeliveryNotePurpose(headerOverride.ReverseDeliveryNotePurpose.Value);
+            invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
         }
     }
 
