@@ -132,6 +132,15 @@ public class InvoiceHeaderOverride
     /// </summary>
     [JsonPropertyName("otherMovePurposeTitle")]
     public string? OtherMovePurposeTitle { get; set; }
+
+    /// <summary>
+    /// Reason for issuing a reverse delivery note (9.3 only).
+    /// Valid values: 
+    /// 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,
+    /// 3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION
+    /// </summary>
+    [JsonPropertyName("reverseDeliveryNotePurpose")]
+    public int? ReverseDeliveryNotePurpose { get; set; }
 }
 
 public class OtherDeliveryNoteHeaderOverride
