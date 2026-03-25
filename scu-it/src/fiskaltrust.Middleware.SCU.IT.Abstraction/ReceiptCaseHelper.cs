@@ -19,6 +19,10 @@ public static class ReceiptCaseHelper
 
     public static bool IsReprint(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.Reprint0x3010;
 
+    public static bool IsResetPrinter(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.ResetPrinter0x3011;
+
+    public static bool IsRebootPrinter(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.RebootPrinter0x3012;
+
     public static bool IsZeroReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.ZeroReceipt0x2000;
 
     public static bool IsOutOfOperationReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.OutOfOperationReceipt0x4002;
