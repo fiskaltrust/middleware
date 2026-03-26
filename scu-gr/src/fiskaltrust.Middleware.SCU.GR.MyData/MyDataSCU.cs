@@ -96,6 +96,27 @@ public class MyDataSCU : IGRSSCD
             return await CancelDeliveryNoteAsync(request, mark);
         }
 
+        var hasLocalPayItemFlag = request.ReceiptRequest.cbPayItems.Any(p => ((long) p.ftPayItemCase & 0x0000_0001_0000_0000) != 0);
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            hasLocalPayItemFlag &&
+            receiptReferences != null && receiptReferences.Count > 0)
+        {
+            var previousReceipt = receiptReferences[0];
+            var invoiceMarkText = previousReceipt.Item2.ftSignatures?.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+
+            if (string.IsNullOrEmpty(invoiceMarkText) || !long.TryParse(invoiceMarkText, out var invoiceMark))
+            {
+                request.ReceiptResponse.SetReceiptResponseError("Cannot send payment method: The invoiceMark of the referenced invoice is missing or invalid. Please ensure cbPreviousReceiptReference points to a successfully submitted invoice.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+
+            var entityVatNumber = new string(_masterDataConfiguration.Account.VatId.Where(char.IsDigit).ToArray());
+            return await SendPaymentsMethodAsync(request, invoiceMark, entityVatNumber);
+        }
+
         var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
@@ -351,6 +372,122 @@ public class MyDataSCU : IGRSSCD
                     {
                         AADEError = data.statusCode,
                         Errors = errors?.ToList() ?? new List<ErrorType>()
+                    }, options: new JsonSerializerOptions
+                    {
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    }));
+                }
+            }
+            else
+            {
+                request.ReceiptResponse.SetReceiptResponseError(content);
+            }
+        }
+        else
+        {
+            request.ReceiptResponse.SetReceiptResponseError(content);
+        }
+
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
+    }
+
+    public async Task<ProcessResponse> SendPaymentsMethodAsync(ProcessRequest request, long invoiceMark, string? entityVatNumber = null)
+    {
+        if (string.IsNullOrEmpty(_masterDataConfiguration.Account.VatId))
+        {
+            request.ReceiptResponse.SetReceiptResponseError("The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
+        (var doc, var error) = aadFactory.MapToPaymentMethodsDoc(request.ReceiptRequest, invoiceMark, entityVatNumber);
+        if (doc == null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(error?.Exception.Message ?? "Something went wrong while mapping the payment method data. Please check the inbound request.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
+        var response = await _httpClient.PostAsync("/myDataProvider/SendPaymentsMethod", new StringContent(payload, Encoding.UTF8, "application/xml"));
+        var content = await response.Content.ReadAsStringAsync();
+
+        var governmentApiResponse = new GovernmentApiData
+        {
+            Protocol = "mydata",
+            ProtocolVersion = "1.0",
+            Action = response.RequestMessage!.RequestUri!.ToString(),
+            ProtocolRequest = payload,
+            ProtocolResponse = content
+        };
+
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governmentApiResponse
+                }
+            };
+        }
+
+        if ((int) response.StatusCode >= 500)
+        {
+            request.ReceiptResponse.SetReceiptResponseError("Error while sending the payment method request to MyData API. Please check the logs for more details.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            var result = GetResponse(content);
+            if (result != null && result.response?.Length > 0)
+            {
+                var data = result.response[0];
+                if (data == null || data.Items == null || data.ItemsElementName == null)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    return new ProcessResponse
+                    {
+                        ReceiptResponse = request.ReceiptResponse
+                    };
+                }
+
+                if (data.statusCode.ToLower() == "success")
+                {
+                    for (var i = 0; i < data.ItemsElementName.Length; i++)
+                    {
+                        if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                        {
+                            continue;
+                        }
+                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                        {
+                            Data = data.Items[i].ToString() ?? "",
+                            Caption = data.ItemsElementName[i].ToString(),
+                            ftSignatureFormat = SignatureFormat.Text,
+                            ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                        });
+                    }
+                }
+                else
+                {
+                    var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
+                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    {
+                        AADEError = data.statusCode,
+                        Errors = errors.ToList()
                     }, options: new JsonSerializerOptions
                     {
                         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
