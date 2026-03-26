@@ -1053,6 +1053,7 @@ public class MyDataOverrideTests
     {
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
         request.cbChargeItems[0].ftChargeItemCaseData = new
         {
             GR = new

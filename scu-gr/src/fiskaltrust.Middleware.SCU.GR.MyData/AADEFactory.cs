@@ -377,7 +377,8 @@ public class AADEFactory
                 var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
                     JsonSerializer.Serialize(ci.ftChargeItemCaseData),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                return data?.GR?.MyDataOverride?.InvoiceDetails?.IncomeClassification != null;
+                var details = data?.GR?.MyDataOverride?.InvoiceDetails;
+                return details?.IncomeClassification != null || details?.ExpensesClassification != null;
             }
             catch { return false; }
         }).Count();
@@ -387,14 +388,14 @@ public class AADEFactory
         if (itemsWithClassificationOverride != receiptRequest.cbChargeItems.Count)
         {
             throw new ArgumentException(
-                "When incomeClassification override is set on any charge item, it must be set on all charge items.");
+                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
         }
 
         var invoiceTypeOverride = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
         if (string.IsNullOrEmpty(invoiceTypeOverride))
         {
             throw new ArgumentException(
-                "When incomeClassification override is set, invoiceType must also be overridden in the invoice header.");
+                "When a classification override is set, invoiceType must also be overridden in the invoice header.");
         }
     }
 
