@@ -706,6 +706,7 @@ public class AADEFactory
                 existing.classificationCategorySpecified = true;
             }
             row.expensesClassification = [existing];
+            row.incomeClassification = null;
         }
         if (detailOverride.Quantity15.HasValue)
         {
