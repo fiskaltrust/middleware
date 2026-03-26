@@ -12,6 +12,7 @@ public class MiddlewareCustomer
     public string? CustomerId { get; set; }
     public string? CustomerType { get; set; }
     public string? CustomerStreet { get; set; }
+    public string? CustomerHouseNumber { get; set; }
     public string? CustomerZip { get; set; }
     public string? CustomerCity { get; set; }
     public string? CustomerCountry { get; set; }

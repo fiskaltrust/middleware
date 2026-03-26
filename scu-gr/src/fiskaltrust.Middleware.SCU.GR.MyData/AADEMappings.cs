@@ -136,7 +136,7 @@ public static class AADEMappings
                 }
                 else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
-                    throw new Exception("Agency business with non EU customer is not supported");
+                    return IncomeClassificationValueType.E3_881_004;
                 }
                 else
                 {

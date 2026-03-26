@@ -362,7 +362,40 @@ public class AADEFactory
             ApplyMyDataOverride(inv, overrideData.GR.MyDataOverride);
         }
 
+        // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
+        ValidateClassificationOverrideConsistency(receiptRequest, overrideData);
         return inv;
+    }
+
+    private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest, ftReceiptCaseDataPayload? overrideData)
+    {
+        var itemsWithClassificationOverride = receiptRequest.cbChargeItems.Where(ci =>
+        {
+            if (ci.ftChargeItemCaseData == null) return false;
+            try
+            {
+                var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
+                    JsonSerializer.Serialize(ci.ftChargeItemCaseData),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return data?.GR?.MyDataOverride?.InvoiceDetails?.IncomeClassification != null;
+            }
+            catch { return false; }
+        }).Count();
+
+        if (itemsWithClassificationOverride == 0) return;
+
+        if (itemsWithClassificationOverride != receiptRequest.cbChargeItems.Count)
+        {
+            throw new ArgumentException(
+                "When incomeClassification override is set on any charge item, it must be set on all charge items.");
+        }
+
+        var invoiceTypeOverride = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
+        if (string.IsNullOrEmpty(invoiceTypeOverride))
+        {
+            throw new ArgumentException(
+                "When incomeClassification override is set, invoiceType must also be overridden in the invoice header.");
+        }
     }
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
@@ -1233,68 +1266,34 @@ public class AADEFactory
             return null;
         }
 
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        var vatNumber = GetAADEVAT(customer.CustomerVATId);
+        var isDomestic = countryType == CountryType.GR;
+
+        var party = new PartyType
         {
-            return new PartyType
+            vatNumber = vatNumber,
+            country = countryType,
+            branch = 0,
+        };
+
+        if (!isDomestic)
+        {
+            party.name = customer.CustomerName;
+        }
+
+        var hasAddress = !string.IsNullOrEmpty(customer.CustomerZip) && !string.IsNullOrEmpty(customer.CustomerCity);
+        if (hasAddress)
+        {
+            party.address = new AddressType
             {
-                vatNumber = customer?.CustomerVATId,
-                country = countryType,
-                branch = 0,
-                address = new AddressType
-                {
-                    street = customer?.CustomerStreet,
-                    city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip,
-                    number = 0.ToString()
-                },
-                name = customer?.CustomerName,
+                postalCode = customer.CustomerZip,
+                city = customer.CustomerCity,
+                street = !string.IsNullOrEmpty(customer.CustomerStreet) ? customer.CustomerStreet : null,
+                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : null
             };
         }
 
-
-        if (customer?.CustomerVATId?.StartsWith("EL") == true && countryType == CountryType.GR)
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId.Replace("EL", ""),
-                country = CountryType.GR,
-                branch = 0,
-            };
-        }
-        else if (customer?.CustomerVATId?.StartsWith("GR") == true && countryType == CountryType.GR)
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId.Replace("GR", ""),
-                country = CountryType.GR,
-                branch = 0,
-            };
-        }
-        else if (customer?.CustomerCountry == "GR" && countryType == CountryType.GR)
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId,
-                country = CountryType.GR,
-                branch = 0,
-            };
-        }
-        else
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId,
-                country = countryType,
-                branch = 0,
-                address = new AddressType
-                {
-                    street = customer?.CustomerStreet,
-                    city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip
-                },
-                name = customer?.CustomerName,
-            };
-        }
+        return party;
     }
 
     public static string GetAADEVAT(string issuerVat)

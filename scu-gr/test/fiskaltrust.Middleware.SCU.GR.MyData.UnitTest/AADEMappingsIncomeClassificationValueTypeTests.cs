@@ -144,16 +144,17 @@ public class AADEMappingsIncomeClassificationValueTypeTests
     }
 
     [Fact]
-    public void GetIncomeClassificationValueType_WithNotOwnSalesInvoiceThirdCountry_ThrowsException()
+    public void GetIncomeClassificationValueType_WithNotOwnSalesInvoiceThirdCountry_ReturnsE3_881_004()
     {
         // Arrange
         var receiptRequest = CreateReceiptRequest(receiptCase: ReceiptCase.InvoiceB2B0x1002, customerCountry: CustomerCountryCategory.ThirdCountry);
         var chargeItem = CreateChargeItem(ChargeItemCaseTypeOfService.NotOwnSales);
 
-        // Act & Assert
-        var action = () => AADEMappings.GetIncomeClassificationValueType(receiptRequest, chargeItem);
-        action.Should().Throw<Exception>()
-            .WithMessage("Agency business with non EU customer is not supported");
+        // Act
+        var result = AADEMappings.GetIncomeClassificationValueType(receiptRequest, chargeItem);
+
+        // Assert
+        result.Should().Be(IncomeClassificationValueType.E3_881_004);
     }
 
     #endregion

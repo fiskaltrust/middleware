@@ -930,6 +930,7 @@ public class MyDataOverrideTests
     {
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
         request.cbChargeItems[0].ftChargeItemCaseData = new
         {
             GR = new
@@ -1144,6 +1145,7 @@ public class MyDataOverrideTests
     {
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
         request.cbChargeItems[0].ftChargeItemCaseData = new
         {
             GR = new
@@ -1296,6 +1298,7 @@ public class MyDataOverrideTests
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
         // Set explicit values: Amount=124, VATRate=24, VATAmount=24 → netValue = 124 - 24 = 100
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
         request.cbChargeItems[0].Amount = 124m;
         request.cbChargeItems[0].VATRate = 24m;
         request.cbChargeItems[0].VATAmount = 24m;
@@ -1334,5 +1337,370 @@ public class MyDataOverrideTests
         // Summary must aggregate correctly
         doc.invoice[0].invoiceSummary.totalNetValue.Should().Be(100m);
         doc.invoice[0].invoiceSummary.incomeClassification[0].amount.Should().Be(100m);
+    }
+
+    // === AGENCY BUSINESS (NotOwnSales) TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_AgencyBusiness_PosReceipt_ShouldMapToInvoiceType_11_5()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "agency-pos",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1,
+                    Description = "Handmade jewelry (on behalf of third party)",
+                    Amount = 62.00m,
+                    VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate)
+                        .WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales),
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 62.00m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0005 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item115, "POS receipt with NotOwnSales should be 11.5");
+        doc.invoice[0].invoiceDetails[0].incomeClassification.Should().ContainSingle();
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_7);
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        xml.Should().Contain("<invoiceType>11.5</invoiceType>");
+        xml.Should().Contain(">category1_7</classificationCategory>");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_AgencyBusiness_B2BInvoice_ShouldMapToInvoiceType_1_4()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "agency-b2b",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "EL026883248",
+                CustomerName = "Αγοραστής Α.Ε.",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 5,
+                    Description = "Electronics (on behalf of third party)",
+                    Amount = 620.00m,
+                    VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate)
+                        .WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales),
+                    VATAmount = 120,
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Description = "Bank Transfer", Amount = 620.00m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0004 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item14, "B2B invoice with NotOwnSales should be 1.4");
+        doc.invoice[0].invoiceDetails[0].incomeClassification.Should().ContainSingle();
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_7);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].amount.Should().Be(500.00m, "netValue = 620 - 120 = 500");
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        xml.Should().Contain("<invoiceType>1.4</invoiceType>");
+        xml.Should().Contain(">category1_7</classificationCategory>");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_AgencyBusiness_MixedWithNonAgency_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "agency-mixed",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Agency item", Amount = 50.00m, VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate)
+                        .WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales),
+                },
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Own item", Amount = 30.00m, VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate),
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 80.00m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull("mixing agency and non-agency items is not allowed");
+        error!.Exception.Message.Should().Contain("NotOwnSales");
+    }
+
+    // === COUNTERPART NAME TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_DomesticCustomer_ShouldNotSetCounterpartName()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "domestic-name",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "EL026883248",
+                CustomerName = "Πελάτης Α.Ε.",
+                CustomerStreet = "Σταδίου 15",
+                CustomerZip = "10562",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Item", Amount = 124m, VATRate = 24m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATAmount = 24
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 124m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.name.Should().BeNull("domestic GR customers should not have name set");
+        doc.invoice[0].counterpart.vatNumber.Should().Be("026883248");
+        doc.invoice[0].counterpart.country.Should().Be(CountryType.GR);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ForeignCustomer_ShouldSetCounterpartName()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "foreign-name",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "DE123456789",
+                CustomerName = "German GmbH",
+                CustomerStreet = "Berliner Str. 1",
+                CustomerZip = "10115",
+                CustomerCity = "Berlin",
+                CustomerCountry = "DE"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Item", Amount = 124m, VATRate = 24m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATAmount = 24
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 124m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.name.Should().Be("German GmbH", "foreign customers must have name set");
+        doc.invoice[0].counterpart.country.Should().Be(CountryType.DE);
+    }
+
+    // === COUNTERPART ADDRESS FIELD TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerWithPostalCodeAndCity_ShouldSetAddress()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL026883248",
+            CustomerZip = "10562",
+            CustomerCity = "Αθηνών",
+            CustomerCountry = "GR"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var cp = doc!.invoice[0].counterpart;
+        cp.address.Should().NotBeNull();
+        cp.address.postalCode.Should().Be("10562");
+        cp.address.city.Should().Be("Αθηνών");
+        cp.address.street.Should().BeNull("street not provided");
+        cp.address.number.Should().BeNull("house number not provided");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerWithStreetAndHouseNumber_ShouldSetBoth()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "DE123456789",
+            CustomerName = "Test GmbH",
+            CustomerStreet = "Berliner Str.",
+            CustomerHouseNumber = "42",
+            CustomerZip = "10115",
+            CustomerCity = "Berlin",
+            CustomerCountry = "DE"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var cp = doc!.invoice[0].counterpart;
+        cp.address.Should().NotBeNull();
+        cp.address.street.Should().Be("Berliner Str.");
+        cp.address.number.Should().Be("42");
+        cp.address.postalCode.Should().Be("10115");
+        cp.address.city.Should().Be("Berlin");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerWithoutPostalCodeOrCity_ShouldNotSetAddress()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL026883248",
+            CustomerCountry = "GR"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var cp = doc!.invoice[0].counterpart;
+        cp.address.Should().BeNull("no postalCode/city provided");
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().NotContain("<address>", "no address element should be serialized");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerAddress_XmlShouldOmitEmptyStreetAndNumber()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL026883248",
+            CustomerZip = "10562",
+            CustomerCity = "Αθηνών",
+            CustomerCountry = "GR"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().Contain("<postalCode>10562</postalCode>");
+        xml.Should().Contain("<city>Αθηνών</city>");
+        xml.Should().NotContain("<street");
+        xml.Should().NotContain("<number");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerAddressWithAllFields_XmlShouldIncludeStreetAndNumber()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "DE123456789",
+            CustomerName = "Test GmbH",
+            CustomerStreet = "Hauptstr.",
+            CustomerHouseNumber = "7",
+            CustomerZip = "80331",
+            CustomerCity = "München",
+            CustomerCountry = "DE"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().Contain("<street>Hauptstr.</street>");
+        xml.Should().Contain("<number>7</number>");
+        xml.Should().Contain("<postalCode>80331</postalCode>");
+        xml.Should().Contain("<city>München</city>");
     }
 }
