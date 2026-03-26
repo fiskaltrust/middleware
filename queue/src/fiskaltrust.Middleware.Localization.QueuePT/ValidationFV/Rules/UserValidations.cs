@@ -25,13 +25,17 @@ public class UserValidations : AbstractValidator<ReceiptRequest>
                     }
                     catch (System.Text.Json.JsonException ex)
                     {
-                        context.AddFailure("cbUser", $"cbUser format is invalid: {ex.Message}");
+                        context.AddFailure(new FluentValidation.Results.ValidationFailure(
+                            "cbUser", $"cbUser format is invalid: {ex.Message}")
+                        { ErrorCode = "InvalidUserStructure" });
                         return;
                     }
 
                     if (string.IsNullOrEmpty(user) || user.Length < 3)
                     {
-                        context.AddFailure("cbUser", "cbUser must be at least 3 characters long");
+                        context.AddFailure(new FluentValidation.Results.ValidationFailure(
+                            "cbUser", "cbUser must be at least 3 characters long")
+                        { ErrorCode = "UserTooShort" });
                     }
                 });
         }

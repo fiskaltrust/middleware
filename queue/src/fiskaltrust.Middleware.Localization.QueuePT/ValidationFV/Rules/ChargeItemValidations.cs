@@ -38,7 +38,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
             {
                 chargeItem.RuleFor(x => x.Description)
                     .MinimumLength(3)
-                    .When(x => !string.IsNullOrEmpty(x.Description));
+                    .When(x => !string.IsNullOrEmpty(x.Description))
+                    .WithErrorCode("ChargeItemDescriptionTooShort");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }

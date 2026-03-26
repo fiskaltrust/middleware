@@ -19,7 +19,19 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x)
                 .Custom((request, context) =>
                 {
-                    var customer = request.GetCustomerOrNull();
+                    fiskaltrust.Middleware.Localization.v2.Models.MiddlewareCustomer? customer;
+                    try
+                    {
+                        customer = request.GetCustomerOrNull();
+                    }
+                    catch (System.Text.Json.JsonException ex)
+                    {
+                        context.AddFailure(new FluentValidation.Results.ValidationFailure(
+                            "cbCustomer", $"cbCustomer format is invalid: {ex.Message}")
+                        { ErrorCode = "CustomerInvalid" });
+                        return;
+                    }
+
                     if (customer == null)
                         return;
 
@@ -28,8 +40,10 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
 
                     if (!TaxIdValidation.IsValidPortugueseNif(customer.CustomerVATId))
                     {
-                        context.AddFailure("cbCustomer.CustomerVATId",
-                            $"Invalid Portuguese tax ID (NIF): '{customer.CustomerVATId}'");
+                        context.AddFailure(new FluentValidation.Results.ValidationFailure(
+                            "cbCustomer.CustomerVATId",
+                            $"Invalid Portuguese tax ID (NIF): '{customer.CustomerVATId}'")
+                        { ErrorCode = "InvalidPortugueseTaxId" });
                     }
                 })
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten));

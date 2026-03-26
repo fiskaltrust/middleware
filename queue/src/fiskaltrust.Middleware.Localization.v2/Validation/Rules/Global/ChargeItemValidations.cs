@@ -167,9 +167,10 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 if (absoluteDiscountAmount > absoluteMainItemAmount)
                                 {
                                     var mainItemIndex = request.cbChargeItems.IndexOf(mainItem);
-                                    context.AddFailure(
+                                    context.AddFailure(new FluentValidation.Results.ValidationFailure(
                                         "cbChargeItems",
-                                        $"Discount ({absoluteDiscountAmount:F2}) exceeds article amount ({absoluteMainItemAmount:F2}) for charge item [{mainItemIndex}] '{mainItem.Description}'");
+                                        $"Discount ({absoluteDiscountAmount:F2}) exceeds article amount ({absoluteMainItemAmount:F2}) for charge item [{mainItemIndex}] '{mainItem.Description}'")
+                                    { ErrorCode = "DiscountExceedsArticleAmount" });
                                 }
                             }
                         }

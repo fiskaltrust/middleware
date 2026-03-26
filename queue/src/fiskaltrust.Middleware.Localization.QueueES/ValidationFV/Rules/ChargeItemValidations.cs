@@ -9,10 +9,13 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 {
     public ChargeItemValidations()
     {
-        Include(new VatAmountRequired());
-        Include(new SupportedVatRates());
-        Include(new VatRateCategory());
-        Include(new ZeroVatNature());
+        When(x => x.ftReceiptCase.Country() == "ES", () =>
+        {
+            Include(new VatAmountRequired());
+            Include(new SupportedVatRates());
+            Include(new VatRateCategory());
+            Include(new ZeroVatNature());
+        });
     }
 
     public class VatAmountRequired : AbstractValidator<ReceiptRequest>
@@ -21,7 +24,10 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         {
             RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
             {
-                chargeItem.RuleFor(x => x.VATAmount).NotNull();
+                chargeItem.RuleFor(x => x.VATAmount)
+                    .NotNull()
+                    .WithMessage("VAT amount is missing.")
+                    .WithErrorCode("ChargeItemVATAmountMissing");
             });
         }
     }

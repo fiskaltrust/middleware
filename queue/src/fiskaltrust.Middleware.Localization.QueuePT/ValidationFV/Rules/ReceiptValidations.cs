@@ -298,7 +298,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage(request =>
                     $"The time difference between cbReceiptMoment ({request.cbReceiptMoment:yyyy-MM-dd HH:mm:ss}) and server time exceeds the maximum allowed difference of {MaxAllowedDifferenceMinutes} minute(s).")
-                .WithErrorCode("EEEE_ReceiptMomentTimeDifferenceExceeded");
+                .WithErrorCode("ReceiptMomentTimeDifferenceExceeded");
         }
     }
 
