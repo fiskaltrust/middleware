@@ -365,7 +365,7 @@ public class AADEFactory
         return inv;
     }
 
-    private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, MyDataOverride overrideData)
+    private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
     {
         if (overrideData?.Invoice == null)
         {
