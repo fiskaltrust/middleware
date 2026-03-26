@@ -379,6 +379,22 @@ public class AADEFactory
             ApplyInvoiceHeaderOverride(invoice, invoiceOverride.InvoiceHeader);
         }
 
+        // Reverse delivery note purpose validation (9.3 + Refund)
+        if (invoice.invoiceHeader.invoiceType == InvoiceType.Item93
+            && invoice.invoiceHeader.reverseDeliveryNote)
+        {
+            if (!invoiceOverride.InvoiceHeader?.ReverseDeliveryNotePurpose.HasValue ?? true)
+            {
+                throw new ArgumentException(
+                    "reverseDeliveryNotePurpose is mandatory for reverse delivery note ",
+                    nameof(invoiceOverride.InvoiceHeader.ReverseDeliveryNotePurpose));
+            }
+
+            invoice.invoiceHeader.reverseDeliveryNotePurpose =
+               AADEMappings.GetReverseDeliveryNotePurpose(invoiceOverride.InvoiceHeader!.ReverseDeliveryNotePurpose!.Value);
+            invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
+        }
+
         if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
         {
             var counterpart = invoice.counterpart;
@@ -392,8 +408,29 @@ public class AADEFactory
         }
     }
 
+    private static readonly Dictionary<string, InvoiceType> InvoiceTypeMap = typeof(InvoiceType)
+        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        .ToDictionary(
+            f => f.GetCustomAttributes(typeof(System.Xml.Serialization.XmlEnumAttribute), false)
+                  .Cast<System.Xml.Serialization.XmlEnumAttribute>()
+                  .FirstOrDefault()?.Name ?? f.Name,
+            f => (InvoiceType) f.GetValue(null)!,
+            StringComparer.OrdinalIgnoreCase);
+
     private static void ApplyInvoiceHeaderOverride(AadeBookInvoiceType invoice, InvoiceHeaderTypeOverride headerOverride)
     {
+        // Apply invoice type override
+        if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
+        {
+            if (!InvoiceTypeMap.TryGetValue(headerOverride.InvoiceType, out var invoiceType))
+            {
+                throw new ArgumentException(
+                    $"Invalid invoiceType override value '{headerOverride.InvoiceType}'. " +
+                    $"Allowed values: {string.Join(", ", InvoiceTypeMap.Keys.OrderBy(k => k))}");
+            }
+            invoice.invoiceHeader.invoiceType = invoiceType;
+        }
+
         // Apply VAT payment suspension
         if (headerOverride.VatPaymentSuspension.HasValue)
         {
@@ -552,12 +589,6 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
         }
 
-        // Apply reverse delivery note
-        if (headerOverride.ReverseDeliveryNotePurpose.HasValue)
-        {
-            invoice.invoiceHeader.reverseDeliveryNotePurpose = headerOverride.ReverseDeliveryNotePurpose.Value;
-            invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
-        }
     }
 
     private static void ApplyPartyOverride(ref PartyType party, PartyTypeOverride partyOverride)
@@ -623,38 +654,58 @@ public class AADEFactory
         if (!string.IsNullOrEmpty(detailOverride.LineComments)) row.lineComments = detailOverride.LineComments;
         if (detailOverride.IncomeClassification != null)
         {
-            row.incomeClassification = detailOverride.IncomeClassification.Select(ic =>
+            if (detailOverride.IncomeClassification.Count != 1)
             {
-                var result = new IncomeClassificationType();
-                if (!string.IsNullOrEmpty(ic.ClassificationType) && Enum.TryParse<IncomeClassificationValueType>(ic.ClassificationType, true, out var type))
+                throw new ArgumentException("incomeClassification override must contain exactly one element.");
+            }
+            var ic = detailOverride.IncomeClassification[0];
+            var incResult = new IncomeClassificationType();
+            if (!string.IsNullOrEmpty(ic.ClassificationType))
+            {
+                if (!Enum.TryParse<IncomeClassificationValueType>(ic.ClassificationType, true, out var type))
                 {
-                    result.classificationType = type;
-                    result.classificationTypeSpecified = true;
+                    throw new ArgumentException($"Invalid incomeClassification.classificationType '{ic.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(IncomeClassificationValueType)))}");
                 }
-                if (!string.IsNullOrEmpty(ic.ClassificationCategory) && Enum.TryParse<IncomeClassificationCategoryType>(ic.ClassificationCategory, true, out var cat))
+                incResult.classificationType = type;
+                incResult.classificationTypeSpecified = true;
+            }
+            if (!string.IsNullOrEmpty(ic.ClassificationCategory))
+            {
+                if (!Enum.TryParse<IncomeClassificationCategoryType>(ic.ClassificationCategory, true, out var cat))
                 {
-                    result.classificationCategory = cat;
+                    throw new ArgumentException($"Invalid incomeClassification.classificationCategory '{ic.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(IncomeClassificationCategoryType)))}");
                 }
-                return result;
-            }).ToArray();
+                incResult.classificationCategory = cat;
+            }
+            row.incomeClassification = [incResult];
         }
         if (detailOverride.ExpensesClassification != null)
         {
-            row.expensesClassification = detailOverride.ExpensesClassification.Select(ec =>
+            if (detailOverride.ExpensesClassification.Count != 1)
             {
-                var result = new ExpensesClassificationType();
-                if (!string.IsNullOrEmpty(ec.ClassificationType) && Enum.TryParse<ExpensesClassificationTypeClassificationType>(ec.ClassificationType, true, out var type))
+                throw new ArgumentException("expensesClassification override must contain exactly one element.");
+            }
+            var ec = detailOverride.ExpensesClassification[0];
+            var expResult = new ExpensesClassificationType();
+            if (!string.IsNullOrEmpty(ec.ClassificationType))
+            {
+                if (!Enum.TryParse<ExpensesClassificationTypeClassificationType>(ec.ClassificationType, true, out var type))
                 {
-                    result.classificationType = type;
-                    result.classificationTypeSpecified = true;
+                    throw new ArgumentException($"Invalid expensesClassification.classificationType '{ec.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationTypeClassificationType)))}");
                 }
-                if (!string.IsNullOrEmpty(ec.ClassificationCategory) && Enum.TryParse<ExpensesClassificationCategoryType>(ec.ClassificationCategory, true, out var cat))
+                expResult.classificationType = type;
+                expResult.classificationTypeSpecified = true;
+            }
+            if (!string.IsNullOrEmpty(ec.ClassificationCategory))
+            {
+                if (!Enum.TryParse<ExpensesClassificationCategoryType>(ec.ClassificationCategory, true, out var cat))
                 {
-                    result.classificationCategory = cat;
-                    result.classificationCategorySpecified = true;
+                    throw new ArgumentException($"Invalid expensesClassification.classificationCategory '{ec.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationCategoryType)))}");
                 }
-                return result;
-            }).ToArray();
+                expResult.classificationCategory = cat;
+                expResult.classificationCategorySpecified = true;
+            }
+            row.expensesClassification = [expResult];
         }
         if (detailOverride.Quantity15.HasValue)
         {
