@@ -1,7 +1,8 @@
-﻿using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.SCU.GR.Abstraction;
+﻿using System;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
+using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
@@ -95,6 +96,33 @@ public static class SignatureItemFactoryGR
             Caption = "Μοναδικός αριθμός παραστατικού",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+        });
+    }
+    public static void AddMyDataXmlSignature(ProcessRequest request, string xmlPayload)
+    {
+        var cleanXml = xmlPayload;
+        if (cleanXml.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase))
+        {
+            var declEnd = cleanXml.IndexOf("?>");
+            if (declEnd >= 0)
+            {
+                cleanXml = cleanXml.Substring(declEnd + 2).TrimStart();
+            }
+        }
+
+        // The receipt-api checks for "<invoicesDoc " (lowercase i)
+        if (cleanXml.StartsWith("<InvoicesDoc"))
+        {
+            cleanXml = "<invoicesDoc" + cleanXml.Substring("<InvoicesDoc".Length);
+            cleanXml = cleanXml.Replace("</InvoicesDoc>", "</invoicesDoc>");
+        }
+
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Data = cleanXml,
+            Caption = "mydata-xml",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
         });
     }
 }

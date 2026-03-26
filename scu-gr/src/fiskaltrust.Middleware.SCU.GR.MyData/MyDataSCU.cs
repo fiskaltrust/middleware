@@ -434,6 +434,7 @@ public class MyDataSCU : IGRSSCD
                         }
                         SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
                         SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                        SignatureItemFactoryGR.AddMyDataXmlSignature(request, payload);
                     }
                     else
                     {
