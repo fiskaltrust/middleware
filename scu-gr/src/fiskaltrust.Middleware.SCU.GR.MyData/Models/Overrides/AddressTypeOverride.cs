@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
-public class AddressOverride
+public class AddressTypeOverride
 {
     [JsonPropertyName("street")]
     public string? Street { get; set; }

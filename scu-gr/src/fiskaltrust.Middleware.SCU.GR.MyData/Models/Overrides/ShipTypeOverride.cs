@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Text.Json.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
-public class ShipOverride
+public class ShipTypeOverride
 {
     [JsonPropertyName("applicationId")]
     public string? ApplicationId { get; set; }

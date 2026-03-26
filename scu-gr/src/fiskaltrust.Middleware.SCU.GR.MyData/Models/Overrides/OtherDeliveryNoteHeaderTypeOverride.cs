@@ -1,14 +1,14 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
-public class OtherDeliveryNoteHeaderOverride
+public class OtherDeliveryNoteHeaderTypeOverride
 {
     [JsonPropertyName("loadingAddress")]
-    public AddressOverride? LoadingAddress { get; set; }
+    public AddressTypeOverride? LoadingAddress { get; set; }
 
     [JsonPropertyName("deliveryAddress")]
-    public AddressOverride? DeliveryAddress { get; set; }
+    public AddressTypeOverride? DeliveryAddress { get; set; }
 
     [JsonPropertyName("startShippingBranch")]
     public int? StartShippingBranch { get; set; }

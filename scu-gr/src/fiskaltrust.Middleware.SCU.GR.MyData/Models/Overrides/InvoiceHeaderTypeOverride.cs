@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
-public class InvoiceHeaderOverride
+public class InvoiceHeaderTypeOverride
 {
     [JsonPropertyName("invoiceType")]
     public string? InvoiceType { get; set; }
@@ -36,8 +36,11 @@ public class InvoiceHeaderOverride
     [JsonPropertyName("invoiceVariationType")]
     public int? InvoiceVariationType { get; set; }
 
+    [JsonPropertyName("otherCorrelatedEntities")]
+    public List<EntityTypeOverride>? OtherCorrelatedEntities { get; set; }
+
     [JsonPropertyName("otherDeliveryNoteHeader")]
-    public OtherDeliveryNoteHeaderOverride? OtherDeliveryNoteHeader { get; set; }
+    public OtherDeliveryNoteHeaderTypeOverride? OtherDeliveryNoteHeader { get; set; }
 
     [JsonPropertyName("otherMovePurposeTitle")]
     public string? OtherMovePurposeTitle { get; set; }
@@ -56,7 +59,4 @@ public class InvoiceHeaderOverride
 
     [JsonPropertyName("reverseDeliveryNotePurpose")]
     public int? ReverseDeliveryNotePurpose { get; set; }
-
-    [JsonPropertyName("otherCorrelatedEntities")]
-    public List<EntityOverride>? OtherCorrelatedEntities { get; set; }
 }

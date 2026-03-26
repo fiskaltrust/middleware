@@ -5,5 +5,5 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public class ChargeItemMyDataOverride
 {
     [JsonPropertyName("invoiceDetails")]
-    public InvoiceDetailOverride? InvoiceDetails { get; set; }
+    public InvoiceRowTypeOverride? InvoiceDetails { get; set; }
 }

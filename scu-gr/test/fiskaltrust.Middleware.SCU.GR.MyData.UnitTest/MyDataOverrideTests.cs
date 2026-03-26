@@ -817,7 +817,7 @@ public class MyDataOverrideTests
     [Fact]
     public void ApplyInvoiceDetailOverride_WithAllFields_ShouldSetAllFields()
     {
-        var row = new InvoiceRowType
+        var row = new global::InvoiceRowType
         {
             lineNumber = 1,
             netValue = 100,
@@ -825,7 +825,7 @@ public class MyDataOverrideTests
             vatCategory = 1
         };
 
-        var detailOverride = new InvoiceDetailOverride
+        var detailOverride = new InvoiceRowTypeOverride
         {
             TaricNo = "12345678",
             ItemCode = "ITEM-001",
