@@ -853,4 +853,320 @@ public class MyDataOverrideTests
         row.netValue.Should().Be(100);
         row.vatAmount.Should().Be(24);
     }
+
+    // === PHASE 2: INVOICE TYPE OVERRIDE TESTS ===
+
+    [Theory]
+    [InlineData("1.1", InvoiceType.Item11)]
+    [InlineData("1.5", InvoiceType.Item15)]
+    [InlineData("3.1", InvoiceType.Item31)]
+    [InlineData("6.1", InvoiceType.Item61)]
+    [InlineData("8.1", InvoiceType.Item81)]
+    [InlineData("8.2", InvoiceType.Item82)]
+    [InlineData("9.3", InvoiceType.Item93)]
+    [InlineData("11.1", InvoiceType.Item111)]
+    [InlineData("17.1", InvoiceType.Item171)]
+    public void MapToInvoicesDoc_WithInvoiceTypeOverride_ShouldSetInvoiceType(string overrideValue, InvoiceType expected)
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = overrideValue
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(expected);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidInvoiceTypeOverride_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "99.9"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("99.9");
+    }
+
+    // === PHASE 2: INCOME CLASSIFICATION OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithIncomeClassificationOverride_ShouldReplaceClassification()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_880_001", classificationCategory = "category1_4" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].incomeClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_880_001);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_4);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidIncomeClassificationType_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "INVALID_TYPE", classificationCategory = "category1_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("INVALID_TYPE");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidIncomeClassificationCategory_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "INVALID_CAT" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("INVALID_CAT");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMultipleIncomeClassifications_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "category1_1" },
+                            new { classificationType = "E3_561_002", classificationCategory = "category1_2" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("exactly one element");
+    }
+
+    // === PHASE 2: EXPENSES CLASSIFICATION OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationOverride_ShouldReplaceClassification()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].expensesClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationTypeSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationCategorySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidExpensesClassificationType_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "BOGUS", classificationCategory = "category2_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("BOGUS");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMultipleExpensesClassifications_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationCategory = "category2_1" },
+                            new { classificationCategory = "category2_2" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("exactly one element");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithIncomeClassificationCategoryOnly_ShouldWork()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationCategory = "category1_95" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].incomeClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeFalse();
+    }
 }

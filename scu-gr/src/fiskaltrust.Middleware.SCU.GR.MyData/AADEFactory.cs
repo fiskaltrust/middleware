@@ -1102,9 +1102,9 @@ public class AADEFactory
                         ApplyInvoiceDetailOverride(invoiceRow, chargeItemData.GR.MyDataOverride.InvoiceDetails);
                     }
                 }
-                catch
+                catch (JsonException)
                 {
-                    // ftChargeItemCaseData may contain data for other purposes, ignore errors
+                    // ftChargeItemCaseData may contain data for other purposes, ignore deserialization errors
                 }
             }
             return invoiceRow;
