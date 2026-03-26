@@ -246,7 +246,7 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
-            _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
+            _ => IncomeClassificationCategoryType.category1_95,
         };
     }
 

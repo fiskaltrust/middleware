@@ -1169,4 +1169,170 @@ public class MyDataOverrideTests
         doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
         doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeFalse();
     }
+
+    // === ISSUE #68: THIRD-PARTY SALE (1.4) END-TO-END ===
+
+    [Fact]
+    public void MapToInvoicesDoc_ThirdPartySale_1_4_ShouldGenerateCorrectXml()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "3rd-party-sale-step1",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "EL026883248",
+                CustomerName = "Αγοραστής Α.Ε.",
+                CustomerStreet = "Σταδίου 15",
+                CustomerZip = "10562",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 10,
+                    Description = "Προϊόντα ΤΡΙΤΟΥ Α.Ε. - Goods of TRITOU S.A.",
+                    Amount = 1240.00m,
+                    VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATAmount = 240,
+                    ftChargeItemCaseData = new
+                    {
+                        GR = new
+                        {
+                            mydataoverride = new
+                            {
+                                invoiceDetails = new
+                                {
+                                    incomeClassification = new[]
+                                    {
+                                        new { classificationType = "E3_561_001", classificationCategory = "category1_7" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Description = "Bank Transfer",
+                    Amount = 1240.00m,
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0004
+                }
+            ],
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    mydataoverride = new
+                    {
+                        invoice = new
+                        {
+                            invoiceHeader = new
+                            {
+                                invoiceType = "1.4"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreateBasicReceiptResponse(request);
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        // Verify no errors
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+
+        var invoice = doc!.invoice[0];
+
+        // Verify invoice type overridden to 1.4
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item14);
+
+        // Verify income classification overridden to category1_7 + E3_561_001
+        invoice.invoiceDetails[0].incomeClassification.Should().HaveCount(1);
+        invoice.invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_7);
+        invoice.invoiceDetails[0].incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
+        invoice.invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeTrue();
+
+        // Verify classification amount equals net value (1240 - 240 VAT = 1000)
+        invoice.invoiceDetails[0].incomeClassification[0].amount.Should().Be(1000.00m);
+
+        // Verify summary aggregates the overridden classification with correct amount
+        invoice.invoiceSummary.incomeClassification.Should().ContainSingle(ic =>
+            ic.classificationCategory == IncomeClassificationCategoryType.category1_7);
+        invoice.invoiceSummary.incomeClassification[0].amount.Should().Be(1000.00m);
+
+        // Verify net value and totals
+        invoice.invoiceDetails[0].netValue.Should().Be(1000.00m);
+        invoice.invoiceDetails[0].vatAmount.Should().Be(240m);
+        invoice.invoiceSummary.totalNetValue.Should().Be(1000.00m);
+        invoice.invoiceSummary.totalVatAmount.Should().Be(240m);
+        invoice.invoiceSummary.totalGrossValue.Should().Be(1240.00m);
+
+        // Generate XML and verify it serializes correctly
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        xml.Should().Contain("<invoiceType>1.4</invoiceType>");
+        xml.Should().Contain(">E3_561_001</classificationType>");
+        xml.Should().Contain(">category1_7</classificationCategory>");
+        xml.Should().Contain(">1000.00</amount>");
+        xml.Should().Contain("026883248");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_IncomeClassificationOverride_AmountShouldMatchNetValue()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        // Set explicit values: Amount=124, VATRate=24, VATAmount=24 → netValue = 124 - 24 = 100
+        request.cbChargeItems[0].Amount = 124m;
+        request.cbChargeItems[0].VATRate = 24m;
+        request.cbChargeItems[0].VATAmount = 24m;
+        request.cbPayItems[0].Amount = 124m;
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "category1_4" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+
+        // netValue = Amount - VATAmount = 124 - 24 = 100
+        row.netValue.Should().Be(100m);
+        row.vatAmount.Should().Be(24m);
+
+        // Classification amount must equal the line's netValue
+        row.incomeClassification.Should().HaveCount(1);
+        row.incomeClassification[0].amount.Should().Be(100m);
+
+        // Summary must aggregate correctly
+        doc.invoice[0].invoiceSummary.totalNetValue.Should().Be(100m);
+        doc.invoice[0].invoiceSummary.incomeClassification[0].amount.Should().Be(100m);
+    }
 }

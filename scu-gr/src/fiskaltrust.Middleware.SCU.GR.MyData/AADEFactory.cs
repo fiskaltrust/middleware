@@ -659,15 +659,15 @@ public class AADEFactory
                 throw new ArgumentException("incomeClassification override must contain exactly one element.");
             }
             var ic = detailOverride.IncomeClassification[0];
-            var incResult = new IncomeClassificationType();
+            var existing = row.incomeClassification?.FirstOrDefault() ?? new IncomeClassificationType { amount = row.netValue };
             if (!string.IsNullOrEmpty(ic.ClassificationType))
             {
                 if (!Enum.TryParse<IncomeClassificationValueType>(ic.ClassificationType, true, out var type))
                 {
                     throw new ArgumentException($"Invalid incomeClassification.classificationType '{ic.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(IncomeClassificationValueType)))}");
                 }
-                incResult.classificationType = type;
-                incResult.classificationTypeSpecified = true;
+                existing.classificationType = type;
+                existing.classificationTypeSpecified = true;
             }
             if (!string.IsNullOrEmpty(ic.ClassificationCategory))
             {
@@ -675,9 +675,9 @@ public class AADEFactory
                 {
                     throw new ArgumentException($"Invalid incomeClassification.classificationCategory '{ic.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(IncomeClassificationCategoryType)))}");
                 }
-                incResult.classificationCategory = cat;
+                existing.classificationCategory = cat;
             }
-            row.incomeClassification = [incResult];
+            row.incomeClassification = [existing];
         }
         if (detailOverride.ExpensesClassification != null)
         {
@@ -686,15 +686,15 @@ public class AADEFactory
                 throw new ArgumentException("expensesClassification override must contain exactly one element.");
             }
             var ec = detailOverride.ExpensesClassification[0];
-            var expResult = new ExpensesClassificationType();
+            var existing = row.expensesClassification?.FirstOrDefault() ?? new ExpensesClassificationType { amount = row.netValue };
             if (!string.IsNullOrEmpty(ec.ClassificationType))
             {
                 if (!Enum.TryParse<ExpensesClassificationTypeClassificationType>(ec.ClassificationType, true, out var type))
                 {
                     throw new ArgumentException($"Invalid expensesClassification.classificationType '{ec.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationTypeClassificationType)))}");
                 }
-                expResult.classificationType = type;
-                expResult.classificationTypeSpecified = true;
+                existing.classificationType = type;
+                existing.classificationTypeSpecified = true;
             }
             if (!string.IsNullOrEmpty(ec.ClassificationCategory))
             {
@@ -702,10 +702,10 @@ public class AADEFactory
                 {
                     throw new ArgumentException($"Invalid expensesClassification.classificationCategory '{ec.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationCategoryType)))}");
                 }
-                expResult.classificationCategory = cat;
-                expResult.classificationCategorySpecified = true;
+                existing.classificationCategory = cat;
+                existing.classificationCategorySpecified = true;
             }
-            row.expensesClassification = [expResult];
+            row.expensesClassification = [existing];
         }
         if (detailOverride.Quantity15.HasValue)
         {
