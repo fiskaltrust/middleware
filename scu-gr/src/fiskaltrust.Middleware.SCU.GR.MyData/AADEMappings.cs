@@ -136,7 +136,7 @@ public static class AADEMappings
                 }
                 else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
-                    throw new Exception("Agency business with non EU customer is not supported");
+                    return IncomeClassificationValueType.E3_881_004;
                 }
                 else
                 {
@@ -246,7 +246,7 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
-            _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
+            _ => IncomeClassificationCategoryType.category1_95,
         };
     }
 
@@ -271,25 +271,8 @@ public static class AADEMappings
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData) && overrideData?.GR?.MyDataOverride != null)
-        {
-            var headerOverride = overrideData.GR.MyDataOverride.Invoice?.InvoiceHeader;
-            if (!string.IsNullOrEmpty(headerOverride?.InvoiceType))
-            {
-                // Define allowed invoice types for override
-                var allowedInvoiceTypes = new HashSet<string> { "8.2" };
-                if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
-                {
-                    throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
-                }
-
-                if(headerOverride.InvoiceType == "8.2")
-                {
-                    return InvoiceType.Item82;
-                }
-            }
-        }
-
+        // InvoiceType override is handled in AADEFactory.ApplyInvoiceHeaderOverride after the initial mapping.
+        // Here we only determine the base type from the receipt case.
 
         // Validate that agency business (NotOwnSales) items are not mixed with other types
         var hasNotOwnSales = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales));
