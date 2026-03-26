@@ -96,8 +96,9 @@ public class MyDataSCU : IGRSSCD
             return await CancelDeliveryNoteAsync(request, mark);
         }
 
+        var hasLocalPayItemFlag = request.ReceiptRequest.cbPayItems.Any(p => ((long) p.ftPayItemCase & 0x0000_0001_0000_0000) != 0);
         if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Pay0x3005) &&
-            request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod) &&
+            hasLocalPayItemFlag &&
             receiptReferences != null && receiptReferences.Count > 0)
         {
             var previousReceipt = receiptReferences[0];
