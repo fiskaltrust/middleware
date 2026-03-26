@@ -648,4 +648,21 @@ public static class AADEMappings
             _ => MyDataMeasurementUnit.Pieces
         };
     }
+
+
+    /// <summary>
+    /// Valid values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,
+    /// 3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION
+    /// </summary>
+    public static int GetReverseDeliveryNotePurpose(int purpose)
+    {
+        if (purpose < 1 || purpose > 5)
+        {
+            throw new Exception(
+                $"Invalid reverseDeliveryNotePurpose value '{purpose}'. " +
+                "Allowed values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR, " +
+                "3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION.");
+        }
+        return purpose;
+    }
 }
