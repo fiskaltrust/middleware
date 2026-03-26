@@ -76,20 +76,31 @@ public class ftChargeItemCaseDataPayload
 
 public class ftChargeItemCaseDataGreekPayload
 {
-    /// <summary>
-    /// MyData override configuration allowing direct control of invoice detail properties per charge item
-    /// </summary>
     [JsonPropertyName("mydataoverride")]
-    public MyDataOverride? MyDataOverride { get; set; }
+    public ChargeItemMyDataOverride? MyDataOverride { get; set; }
 }
 
 public class InvoiceOverride
 {
     /// <summary>
-    /// Invoice header overrides
+    /// Invoice header overrides (maps to InvoiceHeaderType in the MyData XML)
     /// </summary>
     [JsonPropertyName("invoiceHeader")]
     public InvoiceHeaderOverride? InvoiceHeader { get; set; }
+
+    /// <summary>
+    /// Counterpart (buyer) overrides for fields not mapped from cbCustomer.
+    /// Only documentIdNo, supplyAccountNo, and countryDocumentId can be set.
+    /// </summary>
+    [JsonPropertyName("counterpart")]
+    public PartyUnmappedFieldsOverride? Counterpart { get; set; }
+
+    /// <summary>
+    /// Issuer overrides for fields not mapped from master data.
+    /// Only documentIdNo, supplyAccountNo, and countryDocumentId can be set.
+    /// </summary>
+    [JsonPropertyName("issuer")]
+    public PartyUnmappedFieldsOverride? Issuer { get; set; }
 }
 
 public class InvoiceHeaderOverride
@@ -168,13 +179,42 @@ public class InvoiceHeaderOverride
     public string? OtherMovePurposeTitle { get; set; }
 
     /// <summary>
-    /// Reason for issuing a reverse delivery note (9.3 only).
-    /// Valid values: 
-    /// 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,
+    /// Exchange rate when currency is not EUR
+    /// </summary>
+    [JsonPropertyName("exchangeRate")]
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>
+    /// Third party collection indicator
+    /// </summary>
+    [JsonPropertyName("thirdPartyCollection")]
+    public bool? ThirdPartyCollection { get; set; }
+
+    /// <summary>
+    /// Total cancel delivery orders indicator
+    /// </summary>
+    [JsonPropertyName("totalCancelDeliveryOrders")]
+    public bool? TotalCancelDeliveryOrders { get; set; }
+
+    /// <summary>
+    /// Reverse delivery note indicator
+    /// </summary>
+    [JsonPropertyName("reverseDeliveryNote")]
+    public bool? ReverseDeliveryNote { get; set; }
+
+    /// <summary>
+    /// Reverse delivery note purpose code.
+    /// Valid values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,
     /// 3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION
     /// </summary>
     [JsonPropertyName("reverseDeliveryNotePurpose")]
     public int? ReverseDeliveryNotePurpose { get; set; }
+
+    /// <summary>
+    /// Other correlated entities
+    /// </summary>
+    [JsonPropertyName("otherCorrelatedEntities")]
+    public List<EntityOverride>? OtherCorrelatedEntities { get; set; }
 }
 
 public class OtherDeliveryNoteHeaderOverride
@@ -229,6 +269,120 @@ public class AddressOverride
     /// </summary>
     [JsonPropertyName("city")]
     public string? City { get; set; }
+}
+
+/// <summary>
+/// Override for PartyType fields not mapped from cbCustomer or master data.
+/// Only fields without an existing general interface mapping are available.
+/// </summary>
+public class PartyUnmappedFieldsOverride
+{
+    [JsonPropertyName("documentIdNo")]
+    public string? DocumentIdNo { get; set; }
+
+    [JsonPropertyName("supplyAccountNo")]
+    public string? SupplyAccountNo { get; set; }
+
+    [JsonPropertyName("countryDocumentId")]
+    public string? CountryDocumentId { get; set; }
+}
+
+public class EntityOverride
+{
+    [JsonPropertyName("type")]
+    public int? Type { get; set; }
+
+    [JsonPropertyName("entityData")]
+    public PartyOverride? EntityData { get; set; }
+}
+
+public class PartyOverride
+{
+    [JsonPropertyName("vatNumber")]
+    public string? VatNumber { get; set; }
+
+    [JsonPropertyName("country")]
+    public string? Country { get; set; }
+
+    [JsonPropertyName("branch")]
+    public int? Branch { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("address")]
+    public AddressOverride? Address { get; set; }
+
+    [JsonPropertyName("documentIdNo")]
+    public string? DocumentIdNo { get; set; }
+
+    [JsonPropertyName("supplyAccountNo")]
+    public string? SupplyAccountNo { get; set; }
+
+    [JsonPropertyName("countryDocumentId")]
+    public string? CountryDocumentId { get; set; }
+}
+
+/// <summary>
+/// Line-level override for InvoiceRowType fields not set by the middleware.
+/// Applied per ChargeItem via ftChargeItemCaseData.
+/// </summary>
+public class InvoiceDetailOverride
+{
+    [JsonPropertyName("taricNo")]
+    public string? TaricNo { get; set; }
+
+    [JsonPropertyName("itemCode")]
+    public string? ItemCode { get; set; }
+
+    [JsonPropertyName("fuelCode")]
+    public int? FuelCode { get; set; }
+
+    [JsonPropertyName("lineComments")]
+    public string? LineComments { get; set; }
+
+    [JsonPropertyName("quantity15")]
+    public decimal? Quantity15 { get; set; }
+
+    [JsonPropertyName("otherMeasurementUnitQuantity")]
+    public int? OtherMeasurementUnitQuantity { get; set; }
+
+    [JsonPropertyName("otherMeasurementUnitTitle")]
+    public string? OtherMeasurementUnitTitle { get; set; }
+
+    [JsonPropertyName("notVAT195")]
+    public bool? NotVAT195 { get; set; }
+
+    [JsonPropertyName("dienergia")]
+    public ShipOverride? Dienergia { get; set; }
+
+    [JsonPropertyName("discountOption")]
+    public bool? DiscountOption { get; set; }
+}
+
+public class ShipOverride
+{
+    [JsonPropertyName("applicationId")]
+    public string? ApplicationId { get; set; }
+
+    [JsonPropertyName("applicationDate")]
+    public DateTime? ApplicationDate { get; set; }
+
+    [JsonPropertyName("doy")]
+    public string? Doy { get; set; }
+
+    [JsonPropertyName("shipId")]
+    public string? ShipId { get; set; }
+}
+
+/// <summary>
+/// Wrapper for line-level mydataoverride in ftChargeItemCaseData.
+/// JSON: { "GR": { "mydataoverride": { "invoiceDetails": { ... } } } }
+/// </summary>
+public class ChargeItemMyDataOverride
+{
+    [JsonPropertyName("invoiceDetails")]
+    public InvoiceDetailOverride? InvoiceDetails { get; set; }
 }
 
 public class MyDataSCU : IGRSSCD

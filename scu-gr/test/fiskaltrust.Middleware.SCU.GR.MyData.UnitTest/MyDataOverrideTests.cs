@@ -772,94 +772,6 @@ public class MyDataOverrideTests
     // === LINE-LEVEL (INVOICE DETAIL) OVERRIDE TESTS ===
 
     [Fact]
-    public void MapToInvoicesDoc_WithLineInvoiceDetailTypeOverride_ShouldSetInvoiceDetailType()
-    {
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.cbChargeItems[0].ftChargeItemCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoiceDetails = new
-                    {
-                        invoiceDetailType = 2
-                    }
-                }
-            }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        error.Should().BeNull();
-        doc!.invoice[0].invoiceDetails[0].invoiceDetailTypeSpecified.Should().BeTrue();
-        doc.invoice[0].invoiceDetails[0].invoiceDetailType.Should().Be(2);
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithLineIncomeClassificationOverride_ShouldReplaceClassification()
-    {
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.cbChargeItems[0].ftChargeItemCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoiceDetails = new
-                    {
-                        incomeClassification = new[]
-                        {
-                            new { classificationType = "E3_880_001", classificationCategory = "category1_4" }
-                        }
-                    }
-                }
-            }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        error.Should().BeNull();
-        doc!.invoice[0].invoiceDetails[0].incomeClassification.Should().HaveCount(1);
-        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_4);
-        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_880_001);
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithLineExpensesClassificationOverride_ShouldReplaceClassification()
-    {
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.cbChargeItems[0].ftChargeItemCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoiceDetails = new
-                    {
-                        expensesClassification = new[]
-                        {
-                            new { classificationCategory = "category2_9" }
-                        }
-                    }
-                }
-            }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        error.Should().BeNull();
-        doc!.invoice[0].invoiceDetails[0].expensesClassification.Should().HaveCount(1);
-        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_9);
-    }
-
-    [Fact]
     public void MapToInvoicesDoc_WithLineItemCodeAndCommentsOverride_ShouldSetFields()
     {
         var factory = CreateFactory();
@@ -903,29 +815,6 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MyDataOverride_PassthroughDeserialization_ShouldParseEndpointAndPayload()
-    {
-        var request = CreateBasicReceiptRequest();
-        request.ftReceiptCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    endpoint = "/SendPaymentsMethod",
-                    payload = "<paymentMethods><payment>test</payment></paymentMethods>"
-                }
-            }
-        };
-
-        var success = request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var result);
-
-        success.Should().BeTrue();
-        result!.GR!.MyDataOverride!.Endpoint.Should().Be("/SendPaymentsMethod");
-        result.GR.MyDataOverride.Payload.Should().Be("<paymentMethods><payment>test</payment></paymentMethods>");
-    }
-
-    [Fact]
     public void ApplyInvoiceDetailOverride_WithAllFields_ShouldSetAllFields()
     {
         var row = new InvoiceRowType
@@ -941,7 +830,6 @@ public class MyDataOverrideTests
             TaricNo = "12345678",
             ItemCode = "ITEM-001",
             FuelCode = 10,
-            InvoiceDetailType = 1,
             LineComments = "Test comment",
             Quantity15 = 99.5m,
             OtherMeasurementUnitQuantity = 2,
@@ -954,8 +842,6 @@ public class MyDataOverrideTests
         row.TaricNo.Should().Be("12345678");
         row.itemCode.Should().Be("ITEM-001");
         row.fuelCodeSpecified.Should().BeTrue();
-        row.invoiceDetailTypeSpecified.Should().BeTrue();
-        row.invoiceDetailType.Should().Be(1);
         row.lineComments.Should().Be("Test comment");
         row.quantity15Specified.Should().BeTrue();
         row.quantity15.Should().Be(99.5m);
@@ -963,9 +849,8 @@ public class MyDataOverrideTests
         row.otherMeasurementUnitTitle.Should().Be("barrels");
         row.notVAT195Specified.Should().BeTrue();
         row.notVAT195.Should().BeTrue();
-        // Verify amounts are NOT touched by override
-        row.vatCategory.Should().Be(1); // unchanged
-        row.netValue.Should().Be(100); // unchanged
-        row.vatAmount.Should().Be(24); // unchanged
+        row.vatCategory.Should().Be(1);
+        row.netValue.Should().Be(100);
+        row.vatAmount.Should().Be(24);
     }
 }
