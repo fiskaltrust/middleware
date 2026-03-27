@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.Middleware.SCU.DE.Test.Launcher.Helpers;
@@ -12,7 +13,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
-        private static readonly bool useHelipad = false;
+        private static readonly bool useHelipad = true;
         private static readonly string cashBoxId = "";
         private static readonly string accessToken = "";
         private static readonly string fccDirectory = "";
@@ -20,8 +21,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
         private static readonly string configurationFilePath = "";
         private static readonly string serviceFolder = Directory.GetCurrentDirectory();
 
+        // Set to true to perform a factory reset on the Swissbit TSE before startup (development TSEs only)
+        private static readonly bool performFactoryReset = false;
+
         public static void Main()
-        {
+        { 
             ftCashBoxConfiguration cashBoxConfiguration;
             if (useHelipad)
             {
@@ -51,16 +55,34 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
             config.Configuration.Add("accesstoken", "");
             config.Configuration.Add("useoffline", false);
-            config.Configuration.Add("sandbox", true);
+            config.Configuration.Add("sandbox", false);
             config.Configuration.Add("servicefolder", serviceFolder);
             config.Configuration.Add("configuration", JsonConvert.SerializeObject(cashBoxConfiguration));
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
+            //ADD SWISSBITV2
             if (config.Package == "fiskaltrust.Middleware.SCU.DE.Swissbit")
             {
-                ConfigureSwissbit(config, serviceCollection);
+                if (performFactoryReset)
+                {
+                    var devicePath = config.Configuration.ContainsKey("devicePath")
+                        ? config.Configuration["devicePath"]?.ToString()
+                        : config.Configuration.ContainsKey("DevicePath")
+                            ? config.Configuration["DevicePath"]?.ToString()
+                            : null;
+
+                    if (string.IsNullOrEmpty(devicePath))
+                    {
+                        Console.WriteLine("ERROR: Cannot perform factory reset - devicePath not found in configuration.");
+                    }
+                    else
+                    {
+                        PerformSwissbitFactoryReset(devicePath);
+                    }
+                }
+                ConfigureSwissbitV2(config, serviceCollection);
             }else if (config.Package == "fiskaltrust.Middleware.SCU.DE.SwissbitCloud")
             {
                 ConfigureSwissbitCloud(config, serviceCollection);
@@ -95,6 +117,43 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
+        }
+
+        private static void PerformSwissbitFactoryReset(string devicePath)
+        {
+            Console.WriteLine($"Performing TSE factory reset on device: {devicePath}");
+            Console.WriteLine("WARNING: This will erase all data on the TSE. Only works on development TSEs.");
+
+            var nativeFunctions = new Swissbit.Interop.FunctionPointerFactory().LoadLibrary();
+
+            var context = IntPtr.Zero;
+            var mountPointPtr = Marshal.StringToHGlobalAnsi(devicePath);
+            try
+            {
+                var initError = nativeFunctions.func_worm_init(ref context, mountPointPtr);
+                if (initError != Swissbit.Interop.NativeFunctionPointer.WormError.WORM_ERROR_NOERROR)
+                {
+                    Console.WriteLine($"ERROR: worm_init failed with error {initError}.");
+                    return;
+                }
+
+                var resetError = nativeFunctions.func_worm_tse_factoryReset(context);
+                if (resetError != Swissbit.Interop.NativeFunctionPointer.WormError.WORM_ERROR_NOERROR)
+                {
+                    Console.WriteLine($"ERROR: worm_tse_factoryReset failed with error {resetError}.");
+                    return;
+                }
+
+                Console.WriteLine("TSE factory reset completed successfully.");
+            }
+            finally
+            {
+                if (context != IntPtr.Zero)
+                {
+                    nativeFunctions.func_worm_cleanup(context);
+                }
+                Marshal.FreeHGlobal(mountPointPtr);
+            }
         }
 
         private static ftCashBoxConfiguration GetDemoConfiguration()
@@ -200,6 +259,16 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
         private static void ConfigureSwissbit(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new Swissbit.ScuBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
+        private static void ConfigureSwissbitV2(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new SwissbitV2.ScuBootstrapper
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration
