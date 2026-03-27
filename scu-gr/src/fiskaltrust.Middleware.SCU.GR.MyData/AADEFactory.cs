@@ -393,12 +393,6 @@ public class AADEFactory
                 "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
         }
 
-        var invoiceTypeOverride = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
-        if (string.IsNullOrEmpty(invoiceTypeOverride))
-        {
-            throw new ArgumentException(
-                "When a classification override is set, invoiceType must also be overridden in the invoice header.");
-        }
     }
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
