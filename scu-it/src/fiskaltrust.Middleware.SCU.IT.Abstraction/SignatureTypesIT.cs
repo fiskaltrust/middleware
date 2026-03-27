@@ -16,5 +16,6 @@ public enum SignatureTypesIT
 
     RTReferenceZNumber = 0x20,
     RTReferenceDocumentNumber = 0x21,
-    RTReferenceDocumentMoment = 0x22
+    RTReferenceDocumentMoment = 0x22,
+    RTCommand = 0x23
 }

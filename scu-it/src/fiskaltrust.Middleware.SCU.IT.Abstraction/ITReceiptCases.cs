@@ -28,6 +28,9 @@ public enum ITReceiptCases : long
     Order0x3004 = 0x3004,
     Reprint0x3010 = 0x3010,
 
+    ResetPrinter0x3011 = 0x3011,
+    RebootPrinter0x3012 = 0x3012,
+
     InitialOperationReceipt0x4001 = 0x4001,
     OutOfOperationReceipt0x4002 = 0x4002,
     InitSCUSwitch0x4011 = 0x4011,
