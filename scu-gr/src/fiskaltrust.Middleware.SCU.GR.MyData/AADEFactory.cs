@@ -43,7 +43,7 @@ public class AADEFactory
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
     }
-    
+
     public static string GetReceiptUrl(string receiptBaseAddress, Guid ftQueueID, Guid ftQueueItemID)
     {
         return $"{receiptBaseAddress}/{ftQueueID}/{ftQueueItemID}";
@@ -371,7 +371,8 @@ public class AADEFactory
     {
         var itemsWithClassificationOverride = receiptRequest.cbChargeItems.Where(ci =>
         {
-            if (ci.ftChargeItemCaseData == null) return false;
+            if (ci.ftChargeItemCaseData == null)
+                return false;
             try
             {
                 var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
@@ -383,7 +384,8 @@ public class AADEFactory
             catch { return false; }
         }).Count();
 
-        if (itemsWithClassificationOverride == 0) return;
+        if (itemsWithClassificationOverride == 0)
+            return;
 
         if (itemsWithClassificationOverride != receiptRequest.cbChargeItems.Count)
         {
@@ -627,10 +629,14 @@ public class AADEFactory
 
     private static void ApplyPartyOverride(ref PartyType party, PartyTypeOverride partyOverride)
     {
-        if (party == null) party = new PartyType();
-        if (partyOverride.Branch.HasValue) party.branch = partyOverride.Branch.Value;
-        if (!string.IsNullOrEmpty(partyOverride.DocumentIdNo)) party.documentIdNo = partyOverride.DocumentIdNo;
-        if (!string.IsNullOrEmpty(partyOverride.SupplyAccountNo)) party.supplyAccountNo = partyOverride.SupplyAccountNo;
+        if (party == null)
+            party = new PartyType();
+        if (partyOverride.Branch.HasValue)
+            party.branch = partyOverride.Branch.Value;
+        if (!string.IsNullOrEmpty(partyOverride.DocumentIdNo))
+            party.documentIdNo = partyOverride.DocumentIdNo;
+        if (!string.IsNullOrEmpty(partyOverride.SupplyAccountNo))
+            party.supplyAccountNo = partyOverride.SupplyAccountNo;
         if (!string.IsNullOrEmpty(partyOverride.CountryDocumentId) && Enum.TryParse<CountryType>(partyOverride.CountryDocumentId, true, out var countryDocId))
         {
             party.countryDocumentId = countryDocId;
@@ -646,14 +652,16 @@ public class AADEFactory
     }
 
     public static void ApplyInvoiceDetailOverride(InvoiceRowType row, InvoiceRowTypeOverride detailOverride)
-    {        
+    {
         if (detailOverride.RecType.HasValue)
         {
             row.recType = detailOverride.RecType.Value;
             row.recTypeSpecified = true;
         }
-        if (!string.IsNullOrEmpty(detailOverride.TaricNo)) row.TaricNo = detailOverride.TaricNo;
-        if (!string.IsNullOrEmpty(detailOverride.ItemCode)) row.itemCode = detailOverride.ItemCode;
+        if (!string.IsNullOrEmpty(detailOverride.TaricNo))
+            row.TaricNo = detailOverride.TaricNo;
+        if (!string.IsNullOrEmpty(detailOverride.ItemCode))
+            row.itemCode = detailOverride.ItemCode;
         if (detailOverride.FuelCode.HasValue)
         {
             row.fuelCode = (FuelCodes) detailOverride.FuelCode.Value;
@@ -684,8 +692,9 @@ public class AADEFactory
             row.discountOption = detailOverride.DiscountOption.Value;
             row.discountOptionSpecified = true;
         }
-    
-        if (!string.IsNullOrEmpty(detailOverride.LineComments)) row.lineComments = detailOverride.LineComments;
+
+        if (!string.IsNullOrEmpty(detailOverride.LineComments))
+            row.lineComments = detailOverride.LineComments;
         if (detailOverride.IncomeClassification != null)
         {
             if (detailOverride.IncomeClassification.Count != 1)
@@ -752,7 +761,8 @@ public class AADEFactory
             row.otherMeasurementUnitQuantity = detailOverride.OtherMeasurementUnitQuantity.Value;
             row.otherMeasurementUnitQuantitySpecified = true;
         }
-        if (!string.IsNullOrEmpty(detailOverride.OtherMeasurementUnitTitle)) row.otherMeasurementUnitTitle = detailOverride.OtherMeasurementUnitTitle;
+        if (!string.IsNullOrEmpty(detailOverride.OtherMeasurementUnitTitle))
+            row.otherMeasurementUnitTitle = detailOverride.OtherMeasurementUnitTitle;
         if (detailOverride.NotVAT195.HasValue)
         {
             row.notVAT195 = detailOverride.NotVAT195.Value;
@@ -954,7 +964,7 @@ public class AADEFactory
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        if(AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For Invoice Types of type 82 we use a different loading mechanism for the invocies to ensure that taxlevels are included
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
@@ -1027,7 +1037,7 @@ public class AADEFactory
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.itemDescr = x.Description;
-                
+
                 invoiceRow.measurementUnit = AADEMappings.GetMeasurementUnit(x);
                 invoiceRow.measurementUnitSpecified = true;
             }
@@ -1277,7 +1287,7 @@ public class AADEFactory
             branch = 0,
         };
 
-        if (!isDomestic)
+        if (!isDomestic || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
         {
             party.name = customer.CustomerName;
         }
@@ -1290,7 +1300,7 @@ public class AADEFactory
                 postalCode = customer.CustomerZip,
                 city = customer.CustomerCity,
                 street = !string.IsNullOrEmpty(customer.CustomerStreet) ? customer.CustomerStreet : null,
-                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : null
+                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) ? "0" : null)
             };
         }
 
@@ -1411,7 +1421,7 @@ public class AADEFactory
                 invoiceMark = invoiceMark,
                 paymentMethodDetails = paymentMethodDetails.ToArray()
             };
-            
+
             if (!string.IsNullOrEmpty(entityVatNumber))
             {
                 paymentMethod.entityVatNumber = entityVatNumber;
