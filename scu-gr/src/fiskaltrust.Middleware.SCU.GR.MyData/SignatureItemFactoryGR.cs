@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
@@ -9,39 +10,6 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
 public static class SignatureItemFactoryGR
 {
-    public static void AddTransmissionFailure1Signature(ProcessRequest request)
-    {
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
-            Caption = "Transmission Failure_1",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-        });
-    }
-
-    public static void AddMarksForConnectedMarks(ProcessRequest request, InvoicesDoc doc)
-    {
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Data = string.Join(",", doc.invoice[0].invoiceHeader.multipleConnectedMarks),
-            Caption = "",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-        });
-    }
-
-    public static void AddOrderReceiptSignature(ProcessRequest request)
-    {
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Data = $"ΤΟ ΠΑΡΟΝ ΕΙΝΑΙ ΠΛΗΡΟΦΟΡΙΑΚΟ ΣΤΟΙΧΕΙΟ ΚΑΙ ΔΕΝ ΑΠΟΤΕΛΕΙ ΝΟΜΙΜΗ ΦΟΡΟΛΟΓΙΚΗ ΑΠΟΔΕΙΞΗ/ΤΙΜΟΛΟΓΙΟ. THE PRESENT DOCUMENT IS ISSUED ONLY FOR INFORMATION PURPOSES AND DOES NOT STAND FOR A VALID TAX RECEIPT/INVOICE",
-            Caption = "",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-        });
-    }
-
     public static SignatureItem CreateGRQRCode(string qrCode)
     {
         return new SignatureItem()
@@ -60,7 +28,51 @@ public static class SignatureItemFactoryGR
             Data = $"2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
             Caption = "www.viva.com",
             ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            ftSignatureType = SignatureTypeGR.ProviderSignature.As<SignatureType>()
+        });
+    }
+
+    public static void AddInvoiceSignature(ProcessRequest request, InvoicesDoc doc)
+    {
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
+            Caption = "Μοναδικός αριθμός παραστατικού",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.UniqueDocumentIdentifier.As<SignatureType>()
+        });
+    }
+
+    public static void AddTransmissionFailure1Signature(ProcessRequest request)
+    {
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
+            Caption = "Transmission Failure_1",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.TransmissionFailure_1.As<SignatureType>()
+        });
+    }
+
+    public static void AddMarksForConnectedMarks(ProcessRequest request, InvoicesDoc doc)
+    {
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Data = string.Join(",", doc.invoice[0].invoiceHeader.multipleConnectedMarks),
+            Caption = "",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.MultipleConnectedMarks.As<SignatureType>()
+        });
+    }
+
+    public static void AddOrderReceiptSignature(ProcessRequest request)
+    {
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Data = $"ΤΟ ΠΑΡΟΝ ΕΙΝΑΙ ΠΛΗΡΟΦΟΡΙΑΚΟ ΣΤΟΙΧΕΙΟ ΚΑΙ ΔΕΝ ΑΠΟΤΕΛΕΙ ΝΟΜΙΜΗ ΦΟΡΟΛΟΓΙΚΗ ΑΠΟΔΕΙΞΗ/ΤΙΜΟΛΟΓΙΟ. THE PRESENT DOCUMENT IS ISSUED ONLY FOR INFORMATION PURPOSES AND DOES NOT STAND FOR A VALID TAX RECEIPT/INVOICE",
+            Caption = "",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.OrderReceiptSignature.As<SignatureType>()
         });
     }
 
@@ -88,16 +100,7 @@ public static class SignatureItemFactoryGR
         }
     }
 
-    public static void AddInvoiceSignature(ProcessRequest request, InvoicesDoc doc)
-    {
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
-            Caption = "Μοναδικός αριθμός παραστατικού",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-        });
-    }
+
     public static void AddMyDataXmlSignature(ProcessRequest request, string xmlPayload)
     {
         var cleanXml = xmlPayload;
@@ -110,19 +113,12 @@ public static class SignatureItemFactoryGR
             }
         }
 
-        // The receipt-api checks for "<invoicesDoc " (lowercase i)
-        if (cleanXml.StartsWith("<InvoicesDoc"))
-        {
-            cleanXml = "<invoicesDoc" + cleanXml.Substring("<InvoicesDoc".Length);
-            cleanXml = cleanXml.Replace("</InvoicesDoc>", "</invoicesDoc>");
-        }
-
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Data = cleanXml,
             Caption = "mydata-xml",
             ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
+            ftSignatureType = SignatureTypeGR.MyDataXML.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
         });
     }
 }
