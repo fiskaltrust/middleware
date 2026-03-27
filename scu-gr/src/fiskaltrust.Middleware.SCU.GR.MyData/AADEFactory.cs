@@ -1131,8 +1131,6 @@ public class AADEFactory
             {
                 invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
                 invoiceRow.deductionsAmountSpecified = true;
-                invoiceRow.discountOption = true;
-                invoiceRow.discountOptionSpecified = true;
             }
             // Apply line-level mydataoverride from ftChargeItemCaseData
             if (x.ftChargeItemCaseData != null)
