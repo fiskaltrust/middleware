@@ -6,17 +6,18 @@ namespace fiskaltrust.Middleware.SCU.GR.Abstraction;
 public enum SignatureTypeGR : long
 {
     PosReceipt = 0x4752_2000_0000_0001,
-    ProviderSignature = 0x4752_2000_0000_0010,
-    UniqueDocumentIdentifier = 0x4752_2000_0000_0011,
-    TransmissionFailure_1 = 0x4752_2000_0000_0012,
-    MultipleConnectedMarks = 0x4752_2000_0000_0013,
-    OrderReceiptSignature = 0x4752_2000_0000_0014,
-    Uid = 0x4752_2000_0000_0015,
-    Mark = 0x4752_2000_0000_0016,
-    AuthenticatioNCode = 0x4752_2000_0000_0017,
-    GenericMyDataInfo = 0x4752_2000_0000_0018,
-    QRCode = 0x4752_2000_0000_0019,
-    MyDataXML = 0x4752_2000_0000_0050,
+    MyDataXML = 0x4752_2000_0000_0010,
+    ProviderSignature = 0x4752_2000_0000_0011,
+    UniqueDocumentIdentifier = 0x4752_2000_0000_0012,
+    Uid = 0x4752_2000_0000_0013,
+    Mark = 0x4752_2000_0000_0014,
+    AuthenticatioNCode = 0x4752_2000_0000_0015,
+    TransmissionFailure_1 = 0x4752_2000_0000_0016,
+    MultipleConnectedMarks = 0x4752_2000_0000_0017,
+    OrderReceiptSignature = 0x4752_2000_0000_0018,
+    GenericMyDataInfo = 0x4752_2000_0000_0019,
+    QRCode = 0x4752_2000_0000_001A,
+    HandwrittenSignature = 0x4752_2000_0000_001B,
 }
 
 public static class SignatureTypeGRExt

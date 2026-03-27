@@ -85,7 +85,7 @@ public static class SignatureItemFactoryGR
                 Data = $"https://r-sb.ft.ms/{hashPayload}",
                 Caption = "",
                 ftSignatureFormat = SignatureFormat.Link,
-                ftSignatureType = ((SignatureType) 0x4752_2000_0000_0000).WithFlag(SignatureTypeFlags.DontVisualize)
+                ftSignatureType = SignatureTypeGR.HandwrittenSignature.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
             });
         }
         else
@@ -95,7 +95,7 @@ public static class SignatureItemFactoryGR
                 Data = $"https://r.ft.ms/{hashPayload}",
                 Caption = "",
                 ftSignatureFormat = SignatureFormat.Link,
-                ftSignatureType = ((SignatureType) 0x4752_2000_0000_0000).WithFlag(SignatureTypeFlags.DontVisualize)
+                ftSignatureType = SignatureTypeGR.HandwrittenSignature.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
             });
         }
     }

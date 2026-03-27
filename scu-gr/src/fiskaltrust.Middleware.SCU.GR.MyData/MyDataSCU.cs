@@ -258,7 +258,7 @@ public class MyDataSCU : IGRSSCD
                                     Data = data.Items[i].ToString() ?? "",
                                     Caption = data.ItemsElementName[i].ToString(),
                                     ftSignatureFormat = SignatureFormat.Text,
-                                    ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypeGR.GenericMyDataInfo)
+                                    ftSignatureType = SignatureTypeGR.GenericMyDataInfo.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
                                 });
                             }
                         }
