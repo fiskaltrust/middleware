@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Xml.Serialization;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using FluentAssertions;
@@ -607,6 +607,8 @@ namespace fiskaltrust.Middleware.SCU.GR.IntegrationTest.MyDataSCU
             var mark_first = await SendBaseInvoice_1_1();
             _output.WriteLine($">>> First 1.1 MARK: {mark_first}");
 
+            Thread.Sleep(5000); // Wait for MARK to be indexed before sending dependent invoice
+
             var doc = Build_1_1(correlatedInvoices: new[] { mark_first });
             var mark_second = await SendToMyData(AADEFactory.GenerateInvoicePayload(doc));
             _output.WriteLine($">>> Second 1.1 with correlatedInvoices MARK: {mark_second}");
@@ -789,6 +791,8 @@ namespace fiskaltrust.Middleware.SCU.GR.IntegrationTest.MyDataSCU
         {
             var mark_1_1 = await SendBaseInvoice_1_1();
             _output.WriteLine($">>> Base 1.1 MARK: {mark_1_1}");
+            
+            Thread.Sleep(5000); // Wait for MARK to be indexed before sending dependent invoice
 
             var doc = Build_1_6(correlatedInvoices: new[] { mark_1_1 });
             var mark_1_6 = await SendToMyData(AADEFactory.GenerateInvoicePayload(doc));
@@ -932,6 +936,8 @@ namespace fiskaltrust.Middleware.SCU.GR.IntegrationTest.MyDataSCU
         {
             var mark_2_1 = await SendBaseServiceInvoice_2_1();
             _output.WriteLine($">>> Base 2.1 MARK: {mark_2_1}");
+            
+            Thread.Sleep(5000); // Wait for MARK to be indexed before sending dependent invoice
 
             var doc = Build_2_4(correlatedInvoices: new[] { mark_2_1 });
             var mark_2_4 = await SendToMyData(AADEFactory.GenerateInvoicePayload(doc));
