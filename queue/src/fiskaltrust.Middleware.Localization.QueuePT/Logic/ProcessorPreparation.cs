@@ -5,6 +5,9 @@ using fiskaltrust.Middleware.Localization.QueuePT.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 
@@ -16,6 +19,16 @@ public abstract class ProcessorPreparation
     }
 
     protected abstract AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; }
+    protected abstract ftQueuePT GetQueuePT();
+
+    private MarketValidator? _shadowFvValidator;
+    private ILogger? _shadowLogger;
+
+    public void SetShadowValidation(MarketValidator fvValidator, ILogger shadowLogger)
+    {
+        _shadowFvValidator = fvValidator;
+        _shadowLogger = shadowLogger;
+    }
 
     public async Task<ProcessCommandResponse> WithPreparations(ProcessCommandRequest request, Func<Task<ProcessCommandResponse>> process)
     {
@@ -26,21 +39,42 @@ public abstract class ProcessorPreparation
                 chargeItem.VATAmount = VATHelpers.CalculateVAT(chargeItem.Amount, chargeItem.VATRate);
             }
         }
-        //var series = isRefund ? staticNumberStorage.CreditNoteSeries : staticNumberStorage.InvoiceSeries;
 
-        // Perform all validations using the new validator (returns one ValidationResult per error)
-        // Now includes receipt moment order validation with the series
         var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _readOnlyQueueItemRepository);
         var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
         {
             IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
             GeneratesSignature = true,
             IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
-            //NumberSeries = series  // Include series for moment order validation
         });
+
+        if (_shadowFvValidator != null && _shadowLogger != null)
+        {
+            object? numberSeries = null;
+            try { numberSeries = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, GetQueuePT(), await _readOnlyQueueItemRepository); }
+            catch {}
+
+            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue, request.ReceiptResponse, numberSeries);
+            var oldSucceeded = validationResults.IsValid;
+            var fvSucceeded = fvResult.IsValid;
+
+            if (oldSucceeded != fvSucceeded)
+            {
+                _shadowLogger.LogError(
+                    "Receipt validation mismatch " +
+                    "cbReceiptReference={Ref} ftReceiptCase=0x{Case:X} " +
+                    "OldSuccess={OldSuccess} FVSuccess={FVSuccess} " +
+                    "FVErrors={FVErrors}",
+                    request.ReceiptRequest.cbReceiptReference,
+                    request.ReceiptRequest.ftReceiptCase,
+                    oldSucceeded,
+                    fvSucceeded,
+                    string.Join("; ", fvResult.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorMessage}")));
+            }
+        }
+
         if (!validationResults.IsValid)
         {
-
             var error = validationResults.Results.SelectMany(r => r.Errors).FirstOrDefault();
             if (error != null)
             {
@@ -50,17 +84,8 @@ public abstract class ProcessorPreparation
             {
                 request.ReceiptResponse.SetReceiptResponseError($"Validation error [UNKNOWN]: An unknown validation error has occurred.");
             }
-            //foreach (var result in validationResults.Results)
-            //{
-            //    foreach (var error in result.Errors)
-            //    {
-            //        request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-            //    }
-            //}
             return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
-
-
 
         return await process();
     }

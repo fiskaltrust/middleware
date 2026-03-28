@@ -13,6 +13,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -51,8 +52,10 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             });
         });
 
+        var receiptReferenceProvider = new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository());
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
+            new ValidationFV.ReceiptValidator(receiptReferenceProvider),
             new LifecycleCommandProcessorES(
                 queueStorageProvider,
                 storageProvider.CreateConfigurationRepository()
