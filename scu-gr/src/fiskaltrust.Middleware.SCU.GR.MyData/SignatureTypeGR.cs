@@ -1,15 +1,23 @@
-using System;
+﻿using System;
 using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.SCU.GR.Abstraction;
 
 public enum SignatureTypeGR : long
 {
-    InitialOperationReceipt = 0x4752_2000_0001_1001,
-    OutOfOperationReceipt = 0x4752_2000_0001_1002,
     PosReceipt = 0x4752_2000_0000_0001,
-    MyDataInfo = 0x4752_2000_0000_0010,
-    // TBD define signaturetypes => interface ??
+    MyDataXML = 0x4752_2000_0000_0010,
+    ProviderSignature = 0x4752_2000_0000_0011,
+    UniqueDocumentIdentifier = 0x4752_2000_0000_0012,
+    Uid = 0x4752_2000_0000_0013,
+    Mark = 0x4752_2000_0000_0014,
+    AuthenticatioNCode = 0x4752_2000_0000_0015,
+    TransmissionFailure_1 = 0x4752_2000_0000_0016,
+    MultipleConnectedMarks = 0x4752_2000_0000_0017,
+    OrderReceiptSignature = 0x4752_2000_0000_0018,
+    GenericMyDataInfo = 0x4752_2000_0000_0019,
+    QRCode = 0x4752_2000_0000_001A,
+    HandwrittenSignature = 0x4752_2000_0000_001B,
 }
 
 public static class SignatureTypeGRExt

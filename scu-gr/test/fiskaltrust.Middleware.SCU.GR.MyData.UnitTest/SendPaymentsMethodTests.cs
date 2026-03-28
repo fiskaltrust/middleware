@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,14 +15,17 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 
 public class SendPaymentsMethodTests
 {
-    // ISV sends: 0x4752_2000_0800_3005
-    //                          ↑    ↑
-    //                          │    └── Pay (log payment) case
-    //                          └─────── SendPaymentsMethod local flag
-    private static readonly ReceiptCase SendPaymentsMethodCase =
-        ((ReceiptCase) 0x4752_2000_0000_0000)
-            .WithCase(ReceiptCase.Pay0x3005)
-            .WithFlag(ReceiptCaseFlagsGR.SendPaymentsMethod);
+    /// <summary>
+    /// The pay item flag that triggers SendPaymentsMethod routing.
+    /// Bit 32 (0x0000_0001_0000_0000) on the ftPayItemCase signals a local pay-item.
+    /// </summary>
+    private const long LocalPayItemFlag = 0x0000_0001_0000_0000;
+
+    private static readonly ReceiptCase Pay0x3005Case =
+        ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Pay0x3005);
+
+    private static PayItemCase WithLocalFlag(PayItemCase payItemCase) =>
+        (PayItemCase) ((long) payItemCase | LocalPayItemFlag);
 
     private static AADEFactory CreateFactory() =>
         new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
@@ -33,27 +36,11 @@ public class SendPaymentsMethodTests
     #region Flag and Case Detection
 
     [Fact]
-    public void SendPaymentsMethodCase_ShouldHaveCorrectCaseAndFlag()
+    public void Pay0x3005_ShouldNotBeMistaken_ForOtherCases()
     {
-        SendPaymentsMethodCase.IsCase(ReceiptCase.Pay0x3005).Should().BeTrue();
-        SendPaymentsMethodCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod).Should().BeTrue();
-    }
-
-    [Fact]
-    public void SendPaymentsMethodFlag_ShouldNotConflictWithHasTransportInformation()
-    {
-        var transportFlag = (long) ReceiptCaseFlagsGR.HasTransportInformation;
-        var sendPaymentFlag = (long) ReceiptCaseFlagsGR.SendPaymentsMethod;
-
-        (transportFlag & sendPaymentFlag).Should().Be(0, "the two flags must occupy different bits");
-    }
-
-    [Fact]
-    public void SendPaymentsMethodCase_ShouldNotBeMistaken_ForOtherCases()
-    {
-        SendPaymentsMethodCase.IsCase(ReceiptCase.PaymentTransfer0x0002).Should().BeFalse();
-        SendPaymentsMethodCase.IsCase(ReceiptCase.Order0x3004).Should().BeFalse();
-        SendPaymentsMethodCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation).Should().BeFalse();
+        Pay0x3005Case.IsCase(ReceiptCase.PaymentTransfer0x0002).Should().BeFalse();
+        Pay0x3005Case.IsCase(ReceiptCase.Order0x3004).Should().BeFalse();
+        Pay0x3005Case.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation).Should().BeFalse();
     }
 
     #endregion
@@ -71,7 +58,7 @@ public class SendPaymentsMethodTests
                 Position = 1,
                 Amount = 10.00m,
                 Description = "POS Payment",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment))
             }
         });
 
@@ -97,7 +84,7 @@ public class SendPaymentsMethodTests
                 Position = 1,
                 Amount = 50.00m,
                 Description = "Cash",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment))
             }
         });
 
@@ -118,7 +105,7 @@ public class SendPaymentsMethodTests
                 Position = 1,
                 Amount = 10.00m,
                 Description = "Cash",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment))
             }
         });
 
@@ -148,9 +135,9 @@ public class SendPaymentsMethodTests
         var receiptRequest = BuildRequest(new List<PayItem>
         {
             new PayItem { Position = 1, Amount = 5.00m, Description = "Cash",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) },
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)) },
             new PayItem { Position = 2, Amount = 5.00m, Description = "Card",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)) }
         });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
@@ -168,7 +155,7 @@ public class SendPaymentsMethodTests
         var receiptRequest = BuildRequest(new List<PayItem>
         {
             new PayItem { Position = 1, Amount = 10.555m, Description = "Cash",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) }
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)) }
         });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 123456789);
@@ -184,7 +171,7 @@ public class SendPaymentsMethodTests
         var receiptRequest = BuildRequest(new List<PayItem>
         {
             new PayItem { Position = 1, Amount = 10.00m, Description = "Cash",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) }
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment)) }
         });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
@@ -197,9 +184,6 @@ public class SendPaymentsMethodTests
     [Fact]
     public void MapToPaymentMethodsDoc_WithAadeSignatureData_ShouldExtractProviderSignature()
     {
-        // This covers the real-world case where the original invoice was submitted through
-        // a fiscal provider — AADE error 403 "Payment Methods must contain provider signature"
-        // is returned when ProvidersSignature is absent in that scenario.
         var factory = CreateFactory();
         var receiptRequest = BuildRequest(new List<PayItem>
         {
@@ -208,7 +192,7 @@ public class SendPaymentsMethodTests
                 Position = 1,
                 Amount = 10.00m,
                 Description = "POS Payment",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment),
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)),
                 ftPayItemCaseData = new
                 {
                     aadeSignatureData = new
@@ -304,8 +288,6 @@ public class SendPaymentsMethodTests
     [Fact]
     public void GeneratePaymentMethodPayload_WithProviderSignature_ShouldIncludeItInXml()
     {
-        // Reproduces the payload shape required when AADE returns error 403:
-        // "Invoice was sent by provider. Payment Methods must contain provider signature."
         var doc = new PaymentMethodsDoc
         {
             paymentMethods = new[]
@@ -344,29 +326,47 @@ public class SendPaymentsMethodTests
     #region ProcessReceiptAsync Routing
 
     [Fact]
-    public void RoutingCondition_Pay0x3005WithSendPaymentsMethodFlag_ShouldTrigger()
+    public void RoutingCondition_Pay0x3005WithLocalPayItemFlag_ShouldTrigger()
     {
-        var receiptCase = SendPaymentsMethodCase;
+        var receiptCase = Pay0x3005Case;
+        var payItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.00m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment))
+            }
+        };
         var receiptReferences = new List<(ReceiptRequest, ReceiptResponse)> { BuildPreviousReceiptPair("400001951868897") };
 
+        var hasLocalPayItemFlag = payItems.Any(p => ((long) p.ftPayItemCase & LocalPayItemFlag) != 0);
         bool shouldRoute =
             receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
-            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod) &&
+            hasLocalPayItemFlag &&
             receiptReferences != null && receiptReferences.Count > 0;
 
         shouldRoute.Should().BeTrue();
     }
 
     [Fact]
-    public void RoutingCondition_Pay0x3005WithoutFlag_ShouldNotTrigger()
+    public void RoutingCondition_Pay0x3005WithoutLocalPayItemFlag_ShouldNotTrigger()
     {
-        var receiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Pay0x3005);
+        var receiptCase = Pay0x3005Case;
+        var payItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.00m, Description = "Card",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)
+            }
+        };
 
+        var hasLocalPayItemFlag = payItems.Any(p => ((long) p.ftPayItemCase & LocalPayItemFlag) != 0);
         bool shouldRoute =
             receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
-            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod);
+            hasLocalPayItemFlag;
 
-        shouldRoute.Should().BeFalse("flag is missing");
+        shouldRoute.Should().BeFalse("local pay item flag is missing");
     }
 
     [Fact]
@@ -374,9 +374,7 @@ public class SendPaymentsMethodTests
     {
         var receiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PaymentTransfer0x0002);
 
-        bool shouldRoute =
-            receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
-            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod);
+        bool shouldRoute = receiptCase.IsCase(ReceiptCase.Pay0x3005);
 
         shouldRoute.Should().BeFalse("PaymentTransfer0x0002 is a different receipt case that maps to an 8.4 invoice");
     }
@@ -384,12 +382,21 @@ public class SendPaymentsMethodTests
     [Fact]
     public void RoutingCondition_Pay0x3005WithFlag_ButNoReceiptReferences_ShouldNotRoute()
     {
-        var receiptCase = SendPaymentsMethodCase;
+        var receiptCase = Pay0x3005Case;
+        var payItems = new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.00m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment))
+            }
+        };
         List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null;
 
+        var hasLocalPayItemFlag = payItems.Any(p => ((long) p.ftPayItemCase & LocalPayItemFlag) != 0);
         bool shouldRoute =
             receiptCase.IsCase(ReceiptCase.Pay0x3005) &&
-            receiptCase.IsFlag(ReceiptCaseFlagsGR.SendPaymentsMethod) &&
+            hasLocalPayItemFlag &&
             receiptReferences != null && receiptReferences.Count > 0;
 
         shouldRoute.Should().BeFalse("cbPreviousReceiptReference and receiptReferences are required");
@@ -427,11 +434,6 @@ public class SendPaymentsMethodTests
 
     #region EntityVatNumber Extraction (Provider Endpoint)
 
-    // The middleware always calls /myDataProvider/ endpoints (acting as a provider),
-    // so entityVatNumber is always required. The routing block extracts it from
-    // _masterDataConfiguration.Account.VatId by stripping non-digit characters,
-    // following the same pattern as CancelDeliveryNoteAsync.
-
     [Theory]
     [InlineData("EL112545020", "112545020")]
     [InlineData("GR112545020", "112545020")]
@@ -439,8 +441,6 @@ public class SendPaymentsMethodTests
     [InlineData("EL123456789", "123456789")]
     public void EntityVatNumber_ShouldStripPrefixAndKeepDigitsOnly(string configuredVatId, string expectedEntityVat)
     {
-        // Mirrors the extraction logic in ProcessReceiptAsync:
-        //   var entityVatNumber = new string(_masterDataConfiguration.Account.VatId.Where(char.IsDigit).ToArray());
         var entityVatNumber = new string(configuredVatId.Where(char.IsDigit).ToArray());
 
         entityVatNumber.Should().Be(expectedEntityVat);
@@ -449,13 +449,13 @@ public class SendPaymentsMethodTests
     [Fact]
     public void MapToPaymentMethodsDoc_WithELPrefixedVat_ShouldSetDigitsOnlyEntityVatNumber()
     {
-        var factory = CreateFactory(); 
+        var factory = CreateFactory();
         var entityVatNumber = new string("EL123456789".Where(char.IsDigit).ToArray());
 
         var receiptRequest = BuildRequest(new List<PayItem>
         {
             new PayItem { Position = 1, Amount = 10.00m, Description = "POS Payment",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)) }
         });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001960899044, entityVatNumber);
@@ -478,7 +478,7 @@ public class SendPaymentsMethodTests
         var receiptRequest = BuildRequest(new List<PayItem>
         {
             new PayItem { Position = 1, Amount = 10.00m, Description = "POS Payment",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)) }
         });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001960899044, entityVatNumber);
@@ -519,12 +519,11 @@ public class SendPaymentsMethodTests
     [Fact]
     public void MapToPaymentMethodsDoc_WithoutEntityVatNumber_ShouldNotIncludeItInXml()
     {
-        
         var factory = CreateFactory();
         var receiptRequest = BuildRequest(new List<PayItem>
         {
             new PayItem { Position = 1, Amount = 10.00m, Description = "POS Payment",
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment) }
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.DebitCardPayment)) }
         });
 
         (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001960899044);
@@ -551,7 +550,7 @@ public class SendPaymentsMethodTests
             ftPosSystemId = Guid.NewGuid(),
             cbChargeItems = new List<ChargeItem>(),
             cbPayItems = payItems,
-            ftReceiptCase = SendPaymentsMethodCase
+            ftReceiptCase = Pay0x3005Case
         };
 
     private static PaymentMethodsDoc BuildPaymentMethodsDoc(long invoiceMark, int type, decimal amount) =>

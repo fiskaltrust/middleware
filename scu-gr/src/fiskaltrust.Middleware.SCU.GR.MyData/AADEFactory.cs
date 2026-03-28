@@ -393,12 +393,6 @@ public class AADEFactory
                 "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
         }
 
-        var invoiceTypeOverride = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
-        if (string.IsNullOrEmpty(invoiceTypeOverride))
-        {
-            throw new ArgumentException(
-                "When a classification override is set, invoiceType must also be overridden in the invoice header.");
-        }
     }
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
@@ -623,6 +617,22 @@ public class AADEFactory
         {
             invoice.invoiceHeader.reverseDeliveryNote = headerOverride.ReverseDeliveryNote.Value;
             invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
+        }
+
+        // Apply correlatedInvoices override
+        if (headerOverride.CorrelatedInvoices is { Length: > 0 })
+        {
+            invoice.invoiceHeader.correlatedInvoices = headerOverride.CorrelatedInvoices;
+        }
+
+        // When invoiceType is overridden to a type that uses correlatedInvoices instead of
+        // multipleConnectedMarks (e.g. 1.6, 2.4), move the marks to the correct field.
+        if (!AADEMappings.SupportsMultipleConnectedMarks(invoice.invoiceHeader.invoiceType)
+            && invoice.invoiceHeader.multipleConnectedMarks is { Length: > 0 }
+            && invoice.invoiceHeader.correlatedInvoices is null or { Length: 0 })
+        {
+            invoice.invoiceHeader.correlatedInvoices = invoice.invoiceHeader.multipleConnectedMarks;
+            invoice.invoiceHeader.multipleConnectedMarks = null;
         }
 
     }
@@ -1131,8 +1141,6 @@ public class AADEFactory
             {
                 invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
                 invoiceRow.deductionsAmountSpecified = true;
-                invoiceRow.discountOption = true;
-                invoiceRow.discountOptionSpecified = true;
             }
             // Apply line-level mydataoverride from ftChargeItemCaseData
             if (x.ftChargeItemCaseData != null)

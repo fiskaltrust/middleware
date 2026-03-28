@@ -5,11 +5,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Models;
 
 public enum SignatureTypeGR : long
 {
-    InitialOperationReceipt = 0x4752_2000_0001_1001,
-    OutOfOperationReceipt = 0x4752_2000_0001_1002,
-    PosReceipt = 0x4752_2000_0000_0001,
-    MyDataInfo = 0x4752_2000_0000_0010,
-    // TBD define signaturetypes => interface ??
+    InitialOperationReceipt = 0x4752_2000_0000_0003,
+    OutOfOperationReceipt = 0x4752_2000_0000_0003,
 }
 
 public static class SignatureTypeGRExt
