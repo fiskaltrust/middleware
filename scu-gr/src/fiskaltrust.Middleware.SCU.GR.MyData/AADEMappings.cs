@@ -329,11 +329,11 @@ public static class AADEMappings
                 return InvoiceType.Item114;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item115;
             }
-            else if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption)))
+            else if (hasOwnConsumption)
             {
                 return InvoiceType.Item61;
             }
@@ -354,11 +354,11 @@ public static class AADEMappings
                 return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item14;
             }
-            else if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption)))
+            else if (hasOwnConsumption)
             {
                 return InvoiceType.Item61;
             }
