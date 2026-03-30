@@ -362,6 +362,16 @@ public class AADEFactory
             ApplyMyDataOverride(inv, overrideData.GR.MyDataOverride);
         }
 
+        // Strip income classifications for invoice types that forbid them (e.g. 3.1, 3.2 Title Deeds).
+        if (!AADEMappings.SupportsIncomeClassification(inv.invoiceHeader.invoiceType))
+        {
+            foreach (var detail in inv.invoiceDetails)
+            {
+                detail.incomeClassification = null;
+            }
+            inv.invoiceSummary.incomeClassification = null;
+        }
+
         // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
         ValidateClassificationOverrideConsistency(receiptRequest, overrideData);
         return inv;

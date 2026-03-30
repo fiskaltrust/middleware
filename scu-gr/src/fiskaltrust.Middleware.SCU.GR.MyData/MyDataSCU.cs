@@ -15,6 +15,8 @@ using System.Security.Cryptography;
 using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
@@ -24,8 +26,9 @@ public class MyDataSCU : IGRSSCD
     private readonly string _receiptBaseAddress;
     readonly bool _sandbox;
     private readonly MasterDataConfiguration _masterDataConfiguration;
+    private readonly ILogger<MyDataSCU> _logger;
 
-    public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration)
+    public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration, ILogger<MyDataSCU>? logger = null)
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
@@ -45,6 +48,7 @@ public class MyDataSCU : IGRSSCD
                 }
             };
         }
+        _logger = logger ?? NullLogger<MyDataSCU>.Instance;
         _httpClient = new HttpClient()
         {
             BaseAddress = new Uri(baseAddress)
@@ -69,7 +73,7 @@ public class MyDataSCU : IGRSSCD
     {
         if (string.IsNullOrEmpty(_masterDataConfiguration.Account.VatId))
         {
-            request.ReceiptResponse.SetReceiptResponseError("The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
+            SetErrorAndLog(request,"The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -86,7 +90,7 @@ public class MyDataSCU : IGRSSCD
 
             if (string.IsNullOrEmpty(mark))
             {
-                request.ReceiptResponse.SetReceiptResponseError("Cannot void delivery note: The mark of the delivery note to cancel is missing. Please provide the mark in the cbPreviousReceiptReference.");
+                SetErrorAndLog(request,"Cannot void delivery note: The mark of the delivery note to cancel is missing. Please provide the mark in the cbPreviousReceiptReference.");
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
@@ -106,7 +110,7 @@ public class MyDataSCU : IGRSSCD
 
             if (string.IsNullOrEmpty(invoiceMarkText) || !long.TryParse(invoiceMarkText, out var invoiceMark))
             {
-                request.ReceiptResponse.SetReceiptResponseError("Cannot send payment method: The invoiceMark of the referenced invoice is missing or invalid. Please ensure cbPreviousReceiptReference points to a successfully submitted invoice.");
+                SetErrorAndLog(request,"Cannot send payment method: The invoiceMark of the referenced invoice is missing or invalid. Please ensure cbPreviousReceiptReference points to a successfully submitted invoice.");
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
@@ -123,7 +127,7 @@ public class MyDataSCU : IGRSSCD
         {
             if (error != null)
             {
-                request.ReceiptResponse.SetReceiptResponseError(error.Exception.Message);
+                SetErrorAndLog(request,error.Exception.Message);
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
@@ -131,7 +135,7 @@ public class MyDataSCU : IGRSSCD
             }
             else
             {
-                request.ReceiptResponse.SetReceiptResponseError("Something went wrong while mapping the inbound data. Please check the inbound request.");
+                SetErrorAndLog(request,"Something went wrong while mapping the inbound data. Please check the inbound request.");
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
@@ -176,7 +180,7 @@ public class MyDataSCU : IGRSSCD
 
         if ((int) response.StatusCode >= 500)
         {
-            request.ReceiptResponse.SetReceiptResponseError("Error while sending the request to MyData API. Please check the logs for more details.");
+            SetErrorAndLog(request,"Error while sending the request to MyData API. Please check the logs for more details.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -192,7 +196,7 @@ public class MyDataSCU : IGRSSCD
                 var data = ersult.response[0];
                 if (data == null || data.Items == null || data.ItemsElementName == null)
                 {
-                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    SetErrorAndLog(request,"Invalid response from MyData API.");
                     return new ProcessResponse
                     {
                         ReceiptResponse = request.ReceiptResponse
@@ -288,7 +292,7 @@ public class MyDataSCU : IGRSSCD
                     else
                     {
                         var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
-                        request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                        SetErrorAndLog(request,JsonSerializer.Serialize(new AADEEErrorResponse
                         {
                             AADEError = data.statusCode,
                             Errors = errors.ToList()
@@ -301,12 +305,12 @@ public class MyDataSCU : IGRSSCD
             }
             else
             {
-                request.ReceiptResponse.SetReceiptResponseError(content);
+                SetErrorAndLog(request,content);
             }
         }
         else
         {
-            request.ReceiptResponse.SetReceiptResponseError(content);
+            SetErrorAndLog(request,content);
         }
 
         return new ProcessResponse
@@ -321,6 +325,12 @@ public class MyDataSCU : IGRSSCD
                         .Replace('+', '-')
                         .Replace('/', '_');
         return base64;
+    }
+
+    private void SetErrorAndLog(ProcessRequest request, string errorMessage)
+    {
+        _logger.LogError("myDATA error for receipt '{ReceiptReference}' (QueueItemId: {QueueItemId}): {Error}", request.ReceiptRequest.cbReceiptReference, request.ReceiptResponse.ftQueueItemID, errorMessage);
+        request.ReceiptResponse.SetReceiptResponseError(errorMessage);
     }
 
     public class AADEEErrorResponse
@@ -366,7 +376,7 @@ public class MyDataSCU : IGRSSCD
 
         if ((int) response.StatusCode >= 500)
         {
-            request.ReceiptResponse.SetReceiptResponseError("Error while sending the cancel request to MyData API.");
+            SetErrorAndLog(request,"Error while sending the cancel request to MyData API.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -381,7 +391,7 @@ public class MyDataSCU : IGRSSCD
                 var data = result.response[0];
                 if (data == null)
                 {
-                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    SetErrorAndLog(request,"Invalid response from MyData API.");
                     return new ProcessResponse
                     {
                         ReceiptResponse = request.ReceiptResponse
@@ -409,7 +419,7 @@ public class MyDataSCU : IGRSSCD
                 else
                 {
                     var errors = data.Items?.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
-                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    SetErrorAndLog(request,JsonSerializer.Serialize(new AADEEErrorResponse
                     {
                         AADEError = data.statusCode,
                         Errors = errors?.ToList() ?? new List<ErrorType>()
@@ -421,12 +431,12 @@ public class MyDataSCU : IGRSSCD
             }
             else
             {
-                request.ReceiptResponse.SetReceiptResponseError(content);
+                SetErrorAndLog(request,content);
             }
         }
         else
         {
-            request.ReceiptResponse.SetReceiptResponseError(content);
+            SetErrorAndLog(request,content);
         }
 
         return new ProcessResponse
@@ -439,7 +449,7 @@ public class MyDataSCU : IGRSSCD
     {
         if (string.IsNullOrEmpty(_masterDataConfiguration.Account.VatId))
         {
-            request.ReceiptResponse.SetReceiptResponseError("The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
+            SetErrorAndLog(request,"The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -450,7 +460,7 @@ public class MyDataSCU : IGRSSCD
         (var doc, var error) = aadFactory.MapToPaymentMethodsDoc(request.ReceiptRequest, invoiceMark, entityVatNumber);
         if (doc == null)
         {
-            request.ReceiptResponse.SetReceiptResponseError(error?.Exception.Message ?? "Something went wrong while mapping the payment method data. Please check the inbound request.");
+            SetErrorAndLog(request,error?.Exception.Message ?? "Something went wrong while mapping the payment method data. Please check the inbound request.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -483,7 +493,7 @@ public class MyDataSCU : IGRSSCD
 
         if ((int) response.StatusCode >= 500)
         {
-            request.ReceiptResponse.SetReceiptResponseError("Error while sending the payment method request to MyData API. Please check the logs for more details.");
+            SetErrorAndLog(request,"Error while sending the payment method request to MyData API. Please check the logs for more details.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -498,7 +508,7 @@ public class MyDataSCU : IGRSSCD
                 var data = result.response[0];
                 if (data == null || data.Items == null || data.ItemsElementName == null)
                 {
-                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    SetErrorAndLog(request,"Invalid response from MyData API.");
                     return new ProcessResponse
                     {
                         ReceiptResponse = request.ReceiptResponse
@@ -525,7 +535,7 @@ public class MyDataSCU : IGRSSCD
                 else
                 {
                     var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
-                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    SetErrorAndLog(request,JsonSerializer.Serialize(new AADEEErrorResponse
                     {
                         AADEError = data.statusCode,
                         Errors = errors.ToList()
@@ -537,12 +547,12 @@ public class MyDataSCU : IGRSSCD
             }
             else
             {
-                request.ReceiptResponse.SetReceiptResponseError(content);
+                SetErrorAndLog(request,content);
             }
         }
         else
         {
-            request.ReceiptResponse.SetReceiptResponseError(content);
+            SetErrorAndLog(request,content);
         }
 
         return new ProcessResponse
