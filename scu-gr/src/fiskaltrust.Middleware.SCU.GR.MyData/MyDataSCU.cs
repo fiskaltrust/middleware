@@ -31,11 +31,11 @@ public class MyDataSCU : IGRSSCD
         {
             throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
         }
-        
+
         _receiptBaseAddress = receiptBaseAddress;
         _sandbox = sandbox;
         _masterDataConfiguration = masterDataConfiguration;
-        if(sandbox && _masterDataConfiguration?.Account?.VatId == null)
+        if (sandbox && _masterDataConfiguration?.Account?.VatId == null)
         {
             _masterDataConfiguration = new MasterDataConfiguration
             {
@@ -52,12 +52,12 @@ public class MyDataSCU : IGRSSCD
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
-    
+
     public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
     {
         return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
     }
-    
+
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -76,14 +76,14 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && 
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) &&
             request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) &&
             request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) &&
             receiptReferences != null && receiptReferences.Count > 0)
         {
             var previousReceipt = receiptReferences[0];
             var mark = previousReceipt.Item2.ftSignatures?.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
-            
+
             if (string.IsNullOrEmpty(mark))
             {
                 request.ReceiptResponse.SetReceiptResponseError("Cannot void delivery note: The mark of the delivery note to cancel is missing. Please provide the mark in the cbPreviousReceiptReference.");
@@ -204,12 +204,52 @@ public class MyDataSCU : IGRSSCD
                     {
                         for (var i = 0; i < data.ItemsElementName.Length; i++)
                         {
-                            if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+
+                            if (data.ItemsElementName[i] == ItemsChoiceType.invoiceUid)
                             {
-                                continue;
-                                // In the latest API Version mydata returns a QR Code. We don't need it since we are printing our own QR Code. In case
-                                // of ERP API based integrations we will still want this to be added.
-                                // request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
+                                doc.invoice[0].uid = data.Items[i].ToString();
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.Uid.As<SignatureType>()
+                                });
+                            }
+                            else if (data.ItemsElementName[i] == ItemsChoiceType.invoiceMark)
+                            {
+                                doc.invoice[0].mark = long.Parse(data.Items[i].ToString()!);
+                                doc.invoice[0].markSpecified = true;
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.Mark.As<SignatureType>()
+                                });
+                            }
+                            else if (data.ItemsElementName[i] == ItemsChoiceType.authenticationCode)
+                            {
+                                doc.invoice[0].authenticationCode = data.Items[i].ToString();
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.AuthenticatioNCode.As<SignatureType>()
+                                });
+                            }
+                            else if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                            {
+                                // Should we set it?
+                                // doc.invoice[0].qrCodeUrl = data.Items[i].ToString();
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.QRCode,
+                                    ftSignatureType = SignatureTypeGR.QRCode.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
+                                });
                             }
                             else
                             {
@@ -218,11 +258,12 @@ public class MyDataSCU : IGRSSCD
                                     Data = data.Items[i].ToString() ?? "",
                                     Caption = data.ItemsElementName[i].ToString(),
                                     ftSignatureFormat = SignatureFormat.Text,
-                                    ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                                    ftSignatureType = SignatureTypeGR.GenericMyDataInfo.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
                                 });
                             }
                         }
 
+                        var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
@@ -242,6 +283,7 @@ public class MyDataSCU : IGRSSCD
                         }
                         SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
                         SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                        SignatureItemFactoryGR.AddMyDataXmlSignature(request, enrichedPayload);
                     }
                     else
                     {
@@ -272,7 +314,6 @@ public class MyDataSCU : IGRSSCD
             ReceiptResponse = request.ReceiptResponse
         };
     }
-
     public static string EncodeToUrlSafeBase64(byte[] bytes)
     {
         var base64 = Convert.ToBase64String(bytes)
@@ -358,7 +399,7 @@ public class MyDataSCU : IGRSSCD
                                 Data = data.Items[i].ToString() ?? "",
                                 Caption = data.ItemsElementName[i].ToString(),
                                 ftSignatureFormat = SignatureFormat.Text,
-                                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypeGR.GenericMyDataInfo)
                             });
                         }
                     }
@@ -477,7 +518,7 @@ public class MyDataSCU : IGRSSCD
                             Data = data.Items[i].ToString() ?? "",
                             Caption = data.ItemsElementName[i].ToString(),
                             ftSignatureFormat = SignatureFormat.Text,
-                            ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                            ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypeGR.GenericMyDataInfo)
                         });
                     }
                 }

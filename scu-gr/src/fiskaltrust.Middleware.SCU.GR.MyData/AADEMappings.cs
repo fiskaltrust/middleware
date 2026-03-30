@@ -145,6 +145,11 @@ public static class AADEMappings
             }
         }
 
+        if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption))
+        {
+            return IncomeClassificationValueType.E3_595;
+        }
+
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
         {
             if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
@@ -246,6 +251,7 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
+            ChargeItemCaseTypeOfService.OwnConsumption => IncomeClassificationCategoryType.category1_6,
             _ => IncomeClassificationCategoryType.category1_95,
         };
     }
@@ -276,16 +282,30 @@ public static class AADEMappings
 
         // Validate that agency business (NotOwnSales) items are not mixed with other types
         var hasNotOwnSales = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales));
-        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x => 
+        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x =>
         {
             var typeOfService = x.ftChargeItemCase.TypeOfService();
-            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales && 
+            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales &&
                    typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
         });
 
         if (hasNotOwnSales && hasOtherTypes)
         {
             throw new Exception("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
+        }
+
+        // Validate that own consumption (OwnConsumption) items are not mixed with other types
+        var hasOwnConsumption = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption));
+        var hasOtherTypesForOwnConsumption = receiptRequest.cbChargeItems.Any(x =>
+        {
+            var typeOfService = x.ftChargeItemCase.TypeOfService();
+            return typeOfService != ChargeItemCaseTypeOfService.OwnConsumption &&
+                   typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
+        });
+
+        if (hasOwnConsumption && hasOtherTypesForOwnConsumption)
+        {
+            throw new Exception("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
@@ -309,9 +329,13 @@ public static class AADEMappings
                 return InvoiceType.Item114;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item115;
+            }
+            else if (hasOwnConsumption)
+            {
+                return InvoiceType.Item61;
             }
             else if (receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes())
             {
@@ -330,9 +354,13 @@ public static class AADEMappings
                 return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item14;
+            }
+            else if (hasOwnConsumption)
+            {
+                return InvoiceType.Item61;
             }
             else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes())
             {

@@ -551,4 +551,82 @@ public class AADEMappingsInvoiceTypeTests
         act.Should().Throw<Exception>()
             .WithMessage("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
     }
+
+    // ── Own Consumption (6.1 / 6.2) ──────────────────────────────────
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_RetailReceipt_WithAllOwnConsumptionItems_ReturnsItem61()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.OwnConsumption);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_RetailReceipt_WithMultipleOwnConsumptionItems_ReturnsItem61()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Own Use Item 1", ChargeItemCaseTypeOfService.OwnConsumption),
+            CreateChargeItem(2, 50, 24, "Own Use Item 2", ChargeItemCaseTypeOfService.OwnConsumption),
+            CreateChargeItem(3, 75, 24, "Own Use Item 3", ChargeItemCaseTypeOfService.OwnConsumption)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_B2BInvoice_WithAllOwnConsumptionItems_ReturnsItem61()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OwnConsumption);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_B2BInvoice_WithMultipleOwnConsumptionItems_ReturnsItem61()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OwnConsumption);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Own Use Item 2", ChargeItemCaseTypeOfService.OwnConsumption));
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(3, 75, 24, "Own Use Item 3", ChargeItemCaseTypeOfService.OwnConsumption));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void GetInvoiceType_RetailReceipt_WithMixedOwnConsumptionAndOtherItems_ThrowsException()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Delivery Item", ChargeItemCaseTypeOfService.Delivery),
+            CreateChargeItem(2, 50, 24, "Own Use Item", ChargeItemCaseTypeOfService.OwnConsumption)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var act = () => AADEMappings.GetInvoiceType(receiptRequest);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
+    }
+
+    [Fact]
+    public void GetInvoiceType_B2BInvoice_WithMixedOwnConsumptionAndOtherItems_ThrowsException()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Own Use Item", ChargeItemCaseTypeOfService.OwnConsumption));
+
+        var act = () => AADEMappings.GetInvoiceType(receiptRequest);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
+    }
 }
