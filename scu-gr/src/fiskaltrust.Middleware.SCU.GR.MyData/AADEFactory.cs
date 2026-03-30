@@ -1038,6 +1038,11 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
+            if (!string.IsNullOrEmpty(x.ProductNumber))
+            {
+                invoiceRow.itemCode = x.ProductNumber;
+            }
+
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.itemDescr = x.Description;
