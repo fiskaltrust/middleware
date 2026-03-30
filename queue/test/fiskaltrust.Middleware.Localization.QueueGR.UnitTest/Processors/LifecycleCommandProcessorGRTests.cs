@@ -123,7 +123,7 @@ public class LifecycleCommandProcessorGRTests
             Caption = "Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}",
             ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = (SignatureType) 0x4752_2000_0001_1001
+            ftSignatureType = (SignatureType) 0x4752_2000_0000_0003
         };
 
         result.receiptResponse.ftSignatures[0].Should().BeEquivalentTo(expectedSignaturItem);
@@ -206,7 +206,7 @@ public class LifecycleCommandProcessorGRTests
 
         var expectedSignaturItem = new SignatureItem
         {
-            ftSignatureType = (SignatureType) 0x4752_2000_0001_1002,
+            ftSignatureType = (SignatureType) 0x4752_2000_0000_0003,
             ftSignatureFormat = SignatureFormat.Text,
             Caption = "Out-of-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
