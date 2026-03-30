@@ -59,7 +59,4 @@ public class InvoiceHeaderTypeOverride
 
     [JsonPropertyName("reverseDeliveryNotePurpose")]
     public int? ReverseDeliveryNotePurpose { get; set; }
-
-    [JsonPropertyName("correlatedInvoices")]
-    public long[]? CorrelatedInvoices { get; set; }
 }

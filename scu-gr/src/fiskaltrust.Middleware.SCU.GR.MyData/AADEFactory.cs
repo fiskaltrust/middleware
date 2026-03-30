@@ -619,22 +619,6 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
         }
 
-        // Apply correlatedInvoices override
-        if (headerOverride.CorrelatedInvoices is { Length: > 0 })
-        {
-            invoice.invoiceHeader.correlatedInvoices = headerOverride.CorrelatedInvoices;
-        }
-
-        // When invoiceType is overridden to a type that uses correlatedInvoices instead of
-        // multipleConnectedMarks (e.g. 1.6, 2.4), move the marks to the correct field.
-        if (!AADEMappings.SupportsMultipleConnectedMarks(invoice.invoiceHeader.invoiceType)
-            && invoice.invoiceHeader.multipleConnectedMarks is { Length: > 0 }
-            && invoice.invoiceHeader.correlatedInvoices is null or { Length: 0 })
-        {
-            invoice.invoiceHeader.correlatedInvoices = invoice.invoiceHeader.multipleConnectedMarks;
-            invoice.invoiceHeader.multipleConnectedMarks = null;
-        }
-
     }
 
     private static void ApplyPartyOverride(ref PartyType party, PartyTypeOverride partyOverride)

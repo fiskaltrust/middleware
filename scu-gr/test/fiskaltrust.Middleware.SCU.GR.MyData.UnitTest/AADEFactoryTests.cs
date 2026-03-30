@@ -1892,7 +1892,7 @@ public class AADEFactoryTests
     // ════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void MapToInvoicesDoc_B2BInvoice_OverrideTo16_WithPreviousReference_MovesMarksToCorrelatedInvoices()
+    public void MapToInvoicesDoc_B2BInvoice_OverrideTo16_WithPreviousReference_SetsCorrelatedInvoices()
     {
         // Arrange — B2B Invoice that would normally be 1.1, overridden to 1.6
         var receiptRequest = new ReceiptRequest
@@ -1952,7 +1952,7 @@ public class AADEFactoryTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_B2BServiceInvoice_OverrideTo24_WithPreviousReference_MovesMarksToCorrelatedInvoices()
+    public void MapToInvoicesDoc_B2BServiceInvoice_OverrideTo24_WithPreviousReference_SetsCorrelatedInvoices()
     {
         // Arrange — B2B service invoice that would normally be 2.1, overridden to 2.4
         var receiptRequest = new ReceiptRequest
@@ -2011,71 +2011,4 @@ public class AADEFactoryTests
         header.multipleConnectedMarks.Should().BeNull("2.4 does not support multipleConnectedMarks");
     }
 
-    [Fact]
-    public void MapToInvoicesDoc_B2BInvoice_OverrideTo16_WithExplicitCorrelatedInvoices_UsesOverrideValues()
-    {
-        // Arrange — Override provides correlatedInvoices directly (no cbPreviousReceiptReference)
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            ftPosSystemId = Guid.NewGuid(),
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem
-                {
-                    Amount = 50,
-                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
-                    VATRate = 24
-                }
-            },
-            cbPayItems = new List<PayItem> { new PayItem { Amount = 50 } },
-            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
-            cbCustomer = new MiddlewareCustomer { CustomerVATId = "123456789", CustomerCountry = "GR" },
-            ftReceiptCaseData = new
-            {
-                GR = new
-                {
-                    mydataoverride = new
-                    {
-                        invoice = new
-                        {
-                            invoiceHeader = new
-                            {
-                                invoiceType = "1.6",
-                                correlatedInvoices = new long[] { 400009999999999 }
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        var receiptResponse = new ReceiptResponse
-        {
-            cbReceiptReference = receiptRequest.cbReceiptReference,
-            ftReceiptIdentification = "ft789ABC#",
-            ftCashBoxIdentification = "CB-TEST",
-        };
-
-        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
-        {
-            Account = new storage.V0.MasterData.AccountMasterData()
-        }, "https://test.receipts.example.com");
-
-        // Act
-        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
-
-        // Assert
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-        var header = doc!.invoice[0].invoiceHeader;
-
-        header.invoiceType.Should().Be(InvoiceType.Item16);
-        header.correlatedInvoices.Should().NotBeNull();
-        header.correlatedInvoices.Should().Contain(400009999999999, "explicit override value should be used");
-        header.multipleConnectedMarks.Should().BeNull();
-    }
 }
