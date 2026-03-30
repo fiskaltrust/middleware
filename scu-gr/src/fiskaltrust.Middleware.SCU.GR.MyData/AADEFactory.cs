@@ -270,30 +270,6 @@ public class AADEFactory
             }
         }
 
-        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
-        {
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-            {
-                if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
-                {
-                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
-                }
-                else
-                {
-                    // Retail refunds (11.4) use multipleConnectedMarks
-                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
-                }
-            }
-            else
-            {
-                // NON-REFUNDS
-                if (AADEMappings.SupportsMultipleConnectedMarks(inv.invoiceHeader.invoiceType))
-                {
-                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
-                }
-            }
-        }
-
         if (inv.invoiceHeader.invoiceType == InvoiceType.Item86)
         {
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
@@ -370,6 +346,36 @@ public class AADEFactory
                 detail.incomeClassification = null;
             }
             inv.invoiceSummary.incomeClassification = null;
+        }
+
+        // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
+        // (after override, so the correct field is used for the resolved type).
+        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
+        {
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+                else
+                {
+                    // Retail refunds (11.4) use multipleConnectedMarks
+                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+            }
+            else
+            {
+                // NON-REFUNDS
+                if (AADEMappings.SupportsMultipleConnectedMarks(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+                else if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+            }
         }
 
         // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
@@ -1038,13 +1044,13 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            if (!string.IsNullOrEmpty(x.ProductNumber))
-            {
-                invoiceRow.itemCode = x.ProductNumber;
-            }
-
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
+                if (!string.IsNullOrEmpty(x.ProductNumber))
+                {
+                    invoiceRow.itemCode = x.ProductNumber;
+                }
+
                 invoiceRow.itemDescr = x.Description;
 
                 invoiceRow.measurementUnit = AADEMappings.GetMeasurementUnit(x);
