@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
@@ -21,7 +22,7 @@ public class ReceiptProcessorValidationTests
     private readonly Mock<IInvoiceCommandProcessor> _invoiceMock = new();
     private readonly Mock<IProtocolCommandProcessor> _protocolMock = new();
 
-    private static ReceiptReferenceProvider CreateMockProvider()
+    private static FVReceiptReferenceProvider CreateMockProvider()
     {
         var mockRepo = new Mock<IMiddlewareQueueItemRepository>();
         mockRepo.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
@@ -30,8 +31,27 @@ public class ReceiptProcessorValidationTests
             .Returns(AsyncEnumerable.Empty<ftQueueItem>());
         mockRepo.Setup(x => x.GetLastQueueItemAsync())
             .ReturnsAsync((ftQueueItem?)null);
-        return new ReceiptReferenceProvider(
+        return new FVReceiptReferenceProvider(
             new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(mockRepo.Object)));
+    }
+
+    private static QueuePT.ValidationFV.ReceiptValidator CreatePTValidator()
+    {
+        var provider = CreateMockProvider();
+        var repo = new AsyncLazy<IMiddlewareQueueItemRepository>(() =>
+        {
+            var mockRepo = new Mock<IMiddlewareQueueItemRepository>();
+            mockRepo.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
+                .Returns(AsyncEnumerable.Empty<ftQueueItem>());
+            mockRepo.Setup(x => x.GetLastQueueItemAsync())
+                .ReturnsAsync((ftQueueItem?)null);
+            return Task.FromResult(mockRepo.Object);
+        });
+        return new QueuePT.ValidationFV.ReceiptValidator(
+            provider,
+            new DocumentStatusProvider(repo),
+            new VoidValidator(repo),
+            new RefundValidator(repo));
     }
 
     private ReceiptProcessor CreateProcessor(MarketValidator validator)
@@ -95,7 +115,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task InvalidRequest_NegativeVATRate_ProcessorsNeverCalled()
     {
-        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
+        var validator = CreatePTValidator();
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -155,7 +175,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task MultipleChargeItems_EachWithErrors_AllErrorsReturned()
     {
-        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
+        var validator = CreatePTValidator();
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -250,7 +270,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task PTMarket_ShortDescription_ValidationFails()
     {
-        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
+        var validator = CreatePTValidator();
         var processor = CreateProcessor(validator);
 
         var request = new ReceiptRequest
@@ -278,7 +298,7 @@ public class ReceiptProcessorValidationTests
     [Fact]
     public async Task PTMarket_ValidDescription_ValidationPasses()
     {
-        var validator = new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider());
+        var validator = CreatePTValidator();
         var processor = CreateProcessor(validator);
 
         _receiptMock
@@ -346,7 +366,7 @@ public class ReceiptProcessorValidationTests
 
         var ptProcessor = new ReceiptProcessor(
             new Mock<ILogger<ReceiptProcessor>>().Object,
-            new QueuePT.ValidationFV.ReceiptValidator(CreateMockProvider()),
+            CreatePTValidator(),
             new Mock<ILifecycleCommandProcessor>().Object,
             ptReceiptMock.Object,
             new Mock<IDailyOperationsCommandProcessor>().Object,

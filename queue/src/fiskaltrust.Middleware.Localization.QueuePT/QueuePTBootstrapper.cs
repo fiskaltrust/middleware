@@ -12,9 +12,9 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
-using ReceiptReferenceProvider = fiskaltrust.Middleware.Localization.v2.Validation.ReceiptReferenceProvider;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 
@@ -90,7 +90,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var repo = storageProvider.CreateMiddlewareQueueItemRepository();
         var fvValidator = new ReceiptValidator(
-            new ReceiptReferenceProvider(repo),
+            new FVReceiptReferenceProvider(repo),
             new DocumentStatusProvider(repo),
             new VoidValidator(repo),
             new RefundValidator(repo));

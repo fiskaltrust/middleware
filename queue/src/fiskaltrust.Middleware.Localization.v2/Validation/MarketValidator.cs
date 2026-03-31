@@ -1,4 +1,5 @@
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using FluentValidation;
 using FluentValidation.Results;
 using fiskaltrust.storage.V0;
@@ -8,9 +9,9 @@ namespace fiskaltrust.Middleware.Localization.v2.Validation;
 
 public abstract class MarketValidator
 {
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider;
+    private readonly FVReceiptReferenceProvider _receiptReferenceProvider;
 
-    protected MarketValidator(ReceiptReferenceProvider receiptReferenceProvider)
+    protected MarketValidator(FVReceiptReferenceProvider receiptReferenceProvider)
     {
         _receiptReferenceProvider = receiptReferenceProvider;
     }

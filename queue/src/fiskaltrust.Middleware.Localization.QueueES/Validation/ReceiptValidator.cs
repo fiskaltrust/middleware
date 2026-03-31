@@ -11,7 +11,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using FVValidator = fiskaltrust.Middleware.Localization.QueueES.ValidationFV.ReceiptValidator;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using V2ReceiptReferenceProvider = fiskaltrust.Middleware.Localization.v2.Validation.ReceiptReferenceProvider;
+using V2ReceiptReferenceProvider = fiskaltrust.Middleware.Localization.v2.Helpers.FVReceiptReferenceProvider;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Validation;
 

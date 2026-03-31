@@ -1,23 +1,23 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using FluentValidation;
 using GlobalValidations = fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
-using ReceiptReferenceProvider = fiskaltrust.Middleware.Localization.v2.Validation.ReceiptReferenceProvider;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV;
 
 public class ReceiptValidator : MarketValidator
 {
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider;
+    private readonly FVReceiptReferenceProvider _receiptReferenceProvider;
     private readonly DocumentStatusProvider _documentStatusProvider;
     private readonly VoidValidator _voidValidator;
     private readonly RefundValidator _refundValidator;
 
     public ReceiptValidator(
-        ReceiptReferenceProvider receiptReferenceProvider,
+        FVReceiptReferenceProvider receiptReferenceProvider,
         DocumentStatusProvider documentStatusProvider,
         VoidValidator voidValidator,
         RefundValidator refundValidator)
@@ -46,7 +46,7 @@ public class ReceiptValidator : MarketValidator
 
     private class PTGlobalReceiptValidations : AbstractValidator<ReceiptRequest>
     {
-        public PTGlobalReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
+        public PTGlobalReceiptValidations(FVReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
         {
             Include(new GlobalValidations.ReceiptValidations.MandatoryCollections());
             Include(new GlobalValidations.ReceiptValidations.CurrencyMustBeEur());

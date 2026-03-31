@@ -52,7 +52,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             });
         });
 
-        var receiptReferenceProvider = new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository());
+        var receiptReferenceProvider = new FVReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository());
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new ValidationFV.ReceiptValidator(receiptReferenceProvider),

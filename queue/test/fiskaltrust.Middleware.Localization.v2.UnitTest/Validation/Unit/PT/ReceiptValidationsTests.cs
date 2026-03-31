@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation.Unit.PT;
 
 public class ReceiptValidationsTests
 {
-    private static ReceiptReferenceProvider CreateProvider(
+    private static FVReceiptReferenceProvider CreateProvider(
         bool hasExistingRefund = false,
         bool hasExistingPaymentTransfer = false,
         ReceiptRequest? originalReceipt = null)
@@ -94,7 +94,7 @@ public class ReceiptValidationsTests
         mockRepo.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
             .Returns(queueItems.ToAsyncEnumerable());
 
-        return new ReceiptReferenceProvider(
+        return new FVReceiptReferenceProvider(
             new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(mockRepo.Object)));
     }
 

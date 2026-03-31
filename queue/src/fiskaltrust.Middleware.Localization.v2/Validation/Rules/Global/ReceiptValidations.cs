@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
+    public ReceiptValidations(FVReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
     {
         Include(new MandatoryCollections());
         Include(new CurrencyMustBeEur());
@@ -139,7 +139,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PreviousReceiptMustNotBeVoided : AbstractValidator<ReceiptRequest>
     {
-        public PreviousReceiptMustNotBeVoided(ReceiptReferenceProvider receiptReferenceProvider)
+        public PreviousReceiptMustNotBeVoided(FVReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -153,7 +153,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class VoidMustNotAlreadyExist : AbstractValidator<ReceiptRequest>
     {
-        public VoidMustNotAlreadyExist(ReceiptReferenceProvider receiptReferenceProvider)
+        public VoidMustNotAlreadyExist(FVReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -166,7 +166,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class FullRefundMustMatchOriginal : AbstractValidator<ReceiptRequest>
     {
-        public FullRefundMustMatchOriginal(ReceiptReferenceProvider receiptReferenceProvider)
+        public FullRefundMustMatchOriginal(FVReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -205,7 +205,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PartialRefundMustMatchOriginal : AbstractValidator<ReceiptRequest>
     {
-        public PartialRefundMustMatchOriginal(ReceiptReferenceProvider receiptReferenceProvider)
+        public PartialRefundMustMatchOriginal(FVReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -256,7 +256,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class VoidMustMatchOriginal : AbstractValidator<ReceiptRequest>
     {
-        public VoidMustMatchOriginal(ReceiptReferenceProvider receiptReferenceProvider)
+        public VoidMustMatchOriginal(FVReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
