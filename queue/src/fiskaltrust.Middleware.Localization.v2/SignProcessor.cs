@@ -123,7 +123,7 @@ public class SignProcessor : ISignProcessor
 
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{receiptRequest.ftReceiptCase:X}");
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftPosSystemId", receiptRequest.ftPosSystemId);
+                System.Diagnostics.Activity.Current?.AddTag("possystem.id", receiptRequest.ftPosSystemId);
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", _queueId);
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", receiptRequest.cbReceiptReference);
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference);
