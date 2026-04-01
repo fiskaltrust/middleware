@@ -43,8 +43,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new HandwrittenReceiptOnlyForInvoices());
         Include(new HandwrittenSeriesInvalidCharacter());
         Include(new HandwrittenSeriesNumberAlreadyLinked(receiptReferenceProvider));
-        Include(new PreviousReceiptMustNotBeVoided(receiptReferenceProvider));
-
         Include(new PaymentTransferMustHaveAccountReceivableItem());
         Include(new PaymentTransferMustNotAlreadyExist(receiptReferenceProvider));
         Include(new PaymentTransferOriginalMustBeInvoice(receiptReferenceProvider));
@@ -412,26 +410,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     return $"Handwritten receipt with series '{data?.PT?.Series}' and number '{data?.PT?.Number}' has already been linked.";
                 })
                 .WithErrorCode("HandwrittenSeriesNumberAlreadyLinked");
-        }
-    }
-
-    public class PreviousReceiptMustNotBeVoided : AbstractValidator<ReceiptRequest>
-    {
-        public PreviousReceiptMustNotBeVoided(FVReceiptReferenceProvider receiptReferenceProvider)
-        {
-            RuleFor(x => x.cbPreviousReceiptReference)
-                .MustAsync(async (previousRef, _) =>
-                {
-                    if (previousRef!.IsSingle)
-                        return !await receiptReferenceProvider.HasExistingVoidAsync(previousRef.SingleValue!);
-                    foreach (var reference in previousRef.GroupValue)
-                        if (await receiptReferenceProvider.HasExistingVoidAsync(reference))
-                            return false;
-                    return true;
-                })
-                .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbPreviousReceiptReference != null)
-                .WithMessage("The referenced receipt has already been voided.")
-                .WithErrorCode("PreviousReceiptIsVoided");
         }
     }
 

@@ -20,9 +20,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
         Include(new PreviousReceiptMustNotBeVoided(receiptReferenceProvider));
         Include(new VoidMustNotAlreadyExist(receiptReferenceProvider));
-        Include(new FullRefundMustMatchOriginal(receiptReferenceProvider));
-        Include(new PartialRefundMustMatchOriginal(receiptReferenceProvider));
-        Include(new VoidMustMatchOriginal(receiptReferenceProvider));
 
         Include(new RefundMustUseSingleReference());
         Include(new PartialRefundMustUseSingleReference());
@@ -143,8 +140,16 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
-                    !await receiptReferenceProvider.HasExistingVoidAsync(previousRef!.SingleValue))
+                {
+                    if (previousRef!.IsSingle)
+                        return !await receiptReferenceProvider.HasExistingVoidAsync(previousRef.SingleValue!);
+                    foreach (var reference in previousRef.GroupValue)
+                        if (await receiptReferenceProvider.HasExistingVoidAsync(reference))
+                            return false;
+                    return true;
+                })
                 .When(x => x.cbPreviousReceiptReference != null
+                    && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
                 .WithMessage("The referenced receipt has already been voided.")
                 .WithErrorCode("PreviousReceiptIsVoided");
@@ -161,133 +166,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
                 .WithMessage("A void for this receipt already exists.")
                 .WithErrorCode("VoidAlreadyExists");
-        }
-    }
-
-    public class FullRefundMustMatchOriginal : AbstractValidator<ReceiptRequest>
-    {
-        public FullRefundMustMatchOriginal(FVReceiptReferenceProvider receiptReferenceProvider)
-        {
-            RuleFor(x => x)
-                .MustAsync(async (request, _) =>
-                {
-                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(request.cbPreviousReceiptReference!.SingleValue);
-                    if (original == null) return false;
-
-                    if (request.cbChargeItems == null || original.cbChargeItems == null) return false;
-                    if (request.cbChargeItems.Count != original.cbChargeItems.Count) return false;
-                    if (request.cbPayItems == null || original.cbPayItems == null) return false;
-                    if (request.cbPayItems.Count != original.cbPayItems.Count) return false;
-
-                    if (ReceiptComparisonHelper.CompareReceiptRequest(request, original) != null) return false;
-
-                    for (int i = 0; i < request.cbChargeItems.Count; i++)
-                    {
-                        if (ReceiptComparisonHelper.CompareChargeItems(request.cbChargeItems[i], original.cbChargeItems[i]) != null)
-                            return false;
-                    }
-
-                    for (int i = 0; i < request.cbPayItems.Count; i++)
-                    {
-                        if (ReceiptComparisonHelper.ComparePayItems(request.cbPayItems[i], original.cbPayItems[i]) != null)
-                            return false;
-                    }
-
-                    return true;
-                })
-                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
-                    && !x.IsPartialRefundReceipt()
-                    && x.cbPreviousReceiptReference != null)
-                .WithMessage("Full refund items do not match the original receipt.")
-                .WithErrorCode("FullRefundItemsMismatch");
-        }
-    }
-
-    public class PartialRefundMustMatchOriginal : AbstractValidator<ReceiptRequest>
-    {
-        public PartialRefundMustMatchOriginal(FVReceiptReferenceProvider receiptReferenceProvider)
-        {
-            RuleFor(x => x)
-                .MustAsync(async (request, _) =>
-                {
-                    var previousRef = request.cbPreviousReceiptReference!.SingleValue;
-                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(previousRef);
-                    if (original == null || original.cbChargeItems == null || request.cbChargeItems == null) return false;
-
-                    if (ReceiptComparisonHelper.CompareReceiptRequest(request, original) != null) return false;
-
-                    var existingRefunds = await receiptReferenceProvider.LoadExistingPartialRefundsAsync(previousRef, request.cbReceiptReference);
-                    var chargeItemsAvailable = new List<ChargeItem>(original.cbChargeItems);
-
-                    foreach (var existingRefund in existingRefunds.SelectMany(x => x.cbChargeItems))
-                    {
-                        var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
-                            (Math.Abs(item.Amount - Math.Abs(existingRefund.Amount)) < 0.01m) &&
-                            item.Description == existingRefund.Description &&
-                            (Math.Abs(item.VATRate - existingRefund.VATRate) < 0.01m));
-                        if (matchingItem != null)
-                        {
-                            chargeItemsAvailable.Remove(matchingItem);
-                        }
-                    }
-
-                    for (int i = 0; i < request.cbChargeItems.Count; i++)
-                    {
-                        var refundItem = request.cbChargeItems[i];
-                        var matchingItem = chargeItemsAvailable.FirstOrDefault(item =>
-                            (Math.Abs(item.Amount - Math.Abs(refundItem.Amount)) < 0.01m) &&
-                            item.Description == refundItem.Description &&
-                            (Math.Abs(item.VATRate - refundItem.VATRate) < 0.01m));
-                        if (matchingItem == null) return false;
-
-                        if (ReceiptComparisonHelper.CompareChargeItems(refundItem, matchingItem) != null)
-                            return false;
-                    }
-
-                    return true;
-                })
-                .When(x => x.IsPartialRefundReceipt()
-                    && x.cbPreviousReceiptReference != null
-                    && x.cbChargeItems != null)
-                .WithMessage("Partial refund items do not match the available items from the original receipt.")
-                .WithErrorCode("PartialRefundItemsMismatch");
-        }
-    }
-
-    public class VoidMustMatchOriginal : AbstractValidator<ReceiptRequest>
-    {
-        public VoidMustMatchOriginal(FVReceiptReferenceProvider receiptReferenceProvider)
-        {
-            RuleFor(x => x)
-                .MustAsync(async (request, _) =>
-                {
-                    var original = await receiptReferenceProvider.LoadOriginalReceiptAsync(request.cbPreviousReceiptReference!.SingleValue);
-                    if (original == null) return false;
-
-                    if (request.cbChargeItems == null || original.cbChargeItems == null) return false;
-                    if (request.cbChargeItems.Count != original.cbChargeItems.Count) return false;
-                    if (request.cbPayItems == null || original.cbPayItems == null) return false;
-                    if (request.cbPayItems.Count != original.cbPayItems.Count) return false;
-
-                    if (ReceiptComparisonHelper.CompareReceiptRequest(request, original) != null) return false;
-
-                    for (int i = 0; i < request.cbChargeItems.Count; i++)
-                    {
-                        if (ReceiptComparisonHelper.CompareChargeItems(request.cbChargeItems[i], original.cbChargeItems[i]) != null)
-                            return false;
-                    }
-
-                    for (int i = 0; i < request.cbPayItems.Count; i++)
-                    {
-                        if (ReceiptComparisonHelper.ComparePayItems(request.cbPayItems[i], original.cbPayItems[i]) != null)
-                            return false;
-                    }
-
-                    return true;
-                })
-                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
-                .WithMessage("Void receipt items do not match the original receipt.")
-                .WithErrorCode("VoidItemsMismatch");
         }
     }
 
