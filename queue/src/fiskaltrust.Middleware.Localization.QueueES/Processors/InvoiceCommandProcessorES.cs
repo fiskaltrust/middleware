@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Logic;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -12,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : ProcessorPreparation, IInvoiceCommandProcessor
 {
 #pragma warning disable
     private readonly ILogger<InvoiceCommandProcessorES> _logger = logger;
@@ -22,6 +23,8 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
     private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository = journalESRepository;
 #pragma warning restore
 
+    protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = queueItemRepository;
+
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await FullInvoiceRequestAsync(request);
 
     public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => await FullInvoiceRequestAsync(request);
@@ -30,7 +33,10 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
 
     public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await FullInvoiceRequestAsync(request);
 
-    public async Task<ProcessCommandResponse> FullInvoiceRequestAsync(ProcessCommandRequest request)
+    public async Task<ProcessCommandResponse> FullInvoiceRequestAsync(ProcessCommandRequest request) =>
+        await WithPreparations(request, () => ProcessFullInvoiceAsync(request));
+
+    private async Task<ProcessCommandResponse> ProcessFullInvoiceAsync(ProcessCommandRequest request)
     {
         var queueItemRepository = await _queueItemRepository;
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
