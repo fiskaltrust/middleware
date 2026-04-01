@@ -37,19 +37,11 @@ public class ReceiptProcessor : IReceiptProcessor
             var validationResult = await _validator.ValidateAsync(request, queue);
             if (!validationResult.IsValid)
             {
-                receiptResponse.MarkAsFailed();
-                receiptResponse.ftSignatures = [];
-                foreach (var error in validationResult.Errors)
-                {
-                    receiptResponse.AddSignatureItem(new SignatureItem
-                    {
-                        Caption = "FAILURE",
-                        Data = $"Validation error [{error.ErrorCode}]: {error.ErrorMessage} (Property: {error.PropertyName})",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure)
-                    });
-                }
-                return (receiptResponse, new List<ftActionJournal>());
+                _logger.LogError(
+                    "FV validation errors for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: {Errors}",
+                    request.cbReceiptReference,
+                    request.ftReceiptCase,
+                    string.Join("; ", validationResult.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorMessage}")));
             }
         }
 

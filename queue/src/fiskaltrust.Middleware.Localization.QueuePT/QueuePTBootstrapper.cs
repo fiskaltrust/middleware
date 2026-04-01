@@ -104,7 +104,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         invoiceProcessor.SetShadowValidation(fvValidator, shadowLogger);
         protocolProcessor.SetShadowValidation(fvValidator, shadowLogger);
 
-        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(queueStorageProvider), receiptProcessor, new DailyOperationsCommandProcessorPT(), invoiceProcessor, protocolProcessor);
+        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), fvValidator, new LifecycleCommandProcessorPT(queueStorageProvider), receiptProcessor, new DailyOperationsCommandProcessorPT(), invoiceProcessor, protocolProcessor);
 
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
