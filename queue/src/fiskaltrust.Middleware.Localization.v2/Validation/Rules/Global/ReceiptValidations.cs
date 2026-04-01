@@ -13,7 +13,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
     {
         Include(new MandatoryCollections());
         Include(new CurrencyMustBeEur());
-        Include(new ChargeItemsAmountSum());
         Include(new ReceiptBalance());
         Include(new RefundReference());
         Include(new PaymentTransferReference());
@@ -53,29 +52,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Equal(Currency.EUR)
                 .WithMessage(request => $"Only EUR currency is supported, but received '{request.Currency}'.")
                 .WithErrorCode("OnlyEuroCurrencySupported");
-        }
-    }
-
-    public class ChargeItemsAmountSum : AbstractValidator<ReceiptRequest>
-    {
-        public ChargeItemsAmountSum()
-        {
-            RuleFor(x => x.cbReceiptAmount)
-                .Must((request, receiptAmount) =>
-                {
-                    if (!receiptAmount.HasValue) return true;
-                    if (request.cbChargeItems == null || !request.cbChargeItems.Any()) return true;
-
-                    var sum = request.cbChargeItems.Sum(item => item.Amount);
-                    return sum == receiptAmount.Value;
-                })
-                .WithMessage(request =>
-                {
-                    var sum = request.cbChargeItems?.Sum(item => item.Amount) ?? 0;
-                    return $"Sum of ChargeItem amounts ({sum}) does not match cbReceiptAmount ({request.cbReceiptAmount})";
-                })
-                .WithErrorCode("ChargeItemsSumMismatch")
-                .When(x => x.cbReceiptAmount.HasValue);
         }
     }
 
