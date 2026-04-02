@@ -1,53 +1,97 @@
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using FluentValidation.TestHelper;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation.Unit.PT;
+namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation;
 
-public class CustomerValidationsTests
+public class PTCustomerValidationsTests
 {
-    #region CustomerTaxId
+    private static ReceiptCase PtReceiptCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
+    private static ReceiptCase PtHandWrittenCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.HandWritten);
+
+    private static object SerializeCustomer(string? vatId) =>
+        new MiddlewareCustomer { CustomerVATId = vatId };
+
+    // ─── CustomerTaxId ──────────────────────────────────────────────────────────
 
     [Fact]
-    public void ValidPortugueseNif_ShouldPass()
+    public void CustomerTaxId_InvalidPortugueseNif_ShouldFail()
     {
         var validator = new CustomerValidations.CustomerTaxId();
-        var customer = new MiddlewareCustomer { CustomerVATId = "999999990" };
-        var request = new ReceiptRequest { cbCustomer = customer };
+        // 123456780: sum=156, expected check digit=9, actual=0 → invalid
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbCustomer = SerializeCustomer("123456780"),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbCustomer.CustomerVATId")
+            .WithErrorCode("InvalidPortugueseTaxId");
+    }
+
+    [Fact]
+    public void CustomerTaxId_ValidPortugueseNif_ShouldPass()
+    {
+        var validator = new CustomerValidations.CustomerTaxId();
+        // 123456789: sum=156, expected check digit=9, actual=9 → valid
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbCustomer = SerializeCustomer("123456789"),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void InvalidPortugueseNif_ShouldFail()
+    public void CustomerTaxId_HandWritten_ShouldSkip()
     {
         var validator = new CustomerValidations.CustomerTaxId();
-        var customer = new MiddlewareCustomer { CustomerVATId = "123456781" };
-        var request = new ReceiptRequest { cbCustomer = customer };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError();
-    }
-
-    [Fact]
-    public void NoCustomer_ShouldPass()
-    {
-        var validator = new CustomerValidations.CustomerTaxId();
-        var request = new ReceiptRequest { cbCustomer = null };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtHandWrittenCase,
+            cbCustomer = SerializeCustomer("InvalidPortugueseTaxId"),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void EmptyVatId_ShouldPass()
+    public void CustomerTaxId_NoCustomer_ShouldSkip()
     {
         var validator = new CustomerValidations.CustomerTaxId();
-        var customer = new MiddlewareCustomer { CustomerVATId = "" };
-        var request = new ReceiptRequest { cbCustomer = customer };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbCustomer = null,
+            cbChargeItems = [],
+            cbPayItems = []
+        };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    #endregion
+    [Fact]
+    public void CustomerTaxId_CustomerWithoutVatId_ShouldSkip()
+    {
+        var validator = new CustomerValidations.CustomerTaxId();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbCustomer = SerializeCustomer(null),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
 }

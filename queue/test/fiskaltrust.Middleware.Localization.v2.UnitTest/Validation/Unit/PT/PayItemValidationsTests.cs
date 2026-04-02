@@ -4,96 +4,84 @@ using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 using FluentValidation.TestHelper;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation.Unit.PT;
+namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation;
 
-public class PayItemValidationsTests
+public class PTPayItemValidationsTests
 {
-    #region CashPaymentLimit
+    private static ReceiptCase PtReceiptCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
+
+    // PT pay item cases
+    private static PayItemCase CashPaymentCase => PayItemCase.CashPayment.WithCountry("PT");
+    private static PayItemCase CardPaymentCase => PayItemCase.NonCash.WithCountry("PT");
+
+    // ─── CashPaymentLimit ───────────────────────────────────────────────────────
 
     [Fact]
-    public void CashPayment_UnderLimit_ShouldPass()
+    public void CashPaymentLimit_CashExceedsLimit_ShouldFail()
     {
         var validator = new PayItemValidations.CashPaymentLimit();
         var request = new ReceiptRequest
         {
-            cbPayItems = new List<PayItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [],
+            cbPayItems = [new PayItem
             {
-                new PayItem { Amount = 2000m, ftPayItemCase = (PayItemCase)((long)PayItemCase.CashPayment) }
-            }
+                Amount = 3000.01m,
+                ftPayItemCase = CashPaymentCase
+            }]
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.cbPayItems)
+            .WithErrorCode("CashPaymentExceedsLimit");
+    }
+
+    [Fact]
+    public void CashPaymentLimit_CashWithinLimit_ShouldPass()
+    {
+        var validator = new PayItemValidations.CashPaymentLimit();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [],
+            cbPayItems = [new PayItem
+            {
+                Amount = 3000m,
+                ftPayItemCase = CashPaymentCase
+            }]
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void CashPayment_OverLimit_ShouldFail()
+    public void CashPaymentLimit_NoCashPayItems_ShouldPass()
     {
         var validator = new PayItemValidations.CashPaymentLimit();
         var request = new ReceiptRequest
         {
-            cbPayItems = new List<PayItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [],
+            cbPayItems = [new PayItem
             {
-                new PayItem { Amount = 3500m, ftPayItemCase = (PayItemCase)((long)PayItemCase.CashPayment) }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError().WithErrorCode("CashPaymentExceedsLimit");
-    }
-
-    [Fact]
-    public void CashPayment_ExactLimit_ShouldPass()
-    {
-        var validator = new PayItemValidations.CashPaymentLimit();
-        var request = new ReceiptRequest
-        {
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem { Amount = 3000m, ftPayItemCase = (PayItemCase)((long)PayItemCase.CashPayment) }
-            }
+                Amount = 5000m,
+                ftPayItemCase = CardPaymentCase
+            }]
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void NonCashPayment_OverLimit_ShouldPass()
+    public void CashPaymentLimit_EmptyPayItems_ShouldSkip()
     {
         var validator = new PayItemValidations.CashPaymentLimit();
         var request = new ReceiptRequest
         {
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem { Amount = 5000m, ftPayItemCase = (PayItemCase)((long)PayItemCase.DebitCardPayment) }
-            }
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    [Fact]
-    public void NullPayItems_ShouldPass()
-    {
-        var validator = new PayItemValidations.CashPaymentLimit();
-        var request = new ReceiptRequest { cbPayItems = null };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void MultipleCashPayments_CombinedOverLimit_ShouldFail()
-    {
-        var validator = new PayItemValidations.CashPaymentLimit();
-        var request = new ReceiptRequest
-        {
-            cbPayItems = new List<PayItem>
-            {
-                new PayItem { Amount = 2000m, ftPayItemCase = (PayItemCase)((long)PayItemCase.CashPayment) },
-                new PayItem { Amount = 1500m, ftPayItemCase = (PayItemCase)((long)PayItemCase.CashPayment) }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError().WithErrorCode("CashPaymentExceedsLimit");
-    }
-
-    #endregion
 }

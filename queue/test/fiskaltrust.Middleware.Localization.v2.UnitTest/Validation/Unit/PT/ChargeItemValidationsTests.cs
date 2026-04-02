@@ -1,339 +1,604 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
 using fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 using FluentValidation.TestHelper;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation.Unit.PT;
+namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation;
 
-public class ChargeItemValidationsTests
+public class PTChargeItemValidationsTests
 {
-    #region DescriptionMinLength
+    private static ReceiptCase PtReceiptCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
+    private static ReceiptCase PtHandWrittenCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.HandWritten);
+    private static ReceiptCase PtInvoiceCase => ReceiptCase.InvoiceB2C0x1001.WithCountry("PT");
+
+    private static ChargeItem ValidChargeItem() => new()
+    {
+        Description = "Test item",
+        VATRate = 23m,
+        Amount = 12.3m,
+        VATAmount = 2.3m,
+        Quantity = 1m,
+        ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+    };
+
+    // ─── DescriptionMustNotBeEmpty ──────────────────────────────────────────────
 
     [Fact]
-    public void DescriptionTooShort_ShouldHaveError()
+    public void DescriptionMustNotBeEmpty_EmptyDescription_ShouldFail()
     {
-        var validator = new ChargeItemValidations.DescriptionMinLength();
+        var validator = new ChargeItemValidations.DescriptionMustNotBeEmpty();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Description = "AB", VATRate = 23.0m, Amount = 10.00m }
-            }
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem { Description = "   ", VATRate = 23m, Amount = 10m, Quantity = 1m }],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
-        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Description");
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Description")
+            .WithErrorCode("ChargeItemDescriptionMissing");
     }
 
     [Fact]
-    public void DescriptionExactly3Chars_ShouldPass()
+    public void DescriptionMustNotBeEmpty_ValidDescription_ShouldPass()
     {
-        var validator = new ChargeItemValidations.DescriptionMinLength();
+        var validator = new ChargeItemValidations.DescriptionMustNotBeEmpty();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Description = "ABC", VATRate = 23.0m, Amount = 10.00m }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveValidationErrorFor("cbChargeItems[0].Description");
-    }
-
-    [Fact]
-    public void EmptyDescription_ShouldPass_PTRulesOnly()
-    {
-        var validator = new ChargeItemValidations.DescriptionMinLength();
-        var request = new ReceiptRequest
-        {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Description = "", VATRate = 23.0m, Amount = 10.00m }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveValidationErrorFor("cbChargeItems[0].Description");
-    }
-
-    [Fact]
-    public void SingleCharDescription_ShouldHaveError()
-    {
-        var validator = new ChargeItemValidations.DescriptionMinLength();
-        var request = new ReceiptRequest
-        {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Description = "X", VATRate = 23.0m, Amount = 10.00m }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Description");
-    }
-
-    #endregion
-
-    #region PosReceiptNetAmountLimit
-
-    [Fact]
-    public void PosReceipt_UnderLimit_ShouldPass()
-    {
-        var validator = new ChargeItemValidations.PosReceiptNetAmountLimit();
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Amount = 123m, VATRate = 23m, VATAmount = 23m }
-            }
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void PosReceipt_OverLimit_ShouldFail()
+    public void DescriptionMustNotBeEmpty_HandWritten_ShouldSkip()
     {
-        var validator = new ChargeItemValidations.PosReceiptNetAmountLimit();
+        var validator = new ChargeItemValidations.DescriptionMustNotBeEmpty();
         var request = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Amount = 1300m, VATRate = 23m, VATAmount = 230m }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError().WithErrorCode("PosReceiptNetAmountExceedsLimit");
-    }
-
-    [Fact]
-    public void NonPosReceipt_OverLimit_ShouldPass()
-    {
-        var validator = new ChargeItemValidations.PosReceiptNetAmountLimit();
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { Amount = 5000m, VATRate = 23m, VATAmount = 935m }
-            }
+            ftReceiptCase = PtHandWrittenCase,
+            cbChargeItems = [new ChargeItem { Description = "", VATRate = 23m, Amount = 10m }],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    #endregion
-
-    #region OtherServiceNetAmountLimit
+    // ─── DescriptionMinLength ───────────────────────────────────────────────────
 
     [Fact]
-    public void OtherService_UnderLimit_ShouldPass()
+    public void DescriptionMinLength_TooShort_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.DescriptionMinLength();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem { Description = "AB", VATRate = 23m, Amount = 10m, Quantity = 1m }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Description")
+            .WithErrorCode("ChargeItemDescriptionTooShort");
+    }
+
+    [Fact]
+    public void DescriptionMinLength_SufficientLength_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.DescriptionMinLength();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── VatRateMustNotBeNegative ───────────────────────────────────────────────
+
+    [Fact]
+    public void VatRateMustNotBeNegative_NegativeRate_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.VatRateMustNotBeNegative();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem { Description = "Item", VATRate = -5m, Amount = 10m, Quantity = 1m }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
+            .WithErrorCode("ChargeItemVatRateMissing");
+    }
+
+    [Fact]
+    public void VatRateMustNotBeNegative_ZeroRate_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.VatRateMustNotBeNegative();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem { Description = "Item", VATRate = 0m, Amount = 10m, Quantity = 1m }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── AmountMustNotBeZero ────────────────────────────────────────────────────
+
+    [Fact]
+    public void AmountMustNotBeZero_ZeroAmount_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.AmountMustNotBeZero();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem { Description = "Item", VATRate = 23m, Amount = 0m, Quantity = 1m }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Amount")
+            .WithErrorCode("ChargeItemAmountMissing");
+    }
+
+    [Fact]
+    public void AmountMustNotBeZero_NonZeroAmount_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.AmountMustNotBeZero();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── QuantityMustNotBeZero ──────────────────────────────────────────────────
+
+    [Fact]
+    public void QuantityMustNotBeZero_ZeroQuantity_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.QuantityMustNotBeZero();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem { Description = "Item", VATRate = 23m, Amount = 10m, Quantity = 0m }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Quantity")
+            .WithErrorCode("ChargeItemQuantityZeroNotAllowed");
+    }
+
+    [Fact]
+    public void QuantityMustNotBeZero_NonZeroQuantity_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.QuantityMustNotBeZero();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── PosReceiptNetAmountLimit ───────────────────────────────────────────────
+
+    [Fact]
+    public void PosReceiptNetAmountLimit_ExceedsLimit_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.PosReceiptNetAmountLimit();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 23m,
+                Amount = 124m,
+                VATAmount = 23m,
+                Quantity = 1m,
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.cbChargeItems)
+            .WithErrorCode("PosReceiptNetAmountExceedsLimit");
+    }
+
+    [Fact]
+    public void PosReceiptNetAmountLimit_WithinLimit_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.PosReceiptNetAmountLimit();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 23m,
+                Amount = 123m,
+                VATAmount = 23m,
+                Quantity = 1m,
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── OtherServiceNetAmountLimit ─────────────────────────────────────────────
+
+    [Fact]
+    public void OtherServiceNetAmountLimit_ExceedsLimit_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.OtherServiceNetAmountLimit();
+        var otherServiceCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.OtherService);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtInvoiceCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Service",
+                VATRate = 23m,
+                Amount = 124m,
+                VATAmount = 23m,
+                Quantity = 1m,
+                ftChargeItemCase = otherServiceCase
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor(x => x.cbChargeItems)
+            .WithErrorCode("OtherServiceNetAmountExceedsLimit");
+    }
+
+    [Fact]
+    public void OtherServiceNetAmountLimit_WithinLimit_ShouldPass()
     {
         var validator = new ChargeItemValidations.OtherServiceNetAmountLimit();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem
-                {
-                    Amount = 50m, VATRate = 23m, VATAmount = 9.35m,
-                    ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseTypeOfService.OtherService)
-                }
-            }
+            ftReceiptCase = PtInvoiceCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    [Fact]
-    public void OtherService_OverLimit_ShouldFail()
-    {
-        var validator = new ChargeItemValidations.OtherServiceNetAmountLimit();
-        var request = new ReceiptRequest
-        {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem
-                {
-                    Amount = 500m, VATRate = 23m, VATAmount = 93.5m,
-                    ftChargeItemCase = (ChargeItemCase)((long)ChargeItemCase.NormalVatRate | (long)ChargeItemCaseTypeOfService.OtherService)
-                }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError().WithErrorCode("OtherServiceNetAmountExceedsLimit");
-    }
-
-    #endregion
-
-    #region SupportedVatRates
+    // ─── SupportedVatRates ──────────────────────────────────────────────────────
 
     [Fact]
-    public void NormalVatRate_ShouldPass()
+    public void SupportedVatRates_ZeroVatRateCase_ShouldFail()
     {
         var validator = new ChargeItemValidations.SupportedVatRates();
+        var zeroVatCase = ChargeItemCase.ZeroVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery);
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
             {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void SuperReducedVatRate_ShouldFail()
-    {
-        var validator = new ChargeItemValidations.SupportedVatRates();
-        var request = new ReceiptRequest
-        {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.SuperReducedVatRate1 }
-            }
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = zeroVatCase
+            }],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
-              .WithErrorCode("UnsupportedVatRate");
+            .WithErrorCode("UnsupportedVatRate");
     }
 
     [Fact]
-    public void ParkingVatRate_ShouldFail()
+    public void SupportedVatRates_NormalVatRate_ShouldPass()
     {
         var validator = new ChargeItemValidations.SupportedVatRates();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── SupportedChargeItemCases ───────────────────────────────────────────────
+
+    [Fact]
+    public void SupportedChargeItemCases_UnsupportedTypeOfService_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.SupportedChargeItemCases();
+        // NotOwnSales (0x60) is unsupported in PT
+        var unsupportedCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
             {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.ParkingVatRate }
-            }
+                Description = "Item",
+                VATRate = 23m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = unsupportedCase
+            }],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
-              .WithErrorCode("UnsupportedVatRate");
+            .WithErrorCode("UnsupportedChargeItemServiceType");
     }
 
-    #endregion
-
-    #region VatRateCategory
-
     [Fact]
-    public void NormalVatRate23Percent_ShouldPass()
+    public void SupportedChargeItemCases_SupportedTypeOfService_ShouldPass()
     {
-        var validator = new ChargeItemValidations.VatRateCategory();
+        var validator = new ChargeItemValidations.SupportedChargeItemCases();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate, VATRate = 23.0m }
-            }
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
+    // ─── VatRateCategory ────────────────────────────────────────────────────────
+
     [Fact]
-    public void NormalVatRateWrongPercentage_ShouldFail()
+    public void VatRateCategory_WrongRateForCategory_ShouldFail()
     {
         var validator = new ChargeItemValidations.VatRateCategory();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
             {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.NormalVatRate, VATRate = 21.0m }
-            }
+                Description = "Item",
+                VATRate = 21m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+            }],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
-              .WithErrorCode("VatRateMismatch");
+            .WithErrorCode("VatRateMismatch");
     }
 
     [Fact]
-    public void DiscountedVatRate1_6Percent_ShouldPass()
+    public void VatRateCategory_CorrectRateForCategory_ShouldPass()
     {
         var validator = new ChargeItemValidations.VatRateCategory();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.DiscountedVatRate1, VATRate = 6.0m }
-            }
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
+    // ─── VatAmountCheck ─────────────────────────────────────────────────────────
+
     [Fact]
-    public void DiscountedVatRate2_13Percent_ShouldPass()
+    public void VatAmountCheck_IncorrectVatAmount_ShouldFail()
     {
-        var validator = new ChargeItemValidations.VatRateCategory();
+        var validator = new ChargeItemValidations.VatAmountCheck();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
             {
-                new ChargeItem { ftChargeItemCase = ChargeItemCase.DiscountedVatRate2, VATRate = 13.0m }
-            }
+                Description = "Item",
+                VATRate = 23m,
+                Amount = 100m,
+                VATAmount = 20m,
+                Quantity = 1m,
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATAmount")
+            .WithErrorCode("VatAmountMismatch");
+    }
+
+    [Fact]
+    public void VatAmountCheck_CorrectVatAmount_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.VatAmountCheck();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [ValidChargeItem()],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    #endregion
-
-    #region ZeroVatExemption
+    // ─── ZeroVatExemption ───────────────────────────────────────────────────────
 
     [Fact]
-    public void ZeroVat_WithValidExemption_ShouldPass()
+    public void ZeroVatExemption_ZeroRateWithoutExemption_ShouldFail()
     {
         var validator = new ChargeItemValidations.ZeroVatExemption();
         var request = new ReceiptRequest
         {
-            cbChargeItems = new List<ChargeItem>
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
             {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = ChargeItemCase.NotTaxable.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
+            .WithErrorCode("ZeroVatExemption");
+    }
+
+    [Fact]
+    public void ZeroVatExemption_ZeroRateWithValidExemption_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        // NotTaxable (0x18) + NatureOfVat M07 (0x0700) → valid exemption
+        // NatureOfVat bits are in 0xFF00 of lower 16 bits: (0x0718 & 0xFF00) = 0x0700 → M07
+        var exemptCase = (ChargeItemCase) 0x5054_0000_0000_0718L;
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = exemptCase
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── DiscountOrExtraNotPositive ─────────────────────────────────────────────
+
+    [Fact]
+    public void DiscountOrExtraNotPositive_PositiveDiscountAmount_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.DiscountOrExtraNotPositive();
+        var discountCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Discount",
+                VATRate = 23m,
+                Amount = 5m,
+                Quantity = 1m,
+                ftChargeItemCase = discountCase
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].Amount")
+            .WithErrorCode("PositiveDiscountNotAllowed");
+    }
+
+    [Fact]
+    public void DiscountOrExtraNotPositive_NegativeDiscountAmount_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.DiscountOrExtraNotPositive();
+        var discountCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Discount",
+                VATRate = 23m,
+                Amount = -5m,
+                Quantity = 1m,
+                ftChargeItemCase = discountCase
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    // ─── DiscountVatRateAndCaseAlignment ────────────────────────────────────────
+
+    [Fact]
+    public void DiscountVatRateAndCaseAlignment_MismatchedVatRate_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.DiscountVatRateAndCaseAlignment();
+        var mainCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery);
+        var discountCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems =
+            [
                 new ChargeItem
                 {
-                    VATRate = 0m,
-                    ftChargeItemCase = ChargeItemCase.NotTaxable.WithNatureOfVat(ChargeItemCaseNatureOfVatPT.Group0x30)
+                    Description = "Main Item",
+                    VATRate = 23m,
+                    Amount = 10m,
+                    Quantity = 1m,
+                    ftChargeItemCase = mainCase
+                },
+                new ChargeItem
+                {
+                    Description = "Discount",
+                    VATRate = 6m,
+                    Amount = -1m,
+                    Quantity = 1m,
+                    ftChargeItemCase = discountCase
                 }
-            }
+            ],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[1]")
+            .WithErrorCode("DiscountVatRateOrCaseMismatch");
+    }
+
+    [Fact]
+    public void DiscountVatRateAndCaseAlignment_AlignedVatRate_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.DiscountVatRateAndCaseAlignment();
+        var mainCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery);
+        var discountCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount);
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Description = "Main Item",
+                    VATRate = 23m,
+                    Amount = 10m,
+                    Quantity = 1m,
+                    ftChargeItemCase = mainCase
+                },
+                new ChargeItem
+                {
+                    Description = "Discount",
+                    VATRate = 23m,
+                    Amount = -1m,
+                    Quantity = 1m,
+                    ftChargeItemCase = discountCase
+                }
+            ],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
-
-    [Fact]
-    public void ZeroVat_WithoutExemption_ShouldFail()
-    {
-        var validator = new ChargeItemValidations.ZeroVatExemption();
-        var request = new ReceiptRequest
-        {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { VATRate = 0m, ftChargeItemCase = ChargeItemCase.NotTaxable }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
-              .WithErrorCode("ZeroVatExemption");
-    }
-
-    [Fact]
-    public void NonZeroVat_ShouldPass()
-    {
-        var validator = new ChargeItemValidations.ZeroVatExemption();
-        var request = new ReceiptRequest
-        {
-            cbChargeItems = new List<ChargeItem>
-            {
-                new ChargeItem { VATRate = 23m, ftChargeItemCase = ChargeItemCase.NormalVatRate }
-            }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    #endregion
 }

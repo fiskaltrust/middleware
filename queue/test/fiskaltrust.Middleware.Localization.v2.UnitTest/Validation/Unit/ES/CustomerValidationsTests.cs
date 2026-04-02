@@ -1,105 +1,225 @@
-﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
 using FluentValidation.TestHelper;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation.Unit.ES;
+namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation;
 
-public class CustomerValidationsTests
+public class ESCustomerValidationsTests
 {
-    #region CustomerRequiredForInvoice
+    // ES receipt cases
+    private static ReceiptCase EsPosCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES");
+    private static ReceiptCase EsInvoiceCase => ReceiptCase.InvoiceB2C0x1001.WithCountry("ES");
+    private static ReceiptCase PtPosCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
+
+    private static object SerializeCustomer(MiddlewareCustomer customer) => customer;
+
+    // ─── CustomerRequiredForInvoice ────────────────────────────────────────────
 
     [Fact]
-    public void Invoice_WithCustomer_ShouldPass()
+    public void CustomerRequiredForInvoice_InvoiceWithoutCustomer_ShouldFail()
     {
-        var validator = new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice();
+        var validator = new CustomerValidations();
         var request = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
-            cbCustomer = new MiddlewareCustomer { CustomerName = "Test" }
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void Invoice_WithoutCustomer_ShouldFail()
-    {
-        var validator = new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice();
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001,
-            cbCustomer = null
+            ftReceiptCase = EsInvoiceCase,
+            cbCustomer = null,
+            cbChargeItems = [],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldHaveValidationErrorFor(x => x.cbCustomer)
-              .WithErrorCode("CustomerRequiredForInvoice");
+            .WithErrorCode("CustomerRequiredForInvoice");
     }
 
     [Fact]
-    public void NonInvoice_WithoutCustomer_ShouldPass()
+    public void CustomerRequiredForInvoice_InvoiceWithCustomer_ShouldPass()
     {
-        var validator = new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice();
+        var validator = new CustomerValidations();
+        var customer = new MiddlewareCustomer
+        {
+            CustomerName = "Test Customer",
+            CustomerZip = "28001",
+            CustomerStreet = "Calle Mayor 1",
+            CustomerVATId = "B83975577"
+        };
         var request = new ReceiptRequest
         {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001,
-            cbCustomer = null
+            ftReceiptCase = EsInvoiceCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveValidationErrorFor(x => x.cbCustomer);
+    }
+
+    [Fact]
+    public void CustomerRequiredForInvoice_NonInvoiceWithoutCustomer_ShouldPass()
+    {
+        var validator = new CustomerValidations();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = null,
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveValidationErrorFor(x => x.cbCustomer);
+    }
+
+    // ─── CustomerTaxId ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void CustomerTaxId_InvalidSpanishNif_ShouldFail()
+    {
+        var validator = new CustomerValidations.CustomerTaxId();
+        var customer = new MiddlewareCustomer
+        {
+            CustomerVATId = "INVALID123",
+            CustomerCountry = "ES"
+        };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbCustomer.CustomerVATId")
+            .WithErrorCode("InvalidSpanishTaxId");
+    }
+
+    [Fact]
+    public void CustomerTaxId_ValidSpanishNif_ShouldPass()
+    {
+        var validator = new CustomerValidations.CustomerTaxId();
+        // B83975577 is a valid Spanish NIF
+        var customer = new MiddlewareCustomer
+        {
+            CustomerVATId = "B83975577",
+            CustomerCountry = "ES"
+        };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    #endregion
-
-    #region CustomerTaxId
-
     [Fact]
-    public void ValidSpanishNif_ShouldPass()
+    public void CustomerTaxId_NoCustomer_ShouldPass()
     {
         var validator = new CustomerValidations.CustomerTaxId();
-        var customer = new MiddlewareCustomer { CustomerVATId = "12345678Z", CustomerCountry = "ES" };
-        var request = new ReceiptRequest { cbCustomer = customer };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = null,
+            cbChargeItems = [],
+            cbPayItems = []
+        };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
-    public void InvalidSpanishNif_ShouldFail()
+    public void CustomerTaxId_ForeignCountryCustomer_ShouldSkip()
     {
         var validator = new CustomerValidations.CustomerTaxId();
-        var customer = new MiddlewareCustomer { CustomerVATId = "INVALID", CustomerCountry = "ES" };
-        var request = new ReceiptRequest { cbCustomer = customer };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError();
-    }
-
-    [Fact]
-    public void NoCustomer_ShouldPass()
-    {
-        var validator = new CustomerValidations.CustomerTaxId();
-        var request = new ReceiptRequest { cbCustomer = null };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void EmptyVatId_ShouldPass()
-    {
-        var validator = new CustomerValidations.CustomerTaxId();
-        var customer = new MiddlewareCustomer { CustomerVATId = "", CustomerCountry = "ES" };
-        var request = new ReceiptRequest { cbCustomer = customer };
+        var customer = new MiddlewareCustomer
+        {
+            CustomerVATId = "NOTANIF",
+            CustomerCountry = "DE"
+        };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    #endregion
-
-    #region CustomerMandatoryFields
+    // ─── CustomerMandatoryFields ───────────────────────────────────────────────
 
     [Fact]
-    public void AllFieldsPresent_ShouldPass()
+    public void CustomerMandatoryFields_EmptyName_ShouldFail()
+    {
+        var validator = new CustomerValidations.CustomerMandatoryFields();
+        var customer = new MiddlewareCustomer
+        {
+            CustomerName = "",
+            CustomerZip = "28001",
+            CustomerStreet = "Calle Mayor 1"
+        };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbCustomer.CustomerName")
+            .WithErrorCode("CustomerNameMissing");
+    }
+
+    [Fact]
+    public void CustomerMandatoryFields_EmptyZip_ShouldFail()
+    {
+        var validator = new CustomerValidations.CustomerMandatoryFields();
+        var customer = new MiddlewareCustomer
+        {
+            CustomerName = "Test",
+            CustomerZip = "",
+            CustomerStreet = "Calle Mayor 1"
+        };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbCustomer.CustomerZip")
+            .WithErrorCode("CustomerZipMissing");
+    }
+
+    [Fact]
+    public void CustomerMandatoryFields_EmptyStreet_ShouldFail()
+    {
+        var validator = new CustomerValidations.CustomerMandatoryFields();
+        var customer = new MiddlewareCustomer
+        {
+            CustomerName = "Test",
+            CustomerZip = "28001",
+            CustomerStreet = ""
+        };
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbCustomer.CustomerStreet")
+            .WithErrorCode("CustomerStreetMissing");
+    }
+
+    [Fact]
+    public void CustomerMandatoryFields_AllFieldsSet_ShouldPass()
     {
         var validator = new CustomerValidations.CustomerMandatoryFields();
         var customer = new MiddlewareCustomer
@@ -108,34 +228,29 @@ public class CustomerValidationsTests
             CustomerZip = "28001",
             CustomerStreet = "Calle Mayor 1"
         };
-        var request = new ReceiptRequest { cbCustomer = customer };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void MissingName_ShouldFail()
-    {
-        var validator = new CustomerValidations.CustomerMandatoryFields();
-        var customer = new MiddlewareCustomer
+        var request = new ReceiptRequest
         {
-            CustomerName = null,
-            CustomerZip = "28001",
-            CustomerStreet = "Calle Mayor 1"
+            ftReceiptCase = EsPosCase,
+            cbCustomer = SerializeCustomer(customer),
+            cbChargeItems = [],
+            cbPayItems = []
         };
-        var request = new ReceiptRequest { cbCustomer = customer };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError();
-    }
-
-    [Fact]
-    public void MandatoryFields_NoCustomer_ShouldPass()
-    {
-        var validator = new CustomerValidations.CustomerMandatoryFields();
-        var request = new ReceiptRequest { cbCustomer = null };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
 
-    #endregion
+    [Fact]
+    public void CustomerMandatoryFields_NoCustomer_ShouldPass()
+    {
+        var validator = new CustomerValidations.CustomerMandatoryFields();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = EsPosCase,
+            cbCustomer = null,
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
 }

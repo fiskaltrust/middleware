@@ -15,7 +15,6 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     {
         Include(new DescriptionMustNotBeEmpty());
         Include(new DescriptionMinLength());
-        Include(new DescriptionEncodingWindows1252());
         Include(new VatRateMustNotBeNegative());
         Include(new AmountMustNotBeZero());
         Include(new QuantityMustNotBeZero());
@@ -236,30 +235,6 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     .Must(desc => !string.IsNullOrWhiteSpace(desc))
                     .WithMessage("Description is missing.")
                     .WithErrorCode("ChargeItemDescriptionMissing");
-            }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
-        }
-    }
-
-    public class DescriptionEncodingWindows1252 : AbstractValidator<ReceiptRequest>
-    {
-        private static readonly System.Text.Encoding _encoding =
-            System.Text.Encoding.GetEncoding(1252,
-                System.Text.EncoderFallback.ExceptionFallback,
-                System.Text.DecoderFallback.ReplacementFallback);
-
-        public DescriptionEncodingWindows1252()
-        {
-            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
-            {
-                chargeItem.RuleFor(x => x.Description)
-                    .Must(desc =>
-                    {
-                        if (string.IsNullOrEmpty(desc)) return true;
-                        try { _encoding.GetBytes(desc); return true; }
-                        catch (System.Text.EncoderFallbackException) { return false; }
-                    })
-                    .WithMessage(item => $"Description '{item.Description}' contains characters not encodable in Windows-1252.")
-                    .WithErrorCode("ChargeItemDescriptionEncodingInvalid");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }
