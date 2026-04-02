@@ -59,8 +59,8 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
                 "ATCUD": "AAJFJ6K6J5",
                 "Series": "ft2025128b"
               },
-              "HandWrittenFSSeries": {
-                "TypeCode": "FS",
+              "HandWrittenFTSeries": {
+                "TypeCode": "FT",
                 "ATCUD": "AAJFJHK6J6",
                 "Series": "ft20250a62"
               },
@@ -90,7 +90,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var repo = storageProvider.CreateMiddlewareQueueItemRepository();
         var fvValidator = new ReceiptValidator(
-            new FVReceiptReferenceProvider(repo),
+            new v2.Helpers.ReceiptReferenceProvider(repo),
             new DocumentStatusProvider(repo),
             new VoidValidator(repo),
             new RefundValidator(repo));

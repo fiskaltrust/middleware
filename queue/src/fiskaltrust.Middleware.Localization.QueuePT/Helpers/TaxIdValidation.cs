@@ -1,22 +1,10 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-namespace fiskaltrust.Middleware.Localization.v2.Helpers;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 public static class TaxIdValidation
 {
-    private static readonly Regex SpanishNifRegex = new(
-        @"^([a-zA-Z]\d{7}[a-zA-Z]|\d{8}[a-zA-Z]|[a-zA-Z]\d{8})$",
-        RegexOptions.Compiled);
-
     private static readonly int[] ValidPortugueseFirstDigits = [1, 2, 3, 5, 6, 7, 8, 9];
-
-    public static bool IsValidSpanishNif(string taxId)
-    {
-        if (string.IsNullOrWhiteSpace(taxId))
-            return false;
-
-        return SpanishNifRegex.IsMatch(taxId.Trim());
-    }
 
     public static bool IsValidPortugueseNif(string taxId)
     {

@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2.Cases;
+﻿using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Validation;
 using fiskaltrust.Middleware.Localization.v2;
@@ -13,10 +13,10 @@ public abstract class ProcessorPreparation
 {
     protected abstract AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; }
 
-    private MarketValidator? _shadowFvValidator;
+    private IMarketValidator? _shadowFvValidator;
     private ILogger? _shadowLogger;
 
-    public void SetShadowValidation(MarketValidator fvValidator, ILogger shadowLogger)
+    public void SetShadowValidation(IMarketValidator fvValidator, ILogger shadowLogger)
     {
         _shadowFvValidator = fvValidator;
         _shadowLogger = shadowLogger;
@@ -34,7 +34,7 @@ public abstract class ProcessorPreparation
 
         if (_shadowFvValidator != null && _shadowLogger != null)
         {
-            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue, request.ReceiptResponse);
+            var fvResult = _shadowFvValidator.LastResult;
             var oldSucceeded = validationResults.IsValid;
             var fvSucceeded = fvResult.IsValid;
 

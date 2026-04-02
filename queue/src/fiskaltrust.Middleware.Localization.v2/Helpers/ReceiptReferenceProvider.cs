@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -7,10 +7,10 @@ using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
-public class FVReceiptReferenceProvider
+public class ReceiptReferenceProvider
 {
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository;
-    public FVReceiptReferenceProvider(AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository)
+    public ReceiptReferenceProvider(AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository)
     {
         _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
     }

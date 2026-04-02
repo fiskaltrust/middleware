@@ -21,10 +21,10 @@ public abstract class ProcessorPreparation
     protected abstract AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; }
     protected abstract ftQueuePT GetQueuePT();
 
-    private MarketValidator? _shadowFvValidator;
+    private IMarketValidator? _shadowFvValidator;
     private ILogger? _shadowLogger;
 
-    public void SetShadowValidation(MarketValidator fvValidator, ILogger shadowLogger)
+    public void SetShadowValidation(IMarketValidator fvValidator, ILogger shadowLogger)
     {
         _shadowFvValidator = fvValidator;
         _shadowLogger = shadowLogger;
@@ -51,25 +51,35 @@ public abstract class ProcessorPreparation
         if (_shadowFvValidator != null && _shadowLogger != null)
         {
             object? numberSeries = null;
-            try { numberSeries = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, GetQueuePT(), await _readOnlyQueueItemRepository); }
-            catch {}
+            try
+            { numberSeries = await StaticNumeratorStorage.GetNumberSeriesAsync(request.ReceiptRequest, GetQueuePT(), await _readOnlyQueueItemRepository); }
+            catch { }
 
-            var fvResult = await _shadowFvValidator.ValidateAsync(request.ReceiptRequest, request.queue, request.ReceiptResponse, numberSeries);
-            var oldSucceeded = validationResults.IsValid;
-            var fvSucceeded = fvResult.IsValid;
-
-            if (oldSucceeded != fvSucceeded)
+            try
             {
-                _shadowLogger.LogError(
-                    "Receipt validation mismatch " +
-                    "cbReceiptReference={Ref} ftReceiptCase=0x{Case:X} " +
-                    "OldSuccess={OldSuccess} FVSuccess={FVSuccess} " +
-                    "FVErrors={FVErrors}",
+                var fvResult = _shadowFvValidator.LastResult;
+                var oldSucceeded = validationResults.IsValid;
+                var fvSucceeded = fvResult.IsValid;
+
+                if (oldSucceeded != fvSucceeded)
+                {
+                    _shadowLogger.LogError(
+                        "Receipt validation mismatch " +
+                        "cbReceiptReference={Ref} ftReceiptCase=0x{Case:X} " +
+                        "OldSuccess={OldSuccess} FVSuccess={FVSuccess} " +
+                        "FVErrors={FVErrors}",
+                        request.ReceiptRequest.cbReceiptReference,
+                        request.ReceiptRequest.ftReceiptCase,
+                        oldSucceeded,
+                        fvSucceeded,
+                        string.Join("; ", fvResult.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorMessage}")));
+                }
+            }
+            catch (Exception ex)
+            {
+                _shadowLogger.LogError(ex, "Shadow validation failed with exception for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}",
                     request.ReceiptRequest.cbReceiptReference,
-                    request.ReceiptRequest.ftReceiptCase,
-                    oldSucceeded,
-                    fvSucceeded,
-                    string.Join("; ", fvResult.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorMessage}")));
+                    request.ReceiptRequest.ftReceiptCase);
             }
         }
 

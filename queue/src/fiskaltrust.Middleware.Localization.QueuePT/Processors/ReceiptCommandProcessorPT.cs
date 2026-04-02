@@ -21,7 +21,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     private readonly IPTSSCD _sscd = sscd;
 #pragma warning disable
     private readonly ftQueuePT _queuePT = queuePT;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
     private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
     private readonly VoidValidator _voidValidator = new(readOnlyQueueItemRepository);
     private readonly bool _sandbox = sandbox;

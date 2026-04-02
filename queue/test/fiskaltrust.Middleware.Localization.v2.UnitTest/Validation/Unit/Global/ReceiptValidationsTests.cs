@@ -14,7 +14,7 @@ public class ReceiptValidationsTests
 {
     // ─── Shared async helpers ──────────────────────────────────────────────────
 
-    private static FVReceiptReferenceProvider CreateProvider(Mock<IMiddlewareQueueItemRepository> repo)
+    private static ReceiptReferenceProvider CreateProvider(Mock<IMiddlewareQueueItemRepository> repo)
         => new(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repo.Object)));
 
     private static ftQueueItem CreateFinishedItem(ReceiptRequest req, ReceiptResponse res) => new()
@@ -30,7 +30,8 @@ public class ReceiptValidationsTests
 
     private static async IAsyncEnumerable<ftQueueItem> ToAsync(params ftQueueItem[] items)
     {
-        foreach (var item in items) yield return item;
+        foreach (var item in items)
+            yield return item;
         await Task.CompletedTask;
     }
 

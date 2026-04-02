@@ -26,7 +26,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 {
     private readonly ReceiptRequest _receiptRequest = request;
     readonly ReceiptResponse _receiptResponse = receiptResponse;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+    private readonly Logic.ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
     private readonly DocumentStatusProvider _documentStatusProvider = new(readOnlyQueueItemRepository);
     private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
     private readonly VoidValidator _voidValidator = new(readOnlyQueueItemRepository);
@@ -613,7 +613,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                 ErrorMessagesPT.EEEE_CannotVoidInvoicedDocument(previousReceiptRef),
                 rule.Code,
                 rule.Field
-            ));           
+            ));
         }
 
         if (documentStatus.Status == DocumentStatus.Refunded)

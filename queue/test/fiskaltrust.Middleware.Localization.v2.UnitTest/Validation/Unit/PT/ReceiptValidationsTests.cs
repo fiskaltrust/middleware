@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
@@ -11,6 +11,7 @@ using fiskaltrust.storage.V0;
 using FluentValidation.TestHelper;
 using Moq;
 using Xunit;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation;
 
@@ -18,7 +19,7 @@ public class PTReceiptValidationsTests
 {
     // ─── Shared helpers ────────────────────────────────────────────────────────
 
-    private static FVReceiptReferenceProvider CreateProvider(Mock<IMiddlewareQueueItemRepository> repo)
+    private static Helpers.ReceiptReferenceProvider CreateProvider(Mock<IMiddlewareQueueItemRepository> repo)
         => new(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repo.Object)));
 
     private static DocumentStatusProvider CreateDocumentStatusProvider(Mock<IMiddlewareQueueItemRepository> repo)
@@ -43,7 +44,8 @@ public class PTReceiptValidationsTests
 
     private static async IAsyncEnumerable<ftQueueItem> ToAsync(params ftQueueItem[] items)
     {
-        foreach (var item in items) yield return item;
+        foreach (var item in items)
+            yield return item;
         await Task.CompletedTask;
     }
 
@@ -60,7 +62,7 @@ public class PTReceiptValidationsTests
 
     // ftReceiptCaseData must be an object (not a string) because TryDeserializeftReceiptCaseData
     // calls JsonSerializer.Serialize(ftReceiptCaseData) first — a string would be double-serialized.
-    private static ftReceiptCaseDataPayloadPT HandWrittenCaseData(string series = "SERIES-A", long number = 1) =>
+    private static ftReceiptCaseDataPayload HandWrittenCaseData(string series = "SERIES-A", long number = 1) =>
         new() { PT = new ftReceiptCaseDataPortugalPayload { Series = series, Number = number } };
 
     // ─── TrainingModeNotSupported ──────────────────────────────────────────────

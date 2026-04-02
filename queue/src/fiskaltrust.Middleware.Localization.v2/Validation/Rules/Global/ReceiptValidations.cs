@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidations(FVReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
+    public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
     {
         Include(new MandatoryCollections());
         Include(new CurrencyMustBeEur());
@@ -112,7 +112,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PreviousReceiptMustNotBeVoided : AbstractValidator<ReceiptRequest>
     {
-        public PreviousReceiptMustNotBeVoided(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PreviousReceiptMustNotBeVoided(ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -134,7 +134,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class VoidMustNotAlreadyExist : AbstractValidator<ReceiptRequest>
     {
-        public VoidMustNotAlreadyExist(FVReceiptReferenceProvider receiptReferenceProvider)
+        public VoidMustNotAlreadyExist(ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>

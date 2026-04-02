@@ -54,7 +54,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         });
 
         var repo = storageProvider.CreateMiddlewareQueueItemRepository();
-        var fvValidator = new ReceiptValidator(new FVReceiptReferenceProvider(repo), new Validation.VoidValidator(repo));
+        var fvValidator = new ReceiptValidator(new ReceiptReferenceProvider(repo), new Validation.VoidValidator(repo));
         var shadowLogger = loggerFactory.CreateLogger("ShadowValidation.ES");
 
         var receiptProcessor = new ReceiptCommandProcessorES(

@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using FluentValidation;
 using FluentValidation.Results;
@@ -7,16 +7,18 @@ using GlobalValidations = fiskaltrust.Middleware.Localization.v2.Validation.Rule
 
 namespace fiskaltrust.Middleware.Localization.v2.Validation;
 
-public abstract class MarketValidator
+public class MarketValidator : IMarketValidator
 {
-    private readonly FVReceiptReferenceProvider _receiptReferenceProvider;
+    private readonly ReceiptReferenceProvider _receiptReferenceProvider;
 
-    protected MarketValidator(FVReceiptReferenceProvider receiptReferenceProvider)
+    public ValidationResult LastResult { get; private set; }
+
+    public MarketValidator(ReceiptReferenceProvider receiptReferenceProvider)
     {
         _receiptReferenceProvider = receiptReferenceProvider;
     }
 
-    protected virtual IEnumerable<IValidator<ReceiptRequest>> GetGlobalValidators(ftQueue? queue = null)
+    protected IEnumerable<IValidator<ReceiptRequest>> GetGlobalValidators(ftQueue? queue = null)
     {
         yield return new GlobalValidations.ReceiptValidations(_receiptReferenceProvider, queue);
         yield return new GlobalValidations.ChargeItemValidations(queue);
@@ -38,6 +40,7 @@ public abstract class MarketValidator
             result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
         }
 
+        LastResult = result;
         return result;
     }
 }

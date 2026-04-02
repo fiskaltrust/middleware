@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
@@ -10,13 +10,14 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using FluentValidation;
 using Currency = fiskaltrust.ifPOS.v2.Currency;
+using fiskaltrust.Middleware.Localization.QueuePT.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
     public ReceiptValidations(
-        FVReceiptReferenceProvider receiptReferenceProvider,
+        v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider,
         DocumentStatusProvider documentStatusProvider,
         VoidValidator voidValidator,
         RefundValidator refundValidator,
@@ -79,7 +80,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class RefundMustNotAlreadyExist : AbstractValidator<ReceiptRequest>
     {
-        public RefundMustNotAlreadyExist(FVReceiptReferenceProvider receiptReferenceProvider)
+        public RefundMustNotAlreadyExist(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -136,7 +137,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x)
                 .Must(request =>
                 {
-                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var data))
+                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
                         return false;
                     return data?.PT != null
                         && !string.IsNullOrWhiteSpace(data.PT.Series)
@@ -163,7 +164,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PaymentTransferMustNotAlreadyExist : AbstractValidator<ReceiptRequest>
     {
-        public PaymentTransferMustNotAlreadyExist(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PaymentTransferMustNotAlreadyExist(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -184,7 +185,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             ReceiptCase.InvoiceB2G0x1003
         ];
 
-        public PaymentTransferOriginalMustBeInvoice(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PaymentTransferOriginalMustBeInvoice(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -200,7 +201,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PaymentTransferAmountsMustMatch : AbstractValidator<ReceiptRequest>
     {
-        public PaymentTransferAmountsMustMatch(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PaymentTransferAmountsMustMatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -251,7 +252,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 {
                     var receiptMomentUtc = moment.ToUniversalTime();
                     var serverTime = DateTime.UtcNow;
-                    if (receiptMomentUtc > serverTime) return true;
+                    if (receiptMomentUtc > serverTime)
+                        return true;
                     var timeDifference = Math.Abs((receiptMomentUtc - serverTime).TotalMinutes);
                     return timeDifference <= MaxAllowedDifferenceMinutes;
                 })
@@ -341,7 +343,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class ReceiptReferenceAlreadyUsed : AbstractValidator<ReceiptRequest>
     {
-        public ReceiptReferenceAlreadyUsed(FVReceiptReferenceProvider receiptReferenceProvider)
+        public ReceiptReferenceAlreadyUsed(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbReceiptReference)
                 .MustAsync(async (cbReceiptReference, _) =>
@@ -353,7 +355,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PartialRefundPreviousReceiptMustNotBeVoided : AbstractValidator<ReceiptRequest>
     {
-        public PartialRefundPreviousReceiptMustNotBeVoided(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PartialRefundPreviousReceiptMustNotBeVoided(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -366,7 +368,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PartialRefundMustNotHaveExistingRefund : AbstractValidator<ReceiptRequest>
     {
-        public PartialRefundMustNotHaveExistingRefund(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PartialRefundMustNotHaveExistingRefund(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -379,12 +381,12 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class HandwrittenSeriesNumberAlreadyLinked : AbstractValidator<ReceiptRequest>
     {
-        public HandwrittenSeriesNumberAlreadyLinked(FVReceiptReferenceProvider receiptReferenceProvider)
+        public HandwrittenSeriesNumberAlreadyLinked(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
                 {
-                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var data) ||
+                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data) ||
                         data?.PT?.Series is null || !data.PT.Number.HasValue)
                         return true;
                     var series = data.PT.Series;
@@ -392,7 +394,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     return !await receiptReferenceProvider.HasMatchingQueueItemAsync(r =>
                         r.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) &&
                         r.cbReceiptReference != request.cbReceiptReference &&
-                        r.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var d) &&
+                        r.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var d) &&
                         d?.PT?.Series == series &&
                         d.PT.Number.HasValue &&
                         d.PT.Number.Value == number);
@@ -400,7 +402,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage(request =>
                 {
-                    request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var data);
+                    request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data);
                     return $"Handwritten receipt with series '{data?.PT?.Series}' and number '{data?.PT?.Number}' has already been linked.";
                 })
                 .WithErrorCode("HandwrittenSeriesNumberAlreadyLinked");
@@ -434,9 +436,10 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x)
                 .Must(request =>
                 {
-                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayloadPT>(out var data))
+                    if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
                         return true;
-                    if (data?.PT?.Series == null) return true;
+                    if (data?.PT?.Series == null)
+                        return true;
                     return !data.PT.Series.Contains(" ");
                 })
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
@@ -447,7 +450,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class VoidDocumentStatusCheck : AbstractValidator<ReceiptRequest>
     {
-        public VoidDocumentStatusCheck(FVReceiptReferenceProvider receiptReferenceProvider, DocumentStatusProvider documentStatusProvider)
+        public VoidDocumentStatusCheck(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider, DocumentStatusProvider documentStatusProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -505,7 +508,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class VoidFieldsMatch : AbstractValidator<ReceiptRequest>
     {
-        public VoidFieldsMatch(FVReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
+        public VoidFieldsMatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -525,7 +528,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class FullRefundFieldsMatch : AbstractValidator<ReceiptRequest>
     {
-        public FullRefundFieldsMatch(FVReceiptReferenceProvider receiptReferenceProvider, RefundValidator refundValidator)
+        public FullRefundFieldsMatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider, RefundValidator refundValidator)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -548,7 +551,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PartialRefundFieldsMatch : AbstractValidator<ReceiptRequest>
     {
-        public PartialRefundFieldsMatch(FVReceiptReferenceProvider receiptReferenceProvider, RefundValidator refundValidator)
+        public PartialRefundFieldsMatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider, RefundValidator refundValidator)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -568,7 +571,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PaymentTransferForRefundedReceipt : AbstractValidator<ReceiptRequest>
     {
-        public PaymentTransferForRefundedReceipt(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PaymentTransferForRefundedReceipt(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
@@ -581,7 +584,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PaymentTransferCustomerMismatch : AbstractValidator<ReceiptRequest>
     {
-        public PaymentTransferCustomerMismatch(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PaymentTransferCustomerMismatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>
@@ -612,7 +615,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class PreviousReceiptLineItemsMatch : AbstractValidator<ReceiptRequest>
     {
-        public PreviousReceiptLineItemsMatch(FVReceiptReferenceProvider receiptReferenceProvider)
+        public PreviousReceiptLineItemsMatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>

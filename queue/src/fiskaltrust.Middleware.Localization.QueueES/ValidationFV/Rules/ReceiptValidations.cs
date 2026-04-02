@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Validation;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
 
 public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidations(FVReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
+    public ReceiptValidations(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
     {
         Include(new ChargeItemCaseCountryConsistency());
         Include(new VoidFieldsMatch(receiptReferenceProvider, voidValidator));
@@ -28,7 +28,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
 
     public class VoidFieldsMatch : AbstractValidator<ReceiptRequest>
     {
-        public VoidFieldsMatch(FVReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
+        public VoidFieldsMatch(v2.Helpers.ReceiptReferenceProvider receiptReferenceProvider, VoidValidator voidValidator)
         {
             RuleFor(x => x)
                 .MustAsync(async (request, _) =>

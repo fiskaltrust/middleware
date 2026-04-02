@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
@@ -9,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public class ReceiptProcessor : IReceiptProcessor
 {
-    private readonly MarketValidator? _validator;
+    private readonly IMarketValidator _validator;
     private readonly ILifecycleCommandProcessor _lifecyclCommandProcessor;
     private readonly IReceiptCommandProcessor _receiptCommandProcessor;
     private readonly IDailyOperationsCommandProcessor _dailyOperationsCommandProcessor;
@@ -17,7 +18,7 @@ public class ReceiptProcessor : IReceiptProcessor
     private readonly IProtocolCommandProcessor _protocolCommandProcessor;
     private readonly ILogger<ReceiptProcessor> _logger;
 
-    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, MarketValidator validator, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, IMarketValidator validator, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
     {
         _validator = validator;
         _lifecyclCommandProcessor = lifecyclCommandProcessor;
@@ -28,22 +29,31 @@ public class ReceiptProcessor : IReceiptProcessor
         _logger = logger;
     }
 
-    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor) : this(logger, null, lifecyclCommandProcessor, receiptCommandProcessor, dailyOperationsCommandProcessor, invoiceCommandProcessor, protocolCommandProcessor) { }
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ReceiptReferenceProvider receiptReferenceProvider, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor) : this(logger, new MarketValidator(receiptReferenceProvider), lifecyclCommandProcessor, receiptCommandProcessor, dailyOperationsCommandProcessor, invoiceCommandProcessor, protocolCommandProcessor) { }
 
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
-        if (_validator != null)
+        try
         {
             var validationResult = await _validator.ValidateAsync(request, queue);
             if (!validationResult.IsValid)
             {
-                _logger.LogError(
-                    "FV validation errors for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: {Errors}",
-                    request.cbReceiptReference,
-                    request.ftReceiptCase,
-                    string.Join("; ", validationResult.Errors.Select(e => $"[{e.ErrorCode}] {e.ErrorMessage}")));
+                foreach (var error in validationResult.Errors)
+                {
+                    _logger.LogError(
+                        "FV validation errors for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: {ErrorCode} {ErrorMessage}",
+                        request.cbReceiptReference,
+                        request.ftReceiptCase,
+                        error.ErrorCode,
+                        error.ErrorMessage);
+                }
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during FV validation for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}", request);
+        }
+
 
         var processCommandRequest = new ProcessCommandRequest(queue, request, receiptResponse);
         ProcessCommandResponse? processCommandResponse = null;
