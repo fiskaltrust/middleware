@@ -52,9 +52,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010)
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
 
-            if (receiptCase == (int) ReceiptCases.ResetPrinter0x3011)
-                return await ForwardToSSCDAsync(request);
-
             if (receiptCase == (int) ReceiptCases.RebootPrinter0x3012)
                 return await ForwardToSSCDAsync(request);
 

@@ -113,11 +113,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await ProcessPerformReprint(request);
             }
 
-            if (request.ReceiptRequest.IsResetPrinter())
-            {
-                return await ProcessResetPrinterCommand(request);
-            }
-
             if (request.ReceiptRequest.IsRebootPrinter())
             {
                 return await ProcessRebootPrinterCommand(request);
@@ -627,23 +622,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 ReceiptResponse = request.ReceiptResponse
             };
-        }
-    }
-
-    private async Task<ProcessResponse> ProcessResetPrinterCommand(ProcessRequest request)
-    {
-        try
-        {
-            await ResetPrinter();
-            var result = await QueryPrinterStatusAsync();
-            request.ReceiptResponse.ftSignatures = SignatureFactory.CreateResetPrinterCommandSignatures(Helpers.GetPrinterStatus(result?.Printerstatus?.MfStatus) ?? "OK");
-            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
-        }
-        catch (Exception e)
-        {
-            var errorInfo = Helpers.ExceptionInfo(e);
-            request.ReceiptResponse.SetReceiptResponseErrored(errorInfo.SSCDErrorInfo?.Info ?? "");
-            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
         }
     }
 

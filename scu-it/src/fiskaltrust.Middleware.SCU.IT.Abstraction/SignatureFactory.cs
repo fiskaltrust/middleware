@@ -65,17 +65,6 @@ public static class SignatureFactory
         return signs.ToArray();
     }
 
-    public static SignaturItem[] CreateResetPrinterCommandSignatures(string status) => new SignaturItem[]
-    {
-        new SignaturItem
-        {
-            Caption = "reset-printer-command",
-            Data = $"Printer reset successful. Status: {status}",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTCommand
-        }
-    };
-
     public static SignaturItem[] CreateRebootPrinterCommandSignatures() => new SignaturItem[]
     {
         new SignaturItem
