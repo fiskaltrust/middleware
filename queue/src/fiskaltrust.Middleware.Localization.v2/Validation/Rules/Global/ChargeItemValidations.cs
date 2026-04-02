@@ -155,7 +155,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     {
         public CountryConsistency(ftQueue? queue)
         {
-            When(x => x.cbChargeItems != null, () =>
+            When(x => queue != null && x.cbChargeItems != null, () =>
             {
                 RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
                 {

@@ -181,11 +181,14 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
     {
         public CountryConsistency(ftQueue? queue)
         {
-            RuleFor(x => x)
-                .Must(request => request.ftReceiptCase.Country() == queue!.CountryCode)
-                .WithMessage(request =>
-                    $"Receipt case country '{request.ftReceiptCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
-                .WithErrorCode("ReceiptCaseCountryMismatch");
+            When(_ => queue != null, () =>
+            {
+                RuleFor(x => x)
+                    .Must(request => request.ftReceiptCase.Country() == queue!.CountryCode)
+                    .WithMessage(request =>
+                        $"Receipt case country '{request.ftReceiptCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
+                    .WithErrorCode("ReceiptCaseCountryMismatch");
+            });
         }
     }
 }
