@@ -11,182 +11,12 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Models;
-using System.Text.Json.Serialization;
 using System.Security.Cryptography;
 using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
-
-public class ftReceiptCaseDataPayload
-{
-    [JsonPropertyName("GR")]
-    public ftReceiptCaseDataGreekPayload? GR { get; set; }
-}
-
-public class ftReceiptCaseDataGreekPayload
-{
-    public string? MerchantVATID { get; set; }
-    public string? Series { get; set; }
-    public long? AA { get; set; }
-    public string? HashAlg { get; set; }
-    public string? HashPayload { get; set; }
-    
-    /// <summary>
-    /// MyData override configuration allowing direct control of invoice properties
-    /// </summary>
-    [JsonPropertyName("mydataoverride")]
-    public MyDataOverride? MyDataOverride { get; set; }
-}
-
-public class MyDataOverride
-{
-    /// <summary>
-    /// Invoice-level overrides
-    /// </summary>
-    [JsonPropertyName("invoice")]
-    public InvoiceOverride? Invoice { get; set; }
-}
-
-public class InvoiceOverride
-{
-    /// <summary>
-    /// Invoice header overrides
-    /// </summary>
-    [JsonPropertyName("invoiceHeader")]
-    public InvoiceHeaderOverride? InvoiceHeader { get; set; }
-}
-
-public class InvoiceHeaderOverride
-{
-    /// <summary>
-    /// Invoice type override. Only allowed values: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3
-    /// Can only be set when the automatically determined invoice type would result in an error.
-    /// </summary>
-    [JsonPropertyName("invoiceType")]
-    public string? InvoiceType { get; set; }
-
-    /// <summary>
-    /// VAT payment suspension indicator
-    /// </summary>
-    [JsonPropertyName("vatPaymentSuspension")]
-    public bool? VatPaymentSuspension { get; set; }
-
-    /// <summary>
-    /// Self-pricing indicator
-    /// </summary>
-    [JsonPropertyName("selfPricing")]
-    public bool? SelfPricing { get; set; }
-
-    /// <summary>
-    /// Dispatch date (format: yyyy-MM-dd)
-    /// </summary>
-    [JsonPropertyName("dispatchDate")]
-    public DateTime? DispatchDate { get; set; }
-
-    /// <summary>
-    /// Dispatch time (format: HH:mm:ss)
-    /// </summary>
-    [JsonPropertyName("dispatchTime")]
-    public DateTime? DispatchTime { get; set; }
-
-    /// <summary>
-    /// Vehicle number for transport documents
-    /// </summary>
-    [JsonPropertyName("vehicleNumber")]
-    public string? VehicleNumber { get; set; }
-
-    /// <summary>
-    /// Move purpose code
-    /// </summary>
-    [JsonPropertyName("movePurpose")]
-    public int? MovePurpose { get; set; }
-
-    /// <summary>
-    /// Fuel invoice indicator
-    /// </summary>
-    [JsonPropertyName("fuelInvoice")]
-    public bool? FuelInvoice { get; set; }
-
-    /// <summary>
-    /// Special invoice category code
-    /// </summary>
-    [JsonPropertyName("specialInvoiceCategory")]
-    public int? SpecialInvoiceCategory { get; set; }
-
-    /// <summary>
-    /// Invoice variation type code
-    /// </summary>
-    [JsonPropertyName("invoiceVariationType")]
-    public int? InvoiceVariationType { get; set; }
-
-    /// <summary>
-    /// Other delivery note header information
-    /// </summary>
-    [JsonPropertyName("otherDeliveryNoteHeader")]
-    public OtherDeliveryNoteHeaderOverride? OtherDeliveryNoteHeader { get; set; }
-
-    /// <summary>
-    /// Other move purpose title (free text)
-    /// </summary>
-    [JsonPropertyName("otherMovePurposeTitle")]
-    public string? OtherMovePurposeTitle { get; set; }
-}
-
-public class OtherDeliveryNoteHeaderOverride
-{
-    /// <summary>
-    /// Loading address
-    /// </summary>
-    [JsonPropertyName("loadingAddress")]
-    public AddressOverride? LoadingAddress { get; set; }
-
-    /// <summary>
-    /// Delivery address
-    /// </summary>
-    [JsonPropertyName("deliveryAddress")]
-    public AddressOverride? DeliveryAddress { get; set; }
-
-    /// <summary>
-    /// Start shipping branch
-    /// </summary>
-    [JsonPropertyName("startShippingBranch")]
-    public int? StartShippingBranch { get; set; }
-
-    /// <summary>
-    /// Complete shipping branch
-    /// </summary>
-    [JsonPropertyName("completeShippingBranch")]
-    public int? CompleteShippingBranch { get; set; }
-}
-
-public class AddressOverride
-{
-    /// <summary>
-    /// Street name
-    /// </summary>
-    [JsonPropertyName("street")]
-    public string? Street { get; set; }
-
-    /// <summary>
-    /// Street number
-    /// </summary>
-    [JsonPropertyName("number")]
-    public string? Number { get; set; }
-
-    /// <summary>
-    /// Postal code
-    /// </summary>
-    [JsonPropertyName("postalCode")]
-    public string? PostalCode { get; set; }
-
-    /// <summary>
-    /// City name
-    /// </summary>
-    [JsonPropertyName("city")]
-    public string? City { get; set; }
-}
 
 public class MyDataSCU : IGRSSCD
 {
@@ -201,11 +31,11 @@ public class MyDataSCU : IGRSSCD
         {
             throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
         }
-        
+
         _receiptBaseAddress = receiptBaseAddress;
         _sandbox = sandbox;
         _masterDataConfiguration = masterDataConfiguration;
-        if(sandbox && _masterDataConfiguration?.Account?.VatId == null)
+        if (sandbox && _masterDataConfiguration?.Account?.VatId == null)
         {
             _masterDataConfiguration = new MasterDataConfiguration
             {
@@ -222,12 +52,12 @@ public class MyDataSCU : IGRSSCD
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
-    
+
     public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
     {
         return await Task.FromResult(new EchoResponse { Message = echoRequest.Message });
     }
-    
+
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -246,14 +76,14 @@ public class MyDataSCU : IGRSSCD
             };
         }
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && 
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) &&
             request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) &&
             request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) &&
             receiptReferences != null && receiptReferences.Count > 0)
         {
             var previousReceipt = receiptReferences[0];
             var mark = previousReceipt.Item2.ftSignatures?.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
-            
+
             if (string.IsNullOrEmpty(mark))
             {
                 request.ReceiptResponse.SetReceiptResponseError("Cannot void delivery note: The mark of the delivery note to cancel is missing. Please provide the mark in the cbPreviousReceiptReference.");
@@ -264,6 +94,27 @@ public class MyDataSCU : IGRSSCD
             }
 
             return await CancelDeliveryNoteAsync(request, mark);
+        }
+
+        var hasLocalPayItemFlag = request.ReceiptRequest.cbPayItems.Any(p => ((long) p.ftPayItemCase & 0x0000_0001_0000_0000) != 0);
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Pay0x3005) &&
+            hasLocalPayItemFlag &&
+            receiptReferences != null && receiptReferences.Count > 0)
+        {
+            var previousReceipt = receiptReferences[0];
+            var invoiceMarkText = previousReceipt.Item2.ftSignatures?.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+
+            if (string.IsNullOrEmpty(invoiceMarkText) || !long.TryParse(invoiceMarkText, out var invoiceMark))
+            {
+                request.ReceiptResponse.SetReceiptResponseError("Cannot send payment method: The invoiceMark of the referenced invoice is missing or invalid. Please ensure cbPreviousReceiptReference points to a successfully submitted invoice.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+
+            var entityVatNumber = new string(_masterDataConfiguration.Account.VatId.Where(char.IsDigit).ToArray());
+            return await SendPaymentsMethodAsync(request, invoiceMark, entityVatNumber);
         }
 
         var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
@@ -353,12 +204,52 @@ public class MyDataSCU : IGRSSCD
                     {
                         for (var i = 0; i < data.ItemsElementName.Length; i++)
                         {
-                            if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+
+                            if (data.ItemsElementName[i] == ItemsChoiceType.invoiceUid)
                             {
-                                continue;
-                                // In the latest API Version mydata returns a QR Code. We don't need it since we are printing our own QR Code. In case
-                                // of ERP API based integrations we will still want this to be added.
-                                // request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
+                                doc.invoice[0].uid = data.Items[i].ToString();
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.Uid.As<SignatureType>()
+                                });
+                            }
+                            else if (data.ItemsElementName[i] == ItemsChoiceType.invoiceMark)
+                            {
+                                doc.invoice[0].mark = long.Parse(data.Items[i].ToString()!);
+                                doc.invoice[0].markSpecified = true;
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.Mark.As<SignatureType>()
+                                });
+                            }
+                            else if (data.ItemsElementName[i] == ItemsChoiceType.authenticationCode)
+                            {
+                                doc.invoice[0].authenticationCode = data.Items[i].ToString();
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.AuthenticatioNCode.As<SignatureType>()
+                                });
+                            }
+                            else if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                            {
+                                // Should we set it?
+                                // doc.invoice[0].qrCodeUrl = data.Items[i].ToString();
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.QRCode,
+                                    ftSignatureType = SignatureTypeGR.QRCode.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
+                                });
                             }
                             else
                             {
@@ -367,11 +258,12 @@ public class MyDataSCU : IGRSSCD
                                     Data = data.Items[i].ToString() ?? "",
                                     Caption = data.ItemsElementName[i].ToString(),
                                     ftSignatureFormat = SignatureFormat.Text,
-                                    ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                                    ftSignatureType = SignatureTypeGR.GenericMyDataInfo.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
                                 });
                             }
                         }
 
+                        var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
@@ -391,6 +283,7 @@ public class MyDataSCU : IGRSSCD
                         }
                         SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
                         SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                        SignatureItemFactoryGR.AddMyDataXmlSignature(request, enrichedPayload);
                     }
                     else
                     {
@@ -421,7 +314,6 @@ public class MyDataSCU : IGRSSCD
             ReceiptResponse = request.ReceiptResponse
         };
     }
-
     public static string EncodeToUrlSafeBase64(byte[] bytes)
     {
         var base64 = Convert.ToBase64String(bytes)
@@ -507,7 +399,7 @@ public class MyDataSCU : IGRSSCD
                                 Data = data.Items[i].ToString() ?? "",
                                 Caption = data.ItemsElementName[i].ToString(),
                                 ftSignatureFormat = SignatureFormat.Text,
-                                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypeGR.GenericMyDataInfo)
                             });
                         }
                     }
@@ -521,6 +413,122 @@ public class MyDataSCU : IGRSSCD
                     {
                         AADEError = data.statusCode,
                         Errors = errors?.ToList() ?? new List<ErrorType>()
+                    }, options: new JsonSerializerOptions
+                    {
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    }));
+                }
+            }
+            else
+            {
+                request.ReceiptResponse.SetReceiptResponseError(content);
+            }
+        }
+        else
+        {
+            request.ReceiptResponse.SetReceiptResponseError(content);
+        }
+
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
+    }
+
+    public async Task<ProcessResponse> SendPaymentsMethodAsync(ProcessRequest request, long invoiceMark, string? entityVatNumber = null)
+    {
+        if (string.IsNullOrEmpty(_masterDataConfiguration.Account.VatId))
+        {
+            request.ReceiptResponse.SetReceiptResponseError("The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        var aadFactory = new AADEFactory(_masterDataConfiguration, _receiptBaseAddress);
+        (var doc, var error) = aadFactory.MapToPaymentMethodsDoc(request.ReceiptRequest, invoiceMark, entityVatNumber);
+        if (doc == null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(error?.Exception.Message ?? "Something went wrong while mapping the payment method data. Please check the inbound request.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        var payload = AADEFactory.GeneratePaymentMethodPayload(doc);
+        var response = await _httpClient.PostAsync("/myDataProvider/SendPaymentsMethod", new StringContent(payload, Encoding.UTF8, "application/xml"));
+        var content = await response.Content.ReadAsStringAsync();
+
+        var governmentApiResponse = new GovernmentApiData
+        {
+            Protocol = "mydata",
+            ProtocolVersion = "1.0",
+            Action = response.RequestMessage!.RequestUri!.ToString(),
+            ProtocolRequest = payload,
+            ProtocolResponse = content
+        };
+
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governmentApiResponse
+                }
+            };
+        }
+
+        if ((int) response.StatusCode >= 500)
+        {
+            request.ReceiptResponse.SetReceiptResponseError("Error while sending the payment method request to MyData API. Please check the logs for more details.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            var result = GetResponse(content);
+            if (result != null && result.response?.Length > 0)
+            {
+                var data = result.response[0];
+                if (data == null || data.Items == null || data.ItemsElementName == null)
+                {
+                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    return new ProcessResponse
+                    {
+                        ReceiptResponse = request.ReceiptResponse
+                    };
+                }
+
+                if (data.statusCode.ToLower() == "success")
+                {
+                    for (var i = 0; i < data.ItemsElementName.Length; i++)
+                    {
+                        if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                        {
+                            continue;
+                        }
+                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                        {
+                            Data = data.Items[i].ToString() ?? "",
+                            Caption = data.ItemsElementName[i].ToString(),
+                            ftSignatureFormat = SignatureFormat.Text,
+                            ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypeGR.GenericMyDataInfo)
+                        });
+                    }
+                }
+                else
+                {
+                    var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
+                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    {
+                        AADEError = data.statusCode,
+                        Errors = errors.ToList()
                     }, options: new JsonSerializerOptions
                     {
                         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping

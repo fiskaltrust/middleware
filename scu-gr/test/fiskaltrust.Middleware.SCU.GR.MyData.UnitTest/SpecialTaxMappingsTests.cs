@@ -194,5 +194,87 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             mapping.Percentage.Should().Be(expectedPercentage, $"percentage for '{description}' should be {expectedPercentage}");
             mapping.IsFixedAmount.Should().Be(expectedIsFixed, $"IsFixedAmount for '{description}' should be {expectedIsFixed}");
         }
+
+        #region IsVatableSpecialTaxItemTests
+        [Theory]
+        [InlineData("Για μηνιαίο λογαριασμό μέχρι και 50 ευρώ 12%", 1, true)]
+        [InlineData("Για μηνιαίο λογαριασμό από 50,01 μέχρι και 100 ευρώ 15%", 2, true)]
+        [InlineData("Για μηνιαίο λογαριασμό από 100,01 μέχρι και 150 ευρώ 18%", 3, true)]
+        [InlineData("Για μηνιαίο λογαριασμό από 150,01 ευρώ και άνω 20%", 4, true)]
+        [InlineData("Τέλος καρτοκινητής επί της αξίας του χρόνου ομιλίας (12%)", 5, true)]
+        [InlineData("Τέλος στη συνδρομητική τηλεόραση 10%", 6, true)]
+        [InlineData("Τέλος συνδρομητών σταθερής τηλεφωνίας 5%", 7, true)]
+        [InlineData("Περιβαλλοντικό Τέλος & πλαστικής σακούλας ν. 2339/2001 αρ. 6α 0,07 ευρώ ανά τεμάχιο", 8, true)]
+        [InlineData("Εισφορά δακοκτονίας 2%", 9, false)]
+        [InlineData("Λοιπά τέλη", 10, true)]
+        [InlineData("Τέλη Λοιπών Φόρων", 11, true)]
+        [InlineData("Εισφορά δακοκτονίας", 12, false)]
+        [InlineData("Για μηνιαίο λογαριασμό κάθε σύνδεσης (10%)", 13, true)]
+        [InlineData("Τέλος καρτοκινητής επί της αξίας του χρόνου ομιλίας (10%)", 14, true)]
+        [InlineData("Τέλος κινητής και καρτοκινητής για φυσικά πρόσωπα ηλικίας 15 έως και 29 ετών (0%)", 15, true)]
+        [InlineData("Τέλος ανακύκλωσης 0,08 λεπτά ανά τεμάχιο [άρθρο 80 ν. 4819/2021]", 17, true)]
+        [InlineData("Τέλος διαμονής παρεπιδημούντων", 18, false)]
+        [InlineData("Τέλος επί των ακαθάριστων εσόδων των εστιατορίων και συναφών καταστημάτων", 19, true)]
+        [InlineData("Τέλος επί των ακαθάριστων εσόδων των κέντρων διασκέδασης", 20, true)]
+        [InlineData("Τέλος επί των ακαθάριστων εσόδων των καζίνο", 21, false)]
+        [InlineData("Λοιπά τέλη επί των ακαθάριστων εσόδων", 22, true)]
+        [InlineData("Invalid description", 23, false)]
+        [InlineData("INVALID FEE DESC", -1, false)] // unmapped
+        [InlineData("", 0, false)] // empty description = no mapping
+        public void GetFeeMapping_ShouldHandleAllDefinedMappingsForIsVatableSpecialFee(string description, int expectedCode, bool expectedAcceptsVAT)
+        {
+            // Arrange
+            var chargeItem = new ChargeItem { Description = description };
+
+            // Act
+            var result = SpecialTaxMappings.IsVatableSpecialFee(chargeItem);
+
+            // Assert
+            result.Should().Be(expectedAcceptsVAT);
+        }
+
+        [Theory]
+        /* Not special tax item: should always return false for any VAT code and description */
+        [InlineData(ChargeItemCaseTypeOfService.OtherService, ChargeItemCase.NormalVatRate, "Λοιπά τέλη", false)]
+        [InlineData(ChargeItemCaseTypeOfService.OtherService, ChargeItemCase.DiscountedVatRate1, "Λοιπά τέλη", false)]
+        [InlineData(ChargeItemCaseTypeOfService.OtherService, ChargeItemCase.SuperReducedVatRate1, "Λοιπά τέλη", false)]
+        [InlineData(ChargeItemCaseTypeOfService.OtherService, ChargeItemCase.ZeroVatRate, "Λοιπά τέλη", false)]
+        /* Special tax item, allowed VAT code + mapped vatable fee */
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.NormalVatRate, "Λοιπά τέλη", true)]
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.DiscountedVatRate1, "Λοιπά τέλη", true)]
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.SuperReducedVatRate1, "Λοιπά τέλη", true)]
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.ZeroVatRate, "Λοιπά τέλη", true)]
+        /* Special tax item, allowed VAT code but non-vatable fee */
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.NormalVatRate, "Εισφορά δακοκτονίας 2%", false)]
+        /* Special tax item, allowed VAT code but unmapped fee */
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.NormalVatRate, "Unknown Fee", false)]
+        /* Special tax item, allowed VAT code, but empty or null description */
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.NormalVatRate, "", false)]
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.NormalVatRate, null, false)]
+        /* Special tax item, disallowed VAT code (should return false regardless of description) */
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.ParkingVatRate, "Λοιπά τέλη", false)]
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.NotTaxable, "Λοιπά τέλη", false)]
+        [InlineData((ChargeItemCaseTypeOfService) 0xF0, ChargeItemCase.UnknownService, "Λοιπά τέλη", false)]
+        public void IsVatableSpecialTaxItem_ShouldReturnExpectedResult(
+            ChargeItemCaseTypeOfService serviceType,
+            ChargeItemCase vatCode,
+            string description,
+            bool expected
+        )
+        {
+            // If you use a WithTypeOfService extension, apply it; else just use the enum value directly.
+            var chargeCase = vatCode.WithTypeOfService(serviceType);
+
+            var chargeItem = new ChargeItem
+            {
+                Description = description,
+                ftChargeItemCase = chargeCase
+            };
+
+            var result = SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem);
+
+            result.Should().Be(expected, $"serviceType={serviceType}, vatCode={vatCode}, description='{description ?? "null"}'");
+        }
+        #endregion IsVatableSpecialTaxItemTests
     }
 }
