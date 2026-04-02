@@ -2,6 +2,7 @@
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Validation;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms;
 using FluentValidation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
@@ -12,6 +13,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
     {
         Include(new ChargeItemCaseCountryConsistency());
         Include(new VoidFieldsMatch(receiptReferenceProvider, voidValidator));
+        Include(new CurrencyMustBeEur());
     }
 
     public class ChargeItemCaseCountryConsistency : AbstractValidator<ReceiptRequest>

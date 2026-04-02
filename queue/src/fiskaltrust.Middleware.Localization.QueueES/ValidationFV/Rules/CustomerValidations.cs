@@ -12,7 +12,7 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
     {
         When(x => x.ftReceiptCase.Country() == "ES", () =>
         {
-            Include(new fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice());
+            Include(new v2.Validation.Rules.Atoms.Customer.CustomerRequiredForInvoice());
             Include(new CustomerTaxId());
             Include(new CustomerMandatoryFields());
         });

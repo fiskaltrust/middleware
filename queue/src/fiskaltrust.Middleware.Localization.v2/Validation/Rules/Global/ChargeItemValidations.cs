@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -12,7 +12,6 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     public ChargeItemValidations(ftQueue? queue = null)
     {
         Include(new MandatoryFields());
-        Include(new ServiceType());
         Include(new VatCalculation());
         Include(new NegativeAmounts());
         Include(new DiscountLimit());
@@ -31,33 +30,6 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     chargeItem.RuleFor(x => x.Description).NotEmpty();
                     chargeItem.RuleFor(x => x.VATRate).GreaterThanOrEqualTo(0);
                     chargeItem.RuleFor(x => x.Amount).NotEqual(0m);
-                });
-            });
-        }
-    }
-
-    public class ServiceType : AbstractValidator<ReceiptRequest>
-    {
-        private static readonly ChargeItemCaseTypeOfService[] SupportedServiceTypes =
-        [
-            ChargeItemCaseTypeOfService.UnknownService,
-            ChargeItemCaseTypeOfService.Delivery,
-            ChargeItemCaseTypeOfService.OtherService,
-            ChargeItemCaseTypeOfService.Tip,
-            ChargeItemCaseTypeOfService.CatalogService,
-            ChargeItemCaseTypeOfService.Receivable
-        ];
-
-        public ServiceType()
-        {
-            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
-            {
-                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
-                {
-                    chargeItem.RuleFor(x => x.ftChargeItemCase)
-                        .Must(caseValue => SupportedServiceTypes.Contains(caseValue.TypeOfService()))
-                        .WithMessage(item => $"Unsupported charge item service type: {item.ftChargeItemCase.TypeOfService()}")
-                        .WithErrorCode("UnsupportedChargeItemServiceType");
                 });
             });
         }
@@ -128,7 +100,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
                 {
                     chargeItem.RuleFor(x => x.ftChargeItemCase)
-                        .Must(caseValue => ((long)caseValue & 0xFF00) != 0x0000)
+                        .Must(caseValue => ((long) caseValue & 0xFF00) != 0x0000)
                         .When(x => x.VATRate == 0)
                         .WithMessage("Charge item with zero VAT rate must have a NatureOfVat set (0xFF00 bits must not be 0x0000).")
                         .WithErrorCode("ZeroVatRateMissingNature");
@@ -183,8 +155,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
     {
         public CountryConsistency(ftQueue? queue)
         {
-            When(x => queue != null && !string.IsNullOrEmpty(queue.CountryCode)
-                   && x.cbChargeItems != null, () =>
+            When(x => x.cbChargeItems != null, () =>
             {
                 RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
                 {

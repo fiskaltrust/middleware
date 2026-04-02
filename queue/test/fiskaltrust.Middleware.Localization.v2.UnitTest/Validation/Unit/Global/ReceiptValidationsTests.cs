@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -73,33 +73,6 @@ public class ReceiptValidationsTests
         {
             cbChargeItems = [],
             cbPayItems = []
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    // ─── CurrencyMustBeEur ─────────────────────────────────────────────────────
-
-    [Fact]
-    public void CurrencyMustBeEur_NonEurCurrency_ShouldFail()
-    {
-        var validator = new ReceiptValidations.CurrencyMustBeEur();
-        var request = new ReceiptRequest
-        {
-            Currency = Currency.CHF
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveValidationErrorFor(x => x.Currency)
-            .WithErrorCode("OnlyEuroCurrencySupported");
-    }
-
-    [Fact]
-    public void CurrencyMustBeEur_EurCurrency_ShouldPass()
-    {
-        var validator = new ReceiptValidations.CurrencyMustBeEur();
-        var request = new ReceiptRequest
-        {
-            Currency = Currency.EUR
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
@@ -411,62 +384,6 @@ public class ReceiptValidationsTests
         var request = new ReceiptRequest
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("ES")
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    // ─── PayItemCaseCountryConsistency ────────────────────────────────────────
-
-    [Fact]
-    public void PayItemCaseCountryConsistency_PayItemCountryMismatch_ShouldFail()
-    {
-        var queue = new ftQueue { CountryCode = "PT" };
-        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(queue);
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
-            cbChargeItems = [],
-            cbPayItems = [new PayItem
-            {
-                ftPayItemCase = PayItemCase.CashPayment.WithCountry("ES")
-            }]
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveValidationErrorFor("cbPayItems[0].ftPayItemCase")
-            .WithErrorCode("PayItemCaseCountryMismatch");
-    }
-
-    [Fact]
-    public void PayItemCaseCountryConsistency_MatchingCountry_ShouldPass()
-    {
-        var queue = new ftQueue { CountryCode = "PT" };
-        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(queue);
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
-            cbChargeItems = [],
-            cbPayItems = [new PayItem
-            {
-                ftPayItemCase = PayItemCase.CashPayment.WithCountry("PT")
-            }]
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    public void PayItemCaseCountryConsistency_NullQueue_ShouldSkip()
-    {
-        var validator = new ReceiptValidations.PayItemCaseCountryConsistency(null);
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
-            cbChargeItems = [],
-            cbPayItems = [new PayItem
-            {
-                ftPayItemCase = PayItemCase.CashPayment.WithCountry("ES")
-            }]
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();

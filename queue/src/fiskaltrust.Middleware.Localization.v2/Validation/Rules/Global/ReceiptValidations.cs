@@ -12,7 +12,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
     public ReceiptValidations(ReceiptReferenceProvider receiptReferenceProvider, ftQueue? queue = null)
     {
         Include(new MandatoryCollections());
-        Include(new CurrencyMustBeEur());
         Include(new ReceiptBalance());
         Include(new RefundReference());
         Include(new PaymentTransferReference());
@@ -25,7 +24,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         Include(new VoidMustUseSingleReference());
 
         Include(new CountryConsistency(queue));
-        Include(new PayItemCaseCountryConsistency(queue));
     }
 
     public class MandatoryCollections : AbstractValidator<ReceiptRequest>
@@ -34,24 +32,13 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbChargeItems)
                 .NotNull()
-                .WithMessage("cbChargeItems must not be null")
+                // .WithMessage("cbChargeItems must not be null")
                 .WithErrorCode("ChargeItemsMissing");
 
             RuleFor(x => x.cbPayItems)
                 .NotNull()
-                .WithMessage("cbPayItems must not be null")
+                // .WithMessage("cbPayItems must not be null")
                 .WithErrorCode("PayItemsMissing");
-        }
-    }
-
-    public class CurrencyMustBeEur : AbstractValidator<ReceiptRequest>
-    {
-        public CurrencyMustBeEur()
-        {
-            RuleFor(x => x.Currency)
-                .Equal(Currency.EUR)
-                .WithMessage(request => $"Only EUR currency is supported, but received '{request.Currency}'.")
-                .WithErrorCode("OnlyEuroCurrencySupported");
         }
     }
 
@@ -115,15 +102,18 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         public PreviousReceiptMustNotBeVoided(ReceiptReferenceProvider receiptReferenceProvider)
         {
             RuleFor(x => x.cbPreviousReceiptReference)
-                .MustAsync(async (previousRef, _) =>
-                {
-                    if (previousRef!.IsSingle)
-                        return !await receiptReferenceProvider.HasExistingVoidAsync(previousRef.SingleValue!);
-                    foreach (var reference in previousRef.GroupValue)
-                        if (await receiptReferenceProvider.HasExistingVoidAsync(reference))
-                            return false;
-                    return true;
-                })
+                .MustAsync((previousRef, _) => previousRef!.MatchAsync(
+                    async single => !await receiptReferenceProvider.HasExistingVoidAsync(single),
+                    async group =>
+                    {
+                        foreach (var reference in group)
+                        {
+                            if (await receiptReferenceProvider.HasExistingVoidAsync(reference))
+                            { return false; }
+                        }
+                        return true;
+                    }
+                ))
                 .When(x => x.cbPreviousReceiptReference != null
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
@@ -139,7 +129,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
                     !await receiptReferenceProvider.HasExistingVoidAsync(previousRef!.SingleValue))
-                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null)
+                .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && x.cbPreviousReceiptReference != null && x.cbPreviousReceiptReference.IsSingle)
                 .WithMessage("A void for this receipt already exists.")
                 .WithErrorCode("VoidAlreadyExists");
         }
@@ -191,32 +181,11 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
     {
         public CountryConsistency(ftQueue? queue)
         {
-            When(_ => queue != null && !string.IsNullOrEmpty(queue.CountryCode), () =>
-            {
-                RuleFor(x => x)
-                    .Must(request => request.ftReceiptCase.Country() == queue!.CountryCode)
-                    .WithMessage(request =>
-                        $"Receipt case country '{request.ftReceiptCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
-                    .WithErrorCode("ReceiptCaseCountryMismatch");
-            });
-        }
-    }
-
-    public class PayItemCaseCountryConsistency : AbstractValidator<ReceiptRequest>
-    {
-        public PayItemCaseCountryConsistency(ftQueue? queue)
-        {
-            When(x => queue != null && !string.IsNullOrEmpty(queue.CountryCode)
-                   && x.cbPayItems != null, () =>
-            {
-                RuleForEach(x => x.cbPayItems).ChildRules(payItem =>
-                {
-                    payItem.RuleFor(x => x.ftPayItemCase)
-                        .Must(c => c.Country() == queue!.CountryCode)
-                        .WithMessage(item => $"Pay item case country '{item.ftPayItemCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
-                        .WithErrorCode("PayItemCaseCountryMismatch");
-                });
-            });
+            RuleFor(x => x)
+                .Must(request => request.ftReceiptCase.Country() == queue!.CountryCode)
+                .WithMessage(request =>
+                    $"Receipt case country '{request.ftReceiptCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
+                .WithErrorCode("ReceiptCaseCountryMismatch");
         }
     }
 }

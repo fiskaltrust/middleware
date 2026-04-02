@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.v2.Validation;
 using FluentValidation;
 using Currency = fiskaltrust.ifPOS.v2.Currency;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
 
@@ -26,6 +27,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
     {
         Include(new TrainingModeNotSupported());
         Include(new ReceiptReferenceAlreadyUsed(receiptReferenceProvider));
+        Include(new CurrencyMustBeEur());
 
         Include(new RefundMustHavePreviousReference());
         Include(new RefundMustNotAlreadyExist(receiptReferenceProvider));

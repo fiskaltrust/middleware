@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 using fiskaltrust.storage.V0;
@@ -75,70 +75,6 @@ public class ChargeItemValidationsTests
         {
             ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.HandWritten),
             cbChargeItems = [new ChargeItem { Description = "", VATRate = -5m, Amount = 0m }],
-            cbPayItems = []
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    // ─── ServiceType ───────────────────────────────────────────────────────────
-
-    [Fact]
-    public void ServiceType_UnsupportedServiceType_ShouldFail()
-    {
-        var validator = new ChargeItemValidations.ServiceType();
-
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
-            cbChargeItems = [new ChargeItem
-            {
-                Description = "Item",
-                VATRate = 19m,
-                Amount = 10m,
-                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)
-            }],
-            cbPayItems = []
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
-            .WithErrorCode("UnsupportedChargeItemServiceType");
-    }
-
-    [Fact]
-    public void ServiceType_SupportedServiceType_ShouldPass()
-    {
-        var validator = new ChargeItemValidations.ServiceType();
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
-            cbChargeItems = [new ChargeItem
-            {
-                Description = "Item",
-                VATRate = 19m,
-                Amount = 10m,
-                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
-            }],
-            cbPayItems = []
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldNotHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase");
-    }
-
-    [Fact]
-    public void ServiceType_HandWritten_ShouldSkip()
-    {
-        var validator = new ChargeItemValidations.ServiceType();
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.HandWritten),
-            cbChargeItems = [new ChargeItem
-            {
-                Description = "Item",
-                VATRate = 19m,
-                Amount = 10m,
-                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)
-            }],
             cbPayItems = []
         };
         var result = validator.TestValidate(request);
@@ -535,7 +471,7 @@ public class ChargeItemValidationsTests
                 Description = "Item",
                 VATRate = 21m,
                 Amount = 10m,
-                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES") 
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES")
             }],
             cbPayItems = []
         };
@@ -577,7 +513,7 @@ public class ChargeItemValidationsTests
                 Description = "Item",
                 VATRate = 21m,
                 Amount = 10m,
-                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES") 
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("ES")
             }],
             cbPayItems = []
         };

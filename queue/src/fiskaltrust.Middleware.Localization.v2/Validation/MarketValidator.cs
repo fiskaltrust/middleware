@@ -21,6 +21,7 @@ public class MarketValidator : IMarketValidator
     protected IEnumerable<IValidator<ReceiptRequest>> GetGlobalValidators(ftQueue? queue = null)
     {
         yield return new GlobalValidations.ReceiptValidations(_receiptReferenceProvider, queue);
+        yield return new GlobalValidations.PayItemValidations(queue);
         yield return new GlobalValidations.ChargeItemValidations(queue);
     }
 

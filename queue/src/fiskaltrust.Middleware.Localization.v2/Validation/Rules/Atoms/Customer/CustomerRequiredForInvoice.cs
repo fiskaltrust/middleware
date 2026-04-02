@@ -12,7 +12,7 @@ public class CustomerRequiredForInvoice : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbCustomer)
                 .NotNull()
-                .WithMessage("Customer is required for Invoice receipts")
+                // .WithMessage("Customer is required for Invoice receipts")
                 .WithErrorCode("CustomerRequiredForInvoice");
         });
     }

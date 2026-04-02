@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -27,6 +27,34 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         Include(new ZeroVatExemption());
         Include(new DiscountOrExtraNotPositive());
         Include(new DiscountVatRateAndCaseAlignment());
+        Include(new ServiceType());
+    }
+
+    public class ServiceType : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly ChargeItemCaseTypeOfService[] SupportedServiceTypes =
+        [
+            ChargeItemCaseTypeOfService.UnknownService,
+            ChargeItemCaseTypeOfService.Delivery,
+            ChargeItemCaseTypeOfService.OtherService,
+            ChargeItemCaseTypeOfService.Tip,
+            ChargeItemCaseTypeOfService.CatalogService,
+            ChargeItemCaseTypeOfService.Receivable
+        ];
+
+        public ServiceType()
+        {
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
+            {
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.ftChargeItemCase)
+                        .Must(caseValue => SupportedServiceTypes.Contains(caseValue.TypeOfService()))
+                        .WithMessage(item => $"Unsupported charge item service type: {item.ftChargeItemCase.TypeOfService()}")
+                        .WithErrorCode("UnsupportedChargeItemServiceType");
+                });
+            });
+        }
     }
 
     public class DescriptionMinLength : AbstractValidator<ReceiptRequest>
@@ -209,7 +237,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                                 return false;
 
-                            var exemptionCode = (TaxExemptionCodePT)(int)natureValue;
+                            var exemptionCode = (TaxExemptionCodePT) (int) natureValue;
                             return TaxExemptionDictionaryPT.TaxExemptionTable.ContainsKey(exemptionCode);
                         })
                         .WithMessage(item =>
@@ -217,7 +245,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                                 return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field.";
-                            return $"Unknown tax exemption code '0x{(int)natureValue:X4}'.";
+                            return $"Unknown tax exemption code '0x{(int) natureValue:X4}'.";
                         })
                         .WithErrorCode("ZeroVatExemption");
                 });
@@ -347,7 +375,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         {
                             var mainItem = group.chargeItem;
                             var modifiers = group.modifiers;
-                            if (modifiers == null || modifiers.Count == 0) continue;
+                            if (modifiers == null || modifiers.Count == 0)
+                                continue;
                             var mainVatRate = mainItem.VATRate;
                             var mainVatCase = mainItem.ftChargeItemCase.Vat();
                             var mainItemIndex = request.cbChargeItems!.IndexOf(mainItem);
@@ -357,7 +386,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 var modifierIndex = request.cbChargeItems.IndexOf(modifier);
                                 var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
                                 var vatCaseMismatch = modifierVatCase != mainVatCase;
-                                if (!vatRateMismatch && !vatCaseMismatch) continue;
+                                if (!vatRateMismatch && !vatCaseMismatch)
+                                    continue;
                                 context.AddFailure(new ValidationFailure(
                                     $"cbChargeItems[{modifierIndex}]",
                                     $"Discount/extra at index {modifierIndex} has VAT rate {modifier.VATRate} / case '{modifierVatCase}' " +
