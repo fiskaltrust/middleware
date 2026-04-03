@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest;
 
@@ -29,7 +30,7 @@ public class ReceiptProcessorTests
             ftReceiptMoment = DateTime.UtcNow,
         };
 
-        var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), Mock.Of<ILifecycleCommandProcessor>(MockBehavior.Strict), Mock.Of<IReceiptCommandProcessor>(MockBehavior.Strict), Mock.Of<IDailyOperationsCommandProcessor>(MockBehavior.Strict), Mock.Of<IInvoiceCommandProcessor>(MockBehavior.Strict), Mock.Of<IProtocolCommandProcessor>(MockBehavior.Strict));
+        var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), Mock.Of<IMarketValidator>(), Mock.Of<ILifecycleCommandProcessor>(MockBehavior.Strict), Mock.Of<IReceiptCommandProcessor>(MockBehavior.Strict), Mock.Of<IDailyOperationsCommandProcessor>(MockBehavior.Strict), Mock.Of<IInvoiceCommandProcessor>(MockBehavior.Strict), Mock.Of<IProtocolCommandProcessor>(MockBehavior.Strict));
         var result = await sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -57,7 +58,7 @@ public class ReceiptProcessorTests
             ftReceiptMoment = DateTime.UtcNow,
         };
 
-        var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), Mock.Of<ILifecycleCommandProcessor>(MockBehavior.Strict), Mock.Of<IReceiptCommandProcessor>(MockBehavior.Strict), Mock.Of<IDailyOperationsCommandProcessor>(MockBehavior.Strict), Mock.Of<IInvoiceCommandProcessor>(MockBehavior.Strict), Mock.Of<IProtocolCommandProcessor>(MockBehavior.Strict));
+        var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), Mock.Of<IMarketValidator>(), Mock.Of<ILifecycleCommandProcessor>(MockBehavior.Strict), Mock.Of<IReceiptCommandProcessor>(MockBehavior.Strict), Mock.Of<IDailyOperationsCommandProcessor>(MockBehavior.Strict), Mock.Of<IInvoiceCommandProcessor>(MockBehavior.Strict), Mock.Of<IProtocolCommandProcessor>(MockBehavior.Strict));
         var result = await sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
         result.receiptResponse.Should().Be(receiptResponse);

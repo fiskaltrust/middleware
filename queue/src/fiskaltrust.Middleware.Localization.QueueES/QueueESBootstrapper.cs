@@ -1,4 +1,4 @@
-﻿using System.IO.Pipelines;
+using System.IO.Pipelines;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
@@ -7,12 +7,14 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
+using fiskaltrust.Middleware.Localization.QueueES.ValidationFV;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -51,25 +53,29 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             });
         });
 
-        var signProcessorES = new ReceiptProcessor(
-            loggerFactory.CreateLogger<ReceiptProcessor>(),
-            new LifecycleCommandProcessorES(
-                queueStorageProvider,
-                storageProvider.CreateConfigurationRepository()
-            ),
-            new ReceiptCommandProcessorES(
-                loggerFactory.CreateLogger<ReceiptCommandProcessorES>(),
-                essscd,
-                storageProvider.CreateConfigurationRepository(),
-                storageProvider.CreateMiddlewareQueueItemRepository(),
-                storageProvider.CreateMiddlewareJournalESRepository()
-            ),
-            new DailyOperationsCommandProcessorES(
-                essscd,
-                queueStorageProvider),
-            new InvoiceCommandProcessorES(loggerFactory.CreateLogger<InvoiceCommandProcessorES>(), essscd, storageProvider.CreateConfigurationRepository(), storageProvider.CreateMiddlewareQueueItemRepository(), storageProvider.CreateMiddlewareJournalESRepository()),
-            new ProtocolCommandProcessorES()
+        var repo = storageProvider.CreateMiddlewareQueueItemRepository();
+        var fvValidator = new ReceiptValidator(new ReceiptReferenceProvider(repo), new Validation.VoidValidator(repo));
+        var shadowLogger = loggerFactory.CreateLogger("ShadowValidation.ES");
+
+        var receiptProcessor = new ReceiptCommandProcessorES(
+            loggerFactory.CreateLogger<ReceiptCommandProcessorES>(),
+            essscd,
+            storageProvider.CreateConfigurationRepository(),
+            repo,
+            storageProvider.CreateMiddlewareJournalESRepository()
         );
+        var invoiceProcessor = new InvoiceCommandProcessorES(
+            loggerFactory.CreateLogger<InvoiceCommandProcessorES>(),
+            essscd,
+            storageProvider.CreateConfigurationRepository(),
+            repo,
+            storageProvider.CreateMiddlewareJournalESRepository()
+        );
+
+        receiptProcessor.SetShadowValidation(fvValidator, shadowLogger);
+        invoiceProcessor.SetShadowValidation(fvValidator, shadowLogger);
+
+        var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), fvValidator, new LifecycleCommandProcessorES(queueStorageProvider, storageProvider.CreateConfigurationRepository()), receiptProcessor, new DailyOperationsCommandProcessorES(essscd, queueStorageProvider), invoiceProcessor, new ProtocolCommandProcessorES());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.CreateMiddlewareJournalESRepository()), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

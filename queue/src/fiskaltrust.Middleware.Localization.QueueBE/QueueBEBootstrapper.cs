@@ -31,7 +31,7 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
 
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-        var signProcessorBE = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorBE(queueStorageProvider), new ReceiptCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorBE(), new InvoiceCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorBE(beSSCD));
+        var signProcessorBE = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()), new LifecycleCommandProcessorBE(queueStorageProvider), new ReceiptCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorBE(), new InvoiceCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorBE(beSSCD));
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorBE.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorBE(storageProvider, GetFromConfig(configuration, storageProvider) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

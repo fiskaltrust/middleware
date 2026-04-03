@@ -21,12 +21,12 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     private readonly IPTSSCD _sscd = sscd;
 #pragma warning disable
     private readonly ftQueuePT _queuePT = queuePT;
-    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
     private readonly RefundValidator _refundValidator = new(readOnlyQueueItemRepository);
     private readonly VoidValidator _voidValidator = new(readOnlyQueueItemRepository);
     private readonly bool _sandbox = sandbox;
 
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
+    protected override ftQueuePT GetQueuePT() => _queuePT;
 
     public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => WithPreparations(request, () => PointOfSaleReceipt0x0001Async(request));
 

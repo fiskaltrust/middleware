@@ -14,12 +14,13 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using System.Text.Json;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class LifecycleCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorPT(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), new LifecycleCommandProcessorPT(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
