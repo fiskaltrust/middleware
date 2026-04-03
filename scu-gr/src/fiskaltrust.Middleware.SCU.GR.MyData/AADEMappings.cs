@@ -583,6 +583,12 @@ public static class AADEMappings
         _ => true
     };
 
+    public static bool SupportsIncomeClassification(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item31 or InvoiceType.Item32 => false,
+        _ => true
+    };
+
     /// <summary>
     /// Maps ChargeItemCase Nature of VAT to MyData VAT exemption category.
     /// Based on the Greek tax regulations and AADE requirements.
