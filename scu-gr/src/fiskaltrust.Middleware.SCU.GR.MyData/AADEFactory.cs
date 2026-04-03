@@ -762,6 +762,11 @@ public class AADEFactory
                     existing.vatExemptionCategory = ec.VatExemptionCategory.Value;
                     existing.vatExemptionCategorySpecified = true;
                 }
+                if (ec.Id.HasValue)
+                {
+                    existing.id = (sbyte) ec.Id.Value;
+                    existing.idSpecified = true;
+                }
                 expensesClassifications.Add(existing);
             }
             row.expensesClassification = expensesClassifications.ToArray();

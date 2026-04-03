@@ -76,4 +76,7 @@ public class ExpensesClassificationOverride
 
     [JsonPropertyName("vatExemptionCategory")]
     public int? VatExemptionCategory { get; set; }
+
+    [JsonPropertyName("id")]
+    public int? Id { get; set; }
 }
