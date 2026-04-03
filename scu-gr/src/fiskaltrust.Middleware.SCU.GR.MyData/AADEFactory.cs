@@ -174,26 +174,11 @@ public class AADEFactory
             classificationCategory = x.Key,
         }).ToList());
 
-        var expensesClassificationGroups = invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified & x.classificationCategorySpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new ExpensesClassificationType
-        {
-            amount = x.Sum(y => y.amount),
-            classificationCategory = x.Key.classificationCategory,
-            classificationCategorySpecified = true,
-            classificationType = x.Key.classificationType,
-            classificationTypeSpecified = true
-        }).ToList();
-        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => !x.classificationTypeSpecified && x.classificationCategorySpecified).GroupBy(x => x.classificationCategory).Select(x => new ExpensesClassificationType
-        {
-            amount = x.Sum(y => y.amount),
-            classificationCategorySpecified = true,
-            classificationCategory = x.Key,
-        }).ToList());
-        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified && !x.classificationCategorySpecified).GroupBy(x => x.classificationType).Select(x => new ExpensesClassificationType
-        {
-            amount = x.Sum(y => y.amount),
-            classificationTypeSpecified = true,
-            classificationType = x.Key,
-        }).ToList());
+        var allExpensesClassifications = invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification);
+        var expensesClassificationGroups = allExpensesClassifications
+            .GroupBy(x => (x.classificationCategorySpecified, x.classificationCategory, x.classificationTypeSpecified, x.classificationType, x.vatCategorySpecified, x.vatCategory, x.vatExemptionCategorySpecified, x.vatExemptionCategory))
+            .Select(x => CreateExpensesClassificationSummary(x))
+            .ToList();
 
         var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
         var paymentMethods = GetPayments(receiptRequest);
@@ -734,31 +719,57 @@ public class AADEFactory
         }
         if (detailOverride.ExpensesClassification != null)
         {
-            if (detailOverride.ExpensesClassification.Count != 1)
+            var expensesClassifications = new List<ExpensesClassificationType>();
+            for (var i = 0; i < detailOverride.ExpensesClassification.Count; i++)
             {
-                throw new ArgumentException("expensesClassification override must contain exactly one element.");
-            }
-            var ec = detailOverride.ExpensesClassification[0];
-            var existing = row.expensesClassification?.FirstOrDefault() ?? new ExpensesClassificationType { amount = row.netValue };
-            if (!string.IsNullOrEmpty(ec.ClassificationType))
-            {
-                if (!Enum.TryParse<ExpensesClassificationTypeClassificationType>(ec.ClassificationType, true, out var type))
+                var ec = detailOverride.ExpensesClassification[i];
+                var existing = (i == 0 && row.expensesClassification?.FirstOrDefault() != null)
+                    ? row.expensesClassification.First()
+                    : new ExpensesClassificationType();
+
+                existing.amount = ec.Amount ?? row.netValue;
+
+                if (!string.IsNullOrEmpty(ec.ClassificationType))
                 {
-                    throw new ArgumentException($"Invalid expensesClassification.classificationType '{ec.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationTypeClassificationType)))}");
+                    if (!Enum.TryParse<ExpensesClassificationTypeClassificationType>(ec.ClassificationType, true, out var type))
+                    {
+                        throw new ArgumentException($"Invalid expensesClassification.classificationType '{ec.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationTypeClassificationType)))}");
+                    }
+                    existing.classificationType = type;
+                    existing.classificationTypeSpecified = true;
                 }
-                existing.classificationType = type;
-                existing.classificationTypeSpecified = true;
-            }
-            if (!string.IsNullOrEmpty(ec.ClassificationCategory))
-            {
-                if (!Enum.TryParse<ExpensesClassificationCategoryType>(ec.ClassificationCategory, true, out var cat))
+                if (!string.IsNullOrEmpty(ec.ClassificationCategory))
                 {
-                    throw new ArgumentException($"Invalid expensesClassification.classificationCategory '{ec.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationCategoryType)))}");
+                    if (!Enum.TryParse<ExpensesClassificationCategoryType>(ec.ClassificationCategory, true, out var cat))
+                    {
+                        throw new ArgumentException($"Invalid expensesClassification.classificationCategory '{ec.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationCategoryType)))}");
+                    }
+                    existing.classificationCategory = cat;
+                    existing.classificationCategorySpecified = true;
                 }
-                existing.classificationCategory = cat;
-                existing.classificationCategorySpecified = true;
+                if (ec.VatAmount.HasValue)
+                {
+                    existing.vatAmount = ec.VatAmount.Value;
+                    existing.vatAmountSpecified = true;
+                }
+                if (ec.VatCategory.HasValue)
+                {
+                    existing.vatCategory = ec.VatCategory.Value;
+                    existing.vatCategorySpecified = true;
+                }
+                if (ec.VatExemptionCategory.HasValue)
+                {
+                    existing.vatExemptionCategory = ec.VatExemptionCategory.Value;
+                    existing.vatExemptionCategorySpecified = true;
+                }
+                if (ec.Id.HasValue)
+                {
+                    existing.id = (sbyte) ec.Id.Value;
+                    existing.idSpecified = true;
+                }
+                expensesClassifications.Add(existing);
             }
-            row.expensesClassification = [existing];
+            row.expensesClassification = expensesClassifications.ToArray();
             row.incomeClassification = null;
         }
         if (detailOverride.Quantity15.HasValue)
@@ -778,6 +789,34 @@ public class AADEFactory
             row.notVAT195 = detailOverride.NotVAT195.Value;
             row.notVAT195Specified = true;
         }
+    }
+
+    private static ExpensesClassificationType CreateExpensesClassificationSummary(IEnumerable<ExpensesClassificationType> items)
+    {
+        var first = items.First();
+        var result = new ExpensesClassificationType
+        {
+            amount = items.Sum(y => y.amount),
+            classificationCategory = first.classificationCategory,
+            classificationCategorySpecified = first.classificationCategorySpecified,
+            classificationType = first.classificationType,
+            classificationTypeSpecified = first.classificationTypeSpecified,
+            vatCategory = first.vatCategory,
+            vatCategorySpecified = first.vatCategorySpecified,
+            vatExemptionCategory = first.vatExemptionCategory,
+            vatExemptionCategorySpecified = first.vatExemptionCategorySpecified
+        };
+        if (items.Any(y => y.vatAmountSpecified))
+        {
+            result.vatAmount = items.Where(y => y.vatAmountSpecified).Sum(y => y.vatAmount);
+            result.vatAmountSpecified = true;
+        }
+        if (items.Any(y => y.idSpecified))
+        {
+            result.id = items.First(y => y.idSpecified).id;
+            result.idSpecified = true;
+        }
+        return result;
     }
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)

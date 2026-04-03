@@ -64,4 +64,19 @@ public class ExpensesClassificationOverride
 
     [JsonPropertyName("classificationCategory")]
     public string? ClassificationCategory { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+
+    [JsonPropertyName("vatAmount")]
+    public decimal? VatAmount { get; set; }
+
+    [JsonPropertyName("vatCategory")]
+    public int? VatCategory { get; set; }
+
+    [JsonPropertyName("vatExemptionCategory")]
+    public int? VatExemptionCategory { get; set; }
+
+    [JsonPropertyName("id")]
+    public int? Id { get; set; }
 }
