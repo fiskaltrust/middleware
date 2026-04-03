@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
@@ -61,7 +62,7 @@ public class ReceiptCommandProcessorGRTests
         queueStorageProviderMock.Setup(x => x.GetReceiptReferencesIfNecessaryAsync(It.IsAny<ProcessCommandRequest>())).ReturnsAsync([]);
 
         var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
-        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
+        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         result.receiptResponse.Should().Be(scuResponse);
@@ -93,7 +94,7 @@ public class ReceiptCommandProcessorGRTests
         };
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
         var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
-        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
+        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -125,7 +126,7 @@ public class ReceiptCommandProcessorGRTests
         };
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
         var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
-        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
+        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -179,7 +180,7 @@ public class ReceiptCommandProcessorGRTests
             });
 
         var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
-        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
+        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         // Verify that SCU was called
@@ -213,7 +214,7 @@ public class ReceiptCommandProcessorGRTests
         };
         var grSSCDMock = new Mock<IGRSSCD>();
         var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
-        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
+        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         result.receiptResponse.Should().Be(receiptResponse);

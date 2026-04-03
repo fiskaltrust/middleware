@@ -16,6 +16,7 @@ using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -62,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
             );
         }
 
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(Mock.Of<ILogger<ReceiptCommandProcessorES>>(), new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())), new(() => Task.FromResult(Mock.Of<IMiddlewareJournalESRepository>()))), null!, null!, null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, new ReceiptCommandProcessorES(Mock.Of<ILogger<ReceiptCommandProcessorES>>(), new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())), new(() => Task.FromResult(Mock.Of<IMiddlewareJournalESRepository>()))), null!, null!, null!);
 
 
         [Theory]

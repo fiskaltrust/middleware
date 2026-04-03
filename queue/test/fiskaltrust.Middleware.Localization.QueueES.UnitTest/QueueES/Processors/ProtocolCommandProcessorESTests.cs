@@ -7,12 +7,13 @@ using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Moq;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class ProtocolCommandProcessorESTests
     {
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, new ProtocolCommandProcessorES());
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, new ProtocolCommandProcessorES());
 
         [Theory]
         [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
