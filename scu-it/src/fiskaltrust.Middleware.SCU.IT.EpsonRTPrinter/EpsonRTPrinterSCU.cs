@@ -113,6 +113,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await ProcessPerformReprint(request);
             }
 
+            if (request.ReceiptRequest.IsRebootPrinter())
+            {
+                return await ProcessRebootPrinterCommand(request);
+            }
+
             if (receiptCase == (long) ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
@@ -617,6 +622,35 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 ReceiptResponse = request.ReceiptResponse
             };
+        }
+    }
+
+    private async Task<ProcessResponse> ProcessRebootPrinterCommand(ProcessRequest request)
+    {
+        try
+        {
+            await ResetPrinter();
+            var rebootCommand = new PrinterCommand() { DirectIO = DirectIO.GetRestartPrinterCommand() };
+            var xml = SoapSerializer.Serialize(rebootCommand);
+
+            var response = await _httpClient.SendCommandAsync(xml, noStatus: true);
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
+            if (result?.Success == false)
+            {
+                var error = GetErrorInfo(result.Code, result.Status, null);
+                request.ReceiptResponse.SetReceiptResponseErrored(error.Info);
+                return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
+            }
+
+            request.ReceiptResponse.ftSignatures = SignatureFactory.CreateRebootPrinterCommandSignatures();
+            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
+        }
+        catch (Exception e)
+        {
+            var errorInfo = Helpers.ExceptionInfo(e);
+            request.ReceiptResponse.SetReceiptResponseErrored(errorInfo.SSCDErrorInfo?.Info ?? "");
+            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
         }
     }
 

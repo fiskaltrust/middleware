@@ -52,6 +52,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010)
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
 
+            if (receiptCase == (int) ReceiptCases.RebootPrinter0x3012)
+                return await ForwardToSSCDAsync(request);
+
             request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
@@ -93,6 +96,25 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
         public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+
+        private async Task<ProcessCommandResponse> ForwardToSSCDAsync(ProcessCommandRequest request)
+        {
+            var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
+            try
+            {
+                var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                {
+                    ReceiptRequest = receiptRequest,
+                    ReceiptResponse = receiptResponse
+                });
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+            }
+            catch (Exception ex)
+            {
+                receiptResponse.SetReceiptResponseError(ex.Message);
+                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            }
+        }
 
         public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
         {

@@ -33,4 +33,15 @@ public class LocalEpsonFpMateClient : IEpsonFpMateClient
         }
         return response;
     }
+
+    public async Task<HttpResponseMessage> SendCommandAsync(string content, bool noStatus)
+    {
+        var url = noStatus ? _commandUrl + "&directio_no_status=1" : _commandUrl;
+        var response = await _httpClient.PostAsync(url, new StringContent(content, Encoding.UTF8, "application/xml"));
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"An error occured while sending a request to the Epson device (StatusCode: {response.StatusCode}, Content: {await response.Content.ReadAsStringAsync()})");
+        }
+        return response;
+    }
 }
