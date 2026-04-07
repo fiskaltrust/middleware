@@ -52,16 +52,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010)
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
 
-            if (receiptCase == (int) ReceiptCases.RebootPrinter0x3012)
-                return await ForwardToSSCDAsync(request);
-
             request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
         public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request)
         {
-            if ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0)
+            if ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0
+                || (request.ReceiptRequest.ftReceiptCase & 0x0000_0000_0400_0000) != 0)
             {
                 var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
                 try
