@@ -95,25 +95,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
-        private async Task<ProcessCommandResponse> ForwardToSSCDAsync(ProcessCommandRequest request)
-        {
-            var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
-            try
-            {
-                var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = receiptRequest,
-                    ReceiptResponse = receiptResponse
-                });
-                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
-            }
-            catch (Exception ex)
-            {
-                receiptResponse.SetReceiptResponseError(ex.Message);
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-            }
-        }
-
         public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
