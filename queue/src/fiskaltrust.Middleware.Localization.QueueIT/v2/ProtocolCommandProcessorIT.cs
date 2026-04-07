@@ -58,7 +58,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request)
         {
-            if ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0)
+            if ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0
+                || (request.ReceiptRequest.ftReceiptCase & 0x0000_0000_0400_0000) != 0)
             {
                 var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
                 try

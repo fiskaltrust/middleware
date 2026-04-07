@@ -10,6 +10,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "directIO")]
         public DirectIO? DirectIO { get; set; }
+
     }
 
     [XmlType("resetPrinter")]
@@ -29,6 +30,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public string? Data { get; set; }
 
         public static DirectIO GetSerialNrCommand() => new() { Command = "3217", Data = "00" };
+        public static DirectIO GetRestartPrinterCommand() => new() { Command = "4034", Data = "0198" };
     }
 
     [XmlType("response")]
@@ -56,4 +58,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         [XmlElement(ElementName = "responseData")]
         public string? ResponseData { get; set; }
     }
+
 }
