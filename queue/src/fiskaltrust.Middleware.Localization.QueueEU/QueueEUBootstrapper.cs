@@ -34,6 +34,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
 
         var signProcessorEU = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
+            new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()),
             new LifecycleCommandProcessorEU(
                 queueStorageProvider
             ),

@@ -43,7 +43,7 @@ public class AADEFactory
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
     }
-    
+
     public static string GetReceiptUrl(string receiptBaseAddress, Guid ftQueueID, Guid ftQueueItemID)
     {
         return $"{receiptBaseAddress}/{ftQueueID}/{ftQueueItemID}";
@@ -174,26 +174,11 @@ public class AADEFactory
             classificationCategory = x.Key,
         }).ToList());
 
-        var expensesClassificationGroups = invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified & x.classificationCategorySpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new ExpensesClassificationType
-        {
-            amount = x.Sum(y => y.amount),
-            classificationCategory = x.Key.classificationCategory,
-            classificationCategorySpecified = true,
-            classificationType = x.Key.classificationType,
-            classificationTypeSpecified = true
-        }).ToList();
-        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => !x.classificationTypeSpecified && x.classificationCategorySpecified).GroupBy(x => x.classificationCategory).Select(x => new ExpensesClassificationType
-        {
-            amount = x.Sum(y => y.amount),
-            classificationCategorySpecified = true,
-            classificationCategory = x.Key,
-        }).ToList());
-        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified && !x.classificationCategorySpecified).GroupBy(x => x.classificationType).Select(x => new ExpensesClassificationType
-        {
-            amount = x.Sum(y => y.amount),
-            classificationTypeSpecified = true,
-            classificationType = x.Key,
-        }).ToList());
+        var allExpensesClassifications = invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification);
+        var expensesClassificationGroups = allExpensesClassifications
+            .GroupBy(x => (x.classificationCategorySpecified, x.classificationCategory, x.classificationTypeSpecified, x.classificationType, x.vatCategorySpecified, x.vatCategory, x.vatExemptionCategorySpecified, x.vatExemptionCategory))
+            .Select(x => CreateExpensesClassificationSummary(x))
+            .ToList();
 
         var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
         var paymentMethods = GetPayments(receiptRequest);
@@ -229,6 +214,13 @@ public class AADEFactory
         {
             // It looks like Item93 does NOT allow to specify the currency
             inv.invoiceHeader.currencySpecified = false;
+
+            // Reverse delivery note: 9.3 + ReceiptCaseFlags.Refund on the receipt case
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                inv.invoiceHeader.reverseDeliveryNote = true;
+                inv.invoiceHeader.reverseDeliveryNoteSpecified = true;
+            }
         }
 
         var isVoidFlag = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void);
@@ -260,30 +252,6 @@ public class AADEFactory
             if (counterpart != null)
             {
                 inv.counterpart = counterpart;
-            }
-        }
-
-        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
-        {
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-            {
-                if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
-                {
-                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
-                }
-                else
-                {
-                    // Retail refunds (11.4) use multipleConnectedMarks
-                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
-                }
-            }
-            else
-            {
-                // NON-REFUNDS
-                if (AADEMappings.SupportsMultipleConnectedMarks(inv.invoiceHeader.invoiceType))
-                {
-                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
-                }
             }
         }
 
@@ -355,23 +323,157 @@ public class AADEFactory
             ApplyMyDataOverride(inv, overrideData.GR.MyDataOverride);
         }
 
+        // Strip income classifications for invoice types that forbid them (e.g. 3.1, 3.2 Title Deeds).
+        if (!AADEMappings.SupportsIncomeClassification(inv.invoiceHeader.invoiceType))
+        {
+            foreach (var detail in inv.invoiceDetails)
+            {
+                detail.incomeClassification = null;
+            }
+            inv.invoiceSummary.incomeClassification = null;
+        }
+
+        // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
+        // (after override, so the correct field is used for the resolved type).
+        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
+        {
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+                else
+                {
+                    // Retail refunds (11.4) use multipleConnectedMarks
+                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+            }
+            else
+            {
+                // NON-REFUNDS
+                if (AADEMappings.SupportsMultipleConnectedMarks(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+                else if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
+            }
+        }
+
+        // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
+        ValidateClassificationOverrideConsistency(receiptRequest, overrideData);
         return inv;
     }
 
-    private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, MyDataOverride overrideData)
+    private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest, ftReceiptCaseDataPayload? overrideData)
     {
-        if (overrideData?.Invoice?.InvoiceHeader == null)
+        var itemsWithClassificationOverride = receiptRequest.cbChargeItems.Where(ci =>
+        {
+            if (ci.ftChargeItemCaseData == null)
+                return false;
+            try
+            {
+                var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
+                    JsonSerializer.Serialize(ci.ftChargeItemCaseData),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var details = data?.GR?.MyDataOverride?.InvoiceDetails;
+                return details?.IncomeClassification != null || details?.ExpensesClassification != null;
+            }
+            catch { return false; }
+        }).Count();
+
+        if (itemsWithClassificationOverride == 0)
+            return;
+
+        if (itemsWithClassificationOverride != receiptRequest.cbChargeItems.Count)
+        {
+            throw new ArgumentException(
+                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
+        }
+
+    }
+
+    private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
+    {
+        if (overrideData?.Invoice == null)
         {
             return;
         }
 
-        var headerOverride = overrideData.Invoice.InvoiceHeader;
-        // Apply invoice type override with validation
+        var invoiceOverride = overrideData.Invoice;
+
+        if (invoiceOverride.InvoiceHeader != null)
+        {
+            ApplyInvoiceHeaderOverride(invoice, invoiceOverride.InvoiceHeader);
+        }
+
+        // Reverse delivery note purpose validation (9.3 + Refund)
+        if (invoice.invoiceHeader.invoiceType == InvoiceType.Item93
+            && invoice.invoiceHeader.reverseDeliveryNote)
+        {
+            if (!invoiceOverride.InvoiceHeader?.ReverseDeliveryNotePurpose.HasValue ?? true)
+            {
+                throw new ArgumentException(
+                    "reverseDeliveryNotePurpose is mandatory for reverse delivery note ",
+                    nameof(invoiceOverride.InvoiceHeader.ReverseDeliveryNotePurpose));
+            }
+
+            invoice.invoiceHeader.reverseDeliveryNotePurpose =
+               AADEMappings.GetReverseDeliveryNotePurpose(invoiceOverride.InvoiceHeader!.ReverseDeliveryNotePurpose!.Value);
+            invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
+        }
+
+        if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
+        {
+            var counterpart = invoice.counterpart;
+            ApplyPartyOverride(ref counterpart, invoiceOverride.Counterpart);
+            invoice.counterpart = counterpart;
+        }
+
+        if (invoiceOverride.OtherTransportDetails != null)
+        {
+            invoice.otherTransportDetails = [.. invoiceOverride.OtherTransportDetails.Select(t => new TransportDetailType { vehicleNumber = t.VehicleNumber })];
+        }
+    }
+
+    private static readonly Dictionary<string, InvoiceType> InvoiceTypeMap = typeof(InvoiceType)
+        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        .ToDictionary(
+            f => f.GetCustomAttributes(typeof(System.Xml.Serialization.XmlEnumAttribute), false)
+                  .Cast<System.Xml.Serialization.XmlEnumAttribute>()
+                  .FirstOrDefault()?.Name ?? f.Name,
+            f => (InvoiceType) f.GetValue(null)!,
+            StringComparer.OrdinalIgnoreCase);
+
+    private static void ApplyInvoiceHeaderOverride(AadeBookInvoiceType invoice, InvoiceHeaderTypeOverride headerOverride)
+    {
+        // Apply invoice type override
+        if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
+        {
+            if (!InvoiceTypeMap.TryGetValue(headerOverride.InvoiceType, out var invoiceType))
+            {
+                throw new ArgumentException(
+                    $"Invalid invoiceType override value '{headerOverride.InvoiceType}'. " +
+                    $"Allowed values: {string.Join(", ", InvoiceTypeMap.Keys.OrderBy(k => k))}");
+            }
+            invoice.invoiceHeader.invoiceType = invoiceType;
+        }
+
         // Apply VAT payment suspension
         if (headerOverride.VatPaymentSuspension.HasValue)
         {
             invoice.invoiceHeader.vatPaymentSuspension = headerOverride.VatPaymentSuspension.Value;
             invoice.invoiceHeader.vatPaymentSuspensionSpecified = true;
+        }
+
+        // Apply exchange rate
+        if (headerOverride.ExchangeRate.HasValue)
+        {
+            invoice.invoiceHeader.exchangeRate = headerOverride.ExchangeRate.Value;
+            invoice.invoiceHeader.exchangeRateSpecified = true;
         }
 
         // Apply self-pricing
@@ -429,10 +531,23 @@ public class AADEFactory
             invoice.invoiceHeader.invoiceVariationTypeSpecified = true;
         }
 
-        // Apply other move purpose title
-        if (!string.IsNullOrEmpty(headerOverride.OtherMovePurposeTitle))
+        // Apply other correlated entities
+        if (headerOverride.OtherCorrelatedEntities != null)
         {
-            invoice.invoiceHeader.otherMovePurposeTitle = headerOverride.OtherMovePurposeTitle;
+            invoice.invoiceHeader.otherCorrelatedEntities = [.. headerOverride.OtherCorrelatedEntities.Select(e =>
+            {
+                var entity = new EntityType();
+                if (e.Type.HasValue)
+                    entity.type = (sbyte) e.Type.Value;
+                if (e.EntityData != null)
+                {
+                    entity.entityData = new PartyType();
+                    var party = entity.entityData;
+                    ApplyPartyOverride(ref party, e.EntityData);
+                    entity.entityData = party;
+                }
+                return entity;
+            })];
         }
 
         // Apply other delivery note header
@@ -443,7 +558,6 @@ public class AADEFactory
                 invoice.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType();
             }
 
-            // Apply loading address
             if (headerOverride.OtherDeliveryNoteHeader.LoadingAddress != null)
             {
                 invoice.invoiceHeader.otherDeliveryNoteHeader.loadingAddress = new AddressType
@@ -455,7 +569,6 @@ public class AADEFactory
                 };
             }
 
-            // Apply delivery address
             if (headerOverride.OtherDeliveryNoteHeader.DeliveryAddress != null)
             {
                 invoice.invoiceHeader.otherDeliveryNoteHeader.deliveryAddress = new AddressType
@@ -467,20 +580,243 @@ public class AADEFactory
                 };
             }
 
-            // Apply start shipping branch
             if (headerOverride.OtherDeliveryNoteHeader.StartShippingBranch.HasValue)
             {
                 invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranch = headerOverride.OtherDeliveryNoteHeader.StartShippingBranch.Value;
                 invoice.invoiceHeader.otherDeliveryNoteHeader.startShippingBranchSpecified = true;
             }
 
-            // Apply complete shipping branch
             if (headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.HasValue)
             {
                 invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranch = headerOverride.OtherDeliveryNoteHeader.CompleteShippingBranch.Value;
                 invoice.invoiceHeader.otherDeliveryNoteHeader.completeShippingBranchSpecified = true;
             }
         }
+
+        // Apply other move purpose title
+        if (!string.IsNullOrEmpty(headerOverride.OtherMovePurposeTitle))
+        {
+            invoice.invoiceHeader.otherMovePurposeTitle = headerOverride.OtherMovePurposeTitle;
+        }
+
+        // Apply third party collection
+        if (headerOverride.ThirdPartyCollection.HasValue)
+        {
+            invoice.invoiceHeader.thirdPartyCollection = headerOverride.ThirdPartyCollection.Value;
+            invoice.invoiceHeader.thirdPartyCollectionSpecified = true;
+        }
+
+        // Apply total cancel delivery orders
+        if (headerOverride.TotalCancelDeliveryOrders.HasValue)
+        {
+            invoice.invoiceHeader.totalCancelDeliveryOrders = headerOverride.TotalCancelDeliveryOrders.Value;
+            invoice.invoiceHeader.totalCancelDeliveryOrdersSpecified = true;
+        }
+
+        // Apply reverse delivery note
+        if (headerOverride.ReverseDeliveryNote.HasValue)
+        {
+            invoice.invoiceHeader.reverseDeliveryNote = headerOverride.ReverseDeliveryNote.Value;
+            invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
+        }
+
+    }
+
+    private static void ApplyPartyOverride(ref PartyType party, PartyTypeOverride partyOverride)
+    {
+        if (party == null)
+            party = new PartyType();
+        if (partyOverride.Branch.HasValue)
+            party.branch = partyOverride.Branch.Value;
+        if (!string.IsNullOrEmpty(partyOverride.DocumentIdNo))
+            party.documentIdNo = partyOverride.DocumentIdNo;
+        if (!string.IsNullOrEmpty(partyOverride.SupplyAccountNo))
+            party.supplyAccountNo = partyOverride.SupplyAccountNo;
+        if (!string.IsNullOrEmpty(partyOverride.CountryDocumentId) && Enum.TryParse<CountryType>(partyOverride.CountryDocumentId, true, out var countryDocId))
+        {
+            party.countryDocumentId = countryDocId;
+            party.countryDocumentIdSpecified = true;
+        }
+        if (partyOverride.Address != null)
+        {
+            party.address = new AddressType
+            {
+                number = partyOverride.Address.Number ?? "0"
+            };
+        }
+    }
+
+    public static void ApplyInvoiceDetailOverride(InvoiceRowType row, InvoiceRowTypeOverride detailOverride)
+    {
+        if (detailOverride.RecType.HasValue)
+        {
+            row.recType = detailOverride.RecType.Value;
+            row.recTypeSpecified = true;
+        }
+        if (!string.IsNullOrEmpty(detailOverride.TaricNo))
+            row.TaricNo = detailOverride.TaricNo;
+        if (!string.IsNullOrEmpty(detailOverride.ItemCode))
+            row.itemCode = detailOverride.ItemCode;
+        if (detailOverride.FuelCode.HasValue)
+        {
+            row.fuelCode = (FuelCodes) detailOverride.FuelCode.Value;
+            row.fuelCodeSpecified = true;
+        }
+
+        if (detailOverride.InvoiceDetailType.HasValue)
+        {
+            row.invoiceDetailType = detailOverride.InvoiceDetailType.Value;
+            row.invoiceDetailTypeSpecified = true;
+        }
+
+        if (detailOverride.Dienergia != null)
+        {
+            row.dienergia = new ShipType
+            {
+                applicationId = detailOverride.Dienergia.ApplicationId,
+                doy = detailOverride.Dienergia.Doy,
+                shipId = detailOverride.Dienergia.ShipId
+            };
+            if (detailOverride.Dienergia.ApplicationDate.HasValue)
+            {
+                row.dienergia.applicationDate = detailOverride.Dienergia.ApplicationDate.Value;
+            }
+        }
+        if (detailOverride.DiscountOption.HasValue)
+        {
+            row.discountOption = detailOverride.DiscountOption.Value;
+            row.discountOptionSpecified = true;
+        }
+
+        if (!string.IsNullOrEmpty(detailOverride.LineComments))
+            row.lineComments = detailOverride.LineComments;
+        if (detailOverride.IncomeClassification != null)
+        {
+            if (detailOverride.IncomeClassification.Count != 1)
+            {
+                throw new ArgumentException("incomeClassification override must contain exactly one element.");
+            }
+            var ic = detailOverride.IncomeClassification[0];
+            var existing = row.incomeClassification?.FirstOrDefault() ?? new IncomeClassificationType { amount = row.netValue };
+            if (!string.IsNullOrEmpty(ic.ClassificationType))
+            {
+                if (!Enum.TryParse<IncomeClassificationValueType>(ic.ClassificationType, true, out var type))
+                {
+                    throw new ArgumentException($"Invalid incomeClassification.classificationType '{ic.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(IncomeClassificationValueType)))}");
+                }
+                existing.classificationType = type;
+                existing.classificationTypeSpecified = true;
+            }
+            if (!string.IsNullOrEmpty(ic.ClassificationCategory))
+            {
+                if (!Enum.TryParse<IncomeClassificationCategoryType>(ic.ClassificationCategory, true, out var cat))
+                {
+                    throw new ArgumentException($"Invalid incomeClassification.classificationCategory '{ic.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(IncomeClassificationCategoryType)))}");
+                }
+                existing.classificationCategory = cat;
+            }
+            row.incomeClassification = [existing];
+        }
+        if (detailOverride.ExpensesClassification != null)
+        {
+            var expensesClassifications = new List<ExpensesClassificationType>();
+            for (var i = 0; i < detailOverride.ExpensesClassification.Count; i++)
+            {
+                var ec = detailOverride.ExpensesClassification[i];
+                var existing = (i == 0 && row.expensesClassification?.FirstOrDefault() != null)
+                    ? row.expensesClassification.First()
+                    : new ExpensesClassificationType();
+
+                existing.amount = ec.Amount ?? row.netValue;
+
+                if (!string.IsNullOrEmpty(ec.ClassificationType))
+                {
+                    if (!Enum.TryParse<ExpensesClassificationTypeClassificationType>(ec.ClassificationType, true, out var type))
+                    {
+                        throw new ArgumentException($"Invalid expensesClassification.classificationType '{ec.ClassificationType}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationTypeClassificationType)))}");
+                    }
+                    existing.classificationType = type;
+                    existing.classificationTypeSpecified = true;
+                }
+                if (!string.IsNullOrEmpty(ec.ClassificationCategory))
+                {
+                    if (!Enum.TryParse<ExpensesClassificationCategoryType>(ec.ClassificationCategory, true, out var cat))
+                    {
+                        throw new ArgumentException($"Invalid expensesClassification.classificationCategory '{ec.ClassificationCategory}'. Allowed values: {string.Join(", ", Enum.GetNames(typeof(ExpensesClassificationCategoryType)))}");
+                    }
+                    existing.classificationCategory = cat;
+                    existing.classificationCategorySpecified = true;
+                }
+                if (ec.VatAmount.HasValue)
+                {
+                    existing.vatAmount = ec.VatAmount.Value;
+                    existing.vatAmountSpecified = true;
+                }
+                if (ec.VatCategory.HasValue)
+                {
+                    existing.vatCategory = ec.VatCategory.Value;
+                    existing.vatCategorySpecified = true;
+                }
+                if (ec.VatExemptionCategory.HasValue)
+                {
+                    existing.vatExemptionCategory = ec.VatExemptionCategory.Value;
+                    existing.vatExemptionCategorySpecified = true;
+                }
+                if (ec.Id.HasValue)
+                {
+                    existing.id = (sbyte) ec.Id.Value;
+                    existing.idSpecified = true;
+                }
+                expensesClassifications.Add(existing);
+            }
+            row.expensesClassification = expensesClassifications.ToArray();
+            row.incomeClassification = null;
+        }
+        if (detailOverride.Quantity15.HasValue)
+        {
+            row.quantity15 = detailOverride.Quantity15.Value;
+            row.quantity15Specified = true;
+        }
+        if (detailOverride.OtherMeasurementUnitQuantity.HasValue)
+        {
+            row.otherMeasurementUnitQuantity = detailOverride.OtherMeasurementUnitQuantity.Value;
+            row.otherMeasurementUnitQuantitySpecified = true;
+        }
+        if (!string.IsNullOrEmpty(detailOverride.OtherMeasurementUnitTitle))
+            row.otherMeasurementUnitTitle = detailOverride.OtherMeasurementUnitTitle;
+        if (detailOverride.NotVAT195.HasValue)
+        {
+            row.notVAT195 = detailOverride.NotVAT195.Value;
+            row.notVAT195Specified = true;
+        }
+    }
+
+    private static ExpensesClassificationType CreateExpensesClassificationSummary(IEnumerable<ExpensesClassificationType> items)
+    {
+        var first = items.First();
+        var result = new ExpensesClassificationType
+        {
+            amount = items.Sum(y => y.amount),
+            classificationCategory = first.classificationCategory,
+            classificationCategorySpecified = first.classificationCategorySpecified,
+            classificationType = first.classificationType,
+            classificationTypeSpecified = first.classificationTypeSpecified,
+            vatCategory = first.vatCategory,
+            vatCategorySpecified = first.vatCategorySpecified,
+            vatExemptionCategory = first.vatExemptionCategory,
+            vatExemptionCategorySpecified = first.vatExemptionCategorySpecified
+        };
+        if (items.Any(y => y.vatAmountSpecified))
+        {
+            result.vatAmount = items.Where(y => y.vatAmountSpecified).Sum(y => y.vatAmount);
+            result.vatAmountSpecified = true;
+        }
+        if (items.Any(y => y.idSpecified))
+        {
+            result.id = items.First(y => y.idSpecified).id;
+            result.idSpecified = true;
+        }
+        return result;
     }
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
@@ -566,12 +902,12 @@ public class AADEFactory
             throw new Exception("When using this type of invoice only ChargeItems of type Special Tax are supported.");
         }
         var chargeItems = receiptRequest.GetGroupedChargeItems().ToList();
-        var invoiceRows = new List<InvoiceRowType>();
+        var invoiceRows = new List<global::InvoiceRowType>();
         var nextPosition = 1;
         foreach (var chargeItem in chargeItems)
         {
             var item = chargeItem.chargeItem;
-            var invoiceRow = new InvoiceRowType
+            var invoiceRow = new global::InvoiceRowType
             {
                 lineNumber = (int) item.Position,
                 netValue = 0,
@@ -641,7 +977,6 @@ public class AADEFactory
         return invoiceRows;
     }
 
-
     /// <summary>
     /// Returns invoice rows for AADE 8.6 VOID restaurant order (multiple/cancel):
     /// - One line (even if multiple charge items provided)
@@ -673,12 +1008,12 @@ public class AADEFactory
             // No classifications
         };
 
-        return new List<InvoiceRowType> { row };
+        return new List<global::InvoiceRowType> { row };
     }
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        if(AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For Invoice Types of type 82 we use a different loading mechanism for the invocies to ensure that taxlevels are included
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
@@ -720,6 +1055,20 @@ public class AADEFactory
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
             };
 
+            // Per-item return flag (0x0002) inside an 8.6 order = recType 7
+            var isPartialReturnItem = AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86
+                                      && x.IsRefund();
+
+            // myDATA spec: for recType=7 lines amounts MUST be positive; myDATA itself treats them as cancellations.
+            if (isPartialReturnItem)
+            {
+                invoiceRow.recType = 7;
+                invoiceRow.recTypeSpecified = true;
+                invoiceRow.quantity = Math.Abs(invoiceRow.quantity);
+                invoiceRow.vatAmount = Math.Abs(invoiceRow.vatAmount);
+                invoiceRow.netValue = Math.Abs(invoiceRow.netValue);
+            }
+
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 invoiceRow.quantitySpecified = true;
@@ -736,8 +1085,13 @@ public class AADEFactory
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
+                if (!string.IsNullOrEmpty(x.ProductNumber))
+                {
+                    invoiceRow.itemCode = x.ProductNumber;
+                }
+
                 invoiceRow.itemDescr = x.Description;
-                
+
                 invoiceRow.measurementUnit = AADEMappings.GetMeasurementUnit(x);
                 invoiceRow.measurementUnitSpecified = true;
             }
@@ -831,8 +1185,24 @@ public class AADEFactory
             {
                 invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
                 invoiceRow.deductionsAmountSpecified = true;
-                invoiceRow.discountOption = true;
-                invoiceRow.discountOptionSpecified = true;
+            }
+            // Apply line-level mydataoverride from ftChargeItemCaseData
+            if (x.ftChargeItemCaseData != null)
+            {
+                try
+                {
+                    var chargeItemData = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
+                        JsonSerializer.Serialize(x.ftChargeItemCaseData),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (chargeItemData?.GR?.MyDataOverride?.InvoiceDetails != null)
+                    {
+                        ApplyInvoiceDetailOverride(invoiceRow, chargeItemData.GR.MyDataOverride.InvoiceDetails);
+                    }
+                }
+                catch (JsonException)
+                {
+                    // ftChargeItemCaseData may contain data for other purposes, ignore deserialization errors
+                }
             }
             return invoiceRow;
         }).ToList();
@@ -959,68 +1329,34 @@ public class AADEFactory
             return null;
         }
 
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        var vatNumber = GetAADEVAT(customer.CustomerVATId);
+        var isDomestic = countryType == CountryType.GR;
+
+        var party = new PartyType
         {
-            return new PartyType
+            vatNumber = vatNumber,
+            country = countryType,
+            branch = 0,
+        };
+
+        if (!isDomestic || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            party.name = customer.CustomerName;
+        }
+
+        var hasAddress = !string.IsNullOrEmpty(customer.CustomerZip) && !string.IsNullOrEmpty(customer.CustomerCity);
+        if (hasAddress)
+        {
+            party.address = new AddressType
             {
-                vatNumber = customer?.CustomerVATId,
-                country = countryType,
-                branch = 0,
-                address = new AddressType
-                {
-                    street = customer?.CustomerStreet,
-                    city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip,
-                    number = 0.ToString()
-                },
-                name = customer?.CustomerName,
+                postalCode = customer.CustomerZip,
+                city = customer.CustomerCity,
+                street = !string.IsNullOrEmpty(customer.CustomerStreet) ? customer.CustomerStreet : null,
+                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) ? "0" : null)
             };
         }
 
-
-        if (customer?.CustomerVATId?.StartsWith("EL") == true && countryType == CountryType.GR)
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId.Replace("EL", ""),
-                country = CountryType.GR,
-                branch = 0,
-            };
-        }
-        else if (customer?.CustomerVATId?.StartsWith("GR") == true && countryType == CountryType.GR)
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId.Replace("GR", ""),
-                country = CountryType.GR,
-                branch = 0,
-            };
-        }
-        else if (customer?.CustomerCountry == "GR" && countryType == CountryType.GR)
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId,
-                country = CountryType.GR,
-                branch = 0,
-            };
-        }
-        else
-        {
-            return new PartyType
-            {
-                vatNumber = customer?.CustomerVATId,
-                country = countryType,
-                branch = 0,
-                address = new AddressType
-                {
-                    street = customer?.CustomerStreet,
-                    city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip
-                },
-                name = customer?.CustomerName,
-            };
-        }
+        return party;
     }
 
     public static string GetAADEVAT(string issuerVat)
@@ -1116,9 +1452,68 @@ public class AADEFactory
     }
     public string GetUid(AadeBookInvoiceType invoice) => BitConverter.ToString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate.ToString("yyyy-MM-dd")}-{invoice.issuer.branch}-{invoice.invoiceHeader.invoiceType.GetXmlEnumAttributeValueFromEnum() ?? ""}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}"))).Replace("-", "");
 
+    public (PaymentMethodsDoc? paymentMethodsDoc, AADEFactoryError? error) MapToPaymentMethodsDoc(ReceiptRequest receiptRequest, long invoiceMark, string? entityVatNumber = null)
+    {
+        try
+        {
+            foreach (var payItem in receiptRequest.cbPayItems)
+            {
+                payItem.Amount = Math.Round(payItem.Amount, 2);
+                payItem.Quantity = Math.Round(payItem.Quantity, 2);
+            }
+
+            var paymentMethodDetails = GetPayments(receiptRequest);
+            if (paymentMethodDetails == null || paymentMethodDetails.Count == 0)
+            {
+                throw new Exception("At least one payment method detail is required for SendPaymentsMethod.");
+            }
+
+            var paymentMethod = new PaymentMethodType
+            {
+                invoiceMark = invoiceMark,
+                paymentMethodDetails = paymentMethodDetails.ToArray()
+            };
+
+            if (!string.IsNullOrEmpty(entityVatNumber))
+            {
+                paymentMethod.entityVatNumber = entityVatNumber;
+            }
+
+            var doc = new PaymentMethodsDoc
+            {
+                paymentMethods = [paymentMethod]
+            };
+
+            return (doc, null);
+        }
+        catch (Exception ex)
+        {
+            return (null, new AADEFactoryError
+            {
+                Exception = ex
+            });
+        }
+    }
+
     public static string GenerateInvoicePayload(InvoicesDoc doc)
     {
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
+        var settings = new XmlWriterSettings
+        {
+            Indent = false,
+            NewLineHandling = NewLineHandling.None
+        };
+        using (var stringWriter = new StringWriter())
+        using (var xmlWriter = XmlWriter.Create(stringWriter, settings))
+        {
+            xmlSerializer.Serialize(xmlWriter, doc);
+            return stringWriter.ToString();
+        }
+    }
+
+    public static string GeneratePaymentMethodPayload(PaymentMethodsDoc doc)
+    {
+        var xmlSerializer = new XmlSerializer(typeof(PaymentMethodsDoc));
         var settings = new XmlWriterSettings
         {
             Indent = false,

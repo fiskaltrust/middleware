@@ -1886,4 +1886,129 @@ public class AADEFactoryTests
         issueDate.Kind.Should().Be(DateTimeKind.Unspecified,
             "Kind must be Unspecified to prevent myDATA serialization issues");
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // Override to 1.6 / 2.4 — supplementary invoice types
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BInvoice_OverrideTo16_WithPreviousReference_SetsCorrelatedInvoices()
+    {
+        // Arrange — B2B Invoice that would normally be 1.1, overridden to 1.6
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Amount = 100,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24
+                }
+            },
+            cbPayItems = new List<PayItem> { new PayItem { Amount = 100 } },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbPreviousReceiptReference = "PREV-FOR-SUPPLEMENTARY",
+            cbCustomer = new MiddlewareCustomer { CustomerVATId = "123456789", CustomerCountry = "GR" },
+            ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.6" } } } } }
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123ABC#",
+            ftCashBoxIdentification = "CB-TEST",
+            ftSignatures = new List<SignatureItem>
+            {
+                new SignatureItem { Caption = "invoiceMark", Data = "400001958034189" }
+            }
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        }, "https://test.receipts.example.com");
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
+        {
+            (receiptRequest, receiptResponse)
+        });
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+
+        header.invoiceType.Should().Be(InvoiceType.Item16, "override should set type to 1.6");
+        header.correlatedInvoices.Should().NotBeNull("1.6 uses correlatedInvoices");
+        header.correlatedInvoices.Should().Contain(400001958034189);
+        header.multipleConnectedMarks.Should().BeNull("1.6 does not support multipleConnectedMarks");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BServiceInvoice_OverrideTo24_WithPreviousReference_SetsCorrelatedInvoices()
+    {
+        // Arrange — B2B service invoice that would normally be 2.1, overridden to 2.4
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Amount = 200,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate).WithTypeOfService(ChargeItemCaseTypeOfService.OtherService),
+                    VATRate = 24
+                }
+            },
+            cbPayItems = new List<PayItem> { new PayItem { Amount = 200 } },
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbPreviousReceiptReference = "PREV-FOR-SUPPLEMENTARY-SVC",
+            cbCustomer = new MiddlewareCustomer { CustomerVATId = "123456789", CustomerCountry = "GR" },
+            ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "2.4" } } } } }
+        };
+
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft456DEF#",
+            ftCashBoxIdentification = "CB-TEST",
+            ftSignatures = new List<SignatureItem>
+            {
+                new SignatureItem { Caption = "invoiceMark", Data = "400002958034190" }
+            }
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData()
+        }, "https://test.receipts.example.com");
+
+        // Act
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, new List<(ReceiptRequest, ReceiptResponse)>
+        {
+            (receiptRequest, receiptResponse)
+        });
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+
+        header.invoiceType.Should().Be(InvoiceType.Item24, "override should set type to 2.4");
+        header.correlatedInvoices.Should().NotBeNull("2.4 uses correlatedInvoices");
+        header.correlatedInvoices.Should().Contain(400002958034190);
+        header.multipleConnectedMarks.Should().BeNull("2.4 does not support multipleConnectedMarks");
+    }
+
 }

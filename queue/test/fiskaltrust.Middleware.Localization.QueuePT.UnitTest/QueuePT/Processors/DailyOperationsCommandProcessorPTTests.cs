@@ -8,12 +8,13 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Moq;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class DailyOperationsCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, new DailyOperationsCommandProcessorPT(), null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, new DailyOperationsCommandProcessorPT(), null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.ZeroReceipt0x2000)]

@@ -12,6 +12,7 @@ public class MiddlewareCustomer
     public string? CustomerId { get; set; }
     public string? CustomerType { get; set; }
     public string? CustomerStreet { get; set; }
+    public string? CustomerHouseNumber { get; set; }
     public string? CustomerZip { get; set; }
     public string? CustomerCity { get; set; }
     public string? CustomerCountry { get; set; }
@@ -50,6 +51,28 @@ public static class ReceiptRequestExtensions
                 return false;
             }
             result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(request.ftReceiptCaseData), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return result != null;
+        }
+        catch (Exception)
+        {
+            result = default;
+            return false;
+        }
+    }
+
+    public static bool TryDeserializeftChargeItemCaseData<T>(this ChargeItem chargeItem, out T? result) where T : class
+    {
+        result = default;
+        try
+        {
+            if (chargeItem.ftChargeItemCaseData is null)
+            {
+                return false;
+            }
+            result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData), new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });

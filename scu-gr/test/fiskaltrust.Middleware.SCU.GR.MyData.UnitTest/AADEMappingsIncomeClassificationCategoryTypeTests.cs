@@ -68,6 +68,7 @@ public class AADEMappingsIncomeClassificationCategoryTypeTests
     [InlineData(ChargeItemCaseTypeOfService.CatalogService, IncomeClassificationCategoryType.category1_2)]
     [InlineData(ChargeItemCaseTypeOfService.OtherService, IncomeClassificationCategoryType.category1_3)]
     [InlineData(ChargeItemCaseTypeOfService.NotOwnSales, IncomeClassificationCategoryType.category1_7)]
+    [InlineData(ChargeItemCaseTypeOfService.OwnConsumption, IncomeClassificationCategoryType.category1_6)]
     public void GetIncomeClassificationCategoryType_WithDifferentServiceTypes_ReturnsExpectedCategory(ChargeItemCaseTypeOfService serviceType, IncomeClassificationCategoryType expectedCategory)
     {
         // Arrange
@@ -84,7 +85,6 @@ public class AADEMappingsIncomeClassificationCategoryTypeTests
     [Theory]
     [InlineData(ChargeItemCaseTypeOfService.Tip)]
     [InlineData(ChargeItemCaseTypeOfService.Voucher)]
-    [InlineData(ChargeItemCaseTypeOfService.OwnConsumption)]
     [InlineData(ChargeItemCaseTypeOfService.Grant)]
     [InlineData(ChargeItemCaseTypeOfService.Receivable)]
     [InlineData(ChargeItemCaseTypeOfService.CashTransfer)]

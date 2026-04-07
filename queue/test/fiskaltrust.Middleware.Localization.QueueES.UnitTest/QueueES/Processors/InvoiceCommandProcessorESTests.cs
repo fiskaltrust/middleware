@@ -12,6 +12,7 @@ using Castle.Core.Logging;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
@@ -75,6 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 
             return new ReceiptProcessor(
                 Mock.Of<ILogger<ReceiptProcessor>>(),
+                Mock.Of<IMarketValidator>(),
                 null!,
                 null!,
                 null!,

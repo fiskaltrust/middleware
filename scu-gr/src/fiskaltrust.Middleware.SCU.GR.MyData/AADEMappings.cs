@@ -16,6 +16,14 @@ public static class AADEMappings
     {
         var vatAmount = chargeItem.GetVATAmount();
         var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
+
+        // Per-item return flag (0x0002) inside an 8.6 order = recType 7
+        // myDATA spec: for recType=7 lines amounts MUST be positive; myDATA itself treats them as cancellations
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && chargeItem.IsRefund())
+        {
+            netAmount = Math.Abs(netAmount);
+        }
+
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
         {
             return new IncomeClassificationType
@@ -128,13 +136,18 @@ public static class AADEMappings
                 }
                 else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
-                    throw new Exception("Agency business with non EU customer is not supported");
+                    return IncomeClassificationValueType.E3_881_004;
                 }
                 else
                 {
                     return IncomeClassificationValueType.E3_881_001;
                 }
             }
+        }
+
+        if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption))
+        {
+            return IncomeClassificationValueType.E3_595;
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
@@ -238,7 +251,8 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
-            _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
+            ChargeItemCaseTypeOfService.OwnConsumption => IncomeClassificationCategoryType.category1_6,
+            _ => IncomeClassificationCategoryType.category1_95,
         };
     }
 
@@ -263,38 +277,35 @@ public static class AADEMappings
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData) && overrideData?.GR?.MyDataOverride != null)
-        {
-            var headerOverride = overrideData.GR.MyDataOverride.Invoice?.InvoiceHeader;
-            if (!string.IsNullOrEmpty(headerOverride?.InvoiceType))
-            {
-                // Define allowed invoice types for override
-                var allowedInvoiceTypes = new HashSet<string> { "8.2" };
-                if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
-                {
-                    throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
-                }
-
-                if(headerOverride.InvoiceType == "8.2")
-                {
-                    return InvoiceType.Item82;
-                }
-            }
-        }
-
+        // InvoiceType override is handled in AADEFactory.ApplyInvoiceHeaderOverride after the initial mapping.
+        // Here we only determine the base type from the receipt case.
 
         // Validate that agency business (NotOwnSales) items are not mixed with other types
         var hasNotOwnSales = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales));
-        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x => 
+        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x =>
         {
             var typeOfService = x.ftChargeItemCase.TypeOfService();
-            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales && 
+            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales &&
                    typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
         });
 
         if (hasNotOwnSales && hasOtherTypes)
         {
             throw new Exception("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
+        }
+
+        // Validate that own consumption (OwnConsumption) items are not mixed with other types
+        var hasOwnConsumption = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption));
+        var hasOtherTypesForOwnConsumption = receiptRequest.cbChargeItems.Any(x =>
+        {
+            var typeOfService = x.ftChargeItemCase.TypeOfService();
+            return typeOfService != ChargeItemCaseTypeOfService.OwnConsumption &&
+                   typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
+        });
+
+        if (hasOwnConsumption && hasOtherTypesForOwnConsumption)
+        {
+            throw new Exception("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
@@ -318,9 +329,13 @@ public static class AADEMappings
                 return InvoiceType.Item114;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item115;
+            }
+            else if (hasOwnConsumption)
+            {
+                return InvoiceType.Item61;
             }
             else if (receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes())
             {
@@ -339,9 +354,13 @@ public static class AADEMappings
                 return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item14;
+            }
+            else if (hasOwnConsumption)
+            {
+                return InvoiceType.Item61;
             }
             else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes())
             {
@@ -564,6 +583,12 @@ public static class AADEMappings
         _ => true
     };
 
+    public static bool SupportsIncomeClassification(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item31 or InvoiceType.Item32 => false,
+        _ => true
+    };
+
     /// <summary>
     /// Maps ChargeItemCase Nature of VAT to MyData VAT exemption category.
     /// Based on the Greek tax regulations and AADE requirements.
@@ -639,5 +664,22 @@ public static class AADEMappings
             "otherpieces" => MyDataMeasurementUnit.OtherPieces,
             _ => MyDataMeasurementUnit.Pieces
         };
+    }
+
+
+    /// <summary>
+    /// Valid values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,
+    /// 3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION
+    /// </summary>
+    public static int GetReverseDeliveryNotePurpose(int purpose)
+    {
+        if (purpose < 1 || purpose > 5)
+        {
+            throw new Exception(
+                $"Invalid reverseDeliveryNotePurpose value '{purpose}'. " +
+                "Allowed values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR, " +
+                "3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION.");
+        }
+        return purpose;
     }
 }

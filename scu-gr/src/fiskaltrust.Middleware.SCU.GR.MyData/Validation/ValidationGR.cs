@@ -11,9 +11,16 @@ public class ValidationGR
 {
     public static (bool, MiddlewareValidationError? middlewareValidationError) ValidateReceiptRequest(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)) && !receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+        if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales))
+            && receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.TypeOfService() != ChargeItemCaseTypeOfService.NotOwnSales && x.ftChargeItemCase.TypeOfService() != (ChargeItemCaseTypeOfService) 0xF0))
         {
             return (false, new MiddlewareValidationError("ChargeItemTypeNotSupported", "All charge items must be of type 'NotOwnSales' for this receipt type."));
+        }
+
+        if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption))
+            && receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.TypeOfService() != ChargeItemCaseTypeOfService.OwnConsumption && x.ftChargeItemCase.TypeOfService() != (ChargeItemCaseTypeOfService) 0xF0))
+        {
+            return (false, new MiddlewareValidationError("ChargeItemTypeNotSupported", "All charge items must be of type 'OwnConsumption' for this receipt type."));
         }
 
         if (!receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Log) && !receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) && receiptRequest.cbChargeItems.Sum(x => x.Amount) != receiptRequest.cbPayItems.Sum(x => x.Amount))
