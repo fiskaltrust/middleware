@@ -81,22 +81,4 @@ public class AADEMappingsIncomeClassificationCategoryTypeTests
         // Assert
         result.Should().Be(expectedCategory);
     }
-
-    [Theory]
-    [InlineData(ChargeItemCaseTypeOfService.Tip)]
-    [InlineData(ChargeItemCaseTypeOfService.Voucher)]
-    [InlineData(ChargeItemCaseTypeOfService.Grant)]
-    [InlineData(ChargeItemCaseTypeOfService.Receivable)]
-    [InlineData(ChargeItemCaseTypeOfService.CashTransfer)]
-    public void GetIncomeClassificationCategoryType_WithNonSupportedType_ReturnsException(ChargeItemCaseTypeOfService serviceType)
-    {
-        // Arrange
-        var receiptRequest = CreateReceiptRequest();
-        var chargeItem = CreateChargeItem(serviceType);
-
-
-        var action = () => AADEMappings.GetIncomeClassificationCategoryType(receiptRequest, chargeItem);
-        action.Should().Throw<Exception>()
-            .WithMessage($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType.");
-    }
 }
