@@ -142,6 +142,39 @@ public static class ReceiptRequestExtensions
         return data;
     }
 
+    public static List<(PayItem payItem, PayItem? tip)> GetGroupedPayItems(this ReceiptRequest receiptRequest)
+    {
+        var data = new List<(PayItem payItem, PayItem? tip)>();
+        foreach (var payItem in receiptRequest.cbPayItems)
+        {
+            if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))
+            {
+                var last = data.Count > 0 ? data[^1] : default;
+                if (last == default)
+                {
+                    throw new ArgumentException($"Tip pay item at position {payItem.Position} ('{payItem.Description}') has no preceding payment.");
+                }
+                else if (last.tip != null)
+                {
+                    throw new ArgumentException($"Tip pay item at position {payItem.Position} ('{payItem.Description}') cannot be attached because the preceding payment at position {last.payItem.Position} already has a tip assigned.");
+                }
+                else if (last.payItem.ftPayItemCase.Case() != payItem.ftPayItemCase.Case())
+                {
+                    throw new ArgumentException($"Tip pay item at position {payItem.Position} ('{payItem.Description}') has a payment case that does not match the preceding payment at position {last.payItem.Position}.");
+                }
+                else
+                {
+                    data[^1] = (last.payItem, payItem);
+                }
+            }
+            else
+            {
+                data.Add((payItem, null));
+            }
+        }
+        return data;
+    }
+
     public static bool ContainsCustomerInfo(this ReceiptRequest receiptRequest)
     {
         if (receiptRequest.cbCustomer != null)

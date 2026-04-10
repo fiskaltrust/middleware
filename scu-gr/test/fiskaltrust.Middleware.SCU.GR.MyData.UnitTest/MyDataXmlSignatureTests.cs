@@ -49,8 +49,8 @@ public class MyDataXmlSignatureTests
         request.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "mydata-xml");
         var sig = request.ReceiptResponse.ftSignatures.First(s => s.Caption == "mydata-xml");
 
-        sig.Data.Should().StartWith("<invoicesDoc ");
-        sig.Data.Should().EndWith("</invoicesDoc>");
+        sig.Data.Should().StartWith("<InvoicesDoc ");
+        sig.Data.Should().EndWith("</InvoicesDoc>");
         sig.Data.Should().NotStartWith("<?xml");
         sig.Data.Should().Contain("<vatNumber>123456789</vatNumber>");
         sig.ftSignatureFormat.Should().Be(SignatureFormat.Text);
@@ -286,8 +286,8 @@ public class MyDataXmlSignatureTests
         var sig = request.ReceiptResponse.ftSignatures.First(s => s.Caption == "mydata-xml");
         var xml = sig.Data;
 
-        xml.Should().StartWith("<invoicesDoc ");
-        xml.Should().EndWith("</invoicesDoc>");
+        xml.Should().StartWith("<InvoicesDoc ");
+        xml.Should().EndWith("</InvoicesDoc>");
         xml.Should().NotStartWith("<?xml");
 
         // Issuer

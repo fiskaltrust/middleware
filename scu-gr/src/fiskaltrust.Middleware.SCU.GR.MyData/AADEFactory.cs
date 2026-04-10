@@ -1227,20 +1227,22 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        // what is payitemcase 99?
-        return receiptRequest.cbPayItems.Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
+        return receiptRequest.GetGroupedPayItems().Select(group =>
         {
+            var x = group.payItem;
             var payment = new PaymentMethodDetailType
             {
                 type = AADEMappings.GetPaymentType(x),
                 amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
                 paymentMethodInfo = x.Description,
             };
-            var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip));
-            if (tipPayment != null)
+            if (group.tip != null)
             {
-                payment.tipAmount = tipPayment.Amount;
+                payment.tipAmount = Math.Abs(group.tip.Amount); // TipAmount should always be positive
                 payment.tipAmountSpecified = true;
+                // in case of using a tip we need to correct the amount being sent to AADE, as AADE expects the total amount including the tip, while in our model the tip is a separate PayItem. So we need to add the tip amount to the main payment amount. In case of refunds we assume that the tip is also refunded and we apply the same negative sign as for the main payment.
+                var combinedAmount = x.Amount + group.tip.Amount;
+                payment.amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -combinedAmount : combinedAmount;
             }
 
             if (x.ftPayItemCaseData != null)

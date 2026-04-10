@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -213,6 +213,247 @@ public class SendPaymentsMethodTests
         detail.ProvidersSignature!.Signature.Should().Be("test-provider-signature");
         detail.ProvidersSignature.SigningAuthor.Should().Be("126");
         detail.transactionId.Should().Be("test-transaction-id");
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithTipPayItem_ShouldFilterTipAndSetTipAmount()
+    {
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1,
+                Amount = 10.0m,
+                Description = "Card",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "",
+                        ProtocolVersion = "1.0",
+                        Action = "",
+                        ProtocolRequest = new
+                        {
+                            aadeProviderSignatureData = "",
+                            aadeProviderSignature = "817a9c8bc1b5fcfed5cc47b8ed85ba18"
+                        },
+                        ProtocolResponse = new
+                        {
+                            aadeTransactionId = "TXN20240001"
+                        }
+                    }
+                }
+            },
+            new PayItem
+            {
+                Position = 2,
+                Amount = -1.8m,
+                Description = "Tip",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment).WithFlag(PayItemCaseFlags.Tip)
+            }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.paymentMethods[0].paymentMethodDetails.Should().HaveCount(1,
+            "the tip pay item should be filtered out, not treated as a separate payment method");
+        var detail = doc.paymentMethods[0].paymentMethodDetails[0];
+        detail.type.Should().Be(MyDataPaymentMethods.PosEPos);
+        detail.amount.Should().Be(8.2m,
+            "the payment amount (10.0) should be reduced by the tip (1.8)");
+        detail.tipAmountSpecified.Should().BeTrue();
+        detail.tipAmount.Should().Be(1.8m,
+            "tipAmount should be the absolute value of the tip pay item amount");
+        detail.ProvidersSignature.Should().NotBeNull();
+        detail.ProvidersSignature!.Signature.Should().Be("817a9c8bc1b5fcfed5cc47b8ed85ba18");
+        detail.transactionId.Should().Be("TXN20240001");
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithNegativeTipAmount_ShouldUseAbsoluteValue()
+    {
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1,
+                Amount = 25.0m,
+                Description = "Cash",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment))
+            },
+            new PayItem
+            {
+                Position = 2,
+                Amount = -3.5m,
+                Description = "Tip",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment).WithFlag(PayItemCaseFlags.Tip)
+            }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 123456789);
+
+        error.Should().BeNull();
+        doc!.paymentMethods[0].paymentMethodDetails.Should().HaveCount(1);
+        var detail = doc.paymentMethods[0].paymentMethodDetails[0];
+        detail.amount.Should().Be(21.5m,
+            "the payment amount (25.0) should be reduced by the tip (3.5)");
+        detail.tipAmount.Should().Be(3.5m,
+            "negative tip amounts should be converted to positive via Math.Abs");
+        detail.tipAmountSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithTipOnDifferentCase_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1,
+                Amount = 25.0m,
+                Description = "Cash",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment))
+            },
+            new PayItem
+            {
+                Position = 2,
+                Amount = -3.5m,
+                Description = "Tip",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment).WithFlag(PayItemCaseFlags.Tip)
+            }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 123456789);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>();
+        error.Exception.Message.Should().Contain("does not match");
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithTwoCardPaymentsAndTwoTips_ShouldMatchEachTipToItsPayment()
+    {
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1,
+                Amount = 10.0m,
+                Description = "Card 1",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment))
+            },
+            new PayItem
+            {
+                Position = 2,
+                Amount = -1.5m,
+                Description = "Tip 1",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment).WithFlag(PayItemCaseFlags.Tip)
+            },
+            new PayItem
+            {
+                Position = 3,
+                Amount = 20.0m,
+                Description = "Card 2",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment))
+            },
+            new PayItem
+            {
+                Position = 4,
+                Amount = -3.0m,
+                Description = "Tip 2",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment).WithFlag(PayItemCaseFlags.Tip)
+            }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+
+        error.Should().BeNull();
+        doc!.paymentMethods[0].paymentMethodDetails.Should().HaveCount(2);
+
+        var detail1 = doc.paymentMethods[0].paymentMethodDetails[0];
+        detail1.amount.Should().Be(8.5m, "10.0 - 1.5 tip");
+        detail1.tipAmount.Should().Be(1.5m);
+        detail1.tipAmountSpecified.Should().BeTrue();
+
+        var detail2 = doc.paymentMethods[0].paymentMethodDetails[1];
+        detail2.amount.Should().Be(17.0m, "20.0 - 3.0 tip");
+        detail2.tipAmount.Should().Be(3.0m);
+        detail2.tipAmountSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithTwoCardPaymentsAndOneTip_ShouldOnlyApplyTipToFirst()
+    {
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1,
+                Amount = 10.0m,
+                Description = "Card 1",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment))
+            },
+            new PayItem
+            {
+                Position = 2,
+                Amount = -2.0m,
+                Description = "Tip",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment).WithFlag(PayItemCaseFlags.Tip)
+            },
+            new PayItem
+            {
+                Position = 3,
+                Amount = 15.0m,
+                Description = "Card 2",
+                ftPayItemCase = WithLocalFlag(((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment))
+            }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+
+        error.Should().BeNull();
+        doc!.paymentMethods[0].paymentMethodDetails.Should().HaveCount(2);
+
+        var detail1 = doc.paymentMethods[0].paymentMethodDetails[0];
+        detail1.amount.Should().Be(8.0m, "10.0 - 2.0 tip");
+        detail1.tipAmount.Should().Be(2.0m);
+        detail1.tipAmountSpecified.Should().BeTrue();
+
+        var detail2 = doc.paymentMethods[0].paymentMethodDetails[1];
+        detail2.amount.Should().Be(15.0m, "no tip remaining for second card");
+        detail2.tipAmountSpecified.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MapToPaymentMethodsDoc_WithOnlyTipPayItems_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var receiptRequest = BuildRequest(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1,
+                Amount = -1.0m,
+                Description = "Tip",
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CreditCardPayment).WithFlag(PayItemCaseFlags.Tip)
+            }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(receiptRequest, 400001951868897);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>();
+        error.Exception.Message.Should().Contain("no preceding payment");
     }
 
     #endregion
