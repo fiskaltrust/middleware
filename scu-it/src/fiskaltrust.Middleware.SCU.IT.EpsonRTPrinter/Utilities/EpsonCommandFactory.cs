@@ -307,6 +307,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             var fiscalReceipt = new FiscalReceipt();
             fiscalReceipt.ItemAndMessages = GetItemAndMessages(receiptRequest);
             fiscalReceipt.AdjustmentAndMessages = new List<AdjustmentAndMessage>();
+            fiscalReceipt.PrintRecSubtotalAdjustment = GetSubtotalAdjustments(receiptRequest);
             fiscalReceipt.RecTotalAndMessages = GetTotalAndMessages(receiptRequest);
             var customerData = receiptRequest.GetCustomer();
             if (customerData != null)
@@ -603,6 +604,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 // Todo handle payment adjustments / discounts
                 foreach (var i in receiptRequest.cbChargeItems)
                 {
+                    if (i.IsSubtotalDiscount() || i.IsSubtotalSurcharge())
+                        continue;
                     GenerateItems(itemAndMessages, i);
                 }
             }
@@ -700,6 +703,35 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             }
         }
 
+        public static List<PrintRecSubtotalAdjustment> GetSubtotalAdjustments(ReceiptRequest receiptRequest)
+        {
+            var adjustments = new List<PrintRecSubtotalAdjustment>();
+            foreach (var i in receiptRequest.cbChargeItems)
+            {
+                if (i.IsSubtotalDiscount())
+                {
+                    adjustments.Add(new PrintRecSubtotalAdjustment
+                    {
+                        Description = i.Description,
+                        Amount = Math.Abs(i.Amount),
+                        AdjustmentType = 1,
+                        Justification = 1
+                    });
+                }
+                else if (i.IsSubtotalSurcharge())
+                {
+                    adjustments.Add(new PrintRecSubtotalAdjustment
+                    {
+                        Description = i.Description,
+                        Amount = Math.Abs(i.Amount),
+                        AdjustmentType = 6,
+                        Justification = 1
+                    });
+                }
+            }
+            return adjustments.Count > 0 ? adjustments : null;
+        }
+
         public static List<TotalAndMessage> GetTotalAndMessages(ReceiptRequest request)
         {
             var totalAndMessages = new List<TotalAndMessage>();
@@ -711,7 +743,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     Description = pay.Description,
                     PaymentType = paymentType.PaymentType,
                     Index = paymentType.Index,
-                    Payment = (request.IsRefund() || request.IsVoid() || pay.IsRefund() || pay.IsVoid()) ? Math.Abs(pay.Amount) : pay.Amount,
+                    Payment = (request.IsRefund() || request.IsVoid() || pay.IsRefund() || pay.IsVoid() || pay.Amount < 0) ? Math.Abs(pay.Amount) : pay.Amount,
                 };
                 PrintRecMessage? printRecMessage = null;
                 totalAndMessages.Add(new()
