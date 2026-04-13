@@ -19,6 +19,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         /// </summary>
         public int ServerTimeoutMs { get; set; } = 10000;
 
+        /// <summary>
+        /// The maximum number of retries when a network error occurs during receipt printing
+        /// </summary>
+        public int MaxNetworkRetries { get; set; } = 3;
+
         public string? Password { get; set; }
 
         public string? AdditionalTrailerLines { get; set;}
