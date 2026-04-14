@@ -41,16 +41,13 @@ public class ReceiptProcessor : IReceiptProcessor
         try
         {
             validationResult = await _validator.ValidateAsync(request, queue);
-            if (!validationResult.IsValid)
-            {
-                LogValidationErrors(request, validationResult);
+            LogValidationErrors(request, validationResult);
 
-                if (HasFailingErrors(validationResult))
-                {
-                    receiptResponse.MarkAsFailed();
-                    AddValidationSignatures(receiptResponse, validationResult.Errors);
-                    return (receiptResponse, []);
-                }
+            if (HasFailingErrors(validationResult))
+            {
+                receiptResponse.MarkAsFailed();
+                AddValidationSignatures(receiptResponse, validationResult.Errors);
+                return (receiptResponse, []);
             }
         }
         catch (Exception ex)
@@ -160,16 +157,16 @@ public class ReceiptProcessor : IReceiptProcessor
             switch (error.Severity)
             {
                 case FluentValidation.Severity.Warning:
-                    _logger.LogWarning("FV [{Severity}] cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
-                        error.Severity, request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
+                    _logger.LogWarning("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
                     break;
                 case FluentValidation.Severity.Info:
-                    _logger.LogInformation("FV [{Severity}] cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
-                        error.Severity, request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
+                    _logger.LogInformation("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
                     break;
                 default:
-                    _logger.LogError("FV [{Severity}] cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
-                        error.Severity, request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
+                    _logger.LogError("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
                     break;
             }
         }
