@@ -11,6 +11,7 @@ public class CurrencyMustBeEur : AbstractValidator<ReceiptRequest>
         RuleFor(x => x.Currency)
             .Equal(Currency.EUR)
             .WithMessage(request => $"Only EUR currency is supported, but received '{request.Currency}'.")
-            .WithErrorCode("OnlyEuroCurrencySupported");
+            .WithErrorCode("OnlyEuroCurrencySupported")
+            .WithState(_ => new ValidationHelp("Set the Currency field to EUR."));
     }
 }
