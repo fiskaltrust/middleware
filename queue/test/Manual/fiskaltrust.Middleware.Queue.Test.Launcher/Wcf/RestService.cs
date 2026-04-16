@@ -2,7 +2,9 @@
 using fiskaltrust.storage.serialization.V0;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Security.Principal;
 using System.ServiceModel;
 using System.ServiceModel.Description;
 using System.ServiceModel.Web;
@@ -59,7 +61,11 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
 
         private void ConfigureServiceBindings(Type type, object instance, string url)
         {
-            var baseAddress = new Uri(url.Replace("rest://", "http://"));
+            var httpUrl = url.Replace("rest://", "http://");
+            var baseAddress = new Uri(httpUrl);
+
+            TryAddUrlReservation(baseAddress);
+
             _host = new WebServiceHost(instance, baseAddress);
 
             var debugBehavior = _host.Description.Behaviors.Find<ServiceDebugBehavior>();
@@ -122,6 +128,56 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
             binding.ReceiveTimeout = _receiveTimeout;
 
             return binding;
+        }
+
+        private void TryAddUrlReservation(Uri baseAddress)
+        {
+            if (baseAddress.Scheme != "http" && baseAddress.Scheme != "https")
+            {
+                return;
+            }
+
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                return;
+            }
+
+            var urlPrefix = $"{baseAddress.Scheme}://+:{baseAddress.Port}{baseAddress.AbsolutePath}";
+            if (!urlPrefix.EndsWith("/"))
+            {
+                urlPrefix += "/";
+            }
+
+            if (HasUrlReservation(urlPrefix))
+            {
+                return;
+            }
+
+            var userName = identity.Name;
+            _logger.LogWarning("No URL reservation found for {Url}. Run the following command once as administrator: netsh http add urlacl url={Url} user={User}", urlPrefix, urlPrefix, userName);
+        }
+
+        private bool HasUrlReservation(string urlPrefix)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo("netsh", "http show urlacl")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+                var process = Process.Start(psi);
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(5000);
+                return output.IndexOf(urlPrefix, StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public void Dispose()
