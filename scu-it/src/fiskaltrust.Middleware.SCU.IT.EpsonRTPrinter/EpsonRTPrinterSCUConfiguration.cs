@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 {
@@ -21,6 +21,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 
         public string? Password { get; set; }
 
-        public string? AdditionalTrailerLines { get; set;}
+        public string? AdditionalTrailerLines { get; set; }
+
+        /// <summary>
+        /// Base URL of the PDF server exposing /Fiskaltrust/getPDF.php,
+        /// e.g. http://192.168.1.100:643 . This is required for e-receipt PDF functionality.
+        /// </summary>
+        public string? PdfServerUrl { get; set; }
     }
 }

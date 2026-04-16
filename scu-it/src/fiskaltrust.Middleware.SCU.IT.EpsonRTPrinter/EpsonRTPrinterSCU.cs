@@ -1,4 +1,4 @@
-﻿using fiskaltrust.ifPOS.v1.errors;
+using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
@@ -19,15 +19,17 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 {
     private readonly ILogger<EpsonRTPrinterSCU> _logger;
     private readonly IEpsonFpMateClient _httpClient;
+    private readonly IPdfReceiptClient _pdfClient;
     private readonly EpsonRTPrinterSCUConfiguration _configuration;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
     private string? _serialnr;
 
-    public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient)
+    public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient, IPdfReceiptClient pdfClient)
     {
         _logger = logger;
         _httpClient = epsonCloudHttpClient;
         _configuration = configuration;
+        _pdfClient = pdfClient;
     }
 
     public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
@@ -254,9 +256,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = "",
-                RTCustomerID = "", // Todo dread customerid from data           
+                RTCustomerID = "", // Todo dread customerid from data
             };
-            receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            var signatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur);
+            await AddPdfSignatureAsync(signatures,
+                fiscalReceiptResponse.ZRepNumber.ToString(),
+                fiscalReceiptResponse.ReceiptNumber.ToString(),
+                posReceiptSignatur.RTSerialNumber ?? "",
+                fiscalReceiptResponse.ReceiptDateTime.ToString("ddMMyy"));
+            receiptResponse.ftSignatures = signatures.ToArray();
 
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
@@ -302,9 +310,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = "",
-                RTCustomerID = "", // Todo dread customerid from data           
+                RTCustomerID = "", // Todo dread customerid from data
             };
-            receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            var signatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur);
+            await AddPdfSignatureAsync(signatures,
+                fiscalReceiptResponse.ZRepNumber.ToString(),
+                fiscalReceiptResponse.ReceiptNumber.ToString(),
+                posReceiptSignatur.RTSerialNumber,
+                fiscalReceiptResponse.ReceiptDateTime.ToString("ddMMyy"));
+            receiptResponse.ftSignatures = signatures.ToArray();
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
                 receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
@@ -704,6 +718,26 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private async Task<HttpResponseMessage> LoginAsync() => await _httpClient.SendCommandAsync(EpsonCommandFactory.LoginCommand(_configuration.Password));
 
     private async Task<HttpResponseMessage> PerformReprint(string day, string month, string year, long receiptNumber) => await _httpClient.SendCommandAsync(EpsonCommandFactory.ReprintCommand(day, month, year, receiptNumber));
+
+    private async Task AddPdfSignatureAsync(List<SignaturItem> signatures, string znum, string numdoc, string matricola, string date)
+    {
+        if (string.IsNullOrEmpty(_configuration.PdfServerUrl))
+        {
+            return;
+        }
+
+        var pdfResponse = await _pdfClient.GetReceiptPdfAsync(znum, numdoc, matricola, date);
+        if (pdfResponse?.ok == true && !string.IsNullOrEmpty(pdfResponse.base64))
+        {
+            signatures.Add(new SignaturItem
+            {
+                Caption = "<epson-pdf>",
+                Data = pdfResponse.base64,
+                ftSignatureFormat = (long) SignaturItem.Formats.Base64,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTEReceiptPdf
+            });
+        }
+    }
 
     public SSCDErrorInfo GetErrorInfo(string? code, string? status, string? printerStatus)
     {

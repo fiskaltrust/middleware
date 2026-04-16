@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +17,22 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         {
             var epsonScuConfig = JsonConvert.DeserializeObject<EpsonRTPrinterSCUConfiguration>(JsonConvert.SerializeObject(Configuration));
 
-            _ = serviceCollection
-                .AddSingleton(epsonScuConfig)
-                .AddScoped<IEpsonFpMateClient, LocalEpsonFpMateClient>()
-                .AddScoped<IITSSCD, EpsonRTPrinterSCU>();
+            serviceCollection.AddSingleton(epsonScuConfig);
+
+            serviceCollection.AddHttpClient<IEpsonFpMateClient, LocalEpsonFpMateClient>()
+                .ConfigureHttpClient((_, client) =>
+                {
+                    client.BaseAddress = new Uri(epsonScuConfig.DeviceUrl ?? throw new InvalidOperationException("DeviceUrl is required"));
+                    client.Timeout = TimeSpan.FromMilliseconds(epsonScuConfig.ClientTimeoutMs);
+                });
+
+            serviceCollection.AddHttpClient<IPdfReceiptClient, PdfReceiptClient>()
+                .ConfigureHttpClient((_, client) =>
+                {
+                    client.Timeout = TimeSpan.FromMilliseconds(epsonScuConfig.ClientTimeoutMs);
+                });
+
+            serviceCollection.AddScoped<IITSSCD, EpsonRTPrinterSCU>();
         }
     }
 }
