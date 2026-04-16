@@ -157,16 +157,16 @@ public class ReceiptProcessor : IReceiptProcessor
             switch (error.Severity)
             {
                 case FluentValidation.Severity.Warning:
-                    _logger.LogWarning("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}{Help}",
-                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage, FormatHelp(error));
+                    _logger.LogWarning("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
                     break;
                 case FluentValidation.Severity.Info:
-                    _logger.LogInformation("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}{Help}",
-                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage, FormatHelp(error));
+                    _logger.LogInformation("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
                     break;
                 default:
-                    _logger.LogError("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}{Help}",
-                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage, FormatHelp(error));
+                    _logger.LogError("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
                     break;
             }
         }
@@ -184,17 +184,13 @@ public class ReceiptProcessor : IReceiptProcessor
     {
         foreach (var error in errors)
         {
-            var help = (error.CustomState as ValidationHelp)?.Message;
             receiptResponse.AddSignatureItem(new SignatureItem
             {
                 Caption = $"[{error.Severity}] {error.ErrorCode}",
-                Data = help != null ? $"{error.ErrorMessage} | help: {help}" : error.ErrorMessage,
+                Data = error.ErrorMessage,
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
             });
         }
     }
-
-    private static string FormatHelp(ValidationFailure error)
-        => error.CustomState is ValidationHelp h ? $" | help: {h.Message}" : string.Empty;
 }

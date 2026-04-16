@@ -76,8 +76,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                         && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
                         && !x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 .WithMessage("Refund receipt must reference the original receipt.")
-                .WithErrorCode("RefundMissingPreviousReceiptReference")
-                .WithState(_ => new ValidationHelp("Set cbPreviousReceiptReference to the cbReceiptReference of the original receipt being refunded."));
+                .WithErrorCode("RefundMissingPreviousReceiptReference");
         }
     }
 
@@ -90,8 +89,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     !await receiptReferenceProvider.HasExistingRefundAsync(previousRef!.SingleValue))
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && x.cbPreviousReceiptReference != null)
                 .WithMessage("A refund for this receipt already exists.")
-                .WithErrorCode("RefundAlreadyExists")
-                .WithState(_ => new ValidationHelp("Each receipt can only be refunded once. For partial refunds, set the Refund flag on individual cbChargeItems."));
+                .WithErrorCode("RefundAlreadyExists");
         }
     }
 
@@ -103,8 +101,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Must(chargeItems => !chargeItems!.Any(item => !item.IsRefund()))
                 .When(x => x.IsPartialRefundReceipt() && x.cbChargeItems != null)
                 .WithMessage("Partial refund contains mixed refund and non-refund items. All charge items must have the refund flag set for partial refunds.")
-                .WithErrorCode("PartialRefundMixedItems")
-                .WithState(_ => new ValidationHelp("Set the Refund flag on every cbChargeItem when sending a partial refund receipt."));
+                .WithErrorCode("PartialRefundMixedItems");
         }
     }
 
@@ -116,8 +113,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Must(payItems => !payItems!.Any(item => !item.IsRefund()))
                 .When(x => x.IsPartialRefundReceipt() && x.cbPayItems != null)
                 .WithMessage("Partial refund contains mixed refund and non-refund pay items. All pay items must have the refund flag set for partial refunds.")
-                .WithErrorCode("PartialRefundMixedPayItems")
-                .WithState(_ => new ValidationHelp("Set the Refund flag on every cbPayItem when sending a partial refund receipt."));
+                .WithErrorCode("PartialRefundMixedPayItems");
         }
     }
 
@@ -132,8 +128,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     && !request.IsPartialRefundReceipt())
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage("Handwritten receipts must not be used in combination with void/refund or other connections.")
-                .WithErrorCode("HandwrittenWithRefundOrVoid")
-                .WithState(_ => new ValidationHelp("Remove the Refund or Void flag from ftReceiptCase when using HandWritten."));
+                .WithErrorCode("HandwrittenWithRefundOrVoid");
         }
     }
 
@@ -147,13 +142,12 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     if (!request.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data))
                         return false;
                     return data?.PT != null
-                           && !string.IsNullOrWhiteSpace(data.PT.Series)
-                           && data.PT.Number.HasValue
-                           && data.PT.Number.Value >= 1;
+                        && !string.IsNullOrWhiteSpace(data.PT.Series)
+                        && data.PT.Number.HasValue
+                        && data.PT.Number.Value >= 1;
                 })
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-                .WithMessage(
-                    "When using Handwritten flag, ftReceiptCaseData must contain PT.Series and PT.Number (Number must be >= 1).")
+                .WithMessage("When using Handwritten flag, ftReceiptCaseData must contain PT.Series and PT.Number (Number must be >= 1).")
                 .WithErrorCode("HandwrittenMissingSeriesOrNumber");
         }
     }
@@ -166,8 +160,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Must(chargeItems => chargeItems != null && chargeItems.Any(ci => ci.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
                 .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 .WithMessage("PaymentTransfer receipt must contain at least one AccountReceivable charge item.")
-                .WithErrorCode("PaymentTransferMissingReceivableItem")
-                .WithState(_ => new ValidationHelp("Add a charge item with TypeOfService = Receivable."));
+                .WithErrorCode("PaymentTransferMissingReceivableItem");
         }
     }
 
@@ -246,8 +239,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x.cbReceiptMoment)
                 .Must(moment => moment.ToUniversalTime() <= DateTime.UtcNow)
                 .WithMessage("cbReceiptMoment must not be in the future.")
-                .WithErrorCode("ReceiptMomentInFuture")
-                .WithState(_ => new ValidationHelp("Use the current UTC time. Pre-dating receipts is not allowed."));
+                .WithErrorCode("ReceiptMomentInFuture");
         }
     }
 
@@ -268,8 +260,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     return timeDifference <= MaxAllowedDifferenceMinutes;
                 })
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
-                .WithMessage(
-                    $"cbReceiptMoment deviates more than {MaxAllowedDifferenceMinutes} minutes from server time.")
+                .WithMessage($"cbReceiptMoment deviates more than {MaxAllowedDifferenceMinutes} minutes from server time.")
                 .WithErrorCode("ReceiptMomentDeviationExceeded");
         }
     }
@@ -314,8 +305,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x)
                 .Must(request => !request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
                 .WithMessage("Training mode is not supported.")
-                .WithErrorCode("TrainingModeNotSupported")
-                .WithState(_ => new ValidationHelp("Remove the Training flag (0x0002_0000) from ftReceiptCase."));
+                .WithErrorCode("TrainingModeNotSupported");
         }
     }
 
@@ -326,16 +316,16 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x.cbChargeItems)
                 .Must(items => ArePositionsSequential(items!.Select(i => i.Position).ToList()))
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
-                           && x.cbChargeItems != null && x.cbChargeItems.Count > 0
-                           && x.cbChargeItems.Any(i => i.Position > 0))
+                        && x.cbChargeItems != null && x.cbChargeItems.Count > 0
+                        && x.cbChargeItems.Any(i => i.Position > 0))
                 .WithMessage("cbChargeItems positions must start at 1 and be strictly sequential without gaps.")
                 .WithErrorCode("InvalidChargeItemPositions");
 
             RuleFor(x => x.cbPayItems)
                 .Must(items => ArePositionsSequential(items!.Select(i => i.Position).ToList()))
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
-                           && x.cbPayItems != null && x.cbPayItems.Count > 0
-                           && x.cbPayItems.Any(i => i.Position > 0))
+                        && x.cbPayItems != null && x.cbPayItems.Count > 0
+                        && x.cbPayItems.Any(i => i.Position > 0))
                 .WithMessage("cbPayItems positions must start at 1 and be strictly sequential without gaps.")
                 .WithErrorCode("InvalidPayItemPositions");
         }
@@ -372,8 +362,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
                     !await receiptReferenceProvider.HasExistingVoidAsync(previousRef!.SingleValue!))
-                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() &&
-                           x.cbPreviousReceiptReference != null)
+                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() && x.cbPreviousReceiptReference != null)
                 .WithMessage("The original receipt has already been voided and cannot be partially refunded.")
                 .WithErrorCode("PreviousReceiptIsVoided");
         }
@@ -386,8 +375,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
             RuleFor(x => x.cbPreviousReceiptReference)
                 .MustAsync(async (previousRef, _) =>
                     !await receiptReferenceProvider.HasExistingRefundAsync(previousRef!.SingleValue!))
-                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() &&
-                           x.cbPreviousReceiptReference != null)
+                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() && x.cbPreviousReceiptReference != null)
                 .WithMessage("A full refund for this receipt already exists.")
                 .WithErrorCode("RefundAlreadyExists");
         }
@@ -439,8 +427,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Must(c => _invoiceCases.Contains(c.Case()))
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage("Handwritten receipts are only allowed for invoice receipt cases.")
-                .WithErrorCode("HandwrittenReceiptOnlyForInvoices")
-                .WithState(_ => new ValidationHelp("Use InvoiceB2C, InvoiceB2B, or InvoiceB2G with the HandWritten flag."));
+                .WithErrorCode("HandwrittenReceiptOnlyForInvoices");
         }
     }
 
@@ -459,8 +446,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 })
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
                 .WithMessage("Handwritten receipt series must not contain spaces.")
-                .WithErrorCode("HandwrittenSeriesInvalidCharacter")
-                .WithState(_ => new ValidationHelp("Remove all spaces from ftReceiptCaseData.PT.Series."));
+                .WithErrorCode("HandwrittenSeriesInvalidCharacter");
         }
     }
 
@@ -623,8 +609,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbPreviousReceiptReference)
                 .Must(previousRef => previousRef!.IsSingle)
-                .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) &&
-                           x.cbPreviousReceiptReference != null)
+                .When(x => x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && x.cbPreviousReceiptReference != null)
                 .WithMessage("Payment transfer must reference exactly one receipt.")
                 .WithErrorCode("PaymentTransferMultipleReferences");
         }

@@ -45,5 +45,3 @@ public class MarketValidator : IMarketValidator
         return result;
     }
 }
-
-public record ValidationHelp(string Message);

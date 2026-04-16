@@ -103,8 +103,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         .Must(caseValue => ((long) caseValue & 0xFF00) != 0x0000)
                         .When(x => x.VATRate == 0)
                         .WithMessage("Charge item with zero VAT rate must have a NatureOfVat set (0xFF00 bits must not be 0x0000).")
-                        .WithErrorCode("ZeroVatRateMissingNature")
-                        .WithState(_ => new ValidationHelp("Set the NatureOfVat field in ftChargeItemCase to indicate the VAT exemption reason."));
+                        .WithErrorCode("ZeroVatRateMissingNature");
                 });
             });
         }
@@ -143,7 +142,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                     context.AddFailure(new FluentValidation.Results.ValidationFailure(
                                         "cbChargeItems",
                                         $"Discount ({absoluteDiscountAmount:F2}) exceeds article amount ({absoluteMainItemAmount:F2}) for charge item [{mainItemIndex}] '{mainItem.Description}'")
-                                    { ErrorCode = "DiscountExceedsArticleAmount", CustomState = new ValidationHelp("Reduce the discount so it doesn't exceed the article amount.") });
+                                    { ErrorCode = "DiscountExceedsArticleAmount" });
                                 }
                             }
                         }

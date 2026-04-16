@@ -2,7 +2,6 @@
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Validation;
 using FluentValidation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
@@ -87,17 +86,17 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
                         if (string.IsNullOrEmpty(customer.CustomerName))
                             context.AddFailure(new FluentValidation.Results.ValidationFailure(
                                 "cbCustomer.CustomerName", "Customer name must not be empty")
-                            { ErrorCode = "CustomerNameMissing", CustomState = new ValidationHelp("Set CustomerName to the customer's full name.") });
+                            { ErrorCode = "CustomerNameMissing" });
 
                         if (string.IsNullOrEmpty(customer.CustomerZip))
                             context.AddFailure(new FluentValidation.Results.ValidationFailure(
                                 "cbCustomer.CustomerZip", "Customer zip code must not be empty")
-                            { ErrorCode = "CustomerZipMissing", CustomState = new ValidationHelp("Set CustomerZip to the customer's postal code.") });
+                            { ErrorCode = "CustomerZipMissing" });
 
                         if (string.IsNullOrEmpty(customer.CustomerStreet))
                             context.AddFailure(new FluentValidation.Results.ValidationFailure(
                                 "cbCustomer.CustomerStreet", "Customer street must not be empty")
-                            { ErrorCode = "CustomerStreetMissing", CustomState = new ValidationHelp("Set CustomerStreet to the customer's street address.") });
+                            { ErrorCode = "CustomerStreetMissing" });
                     });
             });
         }

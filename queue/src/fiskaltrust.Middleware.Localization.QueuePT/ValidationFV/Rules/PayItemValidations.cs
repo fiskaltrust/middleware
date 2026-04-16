@@ -1,6 +1,5 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Validation;
 using FluentValidation;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.ValidationFV.Rules;
@@ -35,8 +34,7 @@ public class PayItemValidations : AbstractValidator<ReceiptRequest>
                             .Sum(payItem => payItem.Amount);
                         return $"Cash payment amount ({totalCashAmount:F2}) exceeds limit of {Limit:F2}€";
                     })
-                    .WithErrorCode("CashPaymentExceedsLimit")
-                    .WithState(_ => new ValidationHelp("Portuguese law prohibits cash payments above 3000€. Use electronic payment or split the receipt."));
+                    .WithErrorCode("CashPaymentExceedsLimit");
             });
         }
     }

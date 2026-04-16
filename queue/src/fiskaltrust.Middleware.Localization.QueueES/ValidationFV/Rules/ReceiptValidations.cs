@@ -2,7 +2,6 @@
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Validation;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms;
 using FluentValidation;
 
@@ -25,8 +24,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .Must(items => items!.All(ci => ci.ftChargeItemCase.Country() == "ES"))
                 .When(x => x.cbChargeItems != null)
                 .WithMessage("All charge items must use the ES country code.")
-                .WithErrorCode("ChargeItemCaseCountryMismatch")
-                .WithState(_ => new ValidationHelp("Use ES-prefixed ftChargeItemCase values."));
+                .WithErrorCode("ChargeItemCaseCountryMismatch");
         }
     }
 

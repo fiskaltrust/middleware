@@ -1,6 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using FluentValidation;
 
@@ -25,8 +24,7 @@ public class PayItemValidations : AbstractValidator<ReceiptRequest>
                     payItem.RuleFor(x => x.ftPayItemCase)
                         .Must(c => c.Country() == queue!.CountryCode)
                         .WithMessage(item => $"Pay item case country '{item.ftPayItemCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
-                        .WithErrorCode("PayItemCaseCountryMismatch")
-                        .WithState(_ => new ValidationHelp("Use ftPayItemCase values that match the country code configured for this queue."));
+                        .WithErrorCode("PayItemCaseCountryMismatch");
                 });
             });
         }

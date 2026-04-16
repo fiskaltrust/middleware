@@ -4,7 +4,6 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 using FluentValidation;
-using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 
@@ -33,15 +32,13 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
         {
             RuleFor(x => x.cbChargeItems)
                 .NotNull()
-                .WithMessage("cbChargeItems must not be null.")
-                .WithErrorCode("ChargeItemsMissing")
-                .WithState(_ => new ValidationHelp("Always send cbChargeItems. Use [] if empty."));
+                // .WithMessage("cbChargeItems must not be null")
+                .WithErrorCode("ChargeItemsMissing");
 
             RuleFor(x => x.cbPayItems)
                 .NotNull()
-                .WithMessage("cbPayItems must not be null.")
-                .WithErrorCode("PayItemsMissing")
-                .WithState(_ => new ValidationHelp("Always send cbPayItems. Use [] if empty."));
+                // .WithMessage("cbPayItems must not be null")
+                .WithErrorCode("PayItemsMissing");
         }
     }
 
@@ -69,8 +66,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                         var difference = Math.Abs(chargeItemsSum - payItemsSum);
                         return $"Receipt is not balanced: charge items sum ({chargeItemsSum:F2}) does not match pay items sum ({payItemsSum:F2}), difference: {difference:F2}";
                     })
-                    .WithErrorCode("ReceiptNotBalanced")
-                    .WithState(_ => new ValidationHelp("The sum of cbChargeItems.Amount must equal the sum of cbPayItems.Amount (tolerance 0.01€)."));
+                    .WithErrorCode("ReceiptNotBalanced");
             });
         }
     }
@@ -83,9 +79,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .NotNull()
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
                         && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-                .WithMessage("Refund receipt must have cbPreviousReceiptReference.")
-                .WithErrorCode("RefundMissingPreviousReceiptReference")
-                .WithState(_ => new ValidationHelp("Set cbPreviousReceiptReference to the original receipt's cbReceiptReference."));
+                .WithMessage("Refund receipt must have cbPreviousReceiptReference")
+                .WithErrorCode("RefundMissingPreviousReceiptReference");
         }
     }
 
@@ -97,9 +92,8 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 .NotNull()
                 .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
                         && x.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
-                .WithMessage("PaymentTransfer receipt must have cbPreviousReceiptReference.")
-                .WithErrorCode("PaymentTransferMissingPreviousReceiptReference")
-                .WithState(_ => new ValidationHelp("Set cbPreviousReceiptReference to the original invoice's cbReceiptReference."));
+                .WithMessage("PaymentTransfer receipt must have cbPreviousReceiptReference")
+                .WithErrorCode("PaymentTransferMissingPreviousReceiptReference");
         }
     }
 
@@ -151,8 +145,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
                     && x.cbPreviousReceiptReference != null)
                 .WithMessage("Refunding a receipt is only supported with single references.")
-                .WithErrorCode("RefundGroupReferenceNotSupported")
-                .WithState(_ => new ValidationHelp("Set cbPreviousReceiptReference to a single string, not an array."));
+                .WithErrorCode("RefundGroupReferenceNotSupported");
         }
     }
 
@@ -166,8 +159,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     && x.IsPartialRefundReceipt()
                     && x.cbPreviousReceiptReference != null)
                 .WithMessage("Partial refunding a receipt is only supported with single references.")
-                .WithErrorCode("PartialRefundGroupReferenceNotSupported")
-                .WithState(_ => new ValidationHelp("Set cbPreviousReceiptReference to a single string, not an array."));
+                .WithErrorCode("PartialRefundGroupReferenceNotSupported");
         }
     }
 
@@ -181,8 +173,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     && x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     && x.cbPreviousReceiptReference != null)
                 .WithMessage("Voiding a receipt is only supported with single references.")
-                .WithErrorCode("VoidGroupReferenceNotSupported")
-                .WithState(_ => new ValidationHelp("Set cbPreviousReceiptReference to a single string, not an array."));
+                .WithErrorCode("VoidGroupReferenceNotSupported");
         }
     }
 
@@ -196,8 +187,7 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     .Must(request => request.ftReceiptCase.Country() == queue!.CountryCode)
                     .WithMessage(request =>
                         $"Receipt case country '{request.ftReceiptCase.Country()}' does not match queue country '{queue!.CountryCode}'.")
-                    .WithErrorCode("ReceiptCaseCountryMismatch")
-                    .WithState(_ => new ValidationHelp("Use ftReceiptCase values that match the country code configured for this queue."));
+                    .WithErrorCode("ReceiptCaseCountryMismatch");
             });
         }
     }

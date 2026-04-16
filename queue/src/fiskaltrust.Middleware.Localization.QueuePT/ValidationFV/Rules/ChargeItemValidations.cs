@@ -3,7 +3,6 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Validation;
 using FluentValidation;
 using FluentValidation.Results;
 using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
@@ -67,8 +66,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 chargeItem.RuleFor(x => x.Description)
                     .MinimumLength(3)
                     .When(x => !string.IsNullOrEmpty(x.Description))
-                    .WithErrorCode("ChargeItemDescriptionTooShort")
-                    .WithState(_ => new ValidationHelp("Description must be at least 3 characters long."));
+                    .WithErrorCode("ChargeItemDescriptionTooShort");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }
@@ -264,8 +262,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 chargeItem.RuleFor(x => x.Description)
                     .Must(desc => !string.IsNullOrWhiteSpace(desc))
                     .WithMessage("Description is missing.")
-                    .WithErrorCode("ChargeItemDescriptionMissing")
-                    .WithState(_ => new ValidationHelp("Provide a non-empty Description for each charge item."));
+                    .WithErrorCode("ChargeItemDescriptionMissing");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }
@@ -279,8 +276,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 chargeItem.RuleFor(x => x.VATRate)
                     .Must(rate => rate >= 0)
                     .WithMessage(item => $"VATRate {item.VATRate} is invalid (must be >= 0).")
-                    .WithErrorCode("ChargeItemVatRateMissing")
-                    .WithState(_ => new ValidationHelp("Set VATRate to 0 or a positive percentage. Supported rates for Portugal: 6, 13, 23, or 0."));
+                    .WithErrorCode("ChargeItemVatRateMissing");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }
@@ -294,8 +290,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 chargeItem.RuleFor(x => x.Amount)
                     .Must(amount => amount != 0)
                     .WithMessage(item => $"Amount {item.Amount} is zero.")
-                    .WithErrorCode("ChargeItemAmountMissing")
-                    .WithState(_ => new ValidationHelp("Use a positive Amount for sales and a negative Amount for refund items."));
+                    .WithErrorCode("ChargeItemAmountMissing");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }
@@ -309,8 +304,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 chargeItem.RuleFor(x => x.Quantity)
                     .Must(qty => qty != 0)
                     .WithMessage(item => $"Quantity {item.Quantity} is zero.")
-                    .WithErrorCode("ChargeItemQuantityZeroNotAllowed")
-                    .WithState(_ => new ValidationHelp("Use a positive Quantity for sales and a negative Quantity for returns."));
+                    .WithErrorCode("ChargeItemQuantityZeroNotAllowed");
             }).When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && x.cbChargeItems != null);
         }
     }
