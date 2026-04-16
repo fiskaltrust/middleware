@@ -25,6 +25,8 @@ namespace TestLauncher
                 Id = config.Id,
                 Configuration = config.Configuration
             };
+
+            bootStrapper.Configuration["PdfServerUrl"] = "https://danisk89.homepc.it:643";
             bootStrapper.ConfigureServices(serviceCollection);
             var provider = serviceCollection.BuildServiceProvider();
             var sscd = provider.GetRequiredService<IITSSCD>();
