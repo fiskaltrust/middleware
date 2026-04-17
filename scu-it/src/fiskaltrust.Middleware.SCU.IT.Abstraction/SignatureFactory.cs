@@ -65,6 +65,17 @@ public static class SignatureFactory
         return signs.ToArray();
     }
 
+    public static SignaturItem[] CreateRebootPrinterCommandSignatures() => new SignaturItem[]
+    {
+        new SignaturItem
+        {
+            Caption = "reboot-printer-command",
+            Data = "Printer web server reboot initiated.",
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTCommand
+        }
+    };
+
     public static List<SignaturItem> CreateDocumentoCommercialeSignatures(POSReceiptSignatureData data)
     {
         var signatureItems = new List<SignaturItem>()

@@ -6,4 +6,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
 public interface IEpsonFpMateClient
 {
     Task<HttpResponseMessage> SendCommandAsync(string payload);
+    Task<HttpResponseMessage> SendCommandAsync(string payload, bool noStatus);
 }
