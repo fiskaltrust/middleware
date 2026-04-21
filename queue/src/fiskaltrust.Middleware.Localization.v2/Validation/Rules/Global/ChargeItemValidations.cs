@@ -29,7 +29,15 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 {
                     chargeItem.RuleFor(x => x.Description).NotEmpty();
                     chargeItem.RuleFor(x => x.VATRate).GreaterThanOrEqualTo(0);
-                    chargeItem.RuleFor(x => x.Amount).NotEqual(0m);
+                });
+            });
+
+            When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
+                    && !x.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005), () =>
+            {
+                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+                {
+                    chargeItem.RuleFor(x => x.Amount).NotEqual(0m).WithErrorCode("ChargeItemAmountMissing");
                 });
             });
         }
