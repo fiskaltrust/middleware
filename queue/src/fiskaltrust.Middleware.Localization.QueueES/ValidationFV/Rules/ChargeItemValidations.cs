@@ -16,7 +16,22 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
             Include(new SupportedChargeItemCases());
             Include(new VatRateCategory());
             Include(new ZeroVatNature());
+            Include(new AmountMustNotBeZero());
         });
+    }
+
+    public class AmountMustNotBeZero : AbstractValidator<ReceiptRequest>
+    {
+        public AmountMustNotBeZero()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Amount)
+                    .NotEqual(0m)
+                    .WithMessage(item => $"Amount {item.Amount} is zero.")
+                    .WithErrorCode("ChargeItemAmountMissing");
+            });
+        }
     }
 
     public class VatAmountRequired : AbstractValidator<ReceiptRequest>
