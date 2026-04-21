@@ -75,7 +75,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         receiptProcessor.SetShadowValidation(fvValidator, shadowLogger);
         invoiceProcessor.SetShadowValidation(fvValidator, shadowLogger);
 
-        var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), fvValidator, new LifecycleCommandProcessorES(queueStorageProvider, storageProvider.CreateConfigurationRepository()), receiptProcessor, new DailyOperationsCommandProcessorES(essscd, queueStorageProvider), invoiceProcessor, new ProtocolCommandProcessorES());
+        var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), fvValidator, new LifecycleCommandProcessorES(queueStorageProvider, storageProvider.CreateConfigurationRepository()), receiptProcessor, new DailyOperationsCommandProcessorES(essscd, queueStorageProvider), invoiceProcessor, new ProtocolCommandProcessorES(), ValidationConfiguration.FromConfiguration(configuration));
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.CreateMiddlewareJournalESRepository()), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
