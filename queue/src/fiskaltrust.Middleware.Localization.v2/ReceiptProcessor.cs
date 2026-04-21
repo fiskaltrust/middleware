@@ -167,7 +167,6 @@ public class ReceiptProcessor : IReceiptProcessor
                 error.ErrorCode,
                 error.ErrorMessage
             );
-            }
         }
     }
 
