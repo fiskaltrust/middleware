@@ -13,6 +13,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
         {
             Include(new VatAmountRequired());
             Include(new SupportedVatRates());
+            Include(new SupportedChargeItemCases());
             Include(new VatRateCategory());
             Include(new ZeroVatNature());
         });
@@ -28,6 +29,30 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     .NotNull()
                     .WithMessage("VAT amount is missing.")
                     .WithErrorCode("ChargeItemVATAmountMissing");
+            });
+        }
+    }
+
+    public class SupportedChargeItemCases : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly ChargeItemCaseTypeOfService[] _supported =
+        [
+            ChargeItemCaseTypeOfService.UnknownService,
+            ChargeItemCaseTypeOfService.Delivery,
+            ChargeItemCaseTypeOfService.OtherService,
+            ChargeItemCaseTypeOfService.Tip,
+            ChargeItemCaseTypeOfService.CatalogService,
+            ChargeItemCaseTypeOfService.Receivable
+        ];
+
+        public SupportedChargeItemCases()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.ftChargeItemCase)
+                    .Must(c => _supported.Contains(c.TypeOfService()))
+                    .WithMessage(item => $"Unsupported charge item service type '{item.ftChargeItemCase.TypeOfService()}'.")
+                    .WithErrorCode("UnsupportedChargeItemServiceType");
             });
         }
     }
@@ -100,11 +125,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         if (Math.Abs(vatRate) > 0.001m)
                             return true;
 
-                        var natureValue = item.ftChargeItemCase.NatureOfVat();
-                        if (natureValue == ChargeItemCaseNatureOfVatES.UsualVatApplies)
-                            return false;
-
-                        return Enum.IsDefined(natureValue);
+                        return item.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable);
                     })
                     .WithMessage(item =>
                     {
