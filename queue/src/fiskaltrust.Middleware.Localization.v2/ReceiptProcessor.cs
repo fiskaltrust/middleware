@@ -154,20 +154,19 @@ public class ReceiptProcessor : IReceiptProcessor
     {
         foreach (var error in validationResult.Errors)
         {
-            switch (error.Severity)
-            {
-                case FluentValidation.Severity.Warning:
-                    _logger.LogWarning("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
-                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
-                    break;
-                case FluentValidation.Severity.Info:
-                    _logger.LogInformation("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
-                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
-                    break;
-                default:
-                    _logger.LogError("FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
-                        request.cbReceiptReference, request.ftReceiptCase, error.ErrorCode, error.ErrorMessage);
-                    break;
+            _logger.Log(
+                error.Severity switch
+                {
+                    FluentValidation.Severity.Warning => LogLevel.Warning,
+                    FluentValidation.Severity.Info => LogLevel.Information,
+                    _ => LogLevel.Error,
+                },
+                "FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                request.cbReceiptReference,
+                request.ftReceiptCase,
+                error.ErrorCode,
+                error.ErrorMessage
+            );
             }
         }
     }
