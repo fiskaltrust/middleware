@@ -20,6 +20,7 @@ public class ReceiptCommandProcessorGRTests
     [Theory]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    [InlineData(ReceiptCase.ECommerce0x0004)]
     public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
     {
         var queue = TestHelpers.CreateQueue();
@@ -71,7 +72,6 @@ public class ReceiptCommandProcessorGRTests
 
     [Theory]
     [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
-    [InlineData(ReceiptCase.ECommerce0x0004)]
     public async Task ProcessReceiptAsync_ForNotSupportedOperations_ShouldReturnError(ReceiptCase receiptCase)
     {
         var queue = TestHelpers.CreateQueue();
