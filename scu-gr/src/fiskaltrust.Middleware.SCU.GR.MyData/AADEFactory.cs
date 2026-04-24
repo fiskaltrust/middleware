@@ -119,19 +119,16 @@ public class AADEFactory
         return doc;
     }
 
+    public static bool HasInvoiceTypeOverride(ReceiptRequest receiptRequest)
+    {
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData)
+            && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
+    }
+
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         try
         {
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004))
-            {
-                if (!receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData)
-                    || string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType))
-                {
-                    throw new Exception("ECommerce receipts require an explicit invoiceType override in ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.invoiceType.");
-                }
-            }
-
             foreach (var chargeItem in receiptRequest.cbChargeItems)
             {
                 chargeItem.Amount = Math.Round(chargeItem.Amount, 2);

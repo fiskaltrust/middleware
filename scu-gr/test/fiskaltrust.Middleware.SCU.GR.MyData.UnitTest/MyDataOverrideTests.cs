@@ -2360,26 +2360,17 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_ECommerceWithoutOverride_ShouldReturnError()
+    public void HasInvoiceTypeOverride_WithoutCaseData_ReturnsFalse()
     {
-        var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
-        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.ECommerce0x0004);
-        var response = CreateBasicReceiptResponse(request);
 
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        doc.Should().BeNull();
-        error.Should().NotBeNull();
-        error!.Exception.Message.Should().Contain("ECommerce receipts require an explicit invoiceType override");
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeFalse();
     }
 
     [Fact]
-    public void MapToInvoicesDoc_ECommerceWithOverrideButNoInvoiceType_ShouldReturnError()
+    public void HasInvoiceTypeOverride_WithOverrideButNoInvoiceType_ReturnsFalse()
     {
-        var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
-        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.ECommerce0x0004);
         request.ftReceiptCaseData = new
         {
             GR = new
@@ -2396,13 +2387,32 @@ public class MyDataOverrideTests
                 }
             }
         };
-        var response = CreateBasicReceiptResponse(request);
 
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeFalse();
+    }
 
-        doc.Should().BeNull();
-        error.Should().NotBeNull();
-        error!.Exception.Message.Should().Contain("ECommerce receipts require an explicit invoiceType override");
+    [Fact]
+    public void HasInvoiceTypeOverride_WithInvoiceType_ReturnsTrue()
+    {
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "11.1"
+                        }
+                    }
+                }
+            }
+        };
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeTrue();
     }
 
     [Fact]
