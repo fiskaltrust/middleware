@@ -119,6 +119,12 @@ public class AADEFactory
         return doc;
     }
 
+    public static bool HasInvoiceTypeOverride(ReceiptRequest receiptRequest)
+    {
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData)
+            && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
+    }
+
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         try
