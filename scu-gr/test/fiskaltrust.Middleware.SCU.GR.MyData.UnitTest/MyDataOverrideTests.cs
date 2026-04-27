@@ -2358,4 +2358,91 @@ public class MyDataOverrideTests
         xml.Should().Contain("<postalCode>80331</postalCode>");
         xml.Should().Contain("<city>München</city>");
     }
+
+    [Fact]
+    public void HasInvoiceTypeOverride_WithoutCaseData_ReturnsFalse()
+    {
+        var request = CreateBasicReceiptRequest();
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasInvoiceTypeOverride_WithOverrideButNoInvoiceType_ReturnsFalse()
+    {
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            dispatchDate = "2025-06-18"
+                        }
+                    }
+                }
+            }
+        };
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasInvoiceTypeOverride_WithInvoiceType_ReturnsTrue()
+    {
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "11.1"
+                        }
+                    }
+                }
+            }
+        };
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ECommerceWithInvoiceTypeOverride_ShouldUseOverrideType()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.ECommerce0x0004);
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "11.1"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+    }
 }

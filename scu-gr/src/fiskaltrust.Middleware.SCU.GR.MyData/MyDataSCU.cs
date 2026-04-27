@@ -71,6 +71,16 @@ public class MyDataSCU : IGRSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
+            && !AADEFactory.HasInvoiceTypeOverride(request.ReceiptRequest))
+        {
+            _logger.LogInformation("Skipping myDATA submission for ECommerce receipt '{ReceiptReference}' (QueueItemId: {QueueItemId}): no invoiceType override provided.", request.ReceiptRequest.cbReceiptReference, request.ReceiptResponse.ftQueueItemID);
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
         if (string.IsNullOrEmpty(_masterDataConfiguration.Account.VatId))
         {
             SetErrorAndLog(request,"The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
