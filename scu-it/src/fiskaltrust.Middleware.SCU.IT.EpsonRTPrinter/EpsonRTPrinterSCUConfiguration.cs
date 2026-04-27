@@ -24,8 +24,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         public string? AdditionalTrailerLines { get; set; }
 
         /// <summary>
-        /// Base URL of the PDF server exposing /Fiskaltrust/getPDF.php,
-        /// e.g. http://192.168.1.100:643 . This is required for e-receipt PDF functionality.
+        /// Base URL of the PDF signing service exposing /Fiskaltrust/getPDF.php.
+        /// Injected by the host configuration. When unset, PDF signature fetching is disabled.
         /// </summary>
         public string? PdfServerUrl { get; set; }
     }

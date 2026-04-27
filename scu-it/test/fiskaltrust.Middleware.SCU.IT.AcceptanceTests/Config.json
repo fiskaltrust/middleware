@@ -1,4 +1,5 @@
 {
   "DeviceUrl": "http://194.93.177.143/",
-  "AdditionalTrailerLines": "[\\\"T.{cbArea} K.{cbUser}\\\",\\\"\\\"]"
+  "AdditionalTrailerLines": "[\\\"T.{cbArea} K.{cbUser}\\\",\\\"\\\"]",
+  "PdfServerUrl": "https://signing-sandbox.fiskaltrust.it"
 }

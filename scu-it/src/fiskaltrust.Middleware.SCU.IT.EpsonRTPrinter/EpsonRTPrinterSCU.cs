@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v1.errors;
+﻿using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
@@ -30,6 +30,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         _httpClient = epsonCloudHttpClient;
         _configuration = configuration;
         _pdfClient = pdfClient;
+        _logger.LogInformation("Epson PDF signing service url: {Url}", string.IsNullOrWhiteSpace(configuration.PdfServerUrl) ? "<disabled>" : configuration.PdfServerUrl);
     }
 
     public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
@@ -260,6 +261,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             };
             var signatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur);
             await AddPdfSignatureAsync(signatures,
+                request.ReceiptRequest.ftCashBoxID.ToString(),
                 fiscalReceiptResponse.ZRepNumber.ToString(),
                 fiscalReceiptResponse.ReceiptNumber.ToString(),
                 posReceiptSignatur.RTSerialNumber ?? "",
@@ -314,6 +316,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             };
             var signatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur);
             await AddPdfSignatureAsync(signatures,
+                request.ReceiptRequest.ftCashBoxID.ToString(),
                 fiscalReceiptResponse.ZRepNumber.ToString(),
                 fiscalReceiptResponse.ReceiptNumber.ToString(),
                 posReceiptSignatur.RTSerialNumber,
@@ -719,14 +722,14 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     private async Task<HttpResponseMessage> PerformReprint(string day, string month, string year, long receiptNumber) => await _httpClient.SendCommandAsync(EpsonCommandFactory.ReprintCommand(day, month, year, receiptNumber));
 
-    private async Task AddPdfSignatureAsync(List<SignaturItem> signatures, string znum, string numdoc, string matricola, string date)
+    private async Task AddPdfSignatureAsync(List<SignaturItem> signatures, string cashBoxId, string znum, string numdoc, string matricola, string date)
     {
-        if (string.IsNullOrEmpty(_configuration.PdfServerUrl))
+        if (string.IsNullOrWhiteSpace(_configuration.PdfServerUrl))
         {
             return;
         }
 
-        var pdfResponse = await _pdfClient.GetReceiptPdfAsync(znum, numdoc, matricola, date);
+        var pdfResponse = await _pdfClient.GetReceiptPdfAsync(cashBoxId, znum, numdoc, matricola, date);
         if (pdfResponse?.ok == true && !string.IsNullOrEmpty(pdfResponse.base64))
         {
             signatures.Add(new SignaturItem

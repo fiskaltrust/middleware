@@ -25,14 +25,14 @@ public class PdfReceiptClient : IPdfReceiptClient
         }
     }
 
-    public async Task<GetPdfResponse?> GetReceiptPdfAsync(string znum, string numdoc, string matricola, string date)
+    public async Task<GetPdfResponse?> GetReceiptPdfAsync(string cashBoxId, string znum, string numdoc, string matricola, string date)
     {
         if (string.IsNullOrEmpty(_baseUrl))
         {
             return null;
         }
 
-        var endpoint = $"{_baseUrl}/Fiskaltrust/getPDF.php?znum={Uri.EscapeDataString(znum)}&numdoc={Uri.EscapeDataString(numdoc)}&matricola={Uri.EscapeDataString(matricola)}&data={Uri.EscapeDataString(date)}";
+        var endpoint = $"{_baseUrl}/files/getPDF?cashboxid={Uri.EscapeDataString(cashBoxId)}&znum={Uri.EscapeDataString(znum)}&numdoc={Uri.EscapeDataString(numdoc)}&matricola={Uri.EscapeDataString(matricola)}&data={Uri.EscapeDataString(date)}";
 
         try
         {

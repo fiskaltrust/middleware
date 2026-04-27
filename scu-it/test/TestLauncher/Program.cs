@@ -15,6 +15,11 @@ namespace TestLauncher
 
         public static async Task Main()
         {
+            if (string.IsNullOrWhiteSpace(cashBoxId) || string.IsNullOrWhiteSpace(accessToken))
+            {
+                throw new Exception("Missing credentials. Set FT_CASHBOX_ID and FT_ACCESS_TOKEN environment variables.");
+            }
+
             var cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(cashBoxId, accessToken).ConfigureAwait(false);
             var config = cashBoxConfiguration.ftSignaturCreationDevices[0];
             config.Package = "fiskaltrust.Middleware.SCU.IT.Epson";
@@ -26,7 +31,7 @@ namespace TestLauncher
                 Configuration = config.Configuration
             };
 
-            bootStrapper.Configuration["PdfServerUrl"] = "https://danisk89.homepc.it:643";
+            bootStrapper.Configuration["PdfServerUrl"] = "https://signing-sandbox.fiskaltrust.it";
             bootStrapper.ConfigureServices(serviceCollection);
             var provider = serviceCollection.BuildServiceProvider();
             var sscd = provider.GetRequiredService<IITSSCD>();

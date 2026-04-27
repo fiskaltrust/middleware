@@ -11,7 +11,8 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         {
             DeviceUrl = _serverUri.ToString(),
             Password = "21719",
-            AdditionalTrailerLines = "[\"T.{cbArea} K.{cbUser}\",\"\"]"
+            AdditionalTrailerLines = "[\"T.{cbArea} K.{cbUser}\",\"\"]",
+            PdfServerUrl = "https://signing-sandbox.fiskaltrust.it"
         };
 
         protected override string SerialNumber => "99IEC018305";
