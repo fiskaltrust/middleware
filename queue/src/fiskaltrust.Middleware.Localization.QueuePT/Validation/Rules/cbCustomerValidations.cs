@@ -44,7 +44,8 @@ public static class cbCustomerValidations
 
         if (!string.IsNullOrWhiteSpace(middlewareCustomer.CustomerVATId))
         {
-            if (!PortugalValidationHelpers.IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
+            var isPortugueseOrUnknownCountry = string.IsNullOrWhiteSpace(middlewareCustomer.CustomerCountry) || middlewareCustomer.CustomerCountry == "PT";
+            if (isPortugueseOrUnknownCountry && !PortugalValidationHelpers.IsValidPortugueseTaxId(middlewareCustomer.CustomerVATId))
             {
                 var rule = PortugalValidationRules.InvalidPortugueseTaxId;
                 yield return ValidationResult.Failed(new ValidationError(

@@ -39,6 +39,9 @@ public class CustomerValidations : AbstractValidator<ReceiptRequest>
                     if (string.IsNullOrWhiteSpace(customer.CustomerVATId))
                         return;
 
+                    if (!string.IsNullOrWhiteSpace(customer.CustomerCountry) && customer.CustomerCountry != "PT")
+                        return;
+
                     if (!TaxIdValidation.IsValidPortugueseNif(customer.CustomerVATId))
                     {
                         context.AddFailure(new FluentValidation.Results.ValidationFailure(

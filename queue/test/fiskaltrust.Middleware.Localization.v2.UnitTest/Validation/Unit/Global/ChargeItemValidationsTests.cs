@@ -40,20 +40,6 @@ public class ChargeItemValidationsTests
     }
 
     [Fact]
-    public void MandatoryFields_ZeroAmount_ShouldFail()
-    {
-        var validator = new ChargeItemValidations.MandatoryFields();
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
-            cbChargeItems = [new ChargeItem { Description = "Item", VATRate = 19m, Amount = 0m }],
-            cbPayItems = []
-        };
-        var result = validator.TestValidate(request);
-        result.ShouldHaveAnyValidationError();
-    }
-
-    [Fact]
     public void MandatoryFields_ValidItem_ShouldPass()
     {
         var validator = new ChargeItemValidations.MandatoryFields();

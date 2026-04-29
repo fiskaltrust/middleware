@@ -29,9 +29,9 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 {
                     chargeItem.RuleFor(x => x.Description).NotEmpty();
                     chargeItem.RuleFor(x => x.VATRate).GreaterThanOrEqualTo(0);
-                    chargeItem.RuleFor(x => x.Amount).NotEqual(0m);
                 });
             });
+
         }
     }
 
