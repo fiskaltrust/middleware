@@ -12,8 +12,8 @@ public class PTCustomerValidationsTests
     private static ReceiptCase PtReceiptCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT");
     private static ReceiptCase PtHandWrittenCase => ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT").WithFlag(ReceiptCaseFlags.HandWritten);
 
-    private static object SerializeCustomer(string? vatId) =>
-        new MiddlewareCustomer { CustomerVATId = vatId };
+    private static object SerializeCustomer(string? vatId, string? country = null) =>
+        new MiddlewareCustomer { CustomerVATId = vatId, CustomerCountry = country };
 
     // ─── CustomerTaxId ──────────────────────────────────────────────────────────
 
@@ -93,5 +93,36 @@ public class PTCustomerValidationsTests
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CustomerTaxId_ForeignCustomer_ShouldSkipNifValidation()
+    {
+        var validator = new CustomerValidations.CustomerTaxId();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbCustomer = SerializeCustomer("026883248", "GR"),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void CustomerTaxId_NoCountry_InvalidNif_ShouldFail()
+    {
+        var validator = new CustomerValidations.CustomerTaxId();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbCustomer = SerializeCustomer("123456780"),
+            cbChargeItems = [],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbCustomer.CustomerVATId")
+            .WithErrorCode("InvalidPortugueseTaxId");
     }
 }
