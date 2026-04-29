@@ -140,7 +140,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         if (Math.Abs(vatRate) > 0.001m)
                             return true;
 
-                        return item.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable);
+                        return item.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) || item.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatES.UsualVatApplies;
                     })
                     .WithMessage(item =>
                     {
