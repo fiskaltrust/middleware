@@ -544,7 +544,6 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                 })
                 .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
                         && x.cbChargeItems != null
-                        && !x.IsPartialRefundReceipt()
                         && x.cbPreviousReceiptReference != null)
                 .WithMessage("Full refund items mismatch with the original receipt.")
                 .WithErrorCode("FullRefundItemsMismatch");
@@ -565,7 +564,10 @@ public class ReceiptValidations : AbstractValidator<ReceiptRequest>
                     var error = await refundValidator.ValidatePartialRefundAsync(request, original, previousRef);
                     return error == null;
                 })
-                .When(x => x.cbChargeItems != null && x.IsPartialRefundReceipt() && x.cbPreviousReceiptReference != null)
+                .When(x => x.cbChargeItems != null
+                        && x.IsPartialRefundReceipt()
+                        && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+                        && x.cbPreviousReceiptReference != null)
                 .WithMessage("Partial refund items mismatch with the original receipt.")
                 .WithErrorCode("PartialRefundItemsMismatch");
         }

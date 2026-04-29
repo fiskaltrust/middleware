@@ -323,17 +323,22 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                    ));
             }
 
-            if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-            {
-                yield return await ValidateRefundAsync(_receiptRequest, _receiptResponse);
-            }
-
+            // Void runs independently — a receipt may carry both Void and Refund flags,
+            // and both validations need to fire in that case.
             if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
             {
                 yield return await ValidateVoidAsync(_receiptRequest, _receiptResponse);
             }
 
-            if (_receiptRequest.IsPartialRefundReceipt())
+            // A (full) refund and a partial refund are mutually exclusive: if the receipt-level
+            // Refund flag is set, the request is a full refund regardless of any chargeitem-level
+            // Refund flags. Only when there is no receipt-level Refund flag do chargeitem-level
+            // Refund flags identify the request as a partial refund.
+            if (_receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                yield return await ValidateRefundAsync(_receiptRequest, _receiptResponse);
+            }
+            else if (_receiptRequest.IsPartialRefundReceipt())
             {
                 yield return await ValidatePartialRefundAsync(_receiptRequest, _receiptResponse);
             }
