@@ -56,6 +56,11 @@ public class ReceiptRequestValidations
     /// </summary>
     public static IEnumerable<ValidationResult> ValidateOtherServiceNetAmountLimit(ReceiptRequest request)
     {
+        if (!request.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+        {
+            yield break;
+        }
+
         if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
         {
             yield break;
