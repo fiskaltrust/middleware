@@ -133,13 +133,11 @@ public class AADEFactory
             {
                 chargeItem.Amount = Math.Round(chargeItem.Amount, 2);
                 chargeItem.VATAmount = Math.Round(chargeItem.GetVATAmount(), 2);
-                chargeItem.Quantity = Math.Round(chargeItem.Quantity, 2);
             }
 
             foreach (var payItem in receiptRequest.cbPayItems)
             {
                 payItem.Amount = Math.Round(payItem.Amount, 2);
-                payItem.Quantity = Math.Round(payItem.Quantity, 2);
             }
             (var valid, var validationError) = ValidationGR.ValidateReceiptRequest(receiptRequest);
             if (!valid)
