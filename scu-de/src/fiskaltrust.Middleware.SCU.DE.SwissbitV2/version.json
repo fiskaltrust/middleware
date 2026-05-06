@@ -4,10 +4,10 @@
     "/scu-de/src/fiskaltrust.Middleware.SCU.DE.SwissbitV2"
   ],
   "publicReleaseRefSpec": [
-    "^refs/tags/scu-de/swissbit/v.+"
+    "^refs/tags/scu-de/swissbitv2/v.+"
   ],
   "release": {
-    "tagName": "scu-de/swissbit/v{version}"
+    "tagName": "scu-de/swissbitv2/v{version}"
   },
   "inherit": true
 }
