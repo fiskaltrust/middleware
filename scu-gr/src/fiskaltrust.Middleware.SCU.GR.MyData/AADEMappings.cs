@@ -533,6 +533,17 @@ public static class AADEMappings
         PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
 
+    /// <summary>
+    /// Determines whether a pay item should be transmitted to the myDATA API as a payment method.
+    /// Internal material consumption has no AADE payment-method counterpart and is filtered out
+    /// so it never appears in <c>inv.paymentMethods</c> nor in a standalone <c>SendPaymentsMethod</c> call.
+    /// </summary>
+    public static bool ShouldTransmitPayItem(PayItem payItem) => payItem.ftPayItemCase.Case() switch
+    {
+        PayItemCase.InternalMaterialConsumption => false,
+        _ => true
+    };
+
     private static int GetSEPATransferPaymentType(string description)
     {
         if (string.IsNullOrEmpty(description))
