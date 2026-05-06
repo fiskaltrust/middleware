@@ -340,6 +340,43 @@ public class GetPaymentsTests
 
     #endregion
 
+    #region Filtering of non-transmittable pay items
+
+    [Fact]
+    public void InternalMaterialConsumption_ShouldBeFilteredOut()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem { Position = 1, Amount = 10.0m, Description = "Cash",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.CashPayment)) },
+            new PayItem { Position = 2, Amount = 5.0m, Description = "Material consumption",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.InternalMaterialConsumption)) }
+        });
+
+        details.Should().HaveCount(1, "InternalMaterialConsumption must be filtered before mapping");
+        details[0].type.Should().Be(MyDataPaymentMethods.Cash);
+        details[0].amount.Should().Be(10.0m);
+    }
+
+    [Fact]
+    public void OnlyInternalMaterialConsumption_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = BuildRequest(new List<PayItem>
+        {
+            new PayItem { Position = 1, Amount = 10.0m, Description = "Material consumption",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.InternalMaterialConsumption)) }
+        });
+
+        (var doc, var error) = factory.MapToPaymentMethodsDoc(request, 123);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("At least one payment method detail is required");
+    }
+
+    #endregion
+
     #region Combined Tip + Provider Data
 
     [Fact]

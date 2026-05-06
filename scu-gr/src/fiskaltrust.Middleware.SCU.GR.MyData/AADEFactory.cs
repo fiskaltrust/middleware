@@ -1231,7 +1231,9 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.GetGroupedPayItems().Select(group =>
+        return receiptRequest.GetGroupedPayItems()
+            .Where(group => AADEMappings.ShouldTransmitPayItem(group.payItem))
+            .Select(group =>
         {
             var x = group.payItem;
             var payment = new PaymentMethodDetailType
