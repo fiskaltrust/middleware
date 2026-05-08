@@ -38,6 +38,36 @@ public class InvoiceRowTypeOverride
     [JsonPropertyName("itemCode")]
     public string? ItemCode { get; set; }
 
+    [JsonPropertyName("itemDescr")]
+    public string? ItemDescr { get; set; }
+
+    [JsonPropertyName("withheldAmount")]
+    public decimal? WithheldAmount { get; set; }
+
+    [JsonPropertyName("withheldPercentCategory")]
+    public int? WithheldPercentCategory { get; set; }
+
+    [JsonPropertyName("stampDutyAmount")]
+    public decimal? StampDutyAmount { get; set; }
+
+    [JsonPropertyName("stampDutyPercentCategory")]
+    public int? StampDutyPercentCategory { get; set; }
+
+    [JsonPropertyName("feesAmount")]
+    public decimal? FeesAmount { get; set; }
+
+    [JsonPropertyName("feesPercentCategory")]
+    public int? FeesPercentCategory { get; set; }
+
+    [JsonPropertyName("otherTaxesAmount")]
+    public decimal? OtherTaxesAmount { get; set; }
+
+    [JsonPropertyName("otherTaxesPercentCategory")]
+    public int? OtherTaxesPercentCategory { get; set; }
+
+    [JsonPropertyName("deductionsAmount")]
+    public decimal? DeductionsAmount { get; set; }
+
     [JsonPropertyName("otherMeasurementUnitQuantity")]
     public int? OtherMeasurementUnitQuantity { get; set; }
 

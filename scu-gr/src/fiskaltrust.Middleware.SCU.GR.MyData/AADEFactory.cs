@@ -661,6 +661,53 @@ public class AADEFactory
             row.TaricNo = detailOverride.TaricNo;
         if (!string.IsNullOrEmpty(detailOverride.ItemCode))
             row.itemCode = detailOverride.ItemCode;
+        if (!string.IsNullOrEmpty(detailOverride.ItemDescr))
+            row.itemDescr = detailOverride.ItemDescr;
+        if (detailOverride.WithheldAmount.HasValue)
+        {
+            row.withheldAmount = detailOverride.WithheldAmount.Value;
+            row.withheldAmountSpecified = true;
+        }
+        if (detailOverride.WithheldPercentCategory.HasValue)
+        {
+            row.withheldPercentCategory = detailOverride.WithheldPercentCategory.Value;
+            row.withheldPercentCategorySpecified = true;
+        }
+        if (detailOverride.StampDutyAmount.HasValue)
+        {
+            row.stampDutyAmount = detailOverride.StampDutyAmount.Value;
+            row.stampDutyAmountSpecified = true;
+        }
+        if (detailOverride.StampDutyPercentCategory.HasValue)
+        {
+            row.stampDutyPercentCategory = detailOverride.StampDutyPercentCategory.Value;
+            row.stampDutyPercentCategorySpecified = true;
+        }
+        if (detailOverride.FeesAmount.HasValue)
+        {
+            row.feesAmount = detailOverride.FeesAmount.Value;
+            row.feesAmountSpecified = true;
+        }
+        if (detailOverride.FeesPercentCategory.HasValue)
+        {
+            row.feesPercentCategory = detailOverride.FeesPercentCategory.Value;
+            row.feesPercentCategorySpecified = true;
+        }
+        if (detailOverride.OtherTaxesAmount.HasValue)
+        {
+            row.otherTaxesAmount = detailOverride.OtherTaxesAmount.Value;
+            row.otherTaxesAmountSpecified = true;
+        }
+        if (detailOverride.OtherTaxesPercentCategory.HasValue)
+        {
+            row.otherTaxesPercentCategory = detailOverride.OtherTaxesPercentCategory.Value;
+            row.otherTaxesPercentCategorySpecified = true;
+        }
+        if (detailOverride.DeductionsAmount.HasValue)
+        {
+            row.deductionsAmount = detailOverride.DeductionsAmount.Value;
+            row.deductionsAmountSpecified = true;
+        }
         if (detailOverride.FuelCode.HasValue)
         {
             row.fuelCode = (FuelCodes) detailOverride.FuelCode.Value;

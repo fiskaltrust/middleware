@@ -829,18 +829,29 @@ public class MyDataOverrideTests
         {
             TaricNo = "12345678",
             ItemCode = "ITEM-001",
+            ItemDescr = "Imported wine",
             FuelCode = 10,
             LineComments = "Test comment",
             Quantity15 = 99.5m,
             OtherMeasurementUnitQuantity = 2,
             OtherMeasurementUnitTitle = "barrels",
-            NotVAT195 = true
+            NotVAT195 = true,
+            WithheldAmount = 5.5m,
+            WithheldPercentCategory = 1,
+            StampDutyAmount = 1.2m,
+            StampDutyPercentCategory = 2,
+            FeesAmount = 3.4m,
+            FeesPercentCategory = 3,
+            OtherTaxesAmount = 7.8m,
+            OtherTaxesPercentCategory = 4,
+            DeductionsAmount = 9.1m
         };
 
         AADEFactory.ApplyInvoiceDetailOverride(row, detailOverride);
 
         row.TaricNo.Should().Be("12345678");
         row.itemCode.Should().Be("ITEM-001");
+        row.itemDescr.Should().Be("Imported wine");
         row.fuelCodeSpecified.Should().BeTrue();
         row.lineComments.Should().Be("Test comment");
         row.quantity15Specified.Should().BeTrue();
@@ -849,9 +860,81 @@ public class MyDataOverrideTests
         row.otherMeasurementUnitTitle.Should().Be("barrels");
         row.notVAT195Specified.Should().BeTrue();
         row.notVAT195.Should().BeTrue();
+        row.withheldAmountSpecified.Should().BeTrue();
+        row.withheldAmount.Should().Be(5.5m);
+        row.withheldPercentCategorySpecified.Should().BeTrue();
+        row.withheldPercentCategory.Should().Be(1);
+        row.stampDutyAmountSpecified.Should().BeTrue();
+        row.stampDutyAmount.Should().Be(1.2m);
+        row.stampDutyPercentCategorySpecified.Should().BeTrue();
+        row.stampDutyPercentCategory.Should().Be(2);
+        row.feesAmountSpecified.Should().BeTrue();
+        row.feesAmount.Should().Be(3.4m);
+        row.feesPercentCategorySpecified.Should().BeTrue();
+        row.feesPercentCategory.Should().Be(3);
+        row.otherTaxesAmountSpecified.Should().BeTrue();
+        row.otherTaxesAmount.Should().Be(7.8m);
+        row.otherTaxesPercentCategorySpecified.Should().BeTrue();
+        row.otherTaxesPercentCategory.Should().Be(4);
+        row.deductionsAmountSpecified.Should().BeTrue();
+        row.deductionsAmount.Should().Be(9.1m);
         row.vatCategory.Should().Be(1);
         row.netValue.Should().Be(100);
         row.vatAmount.Should().Be(24);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithLineLevelTaxAndDescriptionOverrides_ShouldSetFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        itemDescr = "Premium wine",
+                        withheldAmount = 5.5m,
+                        withheldPercentCategory = 1,
+                        stampDutyAmount = 1.2m,
+                        stampDutyPercentCategory = 2,
+                        feesAmount = 3.4m,
+                        feesPercentCategory = 3,
+                        otherTaxesAmount = 7.8m,
+                        otherTaxesPercentCategory = 4,
+                        deductionsAmount = 9.1m
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+        row.itemDescr.Should().Be("Premium wine");
+        row.withheldAmountSpecified.Should().BeTrue();
+        row.withheldAmount.Should().Be(5.5m);
+        row.withheldPercentCategorySpecified.Should().BeTrue();
+        row.withheldPercentCategory.Should().Be(1);
+        row.stampDutyAmountSpecified.Should().BeTrue();
+        row.stampDutyAmount.Should().Be(1.2m);
+        row.stampDutyPercentCategorySpecified.Should().BeTrue();
+        row.stampDutyPercentCategory.Should().Be(2);
+        row.feesAmountSpecified.Should().BeTrue();
+        row.feesAmount.Should().Be(3.4m);
+        row.feesPercentCategorySpecified.Should().BeTrue();
+        row.feesPercentCategory.Should().Be(3);
+        row.otherTaxesAmountSpecified.Should().BeTrue();
+        row.otherTaxesAmount.Should().Be(7.8m);
+        row.otherTaxesPercentCategorySpecified.Should().BeTrue();
+        row.otherTaxesPercentCategory.Should().Be(4);
+        row.deductionsAmountSpecified.Should().BeTrue();
+        row.deductionsAmount.Should().Be(9.1m);
     }
 
     // === PHASE 2: INVOICE TYPE OVERRIDE TESTS ===
