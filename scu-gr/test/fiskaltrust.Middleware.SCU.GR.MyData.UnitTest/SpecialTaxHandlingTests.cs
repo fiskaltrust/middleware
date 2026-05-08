@@ -1474,6 +1474,8 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
             feeLine.incomeClassification.Should().BeNull("vatable special tax lines must not carry an incomeClassification");
             feeLine.feesPercentCategory.Should().Be(8);
             feeLine.feesAmountSpecified.Should().BeFalse("vatable special tax lines must not carry feesAmount — the fee value lives in the line's netValue");
+            feeLine.recTypeSpecified.Should().BeTrue();
+            feeLine.recType.Should().Be(2, "vatable special tax lines must be marked with recType=2");
 
             feeLine.netValue.Should().Be(7.6m, "fee line netValue must equal the fee amount");
             feeLine.vatCategory.Should().Be(1, "fees must use standard VAT category");

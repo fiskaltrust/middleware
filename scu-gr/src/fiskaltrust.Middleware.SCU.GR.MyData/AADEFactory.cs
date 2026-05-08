@@ -1229,6 +1229,8 @@ public class AADEFactory
                 var feeMapping = SpecialTaxMappings.GetFeeMapping(x.Description);
                 if (feeMapping != null)
                 {
+                    invoiceRow.recType = 2;
+                    invoiceRow.recTypeSpecified = true;
                     invoiceRow.feesPercentCategory = feeMapping.Code;
                     invoiceRow.feesPercentCategorySpecified = true;
                 }
