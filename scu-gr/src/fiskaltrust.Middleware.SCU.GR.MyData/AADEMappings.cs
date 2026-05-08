@@ -12,8 +12,16 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public static class AADEMappings
 {
     private static readonly DateTimeZone _athensZone = DateTimeZoneProviders.Tzdb["Europe/Athens"];
-    public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
+    public static IncomeClassificationType? GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
+        // Special-tax line items (e.g. plastic-bag environmental fee) carry their tax via
+        // feesAmount / stampDutyAmount / otherTaxesAmount / withheldAmount on the row itself —
+        // AADE forbids pairing those with an incomeClassification on the same row.
+        if (SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem))
+        {
+            return null;
+        }
+
         var vatAmount = chargeItem.GetVATAmount();
         var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
 

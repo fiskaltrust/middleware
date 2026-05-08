@@ -142,6 +142,57 @@ public static class ReceiptRequestExtensions
         return data;
     }
 
+    public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItemsByPosition(this ReceiptRequest receiptRequest)
+        => GroupByPosition(receiptRequest.cbChargeItems, ci => ci.Position);
+
+    public static List<(PayItem payItem, List<PayItem> modifiers)> GetGroupedPayItemsByPosition(this ReceiptRequest receiptRequest)
+        => GroupByPosition(receiptRequest.cbPayItems, pi => pi.Position);
+
+    private static List<(T item, List<T> modifiers)> GroupByPosition<T>(IEnumerable<T> items, Func<T, decimal> getPosition)
+    {
+        var result = new List<(T item, List<T> modifiers)>();
+        var groupKeyToIndex = new Dictionary<int, int>();
+
+        foreach (var item in items)
+        {
+            var pos = getPosition(item);
+            if (pos == 0)
+            {
+                // Position 0 is the placeholder used when callers haven't assigned a position yet —
+                // such items don't participate in grouping; each becomes its own standalone entry.
+                result.Add((item, new List<T>()));
+                continue;
+            }
+
+            var key = (int) Math.Truncate(pos);
+            if (!groupKeyToIndex.TryGetValue(key, out var idx))
+            {
+                result.Add((item, new List<T>()));
+                groupKeyToIndex[key] = result.Count - 1;
+                continue;
+            }
+
+            var existing = result[idx];
+            if (getPosition(existing.item) == pos || existing.modifiers.Any(m => getPosition(m) == pos))
+            {
+                throw new ArgumentException(
+                    $"Duplicate Position {pos.ToString(System.Globalization.CultureInfo.InvariantCulture)} found within group {key}.");
+            }
+
+            if (pos < getPosition(existing.item))
+            {
+                existing.modifiers.Insert(0, existing.item);
+                result[idx] = (item, existing.modifiers);
+            }
+            else
+            {
+                existing.modifiers.Add(item);
+            }
+        }
+
+        return result;
+    }
+
     public static List<(PayItem payItem, PayItem? tip)> GetGroupedPayItems(this ReceiptRequest receiptRequest)
     {
         var data = new List<(PayItem payItem, PayItem? tip)>();

@@ -1156,7 +1156,8 @@ public class AADEFactory
                 {
                     invoiceRow.vatExemptionCategorySpecified = true;
                     invoiceRow.vatExemptionCategory = exemptionCategory.Value;
-                    invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+                    var ic = AADEMappings.GetIncomeClassificationType(receiptRequest, x);
+                    if (ic != null) invoiceRow.incomeClassification = [ic];
                 }
                 else
                 {
@@ -1168,7 +1169,8 @@ public class AADEFactory
                 if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 {
                     invoiceRow.vatCategory = MyDataVatCategory.RegistrationsWithoutVat;
-                    invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+                    var ic = AADEMappings.GetIncomeClassificationType(receiptRequest, x);
+                    if (ic != null) invoiceRow.incomeClassification = [ic];
                 }
                 else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
                 {
@@ -1217,7 +1219,8 @@ public class AADEFactory
                     }
                     else
                     {
-                        invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+                        var ic = AADEMappings.GetIncomeClassificationType(receiptRequest, x);
+                        if (ic != null) invoiceRow.incomeClassification = [ic];
                     }
                 }
             }
@@ -1226,8 +1229,6 @@ public class AADEFactory
                 var feeMapping = SpecialTaxMappings.GetFeeMapping(x.Description);
                 if (feeMapping != null)
                 {
-                    invoiceRow.feesAmount = Math.Abs(x.Amount - (x.VATAmount ?? 0));
-                    invoiceRow.feesAmountSpecified = true;
                     invoiceRow.feesPercentCategory = feeMapping.Code;
                     invoiceRow.feesPercentCategorySpecified = true;
                 }
