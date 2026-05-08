@@ -844,7 +844,14 @@ public class MyDataOverrideTests
             FeesPercentCategory = 3,
             OtherTaxesAmount = 7.8m,
             OtherTaxesPercentCategory = 4,
-            DeductionsAmount = 9.1m
+            DeductionsAmount = 9.1m,
+            LineNumber = 42,
+            Quantity = 12.5m,
+            MeasurementUnit = 3,
+            NetValue = 555m,
+            VatCategory = 7,
+            VatAmount = 13.31m,
+            VatExemptionCategory = 22
         };
 
         AADEFactory.ApplyInvoiceDetailOverride(row, detailOverride);
@@ -878,9 +885,58 @@ public class MyDataOverrideTests
         row.otherTaxesPercentCategory.Should().Be(4);
         row.deductionsAmountSpecified.Should().BeTrue();
         row.deductionsAmount.Should().Be(9.1m);
-        row.vatCategory.Should().Be(1);
-        row.netValue.Should().Be(100);
-        row.vatAmount.Should().Be(24);
+        row.lineNumber.Should().Be(42);
+        row.quantitySpecified.Should().BeTrue();
+        row.quantity.Should().Be(12.5m);
+        row.measurementUnitSpecified.Should().BeTrue();
+        row.measurementUnit.Should().Be(3);
+        row.netValue.Should().Be(555m);
+        row.vatCategory.Should().Be(7);
+        row.vatAmount.Should().Be(13.31m);
+        row.vatExemptionCategorySpecified.Should().BeTrue();
+        row.vatExemptionCategory.Should().Be(22);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMiddlewareComputedFieldOverrides_ShouldOverrideMiddlewareValues()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        lineNumber = 99,
+                        quantity = 7.5m,
+                        measurementUnit = 4,
+                        netValue = 200.5m,
+                        vatCategory = 2,
+                        vatAmount = 27.07m,
+                        vatExemptionCategory = 11
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+        row.lineNumber.Should().Be(99);
+        row.quantitySpecified.Should().BeTrue();
+        row.quantity.Should().Be(7.5m);
+        row.measurementUnitSpecified.Should().BeTrue();
+        row.measurementUnit.Should().Be(4);
+        row.netValue.Should().Be(200.5m);
+        row.vatCategory.Should().Be(2);
+        row.vatAmount.Should().Be(27.07m);
+        row.vatExemptionCategorySpecified.Should().BeTrue();
+        row.vatExemptionCategory.Should().Be(11);
     }
 
     [Fact]
@@ -935,6 +991,102 @@ public class MyDataOverrideTests
         row.otherTaxesPercentCategory.Should().Be(4);
         row.deductionsAmountSpecified.Should().BeTrue();
         row.deductionsAmount.Should().Be(9.1m);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithHeaderIdentificationOverrides_ShouldSetFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            series = "OVR-A",
+                            aa = "999",
+                            issueDate = new DateTime(2026, 5, 8, 0, 0, 0, DateTimeKind.Utc),
+                            currency = "USD",
+                            correlatedInvoices = new long[] { 12345L, 67890L },
+                            multipleConnectedMarks = new long[] { 1L, 2L, 3L },
+                            isDeliveryNote = true,
+                            tableAA = "TBL-1"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.series.Should().Be("OVR-A");
+        header.aa.Should().Be("999");
+        header.issueDate.Should().Be(new DateTime(2026, 5, 8));
+        header.currencySpecified.Should().BeTrue();
+        header.currency.Should().Be(CurrencyType.USD);
+        header.correlatedInvoices.Should().Equal(12345L, 67890L);
+        header.multipleConnectedMarks.Should().Equal(1L, 2L, 3L);
+        header.isDeliveryNoteSpecified.Should().BeTrue();
+        header.isDeliveryNote.Should().BeTrue();
+        header.tableAA.Should().Be("TBL-1");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutHeaderIdentificationOverrides_ShouldUseMiddlewareValues()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.series.Should().Be("TEST-001");
+        header.aa.Should().NotBeNullOrEmpty();
+        header.currencySpecified.Should().BeTrue();
+        header.currency.Should().Be(CurrencyType.EUR);
+        header.tableAA.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidCurrencyOverride_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            currency = "NOT_A_CURRENCY"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>();
+        error.Exception.Message.Should().Contain("currency");
+        error.Exception.Message.Should().Contain("NOT_A_CURRENCY");
     }
 
     // === PHASE 2: INVOICE TYPE OVERRIDE TESTS ===

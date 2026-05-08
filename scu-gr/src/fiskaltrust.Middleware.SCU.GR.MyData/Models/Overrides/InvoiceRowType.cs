@@ -76,6 +76,27 @@ public class InvoiceRowTypeOverride
 
     [JsonPropertyName("notVAT195")]
     public bool? NotVAT195 { get; set; }
+
+    [JsonPropertyName("lineNumber")]
+    public int? LineNumber { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public decimal? Quantity { get; set; }
+
+    [JsonPropertyName("measurementUnit")]
+    public int? MeasurementUnit { get; set; }
+
+    [JsonPropertyName("netValue")]
+    public decimal? NetValue { get; set; }
+
+    [JsonPropertyName("vatCategory")]
+    public int? VatCategory { get; set; }
+
+    [JsonPropertyName("vatAmount")]
+    public decimal? VatAmount { get; set; }
+
+    [JsonPropertyName("vatExemptionCategory")]
+    public int? VatExemptionCategory { get; set; }
 }
 
 public class IncomeClassificationOverride

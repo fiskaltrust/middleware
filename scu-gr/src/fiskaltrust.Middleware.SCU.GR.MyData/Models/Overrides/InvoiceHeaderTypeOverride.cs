@@ -59,4 +59,28 @@ public class InvoiceHeaderTypeOverride
 
     [JsonPropertyName("reverseDeliveryNotePurpose")]
     public int? ReverseDeliveryNotePurpose { get; set; }
+
+    [JsonPropertyName("series")]
+    public string? Series { get; set; }
+
+    [JsonPropertyName("aa")]
+    public string? Aa { get; set; }
+
+    [JsonPropertyName("issueDate")]
+    public DateTime? IssueDate { get; set; }
+
+    [JsonPropertyName("currency")]
+    public string? Currency { get; set; }
+
+    [JsonPropertyName("correlatedInvoices")]
+    public List<long>? CorrelatedInvoices { get; set; }
+
+    [JsonPropertyName("multipleConnectedMarks")]
+    public List<long>? MultipleConnectedMarks { get; set; }
+
+    [JsonPropertyName("isDeliveryNote")]
+    public bool? IsDeliveryNote { get; set; }
+
+    [JsonPropertyName("tableAA")]
+    public string? TableAA { get; set; }
 }

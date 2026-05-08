@@ -624,6 +624,61 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
         }
 
+        // Apply series
+        if (!string.IsNullOrEmpty(headerOverride.Series))
+        {
+            invoice.invoiceHeader.series = headerOverride.Series;
+        }
+
+        // Apply aa (sequential number)
+        if (!string.IsNullOrEmpty(headerOverride.Aa))
+        {
+            invoice.invoiceHeader.aa = headerOverride.Aa;
+        }
+
+        // Apply issue date
+        if (headerOverride.IssueDate.HasValue)
+        {
+            invoice.invoiceHeader.issueDate = headerOverride.IssueDate.Value;
+        }
+
+        // Apply currency
+        if (!string.IsNullOrEmpty(headerOverride.Currency))
+        {
+            if (!Enum.TryParse<CurrencyType>(headerOverride.Currency, true, out var currency))
+            {
+                throw new ArgumentException(
+                    $"Invalid currency override value '{headerOverride.Currency}'. " +
+                    $"Allowed values: {string.Join(", ", Enum.GetNames(typeof(CurrencyType)))}");
+            }
+            invoice.invoiceHeader.currency = currency;
+            invoice.invoiceHeader.currencySpecified = true;
+        }
+
+        // Apply correlated invoices
+        if (headerOverride.CorrelatedInvoices != null)
+        {
+            invoice.invoiceHeader.correlatedInvoices = [.. headerOverride.CorrelatedInvoices];
+        }
+
+        // Apply multiple connected marks
+        if (headerOverride.MultipleConnectedMarks != null)
+        {
+            invoice.invoiceHeader.multipleConnectedMarks = [.. headerOverride.MultipleConnectedMarks];
+        }
+
+        // Apply isDeliveryNote
+        if (headerOverride.IsDeliveryNote.HasValue)
+        {
+            invoice.invoiceHeader.isDeliveryNote = headerOverride.IsDeliveryNote.Value;
+            invoice.invoiceHeader.isDeliveryNoteSpecified = true;
+        }
+
+        // Apply tableAA
+        if (!string.IsNullOrEmpty(headerOverride.TableAA))
+        {
+            invoice.invoiceHeader.tableAA = headerOverride.TableAA;
+        }
     }
 
     private static void ApplyPartyOverride(ref PartyType party, PartyTypeOverride partyOverride)
@@ -839,6 +894,37 @@ public class AADEFactory
         {
             row.notVAT195 = detailOverride.NotVAT195.Value;
             row.notVAT195Specified = true;
+        }
+        if (detailOverride.LineNumber.HasValue)
+        {
+            row.lineNumber = detailOverride.LineNumber.Value;
+        }
+        if (detailOverride.Quantity.HasValue)
+        {
+            row.quantity = detailOverride.Quantity.Value;
+            row.quantitySpecified = true;
+        }
+        if (detailOverride.MeasurementUnit.HasValue)
+        {
+            row.measurementUnit = detailOverride.MeasurementUnit.Value;
+            row.measurementUnitSpecified = true;
+        }
+        if (detailOverride.NetValue.HasValue)
+        {
+            row.netValue = detailOverride.NetValue.Value;
+        }
+        if (detailOverride.VatCategory.HasValue)
+        {
+            row.vatCategory = detailOverride.VatCategory.Value;
+        }
+        if (detailOverride.VatAmount.HasValue)
+        {
+            row.vatAmount = detailOverride.VatAmount.Value;
+        }
+        if (detailOverride.VatExemptionCategory.HasValue)
+        {
+            row.vatExemptionCategory = detailOverride.VatExemptionCategory.Value;
+            row.vatExemptionCategorySpecified = true;
         }
     }
 
