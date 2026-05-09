@@ -700,10 +700,8 @@ public static class AADEMappings
     /// and <c>otherMeasurementUnitTitle</c> preserves the original string.
     /// </summary>
     /// <remarks>
-    /// The caller is expected to have populated <c>row.quantity</c> with <c>ChargeItem.Quantity</c>
-    /// (with any refund/abs sign adjustments already applied). When this method overrides the value
-    /// with <c>UnitQuantity</c>, it preserves the sign of the value that was already on the row so
-    /// existing refund / partial-return semantics are not broken.
+    /// AADE schema requires <c>quantity &gt; 0</c> (minExclusive="0"), so the value is always emitted
+    /// as the absolute value when this method overrides the row.
     /// </remarks>
     public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
     {
@@ -730,8 +728,7 @@ public static class AADEMappings
         // implements the "Quantity is used as UnitQuantity" fallback.)
         if (chargeItem.UnitQuantity.HasValue)
         {
-            var sign = row.quantity < 0 ? -1m : 1m;
-            row.quantity = sign * Math.Abs(chargeItem.UnitQuantity.Value);
+            row.quantity = Math.Abs(chargeItem.UnitQuantity.Value);
             row.quantitySpecified = true;
         }
     }

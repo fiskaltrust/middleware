@@ -102,16 +102,16 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         [Fact]
-        public void ApplyMeasurementUnit_WithRefundSignedQuantity_AndUnitQuantity_PreservesSign()
+        public void ApplyMeasurementUnit_WithUnitQuantity_AlwaysEmitsPositiveQuantity()
         {
-            // The caller has already set row.quantity = -ChargeItem.Quantity for a refund. When we
-            // override with UnitQuantity we must keep the negative sign so refund semantics survive.
-            var row = new InvoiceRowType { quantity = -3m, quantitySpecified = true };
-            var chargeItem = new ChargeItem { Quantity = 3m, Unit = "kg", UnitQuantity = 12.5m };
+            // AADE schema requires quantity > 0 (minExclusive="0"). Even if UnitQuantity is provided
+            // as a negative value, the row must carry the absolute value.
+            var row = new InvoiceRowType { quantity = 3m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 3m, Unit = "kg", UnitQuantity = -12.5m };
 
             AADEMappings.ApplyMeasurementUnit(row, chargeItem);
 
-            row.quantity.Should().Be(-12.5m);
+            row.quantity.Should().Be(12.5m);
         }
 
         [Fact]
