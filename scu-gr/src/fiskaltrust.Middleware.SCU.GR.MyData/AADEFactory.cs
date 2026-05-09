@@ -341,7 +341,7 @@ public class AADEFactory
         // (after override, so the correct field is used for the resolved type).
         // Marks come from two sources:
         //   1. Receipts looked up via cbPreviousReceiptReference (issued by this middleware).
-        //   2. Marks supplied directly via ftReceiptCaseData.PreviousReceiptReference.GR.invoiceMark
+        //   2. Marks supplied directly via ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark
         //      (issued by another system, e.g. an existing AADE invoice we did not produce).
         var previousMarks = CollectPreviousMarks(receiptRequest, receiptReferences, overrideData);
         if (previousMarks.Length > 0)
@@ -1380,7 +1380,7 @@ public class AADEFactory
         {
             marks.AddRange(receiptReferences.Select(x => GetInvoiceMark(x.Item2)));
         }
-        var externalMarks = overrideData?.PreviousReceiptReference?.GR?.InvoiceMark;
+        var externalMarks = overrideData?.GR?.PreviousReceiptReference?.InvoiceMark;
         if (externalMarks is not null && externalMarks.Count > 0)
         {
             marks.AddRange(externalMarks);
@@ -1584,10 +1584,10 @@ public class AADEFactory
     public static void SetInvoiceHeaderFieldsForVoid(InvoiceHeaderType invoiceHeader, ReceiptRequest receiptRequest)
     {
         // The previous-invoice MARK can come from either cbPreviousReceiptReference (for invoices issued
-        // by this middleware) or from ftReceiptCaseData.PreviousReceiptReference.GR.invoiceMark (to correlate
+        // by this middleware) or from ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark (to correlate
         // with invoices issued by another system). At least one of the two must be provided.
         var hasExternalMark = receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
-            && caseData?.PreviousReceiptReference?.GR?.InvoiceMark is { Count: > 0 };
+            && caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 };
 
         var refObj = receiptRequest.cbPreviousReceiptReference;
         if (refObj == null)

@@ -9,9 +9,6 @@ public class ftReceiptCaseDataPayload
 {
     [JsonPropertyName("GR")]
     public ftReceiptCaseDataGreekPayload? GR { get; set; }
-
-    [JsonPropertyName("PreviousReceiptReference")]
-    public ftReceiptCaseDataPreviousReceiptReferencePayload? PreviousReceiptReference { get; set; }
 }
 
 public class ftReceiptCaseDataGreekPayload
@@ -24,12 +21,9 @@ public class ftReceiptCaseDataGreekPayload
 
     [JsonPropertyName("mydataoverride")]
     public ReceiptRequestMyDataOverride? MyDataOverride { get; set; }
-}
 
-public class ftReceiptCaseDataPreviousReceiptReferencePayload
-{
-    [JsonPropertyName("GR")]
-    public ftReceiptCaseDataPreviousReceiptReferenceGreekPayload? GR { get; set; }
+    [JsonPropertyName("PreviousReceiptReference")]
+    public ftReceiptCaseDataPreviousReceiptReferenceGreekPayload? PreviousReceiptReference { get; set; }
 }
 
 public class ftReceiptCaseDataPreviousReceiptReferenceGreekPayload

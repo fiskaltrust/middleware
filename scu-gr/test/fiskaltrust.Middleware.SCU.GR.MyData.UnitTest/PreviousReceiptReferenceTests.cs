@@ -65,9 +65,9 @@ public class PreviousReceiptReferenceTests
         request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
         request.ftReceiptCaseData = new
         {
-            PreviousReceiptReference = new
+            GR = new
             {
-                GR = new
+                PreviousReceiptReference = new
                 {
                     invoiceMark = "400123456789"
                 }
@@ -92,9 +92,9 @@ public class PreviousReceiptReferenceTests
         request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
         request.ftReceiptCaseData = new
         {
-            PreviousReceiptReference = new
+            GR = new
             {
-                GR = new
+                PreviousReceiptReference = new
                 {
                     invoiceMark = new[] { "400123456789", "400987654321" }
                 }
@@ -118,9 +118,9 @@ public class PreviousReceiptReferenceTests
         request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
         request.ftReceiptCaseData = new
         {
-            PreviousReceiptReference = new
+            GR = new
             {
-                GR = new
+                PreviousReceiptReference = new
                 {
                     invoiceMark = 400123456789L
                 }
@@ -145,9 +145,9 @@ public class PreviousReceiptReferenceTests
         request.cbPayItems[0].Amount = 35.80m;
         request.ftReceiptCaseData = new
         {
-            PreviousReceiptReference = new
+            GR = new
             {
-                GR = new
+                PreviousReceiptReference = new
                 {
                     invoiceMark = "400123456789"
                 }
@@ -174,9 +174,9 @@ public class PreviousReceiptReferenceTests
         request.cbPreviousReceiptReference = "internal-ref";
         request.ftReceiptCaseData = new
         {
-            PreviousReceiptReference = new
+            GR = new
             {
-                GR = new
+                PreviousReceiptReference = new
                 {
                     invoiceMark = "400999999999"
                 }
@@ -250,9 +250,9 @@ public class PreviousReceiptReferenceTests
             cbPayItems = new List<PayItem>(),
             ftReceiptCaseData = new
             {
-                PreviousReceiptReference = new
+                GR = new
                 {
-                    GR = new
+                    PreviousReceiptReference = new
                     {
                         invoiceMark = "400123456789"
                     }
@@ -323,5 +323,115 @@ public class PreviousReceiptReferenceTests
         error.Should().NotBeNull();
         error!.Exception.Message.Should().Contain("cbPreviousReceiptReference");
         doc.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMyDataOverrideCorrelatedInvoices_PopulatesHeader()
+    {
+        var factory = CreateFactory();
+        var request = CreatePosReceiptRequest();
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400123456789L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400123456789L });
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMyDataOverrideMultipleConnectedMarks_PopulatesHeader()
+    {
+        var factory = CreateFactory();
+        var request = CreatePosReceiptRequest();
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            multipleConnectedMarks = new[] { 400123456789L, 400987654321L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.multipleConnectedMarks.Should().BeEquivalentTo(new[] { 400123456789L, 400987654321L });
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_PreviousReceiptReferenceWinsOverMyDataOverride()
+    {
+        // When both ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark and
+        // ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices/
+        // multipleConnectedMarks are set, the dedicated PreviousReceiptReference path wins
+        // because CollectPreviousMarks runs after ApplyMyDataOverride and overwrites the
+        // header field. Callers should pick one of the two paths — this test pins down the
+        // current precedence so future refactors don't silently swap it.
+        var factory = CreateFactory();
+        var request = CreatePosReceiptRequest();
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "400111111111"
+                },
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400222222222L },
+                            multipleConnectedMarks = new[] { 400333333333L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.multipleConnectedMarks.Should().BeEquivalentTo(new[] { 400111111111L });
+        // The override-supplied correlatedInvoices remains untouched on this invoice type
+        // (Item114 only writes multipleConnectedMarks); both fields exist on the wire.
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400222222222L });
     }
 }
