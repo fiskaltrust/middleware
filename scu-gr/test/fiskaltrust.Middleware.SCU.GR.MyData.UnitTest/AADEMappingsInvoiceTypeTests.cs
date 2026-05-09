@@ -306,6 +306,30 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
+    public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithExternalInvoiceMark_ReturnsItem51()
+    {
+        // Regression for Codex P1 review on PR #664: when only the external
+        // GR.PreviousReceiptReference.invoiceMark is supplied (no cbPreviousReceiptReference),
+        // GetInvoiceType must still resolve to the correlated credit-note type (5.1) so the
+        // emitted document is consistent with the correlatedInvoices it carries.
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "400000000123333"
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item51);
+    }
+
+    [Fact]
     public void Item_9_3_GetInvoiceType_DeliveryNote_WithTransportDocumentFlag_ReturnsItem93()
     {
         var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);

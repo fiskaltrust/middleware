@@ -359,7 +359,7 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
+                return HasAnyPreviousInvoiceReference(receiptRequest) ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
             if (hasNotOwnSales)
@@ -596,6 +596,29 @@ public static class AADEMappings
         InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
         _ => true
     };
+
+    /// <summary>
+    /// Returns true if the request points to a previous invoice via either
+    /// <c>cbPreviousReceiptReference</c> (an invoice issued by this middleware)
+    /// or <c>ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark</c> (an
+    /// invoice issued by another system, identified by its AADE MARK).
+    /// Used by invoice-type selection so e.g. a B2B refund correlated only by
+    /// external MARK still resolves to the correlated credit-note type
+    /// (Item51) instead of the uncorrelated one (Item52).
+    /// </summary>
+    public static bool HasAnyPreviousInvoiceReference(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbPreviousReceiptReference is not null)
+        {
+            return true;
+        }
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
+            && caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 })
+        {
+            return true;
+        }
+        return false;
+    }
     public static bool SupportsMultipleConnectedMarks(InvoiceType invoiceType) => invoiceType switch
     {
         InvoiceType.Item16 or InvoiceType.Item24 or InvoiceType.Item51 => false,
