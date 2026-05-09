@@ -1229,8 +1229,7 @@ public class AADEFactory
 
                 invoiceRow.itemDescr = x.Description;
 
-                invoiceRow.measurementUnit = AADEMappings.GetMeasurementUnit(x);
-                invoiceRow.measurementUnitSpecified = true;
+                AADEMappings.ApplyMeasurementUnit(invoiceRow, x);
             }
 
             if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)

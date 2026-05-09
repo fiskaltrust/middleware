@@ -663,11 +663,7 @@ public static class AADEMappings
 
     public static int GetMeasurementUnit(ChargeItem? chargeItem)
     {
-        if (chargeItem == null)
-        {
-            return MyDataMeasurementUnit.Pieces;
-        }
-        if (string.IsNullOrWhiteSpace(chargeItem?.Unit))
+        if (chargeItem == null || string.IsNullOrWhiteSpace(chargeItem.Unit))
         {
             return MyDataMeasurementUnit.Pieces;
         }
@@ -681,8 +677,45 @@ public static class AADEMappings
             "squaremeters" => MyDataMeasurementUnit.SquareMeters,
             "cubicmeters" => MyDataMeasurementUnit.CubicMeters,
             "otherpieces" => MyDataMeasurementUnit.OtherPieces,
-            _ => MyDataMeasurementUnit.Pieces
+            // A non-empty Unit that does not match any AADE-defined measurement unit
+            // is mapped to OtherPieces; the original string is carried over via
+            // otherMeasurementUnitTitle (see AADEFactory.ApplyMeasurementUnit).
+            _ => MyDataMeasurementUnit.OtherPieces
         };
+    }
+
+    /// <summary>
+    /// Applies the AADE measurement-unit-related fields on an invoice row from a charge item,
+    /// honoring the ChargeItem.Unit / ChargeItem.UnitQuantity named properties with fallbacks
+    /// per market-gr issue #182:
+    ///
+    /// - If <see cref="ChargeItem.Unit"/> is not set or empty: <c>measurementUnit = Pieces (1)</c>
+    ///   and the row's <c>quantity</c> stays as <see cref="ChargeItem.Quantity"/>.
+    /// - If <see cref="ChargeItem.Unit"/> matches an AADE-defined unit (kg, litres, meters, ...):
+    ///   <c>measurementUnit</c> is set to that code.
+    /// - If <see cref="ChargeItem.Unit"/> is a free-form string: <c>measurementUnit = OtherPieces (7)</c>
+    ///   and <c>otherMeasurementUnitTitle</c> carries the original string. The row's
+    ///   <c>otherMeasurementUnitQuantity</c> is filled from <see cref="ChargeItem.UnitQuantity"/> when set,
+    ///   otherwise from <see cref="ChargeItem.Quantity"/> (Quantity is used as UnitQuantity when missing).
+    /// </summary>
+    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
+    {
+        row.measurementUnit = GetMeasurementUnit(chargeItem);
+        row.measurementUnitSpecified = true;
+
+        if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces && !string.IsNullOrWhiteSpace(chargeItem.Unit))
+        {
+            // Only carry the title for free-form units. If the caller explicitly used "OtherPieces"
+            // (the AADE-defined code), no title is needed.
+            if (!string.Equals(chargeItem.Unit, "OtherPieces", StringComparison.OrdinalIgnoreCase))
+            {
+                row.otherMeasurementUnitTitle = chargeItem.Unit;
+            }
+
+            var otherQuantity = chargeItem.UnitQuantity ?? chargeItem.Quantity;
+            row.otherMeasurementUnitQuantity = (int) Math.Round(Math.Abs(otherQuantity), MidpointRounding.AwayFromZero);
+            row.otherMeasurementUnitQuantitySpecified = true;
+        }
     }
 
 

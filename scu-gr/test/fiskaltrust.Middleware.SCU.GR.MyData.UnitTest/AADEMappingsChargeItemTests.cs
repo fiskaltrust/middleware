@@ -1,5 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using FluentAssertions;
 using Xunit;
 
@@ -18,10 +19,13 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         [InlineData("SquareMeters", 5)]
         [InlineData("CubicMeters", 6)]
         [InlineData("OtherPieces", 7)]
-        // legacy / fallback behavior
-        [InlineData("Unknown", 1)]
+        // Empty / null Unit defaults to Pieces (issue #182).
         [InlineData("", 1)]
         [InlineData(null, 1)]
+        // A non-empty, free-form Unit string is routed to OtherPieces (issue #182);
+        // the original string is preserved by AADEMappings.ApplyMeasurementUnit.
+        [InlineData("Unknown", 7)]
+        [InlineData("barrels", 7)]
         public void GetMeasurementUnit_ShouldReturnExpectedValue(string unit, int expectedValue)
         {
             // Arrange
@@ -35,6 +39,78 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
 
             // Assert
             result.Should().Be(expectedValue);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithoutUnit_DefaultsToPiecesAndDoesNotSetOtherFields()
+        {
+            var row = new InvoiceRowType { quantity = 5m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 5m };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnitSpecified.Should().BeTrue();
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.Pieces);
+            row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeFalse();
+            // The line-level quantity stays untouched.
+            row.quantity.Should().Be(5m);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithStandardUnit_SetsCodeAndDoesNotSetOtherFields()
+        {
+            var row = new InvoiceRowType { quantity = 2.5m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 2.5m, Unit = "kg" };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnitSpecified.Should().BeTrue();
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.Kg);
+            row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeFalse();
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithFreeFormUnit_AndUnitQuantity_UsesUnitQuantity()
+        {
+            var row = new InvoiceRowType { quantity = 3m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 3m, Unit = "barrels", UnitQuantity = 12m };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
+            row.otherMeasurementUnitTitle.Should().Be("barrels");
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(12);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithFreeFormUnit_WithoutUnitQuantity_FallsBackToQuantity()
+        {
+            var row = new InvoiceRowType { quantity = 7m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 7m, Unit = "barrels" };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
+            row.otherMeasurementUnitTitle.Should().Be("barrels");
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(7);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithExplicitOtherPieces_DoesNotSetTitleButFillsQuantity()
+        {
+            var row = new InvoiceRowType { quantity = 4m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 4m, Unit = "OtherPieces", UnitQuantity = 4m };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
+            row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(4);
         }
     }
 }
