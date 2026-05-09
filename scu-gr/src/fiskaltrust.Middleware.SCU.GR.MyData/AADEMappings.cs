@@ -689,32 +689,50 @@ public static class AADEMappings
     /// honoring the ChargeItem.Unit / ChargeItem.UnitQuantity named properties with fallbacks
     /// per market-gr issue #182:
     ///
-    /// - If <see cref="ChargeItem.Unit"/> is not set or empty: <c>measurementUnit = Pieces (1)</c>
-    ///   and the row's <c>quantity</c> stays as <see cref="ChargeItem.Quantity"/>.
-    /// - If <see cref="ChargeItem.Unit"/> matches an AADE-defined unit (kg, litres, meters, ...):
-    ///   <c>measurementUnit</c> is set to that code.
-    /// - If <see cref="ChargeItem.Unit"/> is a free-form string: <c>measurementUnit = OtherPieces (7)</c>
-    ///   and <c>otherMeasurementUnitTitle</c> carries the original string. The row's
-    ///   <c>otherMeasurementUnitQuantity</c> is filled from <see cref="ChargeItem.UnitQuantity"/> when set,
-    ///   otherwise from <see cref="ChargeItem.Quantity"/> (Quantity is used as UnitQuantity when missing).
+    /// - If <see cref="ChargeItem.Unit"/> is empty: <c>measurementUnit = Pieces (1)</c>; the row's
+    ///   <c>quantity</c> stays as <see cref="ChargeItem.Quantity"/>.
+    /// - If <see cref="ChargeItem.Unit"/> is set and <see cref="ChargeItem.UnitQuantity"/> is missing:
+    ///   the row's <c>quantity</c> stays as <see cref="ChargeItem.Quantity"/> (Quantity is used as UnitQuantity).
+    /// - If <see cref="ChargeItem.Unit"/> is set and <see cref="ChargeItem.UnitQuantity"/> is set:
+    ///   the row's <c>quantity</c> becomes <see cref="ChargeItem.UnitQuantity"/>.
+    ///
+    /// For free-form unit strings (no AADE-defined code), <c>measurementUnit = OtherPieces (7)</c>
+    /// and <c>otherMeasurementUnitTitle</c> preserves the original string.
     /// </summary>
+    /// <remarks>
+    /// The caller is expected to have populated <c>row.quantity</c> with <c>ChargeItem.Quantity</c>
+    /// (with any refund/abs sign adjustments already applied). When this method overrides the value
+    /// with <c>UnitQuantity</c>, it preserves the sign of the value that was already on the row so
+    /// existing refund / partial-return semantics are not broken.
+    /// </remarks>
     public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
     {
         row.measurementUnit = GetMeasurementUnit(chargeItem);
         row.measurementUnitSpecified = true;
 
-        if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces && !string.IsNullOrWhiteSpace(chargeItem.Unit))
+        if (string.IsNullOrWhiteSpace(chargeItem.Unit))
         {
-            // Only carry the title for free-form units. If the caller explicitly used "OtherPieces"
-            // (the AADE-defined code), no title is needed.
-            if (!string.Equals(chargeItem.Unit, "OtherPieces", StringComparison.OrdinalIgnoreCase))
-            {
-                row.otherMeasurementUnitTitle = chargeItem.Unit;
-            }
+            // No Unit set: keep the row's quantity as ChargeItem.Quantity (already set by the caller),
+            // and use the default measurementUnit (Pieces).
+            return;
+        }
 
-            var otherQuantity = chargeItem.UnitQuantity ?? chargeItem.Quantity;
-            row.otherMeasurementUnitQuantity = (int) Math.Round(Math.Abs(otherQuantity), MidpointRounding.AwayFromZero);
-            row.otherMeasurementUnitQuantitySpecified = true;
+        // Free-form Unit string: preserve the original via otherMeasurementUnitTitle. When the caller
+        // explicitly used the AADE-defined code "OtherPieces", no title is needed.
+        if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces &&
+            !string.Equals(chargeItem.Unit, "OtherPieces", StringComparison.OrdinalIgnoreCase))
+        {
+            row.otherMeasurementUnitTitle = chargeItem.Unit;
+        }
+
+        // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity.
+        // (When UnitQuantity is missing, the existing row.quantity already carries Quantity, which
+        // implements the "Quantity is used as UnitQuantity" fallback.)
+        if (chargeItem.UnitQuantity.HasValue)
+        {
+            var sign = row.quantity < 0 ? -1m : 1m;
+            row.quantity = sign * Math.Abs(chargeItem.UnitQuantity.Value);
+            row.quantitySpecified = true;
         }
     }
 
