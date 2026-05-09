@@ -687,21 +687,23 @@ public static class AADEMappings
     /// <summary>
     /// Applies the AADE measurement-unit-related fields on an invoice row from a charge item,
     /// honoring the ChargeItem.Unit / ChargeItem.UnitQuantity named properties with fallbacks
-    /// per market-gr issue #182:
-    ///
-    /// - If <see cref="ChargeItem.Unit"/> is empty: <c>measurementUnit = Pieces (1)</c>; the row's
-    ///   <c>quantity</c> stays as <see cref="ChargeItem.Quantity"/>.
-    /// - If <see cref="ChargeItem.Unit"/> is set and <see cref="ChargeItem.UnitQuantity"/> is missing:
-    ///   the row's <c>quantity</c> stays as <see cref="ChargeItem.Quantity"/> (Quantity is used as UnitQuantity).
-    /// - If <see cref="ChargeItem.Unit"/> is set and <see cref="ChargeItem.UnitQuantity"/> is set:
-    ///   the row's <c>quantity</c> becomes <see cref="ChargeItem.UnitQuantity"/>.
-    ///
-    /// For free-form unit strings (no AADE-defined code), <c>measurementUnit = OtherPieces (7)</c>
-    /// and <c>otherMeasurementUnitTitle</c> preserves the original string.
+    /// per market-gr issue #182.
     /// </summary>
     /// <remarks>
-    /// AADE schema requires <c>quantity &gt; 0</c> (minExclusive="0"), so the value is always emitted
-    /// as the absolute value when this method overrides the row.
+    /// Per myDATA REST API spec v2.0.1 §5.4 rule #9: when <c>measurementUnit = 7</c>
+    /// (Τεμάχια_Λοιπές Περιπτώσεις / Other Pieces), <c>otherMeasurementUnitQuantity</c> and
+    /// <c>otherMeasurementUnitTitle</c> are MANDATORY. The spec also clarifies that
+    /// <c>quantity</c> always represents the count of items being moved, NOT the count of packaging.
+    ///
+    /// Mapping applied here:
+    /// <list type="bullet">
+    ///   <item><description><c>row.quantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/> (item count)</description></item>
+    ///   <item><description><c>row.otherMeasurementUnitQuantity</c> ← <see cref="ChargeItem.Quantity"/> (packaging count, only when measurementUnit=7)</description></item>
+    ///   <item><description><c>row.otherMeasurementUnitTitle</c> ← <see cref="ChargeItem.Unit"/> (packaging description, only when measurementUnit=7)</description></item>
+    /// </list>
+    ///
+    /// AADE schema requires <c>quantity &gt; 0</c> (<c>minExclusive="0"</c>), so the absolute value
+    /// is always emitted.
     /// </remarks>
     public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
     {
@@ -715,17 +717,19 @@ public static class AADEMappings
             return;
         }
 
-        // Free-form Unit string: preserve the original via otherMeasurementUnitTitle. When the caller
-        // explicitly used the AADE-defined code "OtherPieces", no title is needed.
-        if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces &&
-            !string.Equals(chargeItem.Unit, "OtherPieces", StringComparison.OrdinalIgnoreCase))
+        // measurementUnit = 7 → both otherMeasurementUnitTitle and otherMeasurementUnitQuantity
+        // are mandatory per spec §5.4 rule #9.
+        if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces)
         {
             row.otherMeasurementUnitTitle = chargeItem.Unit;
+            row.otherMeasurementUnitQuantity = (int) Math.Round(Math.Abs(chargeItem.Quantity), MidpointRounding.AwayFromZero);
+            row.otherMeasurementUnitQuantitySpecified = true;
         }
 
-        // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity.
-        // (When UnitQuantity is missing, the existing row.quantity already carries Quantity, which
-        // implements the "Quantity is used as UnitQuantity" fallback.)
+        // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity
+        // (the count of items being moved). When UnitQuantity is missing, row.quantity already
+        // carries ChargeItem.Quantity from the caller — implementing the fallback rule
+        // "Quantity is used as UnitQuantity".
         if (chargeItem.UnitQuantity.HasValue)
         {
             row.quantity = Math.Abs(chargeItem.UnitQuantity.Value);

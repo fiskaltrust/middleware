@@ -54,13 +54,15 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             row.measurementUnit.Should().Be(MyDataMeasurementUnit.Pieces);
             row.quantity.Should().Be(5m);
             row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeFalse();
         }
 
         [Fact]
-        public void ApplyMeasurementUnit_WithUnit_WithoutUnitQuantity_KeepsQuantity()
+        public void ApplyMeasurementUnit_WithStandardUnit_WithoutUnitQuantity_KeepsQuantity()
         {
             // Rule: Unit set, UnitQuantity missing → ChargeItem.Quantity is used as UnitQuantity
-            // (i.e. the row's quantity stays as ChargeItem.Quantity).
+            // (i.e. the row's quantity stays as ChargeItem.Quantity). Standard units (kg, ...)
+            // do not populate otherMeasurement* fields (those are reserved for measurementUnit=7).
             var row = new InvoiceRowType { quantity = 2.5m, quantitySpecified = true };
             var chargeItem = new ChargeItem { Quantity = 2.5m, Unit = "kg" };
 
@@ -70,10 +72,11 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             row.measurementUnit.Should().Be(MyDataMeasurementUnit.Kg);
             row.quantity.Should().Be(2.5m);
             row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeFalse();
         }
 
         [Fact]
-        public void ApplyMeasurementUnit_WithUnit_AndUnitQuantity_UsesUnitQuantityForRowQuantity()
+        public void ApplyMeasurementUnit_WithStandardUnit_AndUnitQuantity_UsesUnitQuantityForRowQuantity()
         {
             // Rule: Unit set, UnitQuantity set → row.quantity = UnitQuantity.
             var row = new InvoiceRowType { quantity = 3m, quantitySpecified = true };
@@ -85,20 +88,44 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             row.quantity.Should().Be(12.5m);
             row.quantitySpecified.Should().BeTrue();
             row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeFalse();
         }
 
         [Fact]
-        public void ApplyMeasurementUnit_WithFreeFormUnit_PreservesTitleAndAppliesQuantityRule()
+        public void ApplyMeasurementUnit_WithFreeFormUnit_AndUnitQuantity_FillsAllOtherFields()
         {
-            // Free-form Unit ("barrels"): goes to OtherPieces, title preserved; quantity rule applies.
+            // Per myDATA spec §5.4 rule #9: measurementUnit=7 requires both
+            // otherMeasurementUnitTitle (packaging description) and otherMeasurementUnitQuantity
+            // (packaging count). The row's quantity is the item count (UnitQuantity).
             var row = new InvoiceRowType { quantity = 3m, quantitySpecified = true };
-            var chargeItem = new ChargeItem { Quantity = 3m, Unit = "barrels", UnitQuantity = 8m };
+            var chargeItem = new ChargeItem { Quantity = 3m, Unit = "Παλέτες", UnitQuantity = 30m };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
+            row.otherMeasurementUnitTitle.Should().Be("Παλέτες");
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(3);
+            row.quantity.Should().Be(30m);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithFreeFormUnit_WithoutUnitQuantity_FallsBackToQuantity()
+        {
+            // When UnitQuantity is missing, ChargeItem.Quantity stands in as item count (per the
+            // user fallback rule). otherMeasurementUnitQuantity still carries the same value, since
+            // we only have one count to work with — but the spec contract (both fields populated)
+            // is satisfied.
+            var row = new InvoiceRowType { quantity = 7m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 7m, Unit = "barrels" };
 
             AADEMappings.ApplyMeasurementUnit(row, chargeItem);
 
             row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
             row.otherMeasurementUnitTitle.Should().Be("barrels");
-            row.quantity.Should().Be(8m);
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(7);
+            row.quantity.Should().Be(7m);
         }
 
         [Fact]
@@ -115,16 +142,20 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         [Fact]
-        public void ApplyMeasurementUnit_WithExplicitOtherPiecesCode_DoesNotSetTitle()
+        public void ApplyMeasurementUnit_WithExplicitOtherPiecesCode_StillSetsMandatoryOtherFields()
         {
-            // "OtherPieces" matches the AADE-defined enum name, so we don't carry a title.
+            // Even when the caller passes the AADE code name "OtherPieces" as Unit, the spec
+            // mandates that both otherMeasurementUnitTitle and otherMeasurementUnitQuantity are
+            // filled. We pass the original string through as the title.
             var row = new InvoiceRowType { quantity = 4m, quantitySpecified = true };
             var chargeItem = new ChargeItem { Quantity = 4m, Unit = "OtherPieces", UnitQuantity = 4m };
 
             AADEMappings.ApplyMeasurementUnit(row, chargeItem);
 
             row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
-            row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitTitle.Should().Be("OtherPieces");
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(4);
             row.quantity.Should().Be(4m);
         }
     }
