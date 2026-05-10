@@ -330,6 +330,61 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
+    public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithOverrideCorrelatedInvoices_ReturnsItem51()
+    {
+        // Same rationale as the external-MARK case: a B2B credit note that carries correlations
+        // (here via mydataoverride.invoice.invoiceHeader.correlatedInvoices) must resolve to 5.1
+        // because the spec encodes the correlation in the type name itself.
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400000000123333L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item51);
+    }
+
+    [Fact]
+    public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithOverrideMultipleConnectedMarks_ReturnsItem51()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            multipleConnectedMarks = new[] { 400000000123333L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item51);
+    }
+
+    [Fact]
     public void Item_9_3_GetInvoiceType_DeliveryNote_WithTransportDocumentFlag_ReturnsItem93()
     {
         var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);

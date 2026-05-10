@@ -598,13 +598,21 @@ public static class AADEMappings
     };
 
     /// <summary>
-    /// Returns true if the request points to a previous invoice via either
-    /// <c>cbPreviousReceiptReference</c> (an invoice issued by this middleware)
-    /// or <c>ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark</c> (an
-    /// invoice issued by another system, identified by its AADE MARK).
-    /// Used by invoice-type selection so e.g. a B2B refund correlated only by
-    /// external MARK still resolves to the correlated credit-note type
-    /// (Item51) instead of the uncorrelated one (Item52).
+    /// Returns true if the request points to a previous invoice via any of the supported
+    /// correlation sources:
+    /// <list type="bullet">
+    /// <item><c>cbPreviousReceiptReference</c> — an invoice issued by this middleware.</item>
+    /// <item><c>ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark</c> — an invoice issued
+    /// by another system, identified by its AADE MARK.</item>
+    /// <item><c>ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices</c>
+    /// or <c>multipleConnectedMarks</c> — marks supplied via the invoice-header override.</item>
+    /// </list>
+    /// Used by invoice-type selection so e.g. a B2B refund correlated only by an external MARK
+    /// (or only via the mydataoverride header) still resolves to the correlated credit-note type
+    /// (Item51) instead of the uncorrelated one (Item52). The myDATA spec encodes the
+    /// correlation in the type name itself: 5.1 = Συσχετιζόμενο (Correlated),
+    /// 5.2 = Μη Συσχετιζόμενο (Non-Correlated). Other invoice types do not require this — they
+    /// accept correlatedInvoices as an optional field without changing type.
     /// </summary>
     public static bool HasAnyPreviousInvoiceReference(ReceiptRequest receiptRequest)
     {
@@ -612,10 +620,18 @@ public static class AADEMappings
         {
             return true;
         }
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
-            && caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 })
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData))
         {
-            return true;
+            if (caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 })
+            {
+                return true;
+            }
+            var overrideHeader = caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader;
+            if (overrideHeader?.CorrelatedInvoices is { Count: > 0 }
+                || overrideHeader?.MultipleConnectedMarks is { Count: > 0 })
+            {
+                return true;
+            }
         }
         return false;
     }
