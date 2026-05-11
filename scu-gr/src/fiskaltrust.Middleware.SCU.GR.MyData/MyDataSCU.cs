@@ -71,8 +71,25 @@ public class MyDataSCU : IGRSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
-            && !AADEFactory.HasInvoiceTypeOverride(request.ReceiptRequest))
+        bool hasInvoiceTypeOverride;
+        try
+        {
+            hasInvoiceTypeOverride = AADEFactory.HasInvoiceTypeOverride(request.ReceiptRequest);
+        }
+        catch (JsonException ex)
+        {
+            // ftReceiptCaseData failed to deserialize (e.g. malformed invoiceMark). The rest of
+            // ProcessReceiptAsync only sees parsed data through MapToInvoicesDoc, which catches
+            // the same error — but the HasInvoiceTypeOverride pre-check runs first, so surface
+            // the parse error here instead of letting it escape unwrapped.
+            SetErrorAndLog(request, ex.Message);
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004) && !hasInvoiceTypeOverride)
         {
             _logger.LogInformation("Skipping myDATA submission for ECommerce receipt '{ReceiptReference}' (QueueItemId: {QueueItemId}): no invoiceType override provided.", request.ReceiptRequest.cbReceiptReference, request.ReceiptResponse.ftQueueItemID);
             return new ProcessResponse
