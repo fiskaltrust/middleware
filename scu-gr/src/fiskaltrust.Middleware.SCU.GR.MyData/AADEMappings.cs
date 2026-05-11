@@ -620,20 +620,27 @@ public static class AADEMappings
         {
             return true;
         }
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData))
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
+            && HasPreviousInvoiceReferenceInCaseData(caseData);
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="caseData"/> carries any of the two case-data-side
+    /// correlation sources accepted by <see cref="HasAnyPreviousInvoiceReference"/>:
+    /// <c>PreviousReceiptReference.invoiceMark</c>, or
+    /// <c>mydataoverride.invoice.invoiceHeader.correlatedInvoices</c> /
+    /// <c>multipleConnectedMarks</c>. Call sites that have already deserialized the payload
+    /// (e.g. <c>SetInvoiceHeaderFieldsForVoid</c>) use this to avoid double-deserializing.
+    /// </summary>
+    public static bool HasPreviousInvoiceReferenceInCaseData(ftReceiptCaseDataPayload? caseData)
+    {
+        if (caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 })
         {
-            if (caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 })
-            {
-                return true;
-            }
-            var overrideHeader = caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader;
-            if (overrideHeader?.CorrelatedInvoices is { Count: > 0 }
-                || overrideHeader?.MultipleConnectedMarks is { Count: > 0 })
-            {
-                return true;
-            }
+            return true;
         }
-        return false;
+        var overrideHeader = caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader;
+        return overrideHeader?.CorrelatedInvoices is { Count: > 0 }
+            || overrideHeader?.MultipleConnectedMarks is { Count: > 0 };
     }
     public static bool SupportsMultipleConnectedMarks(InvoiceType invoiceType) => invoiceType switch
     {

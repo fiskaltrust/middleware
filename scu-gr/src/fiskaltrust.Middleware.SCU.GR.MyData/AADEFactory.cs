@@ -1583,23 +1583,15 @@ public class AADEFactory
     /// </summary>
     public static void SetInvoiceHeaderFieldsForVoid(InvoiceHeaderType invoiceHeader, ReceiptRequest receiptRequest)
     {
-        // The previous-invoice correlation can come from any of:
-        //   1. cbPreviousReceiptReference                                                — invoices issued by this middleware.
-        //   2. ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark                 — external invoices, identified by MARK.
-        //   3. ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices / multipleConnectedMarks
-        //                                                                                — marks supplied via the invoice-header override.
-        // At least one of these must be provided. This mirrors AADEMappings.HasAnyPreviousInvoiceReference.
-        var hasCaseData = receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData);
-        var hasExternalMark = hasCaseData
-            && caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 };
-        var overrideHeader = hasCaseData ? caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader : null;
-        var hasOverrideMarks = overrideHeader?.CorrelatedInvoices is { Count: > 0 }
-            || overrideHeader?.MultipleConnectedMarks is { Count: > 0 };
+        // The previous-invoice correlation can come from any of the three sources accepted by
+        // AADEMappings.HasAnyPreviousInvoiceReference. At least one must be provided.
+        var hasCaseDataReference = receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
+            && AADEMappings.HasPreviousInvoiceReferenceInCaseData(caseData);
 
         var refObj = receiptRequest.cbPreviousReceiptReference;
         if (refObj == null)
         {
-            if (!hasExternalMark && !hasOverrideMarks)
+            if (!hasCaseDataReference)
             {
                 throw new ArgumentException(
                     "A previous-invoice correlation is required for 8.6 VOID. Provide one of: "
