@@ -339,18 +339,23 @@ public class AADEFactory
 
         // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
         // (after override, so the correct field is used for the resolved type).
-        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
+        // Marks come from two sources:
+        //   1. Receipts looked up via cbPreviousReceiptReference (issued by this middleware).
+        //   2. Marks supplied directly via ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark
+        //      (issued by another system, e.g. an existing AADE invoice we did not produce).
+        var previousMarks = CollectPreviousMarks(receiptRequest, receiptReferences, overrideData);
+        if (previousMarks.Length > 0)
         {
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
                 if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
                 {
-                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                    inv.invoiceHeader.correlatedInvoices = previousMarks;
                 }
                 else
                 {
                     // Retail refunds (11.4) use multipleConnectedMarks
-                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                    inv.invoiceHeader.multipleConnectedMarks = previousMarks;
                 }
             }
             else
@@ -358,11 +363,11 @@ public class AADEFactory
                 // NON-REFUNDS
                 if (AADEMappings.SupportsMultipleConnectedMarks(inv.invoiceHeader.invoiceType))
                 {
-                    inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                    inv.invoiceHeader.multipleConnectedMarks = previousMarks;
                 }
                 else if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
                 {
-                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                    inv.invoiceHeader.correlatedInvoices = previousMarks;
                 }
             }
         }
@@ -1365,6 +1370,24 @@ public class AADEFactory
         return -1;
     }
 
+    private static long[] CollectPreviousMarks(
+        ReceiptRequest receiptRequest,
+        List<(ReceiptRequest, ReceiptResponse)>? receiptReferences,
+        ftReceiptCaseDataPayload? overrideData)
+    {
+        var marks = new List<long>();
+        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
+        {
+            marks.AddRange(receiptReferences.Select(x => GetInvoiceMark(x.Item2)));
+        }
+        var externalMarks = overrideData?.GR?.PreviousReceiptReference?.InvoiceMark;
+        if (externalMarks is not null && externalMarks.Count > 0)
+        {
+            marks.AddRange(externalMarks);
+        }
+        return [.. marks];
+    }
+
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
         return receiptRequest.GetGroupedPayItems()
@@ -1560,29 +1583,43 @@ public class AADEFactory
     /// </summary>
     public static void SetInvoiceHeaderFieldsForVoid(InvoiceHeaderType invoiceHeader, ReceiptRequest receiptRequest)
     {
-        // Validate cbPreviousReceiptReference is present and not empty
+        // The previous-invoice correlation can come from any of the three sources accepted by
+        // AADEMappings.HasAnyPreviousInvoiceReference. At least one must be provided.
+        var hasCaseDataReference = receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
+            && AADEMappings.HasPreviousInvoiceReferenceInCaseData(caseData);
+
         var refObj = receiptRequest.cbPreviousReceiptReference;
         if (refObj == null)
         {
-            throw new ArgumentException("cbPreviousReceiptReference must not be null or empty.", nameof(receiptRequest.cbPreviousReceiptReference));
-        }
-
-        refObj.Match(
-            single =>
+            if (!hasCaseDataReference)
             {
-                if (string.IsNullOrWhiteSpace(single))
-                {
-                    throw new ArgumentException("Single MARK value cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
-                }
-            },
-            group =>
-            {
-                if (group == null || group.Length == 0)
-                {
-                    throw new ArgumentException("Group MARKs cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
-                }
+                throw new ArgumentException(
+                    "A previous-invoice correlation is required for 8.6 VOID. Provide one of: "
+                    + "cbPreviousReceiptReference, "
+                    + "ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark, "
+                    + "or ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices/multipleConnectedMarks.",
+                    nameof(receiptRequest.cbPreviousReceiptReference));
             }
-        );
+        }
+        else
+        {
+            refObj.Match(
+                single =>
+                {
+                    if (string.IsNullOrWhiteSpace(single))
+                    {
+                        throw new ArgumentException("Single MARK value cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+                    }
+                },
+                group =>
+                {
+                    if (group == null || group.Length == 0)
+                    {
+                        throw new ArgumentException("Group MARKs cannot be empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+                    }
+                }
+            );
+        }
 
         // TableAA (mandatory for 8.6)
         if (receiptRequest.cbArea == null)
