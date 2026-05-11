@@ -57,6 +57,49 @@ public class PreviousReceiptReferenceTests
         ftReceiptIdentification = "ft123#"
     };
 
+    // B2B refunds (case 0x1002 + Refund) resolve to Item 5.1, which supports correlatedInvoices
+    // rather than multipleConnectedMarks — exercising the other branch in CollectPreviousMarks'
+    // consumer logic.
+    private static ReceiptRequest CreateB2BRefundRequest()
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 5, 5, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.InvoiceB2B0x1002)
+                .WithFlag(ReceiptCaseFlags.Refund),
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "123456789",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Quantity = 1,
+                    Description = "Consulting service",
+                    Amount = -100m,
+                    VATRate = 24m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate)
+                }
+            },
+            cbPayItems = new List<PayItem>
+            {
+                new PayItem
+                {
+                    Description = "Cash",
+                    Amount = -100m,
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
+                }
+            }
+        };
+    }
+
     [Fact]
     public void MapToInvoicesDoc_WithExternalInvoiceMark_PopulatesCorrelatedInvoices()
     {
@@ -433,5 +476,216 @@ public class PreviousReceiptReferenceTests
         // The override-supplied correlatedInvoices remains untouched on this invoice type
         // (Item114 only writes multipleConnectedMarks); both fields exist on the wire.
         header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400222222222L });
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BRefund_WithExternalInvoiceMark_PopulatesCorrelatedInvoices()
+    {
+        // Counterpart to the retail/POS refund tests: a B2B credit note (Item 5.1) routes the
+        // collected marks into invoiceHeader.correlatedInvoices instead of multipleConnectedMarks.
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "400123456789"
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item51);
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400123456789L });
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BRefund_WithExternalInvoiceMarkAsArray_PopulatesCorrelatedInvoices()
+    {
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = new[] { "400123456789", "400987654321" }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item51);
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400123456789L, 400987654321L });
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BRefund_WithExternalInvoiceMarkAsLong_PopulatesCorrelatedInvoices()
+    {
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = 400123456789L
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item51);
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400123456789L });
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BRefund_WithExternalInvoiceMarkAndReceiptReferences_MergesBothInCorrelatedInvoices()
+    {
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.cbPreviousReceiptReference = "internal-b2b-ref";
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "400999999999"
+                }
+            }
+        };
+
+        var refRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = "internal-b2b-ref",
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>(),
+            cbPayItems = new List<PayItem>(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002)
+        };
+        var refResponse = new ReceiptResponse
+        {
+            cbReceiptReference = "internal-b2b-ref",
+            ftCashBoxIdentification = "TEST-001",
+            ftReceiptIdentification = "ft100#",
+            ftSignatures = new List<SignatureItem>
+            {
+                new SignatureItem { Caption = "invoiceMark", Data = "400111111111" }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(
+            request,
+            response,
+            new List<(ReceiptRequest, ReceiptResponse)> { (refRequest, refResponse) });
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item51);
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400111111111L, 400999999999L });
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BRefund_WithMyDataOverrideCorrelatedInvoices_PopulatesHeader()
+    {
+        // Override-only flow on a B2B credit note: the override-supplied marks survive even
+        // though CollectPreviousMarks finds nothing of its own, because ApplyMyDataOverride
+        // wrote them onto the header earlier and the previousMarks.Length == 0 branch leaves
+        // the field alone.
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400123456789L, 400987654321L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item51);
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400123456789L, 400987654321L });
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_B2BRefund_PreviousReceiptReferenceWinsOverMyDataOverride()
+    {
+        // Mirror of the Item114 precedence test but on the correlatedInvoices branch: the
+        // dedicated PreviousReceiptReference path overwrites whatever ApplyMyDataOverride
+        // placed onto correlatedInvoices because CollectPreviousMarks runs afterwards.
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "400111111111"
+                },
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400222222222L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item51);
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400111111111L });
     }
 }
