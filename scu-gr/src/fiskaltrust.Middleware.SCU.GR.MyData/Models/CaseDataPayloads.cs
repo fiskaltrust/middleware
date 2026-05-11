@@ -49,6 +49,10 @@ internal class SingleOrListLongJsonConverter : JsonConverter<List<long>?>
             {
                 values.Add(ReadSingleLong(ref reader));
             }
+            if (values.Count == 0)
+            {
+                throw new JsonException("invoiceMark must contain at least one MARK; omit the field instead of providing an empty array.");
+            }
             return values;
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
@@ -835,15 +836,12 @@ public class PreviousReceiptReferenceTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_WithNonNumericInvoiceMark_SilentlyDropsEntireCaseData()
+    public void MapToInvoicesDoc_WithNonNumericInvoiceMark_ReturnsError()
     {
-        // Pins current behavior: TryDeserializeftReceiptCaseData (Helpers/ReceiptRequestExtensions.cs)
-        // catches every Exception, including the JsonException raised by
-        // SingleOrListLongJsonConverter when the value is non-numeric. The entire
-        // ftReceiptCaseData payload is therefore lost — including a co-supplied mydataoverride —
-        // and the document emerges with NO correlations and the uncorrelated invoice type (5.2
-        // instead of 5.1). If the deserialization error is ever surfaced or the converter is
-        // made more permissive, this test must change.
+        // invoiceMark only accepts a JSON number, a numeric string, or an array of either.
+        // A non-numeric value raises a JsonException from SingleOrListLongJsonConverter, which
+        // TryDeserializeftReceiptCaseData re-throws so the caller is notified instead of
+        // silently losing the entire ftReceiptCaseData payload.
         var factory = CreateFactory();
         var request = CreateB2BRefundRequest();
         request.ftReceiptCaseData = new
@@ -853,16 +851,6 @@ public class PreviousReceiptReferenceTests
                 PreviousReceiptReference = new
                 {
                     invoiceMark = "not-a-number"
-                },
-                mydataoverride = new
-                {
-                    invoice = new
-                    {
-                        invoiceHeader = new
-                        {
-                            correlatedInvoices = new[] { 400123456789L }
-                        }
-                    }
                 }
             }
         };
@@ -871,19 +859,18 @@ public class PreviousReceiptReferenceTests
 
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
-        error.Should().BeNull();
-        var header = doc!.invoice[0].invoiceHeader;
-        header.invoiceType.Should().Be(InvoiceType.Item52);
-        header.correlatedInvoices.Should().BeNull();
-        header.multipleConnectedMarks.Should().BeNull();
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<JsonException>();
+        error.Exception.Message.Should().Contain("not-a-number");
     }
 
     [Fact]
-    public void MapToInvoicesDoc_WithInvoiceMarkExceedingLongMax_SilentlyDropsEntireCaseData()
+    public void MapToInvoicesDoc_WithInvoiceMarkExceedingLongMax_ReturnsError()
     {
-        // Same silent-failure mode as the non-numeric case, but triggered by long.TryParse
-        // returning false for a string of more than 19 digits. Documents the gotcha — see
-        // SingleOrListLongJsonConverter.ReadSingleLong + TryDeserializeftReceiptCaseData.
+        // Same surfacing path as the non-numeric case, triggered by long.TryParse rejecting a
+        // 20-digit string. Catches templating / source-system bugs that would otherwise produce
+        // a wrong-but-accepted document with no correlations.
         var factory = CreateFactory();
         var request = CreateB2BRefundRequest();
         request.ftReceiptCaseData = new
@@ -893,16 +880,6 @@ public class PreviousReceiptReferenceTests
                 PreviousReceiptReference = new
                 {
                     invoiceMark = "99999999999999999999"
-                },
-                mydataoverride = new
-                {
-                    invoice = new
-                    {
-                        invoiceHeader = new
-                        {
-                            correlatedInvoices = new[] { 400123456789L }
-                        }
-                    }
                 }
             }
         };
@@ -911,10 +888,38 @@ public class PreviousReceiptReferenceTests
 
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
-        error.Should().BeNull();
-        var header = doc!.invoice[0].invoiceHeader;
-        header.invoiceType.Should().Be(InvoiceType.Item52);
-        header.correlatedInvoices.Should().BeNull();
-        header.multipleConnectedMarks.Should().BeNull();
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<JsonException>();
+        error.Exception.Message.Should().Contain("99999999999999999999");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithEmptyInvoiceMarkArray_ReturnsError()
+    {
+        // An explicit empty array conveys nothing that "field omitted" doesn't already convey,
+        // and is usually a templating / serialization bug. SingleOrListLongJsonConverter throws
+        // so the caller has to either provide at least one MARK or drop the field entirely.
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = Array.Empty<long>()
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<JsonException>();
+        error.Exception.Message.Should().Contain("at least one MARK");
     }
 }

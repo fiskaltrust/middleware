@@ -10,6 +10,7 @@ using Xunit;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Text.Json;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData;
@@ -385,11 +386,11 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
-    public void Item_5_2_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithEmptyExternalInvoiceMarkArray_ReturnsItem52()
+    public void GetInvoiceType_B2BInvoice_WithEmptyExternalInvoiceMarkArray_Throws()
     {
-        // An explicit empty array must NOT count as a correlation — the {Count: > 0} guard in
-        // HasAnyPreviousInvoiceReference is the only thing preventing a B2B refund with
-        // invoiceMark=[] from being silently mis-typed as 5.1 (correlated).
+        // An explicit empty array is rejected at the JSON layer: invoiceMark must be a number,
+        // a numeric string, or a non-empty array. Callers signal "no correlation" by omitting
+        // the field, not by sending [].
         var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
         receiptRequest.ftReceiptCaseData = new
         {
@@ -402,9 +403,9 @@ public class AADEMappingsInvoiceTypeTests
             }
         };
 
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
+        Action act = () => AADEMappings.GetInvoiceType(receiptRequest);
 
-        result.Should().Be(InvoiceType.Item52);
+        act.Should().Throw<JsonException>().WithMessage("*at least one MARK*");
     }
 
     [Fact]

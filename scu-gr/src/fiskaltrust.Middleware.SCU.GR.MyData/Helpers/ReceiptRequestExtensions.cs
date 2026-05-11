@@ -56,6 +56,13 @@ public static class ReceiptRequestExtensions
             });
             return result != null;
         }
+        catch (JsonException)
+        {
+            // Malformed JSON (e.g. invoiceMark with non-numeric / overflow / empty-array values)
+            // must surface to the caller. Silently dropping the payload would hide a co-supplied
+            // mydataoverride alongside the bad field and produce a wrong-but-accepted document.
+            throw;
+        }
         catch (Exception)
         {
             result = default;
