@@ -737,6 +737,34 @@ public static class AADEMappings
         }
     }
 
+    /// <summary>
+    /// Enforces myDATA spec v2.0.1 §5.4 rule #9: whenever the row ends up with
+    /// <c>measurementUnit = 7</c> (OtherPieces / Τεμάχια_Λοιπές Περιπτώσεις),
+    /// <c>otherMeasurementUnitTitle</c> and <c>otherMeasurementUnitQuantity</c> must both be set.
+    ///
+    /// This guard runs AFTER any line-level override has been applied — it covers the case
+    /// where a caller flips <c>measurementUnit</c> to 7 via override without supplying the
+    /// accompanying title/quantity, falling back to the values on the original ChargeItem.
+    /// </summary>
+    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem)
+    {
+        if (!row.measurementUnitSpecified || row.measurementUnit != MyDataMeasurementUnit.OtherPieces)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.otherMeasurementUnitTitle) && !string.IsNullOrWhiteSpace(chargeItem.Unit))
+        {
+            row.otherMeasurementUnitTitle = chargeItem.Unit;
+        }
+
+        if (!row.otherMeasurementUnitQuantitySpecified)
+        {
+            row.otherMeasurementUnitQuantity = (int) Math.Round(Math.Abs(chargeItem.Quantity), MidpointRounding.AwayFromZero);
+            row.otherMeasurementUnitQuantitySpecified = true;
+        }
+    }
+
 
     /// <summary>
     /// Valid values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,

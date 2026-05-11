@@ -142,6 +142,68 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
         }
 
         [Fact]
+        public void EnsureOtherPiecesMandatoryFields_WhenOverrideFlipsToSeven_FillsTitleFromUnit()
+        {
+            // Simulates an override that set measurementUnit=7 without populating the title.
+            // The guard must back-fill from chargeItem.Unit so the row stays spec-valid.
+            var row = new InvoiceRowType
+            {
+                quantity = 5m,
+                quantitySpecified = true,
+                measurementUnit = MyDataMeasurementUnit.OtherPieces,
+                measurementUnitSpecified = true
+            };
+            var chargeItem = new ChargeItem { Quantity = 5m, Unit = "Παλέτες" };
+
+            AADEMappings.EnsureOtherPiecesMandatoryFields(row, chargeItem);
+
+            row.otherMeasurementUnitTitle.Should().Be("Παλέτες");
+            row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+            row.otherMeasurementUnitQuantity.Should().Be(5);
+        }
+
+        [Fact]
+        public void EnsureOtherPiecesMandatoryFields_WithExistingTitle_DoesNotOverwrite()
+        {
+            // If the override already supplied a title we must respect it.
+            var row = new InvoiceRowType
+            {
+                quantity = 10m,
+                quantitySpecified = true,
+                measurementUnit = MyDataMeasurementUnit.OtherPieces,
+                measurementUnitSpecified = true,
+                otherMeasurementUnitTitle = "Δοχεία",
+                otherMeasurementUnitQuantity = 2,
+                otherMeasurementUnitQuantitySpecified = true
+            };
+            var chargeItem = new ChargeItem { Quantity = 5m, Unit = "Παλέτες" };
+
+            AADEMappings.EnsureOtherPiecesMandatoryFields(row, chargeItem);
+
+            row.otherMeasurementUnitTitle.Should().Be("Δοχεία");
+            row.otherMeasurementUnitQuantity.Should().Be(2);
+        }
+
+        [Fact]
+        public void EnsureOtherPiecesMandatoryFields_WhenMeasurementUnitNotSeven_DoesNothing()
+        {
+            // Other measurement units must not get otherMeasurement* fields.
+            var row = new InvoiceRowType
+            {
+                quantity = 5m,
+                quantitySpecified = true,
+                measurementUnit = MyDataMeasurementUnit.Kg,
+                measurementUnitSpecified = true
+            };
+            var chargeItem = new ChargeItem { Quantity = 5m, Unit = "kg" };
+
+            AADEMappings.EnsureOtherPiecesMandatoryFields(row, chargeItem);
+
+            row.otherMeasurementUnitTitle.Should().BeNull();
+            row.otherMeasurementUnitQuantitySpecified.Should().BeFalse();
+        }
+
+        [Fact]
         public void ApplyMeasurementUnit_WithExplicitOtherPiecesCode_StillSetsMandatoryOtherFields()
         {
             // Even when the caller passes the AADE code name "OtherPieces" as Unit, the spec
