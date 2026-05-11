@@ -385,6 +385,29 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
+    public void Item_5_2_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithEmptyExternalInvoiceMarkArray_ReturnsItem52()
+    {
+        // An explicit empty array must NOT count as a correlation — the {Count: > 0} guard in
+        // HasAnyPreviousInvoiceReference is the only thing preventing a B2B refund with
+        // invoiceMark=[] from being silently mis-typed as 5.1 (correlated).
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = Array.Empty<long>()
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item52);
+    }
+
+    [Fact]
     public void Item_9_3_GetInvoiceType_DeliveryNote_WithTransportDocumentFlag_ReturnsItem93()
     {
         var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);

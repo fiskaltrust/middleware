@@ -256,7 +256,7 @@ public class PreviousReceiptReferenceTests
 
         error.Should().BeNull();
         var header = doc!.invoice[0].invoiceHeader;
-        header.multipleConnectedMarks.Should().BeEquivalentTo(new[] { 400111111111L, 400999999999L });
+        header.multipleConnectedMarks.Should().Equal(400111111111L, 400999999999L);
     }
 
     [Fact]
@@ -364,8 +364,153 @@ public class PreviousReceiptReferenceTests
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
         error.Should().NotBeNull();
+        // Message must enumerate all accepted correlation sources so the caller can pick one.
         error!.Exception.Message.Should().Contain("cbPreviousReceiptReference");
+        error.Exception.Message.Should().Contain("PreviousReceiptReference.invoiceMark");
+        error.Exception.Message.Should().Contain("mydataoverride");
         doc.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RestaurantOrderVoid_WithOnlyMyDataOverrideCorrelatedInvoices_Succeeds()
+    {
+        // 8.6 VOID may also be satisfied by override-supplied correlations: marks placed onto
+        // invoiceHeader.correlatedInvoices via mydataoverride count as a previous reference,
+        // matching AADEMappings.HasAnyPreviousInvoiceReference. The override values survive
+        // because CollectPreviousMarks finds nothing of its own and so does not overwrite them.
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.Order0x3004)
+                .WithFlag(ReceiptCaseFlags.Void),
+            cbTerminalID = "1",
+            cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbArea = "105",
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Quantity = 1,
+                    Description = "VOID item",
+                    Amount = 0.0m,
+                    VATRate = 0,
+                    VATAmount = 0,
+                    Position = 1,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithFlag(ChargeItemCaseFlags.Void)
+                        .WithVat(ChargeItemCase.NotTaxable)
+                }
+            },
+            cbPayItems = new List<PayItem>(),
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    mydataoverride = new
+                    {
+                        invoice = new
+                        {
+                            invoiceHeader = new
+                            {
+                                correlatedInvoices = new[] { 400123456789L }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = new ReceiptResponse
+        {
+            cbReceiptReference = request.cbReceiptReference,
+            ftCashBoxIdentification = "CB001",
+            ftReceiptIdentification = "ft123#"
+        };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item86);
+        header.totalCancelDeliveryOrders.Should().BeTrue();
+        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400123456789L });
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RestaurantOrderVoid_WithOnlyMyDataOverrideMultipleConnectedMarks_Succeeds()
+    {
+        // Mirror of the correlatedInvoices override-only case for the other field. Either
+        // override-supplied field counts as a previous reference for the 8.6 VOID guard.
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                .WithCase(ReceiptCase.Order0x3004)
+                .WithFlag(ReceiptCaseFlags.Void),
+            cbTerminalID = "1",
+            cbCustomer = new MiddlewareCustomer { CustomerCountry = "GR", CustomerVATId = "026883248" },
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbArea = "105",
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = new List<ChargeItem>
+            {
+                new ChargeItem
+                {
+                    Quantity = 1,
+                    Description = "VOID item",
+                    Amount = 0.0m,
+                    VATRate = 0,
+                    VATAmount = 0,
+                    Position = 1,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithFlag(ChargeItemCaseFlags.Void)
+                        .WithVat(ChargeItemCase.NotTaxable)
+                }
+            },
+            cbPayItems = new List<PayItem>(),
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    mydataoverride = new
+                    {
+                        invoice = new
+                        {
+                            invoiceHeader = new
+                            {
+                                multipleConnectedMarks = new[] { 400123456789L }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = new ReceiptResponse
+        {
+            cbReceiptReference = request.cbReceiptReference,
+            ftCashBoxIdentification = "CB001",
+            ftReceiptIdentification = "ft123#"
+        };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item86);
+        header.totalCancelDeliveryOrders.Should().BeTrue();
+        header.multipleConnectedMarks.Should().BeEquivalentTo(new[] { 400123456789L });
+        header.correlatedInvoices.Should().BeNull();
     }
 
     [Fact]
@@ -610,7 +755,7 @@ public class PreviousReceiptReferenceTests
         error.Should().BeNull();
         var header = doc!.invoice[0].invoiceHeader;
         header.invoiceType.Should().Be(InvoiceType.Item51);
-        header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400111111111L, 400999999999L });
+        header.correlatedInvoices.Should().Equal(400111111111L, 400999999999L);
         header.multipleConnectedMarks.Should().BeNull();
     }
 
@@ -687,5 +832,89 @@ public class PreviousReceiptReferenceTests
         var header = doc!.invoice[0].invoiceHeader;
         header.invoiceType.Should().Be(InvoiceType.Item51);
         header.correlatedInvoices.Should().BeEquivalentTo(new[] { 400111111111L });
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithNonNumericInvoiceMark_SilentlyDropsEntireCaseData()
+    {
+        // Pins current behavior: TryDeserializeftReceiptCaseData (Helpers/ReceiptRequestExtensions.cs)
+        // catches every Exception, including the JsonException raised by
+        // SingleOrListLongJsonConverter when the value is non-numeric. The entire
+        // ftReceiptCaseData payload is therefore lost — including a co-supplied mydataoverride —
+        // and the document emerges with NO correlations and the uncorrelated invoice type (5.2
+        // instead of 5.1). If the deserialization error is ever surfaced or the converter is
+        // made more permissive, this test must change.
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "not-a-number"
+                },
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400123456789L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item52);
+        header.correlatedInvoices.Should().BeNull();
+        header.multipleConnectedMarks.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvoiceMarkExceedingLongMax_SilentlyDropsEntireCaseData()
+    {
+        // Same silent-failure mode as the non-numeric case, but triggered by long.TryParse
+        // returning false for a string of more than 19 digits. Documents the gotcha — see
+        // SingleOrListLongJsonConverter.ReadSingleLong + TryDeserializeftReceiptCaseData.
+        var factory = CreateFactory();
+        var request = CreateB2BRefundRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "99999999999999999999"
+                },
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400123456789L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreatePosReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.invoiceType.Should().Be(InvoiceType.Item52);
+        header.correlatedInvoices.Should().BeNull();
+        header.multipleConnectedMarks.Should().BeNull();
     }
 }

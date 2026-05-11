@@ -1583,18 +1583,30 @@ public class AADEFactory
     /// </summary>
     public static void SetInvoiceHeaderFieldsForVoid(InvoiceHeaderType invoiceHeader, ReceiptRequest receiptRequest)
     {
-        // The previous-invoice MARK can come from either cbPreviousReceiptReference (for invoices issued
-        // by this middleware) or from ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark (to correlate
-        // with invoices issued by another system). At least one of the two must be provided.
-        var hasExternalMark = receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
+        // The previous-invoice correlation can come from any of:
+        //   1. cbPreviousReceiptReference                                                — invoices issued by this middleware.
+        //   2. ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark                 — external invoices, identified by MARK.
+        //   3. ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices / multipleConnectedMarks
+        //                                                                                — marks supplied via the invoice-header override.
+        // At least one of these must be provided. This mirrors AADEMappings.HasAnyPreviousInvoiceReference.
+        var hasCaseData = receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData);
+        var hasExternalMark = hasCaseData
             && caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 };
+        var overrideHeader = hasCaseData ? caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader : null;
+        var hasOverrideMarks = overrideHeader?.CorrelatedInvoices is { Count: > 0 }
+            || overrideHeader?.MultipleConnectedMarks is { Count: > 0 };
 
         var refObj = receiptRequest.cbPreviousReceiptReference;
         if (refObj == null)
         {
-            if (!hasExternalMark)
+            if (!hasExternalMark && !hasOverrideMarks)
             {
-                throw new ArgumentException("cbPreviousReceiptReference must not be null or empty.", nameof(receiptRequest.cbPreviousReceiptReference));
+                throw new ArgumentException(
+                    "A previous-invoice correlation is required for 8.6 VOID. Provide one of: "
+                    + "cbPreviousReceiptReference, "
+                    + "ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark, "
+                    + "or ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices/multipleConnectedMarks.",
+                    nameof(receiptRequest.cbPreviousReceiptReference));
             }
         }
         else
