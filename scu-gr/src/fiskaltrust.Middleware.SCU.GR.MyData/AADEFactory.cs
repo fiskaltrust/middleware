@@ -1220,25 +1220,6 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            // Deserialize ftChargeItemCaseData once so the GR-level named properties
-            // (OtherMeasurementUnitQuantity) and the mydataoverride payload share a single
-            // try/catch and can both feed downstream mapping.
-            ftChargeItemCaseDataPayload? chargeItemData = null;
-            if (x.ftChargeItemCaseData != null)
-            {
-                try
-                {
-                    chargeItemData = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
-                        JsonSerializer.Serialize(x.ftChargeItemCaseData),
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                }
-                catch (JsonException)
-                {
-                    // ftChargeItemCaseData may contain data for other purposes, ignore deserialization errors
-                }
-            }
-            var explicitOtherMeasurementUnitQuantity = chargeItemData?.GR?.OtherMeasurementUnitQuantity;
-
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
             {
                 if (!string.IsNullOrEmpty(x.ProductNumber))
@@ -1248,7 +1229,7 @@ public class AADEFactory
 
                 invoiceRow.itemDescr = x.Description;
 
-                AADEMappings.ApplyMeasurementUnit(invoiceRow, x, explicitOtherMeasurementUnitQuantity);
+                AADEMappings.ApplyMeasurementUnit(invoiceRow, x);
             }
 
             if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
@@ -1345,14 +1326,27 @@ public class AADEFactory
                 invoiceRow.deductionsAmountSpecified = true;
             }
             // Apply line-level mydataoverride from ftChargeItemCaseData
-            if (chargeItemData?.GR?.MyDataOverride?.InvoiceDetails != null)
+            if (x.ftChargeItemCaseData != null)
             {
-                ApplyInvoiceDetailOverride(invoiceRow, chargeItemData.GR.MyDataOverride.InvoiceDetails);
+                try
+                {
+                    var chargeItemData = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
+                        JsonSerializer.Serialize(x.ftChargeItemCaseData),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (chargeItemData?.GR?.MyDataOverride?.InvoiceDetails != null)
+                    {
+                        ApplyInvoiceDetailOverride(invoiceRow, chargeItemData.GR.MyDataOverride.InvoiceDetails);
+                    }
+                }
+                catch (JsonException)
+                {
+                    // ftChargeItemCaseData may contain data for other purposes, ignore deserialization errors
+                }
             }
 
             // Guard the spec-mandatory pair for measurementUnit=7 — covers callers who flipped
             // measurementUnit via override without supplying the accompanying title/count.
-            AADEMappings.EnsureOtherPiecesMandatoryFields(invoiceRow, x, explicitOtherMeasurementUnitQuantity);
+            AADEMappings.EnsureOtherPiecesMandatoryFields(invoiceRow, x);
             return invoiceRow;
         }).ToList();
     }

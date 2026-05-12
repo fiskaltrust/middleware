@@ -697,21 +697,15 @@ public static class AADEMappings
     ///
     /// Mapping applied here:
     /// <list type="bullet">
-    ///   <item><description><c>row.quantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/> (item count)</description></item>
-    ///   <item><description><c>row.otherMeasurementUnitQuantity</c> ← <see cref="ChargeItem.Quantity"/> (packaging count, only when measurementUnit=7)</description></item>
-    ///   <item><description><c>row.otherMeasurementUnitTitle</c> ← <see cref="ChargeItem.Unit"/> (packaging description, only when measurementUnit=7)</description></item>
+    ///   <item><description><c>row.quantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/></description></item>
+    ///   <item><description><c>row.otherMeasurementUnitQuantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/> (only when measurementUnit=7; whole-number validated)</description></item>
+    ///   <item><description><c>row.otherMeasurementUnitTitle</c> ← <see cref="ChargeItem.Unit"/> (only when measurementUnit=7)</description></item>
     /// </list>
     ///
     /// AADE schema requires <c>quantity &gt; 0</c> (<c>minExclusive="0"</c>), so the absolute value
     /// is always emitted.
-    ///
-    /// <paramref name="explicitOtherMeasurementUnitQuantity"/> takes precedence over the
-    /// <see cref="ChargeItem.Quantity"/> fallback for <c>otherMeasurementUnitQuantity</c>
-    /// (sourced from <c>ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity</c>). When the
-    /// caller provides this, the whole-number validation against <c>ChargeItem.Quantity</c>
-    /// is skipped because the explicit value is already an <c>int</c>.
     /// </remarks>
-    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem, int? explicitOtherMeasurementUnitQuantity = null)
+    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
     {
         row.measurementUnit = GetMeasurementUnit(chargeItem);
         row.measurementUnitSpecified = true;
@@ -723,8 +717,7 @@ public static class AADEMappings
             if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces)
             {
                 row.otherMeasurementUnitTitle = chargeItem.Unit;
-                row.otherMeasurementUnitQuantity = explicitOtherMeasurementUnitQuantity
-                    ?? ToOtherMeasurementUnitQuantity(chargeItem.Quantity);
+                row.otherMeasurementUnitQuantity = ToOtherMeasurementUnitQuantity(chargeItem.UnitQuantity ?? chargeItem.Quantity);
                 row.otherMeasurementUnitQuantitySpecified = true;
             }
 
@@ -751,7 +744,7 @@ public static class AADEMappings
     /// where a caller flips <c>measurementUnit</c> to 7 via override without supplying the
     /// accompanying title/quantity, falling back to the values on the original ChargeItem.
     /// </summary>
-    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem, int? explicitOtherMeasurementUnitQuantity = null)
+    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem)
     {
         if (!row.measurementUnitSpecified || row.measurementUnit != MyDataMeasurementUnit.OtherPieces)
         {
@@ -765,27 +758,25 @@ public static class AADEMappings
 
         if (!row.otherMeasurementUnitQuantitySpecified)
         {
-            row.otherMeasurementUnitQuantity = explicitOtherMeasurementUnitQuantity
-                ?? ToOtherMeasurementUnitQuantity(chargeItem.Quantity);
+            row.otherMeasurementUnitQuantity = ToOtherMeasurementUnitQuantity(chargeItem.UnitQuantity ?? chargeItem.Quantity);
             row.otherMeasurementUnitQuantitySpecified = true;
         }
     }
 
     /// <summary>
-    /// Converts a <see cref="ChargeItem.Quantity"/> (decimal) to the AADE
-    /// <c>otherMeasurementUnitQuantity</c> (int). Throws if the value would lose precision —
-    /// callers that need a fractional source-quantity must supply the value explicitly via
-    /// <c>ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity</c>.
+    /// Converts a source quantity (<see cref="ChargeItem.UnitQuantity"/> or
+    /// <see cref="ChargeItem.Quantity"/>) to the AADE <c>otherMeasurementUnitQuantity</c> (int).
+    /// Throws if the value would lose precision — fractional inputs are rejected since the
+    /// AADE field is an integer.
     /// </summary>
-    private static int ToOtherMeasurementUnitQuantity(decimal chargeItemQuantity)
+    private static int ToOtherMeasurementUnitQuantity(decimal sourceQuantity)
     {
-        var abs = Math.Abs(chargeItemQuantity);
+        var abs = Math.Abs(sourceQuantity);
         if (abs != Math.Truncate(abs))
         {
             throw new Exception(
-                $"ChargeItem.Quantity ({chargeItemQuantity}) must be a whole number to populate "
-                + "otherMeasurementUnitQuantity for AADE measurementUnit=7 (OtherPieces). "
-                + "Set ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity explicitly to override.");
+                $"ChargeItem.UnitQuantity/Quantity ({sourceQuantity}) must be a whole number to populate "
+                + "otherMeasurementUnitQuantity for AADE measurementUnit=7 (OtherPieces).");
         }
         return (int) abs;
     }

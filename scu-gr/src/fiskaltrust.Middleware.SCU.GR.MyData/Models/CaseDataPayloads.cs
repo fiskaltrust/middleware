@@ -30,7 +30,4 @@ public class ftChargeItemCaseDataGreekPayload
 {
     [JsonPropertyName("mydataoverride")]
     public ChargeItemMyDataOverride? MyDataOverride { get; set; }
-
-    [JsonPropertyName("othermeasurementunitquantity")]
-    public int? OtherMeasurementUnitQuantity { get; set; }
 }
