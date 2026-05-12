@@ -60,6 +60,10 @@ public static class ReceiptCaseHelper
     public static bool IsSingleUseVoucher(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00F0) == 0x40 && !IsMultiUseVoucher(chargeItem);
 
     public static bool IsMultiUseVoucher(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00FF) == 0x48;
+    
+    public static bool IsSubtotalDiscount(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0FFF_0000_0000) == 0x0000_0100_0000_0000;
+
+    public static bool IsSubtotalSurcharge(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0FFF_0000_0000) == 0x0000_0200_0000_0000;
 
     public static bool IsRefund(this PayItem payItem) => (payItem.ftPayItemCase & 0x0000_0000_0002_0000) > 0x0000;
 
