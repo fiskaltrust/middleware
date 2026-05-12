@@ -704,37 +704,42 @@ public static class AADEMappings
     ///
     /// AADE schema requires <c>quantity &gt; 0</c> (<c>minExclusive="0"</c>), so the absolute value
     /// is always emitted.
+    ///
+    /// <paramref name="explicitOtherMeasurementUnitQuantity"/> takes precedence over the
+    /// <see cref="ChargeItem.Quantity"/> fallback for <c>otherMeasurementUnitQuantity</c>
+    /// (sourced from <c>ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity</c>). When the
+    /// caller provides this, the whole-number validation against <c>ChargeItem.Quantity</c>
+    /// is skipped because the explicit value is already an <c>int</c>.
     /// </remarks>
-    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
+    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem, int? explicitOtherMeasurementUnitQuantity = null)
     {
         row.measurementUnit = GetMeasurementUnit(chargeItem);
         row.measurementUnitSpecified = true;
 
-        if (string.IsNullOrWhiteSpace(chargeItem.Unit))
+        if (!string.IsNullOrWhiteSpace(chargeItem.Unit))
         {
-            // No Unit set: keep the row's quantity as ChargeItem.Quantity (already set by the caller),
-            // and use the default measurementUnit (Pieces).
-            return;
+            // measurementUnit = 7 → both otherMeasurementUnitTitle and otherMeasurementUnitQuantity
+            // are mandatory per spec §5.4 rule #9.
+            if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces)
+            {
+                row.otherMeasurementUnitTitle = chargeItem.Unit;
+                row.otherMeasurementUnitQuantity = explicitOtherMeasurementUnitQuantity
+                    ?? ToOtherMeasurementUnitQuantity(chargeItem.Quantity);
+                row.otherMeasurementUnitQuantitySpecified = true;
+            }
+
+            // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity
+            // (the count of items being moved). When UnitQuantity is missing, row.quantity already
+            // carries ChargeItem.Quantity from the caller — implementing the fallback rule
+            // "Quantity is used as UnitQuantity".
+            if (chargeItem.UnitQuantity.HasValue)
+            {
+                row.quantity = chargeItem.UnitQuantity.Value;
+                row.quantitySpecified = true;
+            }
         }
 
-        // measurementUnit = 7 → both otherMeasurementUnitTitle and otherMeasurementUnitQuantity
-        // are mandatory per spec §5.4 rule #9.
-        if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces)
-        {
-            row.otherMeasurementUnitTitle = chargeItem.Unit;
-            row.otherMeasurementUnitQuantity = (int) Math.Round(Math.Abs(chargeItem.Quantity), MidpointRounding.AwayFromZero);
-            row.otherMeasurementUnitQuantitySpecified = true;
-        }
-
-        // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity
-        // (the count of items being moved). When UnitQuantity is missing, row.quantity already
-        // carries ChargeItem.Quantity from the caller — implementing the fallback rule
-        // "Quantity is used as UnitQuantity".
-        if (chargeItem.UnitQuantity.HasValue)
-        {
-            row.quantity = Math.Abs(chargeItem.UnitQuantity.Value);
-            row.quantitySpecified = true;
-        }
+        row.quantity = Math.Abs(row.quantity);
     }
 
     /// <summary>
@@ -746,7 +751,7 @@ public static class AADEMappings
     /// where a caller flips <c>measurementUnit</c> to 7 via override without supplying the
     /// accompanying title/quantity, falling back to the values on the original ChargeItem.
     /// </summary>
-    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem)
+    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem, int? explicitOtherMeasurementUnitQuantity = null)
     {
         if (!row.measurementUnitSpecified || row.measurementUnit != MyDataMeasurementUnit.OtherPieces)
         {
@@ -760,9 +765,29 @@ public static class AADEMappings
 
         if (!row.otherMeasurementUnitQuantitySpecified)
         {
-            row.otherMeasurementUnitQuantity = (int) Math.Round(Math.Abs(chargeItem.Quantity), MidpointRounding.AwayFromZero);
+            row.otherMeasurementUnitQuantity = explicitOtherMeasurementUnitQuantity
+                ?? ToOtherMeasurementUnitQuantity(chargeItem.Quantity);
             row.otherMeasurementUnitQuantitySpecified = true;
         }
+    }
+
+    /// <summary>
+    /// Converts a <see cref="ChargeItem.Quantity"/> (decimal) to the AADE
+    /// <c>otherMeasurementUnitQuantity</c> (int). Throws if the value would lose precision —
+    /// callers that need a fractional source-quantity must supply the value explicitly via
+    /// <c>ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity</c>.
+    /// </summary>
+    private static int ToOtherMeasurementUnitQuantity(decimal chargeItemQuantity)
+    {
+        var abs = Math.Abs(chargeItemQuantity);
+        if (abs != Math.Truncate(abs))
+        {
+            throw new Exception(
+                $"ChargeItem.Quantity ({chargeItemQuantity}) must be a whole number to populate "
+                + "otherMeasurementUnitQuantity for AADE measurementUnit=7 (OtherPieces). "
+                + "Set ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity explicitly to override.");
+        }
+        return (int) abs;
     }
 
 

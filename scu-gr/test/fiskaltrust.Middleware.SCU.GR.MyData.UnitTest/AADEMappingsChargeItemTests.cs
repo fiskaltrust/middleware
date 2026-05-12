@@ -220,5 +220,102 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
             row.otherMeasurementUnitQuantity.Should().Be(4);
             row.quantity.Should().Be(4m);
         }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithoutUnit_NormalizesNegativeRowQuantityToPositive()
+        {
+            // Refund flows pre-set row.quantity to a negative value (AADEFactory line 1189).
+            // AADE schema requires quantity > 0 even on the empty-Unit / default-Pieces path.
+            var row = new InvoiceRowType { quantity = -5m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 5m };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.Pieces);
+            row.quantity.Should().Be(5m);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithStandardUnit_AndNegativeRowQuantity_NormalizesToPositive()
+        {
+            // Same normalization applies when Unit maps to a standard code and UnitQuantity is missing.
+            var row = new InvoiceRowType { quantity = -2.5m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 2.5m, Unit = "kg" };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.Kg);
+            row.quantity.Should().Be(2.5m);
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithFractionalQuantityForOtherPieces_Throws()
+        {
+            // otherMeasurementUnitQuantity is an int in the AADE schema. We refuse silent
+            // rounding of fractional ChargeItem.Quantity; the caller must set the explicit
+            // named property if they really need a non-whole source.
+            var row = new InvoiceRowType { quantity = 1.5m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 1.5m, Unit = "barrels" };
+
+            var act = () => AADEMappings.ApplyMeasurementUnit(row, chargeItem);
+
+            act.Should().Throw<Exception>()
+                .WithMessage("*whole number*otherMeasurementUnitQuantity*");
+        }
+
+        [Fact]
+        public void ApplyMeasurementUnit_WithExplicitOtherMeasurementUnitQuantity_BypassesFractionalCheck()
+        {
+            // When the caller supplies ftChargeItemCaseData.GR.OtherMeasurementUnitQuantity,
+            // the fractional ChargeItem.Quantity is irrelevant — the int value wins.
+            var row = new InvoiceRowType { quantity = 1.5m, quantitySpecified = true };
+            var chargeItem = new ChargeItem { Quantity = 1.5m, Unit = "barrels", UnitQuantity = 9m };
+
+            AADEMappings.ApplyMeasurementUnit(row, chargeItem, explicitOtherMeasurementUnitQuantity: 3);
+
+            row.measurementUnit.Should().Be(MyDataMeasurementUnit.OtherPieces);
+            row.otherMeasurementUnitTitle.Should().Be("barrels");
+            row.otherMeasurementUnitQuantity.Should().Be(3);
+            row.quantity.Should().Be(9m);
+        }
+
+        [Fact]
+        public void EnsureOtherPiecesMandatoryFields_WithFractionalQuantity_Throws()
+        {
+            // Same whole-number contract applies in the post-override guard.
+            var row = new InvoiceRowType
+            {
+                quantity = 5m,
+                quantitySpecified = true,
+                measurementUnit = MyDataMeasurementUnit.OtherPieces,
+                measurementUnitSpecified = true
+            };
+            var chargeItem = new ChargeItem { Quantity = 2.5m, Unit = "barrels" };
+
+            var act = () => AADEMappings.EnsureOtherPiecesMandatoryFields(row, chargeItem);
+
+            act.Should().Throw<Exception>()
+                .WithMessage("*whole number*otherMeasurementUnitQuantity*");
+        }
+
+        [Fact]
+        public void EnsureOtherPiecesMandatoryFields_WithExplicitQuantity_BypassesFractionalCheck()
+        {
+            // Guard accepts an explicit GR.OtherMeasurementUnitQuantity, even when the
+            // ChargeItem.Quantity would otherwise have failed the whole-number check.
+            var row = new InvoiceRowType
+            {
+                quantity = 5m,
+                quantitySpecified = true,
+                measurementUnit = MyDataMeasurementUnit.OtherPieces,
+                measurementUnitSpecified = true
+            };
+            var chargeItem = new ChargeItem { Quantity = 2.5m, Unit = "barrels" };
+
+            AADEMappings.EnsureOtherPiecesMandatoryFields(row, chargeItem, explicitOtherMeasurementUnitQuantity: 4);
+
+            row.otherMeasurementUnitTitle.Should().Be("barrels");
+            row.otherMeasurementUnitQuantity.Should().Be(4);
+        }
     }
 }
