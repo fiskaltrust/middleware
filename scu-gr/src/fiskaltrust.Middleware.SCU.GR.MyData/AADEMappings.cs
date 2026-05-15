@@ -709,11 +709,7 @@ public static class AADEMappings
 
     public static int GetMeasurementUnit(ChargeItem? chargeItem)
     {
-        if (chargeItem == null)
-        {
-            return MyDataMeasurementUnit.Pieces;
-        }
-        if (string.IsNullOrWhiteSpace(chargeItem?.Unit))
+        if (chargeItem == null || string.IsNullOrWhiteSpace(chargeItem.Unit))
         {
             return MyDataMeasurementUnit.Pieces;
         }
@@ -727,8 +723,110 @@ public static class AADEMappings
             "squaremeters" => MyDataMeasurementUnit.SquareMeters,
             "cubicmeters" => MyDataMeasurementUnit.CubicMeters,
             "otherpieces" => MyDataMeasurementUnit.OtherPieces,
-            _ => MyDataMeasurementUnit.Pieces
+            // A non-empty Unit that does not match any AADE-defined measurement unit
+            // is mapped to OtherPieces; the original string is carried over via
+            // otherMeasurementUnitTitle (see AADEFactory.ApplyMeasurementUnit).
+            _ => MyDataMeasurementUnit.OtherPieces
         };
+    }
+
+    /// <summary>
+    /// Applies the AADE measurement-unit-related fields on an invoice row from a charge item,
+    /// honoring the ChargeItem.Unit / ChargeItem.UnitQuantity named properties with fallbacks
+    /// per market-gr issue #182.
+    /// </summary>
+    /// <remarks>
+    /// Per myDATA REST API spec v2.0.1 §5.4 rule #9: when <c>measurementUnit = 7</c>
+    /// (Τεμάχια_Λοιπές Περιπτώσεις / Other Pieces), <c>otherMeasurementUnitQuantity</c> and
+    /// <c>otherMeasurementUnitTitle</c> are MANDATORY. The spec also clarifies that
+    /// <c>quantity</c> always represents the count of items being moved, NOT the count of packaging.
+    ///
+    /// Mapping applied here:
+    /// <list type="bullet">
+    ///   <item><description><c>row.quantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/></description></item>
+    ///   <item><description><c>row.otherMeasurementUnitQuantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/> (only when measurementUnit=7; whole-number validated)</description></item>
+    ///   <item><description><c>row.otherMeasurementUnitTitle</c> ← <see cref="ChargeItem.Unit"/> (only when measurementUnit=7)</description></item>
+    /// </list>
+    ///
+    /// AADE schema requires <c>quantity &gt; 0</c> (<c>minExclusive="0"</c>), so the absolute value
+    /// is always emitted.
+    /// </remarks>
+    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
+    {
+        row.measurementUnit = GetMeasurementUnit(chargeItem);
+        row.measurementUnitSpecified = true;
+
+        if (!string.IsNullOrWhiteSpace(chargeItem.Unit))
+        {
+            // measurementUnit = 7 → both otherMeasurementUnitTitle and otherMeasurementUnitQuantity
+            // are mandatory per spec §5.4 rule #9.
+            if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces)
+            {
+                row.otherMeasurementUnitTitle = chargeItem.Unit;
+                row.otherMeasurementUnitQuantity = ToOtherMeasurementUnitQuantity(chargeItem.UnitQuantity ?? chargeItem.Quantity);
+                row.otherMeasurementUnitQuantitySpecified = true;
+            }
+
+            // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity
+            // (the count of items being moved). When UnitQuantity is missing, row.quantity already
+            // carries ChargeItem.Quantity from the caller — implementing the fallback rule
+            // "Quantity is used as UnitQuantity".
+            if (chargeItem.UnitQuantity.HasValue)
+            {
+                row.quantity = chargeItem.UnitQuantity.Value;
+                row.quantitySpecified = true;
+            }
+        }
+
+        // Normalize: AADE requires quantity > 0 (minExclusive="0"). At this point row.quantity
+        // is whichever source already won above (UnitQuantity or caller-supplied Quantity).
+        row.quantity = Math.Abs(row.quantity);
+    }
+
+    /// <summary>
+    /// Enforces myDATA spec v2.0.1 §5.4 rule #9: whenever the row ends up with
+    /// <c>measurementUnit = 7</c> (OtherPieces / Τεμάχια_Λοιπές Περιπτώσεις),
+    /// <c>otherMeasurementUnitTitle</c> and <c>otherMeasurementUnitQuantity</c> must both be set.
+    ///
+    /// This guard runs AFTER any line-level override has been applied — it covers the case
+    /// where a caller flips <c>measurementUnit</c> to 7 via override without supplying the
+    /// accompanying title/quantity, falling back to the values on the original ChargeItem.
+    /// </summary>
+    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem)
+    {
+        if (!row.measurementUnitSpecified || row.measurementUnit != MyDataMeasurementUnit.OtherPieces)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.otherMeasurementUnitTitle) && !string.IsNullOrWhiteSpace(chargeItem.Unit))
+        {
+            row.otherMeasurementUnitTitle = chargeItem.Unit;
+        }
+
+        if (!row.otherMeasurementUnitQuantitySpecified)
+        {
+            row.otherMeasurementUnitQuantity = ToOtherMeasurementUnitQuantity(chargeItem.UnitQuantity ?? chargeItem.Quantity);
+            row.otherMeasurementUnitQuantitySpecified = true;
+        }
+    }
+
+    /// <summary>
+    /// Converts a source quantity (<see cref="ChargeItem.UnitQuantity"/> or
+    /// <see cref="ChargeItem.Quantity"/>) to the AADE <c>otherMeasurementUnitQuantity</c> (int).
+    /// Throws if the value would lose precision — fractional inputs are rejected since the
+    /// AADE field is an integer.
+    /// </summary>
+    private static int ToOtherMeasurementUnitQuantity(decimal sourceQuantity)
+    {
+        var abs = Math.Abs(sourceQuantity);
+        if (abs != Math.Truncate(abs))
+        {
+            throw new Exception(
+                $"ChargeItem.UnitQuantity/Quantity ({sourceQuantity}) must be a whole number to populate "
+                + "otherMeasurementUnitQuantity for AADE measurementUnit=7 (OtherPieces).");
+        }
+        return (int) abs;
     }
 
 

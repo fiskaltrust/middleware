@@ -1234,8 +1234,7 @@ public class AADEFactory
 
                 invoiceRow.itemDescr = x.Description;
 
-                invoiceRow.measurementUnit = AADEMappings.GetMeasurementUnit(x);
-                invoiceRow.measurementUnitSpecified = true;
+                AADEMappings.ApplyMeasurementUnit(invoiceRow, x);
             }
 
             if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
@@ -1349,6 +1348,10 @@ public class AADEFactory
                     // ftChargeItemCaseData may contain data for other purposes, ignore deserialization errors
                 }
             }
+
+            // Guard the spec-mandatory pair for measurementUnit=7 — covers callers who flipped
+            // measurementUnit via override without supplying the accompanying title/count.
+            AADEMappings.EnsureOtherPiecesMandatoryFields(invoiceRow, x);
             return invoiceRow;
         }).ToList();
     }
