@@ -732,6 +732,8 @@ public static class AADEMappings
             }
         }
 
+        // Normalize: AADE requires quantity > 0 (minExclusive="0"). At this point row.quantity
+        // is whichever source already won above (UnitQuantity or caller-supplied Quantity).
         row.quantity = Math.Abs(row.quantity);
     }
 
