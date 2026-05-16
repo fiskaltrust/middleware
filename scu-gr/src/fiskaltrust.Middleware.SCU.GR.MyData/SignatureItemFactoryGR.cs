@@ -101,22 +101,6 @@ public static class SignatureItemFactoryGR
     }
 
 
-    public static void AddAadeDuplicateResubmissionSignature(ProcessRequest request)
-    {
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            // AADE returned error 233 ("UID has already been sent"). The most common cause
-            // is a crash between AADE's previous 200 OK and our storage commit, so we treat
-            // the duplicate as success-equivalent and let the QueueGR processor advance the
-            // counter on this retry. Mark of the originally-accepted submission is not in
-            // the 233 response body and will be recovered separately (Phase 2).
-            Data = "AADE error 233: this (series, aa) was already submitted by a prior attempt. Treating as success-equivalent so the queue counter advances. The mark of the original submission is recorded on AADE but not in this response.",
-            Caption = "aadeDuplicateResubmission",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeGR.AadeDuplicateResubmission.As<SignatureType>().WithFlag(SignatureTypeFlags.DontVisualize)
-        });
-    }
-
     public static void AddMyDataXmlSignature(ProcessRequest request, string xmlPayload)
     {
         var cleanXml = xmlPayload;

@@ -132,14 +132,14 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task UpgradedQueue_SeedsInvoiceNumeratorFromFtReceiptNumeratorMinusOne()
+    public async Task UpgradedQueue_SeedsInvoiceNumeratorFromFtReceiptNumerator()
     {
         // Queues activated before the InvoiceNumerator-based fix had been submitting
-        // receipts with aa = ftReceiptNumerator (read before post-submission increment).
-        // After N successful pre-upgrade submissions, ftReceiptNumerator == N and the
-        // highest aa AADE has is N-1. Seeding from ftReceiptNumerator-1 makes the first
-        // post-upgrade reserved aa exactly N — the value the old code would have
-        // emitted next — so AADE's sequence stays gap-free across the upgrade.
+        // receipts with aa derived from ftReceiptNumerator. The migration seeds
+        // InvoiceNumerator from ftReceiptNumerator so the first post-upgrade reserved
+        // aa lands strictly above anything AADE could already have on file, accepting
+        // a one-aa cosmetic gap in exchange for a guaranteed collision-free upgrade
+        // even on queues where a pre-upgrade attempt crashed after AADE-success.
         var queue = TestHelpers.CreateQueue();
         queue.ftReceiptNumerator = 17;  // queue was submitting receipts pre-upgrade
         var queueGR = new ftQueueGR
@@ -150,7 +150,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 0, // never written under the new code yet
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 17, mark: 999L);
+        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 18, mark: 999L);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -163,7 +163,7 @@ public class InvoiceCounterReservationTests
 
         configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
             q.InvoiceSeries == "CB-A" &&
-            q.InvoiceNumerator == 17)),
+            q.InvoiceNumerator == 18)),
             Times.Once);
     }
 

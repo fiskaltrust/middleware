@@ -17,23 +17,23 @@ internal static class InvoiceCounterReservation
         var configRepo = await configurationRepository;
         var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
 
-        // One-time migration for queues activated before this code shipped. Pre-upgrade,
-        // the aa transmitted to AADE was read as ftReceiptNumerator *before* its post-
-        // submission increment, so after N successful submissions ftReceiptNumerator==N
-        // and the highest aa AADE has on file is N-1. Seeding InvoiceNumerator from
-        // ftReceiptNumerator-1 makes the first post-upgrade reserved aa equal to N —
-        // exactly the value the old code would have submitted next — keeping the AADE
-        // sequence gap-free across the upgrade. If a pre-upgrade attempt crashed after
-        // AADE accepted (so AADE has aa=N without ftReceiptNumerator having bumped),
-        // this seed collides with that record and the 233 handler self-heals on the
-        // next round-trip.
+        // One-time migration for queues activated before this code shipped. Pre-upgrade
+        // the aa transmitted to AADE was derived from the generic ftReceiptNumerator.
+        // Seeding InvoiceNumerator from ftReceiptNumerator makes the first post-upgrade
+        // reserved aa strictly greater than any aa AADE could have on file for this
+        // queue (in particular, greater than any value that may have been filed by a
+        // pre-upgrade attempt that crashed between AADE-success and storage-commit).
+        // This produces a one-aa cosmetic gap per upgraded queue — AADE permits
+        // non-contiguous aa, it just refuses duplicates. The alternative (seed at
+        // ftReceiptNumerator-1) is gap-free but would deadlock crash-recovered queues
+        // without a 233 self-heal handler, which is intentionally out of scope here.
         if (string.IsNullOrEmpty(queueGR.InvoiceSeries))
         {
             queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
         }
         if (queueGR.InvoiceNumerator == 0 && request.queue.ftReceiptNumerator > 0)
         {
-            queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator - 1;
+            queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator;
         }
 
         var reservedSeries = queueGR.InvoiceSeries;
