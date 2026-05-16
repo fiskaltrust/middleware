@@ -18,6 +18,7 @@ public enum SignatureTypeGR : long
     GenericMyDataInfo = 0x4752_2000_0000_0019,
     QRCode = 0x4752_2000_0000_001A,
     HandwrittenSignature = 0x4752_2000_0000_001B,
+    AadeDuplicateResubmission = 0x4752_2000_0000_001C,
 }
 
 public static class SignatureTypeGRExt

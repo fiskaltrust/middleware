@@ -312,15 +312,32 @@ public class MyDataSCU : IGRSSCD
                     }
                     else
                     {
-                        var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
-                        SetErrorAndLog(request,JsonSerializer.Serialize(new AADEEErrorResponse
+                        var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error).ToList();
+                        if (errors.Any(e => e.code == "233"))
                         {
-                            AADEError = data.statusCode,
-                            Errors = errors.ToList()
-                        }, options: new JsonSerializerOptions
+                            // AADE rejected the submission because the deterministic uid
+                            // (issuer, branch, date, type, series, aa) is already on file.
+                            // Almost always the prior submission was ours, lost between
+                            // AADE's 200 and our storage commit (process kill, network
+                            // hiccup, etc.). Treat as success-equivalent so the QueueGR
+                            // processor's reserve-then-commit path advances the counter
+                            // on this retry, otherwise the queue is stuck forever. The
+                            // foreign-collision case is ambiguous from 233 alone and is
+                            // resolved by Phase 2 verification via RequestTransmittedDocs.
+                            request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                            SignatureItemFactoryGR.AddAadeDuplicateResubmissionSignature(request);
+                        }
+                        else
                         {
-                            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                        }));
+                            SetErrorAndLog(request,JsonSerializer.Serialize(new AADEEErrorResponse
+                            {
+                                AADEError = data.statusCode,
+                                Errors = errors
+                            }, options: new JsonSerializerOptions
+                            {
+                                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                            }));
+                        }
                     }
                 }
             }
