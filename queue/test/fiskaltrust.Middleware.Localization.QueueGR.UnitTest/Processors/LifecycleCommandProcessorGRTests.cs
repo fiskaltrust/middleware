@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
@@ -159,6 +160,67 @@ public class LifecycleCommandProcessorGRTests
         data.Version.Should().Be("V0");
 
         configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
+    }
+
+    [Fact]
+    public async Task InitialOperationReceipt_SeedsInvoiceSeriesFromCashBoxIdentification_WhenUnset()
+    {
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+        };
+        var configRepo = new Mock<IConfigurationRepository>();
+        configRepo.Setup(x => x.GetQueueGRAsync(It.IsAny<Guid>())).ReturnsAsync(queueGR);
+        configRepo.Setup(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>())).Returns(Task.CompletedTask);
+
+        var sut = new LifecycleCommandProcessorGR(
+            Mock.Of<ILocalizedQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepo.Object)));
+
+        var request = new ProcessCommandRequest(
+            queue,
+            new ReceiptRequest { ftCashBoxID = Guid.NewGuid(), ftReceiptCase = ReceiptCase.InitialOperationReceipt0x4001 },
+            new ReceiptResponse { ftCashBoxIdentification = "CB-A", ftQueueID = queue.ftQueueId });
+
+        await sut.InitialOperationReceipt0x4001Async(request);
+
+        configRepo.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
+            q.InvoiceSeries == "CB-A")),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task InitialOperationReceipt_DoesNotOverwriteExistingInvoiceSeries()
+    {
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "PRE-CONFIGURED",
+        };
+        var configRepo = new Mock<IConfigurationRepository>();
+        configRepo.Setup(x => x.GetQueueGRAsync(It.IsAny<Guid>())).ReturnsAsync(queueGR);
+        configRepo.Setup(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>())).Returns(Task.CompletedTask);
+
+        var sut = new LifecycleCommandProcessorGR(
+            Mock.Of<ILocalizedQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepo.Object)));
+
+        var request = new ProcessCommandRequest(
+            queue,
+            new ReceiptRequest { ftCashBoxID = Guid.NewGuid(), ftReceiptCase = ReceiptCase.InitialOperationReceipt0x4001 },
+            new ReceiptResponse { ftCashBoxIdentification = "CB-A", ftQueueID = queue.ftQueueId });
+
+        await sut.InitialOperationReceipt0x4001Async(request);
+
+        // No InsertOrUpdate because InvoiceSeries was already set, so the seeding branch
+        // didn't run. Rotating an active series is a deliberate operational action and
+        // must not happen as a side effect of activation.
+        configRepo.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
     }
 
     [Fact]
