@@ -243,6 +243,201 @@ public class InvoiceCounterReservationTests
         return repo;
     }
 
+    [Fact]
+    public async Task FiveSuccessfulSubmissions_ProduceContinuousAa1Through5()
+    {
+        // Continuity smoke: five POS receipts in a row on a fresh queue must produce
+        // exactly aa = 1, 2, 3, 4, 5 on AADE with no skips.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        for (var i = 0; i < 5; i++)
+        {
+            await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+        }
+
+        capturedAa.Should().Equal(1L, 2L, 3L, 4L, 5L);
+        queueGR.InvoiceNumerator.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task RetryAfterErrorReusesSameAa()
+    {
+        // Failure semantics: if AADE rejects a submission (State.Error), the counter
+        // must not advance and the retry must reuse the exact same aa.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var callCount = 0;
+
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                callCount++;
+                CaptureReservedAa(req.ReceiptResponse, capturedAa);
+                if (callCount == 2)
+                {
+                    // Second call fails. Counter must not advance.
+                    req.ReceiptResponse.ftState = req.ReceiptResponse.ftState.WithState(State.Error);
+                }
+                else
+                {
+                    MarkAsSuccessKeepingSuffix(req.ReceiptResponse, mark: 100L + callCount);
+                }
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // succeeds, aa=1
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // fails, attempts aa=2
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // retry succeeds, aa=2 again
+
+        capturedAa.Should().Equal(1L, 2L, 2L);
+        queueGR.InvoiceNumerator.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task OverrideBetweenAutoReceipts_DoesNotShiftAutoSequence()
+    {
+        // A receipt that submits under a caller-supplied (series, aa) — handwritten or
+        // mydataoverride — must not advance the auto counter. The next auto receipt
+        // therefore picks up at the value following the *last auto-committed* one,
+        // not at the value following the override.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var callCount = 0;
+
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                callCount++;
+                CaptureReservedAa(req.ReceiptResponse, capturedAa);
+                if (callCount == 2)
+                {
+                    // Override path: suffix gets rewritten to something else (simulates
+                    // handwritten or mydataoverride replacing series/aa on the doc).
+                    OverwriteSuffix(req.ReceiptResponse, "HANDWRITTEN", 9999, mark: 5_555_555L);
+                }
+                else
+                {
+                    MarkAsSuccessKeepingSuffix(req.ReceiptResponse, mark: 100L + callCount);
+                }
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // auto, aa=1, commits
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // override, suffix mismatch, no commit
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // auto, aa=2 (NOT 3), commits
+
+        // Reservations attempted: 1 (committed), 2 (lost to override), 2 (committed).
+        capturedAa.Should().Equal(1L, 2L, 2L);
+        queueGR.InvoiceNumerator.Should().Be(2);
+    }
+
+    private static Mock<IGRSSCD> SetupAutoEchoSscdMock(List<long> capturedAa, long startMark = 100L)
+    {
+        var markCounter = startMark;
+        var mock = new Mock<IGRSSCD>();
+        mock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                CaptureReservedAa(req.ReceiptResponse, capturedAa);
+                MarkAsSuccessKeepingSuffix(req.ReceiptResponse, markCounter++);
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        return mock;
+    }
+
+    private static void CaptureReservedAa(ReceiptResponse response, List<long> sink)
+    {
+        var identification = response.ftReceiptIdentification ?? string.Empty;
+        var hashIdx = identification.IndexOf('#');
+        if (hashIdx < 0)
+        {
+            return;
+        }
+        var suffix = identification.Substring(hashIdx + 1);
+        var dashIdx = suffix.LastIndexOf('-');
+        if (dashIdx > 0 && long.TryParse(suffix.Substring(dashIdx + 1), out var aa))
+        {
+            sink.Add(aa);
+        }
+    }
+
+    private static void MarkAsSuccessKeepingSuffix(ReceiptResponse response, long mark)
+    {
+        // Auto path: MyDataSCU's SetCountrySuffix rewrites with the doc's values, which
+        // in the no-override case equal what the country processor pre-appended — so the
+        // suffix stays unchanged.
+        response.ftState = response.ftState.WithState(State.Success);
+        response.AddSignatureItem(new SignatureItem
+        {
+            Caption = "invoiceMark",
+            Data = mark.ToString(),
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = (SignatureType) 0,
+        });
+    }
+
+    private static void OverwriteSuffix(ReceiptResponse response, string overrideSeries, long overrideAa, long mark)
+    {
+        // Override path: MyDataSCU rewrites the suffix with the override values from the
+        // doc, producing a string that does not end with the country processor's
+        // pre-appended reservation.
+        response.ftState = response.ftState.WithState(State.Success);
+        var identification = response.ftReceiptIdentification ?? string.Empty;
+        var hashIdx = identification.IndexOf('#');
+        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
+        response.ftReceiptIdentification = prefix + $"{overrideSeries}-{overrideAa}";
+        response.AddSignatureItem(new SignatureItem
+        {
+            Caption = "invoiceMark",
+            Data = mark.ToString(),
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = (SignatureType) 0,
+        });
+    }
+
     private static Mock<IGRSSCD> SetupSscdMock(bool success, string series, long aa, long? mark)
     {
         var mock = new Mock<IGRSSCD>();
