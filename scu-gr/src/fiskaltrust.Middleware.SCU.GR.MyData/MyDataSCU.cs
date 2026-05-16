@@ -194,15 +194,9 @@ public class MyDataSCU : IGRSSCD
         };
 
         // We currently only return this in sandbox
-        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        if (_sandbox)
         {
-            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
-            {
-                GR = new MiddlewareQueueGRState
-                {
-                    GovernmentApi = governemntApiResponse
-                }
-            };
+            AttachGovernmentApiToState(request.ReceiptResponse, governemntApiResponse);
         }
 
         if ((int) response.StatusCode >= 500)
@@ -360,6 +354,18 @@ public class MyDataSCU : IGRSSCD
         request.ReceiptResponse.SetReceiptResponseError(errorMessage);
     }
 
+    private static void AttachGovernmentApiToState(ReceiptResponse response, GovernmentApiData governmentApi)
+    {
+        // Merge rather than replace so the QueueGR processor's ProposedInvoiceCounter
+        // (set on ftStateData before this SCU call) is preserved alongside the sandbox
+        // GovernmentApi payload.
+        var state = response.ftStateData as MiddlewareSCUGRMyDataState
+                    ?? new MiddlewareSCUGRMyDataState();
+        state.GR ??= new MiddlewareQueueGRState();
+        state.GR.GovernmentApi = governmentApi;
+        response.ftStateData = state;
+    }
+
     public class AADEEErrorResponse
     {
         public string? AADEError { get; set; }
@@ -390,15 +396,9 @@ public class MyDataSCU : IGRSSCD
             ProtocolResponse = content
         };
 
-        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        if (_sandbox)
         {
-            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
-            {
-                GR = new MiddlewareQueueGRState
-                {
-                    GovernmentApi = governmentApiResponse
-                }
-            };
+            AttachGovernmentApiToState(request.ReceiptResponse, governmentApiResponse);
         }
 
         if ((int) response.StatusCode >= 500)
@@ -507,15 +507,9 @@ public class MyDataSCU : IGRSSCD
             ProtocolResponse = content
         };
 
-        if (request.ReceiptResponse.ftStateData == null && _sandbox)
+        if (_sandbox)
         {
-            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
-            {
-                GR = new MiddlewareQueueGRState
-                {
-                    GovernmentApi = governmentApiResponse
-                }
-            };
+            AttachGovernmentApiToState(request.ReceiptResponse, governmentApiResponse);
         }
 
         if ((int) response.StatusCode >= 500)

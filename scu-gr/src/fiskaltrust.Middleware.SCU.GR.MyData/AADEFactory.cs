@@ -184,7 +184,7 @@ public class AADEFactory
             .Select(x => CreateExpensesClassificationSummary(x))
             .ToList();
 
-        var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
+        var (resolvedSeries, resolvedAa) = ResolveSeriesAndAa(receiptResponse);
         var paymentMethods = GetPayments(receiptRequest);
         var issuer = CreateIssuer(receiptRequest);
         var inv = new AadeBookInvoiceType
@@ -192,8 +192,8 @@ public class AADEFactory
             issuer = issuer,
             invoiceHeader = new InvoiceHeaderType
             {
-                series = receiptResponse.ftCashBoxIdentification,
-                aa = identification.ToString(),
+                series = resolvedSeries,
+                aa = resolvedAa,
                 issueDate = AADEMappings.GetLocalTime(receiptRequest),
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
                 currency = CurrencyType.EUR,
@@ -1708,6 +1708,50 @@ public class AADEFactory
         {
             xmlSerializer.Serialize(xmlWriter, doc);
             return stringWriter.ToString();
+        }
+    }
+
+    private static (string series, string aa) ResolveSeriesAndAa(ReceiptResponse receiptResponse)
+    {
+        // Preferred path: the QueueGR processor reserved a (series, aa) and stashed it on
+        // ftStateData.GR.ProposedInvoiceCounter before invoking the SCU. The handwritten and
+        // mydataoverride paths overwrite series/aa on the doc afterwards via the existing
+        // override logic, so this is the only place that needs to know about the proposal.
+        var proposal = ExtractProposedInvoiceCounter(receiptResponse.ftStateData);
+        if (proposal is not null)
+        {
+            return (proposal.Series, proposal.Aa.ToString());
+        }
+
+        // Legacy fallback: derive aa from the generic ftReceiptIdentification ("ft{N}#"),
+        // series from ftCashBoxIdentification. Kept so existing tests (and callers that set
+        // ftReceiptIdentification directly) continue to work without modification.
+        var identification = long.Parse(
+            receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0],
+            System.Globalization.NumberStyles.HexNumber);
+        return (receiptResponse.ftCashBoxIdentification, identification.ToString());
+    }
+
+    private static ProposedInvoiceCounter? ExtractProposedInvoiceCounter(object? ftStateData)
+    {
+        switch (ftStateData)
+        {
+            case null:
+                return null;
+            case MiddlewareSCUGRMyDataState typed:
+                return typed.GR?.ProposedInvoiceCounter;
+            case System.Text.Json.JsonElement element:
+                try
+                {
+                    var rehydrated = element.Deserialize<MiddlewareSCUGRMyDataState>();
+                    return rehydrated?.GR?.ProposedInvoiceCounter;
+                }
+                catch
+                {
+                    return null;
+                }
+            default:
+                return null;
         }
     }
 }

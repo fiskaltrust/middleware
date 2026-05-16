@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
 public class LifecycleCommandProcessorGRTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), new LifecycleCommandProcessorGR(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), new LifecycleCommandProcessorGR(Mock.Of<ILocalizedQueueStorageProvider>(), TestHelpers.CreateConfigurationRepositoryStub()), null!, null!, null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
@@ -87,7 +87,7 @@ public class LifecycleCommandProcessorGRTests
             queue.StartMoment = DateTime.UtcNow;
             return Task.CompletedTask;
         });
-        var sut = new LifecycleCommandProcessorGR(configMock.Object);
+        var sut = new LifecycleCommandProcessorGR(configMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
 
         var receiptRequest = new ReceiptRequest
         {
@@ -175,7 +175,7 @@ public class LifecycleCommandProcessorGRTests
             queue.StopMoment = DateTime.UtcNow;
             return Task.CompletedTask;
         });
-        var sut = new LifecycleCommandProcessorGR(configMock.Object);
+        var sut = new LifecycleCommandProcessorGR(configMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
 
         var receiptRequest = new ReceiptRequest
         {
