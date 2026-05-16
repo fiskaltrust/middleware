@@ -132,6 +132,42 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
+    public async Task NewQueueWithNoOpsBeforeFirstSubmission_StartsAtAa1()
+    {
+        // Regression test: a brand-new queue whose activation already seeded
+        // InvoiceSeries must NOT be treated as a pre-upgrade queue, even if NoOp
+        // receipts (daily closings etc.) have advanced ftReceiptNumerator before
+        // the first myDATA submission. Without the upgrade gating, the migration
+        // would seed InvoiceNumerator from ftReceiptNumerator and emit aa=N+1,
+        // recreating the very gaps this PR is trying to fix.
+        var queue = TestHelpers.CreateQueue();
+        queue.ftReceiptNumerator = 3;  // 3 NoOps happened post-activation
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",  // activation seeded this — discriminator for new vs upgraded
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 1, mark: 100L);
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
+
+        await processor.PointOfSaleReceipt0x0001Async(request);
+
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
+            q.InvoiceSeries == "CB-A" &&
+            q.InvoiceNumerator == 1)),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task UpgradedQueue_SeedsInvoiceNumeratorFromFtReceiptNumerator()
     {
         // Queues activated before the InvoiceNumerator-based fix had been submitting

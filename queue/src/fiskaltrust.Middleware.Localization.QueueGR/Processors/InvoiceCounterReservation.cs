@@ -17,23 +17,32 @@ internal static class InvoiceCounterReservation
         var configRepo = await configurationRepository;
         var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
 
-        // One-time migration for queues activated before this code shipped. Pre-upgrade
-        // the aa transmitted to AADE was derived from the generic ftReceiptNumerator.
-        // Seeding InvoiceNumerator from ftReceiptNumerator makes the first post-upgrade
-        // reserved aa strictly greater than any aa AADE could have on file for this
-        // queue (in particular, greater than any value that may have been filed by a
-        // pre-upgrade attempt that crashed between AADE-success and storage-commit).
-        // This produces a one-aa cosmetic gap per upgraded queue — AADE permits
-        // non-contiguous aa, it just refuses duplicates. The alternative (seed at
-        // ftReceiptNumerator-1) is gap-free but would deadlock crash-recovered queues
+        // One-time migration for queues activated before this code shipped. The reliable
+        // upgrade discriminator is an empty InvoiceSeries: LifecycleCommandProcessorGR
+        // now seeds it from CashBoxIdentification at activation, so every new queue has
+        // it populated before its first submission. A queue that reaches this point with
+        // InvoiceSeries still unset went through activation under the old code and never
+        // got the seed — i.e. it is a pre-upgrade queue.
+        //
+        // For pre-upgrade queues the aa transmitted to AADE was derived from the generic
+        // ftReceiptNumerator. Seeding InvoiceNumerator from ftReceiptNumerator makes the
+        // first post-upgrade reserved aa strictly greater than any aa AADE could already
+        // have on file (including any value filed by a crashed-between-AADE-and-commit
+        // attempt). This produces a one-aa cosmetic gap per upgraded queue — AADE
+        // permits non-contiguous aa, it just refuses duplicates. The alternative (seed
+        // at ftReceiptNumerator-1) is gap-free but would deadlock crash-recovered queues
         // without a 233 self-heal handler, which is intentionally out of scope here.
+        //
+        // Brand-new queues must NOT enter this branch even if NoOp receipts (daily
+        // closings etc.) have already advanced ftReceiptNumerator past zero — they
+        // should number from aa=1.
         if (string.IsNullOrEmpty(queueGR.InvoiceSeries))
         {
             queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
-        }
-        if (queueGR.InvoiceNumerator == 0 && request.queue.ftReceiptNumerator > 0)
-        {
-            queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator;
+            if (request.queue.ftReceiptNumerator > 0)
+            {
+                queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator;
+            }
         }
 
         var reservedSeries = queueGR.InvoiceSeries;
