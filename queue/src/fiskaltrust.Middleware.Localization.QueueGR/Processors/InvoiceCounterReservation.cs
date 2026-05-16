@@ -3,7 +3,6 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
@@ -18,14 +17,13 @@ internal static class InvoiceCounterReservation
         var configRepo = await configurationRepository;
         var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
 
-        // One-time migration for queues that were activated before this code shipped.
-        // Pre-upgrade, the aa transmitted to AADE was derived from the generic
-        // ftReceiptNumerator. We seed InvoiceNumerator from that value so the first
-        // post-upgrade aa is strictly greater than any aa AADE already has on file
-        // for this queue, avoiding collisions on the deterministic uid. The gap
-        // produced (we overshoot by the count of NoOp receipts that previously
-        // advanced ftReceiptNumerator without submitting) is acceptable — AADE
-        // permits non-contiguous aa, it just refuses duplicates.
+        // One-time migration for queues activated before this code shipped. Pre-upgrade,
+        // the aa transmitted to AADE was derived from the generic ftReceiptNumerator.
+        // We seed InvoiceNumerator from that value so the first post-upgrade aa lands
+        // strictly above any aa AADE already has on file for this queue, avoiding the
+        // deterministic-uid collision. The gap produced (we overshoot by the count of
+        // NoOp receipts that previously advanced ftReceiptNumerator without submitting)
+        // is acceptable — AADE permits non-contiguous aa, it just refuses duplicates.
         if (string.IsNullOrEmpty(queueGR.InvoiceSeries))
         {
             queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
@@ -38,13 +36,18 @@ internal static class InvoiceCounterReservation
         var reservedSeries = queueGR.InvoiceSeries;
         var reservedAa = queueGR.InvoiceNumerator + 1;
 
-        AttachProposal(request.ReceiptResponse, reservedSeries, reservedAa);
+        // Pre-append the country segment to ftReceiptIdentification, following the same
+        // convention every other country queue uses (ES/FR/AT/PT all append after "#").
+        // AADEFactory reads (series, aa) from this segment; MyDataSCU rewrites it after
+        // AADE confirms what was actually submitted, so an override path (handwritten
+        // or mydataoverride) produces a suffix different from our reservation and the
+        // commit check below correctly skips advancing the counter.
+        request.ReceiptResponse.ftReceiptIdentification += $"{reservedSeries}-{reservedAa}";
 
         var response = await sscdCall();
 
         if (WasReservedCounterUsed(response.ReceiptResponse, reservedSeries, reservedAa))
         {
-            queueGR.InvoiceSeries = reservedSeries;
             queueGR.InvoiceNumerator = reservedAa;
             queueGR.LastInvoiceMoment = request.ReceiptRequest.cbReceiptMoment;
             queueGR.LastInvoiceQueueItemId = response.ReceiptResponse.ftQueueItemID;
@@ -55,25 +58,14 @@ internal static class InvoiceCounterReservation
         return new ProcessCommandResponse(response.ReceiptResponse, []);
     }
 
-    private static void AttachProposal(ReceiptResponse response, string series, long aa)
-    {
-        var state = response.ftStateData as MiddlewareSCUGRMyDataState ?? new MiddlewareSCUGRMyDataState();
-        state.GR ??= new MiddlewareQueueGRState();
-        state.GR.ProposedInvoiceCounter = new ProposedInvoiceCounter
-        {
-            Series = series,
-            Aa = aa,
-        };
-        response.ftStateData = state;
-    }
-
     private static bool WasReservedCounterUsed(ReceiptResponse response, string series, long aa)
     {
         // Commit only if AADE confirmed the submission *and* it used our reservation.
-        // The MyDataSCU appends "{series}-{aa}" to ftReceiptIdentification only on a
-        // successful SendInvoices call (line 300 of MyDataSCU.cs), using the values
-        // that actually went into the doc. If the request was overridden by a
-        // handwritten payload or mydataoverride, those values won't equal ours.
+        // MyDataSCU rewrites the country segment after "#" with the (series, aa) that
+        // actually went to AADE on a successful submission (including the 233 retry
+        // branch). If the rewrite still matches our reservation, the auto-counter was
+        // honoured; if not, a handwritten or mydataoverride path replaced it and we
+        // must not advance.
         if (!response.ftState.IsState(State.Success))
         {
             return false;

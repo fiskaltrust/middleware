@@ -194,9 +194,15 @@ public class MyDataSCU : IGRSSCD
         };
 
         // We currently only return this in sandbox
-        if (_sandbox)
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
         {
-            AttachGovernmentApiToState(request.ReceiptResponse, governemntApiResponse);
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governemntApiResponse
+                }
+            };
         }
 
         if ((int) response.StatusCode >= 500)
@@ -291,7 +297,7 @@ public class MyDataSCU : IGRSSCD
                         var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
-                        request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                        SetCountrySuffix(request.ReceiptResponse, doc.invoice[0].invoiceHeader.series, doc.invoice[0].invoiceHeader.aa);
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {
                             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.HashPayload));
@@ -324,7 +330,7 @@ public class MyDataSCU : IGRSSCD
                             // on this retry, otherwise the queue is stuck forever. The
                             // foreign-collision case is ambiguous from 233 alone and is
                             // resolved by Phase 2 verification via RequestTransmittedDocs.
-                            request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                            SetCountrySuffix(request.ReceiptResponse, doc.invoice[0].invoiceHeader.series, doc.invoice[0].invoiceHeader.aa);
                             SignatureItemFactoryGR.AddAadeDuplicateResubmissionSignature(request);
                         }
                         else
@@ -371,16 +377,18 @@ public class MyDataSCU : IGRSSCD
         request.ReceiptResponse.SetReceiptResponseError(errorMessage);
     }
 
-    private static void AttachGovernmentApiToState(ReceiptResponse response, GovernmentApiData governmentApi)
+    private static void SetCountrySuffix(ReceiptResponse response, string series, string aa)
     {
-        // Merge rather than replace so the QueueGR processor's ProposedInvoiceCounter
-        // (set on ftStateData before this SCU call) is preserved alongside the sandbox
-        // GovernmentApi payload.
-        var state = response.ftStateData as MiddlewareSCUGRMyDataState
-                    ?? new MiddlewareSCUGRMyDataState();
-        state.GR ??= new MiddlewareQueueGRState();
-        state.GR.GovernmentApi = governmentApi;
-        response.ftStateData = state;
+        // Rewrite the country segment after "#" so it always reflects the (series, aa)
+        // that actually went to AADE. The QueueGR processor pre-appends its reserved
+        // values before invoking the SCU; if a handwritten or mydataoverride path
+        // replaced them on the doc, the suffix changes here so the country processor
+        // can detect the mismatch (via EndsWith on its reservation) and skip the
+        // counter commit.
+        var identification = response.ftReceiptIdentification ?? string.Empty;
+        var hashIdx = identification.IndexOf('#');
+        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
+        response.ftReceiptIdentification = prefix + $"{series}-{aa}";
     }
 
     public class AADEEErrorResponse
@@ -413,9 +421,15 @@ public class MyDataSCU : IGRSSCD
             ProtocolResponse = content
         };
 
-        if (_sandbox)
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
         {
-            AttachGovernmentApiToState(request.ReceiptResponse, governmentApiResponse);
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governmentApiResponse
+                }
+            };
         }
 
         if ((int) response.StatusCode >= 500)
@@ -524,9 +538,15 @@ public class MyDataSCU : IGRSSCD
             ProtocolResponse = content
         };
 
-        if (_sandbox)
+        if (request.ReceiptResponse.ftStateData == null && _sandbox)
         {
-            AttachGovernmentApiToState(request.ReceiptResponse, governmentApiResponse);
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governmentApiResponse
+                }
+            };
         }
 
         if ((int) response.StatusCode >= 500)

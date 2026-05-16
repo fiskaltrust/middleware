@@ -215,7 +215,12 @@ public class InvoiceCounterReservationTests
                 if (success)
                 {
                     resp.ftState = resp.ftState.WithState(State.Success);
-                    resp.ftReceiptIdentification += $"{series}-{aa}";
+                    // MyDataSCU rewrites the country segment after "#" with the (series, aa)
+                    // actually submitted to AADE; we mirror that behaviour here.
+                    var identification = resp.ftReceiptIdentification ?? string.Empty;
+                    var hashIdx = identification.IndexOf('#');
+                    var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
+                    resp.ftReceiptIdentification = prefix + $"{series}-{aa}";
                     if (mark.HasValue)
                     {
                         resp.AddSignatureItem(new SignatureItem
