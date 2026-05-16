@@ -1,19 +1,31 @@
 ﻿using fiskaltrust.Middleware.Localization.QueueGR.Factories;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class LifecycleCommandProcessorGR(ILocalizedQueueStorageProvider localizedQueueStorageProvider) : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorGR(ILocalizedQueueStorageProvider localizedQueueStorageProvider, AsyncLazy<IConfigurationRepository> configurationRepository) : ILifecycleCommandProcessor
 {
     private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider = localizedQueueStorageProvider;
+    private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _localizedQueueStorageProvider.ActivateQueueAsync();
+
+        var configurationRepository = await _configurationRepository;
+        var queueGR = await configurationRepository.GetQueueGRAsync(queue.ftQueueId);
+        if (string.IsNullOrEmpty(queueGR.InvoiceSeries))
+        {
+            queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
+            await configurationRepository.InsertOrUpdateQueueGRAsync(queueGR);
+        }
+
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
