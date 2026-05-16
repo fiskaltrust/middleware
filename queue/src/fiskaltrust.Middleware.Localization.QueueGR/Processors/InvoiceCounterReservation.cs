@@ -18,19 +18,22 @@ internal static class InvoiceCounterReservation
         var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
 
         // One-time migration for queues activated before this code shipped. Pre-upgrade,
-        // the aa transmitted to AADE was derived from the generic ftReceiptNumerator.
-        // We seed InvoiceNumerator from that value so the first post-upgrade aa lands
-        // strictly above any aa AADE already has on file for this queue, avoiding the
-        // deterministic-uid collision. The gap produced (we overshoot by the count of
-        // NoOp receipts that previously advanced ftReceiptNumerator without submitting)
-        // is acceptable — AADE permits non-contiguous aa, it just refuses duplicates.
+        // the aa transmitted to AADE was read as ftReceiptNumerator *before* its post-
+        // submission increment, so after N successful submissions ftReceiptNumerator==N
+        // and the highest aa AADE has on file is N-1. Seeding InvoiceNumerator from
+        // ftReceiptNumerator-1 makes the first post-upgrade reserved aa equal to N —
+        // exactly the value the old code would have submitted next — keeping the AADE
+        // sequence gap-free across the upgrade. If a pre-upgrade attempt crashed after
+        // AADE accepted (so AADE has aa=N without ftReceiptNumerator having bumped),
+        // this seed collides with that record and the 233 handler self-heals on the
+        // next round-trip.
         if (string.IsNullOrEmpty(queueGR.InvoiceSeries))
         {
             queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
         }
         if (queueGR.InvoiceNumerator == 0 && request.queue.ftReceiptNumerator > 0)
         {
-            queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator;
+            queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator - 1;
         }
 
         var reservedSeries = queueGR.InvoiceSeries;
