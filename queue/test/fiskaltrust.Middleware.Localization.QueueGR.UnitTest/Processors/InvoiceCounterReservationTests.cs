@@ -132,6 +132,40 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
+    public async Task UpgradedQueue_SeedsInvoiceNumeratorFromFtReceiptNumerator()
+    {
+        // Queues activated before the InvoiceNumerator-based fix had been submitting
+        // receipts with aa derived from ftReceiptNumerator. On first post-upgrade
+        // submission the helper must seed InvoiceNumerator from ftReceiptNumerator so
+        // the new aa lands strictly above anything AADE already has on file.
+        var queue = TestHelpers.CreateQueue();
+        queue.ftReceiptNumerator = 17;  // queue was submitting receipts pre-upgrade
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+            InvoiceNumerator = 0, // never written under the new code yet
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 18, mark: 999L);
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
+
+        await processor.PointOfSaleReceipt0x0001Async(request);
+
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
+            q.InvoiceSeries == "CB-A" &&
+            q.InvoiceNumerator == 18)),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task EmptyInvoiceSeries_FallsBackToCashBoxIdentification()
     {
         // Queues that existed before the activation seeding ran (or before the upgrade)

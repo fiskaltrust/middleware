@@ -18,9 +18,24 @@ internal static class InvoiceCounterReservation
         var configRepo = await configurationRepository;
         var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
 
-        var reservedSeries = string.IsNullOrEmpty(queueGR.InvoiceSeries)
-            ? queueGR.CashBoxIdentification
-            : queueGR.InvoiceSeries;
+        // One-time migration for queues that were activated before this code shipped.
+        // Pre-upgrade, the aa transmitted to AADE was derived from the generic
+        // ftReceiptNumerator. We seed InvoiceNumerator from that value so the first
+        // post-upgrade aa is strictly greater than any aa AADE already has on file
+        // for this queue, avoiding collisions on the deterministic uid. The gap
+        // produced (we overshoot by the count of NoOp receipts that previously
+        // advanced ftReceiptNumerator without submitting) is acceptable — AADE
+        // permits non-contiguous aa, it just refuses duplicates.
+        if (string.IsNullOrEmpty(queueGR.InvoiceSeries))
+        {
+            queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
+        }
+        if (queueGR.InvoiceNumerator == 0 && request.queue.ftReceiptNumerator > 0)
+        {
+            queueGR.InvoiceNumerator = request.queue.ftReceiptNumerator;
+        }
+
+        var reservedSeries = queueGR.InvoiceSeries;
         var reservedAa = queueGR.InvoiceNumerator + 1;
 
         AttachProposal(request.ReceiptResponse, reservedSeries, reservedAa);
