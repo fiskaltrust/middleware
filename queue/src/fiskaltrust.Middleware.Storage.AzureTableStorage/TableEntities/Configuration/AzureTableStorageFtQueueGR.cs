@@ -19,6 +19,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
         public DateTime? UsedFailedMomentMax { get; set; }
         public Guid? UsedFailedQueueItemId { get; set; }
 
+        public string InvoiceSeries { get; set; }
+        public long InvoiceNumerator { get; set; }
+        public DateTime? LastInvoiceMoment { get; set; }
+        public Guid? LastInvoiceQueueItemId { get; set; }
+        public long? LastInvoiceMark { get; set; }
+
         public long TimeStamp { get; set; }
     }
 }
