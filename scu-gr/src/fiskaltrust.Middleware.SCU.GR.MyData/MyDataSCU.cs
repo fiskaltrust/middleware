@@ -313,7 +313,11 @@ public class MyDataSCU : IGRSSCD
                             SignatureItemFactoryGR.AddMarksForConnectedMarks(request, doc);
                         }
                         SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
-                        SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                        if (!request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
+                            || AADEFactory.HasAnyAadeProviderData(request.ReceiptRequest))
+                        {
+                            SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                        }
                         SignatureItemFactoryGR.AddMyDataXmlSignature(request, enrichedPayload);
                     }
                     else
