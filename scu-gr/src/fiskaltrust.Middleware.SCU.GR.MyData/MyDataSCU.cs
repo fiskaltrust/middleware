@@ -314,7 +314,7 @@ public class MyDataSCU : IGRSSCD
                         }
                         SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
                         if (!request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
-                            || AADEFactory.HasAnyAadeProviderData(doc))
+                            || AADEFactory.HasAnyAadeProviderSignature(doc))
                         {
                             SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
                         }
