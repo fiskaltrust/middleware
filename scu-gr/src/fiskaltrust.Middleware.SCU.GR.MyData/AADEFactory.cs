@@ -125,114 +125,14 @@ public class AADEFactory
             && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
     }
 
-    private static readonly HashSet<string> _aadeProviderFieldNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "aadeTransactionId",
-        "aadeProviderSignature",
-        "aadeProviderId",
-        "aadeProviderSignatureData"
-    };
-
-    public static bool HasAnyAadeProviderData(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.cbPayItems == null)
-        {
-            return false;
-        }
-        foreach (var payItem in receiptRequest.cbPayItems)
-        {
-            if (payItem.ftPayItemCaseData == null)
-            {
-                continue;
-            }
-            try
-            {
-                var json = JsonSerializer.Serialize(payItem.ftPayItemCaseData);
-                using var doc = JsonDocument.Parse(json);
-                if (JsonContainsAadeProviderField(doc.RootElement))
-                {
-                    return true;
-                }
-            }
-            catch
-            {
-                // ftPayItemCaseData is free-form; treat unparseable payloads as carrying no AADE data.
-            }
-        }
-        return false;
-    }
-
-    private static bool JsonContainsAadeProviderField(JsonElement element)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.Object:
-                foreach (var prop in element.EnumerateObject())
-                {
-                    if (_aadeProviderFieldNames.Contains(prop.Name) && HasMeaningfulValue(prop.Value))
-                    {
-                        return true;
-                    }
-                    if (JsonContainsAadeProviderField(prop.Value))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            case JsonValueKind.Array:
-                foreach (var item in element.EnumerateArray())
-                {
-                    if (JsonContainsAadeProviderField(item))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            case JsonValueKind.String:
-                return UrlQueryContainsAadeProviderField(element.GetString());
-            default:
-                return false;
-        }
-    }
-
-    private static bool UrlQueryContainsAadeProviderField(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return false;
-        }
-        var queryStart = value!.IndexOf('?');
-        if (queryStart < 0)
-        {
-            return false;
-        }
-        try
-        {
-            var parsed = HttpUtility.ParseQueryString(value.Substring(queryStart));
-            foreach (var key in parsed.AllKeys)
-            {
-                if (key != null && _aadeProviderFieldNames.Contains(key) && !string.IsNullOrEmpty(parsed[key]))
-                {
-                    return true;
-                }
-            }
-        }
-        catch
-        {
-        }
-        return false;
-    }
-
-    private static bool HasMeaningfulValue(JsonElement value)
-    {
-        return value.ValueKind switch
-        {
-            JsonValueKind.Null => false,
-            JsonValueKind.Undefined => false,
-            JsonValueKind.String => !string.IsNullOrEmpty(value.GetString()),
-            _ => true
-        };
-    }
+    // After MapToInvoicesDoc, AADE provider data extracted from any input shape (App2App URL,
+    // cloud-API nested provider, generic aadeSignatureData envelope) ends up on
+    // PaymentMethodDetailType.transactionId / ProvidersSignature.Signature. Checking those is
+    // equivalent to scanning the raw pay items, without duplicating the parsing logic.
+    public static bool HasAnyAadeProviderData(InvoicesDoc doc) =>
+        doc.invoice?.Any(inv => inv.paymentMethods?.Any(p =>
+            !string.IsNullOrEmpty(p.transactionId)
+            || !string.IsNullOrEmpty(p.ProvidersSignature?.Signature)) == true) == true;
 
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
