@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -21,16 +22,31 @@ public static class SignatureItemFactoryGR
         };
     }
 
-    public static void AddVivaFiscalProviderSignature(ProcessRequest request)
+    public static void AddVivaFiscalProviderSignature(ProcessRequest request, InvoicesDoc doc)
     {
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        var signatureItem = new SignatureItem
         {
             Data = $"2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
             Caption = "www.viva.com",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.ProviderSignature.As<SignatureType>()
-        });
+        };
+        request.ReceiptResponse.AddSignatureItem(signatureItem);
+
+        // The Viva fiscal provider signature is a static attestation. For ECommerce receipts we
+        // can't honestly emit it unless the AADE payload carries a real provider signature on
+        // at least one payment — otherwise there's nothing to attest. End the method by resetting
+        // the just-added item.
+        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
+            && !HasAadeProviderSignature(doc))
+        {
+            request.ReceiptResponse.ftSignatures.Remove(signatureItem);
+        }
     }
+
+    private static bool HasAadeProviderSignature(InvoicesDoc doc) =>
+        doc.invoice?.Any(inv => inv.paymentMethods?.Any(p =>
+            !string.IsNullOrEmpty(p.ProvidersSignature?.Signature)) == true) == true;
 
     public static void AddInvoiceSignature(ProcessRequest request, InvoicesDoc doc)
     {

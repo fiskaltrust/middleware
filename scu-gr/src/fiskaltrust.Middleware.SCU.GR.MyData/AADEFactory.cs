@@ -125,15 +125,6 @@ public class AADEFactory
             && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
     }
 
-    // After MapToInvoicesDoc, the AADE provider signature (aadeProviderSignature) extracted from
-    // any input shape (App2App URL, cloud-API nested provider, generic aadeSignatureData envelope)
-    // ends up on PaymentMethodDetailType.ProvidersSignature.Signature. If no payment in the
-    // payload carries that signature, there's no AADE provider attestation to back the static
-    // Viva fiscal provider signature.
-    public static bool HasAnyAadeProviderSignature(InvoicesDoc doc) =>
-        doc.invoice?.Any(inv => inv.paymentMethods?.Any(p =>
-            !string.IsNullOrEmpty(p.ProvidersSignature?.Signature)) == true) == true;
-
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         try
