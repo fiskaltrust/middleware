@@ -113,7 +113,7 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("ReceiptCase"));
         }
 
-        if (originalItem.ftReceiptCaseData != refundItem.ftReceiptCaseData)
+        if (!CaseDataEquals(originalItem.ftReceiptCaseData, refundItem.ftReceiptCaseData))
         {
             return (flowControl: false, value: Mismatch("ReceiptCaseData"));
         }
@@ -229,9 +229,9 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("ReceiptCase"));
         }
 
-        if (originalItem.ftChargeItemCaseData != refundItem.ftChargeItemCaseData)
+        if (!CaseDataEquals(originalItem.ftChargeItemCaseData, refundItem.ftChargeItemCaseData))
         {
-            return (flowControl: false, value: Mismatch("cbCustomer"));
+            return (flowControl: false, value: Mismatch("ftChargeItemCaseData"));
         }
 
         if (Math.Abs(Math.Abs(originalItem.GetVATAmount()) - Math.Abs(refundItem.GetVATAmount())) > 0.001m)
@@ -335,7 +335,7 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("ftPayItemCase"));
         }
 
-        if (originalItem.ftPayItemCaseData != refundItem.ftPayItemCaseData)
+        if (!CaseDataEquals(originalItem.ftPayItemCaseData, refundItem.ftPayItemCaseData))
         {
             return (flowControl: false, value: Mismatch("ftPayItemCaseData"));
         }
@@ -486,6 +486,26 @@ public class RefundValidator
             return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "PayItem OtherPayments Exceeded");
         }
         return null; // Validation passed
+    }
+
+    private static bool CaseDataEquals(object? original, object? refundValue)
+    {
+        var originalIsEmpty = original is null || (original is string s1 && s1.Length == 0);
+        var refundIsEmpty = refundValue is null || (refundValue is string s2 && s2.Length == 0);
+        if (originalIsEmpty && refundIsEmpty)
+        {
+            return true;
+        }
+
+        if (originalIsEmpty || refundIsEmpty)
+        {
+            return false;
+        }
+
+        // ftReceiptCaseData/ftChargeItemCaseData/ftPayItemCaseData are typed as object,
+        // so after JSON deserialization both sides are typically distinct JsonElement
+        // instances. Compare by serialized value rather than by reference.
+        return JsonSerializer.Serialize(original) == JsonSerializer.Serialize(refundValue);
     }
 
     private static bool AreOppositeWithTolerance(decimal original, decimal refundValue, decimal tolerance)
