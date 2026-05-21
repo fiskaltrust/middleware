@@ -462,6 +462,90 @@ public class GetPaymentsTests
     }
 
     [Fact]
+    public void Ecommerce_CloudApiWithTransactionId_KeepsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "",
+                        ProtocolRequest = new
+                        {
+                            aadeProviderSignatureData = "",
+                            aadeProviderSignature = "sig-cloud-ec"
+                        },
+                        ProtocolResponse = new
+                        {
+                            aadeTransactionId = "TXN-CLOUD-EC"
+                        }
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().Be("TXN-CLOUD-EC");
+        details[0].ProvidersSignature.Should().NotBeNull();
+        details[0].ProvidersSignature!.Signature.Should().Be("sig-cloud-ec");
+    }
+
+    [Fact]
+    public void Ecommerce_App2AppWithTransactionId_KeepsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "use_auto",
+                        ProtocolRequest = "vivapayclient://pay/v1?amount=1000&aadeProviderSignature=sig-app2app-ec",
+                        ProtocolResponse = "instoreapp://result?status=success&aadeTransactionId=TXN-APP2APP-EC"
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().Be("TXN-APP2APP-EC");
+        details[0].ProvidersSignature.Should().NotBeNull();
+        details[0].ProvidersSignature!.Signature.Should().Be("sig-app2app-ec");
+    }
+
+    [Fact]
+    public void Ecommerce_App2AppWithoutTransactionId_DropsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "use_auto",
+                        ProtocolRequest = "vivapayclient://pay/v1?amount=1000&aadeProviderSignature=sig-app2app-no-txn",
+                        ProtocolResponse = "instoreapp://result?status=success"
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().BeNullOrEmpty();
+        details[0].ProvidersSignature.Should().BeNull();
+    }
+
+    [Fact]
     public void NonEcommerce_WithoutTransactionId_KeepsProvidersSignature()
     {
         var details = GetPaymentDetails(new List<PayItem>
