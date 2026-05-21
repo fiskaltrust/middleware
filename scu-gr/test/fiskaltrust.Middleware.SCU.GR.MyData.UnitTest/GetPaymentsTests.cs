@@ -17,6 +17,9 @@ public class GetPaymentsTests
     private static readonly ReceiptCase Pay0x3005Case =
         ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Pay0x3005);
 
+    private static readonly ReceiptCase ECommerceCase =
+        ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.ECommerce0x0004);
+
     private static PayItemCase GR(PayItemCase c) =>
         ((PayItemCase) 0x4752_2000_0000_0000).WithCase(c);
 
@@ -373,6 +376,197 @@ public class GetPaymentsTests
         doc.Should().BeNull();
         error.Should().NotBeNull();
         error!.Exception.Message.Should().Contain("At least one payment method detail is required");
+    }
+
+    #endregion
+
+    #region ECommerce ProvidersSignature suppression
+
+    [Fact]
+    public void Ecommerce_WithTransactionId_KeepsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    aadeSignatureData = new
+                    {
+                        aadeProviderSignature = "sig-ec-1",
+                        aadeTransactionId = "TXN-EC-1"
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().Be("TXN-EC-1");
+        details[0].ProvidersSignature.Should().NotBeNull();
+        details[0].ProvidersSignature!.Signature.Should().Be("sig-ec-1");
+    }
+
+    [Fact]
+    public void Ecommerce_WithoutTransactionId_DropsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    aadeSignatureData = new
+                    {
+                        aadeProviderSignature = "sig-ec-no-txn"
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().BeNullOrEmpty();
+        details[0].ProvidersSignature.Should().BeNull();
+    }
+
+    [Fact]
+    public void Ecommerce_WithEmptyTransactionId_DropsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "",
+                        ProtocolRequest = new
+                        {
+                            aadeProviderSignature = "sig-cloud-no-txn"
+                        },
+                        ProtocolResponse = new
+                        {
+                            aadeTransactionId = ""
+                        }
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().BeNullOrEmpty();
+        details[0].ProvidersSignature.Should().BeNull();
+    }
+
+    [Fact]
+    public void Ecommerce_CloudApiWithTransactionId_KeepsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "",
+                        ProtocolRequest = new
+                        {
+                            aadeProviderSignatureData = "",
+                            aadeProviderSignature = "sig-cloud-ec"
+                        },
+                        ProtocolResponse = new
+                        {
+                            aadeTransactionId = "TXN-CLOUD-EC"
+                        }
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().Be("TXN-CLOUD-EC");
+        details[0].ProvidersSignature.Should().NotBeNull();
+        details[0].ProvidersSignature!.Signature.Should().Be("sig-cloud-ec");
+    }
+
+    [Fact]
+    public void Ecommerce_App2AppWithTransactionId_KeepsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "use_auto",
+                        ProtocolRequest = "vivapayclient://pay/v1?amount=1000&aadeProviderSignature=sig-app2app-ec",
+                        ProtocolResponse = "instoreapp://result?status=success&aadeTransactionId=TXN-APP2APP-EC"
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().Be("TXN-APP2APP-EC");
+        details[0].ProvidersSignature.Should().NotBeNull();
+        details[0].ProvidersSignature!.Signature.Should().Be("sig-app2app-ec");
+    }
+
+    [Fact]
+    public void Ecommerce_App2AppWithoutTransactionId_DropsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    Provider = new
+                    {
+                        Protocol = "use_auto",
+                        ProtocolRequest = "vivapayclient://pay/v1?amount=1000&aadeProviderSignature=sig-app2app-no-txn",
+                        ProtocolResponse = "instoreapp://result?status=success"
+                    }
+                }
+            }
+        }, ECommerceCase);
+
+        details[0].transactionId.Should().BeNullOrEmpty();
+        details[0].ProvidersSignature.Should().BeNull();
+    }
+
+    [Fact]
+    public void NonEcommerce_WithoutTransactionId_KeepsProvidersSignature()
+    {
+        var details = GetPaymentDetails(new List<PayItem>
+        {
+            new PayItem
+            {
+                Position = 1, Amount = 10.0m, Description = "Card",
+                ftPayItemCase = WithLocalFlag(GR(PayItemCase.DebitCardPayment)),
+                ftPayItemCaseData = new
+                {
+                    aadeSignatureData = new
+                    {
+                        aadeProviderSignature = "sig-non-ec"
+                    }
+                }
+            }
+        });
+
+        details[0].transactionId.Should().BeNullOrEmpty();
+        details[0].ProvidersSignature.Should().NotBeNull();
+        details[0].ProvidersSignature!.Signature.Should().Be("sig-non-ec");
     }
 
     #endregion

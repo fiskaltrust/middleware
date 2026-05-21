@@ -1430,12 +1430,7 @@ public class AADEFactory
                         var requestUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolRequest).Query);
                         var responesUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolResponse).Query);
                         payment.transactionId = responesUri["aadeTransactionId"];
-
-                        payment.ProvidersSignature = new ProviderSignatureType
-                        {
-                            Signature = requestUri["aadeProviderSignature"],
-                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
-                        };
+                        AssignProvidersSignature(payment, requestUri["aadeProviderSignature"], receiptRequest);
                     }
                 }
                 else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
@@ -1446,13 +1441,8 @@ public class AADEFactory
                     })!;
                     if (providerCloudRestApi.Provider is PayItemCaseProviderVivaWallet vivaPayment)
                     {
-
                         payment.transactionId = vivaPayment.ProtocolResponse?.aadeTransactionId;
-                        payment.ProvidersSignature = new ProviderSignatureType
-                        {
-                            Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
-                        };
+                        AssignProvidersSignature(payment, vivaPayment.ProtocolRequest?.aadeProviderSignature, receiptRequest);
                     }
                 }
                 else
@@ -1463,19 +1453,16 @@ public class AADEFactory
                         using var jsonDoc = JsonDocument.Parse(payItemCaseDataJson);
                         if (jsonDoc.RootElement.TryGetProperty("aadeSignatureData", out var aadeSignatureDataElement))
                         {
-                            if (aadeSignatureDataElement.TryGetProperty("aadeProviderSignature", out var aadeProviderSignatureElement) && aadeProviderSignatureElement.ValueKind == JsonValueKind.String)
-                            {
-
-                                payment.ProvidersSignature = new ProviderSignatureType
-                                {
-                                    Signature = aadeProviderSignatureElement.GetString(),
-                                    SigningAuthor = VIVA_FISCAL_PROVIDER_ID
-                                };
-                            }
-
+                            // transactionId first: AssignProvidersSignature inspects payment.transactionId
+                            // to decide whether the signature is meaningful for this receipt.
                             if (aadeSignatureDataElement.TryGetProperty("aadeTransactionId", out var aadeTransactionIdElement) && aadeTransactionIdElement.ValueKind == JsonValueKind.String)
                             {
                                 payment.transactionId = aadeTransactionIdElement.GetString();
+                            }
+
+                            if (aadeSignatureDataElement.TryGetProperty("aadeProviderSignature", out var aadeProviderSignatureElement) && aadeProviderSignatureElement.ValueKind == JsonValueKind.String)
+                            {
+                                AssignProvidersSignature(payment, aadeProviderSignatureElement.GetString(), receiptRequest);
                             }
                         }
                     }
@@ -1484,6 +1471,24 @@ public class AADEFactory
             }
             return payment;
         }).ToList();
+    }
+
+    // For ECommerce receipts the ProvidersSignature is only meaningful when paired with a real
+    // aadeTransactionId — skip assigning it otherwise so we don't transmit an attestation that
+    // has no transaction to attest. Call only after payment.transactionId has been set.
+    private static void AssignProvidersSignature(PaymentMethodDetailType payment, string? signature, ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
+            && string.IsNullOrEmpty(payment.transactionId))
+        {
+            return;
+        }
+
+        payment.ProvidersSignature = new ProviderSignatureType
+        {
+            Signature = signature,
+            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
+        };
     }
 
     public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
