@@ -1482,6 +1482,16 @@ public class AADEFactory
                     catch { }
                 }
             }
+
+            // For ECommerce receipts the ProvidersSignature is only meaningful when paired with a
+            // real aadeTransactionId — drop it otherwise so we don't transmit an attestation that
+            // has no transaction to attest.
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
+                && string.IsNullOrEmpty(payment.transactionId))
+            {
+                payment.ProvidersSignature = null;
+            }
+
             return payment;
         }).ToList();
     }
