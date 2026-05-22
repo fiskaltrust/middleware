@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><T:TicketBai xmlns:T="urn:ticketbai:emision" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/XMLSchema ticketbai.xsd">
+	<Cabecera> <!-- header -->
+		<IDVersionTBAI>1.2</IDVersionTBAI> <!-- TicketBAI version -->
+	</Cabecera>
+	<Sujetos>
+		<Emisor>
+			<NIF>M0291081Q</NIF> <!-- NIF of the issuer -->
+			<ApellidosNombreRazonSocial>Thomas Steininger</ApellidosNombreRazonSocial> <!-- name / company name of issuer -->
+		</Emisor>
+		<VariosDestinatarios>N</VariosDestinatarios> <!-- indicator if invoice has multiple recipients; "N" if not indicated; L3 -->
+		<EmitidaPorTercerosODestinatario>N</EmitidaPorTercerosODestinatario> <!-- indicator if invoice was issued by third party or recipient; "N" if not indicated; L4 -->
+	</Sujetos>
+	<Factura>
+		<CabeceraFactura> <!-- invoice header-->
+			<SerieFactura>A2021</SerieFactura> <!-- series of the invoice  -->
+			<NumFactura>123</NumFactura> <!-- number of the invoice -->
+			<FechaExpedicionFactura>04-11-2021</FechaExpedicionFactura> <!-- date of issue (dd-mm-yyy) -->
+			<HoraExpedicionFactura>10:41:23</HoraExpedicionFactura> <!-- time of issue (hh:mm:ss) -->
+			<FacturaSimplificada>S</FacturaSimplificada> <!-- indicator if invoice is simplified invoice or full invoice; L5 -->
+			<FacturaEmitidaSustitucionSimplificada>N</FacturaEmitidaSustitucionSimplificada> <!-- Identifier specifying whether this is an invoice issued to replace a simplified invoice; "N" if not indicated; L6 -->
+        </CabeceraFactura>
+		<DatosFactura> <!-- invoice data -->
+            <DescripcionFactura>Clave de régimen - Exportación</DescripcionFactura> <!-- Regime code - Export transaction -->
+			<DetallesFactura> <!-- invoice details (line items) -->
+				<IDDetalleFactura> <!-- ID of invoice details (1-1000) -->
+					<DescripcionDetalle>Artículo 1 Ejemplo</DescripcionDetalle> <!-- article/service description -->
+					<Cantidad>1</Cantidad> <!-- article / service quantity -->
+					<ImporteUnitario>23.356</ImporteUnitario> <!-- net amount of the invoice line -->
+					<Descuento>2.00</Descuento> <!-- Amount in euros of the discount of the invoice line -->
+					<ImporteTotal>25.84</ImporteTotal> <!-- Total amount including VAT of the invoice line. -->
+				</IDDetalleFactura>
+				<IDDetalleFactura>
+					<DescripcionDetalle>Artículo 2 xxx </DescripcionDetalle>
+					<Cantidad>1.50</Cantidad>
+					<ImporteUnitario>18.2</ImporteUnitario>
+					<ImporteTotal>33.03</ImporteTotal>
+				</IDDetalleFactura>
+				<IDDetalleFactura>
+					<DescripcionDetalle>Artículo 3 aaaaaaaa </DescripcionDetalle>
+					<Cantidad>18</Cantidad>
+					<ImporteUnitario>1.40</ImporteUnitario>
+					<ImporteTotal>30.49</ImporteTotal>
+				</IDDetalleFactura>
+			</DetallesFactura>
+			<ImporteTotalFactura>89.36</ImporteTotalFactura> <!-- Total amount of the invoice (incl. VAT) -->
+            <RetencionSoportada></RetencionSoportada> <!-- Paid withholding - certain taxpayers are obliged to pay income taxes in this way -->
+            <BaseImponibleACoste></BaseImponibleACoste> <!-- Taxable amount at cost (for VAT groups – advanced level); for group taxation -->
+			<Claves> <!-- keys for special VAT regimes -->
+				<IDClave> <!-- Key ID 1-3 -->
+					<ClaveRegimenIvaOpTrascendencia>02</ClaveRegimenIvaOpTrascendencia> <!-- L9: 02 - Exportación -->
+				</IDClave>
+			</Claves>
+		</DatosFactura>
+		<DesgloseTipoOperacion>					<!-- in case of non-national transactions (recipient is outside of Spain) -->
+			<Entrega>								<!-- in case of delivery -->
+                <Sujeta>								<!-- subject of transaction -->
+                    <Exenta>								<!-- in case of exemption from VAT -->
+                        <DetalleExenta>							<!-- details of exemption (1-7 data must be grouped per reason) -->
+                            <CausaExencion>E2</CausaExencion>		<!-- L10 = E2; Exempt under Article 21 of the VAT Regulations -->
+                            <BaseImponible>89.36</BaseImponible>	<!-- value exemption in EUR -->
+                        </DetalleExenta>
+                    </Exenta>
+                </Sujeta>
+            </Entrega>
+        </DesgloseTipoOperacion>
+	</Factura>
+	<HuellaTBAI> <!-- TicketBAI fingerprint -->
+		<EncadenamientoFacturaAnterior> <!-- chaining with previous document -->
+			<SerieFacturaAnterior>R2021</SerieFacturaAnterior> <!-- invoice series of the previous document -->
+			<NumFacturaAnterior>35</NumFacturaAnterior> <!-- invoice number of the previous document -->
+			<FechaExpedicionFacturaAnterior>04-11-2021</FechaExpedicionFacturaAnterior> <!-- issuing date of the previous document (dd-mm-yyyy) -->
+            <SignatureValueFirmaFacturaAnterior>FCW9/v2X17sMAgm16Q02lNrhUSdK5c5LKymeeM/DcVYbgi81n/qKCEqC3AkfMjBeO/RoSy3kwWjLQeP247uRKBQG7Cj3Loyy0NOv</SignatureValueFirmaFacturaAnterior> <!-- First hundred characters of the SignatureValue field of the TicketBAI file from the previous invoice -->
+		</EncadenamientoFacturaAnterior>
+        <Software> <!-- invoicing software -->
+			<LicenciaTBAI>TBAGIXuwierwwer009</LicenciaTBAI> <!-- registration number of the TicketBAI software (invoicing software) -->
+			<EntidadDesarrolladora> <!-- developer of the TicketBAI software -->
+				<NIF>12121212T</NIF> <!-- NIF of the developer (entity of person) -->
+			</EntidadDesarrolladora>
+			<Nombre>nombre 9</Nombre> <!-- name of the TicketBAI software -->
+			<Version>1.0.4</Version> <!-- version of the TicketBAI software -->
+		</Software>
+		<NumSerieDispositivo>12332413</NumSerieDispositivo> <!-- serial number of invoicing system -->
+	</HuellaTBAI>
+</T:TicketBai>
