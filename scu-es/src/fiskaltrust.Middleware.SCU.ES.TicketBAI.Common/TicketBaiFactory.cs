@@ -139,13 +139,7 @@ public class TicketBaiFactory
                 DescripcionFactura = GetDescripcionFactura(request),
                 DetallesFactura = CreateFacturas(request),
                 ImporteTotalFactura = request.ReceiptRequest.cbChargeItems.Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
-                Claves =
-                [
-                    new IDClaveType
-                    {
-                        ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item01
-                    }
-                ]
+                Claves = GetClaves(request)
             },
             TipoDesglose = new TipoDesgloseType
             {
@@ -179,63 +173,111 @@ public class TicketBaiFactory
                 ChargeItemCaseTypeOfService.CashTransfer
             };
 
-            var entregaTypes = CreateDetalleIVAType(request.ReceiptRequest.cbChargeItems.Where(x => entregaChargeItems.Contains(x.ftChargeItemCase.TypeOfService())).ToList()).ToList();
-            var prestacionServicios = CreateDetalleIVAType(request.ReceiptRequest.cbChargeItems.Where(x => prestacionServiciosChargeItems.Contains(x.ftChargeItemCase.TypeOfService())).ToList()).ToList();
+            var entregaItems = request.ReceiptRequest.cbChargeItems.Where(x => entregaChargeItems.Contains(x.ftChargeItemCase.TypeOfService())).ToList();
+            var prestacionServiciosItems = request.ReceiptRequest.cbChargeItems.Where(x => prestacionServiciosChargeItems.Contains(x.ftChargeItemCase.TypeOfService())).ToList();
+
             var details = new DesgloseTipoOperacionType();
-            if (entregaTypes.Count > 0)
+            var (entregaSujeta, entregaNoSujeta) = BuildDesgloseParts(entregaItems);
+            if (entregaSujeta != null || entregaNoSujeta != null)
             {
                 details.Entrega = new Entrega
                 {
-                    Sujeta = new SujetaType
-                    {
-                        NoExenta =
-                                [
-                                    new DetalleNoExentaType
-                                    {
-                                        TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                        DesgloseIVA = entregaTypes.ToArray()
-                                    }
-                                ]
-                    }
+                    Sujeta = entregaSujeta,
+                    NoSujeta = entregaNoSujeta
                 };
             }
 
-            if (prestacionServicios.Count > 0)
+            var (prestSujeta, prestNoSujeta) = BuildDesgloseParts(prestacionServiciosItems);
+            if (prestSujeta != null || prestNoSujeta != null)
             {
                 details.PrestacionServicios = new PrestacionServicios
                 {
-                    Sujeta = new SujetaType
-                    {
-                        NoExenta =
-                                [
-                                    new DetalleNoExentaType
-                                    {
-                                        TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                        DesgloseIVA = prestacionServicios.ToArray()
-                                    }
-                                ]
-                    }
+                    Sujeta = prestSujeta,
+                    NoSujeta = prestNoSujeta
                 };
             }
             return details;
         }
         else
         {
+            var (sujeta, noSujeta) = BuildDesgloseParts(request.ReceiptRequest.cbChargeItems.ToList());
             return new DesgloseFacturaType
             {
-                Sujeta = new SujetaType
-                {
-                    NoExenta =
-                            [
-                                new DetalleNoExentaType
-                                {
-                                    TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                    DesgloseIVA = CreateDetalleIVAType(request)
-                                }
-                            ]
-                }
+                Sujeta = sujeta,
+                NoSujeta = noSujeta
             };
         }
+    }
+
+    private static (SujetaType? Sujeta, DetalleNoSujeta[]? NoSujeta) BuildDesgloseParts(List<ChargeItem> chargeItems)
+    {
+        if (chargeItems.Count == 0)
+        {
+            return (null, null);
+        }
+
+        var byNature = chargeItems
+            .GroupBy(ci => ci.ftChargeItemCase.NatureOfVat())
+            .Select(g => new { Mapping = TicketBaiNatureOfVatMapping.Map(g.Key), Items = g.ToList() })
+            .ToList();
+
+        var exenta = byNature
+            .Where(x => x.Mapping.Branch == DesgloseBranch.Exenta)
+            .GroupBy(x => x.Mapping.CausaExencion!.Value)
+            .Select(g => new DetalleExentaType
+            {
+                CausaExencion = g.Key,
+                BaseImponible = g.SelectMany(x => x.Items).Sum(ci => ci.Amount - (ci.VATAmount ?? 0m))
+                    .ToString("0.00", CultureInfo.InvariantCulture)
+            })
+            .ToArray();
+
+        var noExenta = byNature
+            .Where(x => x.Mapping.Branch == DesgloseBranch.NoExenta)
+            .GroupBy(x => x.Mapping.TipoNoExenta!.Value)
+            .Select(g => new DetalleNoExentaType
+            {
+                TipoNoExenta = g.Key,
+                DesgloseIVA = CreateDetalleIVAType(g.SelectMany(x => x.Items).ToList())
+            })
+            .ToArray();
+
+        var noSujeta = byNature
+            .Where(x => x.Mapping.Branch == DesgloseBranch.NoSujeta)
+            .GroupBy(x => x.Mapping.CausaNoSujeta!.Value)
+            .Select(g => new DetalleNoSujeta
+            {
+                Causa = g.Key,
+                Importe = g.SelectMany(x => x.Items).Sum(ci => ci.Amount).ToString("0.00", CultureInfo.InvariantCulture)
+            })
+            .ToArray();
+
+        SujetaType? sujeta = null;
+        if (exenta.Length > 0 || noExenta.Length > 0)
+        {
+            sujeta = new SujetaType
+            {
+                Exenta = exenta.Length > 0 ? exenta : null,
+                NoExenta = noExenta.Length > 0 ? noExenta : null
+            };
+        }
+
+        return (sujeta, noSujeta.Length > 0 ? noSujeta : null);
+    }
+
+    private static IDClaveType[] GetClaves(ProcessRequest request)
+    {
+        var distinctClaves = request.ReceiptRequest.cbChargeItems
+            .Select(ci => TicketBaiNatureOfVatMapping.Map(ci.ftChargeItemCase.NatureOfVat()).ClaveRegimen)
+            .Distinct()
+            .ToArray();
+
+        if (distinctClaves.Length == 0)
+        {
+            distinctClaves = [IdOperacionesTrascendenciaTributariaType.Item01];
+        }
+
+        return [.. distinctClaves.Select(clave => new IDClaveType { ClaveRegimenIvaOpTrascendencia = clave })];
     }
 
     private static string GetDescripcionFactura(ProcessRequest request) => request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) ? "Factura Simplificada" : "Factura";
@@ -293,17 +335,6 @@ public class TicketBaiFactory
     private static DetalleIVAType[] CreateDetalleIVAType(List<ChargeItem> chargeItems)
     {
         var vatRates = chargeItems.GroupBy(x => x.VATRate);
-        return [.. vatRates.Select(x => new DetalleIVAType
-        {
-            BaseImponible = x.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)).ToString("0.00", CultureInfo.InvariantCulture),
-            TipoImpositivo = x.Key.ToString("0.00", CultureInfo.InvariantCulture),
-            CuotaImpuesto = x.Sum(x => x.VATAmount ?? 0.0m).ToString("0.00", CultureInfo.InvariantCulture)
-        })];
-    }
-
-    private static DetalleIVAType[] CreateDetalleIVAType(ProcessRequest request)
-    {
-        var vatRates = request.ReceiptRequest.cbChargeItems.GroupBy(x => x.VATRate);
         return [.. vatRates.Select(x => new DetalleIVAType
         {
             BaseImponible = x.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)).ToString("0.00", CultureInfo.InvariantCulture),
