@@ -219,8 +219,10 @@ public class AADEFactory
             // It looks like Item93 does NOT allow to specify the currency
             inv.invoiceHeader.currencySpecified = false;
 
-            // Reverse delivery note: 9.3 + ReceiptCaseFlags.Refund on the receipt case
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            // Reverse delivery note: 9.3 + Refund (or effective-refund Void) on the receipt case.
+            // Void+9.3+HasTransportInformation is normally dispatched to CancelDeliveryNoteAsync upstream;
+            // covering it here keeps the override path consistent.
+            if (receiptRequest.IsEffectiveRefund())
             {
                 inv.invoiceHeader.reverseDeliveryNote = true;
                 inv.invoiceHeader.reverseDeliveryNoteSpecified = true;
@@ -233,10 +235,10 @@ public class AADEFactory
             // set the required header fields for Invoice Type 8.6 with VOID/CANCEL flag
             SetInvoiceHeaderFieldsForVoid(inv.invoiceHeader, receiptRequest);
         }
-        else if (isVoidFlag)
+        else if (isVoidFlag && !receiptRequest.IsEffectiveRefund())
         {
-            // For other invoice types, voiding is not supported
-            // we choose to throw an exception
+            // Reachable only if Void+Order0x3004 was overridden to a non-8.6 invoice type — we cannot infer intent.
+            // All other Void cases route through IsEffectiveRefund() and produce a credit-note / refund-slip document.
             throw new Exception("Voiding of documents is not supported for this invoice type. Please use refund.");
         }
 
@@ -346,7 +348,7 @@ public class AADEFactory
         var previousMarks = CollectPreviousMarks(receiptRequest, receiptReferences, overrideData);
         if (previousMarks.Length > 0)
         {
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            if (receiptRequest.IsEffectiveRefund())
             {
                 if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
                 {
@@ -1168,10 +1170,10 @@ public class AADEFactory
             // generate a single invoice line with zero values and VAT category 8, as required by AADE for full order cancellation.
             return GetInvoiceDetailsForVoid(receiptRequest);
         }
-        else if (isVoidFlag)
+        else if (isVoidFlag && !receiptRequest.IsEffectiveRefund())
         {
-            // For other invoice types, voiding is not supported
-            // we choose to throw an exception
+            // Reachable only if Void+Order0x3004 was overridden to a non-8.6 invoice type — we cannot infer intent.
+            // All other Void cases fall through and emit refund-shaped (negated) rows below.
             throw new Exception("Voiding of documents is not supported for this invoice type. Please use refund.");
         }
 
@@ -1191,10 +1193,10 @@ public class AADEFactory
             var vatAmount = x.GetVATAmount();
             var invoiceRow = new InvoiceRowType
             {
-                quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
+                quantity = receiptRequest.IsEffectiveRefund() ? -x.Quantity : x.Quantity,
                 lineNumber = (int) x.Position,
-                vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
-                netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
+                vatAmount = receiptRequest.IsEffectiveRefund() ? -vatAmount : vatAmount,
+                netValue = receiptRequest.IsEffectiveRefund() ? -x.Amount - -vatAmount : x.Amount - vatAmount,
             };
 
             // Per-item return flag (0x0002) inside an 8.6 order = recType 7
@@ -1401,7 +1403,7 @@ public class AADEFactory
             var payment = new PaymentMethodDetailType
             {
                 type = AADEMappings.GetPaymentType(x),
-                amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
+                amount = receiptRequest.IsEffectiveRefund() ? -x.Amount : x.Amount,
                 paymentMethodInfo = x.Description,
             };
             if (group.tip != null)
@@ -1410,7 +1412,7 @@ public class AADEFactory
                 payment.tipAmountSpecified = true;
                 // in case of using a tip we need to correct the amount being sent to AADE, as AADE expects the total amount including the tip, while in our model the tip is a separate PayItem. So we need to add the tip amount to the main payment amount. In case of refunds we assume that the tip is also refunded and we apply the same negative sign as for the main payment.
                 var combinedAmount = x.Amount + group.tip.Amount;
-                payment.amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -combinedAmount : combinedAmount;
+                payment.amount = receiptRequest.IsEffectiveRefund() ? -combinedAmount : combinedAmount;
             }
 
             if (x.ftPayItemCaseData != null)

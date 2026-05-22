@@ -41,6 +41,14 @@ public enum CustomerCountryCategory
 
 public static class ReceiptRequestExtensions
 {
+    // myDATA providers cannot call CancelInvoice (see fiskaltrust/market-gr#133 — endpoint is for direct AADE/ERP users only).
+    // Treat receipt-level Void on non-8.6 cases as a refund so it produces a valid credit-note / refund-slip document.
+    // 8.6 (Order0x3004) keeps its dedicated totalCancelDeliveryOrders path.
+    public static bool IsEffectiveRefund(this ReceiptRequest receiptRequest)
+        => receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund)
+           || (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+               && !receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004));
+
     public static bool TryDeserializeftReceiptCaseData<T>(this ReceiptRequest request, out T? result) where T : class
     {
         result = default;

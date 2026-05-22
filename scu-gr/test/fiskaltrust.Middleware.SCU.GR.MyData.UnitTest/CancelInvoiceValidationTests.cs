@@ -741,30 +741,43 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
 
         //
         // Test 11:
-        // Void on ftReceiptCase for a NON-8.6 invoice type → must return "not supported" error.
-        // Proves: VOID is exclusively allowed for Order0x3004 (type 8.6).
+        // Void on ftReceiptCase for a NON-8.6 case (a retail receipt) is mapped to the refund flow.
+        // myDATA providers cannot call CancelInvoice (market-gr#133), so receipt-level Void on
+        // anything other than Order0x3004 must produce a credit-note / refund-slip document.
         //
         [Fact]
-        public void MapToInvoicesDoc_VoidOnReceiptCase_NonOrder86InvoiceType_ReturnsUnsupportedError()
+        public void MapToInvoicesDoc_VoidOnReceiptCase_NonOrder86InvoiceType_RoutesAsRefund()
         {
+            var previousMark = 4000019580341891L;
             var receiptRequest = new ReceiptRequest
             {
-                // Receipt type (Item111) with Void — not an Order/Log
                 ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+                    .WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
                     .WithFlag(ReceiptCaseFlags.Void),
                 cbTerminalID = "1",
                 Currency = Currency.EUR,
                 cbReceiptMoment = DateTime.UtcNow,
                 cbReceiptReference = Guid.NewGuid().ToString(),
-                cbArea = "105",
-                cbPreviousReceiptReference = new[] { "4000019580341891" },
+                cbPreviousReceiptReference = "prev-ref",
                 ftPosSystemId = Guid.NewGuid(),
                 cbChargeItems = new List<ChargeItem>
-        {
-            new ChargeItem { Quantity = 1, Description = "Item", Amount = 0.0m, VATRate = 0, VATAmount = 0, Position = 1,
-                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithVat(ChargeItemCase.NotTaxable) }
-        },
-                cbPayItems = new List<PayItem>()
+                {
+                    new ChargeItem
+                    {
+                        Quantity = 1,
+                        Description = "Item",
+                        Amount = 124.0m,
+                        VATRate = 24m,
+                        VATAmount = 24m,
+                        Position = 1,
+                        ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0013)
+                    }
+                },
+                cbPayItems = new List<PayItem>
+                {
+                    new PayItem { Position = 1, Amount = 124.0m, Description = "Cash",
+                        ftPayItemCase = ((PayItemCase)0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment) }
+                }
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -772,13 +785,21 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest
                 ftCashBoxIdentification = "CB001",
                 ftReceiptIdentification = "ft123#"
             };
+            var receiptReferences = CreateReceiptReferences(previousMark);
             var aadeFactory = new AADEFactory(MockMasterData(), "https://test.receipts.example.com");
 
-            var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+            var (doc, error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, receiptReferences);
 
-            error.Should().NotBeNull("Void is only supported for invoice type 8.6");
-            error!.Exception.Message.Should().Contain("not supported");
-            doc.Should().BeNull();
+            error.Should().BeNull("Void on a non-8.6 receipt is mapped to the refund flow (myDATA provider channel forbids CancelInvoice)");
+            doc.Should().NotBeNull();
+
+            var invoice = doc!.invoice[0];
+            invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item114, "Receipt + Refund/Void → retail refund slip (11.4)");
+            invoice.invoiceHeader.multipleConnectedMarks.Should().BeEquivalentTo(new[] { previousMark }, "11.4 carries prior MARKs via multipleConnectedMarks");
+            invoice.invoiceDetails.Should().HaveCount(1);
+            invoice.invoiceDetails[0].netValue.Should().Be(-100m);
+            invoice.invoiceDetails[0].vatAmount.Should().Be(-24m);
+            invoice.invoiceDetails[0].quantity.Should().Be(-1m);
         }
 
         //

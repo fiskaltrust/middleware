@@ -23,7 +23,7 @@ public static class AADEMappings
         }
 
         var vatAmount = chargeItem.GetVATAmount();
-        var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
+        var netAmount = receiptRequest.IsEffectiveRefund() ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
 
         // Per-item return flag (0x0002) inside an 8.6 order = recType 7
         // myDATA spec: for recType=7 lines amounts MUST be positive; myDATA itself treats them as cancellations
@@ -329,10 +329,10 @@ public static class AADEMappings
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
             {
-                return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
+                return receiptRequest.IsEffectiveRefund() ? InvoiceType.Item85 : InvoiceType.Item84;
             }
 
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            if (receiptRequest.IsEffectiveRefund())
             {
                 return InvoiceType.Item114;
             }
@@ -357,7 +357,7 @@ public static class AADEMappings
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
         {
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            if (receiptRequest.IsEffectiveRefund())
             {
                 return HasAnyPreviousInvoiceReference(receiptRequest) ? InvoiceType.Item51 : InvoiceType.Item52;
             }
