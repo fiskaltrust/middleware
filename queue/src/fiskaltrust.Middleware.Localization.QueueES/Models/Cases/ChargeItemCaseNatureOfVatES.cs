@@ -16,7 +16,10 @@ public enum ChargeItemCaseNatureOfVatES : long
     ExteptArticle25 = 0x3400,
     ExteptOthers = 0x3500,
 
-    ReverseCharge = 0x5000
+    ReverseCharge = 0x5000,
+
+    ForeignTaxApplies = 0x6000,
+    ExcludedThirdParty = 0x8000
 }
 
 public static class ChargeItemCaseNatureOfVatESExt
