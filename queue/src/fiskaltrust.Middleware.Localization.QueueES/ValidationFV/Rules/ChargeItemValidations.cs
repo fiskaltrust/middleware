@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
+using fiskaltrust.ifPOS.v2.es.Cases;
 using FluentValidation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
