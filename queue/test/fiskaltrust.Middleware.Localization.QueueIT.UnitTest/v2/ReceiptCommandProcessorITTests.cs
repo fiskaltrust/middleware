@@ -1,45 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest.v2;
 
 public class ReceiptCommandProcessorITTests
 {
+    private static readonly ReceiptCase PointOfSaleVoid =
+        (ReceiptCase) (0x4954_2000_0000_0000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | (long) ReceiptCaseFlags.Void);
+
+    private static readonly ReceiptCase PointOfSaleRefund =
+        (ReceiptCase) (0x4954_2000_0000_0000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | (long) ReceiptCaseFlags.Refund);
+
+    private static SignatureItem MakeSig(string caption, string data, SignatureTypesIT type) => new()
+    {
+        Caption = caption,
+        Data = data,
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = (SignatureType) (Cases.BASE_STATE | (long) type),
+    };
+
     [Fact]
     public async Task PointOfSaleReceipt0x0001Async_Void_ShouldReturn_EEEE_Tag_IfReceiptReference_IsNotAvailable()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>().ToAsyncEnumerable());
 
-        var itSSCDProvider = Mock.Of<IITSSCDProvider>(MockBehavior.Strict);
-        var journalITRepository = Mock.Of<IJournalITRepository>(MockBehavior.Strict);
-        var logger = Mock.Of<ILogger<ReceiptCommandProcessorIT>>();
+        var processor = new ReceiptCommandProcessorIT(
+            Mock.Of<IITSSCD>(MockBehavior.Strict),
+            Mock.Of<IJournalITRepository>(MockBehavior.Strict),
+            queueItemRepositoryMock.Object,
+            new ftQueueIT());
 
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
+        var request = new ProcessCommandRequest(new ftQueue(), new ReceiptRequest
         {
-            ftReceiptCase = 0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0004_0000,
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
-        var processor = new ReceiptCommandProcessorIT(itSSCDProvider, journalITRepository, queueItemRepositoryMock.Object);
+            ftReceiptCase = PointOfSaleVoid,
+            cbPreviousReceiptReference = cbPreviousReceiptReference,
+        }, new ReceiptResponse());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(request);
 
-       (result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
     }
 
     [Fact]
@@ -48,182 +60,78 @@ public class ReceiptCommandProcessorITTests
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>().ToAsyncEnumerable());
 
-        var itSSCDProvider = Mock.Of<IITSSCDProvider>(MockBehavior.Strict);
-        var journalITRepository = Mock.Of<IJournalITRepository>(MockBehavior.Strict);
-        var logger = Mock.Of<ILogger<ReceiptCommandProcessorIT>>();
+        var processor = new ReceiptCommandProcessorIT(
+            Mock.Of<IITSSCD>(MockBehavior.Strict),
+            Mock.Of<IJournalITRepository>(MockBehavior.Strict),
+            queueItemRepositoryMock.Object,
+            new ftQueueIT());
 
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
+        var request = new ProcessCommandRequest(new ftQueue(), new ReceiptRequest
         {
-            ftReceiptCase = 0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0100_0000,
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
-        var processor = new ReceiptCommandProcessorIT(itSSCDProvider, journalITRepository, queueItemRepositoryMock.Object);
+            ftReceiptCase = PointOfSaleRefund,
+            cbPreviousReceiptReference = cbPreviousReceiptReference,
+        }, new ReceiptResponse());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(request);
 
-        (result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
     }
 
     [Fact]
     public async Task PointOfSaleReceipt0x0001Async_Refund_ShouldReturn_ReferenceSignatures_IfLoadedReceipt_ContainsThem()
     {
-        var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-        var documentNumberSignature = new SignaturItem
-        {
-            Caption = "<doc-number>",
-            Data = "1239",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
-        };
-        var documentZNumber = new SignaturItem
-        {
-            Caption = "<z-number>",
-            Data = "344",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-10-14 08:55:45",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var type = new SignaturItem
-        {
-            Caption = "<rt-document-type>",
-            Data = "POSRECEIPT",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentType
-        };
-        var signatures = new List<SignaturItem> {
-            documentNumberSignature,
-            documentZNumber,
-            documentMoment,
-            type
-        };
-
-        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> {
-        new ftQueueItem
-            {
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures.ToArray()
-                })
-            }
-        }.ToAsyncEnumerable());
-
-        var itSSCDProviderMock = new Mock<IITSSCDProvider>(MockBehavior.Strict);
-        itSSCDProviderMock.Setup(itSSCDProviderMock => itSSCDProviderMock.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest request) => new ProcessResponse
-        {
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        var journalITRepository = Mock.Of<IJournalITRepository>();
-        var logger = Mock.Of<ILogger<ProtocolCommandProcessorIT>>();
-
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT
-        {
-            ftSignaturCreationUnitITId = Guid.NewGuid()
-        }, new ReceiptRequest
-        {
-            ftReceiptCase = 0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0100_0000,
-            cbPreviousReceiptReference = cbPreviousReceiptReference,
-        }, new ReceiptResponse
-        {
-            ftSignatures = signatures.ToArray()
-        }, new ftQueueItem());
-        var processor = new ReceiptCommandProcessorIT(itSSCDProviderMock.Object, journalITRepository, queueItemRepositoryMock.Object);
-
-        var result = await processor.PointOfSaleReceipt0x0001Async(request);
-        (result.receiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
+        await AssertReferenceSignaturesAppended(PointOfSaleRefund);
     }
 
     [Fact]
     public async Task PointOfSaleReceipt0x0001Async_Void_ShouldReturn_ReferenceSignatures_IfLoadedReceipt_ContainsThem()
     {
+        await AssertReferenceSignaturesAppended(PointOfSaleVoid);
+    }
+
+    private static async Task AssertReferenceSignaturesAppended(ReceiptCase ftReceiptCase)
+    {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-        var documentNumberSignature = new SignaturItem
+        var signatures = new List<SignatureItem>
         {
-            Caption = "<doc-number>",
-            Data = "1239",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
-        };
-        var documentZNumber = new SignaturItem
-        {
-            Caption = "<z-number>",
-            Data = "344",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-10-14 08:55:45",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var type = new SignaturItem
-        {
-            Caption = "<rt-document-type>",
-            Data = "POSRECEIPT",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentType
-        };
-        var signatures = new List<SignaturItem> {
-            documentNumberSignature,
-            documentZNumber,
-            documentMoment,
-            type
+            MakeSig("<doc-number>", "1239", SignatureTypesIT.RTDocumentNumber),
+            MakeSig("<z-number>", "344", SignatureTypesIT.RTZNumber),
+            MakeSig("<timestamp>", "2024-10-14 08:55:45", SignatureTypesIT.RTDocumentMoment),
+            MakeSig("<rt-document-type>", "POSRECEIPT", SignatureTypesIT.RTDocumentType),
         };
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> {
-        new ftQueueItem
-            {
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures.ToArray()
-                })
-            }
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>
+        {
+            new() { response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = signatures }) },
         }.ToAsyncEnumerable());
 
-        var itSSCDProviderMock = new Mock<IITSSCDProvider>(MockBehavior.Strict);
-        itSSCDProviderMock.Setup(itSSCDProviderMock => itSSCDProviderMock.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest request) => new ProcessResponse
-        {
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        var journalITRepository = Mock.Of<IJournalITRepository>();
-        var logger = Mock.Of<ILogger<ProtocolCommandProcessorIT>>();
+        var itSSCDMock = new Mock<IITSSCD>(MockBehavior.Strict);
+        itSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest r) => new ProcessResponse { ReceiptResponse = r.ReceiptResponse });
 
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT {
-            ftSignaturCreationUnitITId = Guid.NewGuid()  
-        }, new ReceiptRequest
+        var processor = new ReceiptCommandProcessorIT(
+            itSSCDMock.Object,
+            Mock.Of<IJournalITRepository>(),
+            queueItemRepositoryMock.Object,
+            new ftQueueIT { ftSignaturCreationUnitITId = Guid.NewGuid() });
+
+        var request = new ProcessCommandRequest(new ftQueue(), new ReceiptRequest
         {
-            ftReceiptCase = 0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0004_0000,
+            ftReceiptCase = ftReceiptCase,
             cbPreviousReceiptReference = cbPreviousReceiptReference,
         }, new ReceiptResponse
         {
-            ftSignatures = signatures.ToArray()
-        }, new ftQueueItem());
-        var processor = new ReceiptCommandProcessorIT(itSSCDProviderMock.Object, journalITRepository, queueItemRepositoryMock.Object);
+            ftSignatures = new List<SignatureItem>(signatures),
+            ftReceiptIdentification = "ft1#",
+        });
 
         var result = await processor.PointOfSaleReceipt0x0001Async(request);
-        (result.receiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
-        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
+
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.receiptResponse.ftSignatures.Should().Contain(x => (long) x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == "1239");
+        result.receiptResponse.ftSignatures.Should().Contain(x => (long) x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == "344");
+        result.receiptResponse.ftSignatures.Should().Contain(x => (long) x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == "2024-10-14 08:55:45");
     }
 }

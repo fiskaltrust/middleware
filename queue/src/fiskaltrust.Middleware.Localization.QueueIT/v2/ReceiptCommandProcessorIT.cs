@@ -1,112 +1,101 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
-using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.Middleware.Localization.QueueIT.Models;
+using fiskaltrust.Middleware.Localization.QueueIT.v2.Scu;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
-using Newtonsoft.Json;
 
-#pragma warning disable
+namespace fiskaltrust.Middleware.Localization.QueueIT.v2;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.v2
+public class ReceiptCommandProcessorIT : IReceiptCommandProcessor
 {
-    public class ReceiptCommandProcessorIT
-    {
-        private readonly IITSSCDProvider _itSSCDProvider;
-        private readonly IJournalITRepository _journalITRepository;
-        private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+    private readonly IITSSCD _itSSCD;
+    private readonly IJournalITRepository _journalITRepository;
+    private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+    private readonly ftQueueIT _queueIT;
 
-        public ReceiptCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IMiddlewareQueueItemRepository queueItemRepository)
+    public ReceiptCommandProcessorIT(
+        IITSSCD itSSCD,
+        IJournalITRepository journalITRepository,
+        IMiddlewareQueueItemRepository queueItemRepository,
+        ftQueueIT queueIT)
+    {
+        _itSSCD = itSSCD;
+        _journalITRepository = journalITRepository;
+        _queueItemRepository = queueItemRepository;
+        _queueIT = queueIT;
+    }
+
+    public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request)
+        => PointOfSaleReceipt0x0001Async(request);
+
+    public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
+    {
+        var receiptCase = request.ReceiptRequest.ftReceiptCase;
+        var isVoidOrRefund = receiptCase.IsFlag(ReceiptCaseFlags.Void) || receiptCase.IsFlag(ReceiptCaseFlags.Refund);
+        if (isVoidOrRefund && request.ReceiptRequest.cbPreviousReceiptReference is { SingleValue: { Length: > 0 } })
         {
-            _itSSCDProvider = itSSCDProvider;
-            _journalITRepository = journalITRepository;
-            _queueItemRepository = queueItemRepository;
+            await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, request.ReceiptRequest, request.ReceiptRequest.cbReceiptMoment, request.ReceiptResponse);
+            if (request.ReceiptResponse.ftState.IsState(State.Error))
+            {
+                return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
+            }
         }
 
-        public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
+        var v1Request = V1ScuAdapter.ToV1ProcessRequest(request.ReceiptRequest, request.ReceiptResponse);
+        var result = await _itSSCD.ProcessReceiptAsync(v1Request).ConfigureAwait(false);
+        V1ScuAdapter.MergeIntoV2(request.ReceiptResponse, result.ReceiptResponse);
+        if (request.ReceiptResponse.ftState.IsState(State.Error))
         {
-            var receiptCase = (request.ReceiptRequest.ftReceiptCase & 0xFFFF);
-            if (receiptCase == (int) ReceiptCases.UnknownReceipt0x0000)
-                return await UnknownReceipt0x0000Async(request);
-
-            if (receiptCase == (int) ReceiptCases.PointOfSaleReceipt0x0001)
-                return await PointOfSaleReceipt0x0001Async(request);
-
-            if (receiptCase == (int) ReceiptCases.PaymentTransfer0x0002)
-                return await PaymentTransfer0x0002Async(request);
-
-            if (receiptCase == (int) ReceiptCases.PointOfSaleReceiptWithoutObligation0x0003)
-                return await PointOfSaleReceiptWithoutObligation0x0003Async(request);
-
-            if (receiptCase == (int) ReceiptCases.ECommerce0x0004)
-                return await ECommerce0x0004Async(request);
-
-            if (receiptCase == (int) ReceiptCases.DeliveryNote0x0005)
-                return await DeliveryNote0x0005Async(request);
-
-            request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
-        public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
-
-        public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
+        var documentNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)!.Data;
+        var zNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)!.Data;
+        if (!request.ReceiptResponse.ftReceiptIdentification.EndsWith("#"))
         {
-            var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
-            if ((request.ReceiptRequest.IsVoid() || request.ReceiptRequest.IsRefund()) && !string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
-            {
-                receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, receiptRequest, queueItem, receiptResponse);
-                if (receiptResponse.HasFailed())
-                {
-                    return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-                }
-            }
-
-            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = receiptRequest,
-                ReceiptResponse = receiptResponse,
-            });
-            if (result.ReceiptResponse.HasFailed())
-            {
-                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
-            }
-
-            var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
-            var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
-            if (!result.ReceiptResponse.ftReceiptIdentification.EndsWith("#"))
-            {
-                receiptResponse.ftReceiptIdentification = result.ReceiptResponse.ftReceiptIdentification;
-            }
-            else
-            {
-                receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";
-            }
-
-            receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
-            receiptResponse.InsertSignatureItems(SignaturItemFactory.CreatePOSReceiptFormatSignatures(receiptResponse));
-            var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
-            {
-                ftReceiptCase = receiptRequest.ftReceiptCase,
-                ReceiptNumber = long.Parse(documentNumber.Data),
-                ZRepNumber = long.Parse(zNumber.Data)
-            });
-            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-            return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            // SCU already produced the final identification; nothing to append.
+        }
+        else
+        {
+            request.ReceiptResponse.ftReceiptIdentification += $"{zNumber.PadLeft(4, '0')}-{documentNumber.PadLeft(4, '0')}";
         }
 
-        public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        request.ReceiptResponse.InsertSignatureItems(SignaturItemFactory.CreatePOSReceiptFormatSignatures(request.ReceiptResponse));
 
-        public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-
-        public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-
-        public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
+        var journalIT = ftJournalITFactory.CreateFrom(
+            request.ReceiptResponse.ftQueueItemID,
+            request.ReceiptRequest.cbReceiptReference,
+            _queueIT,
+            new ScuResponse
+            {
+                ftReceiptCase = (long) request.ReceiptRequest.ftReceiptCase,
+                ReceiptNumber = long.Parse(documentNumber),
+                ZRepNumber = long.Parse(zNumber),
+            });
+        await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+        return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
     }
+
+    public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request)
+        => Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
+    public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request)
+        => Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
+    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request)
+        => Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
+    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
+        => PointOfSaleReceipt0x0001Async(request);
+
+    public Task<ProcessCommandResponse> TableCheck0x0006Async(ProcessCommandRequest request)
+        => Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
+    public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request)
+        => Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 }

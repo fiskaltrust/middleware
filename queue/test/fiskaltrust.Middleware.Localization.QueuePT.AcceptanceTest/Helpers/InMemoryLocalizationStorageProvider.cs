@@ -67,6 +67,9 @@ internal sealed class InMemoryLocalizationStorageProvider : IStorageProvider
 
     public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => _journalEsRepository;
 
+    public AsyncLazy<IMiddlewareJournalITRepository> CreateMiddlewareJournalITRepository()
+        => new(() => Task.FromResult<IMiddlewareJournalITRepository>(new fiskaltrust.Middleware.Storage.InMemory.Repositories.IT.InMemoryJournalITRepository()));
+
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => _accountMasterDataRepository;
 
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => _outletMasterDataRepository;

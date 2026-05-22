@@ -1,28 +1,23 @@
-﻿using System;
 using fiskaltrust.Middleware.Localization.QueueIT.Models;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
+namespace fiskaltrust.Middleware.Localization.QueueIT.Factories;
+
+public static class ftJournalITFactory
 {
-    public static class ftJournalITFactory
-    {
-        public static ftJournalIT CreateFrom(ftQueueItem queueItem, ftQueueIT queueIT, ScuResponse scuResponse)
+    public static ftJournalIT CreateFrom(Guid queueItemId, string? cbReceiptReference, ftQueueIT queueIT, ScuResponse scuResponse)
+        => new()
         {
-            var ftJournalIT = new ftJournalIT
-            {
-                ftJournalITId = Guid.NewGuid(),
-                ftQueueId = queueIT.ftQueueId,
-                ftQueueItemId = queueItem.ftQueueItemId,
-                cbReceiptReference = queueItem.cbReceiptReference,
-                ftSignaturCreationUnitITId = queueIT.ftSignaturCreationUnitId.Value,
-                JournalType = scuResponse.ftReceiptCase & 0xFFFF,
-                ReceiptDateTime = scuResponse.ReceiptDateTime,
-                ReceiptNumber = scuResponse.ReceiptNumber,
-                ZRepNumber = scuResponse.ZRepNumber,
-                DataJson = scuResponse.DataJson,
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
-            return ftJournalIT;
-        }
-    }
+            ftJournalITId = Guid.NewGuid(),
+            ftQueueId = queueIT.ftQueueId,
+            ftQueueItemId = queueItemId,
+            cbReceiptReference = cbReceiptReference,
+            ftSignaturCreationUnitITId = queueIT.ftSignaturCreationUnitId!.Value,
+            JournalType = scuResponse.ftReceiptCase & 0xFFFF,
+            ReceiptDateTime = scuResponse.ReceiptDateTime,
+            ReceiptNumber = scuResponse.ReceiptNumber,
+            ZRepNumber = scuResponse.ZRepNumber,
+            DataJson = scuResponse.DataJson,
+            TimeStamp = DateTime.UtcNow.Ticks,
+        };
 }

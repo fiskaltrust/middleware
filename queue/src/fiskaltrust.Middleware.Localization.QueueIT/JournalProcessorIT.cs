@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Interfaces;
-using Microsoft.Extensions.Logging;
+using System.Net.Mime;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT
+namespace fiskaltrust.Middleware.Localization.QueueIT;
+
+public class JournalProcessorIT : IJournalProcessor
 {
-    public class JournalProcessorIT : IMarketSpecificJournalProcessor
+    public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
+        => (new ContentType(MediaTypeNames.Text.Plain), EmptyAsync());
+
+    private static async IAsyncEnumerable<byte[]> EmptyAsync()
     {
-        public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
-        {
-            throw new NotImplementedException();
-        }
+        await Task.CompletedTask;
+        yield break;
     }
 }

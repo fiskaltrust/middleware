@@ -1,353 +1,170 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Moq;
-using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.Ocsp;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest.v2;
 
 public class MiddlewareStorageHelpersTests
 {
+    private static SignatureItem MakeSignature(string caption, string data, SignatureTypesIT type) => new()
+    {
+        Caption = caption,
+        Data = data,
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = (SignatureType) (Cases.BASE_STATE | (long) type),
+    };
+
+    private static List<SignatureItem> StandardSignatures() => new()
+    {
+        MakeSignature("<doc-number>", "1239", SignatureTypesIT.RTDocumentNumber),
+        MakeSignature("<z-number>", "344", SignatureTypesIT.RTZNumber),
+        MakeSignature("<timestamp>", "2024-23-01", SignatureTypesIT.RTDocumentMoment),
+    };
+
+    private static ReceiptRequest MakeRequest(string cbPrev, string? cbTerminalId = null) => new()
+    {
+        cbTerminalID = cbTerminalId ?? string.Empty,
+        cbPreviousReceiptReference = cbPrev,
+        cbReceiptMoment = new DateTime(2024, 1, 1),
+    };
+
     [Fact]
     public async Task LoadReceiptReferencesToResponse_ShouldReturn_EEEE_Tag_IfReceiptReference_IsNotAvailable()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
-        {
-            cbTerminalID = "",
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
-        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
-        (result.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>().ToAsyncEnumerable());
+
+        var request = MakeRequest(cbPreviousReceiptReference);
+        var response = new ReceiptResponse();
+
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request, request.cbReceiptMoment, response);
+
+        result.ftState.IsState(State.Error).Should().BeTrue();
     }
 
     [Fact]
     public async Task LoadReceiptReferencesToResponse_ShouldReturn_ReferenceSignatures_IfLoadedReceipt_ContainsThem()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-        var documentNumberSignature = new SignaturItem
-        {
-            Caption = "<doc-number>",
-            Data = "1239",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
-        };
-        var documentZNumber = new SignaturItem
-        {
-            Caption = "<z-number>",
-            Data = "344",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-23-01",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var signatures = new List<SignaturItem> {
-            documentNumberSignature,
-            documentZNumber,
-            documentMoment
-        };
+        var signatures = StandardSignatures();
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> {
-        new ftQueueItem
-            {              
-                cbTerminalID = "",
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures.ToArray()
-                })
-            }
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>
+        {
+            new() { cbTerminalID = string.Empty, response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = signatures }) },
         }.ToAsyncEnumerable());
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
-        {
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse
-        {
-            ftSignatures = signatures.ToArray()
-        }, new ftQueueItem());
-        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
-        (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
+
+        var request = MakeRequest(cbPreviousReceiptReference);
+        var response = new ReceiptResponse { ftSignatures = new List<SignatureItem>(signatures) };
+
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request, request.cbReceiptMoment, response);
+
+        result.ftState.IsState(State.Error).Should().BeFalse();
+        AssertContainsReference(result, signatures);
     }
 
     [Fact]
     public async Task LoadReceiptReferencesToResponse_ShouldReturn_ReferenceSignatures_IfLoadedReceipt_ContainsThem_EvenIfTerminalIdIsSet()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-        var documentNumberSignature = new SignaturItem
-        {
-            Caption = "<doc-number>",
-            Data = "1239",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
-        };
-        var documentZNumber = new SignaturItem
-        {
-            Caption = "<z-number>",
-            Data = "344",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-23-01",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var signatures = new List<SignaturItem> {
-            documentNumberSignature,
-            documentZNumber,
-            documentMoment
-        };
+        var signatures = StandardSignatures();
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> {
-        new ftQueueItem
-            {
-                cbTerminalID = "",
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures.ToArray()
-                })
-            }
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>
+        {
+            new() { cbTerminalID = string.Empty, response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = signatures }) },
         }.ToAsyncEnumerable());
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
-        {
-            cbTerminalID = "myterminalid",
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse
-        {
-            ftSignatures = signatures.ToArray()
-        }, new ftQueueItem());
-        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
-        (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
+
+        var request = MakeRequest(cbPreviousReceiptReference, "myterminalid");
+        var response = new ReceiptResponse { ftSignatures = new List<SignatureItem>(signatures) };
+
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request, request.cbReceiptMoment, response);
+
+        result.ftState.IsState(State.Error).Should().BeFalse();
+        AssertContainsReference(result, signatures);
     }
 
     [Fact]
-    public async Task LoadReceiptReferencesToResponse_ShouldReturn_ReferenceSignatures_IfLoadedReceipt_ContainsThem_AndUseRightReceipt_IfMatchesWithTerminalId()
+    public async Task LoadReceiptReferencesToResponse_ShouldUseRightReceipt_IfMatchesWithTerminalId()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-        var documentNumberSignature1 = new SignaturItem
+        var otherSignatures = new List<SignatureItem>
         {
-            Caption = "<doc-number>",
-            Data = "1239",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
+            MakeSignature("<doc-number>", "1239", SignatureTypesIT.RTDocumentNumber),
+            MakeSignature("<z-number>", "344", SignatureTypesIT.RTZNumber),
+            MakeSignature("<timestamp>", "2024-23-01", SignatureTypesIT.RTDocumentMoment),
         };
-        var documentZNumber1 = new SignaturItem
+        var matchedSignatures = new List<SignatureItem>
         {
-            Caption = "<z-number>",
-            Data = "344",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment1 = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-23-01",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var signatures1 = new List<SignaturItem> {
-            documentNumberSignature1,
-            documentZNumber1,
-            documentMoment1
-        };
-
-        var documentNumberSignature2 = new SignaturItem
-        {
-            Caption = "<doc-number>",
-            Data = "11111",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
-        };
-        var documentZNumber2 = new SignaturItem
-        {
-            Caption = "<z-number>",
-            Data = "434",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment2 = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-01-01",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var signatures2 = new List<SignaturItem> {
-            documentNumberSignature2,
-            documentZNumber2,
-            documentMoment2
+            MakeSignature("<doc-number>", "11111", SignatureTypesIT.RTDocumentNumber),
+            MakeSignature("<z-number>", "434", SignatureTypesIT.RTZNumber),
+            MakeSignature("<timestamp>", "2024-01-01", SignatureTypesIT.RTDocumentMoment),
         };
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> {
-            new ftQueueItem
-            {
-                cbTerminalID = "asdf",
-                request = JsonConvert.SerializeObject(new ReceiptRequest
-                {
-                    cbTerminalID = "asdf", 
-                }),
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures1.ToArray()
-                })
-            },
-            new ftQueueItem
-            {
-                cbTerminalID = "myterminalid",
-                request = JsonConvert.SerializeObject(new ReceiptRequest
-                {
-                    cbTerminalID = "myterminalid",
-                }),
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures2.ToArray()
-                })
-            }
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>
+        {
+            new() { cbTerminalID = "asdf", response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = otherSignatures }) },
+            new() { cbTerminalID = "myterminalid", response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = matchedSignatures }) },
         }.ToAsyncEnumerable());
 
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
-        {
-            cbTerminalID = "myterminalid",
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse
-        {
-            ftSignatures = signatures2.ToArray()
-        }, new ftQueueItem());
-        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
-        (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment2.Data);
+        var request = MakeRequest(cbPreviousReceiptReference, "myterminalid");
+        var response = new ReceiptResponse { ftSignatures = new List<SignatureItem>(matchedSignatures) };
+
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request, request.cbReceiptMoment, response);
+
+        result.ftState.IsState(State.Error).Should().BeFalse();
+        AssertContainsReference(result, matchedSignatures);
     }
 
     [Fact]
-    public async Task LoadReceiptReferencesToResponse_ShouldReturn_CorrectReceipt_IfLoadedReceipt_ContainsThem_AndUseRightReceipt_AndSkip_FailedReceipts_IfMatchesWithTerminalId()
+    public async Task LoadReceiptReferencesToResponse_ShouldSkip_FailedReceipts()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-        var error = new SignaturItem
+        var failedSignatures = new List<SignatureItem>
         {
-            Caption = "FAILURE",
-            Data = "Failed to process receiptcase 0x4954200008003010. with the following exception message: Object reference not set to an instance of an object.",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = 5283883447184535552
+            new() { Caption = "FAILURE", Data = "boom", ftSignatureFormat = SignatureFormat.Text, ftSignatureType = (SignatureType) 5283883447184535552 },
         };
-        var signatures1 = new List<SignaturItem> {
-            error
-        };
-
-        var documentNumberSignature2 = new SignaturItem
+        var goodSignatures = new List<SignatureItem>
         {
-            Caption = "<doc-number>",
-            Data = "11111",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
-        };
-        var documentZNumber2 = new SignaturItem
-        {
-            Caption = "<z-number>",
-            Data = "434",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
-        };
-        var documentMoment2 = new SignaturItem
-        {
-            Caption = "<timestamp>",
-            Data = "2024-01-01",
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
-        };
-        var signatures2 = new List<SignaturItem> {
-            documentNumberSignature2,
-            documentZNumber2,
-            documentMoment2
+            MakeSignature("<doc-number>", "11111", SignatureTypesIT.RTDocumentNumber),
+            MakeSignature("<z-number>", "434", SignatureTypesIT.RTZNumber),
+            MakeSignature("<timestamp>", "2024-01-01", SignatureTypesIT.RTDocumentMoment),
         };
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> 
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>
         {
-            new ftQueueItem
-            {
-                request = JsonConvert.SerializeObject(new ReceiptRequest
-                {
-                }),
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures1.ToArray(),
-                    ftState =  Cases.BASE_STATE |0xEEEE_EEEE
-                })
-            },
-            new ftQueueItem
-            {
-                request = JsonConvert.SerializeObject(new ReceiptRequest
-                {
-                }),
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures2.ToArray()
-                })
-            },
-            new ftQueueItem
-            {
-                request = JsonConvert.SerializeObject(new ReceiptRequest
-                {
-                }),
-                response  = JsonConvert.SerializeObject(new ReceiptResponse
-                {
-                    ftSignatures = signatures1.ToArray(),
-                    ftState =  Cases.BASE_STATE |0xEEEE_EEEE
-                })
-            },
+            new() { response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = failedSignatures, ftState = (State) (Cases.BASE_STATE | 0xEEEE_EEEE) }) },
+            new() { response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = goodSignatures }) },
+            new() { response = JsonSerializer.Serialize(new ReceiptResponse { ftSignatures = failedSignatures, ftState = (State) (Cases.BASE_STATE | 0xEEEE_EEEE) }) },
         }.ToAsyncEnumerable());
 
-        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
-        {
-            cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse
-        {
-            ftSignatures = signatures2.ToArray()
-        }, new ftQueueItem());
-        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
-        (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber2.Data);
-        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment2.Data);
+        var request = MakeRequest(cbPreviousReceiptReference);
+        var response = new ReceiptResponse { ftSignatures = new List<SignatureItem>(goodSignatures) };
+
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request, request.cbReceiptMoment, response);
+
+        result.ftState.IsState(State.Error).Should().BeFalse();
+        AssertContainsReference(result, goodSignatures);
+    }
+
+    private static void AssertContainsReference(ReceiptResponse response, List<SignatureItem> expected)
+    {
+        var docNumber = expected.First(s => ((long) s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTDocumentNumber).Data;
+        var zNumber = expected.First(s => ((long) s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTZNumber).Data;
+        var moment = expected.First(s => ((long) s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTDocumentMoment).Data;
+
+        response.ftSignatures.Should().Contain(x => (long) x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == docNumber);
+        response.ftSignatures.Should().Contain(x => (long) x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == zNumber);
+        response.ftSignatures.Should().Contain(x => (long) x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == moment);
     }
 }

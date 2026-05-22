@@ -1,51 +1,14 @@
-﻿using Xunit;
-using Microsoft.Extensions.DependencyInjection;
-using fiskaltrust.Middleware.Contracts.Interfaces;
-using Moq;
-using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using FluentAssertions;
+using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
+namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest;
+
+public class QueueITBootstrapperTests
 {
-
-
-    public class ReceiptTypeProcessorFactoryTests
+    [Fact]
+    public void ImplementsIV2QueueBootstrapper()
     {
-        [Fact]
-        public void CreateWithWrongReceiptCase_ShouldThrow()
-        {
-
-        }
+        typeof(IV2QueueBootstrapper).IsAssignableFrom(typeof(QueueITBootstrapper)).Should().BeTrue();
     }
-
-    public class QueueITBootstrapperTests
-    {
-        [Fact]
-        public void TryToConstructSignProcessorIT()
-        {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-            serviceCollection.AddSingleton(Mock.Of<IConfigurationRepository>());
-            serviceCollection.AddSingleton(Mock.Of<IJournalITRepository>());
-            serviceCollection.AddSingleton(Mock.Of<IMiddlewareQueueItemRepository>());
-            serviceCollection.AddSingleton(Mock.Of<IClientFactory<IITSSCD>>());
-            serviceCollection.AddSingleton(new MiddlewareConfiguration
-            {
-                Configuration = new System.Collections.Generic.Dictionary<string, object>
-                {
-                    { "init_ftSignaturCreationUnitIT", "[{\"Url\":\"https://faker\"}]" }
-                },
-                ProcessingVersion = "test"
-            });
-
-            var bootstrapper = new QueueITBootstrapper();
-            bootstrapper.ConfigureServices(serviceCollection);
-
-            serviceCollection.BuildServiceProvider().GetRequiredService<IMarketSpecificSignProcessor>();
-        }
-    }
-
 }
