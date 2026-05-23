@@ -1,6 +1,6 @@
 ﻿using AutoFixture;
-using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es.Cases;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;

@@ -1,0 +1,40 @@
+<RegistroFacturacionAlta xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <IDVersion xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">1.0</IDVersion>
+  <IDFactura xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">
+    <IDEmisorFactura>M0291081Q</IDEmisorFactura>
+    <NumSerieFactura>0/POS-acceptance-0001</NumSerieFactura>
+    <FechaExpedicionFactura>22-05-2026</FechaExpedicionFactura>
+  </IDFactura>
+  <NombreRazonEmisor xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">Acceptance Test Emisor</NombreRazonEmisor>
+  <TipoFactura xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">F2</TipoFactura>
+  <DescripcionOperacion xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">test</DescripcionOperacion>
+  <Desglose xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">
+    <DetalleDesglose>
+      <Impuesto>01</Impuesto>
+      <ClaveRegimen>01</ClaveRegimen>
+      <CalificacionOperacion>S1</CalificacionOperacion>
+      <TipoImpositivo>21.00</TipoImpositivo>
+      <BaseImponibleOimporteNoSujeto>10.00</BaseImponibleOimporteNoSujeto>
+      <CuotaRepercutida>2.10</CuotaRepercutida>
+    </DetalleDesglose>
+  </Desglose>
+  <CuotaTotal xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">2.10</CuotaTotal>
+  <ImporteTotal xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">12.10</ImporteTotal>
+  <Encadenamiento xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">
+    <PrimerRegistro>S</PrimerRegistro>
+  </Encadenamiento>
+  <SistemaInformatico xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">
+    <NombreRazon>Acceptance Test Emisor</NombreRazon>
+    <NIF>M0291081Q</NIF>
+    <NombreSistemaInformatico>fiskaltrust.Middleware</NombreSistemaInformatico>
+    <IdSistemaInformatico>00</IdSistemaInformatico>
+    <Version>1.0.0</Version>
+    <NumeroInstalacion>AAAAAAAAAA</NumeroInstalacion>
+    <TipoUsoPosibleSoloVerifactu>N</TipoUsoPosibleSoloVerifactu>
+    <TipoUsoPosibleMultiOT>N</TipoUsoPosibleMultiOT>
+    <IndicadorMultiplesOT>N</IndicadorMultiplesOT>
+  </SistemaInformatico>
+  <FechaHoraHusoGenRegistro xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">2026-05-22T10:30:15+02:00</FechaHoraHusoGenRegistro>
+  <TipoHuella xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">01</TipoHuella>
+  <Huella xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">28672F53CC591F3E2A455BD1D2F2164BFB624D786E027B34FC359283E92FD045</Huella>
+</RegistroFacturacionAlta>
