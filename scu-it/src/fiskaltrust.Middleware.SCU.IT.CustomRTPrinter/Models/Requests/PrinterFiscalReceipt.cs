@@ -14,25 +14,23 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
             Records = new Records<IFiscalRecord>(records);
         }
 
+        [XmlElement("dematerializedOn", IsNullable = false)]
+        public DematerializedOn DematerializedOn { get; set; } = new();
+
         [XmlElement("beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new();
 
         [XmlAnyElement()]
         public Records<IFiscalRecord> Records { get; set; }
 
-        [XmlElement("endFiscalReceipt")]
-        public EndFiscalReceipt EndFiscalReceipt { get; set; } = new();
+        [XmlElement("endFiscalReceiptCut")]
+        public EndFiscalReceiptCut EndFiscalReceiptCut { get; set; } = new();
     }
 
     public interface IFiscalRecord : IRecord { }
 
     [XmlRoot("beginFiscalReceipt")]
     public class BeginFiscalReceipt
-    {
-    }
-
-    [XmlRoot("endFiscalReceipt")]
-    public class EndFiscalReceipt
     {
     }
 }

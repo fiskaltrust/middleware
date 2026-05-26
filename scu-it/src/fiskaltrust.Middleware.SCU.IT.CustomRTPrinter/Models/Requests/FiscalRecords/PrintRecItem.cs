@@ -8,16 +8,18 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
         [XmlAttribute("description")]
         public string Description { get; set; }
 
+        [XmlAttribute("quantity")]
+        public decimal Quantity { get; set; }
+
+        public bool ShouldSerializeQuantity() => Quantity != 0;
+
         [XmlAttribute("unitPrice")]
         public decimal UnitPrice { get; set; }
 
         [XmlAttribute("department")]
-        public uint Department { get; set; }
+        public uint Department { get; set; } = 1;
 
         [XmlAttribute("idVat")]
         public uint IdVat { get; set; }
-
-        [XmlAttribute("quantity")]
-        public decimal Quantity { get; set; }
     }
 }

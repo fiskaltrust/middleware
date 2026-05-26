@@ -126,14 +126,12 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
                         Description = "Test",
                         Quantity = 1,
                         UnitPrice = 3.3m,
-                        Department = 2,
                         IdVat = 1,
                     },
                     new PrintRecItem {
                         Description = "Test33",
                         Quantity = 1,
                         UnitPrice = 3.3m,
-                        Department = 2,
                         IdVat = 1,
                     },
                     new PrintRecItemVoid {

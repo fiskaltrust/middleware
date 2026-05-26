@@ -1,4 +1,3 @@
-using System.Xml;
 using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
@@ -14,8 +13,5 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
 
         [XmlAttribute("paymentType")]
         public uint PaymentType { get; set; }
-
-        [XmlAttribute("paymentQty")]
-        public uint PaymentQty { get; set; }
     }
 }

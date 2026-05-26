@@ -7,7 +7,9 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models
         [XmlEnum("SI")]
         Vera,
         [XmlEnum("NO")]
-        Falsa
+        Falsa,
+        [XmlEnum("--")]
+        NonApplicabile
     }
 
     public static class BooleanoExtensions
