@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 
                 foreach (var (chunk, i) in chunks.Select((chunk, i) => (chunk, i)))
                 {
-                    entity.Add(string.Format(OVERSIZED_MARKER, property, i), chunk.Array);
+                    entity.Add(string.Format(OVERSIZED_MARKER, property, i), chunk.ToArray());
                 }
             }
         }
