@@ -252,6 +252,13 @@ public static class AADEMappings
             return IncomeClassificationCategoryType.category1_1;
         }
 
+        //Owner tip falls into category1_3 - service revenue
+        if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Tip)
+            && receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
+        {
+            return IncomeClassificationCategoryType.category1_3;
+        }
+
         return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
             ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_95,
@@ -260,7 +267,7 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
             ChargeItemCaseTypeOfService.OwnConsumption => IncomeClassificationCategoryType.category1_6,
-            _ => IncomeClassificationCategoryType.category1_95,
+        _ => IncomeClassificationCategoryType.category1_95,
         };
     }
 
