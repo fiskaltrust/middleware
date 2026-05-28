@@ -184,7 +184,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 {
                     Description = "Pagamento",
                     Payment = Math.Round(Math.Abs(receiptRequest.cbReceiptAmount ?? 0) * 100),
-                    PaymentType = 0
+                    PaymentType = 1
                 });
             }
 
@@ -497,7 +497,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 {
                     Description = "Pagamento",
                     Payment = Math.Round(Math.Abs(receiptRequest.cbReceiptAmount ?? 0) * 100),
-                    PaymentType = 0
+                    PaymentType = 1
                 });
             }
 
@@ -674,11 +674,11 @@ public sealed class CustomRTPrinterSCU : LegacySCU
     private static uint GetIdVat(long ftChargeItemCase) =>
         (ftChargeItemCase & 0xF) switch
         {
-            0x3 => 1, // 22%
-            0x1 => 2, // 10%
-            0x2 => 3, // 4%
-            0x4 => 4, // 5%
-            _ => 1    // default: 22%
+            0x3 => 1, // Normal — 22%
+            0x1 => 2, // Discounted-1 — 10%
+            0x2 => 4, // Discounted-2 — 5%
+            0x4 => 3, // Super reduced 1 — 4%
+            _ => 1
         };
 
     public static ProcessResponse CreateResponse(ReceiptResponse receiptResponse) => new ProcessResponse { ReceiptResponse = receiptResponse };

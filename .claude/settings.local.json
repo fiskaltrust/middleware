@@ -42,7 +42,9 @@
       "Bash(curl -v --max-time 10 -u \"STMTE501091:STMTE501091\" \"http://danisk89.homepc.it:5210/xml/printer.htm\" -d '<?xml version=\"1.0\" encoding=\"utf-8\"?><printerCommand><queryPrinterStatus /></printerCommand>' -H \"Content-Type: text/xml\")",
       "Bash(grep -v \"^\\\\s*$\")",
       "Bash(xargs grep -l \"BeginRtDocRefund\\\\|BeginRtDocAnnulment\")",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(git -C \"C:\\\\Users\\\\DanielScaini\\\\source\\\\repos\\\\middleware\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\DanielScaini\\\\source\\\\repos\\\\middleware\" log --oneline -5)"
     ]
   }
 }

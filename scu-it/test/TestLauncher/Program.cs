@@ -13,11 +13,20 @@ namespace TestLauncher
         private static readonly string cashBoxId    = "4a0d8f34-c06c-4467-91e5-f25257f8bb77";
         private static readonly string accessToken  = "BBwwLfCVEjL2bQcYFGRpWWXrfS9iwTRUjX+C5a55TKVeVDCxHIXkTpcBKzQaBEC1UHe3ogdqRvvHP8LZFK1sazA=";
 
-        public static async Task Main()
+        public static async Task Main(string[] args)
         {
+            if (args.Length >= 2 && args[0] == "--test")
+            {
+                var sc = new ServiceCollection();
+                sc.AddStandardLoggers(LogLevel.Debug);
+                var pr = sc.BuildServiceProvider();
+                var serialForAuth = args.Length >= 3 ? args[2] : "STMTE501091";
+                await PrinterTester.RunAllAsync(args[1], pr.GetRequiredService<ILoggerFactory>(), serialForAuth);
+                return;
+            }
+
             var cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(cashBoxId, accessToken).ConfigureAwait(false);
             var config = cashBoxConfiguration.ftSignaturCreationDevices[0];
-            config.Package = "fiskaltrust.Middleware.SCU.IT.CustomRTPrinter";
 
             Console.WriteLine($"SCU Id       : {config.Id}");
             Console.WriteLine($"SCU Package  : {config.Package}");
