@@ -1,0 +1,58 @@
+{
+  "ftCashBoxId": "|[cashbox_id]|",
+  "ftSignaturCreationDevices": [
+  {
+    "Id": "93771342-ced0-4d5a-84b5-e87c8200336a",
+    "Package": "fiskaltrust.Middleware.SCU.DE.InMemory",
+    "Configuration": {},
+    "Url": [
+      "rest://localhost:1501/93771342-ced0-4d5a-84b5-e87c8200336a"
+    ]
+  }
+  ],
+  "ftQueues": [
+    {
+      "Id": "|[queue0_id]|",
+      "Package": "fiskaltrust.Middleware.Queue.SQLite",
+      "Version": "latest",
+      "Configuration": {
+        "storageaccountname": "fta217spccloudcashbox001",
+        "init_ftQueue": [
+          {
+            "ftQueueId": "|[queue0_id]|",
+            "ftCashBoxId": "|[cashbox_id]|",
+            "CountryCode": "DE",
+            "Timeout": 15000
+          }
+        ],
+        "init_ftQueueDE": [
+          {
+            "ftQueueDEId": "|[queue0_id]|",
+            "ftSignaturCreationUnitDEId": "93771342-ced0-4d5a-84b5-e87c8200336a",
+            "CashBoxIdentification": "gdfhgd"
+          }
+        ],
+        "init_ftSignaturCreationUnitDE": [
+          {
+            "ftSignaturCreationUnitDEId": "93771342-ced0-4d5a-84b5-e87c8200336a",
+            "Url": "[\"rest://localhost:1501/93771342-ced0-4d5a-84b5-e87c8200336a\"]"
+          }
+        ]
+      },
+      "Url": [
+        "rest://localhost:1500/|[queue0_id]|"
+      ]
+    }
+  ],
+  "helpers": [
+    {
+      "Id": "d2e06674-d153-4538-b0ef-dfdc234b0378",
+      "Package": "fiskaltrust.Middleware.Helper.LocalPosSystemApi",
+      "Version": "latest",
+      "Configuration": {},
+      "Url": [
+        "http://localhost:1200/d2e06674-d153-4538-b0ef-dfdc234b0378"
+      ]
+    }
+  ]
+}

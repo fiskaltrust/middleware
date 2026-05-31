@@ -92,7 +92,8 @@ jobs:
             "Content-Type" = "application/json"
           }
 
-          $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
+          $templateFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/template-v2.json" } else { ".github/scripts/template.json" }
+          $body = Get-Content $templateFile -Raw | ConvertFrom-Json
           $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
           $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
@@ -200,7 +201,7 @@ jobs:
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
       - name: Install Mono if platform is Ubuntu
-        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest'  && inputs.launcherVersion == 'v1.3') }}
+        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest' && inputs.launcherVersion == 'v1.3') }}
         run: |
           if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
              
@@ -265,15 +266,16 @@ jobs:
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
+          $readinessPort = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { 1200 } else { 1500 }
           $maxAttempts = 30
           for ($i = 1; $i -le $maxAttempts; $i++) {
             if ($isWindows) {
-                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port $readinessPort -WarningAction SilentlyContinue).TcpTestSucceeded
             } else {
-               bash -c "nc -z localhost 1500"
+               bash -c "nc -z localhost $readinessPort"
                $tcpReady = ($LASTEXITCODE -eq 0)
             }
-            
+
             if ($tcpReady) {
                 Write-Host "Launcher is ready!"
                 break
@@ -281,23 +283,27 @@ jobs:
 
             Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
             Start-Sleep -Seconds 5
-          } 
+          }
 
           #....Send requests....
           if ($tcpReady) {
-           $baseUrl = "http://localhost:1500/${{ env.queueId }}"
-           $baseFile = ".github/scripts/requests"
+           $queueUrl = "http://localhost:1500/${{ env.queueId }}"
+           $helperId = "d2e06674-d153-4538-b0ef-dfdc234b0378"
+           $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "http://localhost:1200/$helperId" } else { $queueUrl }
+           $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
+           $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
+           $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
-                @{ Name = "Echo";                      Url = "$baseUrl/json/v1/Echo"; File = "$baseFile/Echo.json" }
-                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Zero-receipt.json" }
-                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Initial-operation-receipt.json" }
-                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Pos-receipt.json" }
-                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Daily-closing-receipt.json" }
-                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00"; File = "" }
-                # @{ Name = "Tar-Export-from-middleware";Url = "$baseUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
-                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1&from=0&to=00"; File = "" }
-                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2&from=0&to=00"; File = "" }
-                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3&from=0&to=00"; File = "" }
+                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }
+                @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Pos-receipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Pos-receipt.json" }
+                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl$signPath"; File = "$baseFile/Daily-closing-receipt.json" }
+                @{ Name = "DSFinVK-Export";            Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/DSFinVK-Export.json" } else { "" } }
+                # @{ Name = "Tar-Export-from-middleware";Url = "$queueUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
+                @{ Name = "Action-Journal-Export";     Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=1&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Action-Journal-Export.json" } else { "" } }
+                @{ Name = "Receipt-Journal-Export";    Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=2&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Receipt-Journal-Export.json" } else { "" } }
+                @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
 
             $ErrorActionPreference = "Stop"
@@ -313,15 +319,24 @@ jobs:
                     $req.Url = $req.Url.Replace("/json/v1/Echo", "/echo");
                     $req.Url = $req.Url.Replace("/json/v1/Sign", "/sign");
                     $req.Url = $req.Url.Replace("/json/v0/Journal", "/journal");
-                    if ($req.Name -like "*Export*") {$contentType = "text/plain"}
+                    if ($req.Name -like "*Export*" -and "${{ inputs.launcherVersion }}" -ne "v2.0") {$contentType = "text/plain"}
+                }
+
+                $headers = @{}
+                if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
+                    $headers = @{
+                        "x-cashbox-id"           = "${{ env.cashboxId }}"
+                        "x-cashbox-accesstoken"  = "${{ env.accessToken }}"
+                        "x-operation-id"         = [guid]::NewGuid().ToString()
+                    }
                 }
 
                 try {
 
                   if ($null -ne $body) {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
                   Write-Host "Response: $($response | ConvertTo-Json)"
 
