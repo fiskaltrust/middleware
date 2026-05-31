@@ -1,7 +1,4 @@
 {
-  "ftCashBoxID": "{{cashbox_id}}",
-  "ftPosSystemId": "{{possystem_id}}",
-  "cbTerminalID": "D",
   "cbReceiptReference": "daily-closing-{{current_moment}}",
   "cbReceiptMoment": "{{current_moment}}",
   "cbChargeItems": [],
