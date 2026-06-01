@@ -30,7 +30,7 @@ jobs:
           path: artifacts/package-v1-${{ inputs.package }}
 
       - name: Deploy to v1 Packages
-        uses: ./.github/actions/deploy-v1-packages
+        uses: fiskaltrust/middleware/.github/actions/deploy-v1-packages@main
         with:
           directory: artifacts/package-v1-${{ inputs.package }}
           package: ${{ inputs.package }}
@@ -56,7 +56,7 @@ jobs:
           path: artifacts/package-v2-${{ inputs.package }}
 
       - name: Deploy to v2 Packages
-        uses: ./.github/actions/deploy-v2-packages
+        uses: fiskaltrust/middleware/.github/actions/deploy-v2-packages@main
         with:
           directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}

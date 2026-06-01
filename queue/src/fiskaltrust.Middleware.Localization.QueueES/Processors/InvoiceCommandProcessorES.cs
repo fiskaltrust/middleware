@@ -3,8 +3,8 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Logic;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
-using fiskaltrust.Middleware.Localization.QueueES.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : ProcessorPreparation, IInvoiceCommandProcessor
 {
 #pragma warning disable
     private readonly ILogger<InvoiceCommandProcessorES> _logger = logger;
@@ -23,6 +23,8 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
     private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository = journalESRepository;
 #pragma warning restore
 
+    protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = queueItemRepository;
+
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await FullInvoiceRequestAsync(request);
 
     public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => await FullInvoiceRequestAsync(request);
@@ -31,29 +33,11 @@ public class InvoiceCommandProcessorES(ILogger<InvoiceCommandProcessorES> logger
 
     public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await FullInvoiceRequestAsync(request);
 
-    public async Task<ProcessCommandResponse> FullInvoiceRequestAsync(ProcessCommandRequest request)
+    public async Task<ProcessCommandResponse> FullInvoiceRequestAsync(ProcessCommandRequest request) =>
+        await WithPreparations(request, () => ProcessFullInvoiceAsync(request));
+
+    private async Task<ProcessCommandResponse> ProcessFullInvoiceAsync(ProcessCommandRequest request)
     {
-        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _queueItemRepository);
-        var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
-        {
-            IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
-            GeneratesSignature = true,
-            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
-            //NumberSeries = series  // Include series for moment order validation
-        });
-        if (!validationResults.IsValid)
-        {
-            foreach (var result in validationResults.Results)
-            {
-                foreach (var error in result.Errors)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-                }
-            }
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
-
-
         var queueItemRepository = await _queueItemRepository;
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
         var lastQueueItem = queueES.LastInvoiceQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.LastInvoiceQueueItemId.Value) : null;

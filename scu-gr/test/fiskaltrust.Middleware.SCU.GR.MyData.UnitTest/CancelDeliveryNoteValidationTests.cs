@@ -191,7 +191,7 @@ public class CancelDeliveryNoteValidationTests
                 Caption = "invoiceMark",
                 Data = mark,
                 ftSignatureFormat = (SignatureFormat) ((long) SignatureFormat.Text),
-                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypesGR.MyDataInfo)
+                ftSignatureType = (SignatureType) ((long) GRConstants.BASE_STATE | (long) SignatureTypeGR.GenericMyDataInfo)
             });
         }
 

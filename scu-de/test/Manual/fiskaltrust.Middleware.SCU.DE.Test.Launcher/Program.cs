@@ -13,6 +13,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
+        /* in vs 2026 use Debug - Attach to Process and select testlauncher after starting it
+         */
         private static readonly bool useHelipad = true;
         private static readonly string cashBoxId = "";
         private static readonly string accessToken = "";
@@ -82,7 +84,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
                         PerformSwissbitFactoryReset(devicePath);
                     }
                 }
-                ConfigureSwissbitV2(config, serviceCollection);
+                ConfigureSwissbit(config, serviceCollection);
             }else if (config.Package == "fiskaltrust.Middleware.SCU.DE.SwissbitCloud")
             {
                 ConfigureSwissbitCloud(config, serviceCollection);
@@ -259,16 +261,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
         private static void ConfigureSwissbit(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new Swissbit.ScuBootstrapper
-            {
-                Id = queue.Id,
-                Configuration = queue.Configuration
-            };
-            bootStrapper.ConfigureServices(serviceCollection);
-        }
-
-        private static void ConfigureSwissbitV2(PackageConfiguration queue, ServiceCollection serviceCollection)
-        {
-            var bootStrapper = new SwissbitV2.ScuBootstrapper
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration

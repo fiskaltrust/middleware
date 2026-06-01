@@ -3,8 +3,8 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Logic;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
-using fiskaltrust.Middleware.Localization.QueueES.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : ProcessorPreparation, IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly ILogger<ReceiptCommandProcessorES> _logger = logger;
@@ -23,30 +23,15 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
     private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository = journalESRepository;
 #pragma warning restore
 
+    protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = queueItemRepository;
+
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
 
-    public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
-    {
-        var validator = new ReceiptValidator(request.ReceiptRequest, request.ReceiptResponse, _queueItemRepository);
-        var validationResults = await validator.ValidateAndCollectAsync(new ReceiptValidationContext
-        {
-            IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
-            GeneratesSignature = true,
-            IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
-            //NumberSeries = series  // Include series for moment order validation
-        });
-        if (!validationResults.IsValid)
-        {
-            foreach (var result in validationResults.Results)
-            {
-                foreach (var error in result.Errors)
-                {
-                    request.ReceiptResponse.SetReceiptResponseError($"Validation error [{error.Code}]: {error.Message} (Field: {error.Field}, Index: {error.ItemIndex})");
-                }
-            }
-            return new ProcessCommandResponse(request.ReceiptResponse, []);
-        }
+    public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) =>
+        await WithPreparations(request, () => ProcessPointOfSaleReceiptAsync(request));
 
+    private async Task<ProcessCommandResponse> ProcessPointOfSaleReceiptAsync(ProcessCommandRequest request)
+    {
         var queueItemRepository = await _queueItemRepository;
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
         var lastQueueItem = queueES.LastSimplifiedInvoiceQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.LastSimplifiedInvoiceQueueItemId.Value) : null;

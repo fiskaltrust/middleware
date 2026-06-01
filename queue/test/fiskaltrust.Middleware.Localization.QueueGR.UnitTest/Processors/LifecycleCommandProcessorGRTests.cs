@@ -11,12 +11,13 @@ using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
 public class LifecycleCommandProcessorGRTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorGR(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), new LifecycleCommandProcessorGR(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
@@ -123,7 +124,7 @@ public class LifecycleCommandProcessorGRTests
             Caption = "Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}",
             ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = (SignatureType) 0x4752_2000_0001_1001
+            ftSignatureType = (SignatureType) 0x4752_2000_0000_0003
         };
 
         result.receiptResponse.ftSignatures[0].Should().BeEquivalentTo(expectedSignaturItem);
@@ -206,7 +207,7 @@ public class LifecycleCommandProcessorGRTests
 
         var expectedSignaturItem = new SignatureItem
         {
-            ftSignatureType = (SignatureType) 0x4752_2000_0001_1002,
+            ftSignatureType = (SignatureType) 0x4752_2000_0000_0003,
             ftSignatureFormat = SignatureFormat.Text,
             Caption = "Out-of-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"

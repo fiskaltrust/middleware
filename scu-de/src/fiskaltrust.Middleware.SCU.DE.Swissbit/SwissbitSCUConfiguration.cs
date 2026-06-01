@@ -7,7 +7,7 @@
         public string TimeAdminPin { get; set; } = "98765";
         public bool EnableTarFileExport { get; set; } = true;
         public int TooLargeToExportThreshold { get; set; } = 100 * 1024 * 1024;  // 100 MB
-        public bool EnableFirmwareUpdate { get; set; } = false;
+        public bool EnableFirmwareUpdate { get; set; } = true;
         public string NativeLibArch { get; set; }
         public bool StoreTemporaryExportFiles { get; set; } = false;
         public string ServiceFolder { get; set; }

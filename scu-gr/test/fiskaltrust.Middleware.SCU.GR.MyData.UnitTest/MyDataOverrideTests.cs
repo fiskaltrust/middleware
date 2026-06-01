@@ -664,4 +664,2020 @@ public class MyDataOverrideTests
         doc.Should().NotBeNull();
         doc!.invoice[0].downloadingInvoiceUrl.Should().Be("https://receipts.example.com/12345678-1234-1234-1234-123456789012/87654321-4321-4321-4321-210987654321");
     }
+
+    // === NEW HEADER OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExchangeRateOverride_ShouldSetExchangeRate()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            exchangeRate = 1.15m
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.exchangeRateSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceHeader.exchangeRate.Should().Be(1.15m);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithThirdPartyCollectionOverride_ShouldSetThirdPartyCollection()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            thirdPartyCollection = true
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.thirdPartyCollectionSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceHeader.thirdPartyCollection.Should().BeTrue();
+    }
+
+
+    // === COUNTERPART UNMAPPED FIELDS OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithCounterpartDocumentIdOverride_ShouldSetDocumentIdNo()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        // Need a B2B receipt with customer so counterpart is created
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new { CustomerVATId = "EL123456789", CustomerCountry = "GR" };
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        counterpart = new
+                        {
+                            documentIdNo = "AB123456",
+                            supplyAccountNo = "SUP-001",
+                            countryDocumentId = "GR"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.documentIdNo.Should().Be("AB123456");
+        doc.invoice[0].counterpart.supplyAccountNo.Should().Be("SUP-001");
+        doc.invoice[0].counterpart.countryDocumentIdSpecified.Should().BeTrue();
+        doc.invoice[0].counterpart.countryDocumentId.Should().Be(CountryType.GR);
+    }
+
+
+    // === LINE-LEVEL (INVOICE DETAIL) OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithLineItemCodeAndCommentsOverride_ShouldSetFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        itemCode = "PROD-001",
+                        lineComments = "Special handling required"
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].itemCode.Should().Be("PROD-001");
+        doc.invoice[0].invoiceDetails[0].lineComments.Should().Be("Special handling required");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidChargeItemCaseData_ShouldNotThrow()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        // Set some unrelated data in ftChargeItemCaseData
+        request.cbChargeItems[0].ftChargeItemCaseData = new { someOtherField = "value" };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ApplyInvoiceDetailOverride_WithAllFields_ShouldSetAllFields()
+    {
+        var row = new global::InvoiceRowType
+        {
+            lineNumber = 1,
+            netValue = 100,
+            vatAmount = 24,
+            vatCategory = 1
+        };
+
+        var detailOverride = new InvoiceRowTypeOverride
+        {
+            TaricNo = "12345678",
+            ItemCode = "ITEM-001",
+            ItemDescr = "Imported wine",
+            FuelCode = 10,
+            LineComments = "Test comment",
+            Quantity15 = 99.5m,
+            OtherMeasurementUnitQuantity = 2,
+            OtherMeasurementUnitTitle = "barrels",
+            NotVAT195 = true,
+            WithheldAmount = 5.5m,
+            WithheldPercentCategory = 1,
+            StampDutyAmount = 1.2m,
+            StampDutyPercentCategory = 2,
+            FeesAmount = 3.4m,
+            FeesPercentCategory = 3,
+            OtherTaxesAmount = 7.8m,
+            OtherTaxesPercentCategory = 4,
+            DeductionsAmount = 9.1m,
+            LineNumber = 42,
+            Quantity = 12.5m,
+            MeasurementUnit = 3,
+            NetValue = 555m,
+            VatCategory = 7,
+            VatAmount = 13.31m,
+            VatExemptionCategory = 22
+        };
+
+        AADEFactory.ApplyInvoiceDetailOverride(row, detailOverride);
+
+        row.TaricNo.Should().Be("12345678");
+        row.itemCode.Should().Be("ITEM-001");
+        row.itemDescr.Should().Be("Imported wine");
+        row.fuelCodeSpecified.Should().BeTrue();
+        row.lineComments.Should().Be("Test comment");
+        row.quantity15Specified.Should().BeTrue();
+        row.quantity15.Should().Be(99.5m);
+        row.otherMeasurementUnitQuantitySpecified.Should().BeTrue();
+        row.otherMeasurementUnitTitle.Should().Be("barrels");
+        row.notVAT195Specified.Should().BeTrue();
+        row.notVAT195.Should().BeTrue();
+        row.withheldAmountSpecified.Should().BeTrue();
+        row.withheldAmount.Should().Be(5.5m);
+        row.withheldPercentCategorySpecified.Should().BeTrue();
+        row.withheldPercentCategory.Should().Be(1);
+        row.stampDutyAmountSpecified.Should().BeTrue();
+        row.stampDutyAmount.Should().Be(1.2m);
+        row.stampDutyPercentCategorySpecified.Should().BeTrue();
+        row.stampDutyPercentCategory.Should().Be(2);
+        row.feesAmountSpecified.Should().BeTrue();
+        row.feesAmount.Should().Be(3.4m);
+        row.feesPercentCategorySpecified.Should().BeTrue();
+        row.feesPercentCategory.Should().Be(3);
+        row.otherTaxesAmountSpecified.Should().BeTrue();
+        row.otherTaxesAmount.Should().Be(7.8m);
+        row.otherTaxesPercentCategorySpecified.Should().BeTrue();
+        row.otherTaxesPercentCategory.Should().Be(4);
+        row.deductionsAmountSpecified.Should().BeTrue();
+        row.deductionsAmount.Should().Be(9.1m);
+        row.lineNumber.Should().Be(42);
+        row.quantitySpecified.Should().BeTrue();
+        row.quantity.Should().Be(12.5m);
+        row.measurementUnitSpecified.Should().BeTrue();
+        row.measurementUnit.Should().Be(3);
+        row.netValue.Should().Be(555m);
+        row.vatCategory.Should().Be(7);
+        row.vatAmount.Should().Be(13.31m);
+        row.vatExemptionCategorySpecified.Should().BeTrue();
+        row.vatExemptionCategory.Should().Be(22);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMiddlewareComputedFieldOverrides_ShouldOverrideMiddlewareValues()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        lineNumber = 99,
+                        quantity = 7.5m,
+                        measurementUnit = 4,
+                        netValue = 200.5m,
+                        vatCategory = 2,
+                        vatAmount = 27.07m,
+                        vatExemptionCategory = 11
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+        row.lineNumber.Should().Be(99);
+        row.quantitySpecified.Should().BeTrue();
+        row.quantity.Should().Be(7.5m);
+        row.measurementUnitSpecified.Should().BeTrue();
+        row.measurementUnit.Should().Be(4);
+        row.netValue.Should().Be(200.5m);
+        row.vatCategory.Should().Be(2);
+        row.vatAmount.Should().Be(27.07m);
+        row.vatExemptionCategorySpecified.Should().BeTrue();
+        row.vatExemptionCategory.Should().Be(11);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithLineLevelTaxAndDescriptionOverrides_ShouldSetFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        itemDescr = "Premium wine",
+                        withheldAmount = 5.5m,
+                        withheldPercentCategory = 1,
+                        stampDutyAmount = 1.2m,
+                        stampDutyPercentCategory = 2,
+                        feesAmount = 3.4m,
+                        feesPercentCategory = 3,
+                        otherTaxesAmount = 7.8m,
+                        otherTaxesPercentCategory = 4,
+                        deductionsAmount = 9.1m
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+        row.itemDescr.Should().Be("Premium wine");
+        row.withheldAmountSpecified.Should().BeTrue();
+        row.withheldAmount.Should().Be(5.5m);
+        row.withheldPercentCategorySpecified.Should().BeTrue();
+        row.withheldPercentCategory.Should().Be(1);
+        row.stampDutyAmountSpecified.Should().BeTrue();
+        row.stampDutyAmount.Should().Be(1.2m);
+        row.stampDutyPercentCategorySpecified.Should().BeTrue();
+        row.stampDutyPercentCategory.Should().Be(2);
+        row.feesAmountSpecified.Should().BeTrue();
+        row.feesAmount.Should().Be(3.4m);
+        row.feesPercentCategorySpecified.Should().BeTrue();
+        row.feesPercentCategory.Should().Be(3);
+        row.otherTaxesAmountSpecified.Should().BeTrue();
+        row.otherTaxesAmount.Should().Be(7.8m);
+        row.otherTaxesPercentCategorySpecified.Should().BeTrue();
+        row.otherTaxesPercentCategory.Should().Be(4);
+        row.deductionsAmountSpecified.Should().BeTrue();
+        row.deductionsAmount.Should().Be(9.1m);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithHeaderIdentificationOverrides_ShouldSetFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            series = "OVR-A",
+                            aa = "999",
+                            issueDate = new DateTime(2026, 5, 8, 0, 0, 0, DateTimeKind.Utc),
+                            currency = "USD",
+                            correlatedInvoices = new long[] { 12345L, 67890L },
+                            multipleConnectedMarks = new long[] { 1L, 2L, 3L },
+                            isDeliveryNote = true,
+                            tableAA = "TBL-1"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.series.Should().Be("OVR-A");
+        header.aa.Should().Be("999");
+        header.issueDate.Should().Be(new DateTime(2026, 5, 8));
+        header.currencySpecified.Should().BeTrue();
+        header.currency.Should().Be(CurrencyType.USD);
+        header.correlatedInvoices.Should().Equal(12345L, 67890L);
+        header.multipleConnectedMarks.Should().Equal(1L, 2L, 3L);
+        header.isDeliveryNoteSpecified.Should().BeTrue();
+        header.isDeliveryNote.Should().BeTrue();
+        header.tableAA.Should().Be("TBL-1");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutHeaderIdentificationOverrides_ShouldUseMiddlewareValues()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.series.Should().Be("TEST-001");
+        header.aa.Should().NotBeNullOrEmpty();
+        header.currencySpecified.Should().BeTrue();
+        header.currency.Should().Be(CurrencyType.EUR);
+        header.tableAA.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidCurrencyOverride_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            currency = "NOT_A_CURRENCY"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>();
+        error.Exception.Message.Should().Contain("currency");
+        error.Exception.Message.Should().Contain("NOT_A_CURRENCY");
+    }
+
+    // === PHASE 2: INVOICE TYPE OVERRIDE TESTS ===
+
+    [Theory]
+    [InlineData("1.1", InvoiceType.Item11)]
+    [InlineData("1.2", InvoiceType.Item12)]
+    [InlineData("1.3", InvoiceType.Item13)]
+    [InlineData("1.4", InvoiceType.Item14)]
+    [InlineData("1.5", InvoiceType.Item15)]
+    [InlineData("1.6", InvoiceType.Item16)]
+    [InlineData("2.1", InvoiceType.Item21)]
+    [InlineData("2.2", InvoiceType.Item22)]
+    [InlineData("2.3", InvoiceType.Item23)]
+    [InlineData("2.4", InvoiceType.Item24)]
+    [InlineData("3.1", InvoiceType.Item31)]
+    [InlineData("3.2", InvoiceType.Item32)]
+    [InlineData("5.1", InvoiceType.Item51)]
+    [InlineData("5.2", InvoiceType.Item52)]
+    [InlineData("6.1", InvoiceType.Item61)]
+    [InlineData("6.2", InvoiceType.Item62)]
+    [InlineData("7.1", InvoiceType.Item71)]
+    [InlineData("8.1", InvoiceType.Item81)]
+    [InlineData("8.2", InvoiceType.Item82)]
+    [InlineData("8.4", InvoiceType.Item84)]
+    [InlineData("8.5", InvoiceType.Item85)]
+    [InlineData("8.6", InvoiceType.Item86)]
+    [InlineData("9.3", InvoiceType.Item93)]
+    [InlineData("11.1", InvoiceType.Item111)]
+    [InlineData("11.2", InvoiceType.Item112)]
+    [InlineData("11.3", InvoiceType.Item113)]
+    [InlineData("11.4", InvoiceType.Item114)]
+    [InlineData("11.5", InvoiceType.Item115)]
+    public void MapToInvoicesDoc_WithInvoiceTypeOverride_ShouldSetInvoiceType(string overrideValue, InvoiceType expected)
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = overrideValue
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(expected);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidInvoiceTypeOverride_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "99.9"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("99.9");
+    }
+
+    // === PHASE 2: INCOME CLASSIFICATION OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithIncomeClassificationOverride_ShouldReplaceClassification()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_880_001", classificationCategory = "category1_4" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].incomeClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_880_001);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_4);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidIncomeClassificationType_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "INVALID_TYPE", classificationCategory = "category1_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("INVALID_TYPE");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidIncomeClassificationCategory_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "INVALID_CAT" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("INVALID_CAT");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMultipleIncomeClassifications_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "category1_1" },
+                            new { classificationType = "E3_561_002", classificationCategory = "category1_2" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("exactly one element");
+    }
+
+    // === PHASE 2: EXPENSES CLASSIFICATION OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationOverride_ShouldReplaceClassification()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].expensesClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationTypeSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationCategorySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidExpensesClassificationType_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "BOGUS", classificationCategory = "category2_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("BOGUS");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMultipleExpensesClassifications_ShouldCreateMultipleEntries()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 50.0m },
+                            new { classificationType = "E3_102_002", classificationCategory = "category2_2", amount = 50.0m }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].expensesClassification.Should().HaveCount(2);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].amount.Should().Be(50.0m);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[1].classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_002);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[1].classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_2);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[1].amount.Should().Be(50.0m);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationAmountOverride_ShouldUseProvidedAmount()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 75.0m }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].expensesClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].expensesClassification[0].amount.Should().Be(75.0m);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationSummary_ShouldGroupByAllDimensions()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                Quantity = 1,
+                Description = "Item A",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new
+                    {
+                        mydataoverride = new
+                        {
+                            invoiceDetails = new
+                            {
+                                expensesClassification = new[]
+                                {
+                                    new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 40.0m, vatCategory = 1 },
+                                    new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 40.0m, vatCategory = 2 }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            new ChargeItem
+            {
+                Amount = 100,
+                Quantity = 1,
+                Description = "Item B",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new
+                    {
+                        mydataoverride = new
+                        {
+                            invoiceDetails = new
+                            {
+                                expensesClassification = new[]
+                                {
+                                    new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 60.0m, vatCategory = 1 }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        request.cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 200, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0000 }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+
+        // Summary should have 2 entries: same type/category but different vatCategory (1 vs 2)
+        var summary = doc!.invoice[0].invoiceSummary.expensesClassification;
+        summary.Should().HaveCount(2);
+
+        var vatCat1 = summary.Single(x => x.vatCategory == 1);
+        vatCat1.amount.Should().Be(100.0m); // 40 + 60
+        vatCat1.classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        vatCat1.classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+        vatCat1.vatCategorySpecified.Should().BeTrue();
+
+        var vatCat2 = summary.Single(x => x.vatCategory == 2);
+        vatCat2.amount.Should().Be(40.0m);
+        vatCat2.classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        vatCat2.classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+        vatCat2.vatCategorySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationNoAmount_ShouldDefaultToNetValue()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var line = doc!.invoice[0].invoiceDetails[0];
+        line.expensesClassification[0].amount.Should().Be(line.netValue);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMultipleExpensesClassificationsNoAmount_ShouldDefaultEachToNetValue()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1" },
+                            new { classificationType = "E3_102_002", classificationCategory = "category2_2" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var line = doc!.invoice[0].invoiceDetails[0];
+        line.expensesClassification.Should().HaveCount(2);
+        line.expensesClassification[0].amount.Should().Be(line.netValue);
+        line.expensesClassification[1].amount.Should().Be(line.netValue);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationVatAmount_ShouldMapVatAmount()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 80.0m, vatAmount = 19.2m }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var ec = doc!.invoice[0].invoiceDetails[0].expensesClassification[0];
+        ec.vatAmount.Should().Be(19.2m);
+        ec.vatAmountSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationVatCategory_ShouldMapVatCategory()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1", vatCategory = 1 }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var ec = doc!.invoice[0].invoiceDetails[0].expensesClassification[0];
+        ec.vatCategory.Should().Be(1);
+        ec.vatCategorySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationVatExemptionCategory_ShouldMapVatExemptionCategory()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1", vatExemptionCategory = 3 }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var ec = doc!.invoice[0].invoiceDetails[0].expensesClassification[0];
+        ec.vatExemptionCategory.Should().Be(3);
+        ec.vatExemptionCategorySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationId_ShouldMapId()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1", id = 5 }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var ec = doc!.invoice[0].invoiceDetails[0].expensesClassification[0];
+        ec.id.Should().Be(5);
+        ec.idSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationAllFields_ShouldMapAllFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new
+                            {
+                                classificationType = "E3_102_001",
+                                classificationCategory = "category2_1",
+                                amount = 80.0m,
+                                vatAmount = 19.2m,
+                                vatCategory = 1,
+                                vatExemptionCategory = 3,
+                                id = 2
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var ec = doc!.invoice[0].invoiceDetails[0].expensesClassification[0];
+        ec.classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        ec.classificationTypeSpecified.Should().BeTrue();
+        ec.classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+        ec.classificationCategorySpecified.Should().BeTrue();
+        ec.amount.Should().Be(80.0m);
+        ec.vatAmount.Should().Be(19.2m);
+        ec.vatAmountSpecified.Should().BeTrue();
+        ec.vatCategory.Should().Be(1);
+        ec.vatCategorySpecified.Should().BeTrue();
+        ec.vatExemptionCategory.Should().Be(3);
+        ec.vatExemptionCategorySpecified.Should().BeTrue();
+        ec.id.Should().Be(2);
+        ec.idSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationOverride_ShouldClearIncomeClassification()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "category2_1" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].incomeClassification.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithInvalidExpensesClassificationCategory_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = "E3_102_001", classificationCategory = "INVALID_CAT" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("INVALID_CAT");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationSummary_ShouldSumAmountsForSameGroup()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item A",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 30.0m }
+                    }}}}
+                }
+            },
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item B",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 50.0m }
+                    }}}}
+                }
+            }
+        };
+        request.cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 200, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0000 }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var summary = doc!.invoice[0].invoiceSummary.expensesClassification;
+        summary.Should().HaveCount(1);
+        summary[0].amount.Should().Be(80.0m);
+        summary[0].classificationType.Should().Be(ExpensesClassificationTypeClassificationType.E3_102_001);
+        summary[0].classificationCategory.Should().Be(ExpensesClassificationCategoryType.category2_1);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationSummary_ShouldGroupByVatExemptionCategory()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item A",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 40.0m, vatExemptionCategory = 1 }
+                    }}}}
+                }
+            },
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item B",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 60.0m, vatExemptionCategory = 2 }
+                    }}}}
+                }
+            }
+        };
+        request.cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 200, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0000 }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var summary = doc!.invoice[0].invoiceSummary.expensesClassification;
+        summary.Should().HaveCount(2);
+
+        var exemptCat1 = summary.Single(x => x.vatExemptionCategory == 1);
+        exemptCat1.amount.Should().Be(40.0m);
+        exemptCat1.vatExemptionCategorySpecified.Should().BeTrue();
+
+        var exemptCat2 = summary.Single(x => x.vatExemptionCategory == 2);
+        exemptCat2.amount.Should().Be(60.0m);
+        exemptCat2.vatExemptionCategorySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationSummary_ShouldSumVatAmounts()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item A",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 40.0m, vatAmount = 9.6m }
+                    }}}}
+                }
+            },
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item B",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 60.0m, vatAmount = 14.4m }
+                    }}}}
+                }
+            }
+        };
+        request.cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 200, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0000 }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var summary = doc!.invoice[0].invoiceSummary.expensesClassification;
+        summary.Should().HaveCount(1);
+        summary[0].amount.Should().Be(100.0m);
+        summary[0].vatAmount.Should().Be(24.0m);
+        summary[0].vatAmountSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithExpensesClassificationSummary_ShouldSeparateDifferentClassificationTypes()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item A",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_001", classificationCategory = "category2_1", amount = 40.0m }
+                    }}}}
+                }
+            },
+            new ChargeItem
+            {
+                Amount = 100, Quantity = 1, Description = "Item B",
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+                ftChargeItemCaseData = new
+                {
+                    GR = new { mydataoverride = new { invoiceDetails = new { expensesClassification = new[]
+                    {
+                        new { classificationType = "E3_102_002", classificationCategory = "category2_1", amount = 60.0m }
+                    }}}}
+                }
+            }
+        };
+        request.cbPayItems = new List<PayItem>
+        {
+            new PayItem { Amount = 200, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0000 }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var summary = doc!.invoice[0].invoiceSummary.expensesClassification;
+        summary.Should().HaveCount(2);
+        summary.Single(x => x.classificationType == ExpensesClassificationTypeClassificationType.E3_102_001).amount.Should().Be(40.0m);
+        summary.Single(x => x.classificationType == ExpensesClassificationTypeClassificationType.E3_102_002).amount.Should().Be(60.0m);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithIncomeClassificationCategoryOnly_ShouldWork()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationCategory = "category1_95" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].incomeClassification.Should().HaveCount(1);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeFalse();
+    }
+
+    // === ISSUE #68: THIRD-PARTY SALE (1.4) END-TO-END ===
+
+    [Fact]
+    public void MapToInvoicesDoc_ThirdPartySale_1_4_ShouldGenerateCorrectXml()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "3rd-party-sale-step1",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "EL026883248",
+                CustomerName = "Αγοραστής Α.Ε.",
+                CustomerStreet = "Σταδίου 15",
+                CustomerZip = "10562",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 10,
+                    Description = "Προϊόντα ΤΡΙΤΟΥ Α.Ε. - Goods of TRITOU S.A.",
+                    Amount = 1240.00m,
+                    VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATAmount = 240,
+                    ftChargeItemCaseData = new
+                    {
+                        GR = new
+                        {
+                            mydataoverride = new
+                            {
+                                invoiceDetails = new
+                                {
+                                    incomeClassification = new[]
+                                    {
+                                        new { classificationType = "E3_561_001", classificationCategory = "category1_7" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Description = "Bank Transfer",
+                    Amount = 1240.00m,
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0004
+                }
+            ],
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    mydataoverride = new
+                    {
+                        invoice = new
+                        {
+                            invoiceHeader = new
+                            {
+                                invoiceType = "1.4"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreateBasicReceiptResponse(request);
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        // Verify no errors
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+
+        var invoice = doc!.invoice[0];
+
+        // Verify invoice type overridden to 1.4
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item14);
+
+        // Verify income classification overridden to category1_7 + E3_561_001
+        invoice.invoiceDetails[0].incomeClassification.Should().HaveCount(1);
+        invoice.invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_7);
+        invoice.invoiceDetails[0].incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
+        invoice.invoiceDetails[0].incomeClassification[0].classificationTypeSpecified.Should().BeTrue();
+
+        // Verify classification amount equals net value (1240 - 240 VAT = 1000)
+        invoice.invoiceDetails[0].incomeClassification[0].amount.Should().Be(1000.00m);
+
+        // Verify summary aggregates the overridden classification with correct amount
+        invoice.invoiceSummary.incomeClassification.Should().ContainSingle(ic =>
+            ic.classificationCategory == IncomeClassificationCategoryType.category1_7);
+        invoice.invoiceSummary.incomeClassification[0].amount.Should().Be(1000.00m);
+
+        // Verify net value and totals
+        invoice.invoiceDetails[0].netValue.Should().Be(1000.00m);
+        invoice.invoiceDetails[0].vatAmount.Should().Be(240m);
+        invoice.invoiceSummary.totalNetValue.Should().Be(1000.00m);
+        invoice.invoiceSummary.totalVatAmount.Should().Be(240m);
+        invoice.invoiceSummary.totalGrossValue.Should().Be(1240.00m);
+
+        // Generate XML and verify it serializes correctly
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        xml.Should().Contain("<invoiceType>1.4</invoiceType>");
+        xml.Should().Contain(">E3_561_001</classificationType>");
+        xml.Should().Contain(">category1_7</classificationCategory>");
+        xml.Should().Contain(">1000.00</amount>");
+        xml.Should().Contain("026883248");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_IncomeClassificationOverride_AmountShouldMatchNetValue()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        // Set explicit values: Amount=124, VATRate=24, VATAmount=24 → netValue = 124 - 24 = 100
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "1.1" } } } } };
+        request.cbChargeItems[0].Amount = 124m;
+        request.cbChargeItems[0].VATRate = 24m;
+        request.cbChargeItems[0].VATAmount = 24m;
+        request.cbPayItems[0].Amount = 124m;
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoiceDetails = new
+                    {
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "category1_4" }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+
+        // netValue = Amount - VATAmount = 124 - 24 = 100
+        row.netValue.Should().Be(100m);
+        row.vatAmount.Should().Be(24m);
+
+        // Classification amount must equal the line's netValue
+        row.incomeClassification.Should().HaveCount(1);
+        row.incomeClassification[0].amount.Should().Be(100m);
+
+        // Summary must aggregate correctly
+        doc.invoice[0].invoiceSummary.totalNetValue.Should().Be(100m);
+        doc.invoice[0].invoiceSummary.incomeClassification[0].amount.Should().Be(100m);
+    }
+
+    // === AGENCY BUSINESS (NotOwnSales) TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_AgencyBusiness_PosReceipt_ShouldMapToInvoiceType_11_5()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "agency-pos",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1,
+                    Description = "Handmade jewelry (on behalf of third party)",
+                    Amount = 62.00m,
+                    VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate)
+                        .WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales),
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 62.00m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0005 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item115, "POS receipt with NotOwnSales should be 11.5");
+        doc.invoice[0].invoiceDetails[0].incomeClassification.Should().ContainSingle();
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_7);
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        xml.Should().Contain("<invoiceType>11.5</invoiceType>");
+        xml.Should().Contain(">category1_7</classificationCategory>");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_AgencyBusiness_B2BInvoice_ShouldMapToInvoiceType_1_4()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "agency-b2b",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "EL026883248",
+                CustomerName = "Αγοραστής Α.Ε.",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 5,
+                    Description = "Electronics (on behalf of third party)",
+                    Amount = 620.00m,
+                    VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate)
+                        .WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales),
+                    VATAmount = 120,
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Description = "Bank Transfer", Amount = 620.00m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0004 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item14, "B2B invoice with NotOwnSales should be 1.4");
+        doc.invoice[0].invoiceDetails[0].incomeClassification.Should().ContainSingle();
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_7);
+        doc.invoice[0].invoiceDetails[0].incomeClassification[0].amount.Should().Be(500.00m, "netValue = 620 - 120 = 500");
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        xml.Should().Contain("<invoiceType>1.4</invoiceType>");
+        xml.Should().Contain(">category1_7</classificationCategory>");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_AgencyBusiness_MixedWithNonAgency_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "agency-mixed",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Agency item", Amount = 50.00m, VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate)
+                        .WithTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales),
+                },
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Own item", Amount = 30.00m, VATRate = 24.0m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000)
+                        .WithVat(ChargeItemCase.NormalVatRate),
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 80.00m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull("mixing agency and non-agency items is not allowed");
+        error!.Exception.Message.Should().Contain("NotOwnSales");
+    }
+
+    // === COUNTERPART NAME TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_DomesticCustomer_ShouldNotSetCounterpartName()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "domestic-name",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "EL026883248",
+                CustomerName = "Πελάτης Α.Ε.",
+                CustomerStreet = "Σταδίου 15",
+                CustomerZip = "10562",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Item", Amount = 124m, VATRate = 24m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATAmount = 24
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 124m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.name.Should().BeNull("domestic GR customers should not have name set");
+        doc.invoice[0].counterpart.vatNumber.Should().Be("026883248");
+        doc.invoice[0].counterpart.country.Should().Be(CountryType.GR);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ForeignCustomer_ShouldSetCounterpartName()
+    {
+        var factory = CreateFactory();
+        var request = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = new DateTime(2026, 3, 26, 10, 0, 0, DateTimeKind.Utc),
+            cbReceiptReference = "foreign-name",
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002),
+            cbCustomer = new
+            {
+                CustomerVATId = "DE123456789",
+                CustomerName = "German GmbH",
+                CustomerStreet = "Berliner Str. 1",
+                CustomerZip = "10115",
+                CustomerCity = "Berlin",
+                CustomerCountry = "DE"
+            },
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Quantity = 1, Description = "Item", Amount = 124m, VATRate = 24m,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATAmount = 24
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem { Amount = 124m, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }
+            ]
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.name.Should().Be("German GmbH", "foreign customers must have name set");
+        doc.invoice[0].counterpart.country.Should().Be(CountryType.DE);
+    }
+
+    // === COUNTERPART ADDRESS FIELD TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerWithPostalCodeAndCity_ShouldSetAddress()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL026883248",
+            CustomerZip = "10562",
+            CustomerCity = "Αθηνών",
+            CustomerCountry = "GR"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var cp = doc!.invoice[0].counterpart;
+        cp.address.Should().NotBeNull();
+        cp.address.postalCode.Should().Be("10562");
+        cp.address.city.Should().Be("Αθηνών");
+        cp.address.street.Should().BeNull("street not provided");
+        cp.address.number.Should().BeNull("house number not provided");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerWithStreetAndHouseNumber_ShouldSetBoth()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "DE123456789",
+            CustomerName = "Test GmbH",
+            CustomerStreet = "Berliner Str.",
+            CustomerHouseNumber = "42",
+            CustomerZip = "10115",
+            CustomerCity = "Berlin",
+            CustomerCountry = "DE"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var cp = doc!.invoice[0].counterpart;
+        cp.address.Should().NotBeNull();
+        cp.address.street.Should().Be("Berliner Str.");
+        cp.address.number.Should().Be("42");
+        cp.address.postalCode.Should().Be("10115");
+        cp.address.city.Should().Be("Berlin");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerWithoutPostalCodeOrCity_ShouldNotSetAddress()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL026883248",
+            CustomerCountry = "GR"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var cp = doc!.invoice[0].counterpart;
+        cp.address.Should().BeNull("no postalCode/city provided");
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().NotContain("<address>", "no address element should be serialized");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerAddress_XmlShouldOmitEmptyStreetAndNumber()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL026883248",
+            CustomerZip = "10562",
+            CustomerCity = "Αθηνών",
+            CustomerCountry = "GR"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().Contain("<postalCode>10562</postalCode>");
+        xml.Should().Contain("<city>Αθηνών</city>");
+        xml.Should().NotContain("<street");
+        xml.Should().NotContain("<number");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CustomerAddressWithAllFields_XmlShouldIncludeStreetAndNumber()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = new
+        {
+            CustomerVATId = "DE123456789",
+            CustomerName = "Test GmbH",
+            CustomerStreet = "Hauptstr.",
+            CustomerHouseNumber = "7",
+            CustomerZip = "80331",
+            CustomerCity = "München",
+            CustomerCountry = "DE"
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().Contain("<street>Hauptstr.</street>");
+        xml.Should().Contain("<number>7</number>");
+        xml.Should().Contain("<postalCode>80331</postalCode>");
+        xml.Should().Contain("<city>München</city>");
+    }
+
+    [Fact]
+    public void HasInvoiceTypeOverride_WithoutCaseData_ReturnsFalse()
+    {
+        var request = CreateBasicReceiptRequest();
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasInvoiceTypeOverride_WithOverrideButNoInvoiceType_ReturnsFalse()
+    {
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            dispatchDate = "2025-06-18"
+                        }
+                    }
+                }
+            }
+        };
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasInvoiceTypeOverride_WithInvoiceType_ReturnsTrue()
+    {
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "11.1"
+                        }
+                    }
+                }
+            }
+        };
+
+        AADEFactory.HasInvoiceTypeOverride(request).Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ECommerceWithInvoiceTypeOverride_ShouldUseOverrideType()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.ECommerce0x0004);
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = "11.1"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+    }
 }

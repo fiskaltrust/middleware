@@ -28,15 +28,4 @@ public static class SignaturItemFactory
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
     }
-
-    public static SignatureItem CreateGRQRCode(string qrCode)
-    {
-        return new SignatureItem()
-        {
-            Caption = "[www.fiskaltrust.gr]",
-            Data = qrCode,
-            ftSignatureFormat = SignatureFormat.QRCode,
-            ftSignatureType = SignatureTypeGR.PosReceipt.As<SignatureType>()
-        };
-    }
 }

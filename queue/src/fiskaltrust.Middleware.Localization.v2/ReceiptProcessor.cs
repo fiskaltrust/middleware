@@ -1,32 +1,60 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
+using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
 public class ReceiptProcessor : IReceiptProcessor
 {
+    private readonly IMarketValidator _validator;
     private readonly ILifecycleCommandProcessor _lifecyclCommandProcessor;
     private readonly IReceiptCommandProcessor _receiptCommandProcessor;
     private readonly IDailyOperationsCommandProcessor _dailyOperationsCommandProcessor;
     private readonly IInvoiceCommandProcessor _invoiceCommandProcessor;
     private readonly IProtocolCommandProcessor _protocolCommandProcessor;
     private readonly ILogger<ReceiptProcessor> _logger;
+    private readonly ValidationConfiguration? _validationConfig;
 
-    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, IMarketValidator validator, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor, ValidationConfiguration? validationConfig = null)
     {
+        _validator = validator;
         _lifecyclCommandProcessor = lifecyclCommandProcessor;
         _receiptCommandProcessor = receiptCommandProcessor;
         _dailyOperationsCommandProcessor = dailyOperationsCommandProcessor;
         _invoiceCommandProcessor = invoiceCommandProcessor;
         _protocolCommandProcessor = protocolCommandProcessor;
         _logger = logger;
+        _validationConfig = validationConfig;
     }
+
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ReceiptReferenceProvider receiptReferenceProvider, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor, ValidationConfiguration? validationConfig = null) : this(logger, new MarketValidator(receiptReferenceProvider), lifecyclCommandProcessor, receiptCommandProcessor, dailyOperationsCommandProcessor, invoiceCommandProcessor, protocolCommandProcessor, validationConfig) { }
 
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
     {
+        ValidationResult? validationResult = null;
+        try
+        {
+            validationResult = await _validator.ValidateAsync(request, queue);
+            LogValidationErrors(request, validationResult);
+
+            if (HasFailingErrors(validationResult))
+            {
+                receiptResponse.MarkAsFailed();
+                AddValidationSignatures(receiptResponse, validationResult.Errors);
+                return (receiptResponse, []);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during FV validation for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}", request.cbReceiptReference, request.ftReceiptCase);
+        }
+
         var processCommandRequest = new ProcessCommandRequest(queue, request, receiptResponse);
         ProcessCommandResponse? processCommandResponse = null;
         var receiptCase = request.ftReceiptCase.Case();
@@ -69,8 +97,8 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => await _receiptCommandProcessor.PointOfSaleReceiptWithoutObligation0x0003Async(processCommandRequest),
                     ReceiptCase.ECommerce0x0004 => await _receiptCommandProcessor.ECommerce0x0004Async(processCommandRequest),
                     ReceiptCase.DeliveryNote0x0005 => await _receiptCommandProcessor.DeliveryNote0x0005Async(processCommandRequest),
-                    (ReceiptCase) 0x0006 /* Table Check, replace with enum */ => await _receiptCommandProcessor.TableCheck0x0006Async(processCommandRequest),
-                    (ReceiptCase) 0x0007 /* Pro Forma, replace with enum */ => await _receiptCommandProcessor.ProForma0x0007Async(processCommandRequest),
+                    (ReceiptCase)0x0006 /* Table Check, replace with enum */ => await _receiptCommandProcessor.TableCheck0x0006Async(processCommandRequest),
+                    (ReceiptCase)0x0007 /* Pro Forma, replace with enum */ => await _receiptCommandProcessor.ProForma0x0007Async(processCommandRequest),
                     _ => null
                 };
             }
@@ -105,6 +133,9 @@ public class ReceiptProcessor : IReceiptProcessor
 
             if (processCommandResponse is not null)
             {
+                if (_validationConfig?.ValidationsInSignatures == true && validationResult?.IsValid == false)
+                    AddValidationSignatures(processCommandResponse.receiptResponse, validationResult.Errors);
+
                 return (processCommandResponse.receiptResponse, processCommandResponse.actionJournals);
             }
 
@@ -116,6 +147,48 @@ public class ReceiptProcessor : IReceiptProcessor
             _logger.LogError(ex, "Failed to process receiptcase 0x{receiptcase}", request.ftReceiptCase.ToString("X"));
             receiptResponse.SetReceiptResponseError($"Failed to process receiptcase 0x{request.ftReceiptCase.ToString("X")}. with the following exception message: " + ex.Message);
             return (receiptResponse, new List<ftActionJournal>());
+        }
+    }
+
+    private void LogValidationErrors(ReceiptRequest request, ValidationResult validationResult)
+    {
+        foreach (var error in validationResult.Errors)
+        {
+            _logger.Log(
+                error.Severity switch
+                {
+                    FluentValidation.Severity.Warning => LogLevel.Warning,
+                    FluentValidation.Severity.Info => LogLevel.Information,
+                    _ => LogLevel.Error,
+                },
+                "FV cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}: [{ErrorCode}] {ErrorMessage}",
+                request.cbReceiptReference,
+                request.ftReceiptCase,
+                error.ErrorCode,
+                error.ErrorMessage
+            );
+        }
+    }
+
+    private bool HasFailingErrors(ValidationResult validationResult)
+    {
+        if (_validationConfig?.ValidationLevel is not { } level)
+            return false;
+
+        return validationResult.Errors.Any(e => (int)e.Severity <= (int)level);
+    }
+
+    private static void AddValidationSignatures(ReceiptResponse receiptResponse, IEnumerable<ValidationFailure> errors)
+    {
+        foreach (var error in errors)
+        {
+            receiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Caption = $"[{error.Severity}] {error.ErrorCode}",
+                Data = error.ErrorMessage,
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = receiptResponse.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
+            });
         }
     }
 }

@@ -12,10 +12,26 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public static class AADEMappings
 {
     private static readonly DateTimeZone _athensZone = DateTimeZoneProviders.Tzdb["Europe/Athens"];
-    public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
+    public static IncomeClassificationType? GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
+        // Special-tax line items (e.g. plastic-bag environmental fee) carry their tax via
+        // feesAmount / stampDutyAmount / otherTaxesAmount / withheldAmount on the row itself —
+        // AADE forbids pairing those with an incomeClassification on the same row.
+        if (SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem))
+        {
+            return null;
+        }
+
         var vatAmount = chargeItem.GetVATAmount();
         var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
+
+        // Per-item return flag (0x0002) inside an 8.6 order = recType 7
+        // myDATA spec: for recType=7 lines amounts MUST be positive; myDATA itself treats them as cancellations
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) && chargeItem.IsRefund())
+        {
+            netAmount = Math.Abs(netAmount);
+        }
+
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
         {
             return new IncomeClassificationType
@@ -128,13 +144,18 @@ public static class AADEMappings
                 }
                 else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
-                    throw new Exception("Agency business with non EU customer is not supported");
+                    return IncomeClassificationValueType.E3_881_004;
                 }
                 else
                 {
                     return IncomeClassificationValueType.E3_881_001;
                 }
             }
+        }
+
+        if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption))
+        {
+            return IncomeClassificationValueType.E3_595;
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
@@ -152,6 +173,11 @@ public static class AADEMappings
                 if (chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a))
                 {
                     return IncomeClassificationValueType.E3_561_002;
+                }
+                
+                if (SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem))
+                {
+                    return IncomeClassificationValueType.E3_561_001;
                 }
 
                 return chargeItem.ftChargeItemCase.TypeOfService() switch
@@ -221,6 +247,11 @@ public static class AADEMappings
             return IncomeClassificationCategoryType.category1_6;
         }
 
+        if (SpecialTaxMappings.IsVatableSpecialTaxItem(chargeItem))
+        {
+            return IncomeClassificationCategoryType.category1_1;
+        }
+
         return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
             ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_95,
@@ -228,7 +259,8 @@ public static class AADEMappings
             ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
-            _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
+            ChargeItemCaseTypeOfService.OwnConsumption => IncomeClassificationCategoryType.category1_6,
+            _ => IncomeClassificationCategoryType.category1_95,
         };
     }
 
@@ -253,38 +285,35 @@ public static class AADEMappings
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData) && overrideData?.GR?.MyDataOverride != null)
-        {
-            var headerOverride = overrideData.GR.MyDataOverride.Invoice?.InvoiceHeader;
-            if (!string.IsNullOrEmpty(headerOverride?.InvoiceType))
-            {
-                // Define allowed invoice types for override
-                var allowedInvoiceTypes = new HashSet<string> { "8.2" };
-                if (!allowedInvoiceTypes.Contains(headerOverride.InvoiceType))
-                {
-                    throw new Exception($"Invalid invoice type override value '{headerOverride.InvoiceType}'. Only the following values are allowed: 3.1, 3.2, 6.1, 6.2, 8.1, 8.2, 9.3");
-                }
-
-                if(headerOverride.InvoiceType == "8.2")
-                {
-                    return InvoiceType.Item82;
-                }
-            }
-        }
-
+        // InvoiceType override is handled in AADEFactory.ApplyInvoiceHeaderOverride after the initial mapping.
+        // Here we only determine the base type from the receipt case.
 
         // Validate that agency business (NotOwnSales) items are not mixed with other types
         var hasNotOwnSales = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales));
-        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x => 
+        var hasOtherTypes = receiptRequest.cbChargeItems.Any(x =>
         {
             var typeOfService = x.ftChargeItemCase.TypeOfService();
-            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales && 
+            return typeOfService != ChargeItemCaseTypeOfService.NotOwnSales &&
                    typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
         });
 
         if (hasNotOwnSales && hasOtherTypes)
         {
             throw new Exception("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
+        }
+
+        // Validate that own consumption (OwnConsumption) items are not mixed with other types
+        var hasOwnConsumption = receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OwnConsumption));
+        var hasOtherTypesForOwnConsumption = receiptRequest.cbChargeItems.Any(x =>
+        {
+            var typeOfService = x.ftChargeItemCase.TypeOfService();
+            return typeOfService != ChargeItemCaseTypeOfService.OwnConsumption &&
+                   typeOfService != (ChargeItemCaseTypeOfService)0xF0; // Exclude special tax items
+        });
+
+        if (hasOwnConsumption && hasOtherTypesForOwnConsumption)
+        {
+            throw new Exception("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
@@ -308,9 +337,13 @@ public static class AADEMappings
                 return InvoiceType.Item114;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item115;
+            }
+            else if (hasOwnConsumption)
+            {
+                return InvoiceType.Item61;
             }
             else if (receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes())
             {
@@ -326,12 +359,16 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
+                return HasAnyPreviousInvoiceReference(receiptRequest) ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            if (hasNotOwnSales)
             {
                 return InvoiceType.Item14;
+            }
+            else if (hasOwnConsumption)
+            {
+                return InvoiceType.Item61;
             }
             else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes())
             {
@@ -504,6 +541,17 @@ public static class AADEMappings
         PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
 
+    /// <summary>
+    /// Determines whether a pay item should be transmitted to the myDATA API as a payment method.
+    /// Internal material consumption has no AADE payment-method counterpart and is filtered out
+    /// so it never appears in <c>inv.paymentMethods</c> nor in a standalone <c>SendPaymentsMethod</c> call.
+    /// </summary>
+    public static bool ShouldTransmitPayItem(PayItem payItem) => payItem.ftPayItemCase.Case() switch
+    {
+        PayItemCase.InternalMaterialConsumption => false,
+        _ => true
+    };
+
     private static int GetSEPATransferPaymentType(string description)
     {
         if (string.IsNullOrEmpty(description))
@@ -548,9 +596,61 @@ public static class AADEMappings
         InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
         _ => true
     };
+
+    /// <summary>
+    /// Returns true if the request points to a previous invoice via any of the supported
+    /// correlation sources:
+    /// <list type="bullet">
+    /// <item><c>cbPreviousReceiptReference</c> — an invoice issued by this middleware.</item>
+    /// <item><c>ftReceiptCaseData.GR.PreviousReceiptReference.invoiceMark</c> — an invoice issued
+    /// by another system, identified by its AADE MARK.</item>
+    /// <item><c>ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.correlatedInvoices</c>
+    /// or <c>multipleConnectedMarks</c> — marks supplied via the invoice-header override.</item>
+    /// </list>
+    /// Used by invoice-type selection so e.g. a B2B refund correlated only by an external MARK
+    /// (or only via the mydataoverride header) still resolves to the correlated credit-note type
+    /// (Item51) instead of the uncorrelated one (Item52). The myDATA spec encodes the
+    /// correlation in the type name itself: 5.1 = Συσχετιζόμενο (Correlated),
+    /// 5.2 = Μη Συσχετιζόμενο (Non-Correlated). Other invoice types do not require this — they
+    /// accept correlatedInvoices as an optional field without changing type.
+    /// </summary>
+    public static bool HasAnyPreviousInvoiceReference(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbPreviousReceiptReference is not null)
+        {
+            return true;
+        }
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData)
+            && HasPreviousInvoiceReferenceInCaseData(caseData);
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="caseData"/> carries any of the two case-data-side
+    /// correlation sources accepted by <see cref="HasAnyPreviousInvoiceReference"/>:
+    /// <c>PreviousReceiptReference.invoiceMark</c>, or
+    /// <c>mydataoverride.invoice.invoiceHeader.correlatedInvoices</c> /
+    /// <c>multipleConnectedMarks</c>. Call sites that have already deserialized the payload
+    /// (e.g. <c>SetInvoiceHeaderFieldsForVoid</c>) use this to avoid double-deserializing.
+    /// </summary>
+    public static bool HasPreviousInvoiceReferenceInCaseData(ftReceiptCaseDataPayload? caseData)
+    {
+        if (caseData?.GR?.PreviousReceiptReference?.InvoiceMark is { Count: > 0 })
+        {
+            return true;
+        }
+        var overrideHeader = caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader;
+        return overrideHeader?.CorrelatedInvoices is { Count: > 0 }
+            || overrideHeader?.MultipleConnectedMarks is { Count: > 0 };
+    }
     public static bool SupportsMultipleConnectedMarks(InvoiceType invoiceType) => invoiceType switch
     {
         InvoiceType.Item16 or InvoiceType.Item24 or InvoiceType.Item51 => false,
+        _ => true
+    };
+
+    public static bool SupportsIncomeClassification(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item31 or InvoiceType.Item32 => false,
         _ => true
     };
 
@@ -609,11 +709,7 @@ public static class AADEMappings
 
     public static int GetMeasurementUnit(ChargeItem? chargeItem)
     {
-        if (chargeItem == null)
-        {
-            return MyDataMeasurementUnit.Pieces;
-        }
-        if (string.IsNullOrWhiteSpace(chargeItem?.Unit))
+        if (chargeItem == null || string.IsNullOrWhiteSpace(chargeItem.Unit))
         {
             return MyDataMeasurementUnit.Pieces;
         }
@@ -627,7 +723,126 @@ public static class AADEMappings
             "squaremeters" => MyDataMeasurementUnit.SquareMeters,
             "cubicmeters" => MyDataMeasurementUnit.CubicMeters,
             "otherpieces" => MyDataMeasurementUnit.OtherPieces,
-            _ => MyDataMeasurementUnit.Pieces
+            // A non-empty Unit that does not match any AADE-defined measurement unit
+            // is mapped to OtherPieces; the original string is carried over via
+            // otherMeasurementUnitTitle (see AADEFactory.ApplyMeasurementUnit).
+            _ => MyDataMeasurementUnit.OtherPieces
         };
+    }
+
+    /// <summary>
+    /// Applies the AADE measurement-unit-related fields on an invoice row from a charge item,
+    /// honoring the ChargeItem.Unit / ChargeItem.UnitQuantity named properties with fallbacks
+    /// per market-gr issue #182.
+    /// </summary>
+    /// <remarks>
+    /// Per myDATA REST API spec v2.0.1 §5.4 rule #9: when <c>measurementUnit = 7</c>
+    /// (Τεμάχια_Λοιπές Περιπτώσεις / Other Pieces), <c>otherMeasurementUnitQuantity</c> and
+    /// <c>otherMeasurementUnitTitle</c> are MANDATORY. The spec also clarifies that
+    /// <c>quantity</c> always represents the count of items being moved, NOT the count of packaging.
+    ///
+    /// Mapping applied here:
+    /// <list type="bullet">
+    ///   <item><description><c>row.quantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/></description></item>
+    ///   <item><description><c>row.otherMeasurementUnitQuantity</c> ← <see cref="ChargeItem.UnitQuantity"/> when set, otherwise <see cref="ChargeItem.Quantity"/> (only when measurementUnit=7; whole-number validated)</description></item>
+    ///   <item><description><c>row.otherMeasurementUnitTitle</c> ← <see cref="ChargeItem.Unit"/> (only when measurementUnit=7)</description></item>
+    /// </list>
+    ///
+    /// AADE schema requires <c>quantity &gt; 0</c> (<c>minExclusive="0"</c>), so the absolute value
+    /// is always emitted.
+    /// </remarks>
+    public static void ApplyMeasurementUnit(InvoiceRowType row, ChargeItem chargeItem)
+    {
+        row.measurementUnit = GetMeasurementUnit(chargeItem);
+        row.measurementUnitSpecified = true;
+
+        if (!string.IsNullOrWhiteSpace(chargeItem.Unit))
+        {
+            // measurementUnit = 7 → both otherMeasurementUnitTitle and otherMeasurementUnitQuantity
+            // are mandatory per spec §5.4 rule #9.
+            if (row.measurementUnit == MyDataMeasurementUnit.OtherPieces)
+            {
+                row.otherMeasurementUnitTitle = chargeItem.Unit;
+                row.otherMeasurementUnitQuantity = ToOtherMeasurementUnitQuantity(chargeItem.UnitQuantity ?? chargeItem.Quantity);
+                row.otherMeasurementUnitQuantitySpecified = true;
+            }
+
+            // Unit is set and UnitQuantity is provided: the AADE row's quantity becomes UnitQuantity
+            // (the count of items being moved). When UnitQuantity is missing, row.quantity already
+            // carries ChargeItem.Quantity from the caller — implementing the fallback rule
+            // "Quantity is used as UnitQuantity".
+            if (chargeItem.UnitQuantity.HasValue)
+            {
+                row.quantity = chargeItem.UnitQuantity.Value;
+                row.quantitySpecified = true;
+            }
+        }
+
+        // Normalize: AADE requires quantity > 0 (minExclusive="0"). At this point row.quantity
+        // is whichever source already won above (UnitQuantity or caller-supplied Quantity).
+        row.quantity = Math.Abs(row.quantity);
+    }
+
+    /// <summary>
+    /// Enforces myDATA spec v2.0.1 §5.4 rule #9: whenever the row ends up with
+    /// <c>measurementUnit = 7</c> (OtherPieces / Τεμάχια_Λοιπές Περιπτώσεις),
+    /// <c>otherMeasurementUnitTitle</c> and <c>otherMeasurementUnitQuantity</c> must both be set.
+    ///
+    /// This guard runs AFTER any line-level override has been applied — it covers the case
+    /// where a caller flips <c>measurementUnit</c> to 7 via override without supplying the
+    /// accompanying title/quantity, falling back to the values on the original ChargeItem.
+    /// </summary>
+    public static void EnsureOtherPiecesMandatoryFields(InvoiceRowType row, ChargeItem chargeItem)
+    {
+        if (!row.measurementUnitSpecified || row.measurementUnit != MyDataMeasurementUnit.OtherPieces)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.otherMeasurementUnitTitle) && !string.IsNullOrWhiteSpace(chargeItem.Unit))
+        {
+            row.otherMeasurementUnitTitle = chargeItem.Unit;
+        }
+
+        if (!row.otherMeasurementUnitQuantitySpecified)
+        {
+            row.otherMeasurementUnitQuantity = ToOtherMeasurementUnitQuantity(chargeItem.UnitQuantity ?? chargeItem.Quantity);
+            row.otherMeasurementUnitQuantitySpecified = true;
+        }
+    }
+
+    /// <summary>
+    /// Converts a source quantity (<see cref="ChargeItem.UnitQuantity"/> or
+    /// <see cref="ChargeItem.Quantity"/>) to the AADE <c>otherMeasurementUnitQuantity</c> (int).
+    /// Throws if the value would lose precision — fractional inputs are rejected since the
+    /// AADE field is an integer.
+    /// </summary>
+    private static int ToOtherMeasurementUnitQuantity(decimal sourceQuantity)
+    {
+        var abs = Math.Abs(sourceQuantity);
+        if (abs != Math.Truncate(abs))
+        {
+            throw new Exception(
+                $"ChargeItem.UnitQuantity/Quantity ({sourceQuantity}) must be a whole number to populate "
+                + "otherMeasurementUnitQuantity for AADE measurementUnit=7 (OtherPieces).");
+        }
+        return (int) abs;
+    }
+
+
+    /// <summary>
+    /// Valid values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR,
+    /// 3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION
+    /// </summary>
+    public static int GetReverseDeliveryNotePurpose(int purpose)
+    {
+        if (purpose < 1 || purpose > 5)
+        {
+            throw new Exception(
+                $"Invalid reverseDeliveryNotePurpose value '{purpose}'. " +
+                "Allowed values: 1-NOT OBLIGED TO ISSUE, 2-REFUSAL/CLERICAL ERROR, " +
+                "3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION.");
+        }
+        return purpose;
     }
 }

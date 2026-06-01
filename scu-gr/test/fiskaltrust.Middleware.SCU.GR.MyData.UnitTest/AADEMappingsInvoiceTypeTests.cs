@@ -10,6 +10,7 @@ using Xunit;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Text.Json;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData;
@@ -306,6 +307,108 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
+    public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithExternalInvoiceMark_ReturnsItem51()
+    {
+        // Regression for Codex P1 review on PR #664: when only the external
+        // GR.PreviousReceiptReference.invoiceMark is supplied (no cbPreviousReceiptReference),
+        // GetInvoiceType must still resolve to the correlated credit-note type (5.1) so the
+        // emitted document is consistent with the correlatedInvoices it carries.
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = "400000000123333"
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item51);
+    }
+
+    [Fact]
+    public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithOverrideCorrelatedInvoices_ReturnsItem51()
+    {
+        // Same rationale as the external-MARK case: a B2B credit note that carries correlations
+        // (here via mydataoverride.invoice.invoiceHeader.correlatedInvoices) must resolve to 5.1
+        // because the spec encodes the correlation in the type name itself.
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            correlatedInvoices = new[] { 400000000123333L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item51);
+    }
+
+    [Fact]
+    public void Item_5_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_IsRefund_WithOverrideMultipleConnectedMarks_ReturnsItem51()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            multipleConnectedMarks = new[] { 400000000123333L }
+                        }
+                    }
+                }
+            }
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item51);
+    }
+
+    [Fact]
+    public void GetInvoiceType_B2BInvoice_WithEmptyExternalInvoiceMarkArray_Throws()
+    {
+        // An explicit empty array is rejected at the JSON layer: invoiceMark must be a number,
+        // a numeric string, or a non-empty array. Callers signal "no correlation" by omitting
+        // the field, not by sending [].
+        var receiptRequest = CreateB2BInvoice("GR", isRefund: true);
+        receiptRequest.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                PreviousReceiptReference = new
+                {
+                    invoiceMark = Array.Empty<long>()
+                }
+            }
+        };
+
+        Action act = () => AADEMappings.GetInvoiceType(receiptRequest);
+
+        act.Should().Throw<JsonException>().WithMessage("*at least one MARK*");
+    }
+
+    [Fact]
     public void Item_9_3_GetInvoiceType_DeliveryNote_WithTransportDocumentFlag_ReturnsItem93()
     {
         var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
@@ -550,5 +653,83 @@ public class AADEMappingsInvoiceTypeTests
 
         act.Should().Throw<Exception>()
             .WithMessage("In Greece, agency business (NotOwnSales) items cannot be mixed with other types of service items in the same receipt.");
+    }
+
+    // ── Own Consumption (6.1 / 6.2) ──────────────────────────────────
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_RetailReceipt_WithAllOwnConsumptionItems_ReturnsItem61()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.OwnConsumption);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_RetailReceipt_WithMultipleOwnConsumptionItems_ReturnsItem61()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Own Use Item 1", ChargeItemCaseTypeOfService.OwnConsumption),
+            CreateChargeItem(2, 50, 24, "Own Use Item 2", ChargeItemCaseTypeOfService.OwnConsumption),
+            CreateChargeItem(3, 75, 24, "Own Use Item 3", ChargeItemCaseTypeOfService.OwnConsumption)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_B2BInvoice_WithAllOwnConsumptionItems_ReturnsItem61()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OwnConsumption);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void Item_6_1_GetInvoiceType_B2BInvoice_WithMultipleOwnConsumptionItems_ReturnsItem61()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OwnConsumption);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Own Use Item 2", ChargeItemCaseTypeOfService.OwnConsumption));
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(3, 75, 24, "Own Use Item 3", ChargeItemCaseTypeOfService.OwnConsumption));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item61);
+    }
+
+    [Fact]
+    public void GetInvoiceType_RetailReceipt_WithMixedOwnConsumptionAndOtherItems_ThrowsException()
+    {
+        var chargeItems = new List<ChargeItem>
+        {
+            CreateChargeItem(1, 100, 24, "Delivery Item", ChargeItemCaseTypeOfService.Delivery),
+            CreateChargeItem(2, 50, 24, "Own Use Item", ChargeItemCaseTypeOfService.OwnConsumption)
+        };
+        var receiptRequest = CreateReceipt(chargeItems);
+
+        var act = () => AADEMappings.GetInvoiceType(receiptRequest);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
+    }
+
+    [Fact]
+    public void GetInvoiceType_B2BInvoice_WithMixedOwnConsumptionAndOtherItems_ThrowsException()
+    {
+        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Own Use Item", ChargeItemCaseTypeOfService.OwnConsumption));
+
+        var act = () => AADEMappings.GetInvoiceType(receiptRequest);
+
+        act.Should().Throw<Exception>()
+            .WithMessage("In Greece, own consumption (OwnConsumption) items cannot be mixed with other types of service items in the same receipt.");
     }
 }

@@ -68,6 +68,7 @@ public class AADEMappingsIncomeClassificationCategoryTypeTests
     [InlineData(ChargeItemCaseTypeOfService.CatalogService, IncomeClassificationCategoryType.category1_2)]
     [InlineData(ChargeItemCaseTypeOfService.OtherService, IncomeClassificationCategoryType.category1_3)]
     [InlineData(ChargeItemCaseTypeOfService.NotOwnSales, IncomeClassificationCategoryType.category1_7)]
+    [InlineData(ChargeItemCaseTypeOfService.OwnConsumption, IncomeClassificationCategoryType.category1_6)]
     public void GetIncomeClassificationCategoryType_WithDifferentServiceTypes_ReturnsExpectedCategory(ChargeItemCaseTypeOfService serviceType, IncomeClassificationCategoryType expectedCategory)
     {
         // Arrange
@@ -79,24 +80,5 @@ public class AADEMappingsIncomeClassificationCategoryTypeTests
 
         // Assert
         result.Should().Be(expectedCategory);
-    }
-
-    [Theory]
-    [InlineData(ChargeItemCaseTypeOfService.Tip)]
-    [InlineData(ChargeItemCaseTypeOfService.Voucher)]
-    [InlineData(ChargeItemCaseTypeOfService.OwnConsumption)]
-    [InlineData(ChargeItemCaseTypeOfService.Grant)]
-    [InlineData(ChargeItemCaseTypeOfService.Receivable)]
-    [InlineData(ChargeItemCaseTypeOfService.CashTransfer)]
-    public void GetIncomeClassificationCategoryType_WithNonSupportedType_ReturnsException(ChargeItemCaseTypeOfService serviceType)
-    {
-        // Arrange
-        var receiptRequest = CreateReceiptRequest();
-        var chargeItem = CreateChargeItem(serviceType);
-
-
-        var action = () => AADEMappings.GetIncomeClassificationCategoryType(receiptRequest, chargeItem);
-        action.Should().Throw<Exception>()
-            .WithMessage($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType.");
     }
 }

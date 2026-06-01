@@ -191,6 +191,49 @@ public class AADEMappingsGetPaymentTypeTests
         exception.Message.Should().Contain("is not supported");
     }
 
+    [Theory]
+    [InlineData(PayItemCase.UnknownPaymentType)]
+    [InlineData(PayItemCase.CashPayment)]
+    [InlineData(PayItemCase.NonCash)]
+    [InlineData(PayItemCase.CrossedCheque)]
+    [InlineData(PayItemCase.DebitCardPayment)]
+    [InlineData(PayItemCase.CreditCardPayment)]
+    [InlineData(PayItemCase.VoucherPaymentCouponVoucherByMoneyValue)]
+    [InlineData(PayItemCase.OnlinePayment)]
+    [InlineData(PayItemCase.LoyaltyProgramCustomerCardPayment)]
+    [InlineData(PayItemCase.AccountsReceivable)]
+    [InlineData(PayItemCase.SEPATransfer)]
+    [InlineData(PayItemCase.OtherBankTransfer)]
+    [InlineData(PayItemCase.TransferToCashbookVaultOwnerEmployee)]
+    [InlineData(PayItemCase.Grant)]
+    [InlineData(PayItemCase.TicketRestaurant)]
+    public void ShouldTransmitPayItem_WithAnyPayItemCaseExceptInternalMaterialConsumption_ReturnsTrue(PayItemCase payItemCase)
+    {
+        var payItem = new PayItem
+        {
+            Position = 1,
+            Amount = 10.0m,
+            Description = "Test Payment",
+            ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(payItemCase)
+        };
+
+        AADEMappings.ShouldTransmitPayItem(payItem).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldTransmitPayItem_WithInternalMaterialConsumption_ReturnsFalse()
+    {
+        var payItem = new PayItem
+        {
+            Position = 1,
+            Amount = 10.0m,
+            Description = "Test Payment",
+            ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.InternalMaterialConsumption)
+        };
+
+        AADEMappings.ShouldTransmitPayItem(payItem).Should().BeFalse();
+    }
+
     [Fact]
     public void GetPaymentType_WithComplexPayItemCase_ExtractsCorrectCase()
     {

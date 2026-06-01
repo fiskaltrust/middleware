@@ -15,13 +15,14 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class LifecycleCommandProcessorESTests
     {
         private readonly Fixture _fixture = new Fixture();
-        private readonly ReceiptProcessor _sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(Mock.Of<ILocalizedQueueStorageProvider>(), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>()))), null!, null!, null!, null!);
+        private readonly ReceiptProcessor _sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), new LifecycleCommandProcessorES(Mock.Of<ILocalizedQueueStorageProvider>(), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>()))), null!, null!, null!, null!);
 
         [Theory]
         [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
@@ -49,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
                 InvoiceSeries = "1000",
                 SimplifiedInvoiceSeries = "0000",
             });
-            var sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(configurationRepositoryMock.Object))), null!, null!, null!, null!);
+            var sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), new LifecycleCommandProcessorES(configMock.Object, new(() => Task.FromResult(configurationRepositoryMock.Object))), null!, null!, null!, null!);
 
             var receiptRequest = new ReceiptRequest
             {

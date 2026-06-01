@@ -45,7 +45,16 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queue
 
     public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "PointOfSaleReceiptWithoutObligation");
 
-    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "ECommerce");
+    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request)
+    {
+        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        }, receiptReferences);
+        return new ProcessCommandResponse(response.ReceiptResponse, []);
+    }
 
     public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
     {

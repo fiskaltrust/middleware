@@ -1,6 +1,8 @@
 ﻿using fiskaltrust.storage.serialization.V0;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
+using System.Security.Principal;
 using System.ServiceModel;
 using System.ServiceModel.Description;
 
@@ -66,6 +68,12 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
             else
             {
                 var baseAddress = new Uri(uri);
+
+                if (baseAddress.Scheme == "http" || baseAddress.Scheme == "https")
+                {
+                    TryAddUrlReservation(baseAddress);
+                }
+
                 _host = new ServiceHost(instance, baseAddress);
                 switch (baseAddress.Scheme)
                 {
@@ -137,6 +145,51 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
             binding.SendTimeout = _sendTimeout;
             binding.ReceiveTimeout = _receiveTimeout;
             return binding;
+        }
+
+        private void TryAddUrlReservation(Uri baseAddress)
+        {
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                return;
+            }
+
+            var urlPrefix = $"{baseAddress.Scheme}://+:{baseAddress.Port}{baseAddress.AbsolutePath}";
+            if (!urlPrefix.EndsWith("/"))
+            {
+                urlPrefix += "/";
+            }
+
+            if (HasUrlReservation(urlPrefix))
+            {
+                return;
+            }
+
+            var userName = identity.Name;
+            _logger.LogWarning("No URL reservation found for {Url}. Run the following command once as administrator: netsh http add urlacl url={Url} user={User}", urlPrefix, urlPrefix, userName);
+        }
+
+        private bool HasUrlReservation(string urlPrefix)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo("netsh", "http show urlacl")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+                var process = Process.Start(psi);
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(5000);
+                return output.IndexOf(urlPrefix, StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public void Dispose()

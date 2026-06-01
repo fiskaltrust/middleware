@@ -1,0 +1,156 @@
+﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es.Cases;
+using FluentValidation;
+
+namespace fiskaltrust.Middleware.Localization.QueueES.ValidationFV.Rules;
+
+public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
+{
+    public ChargeItemValidations()
+    {
+        When(x => x.ftReceiptCase.Country() == "ES", () =>
+        {
+            Include(new VatAmountRequired());
+            Include(new SupportedVatRates());
+            Include(new SupportedChargeItemCases());
+            Include(new VatRateCategory());
+            Include(new ZeroVatNature());
+            Include(new AmountMustNotBeZero());
+        });
+    }
+
+    public class AmountMustNotBeZero : AbstractValidator<ReceiptRequest>
+    {
+        public AmountMustNotBeZero()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Amount)
+                    .NotEqual(0m)
+                    .WithMessage(item => $"Amount {item.Amount} is zero.")
+                    .WithErrorCode("ChargeItemAmountMissing");
+            });
+        }
+    }
+
+    public class VatAmountRequired : AbstractValidator<ReceiptRequest>
+    {
+        public VatAmountRequired()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.VATAmount)
+                    .NotNull()
+                    .WithMessage("VAT amount is missing.")
+                    .WithErrorCode("ChargeItemVATAmountMissing");
+            });
+        }
+    }
+
+    public class SupportedChargeItemCases : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly ChargeItemCaseTypeOfService[] _supported =
+        [
+            ChargeItemCaseTypeOfService.UnknownService,
+            ChargeItemCaseTypeOfService.Delivery,
+            ChargeItemCaseTypeOfService.OtherService,
+            ChargeItemCaseTypeOfService.Tip,
+            ChargeItemCaseTypeOfService.CatalogService,
+            ChargeItemCaseTypeOfService.Receivable
+        ];
+
+        public SupportedChargeItemCases()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.ftChargeItemCase)
+                    .Must(c => _supported.Contains(c.TypeOfService()))
+                    .WithMessage(item => $"Unsupported charge item service type '{item.ftChargeItemCase.TypeOfService()}'.")
+                    .WithErrorCode("UnsupportedChargeItemServiceType");
+            });
+        }
+    }
+
+    public class SupportedVatRates : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly ChargeItemCase[] _unsupported =
+        [
+            ChargeItemCase.UnknownService,
+            ChargeItemCase.ParkingVatRate
+        ];
+
+        public SupportedVatRates()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.ftChargeItemCase)
+                    .Must(ftCase => !_unsupported.Contains(ftCase.Vat()))
+                    .WithMessage("Unsupported VAT rate category. Spain supports: SuperReducedVatRate1/2 (4%), DiscountedVatRate1/2 (10%), NormalVatRate (21%), NotTaxable (0%), and ZeroVatRate (0%).")
+                    .WithErrorCode("UnsupportedVatRate");
+            });
+        }
+    }
+
+    public class VatRateCategory : AbstractValidator<ReceiptRequest>
+    {
+        private static readonly Dictionary<ChargeItemCase, decimal> _expectedRates = new()
+        {
+            { ChargeItemCase.DiscountedVatRate1, 10.0m },
+            { ChargeItemCase.DiscountedVatRate2, 10.0m },
+            { ChargeItemCase.SuperReducedVatRate1, 4.0m },
+            { ChargeItemCase.SuperReducedVatRate2, 4.0m },
+            { ChargeItemCase.NormalVatRate, 21.0m },
+            { ChargeItemCase.NotTaxable, 0.0m },
+            { ChargeItemCase.ZeroVatRate, 0.0m }
+        };
+
+        public VatRateCategory()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.VATRate)
+                    .Must((item, vatRate) =>
+                    {
+                        var vatCategory = item.ftChargeItemCase.Vat();
+                        if (!_expectedRates.TryGetValue(vatCategory, out var expectedRate))
+                            return true;
+                        return Math.Abs(vatRate - expectedRate) <= 0.001m;
+                    })
+                    .WithMessage(item =>
+                    {
+                        var vatCategory = item.ftChargeItemCase.Vat();
+                        _expectedRates.TryGetValue(vatCategory, out var expectedRate);
+                        return $"VAT rate category '{vatCategory}' expects {expectedRate}% but VATRate is {item.VATRate}%.";
+                    })
+                    .WithErrorCode("VatRateMismatch");
+            });
+        }
+    }
+
+    public class ZeroVatNature : AbstractValidator<ReceiptRequest>
+    {
+        public ZeroVatNature()
+        {
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.VATRate)
+                    .Must((item, vatRate) =>
+                    {
+                        if (Math.Abs(vatRate) > 0.001m)
+                            return true;
+
+                        return item.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) || item.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatES.UsualVatApplies;
+                    })
+                    .WithMessage(item =>
+                    {
+                        var natureValue = item.ftChargeItemCase.NatureOfVat();
+                        if (natureValue == ChargeItemCaseNatureOfVatES.UsualVatApplies)
+                            return "Zero VAT rate requires a valid exemption reason via the Nature of VAT field.";
+                        return $"Unknown tax exemption code '0x{(long) natureValue:X4}'.";
+                    })
+                    .WithErrorCode("ZeroVatNature");
+            });
+        }
+    }
+}

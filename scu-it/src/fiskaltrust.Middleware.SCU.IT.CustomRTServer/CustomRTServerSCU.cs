@@ -109,11 +109,16 @@ public sealed class CustomRTServerSCU : LegacySCU
                 return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
             }
 
-            if (request.ReceiptRequest.IsDailyClosing())
+            if (request.ReceiptRequest.IsDailyClosing() || request.ReceiptRequest.IsMonthlyClosing() || request.ReceiptRequest.IsYearlyClosing())
             {
                 (var signatures, var state) = await PerformDailyCosingAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid);
                 request.ReceiptResponse.ftState = state;
                 return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
+
+            if (receiptCase == (long) ITReceiptCases.ProtocolUnspecified0x3000)
+            {
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
             }
 
             switch (receiptCase)
@@ -127,7 +132,7 @@ public sealed class CustomRTServerSCU : LegacySCU
                     return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
             }
 
-            throw new Exception($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported.");
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
         }
         catch (Exception ex)
         {

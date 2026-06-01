@@ -12,6 +12,7 @@ public class MiddlewareCustomer
     public string? CustomerId { get; set; }
     public string? CustomerType { get; set; }
     public string? CustomerStreet { get; set; }
+    public string? CustomerHouseNumber { get; set; }
     public string? CustomerZip { get; set; }
     public string? CustomerCity { get; set; }
     public string? CustomerCountry { get; set; }
@@ -50,6 +51,35 @@ public static class ReceiptRequestExtensions
                 return false;
             }
             result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(request.ftReceiptCaseData), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return result != null;
+        }
+        catch (JsonException)
+        {
+            // Malformed JSON (e.g. invoiceMark with non-numeric / overflow / empty-array values)
+            // must surface to the caller. Silently dropping the payload would hide a co-supplied
+            // mydataoverride alongside the bad field and produce a wrong-but-accepted document.
+            throw;
+        }
+        catch (Exception)
+        {
+            result = default;
+            return false;
+        }
+    }
+
+    public static bool TryDeserializeftChargeItemCaseData<T>(this ChargeItem chargeItem, out T? result) where T : class
+    {
+        result = default;
+        try
+        {
+            if (chargeItem.ftChargeItemCaseData is null)
+            {
+                return false;
+            }
+            result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData), new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -114,6 +144,90 @@ public static class ReceiptRequestExtensions
             else
             {
                 data.Add((receiptChargeItem, new List<ChargeItem>()));
+            }
+        }
+        return data;
+    }
+
+    public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItemsByPosition(this ReceiptRequest receiptRequest)
+        => GroupByPosition(receiptRequest.cbChargeItems, ci => ci.Position);
+
+    public static List<(PayItem payItem, List<PayItem> modifiers)> GetGroupedPayItemsByPosition(this ReceiptRequest receiptRequest)
+        => GroupByPosition(receiptRequest.cbPayItems, pi => pi.Position);
+
+    private static List<(T item, List<T> modifiers)> GroupByPosition<T>(IEnumerable<T> items, Func<T, decimal> getPosition)
+    {
+        var result = new List<(T item, List<T> modifiers)>();
+        var groupKeyToIndex = new Dictionary<int, int>();
+
+        foreach (var item in items)
+        {
+            var pos = getPosition(item);
+            if (pos == 0)
+            {
+                // Position 0 is the placeholder used when callers haven't assigned a position yet —
+                // such items don't participate in grouping; each becomes its own standalone entry.
+                result.Add((item, new List<T>()));
+                continue;
+            }
+
+            var key = (int) Math.Truncate(pos);
+            if (!groupKeyToIndex.TryGetValue(key, out var idx))
+            {
+                result.Add((item, new List<T>()));
+                groupKeyToIndex[key] = result.Count - 1;
+                continue;
+            }
+
+            var existing = result[idx];
+            if (getPosition(existing.item) == pos || existing.modifiers.Any(m => getPosition(m) == pos))
+            {
+                throw new ArgumentException(
+                    $"Duplicate Position {pos.ToString(System.Globalization.CultureInfo.InvariantCulture)} found within group {key}.");
+            }
+
+            if (pos < getPosition(existing.item))
+            {
+                existing.modifiers.Insert(0, existing.item);
+                result[idx] = (item, existing.modifiers);
+            }
+            else
+            {
+                existing.modifiers.Add(item);
+            }
+        }
+
+        return result;
+    }
+
+    public static List<(PayItem payItem, PayItem? tip)> GetGroupedPayItems(this ReceiptRequest receiptRequest)
+    {
+        var data = new List<(PayItem payItem, PayItem? tip)>();
+        foreach (var payItem in receiptRequest.cbPayItems)
+        {
+            if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))
+            {
+                var last = data.Count > 0 ? data[^1] : default;
+                if (last == default)
+                {
+                    throw new ArgumentException($"Tip pay item at position {payItem.Position} ('{payItem.Description}') has no preceding payment.");
+                }
+                else if (last.tip != null)
+                {
+                    throw new ArgumentException($"Tip pay item at position {payItem.Position} ('{payItem.Description}') cannot be attached because the preceding payment at position {last.payItem.Position} already has a tip assigned.");
+                }
+                else if (last.payItem.ftPayItemCase.Case() != payItem.ftPayItemCase.Case())
+                {
+                    throw new ArgumentException($"Tip pay item at position {payItem.Position} ('{payItem.Description}') has a payment case that does not match the preceding payment at position {last.payItem.Position}.");
+                }
+                else
+                {
+                    data[^1] = (last.payItem, payItem);
+                }
+            }
+            else
+            {
+                data.Add((payItem, null));
             }
         }
         return data;

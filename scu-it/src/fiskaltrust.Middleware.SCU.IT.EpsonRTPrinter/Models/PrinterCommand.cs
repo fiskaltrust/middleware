@@ -29,6 +29,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public string? Data { get; set; }
 
         public static DirectIO GetSerialNrCommand() => new() { Command = "3217", Data = "00" };
+        public static DirectIO GetLastEmittedDocStatusCommand() => new() { Command = "1387", Data = "01" };
     }
 
     [XmlType("response")]

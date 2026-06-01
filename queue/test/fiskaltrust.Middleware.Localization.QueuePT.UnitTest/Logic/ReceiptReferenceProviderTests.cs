@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -41,7 +41,7 @@ public class ReceiptReferenceProviderTests
         repository.Setup(r => r.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
             .Returns(queueItems.ToAsyncEnumerable());
 
-        var provider = new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)));
+        var provider = new Localization.QueuePT.Logic.ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)));
 
         var results = await provider.GetChargeItemMatchesForPreviousReferenceAsync(
             "REF-1",
@@ -75,7 +75,7 @@ public class ReceiptReferenceProviderTests
         repository.Setup(r => r.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>()))
             .Returns(queueItems.ToAsyncEnumerable());
 
-        var provider = new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)));
+        var provider = new Localization.QueuePT.Logic.ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)));
 
         var results = await provider.GetChargeItemMatchesForPreviousReferenceAsync(
             "REF-1",

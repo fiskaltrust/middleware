@@ -19,7 +19,7 @@ public class LocalEpsonFpMateClient : IEpsonFpMateClient
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(configuration.DeviceUrl),
-
+            Timeout = TimeSpan.FromMilliseconds(configuration.ClientTimeoutMs)
         };
         _commandUrl = $"cgi-bin/fpmate.cgi?timeout={configuration.ServerTimeoutMs}";
     }

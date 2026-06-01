@@ -19,6 +19,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     private readonly bool _sandbox = sandbox;
 
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
+    protected override ftQueuePT GetQueuePT() => _queuePT;
 
     public Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => InvoiceB2C0x1001Async(request);
 

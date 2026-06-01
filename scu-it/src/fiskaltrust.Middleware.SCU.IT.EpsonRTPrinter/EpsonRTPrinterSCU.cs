@@ -22,6 +22,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private readonly EpsonRTPrinterSCUConfiguration _configuration;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
     private string? _serialnr;
+    private (long ZNumber, long DocNumber)? _lastSuccessfulDoc;
 
     public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient)
     {
@@ -199,6 +200,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     public async Task<ReceiptResponse> PerformProtocolReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
+        string? data = null;
         try
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
@@ -229,7 +231,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 });
             }
 
-            var data = SoapSerializer.Serialize(content);
+            data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
             var response = await _httpClient.SendCommandAsync(data);
 
@@ -254,9 +256,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = "",
-                RTCustomerID = "", // Todo dread customerid from data           
+                RTCustomerID = "", // Todo dread customerid from data
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            _lastSuccessfulDoc = (fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
 
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
@@ -264,6 +267,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
 
             return receiptResponse;
+        }
+        catch (Exception e) when ((e is TaskCanceledException || e is HttpRequestException) && data != null)
+        {
+            _logger.LogWarning("({receiptreference}) Network error — checking if the printer has already printed...", receiptRequest.cbReceiptReference);
+            return await TryRecoverFromNetworkErrorAsync(receiptRequest, receiptResponse, data);
         }
         catch (Exception e)
         {
@@ -275,12 +283,14 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     public async Task<ReceiptResponse> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
+        string? data = null;
         try
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
-            var data = SoapSerializer.Serialize(content);
+            data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, data);
             var response = await _httpClient.SendCommandAsync(data);
+
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(responseContent);
             if (result != null)
@@ -302,14 +312,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = "",
-                RTCustomerID = "", // Todo dread customerid from data           
+                RTCustomerID = "", // Todo dread customerid from data
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            _lastSuccessfulDoc = (fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
                 receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
             }
             return receiptResponse;
+        }
+        catch (Exception e) when ((e is TaskCanceledException || e is HttpRequestException) && data != null)
+        {
+            _logger.LogWarning("({receiptreference}) Network error — checking if the printer has already printed...", receiptRequest.cbReceiptReference);
+            return await TryRecoverFromNetworkErrorAsync(receiptRequest, receiptResponse, data);
         }
         catch (Exception e)
         {
@@ -317,6 +333,133 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             _logger.LogError(e, "Error while processing classic receipt: {error}", response.SSCDErrorInfo?.Info);
             receiptResponse.SetReceiptResponseErrored(response.SSCDErrorInfo?.Info ?? "");
             return receiptResponse;
+        }
+    }
+
+    private async Task<ReceiptResponse> TryRecoverFromNetworkErrorAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string xmlData)
+    {
+        _logger.LogInformation("({receiptreference}) Querying last emitted document from printer...", receiptRequest.cbReceiptReference);
+        var docBeforeRetry = await ReadLastEmittedDocStatusAsync(receiptRequest.cbReceiptReference);
+        var expectedAmountCents = (long) Math.Round((receiptRequest.cbReceiptAmount ?? 0) * 100);
+        _logger.LogDebug("({receiptreference}) Last emitted doc: Z#{z} Doc#{doc} amount={amount}cents, expected={expected}cents",
+            receiptRequest.cbReceiptReference, docBeforeRetry?.ZNumber, docBeforeRetry?.DocNumber, docBeforeRetry?.TotalDocAmountCents, expectedAmountCents);
+
+        var hasProgressed = _lastSuccessfulDoc.HasValue && IsDocAdvanced(docBeforeRetry, _lastSuccessfulDoc.Value);
+        var matchesByAmount = !_lastSuccessfulDoc.HasValue && docBeforeRetry != null
+            && docBeforeRetry.IsFiscalDocument && docBeforeRetry.TotalDocAmountCents == expectedAmountCents;
+
+        if (hasProgressed || matchesByAmount)
+        {
+            var reason = hasProgressed ? "progression detected" : "amount matches, no cache";
+            _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} ({reason}) — printer already printed, skipping retry.",
+                receiptRequest.cbReceiptReference, docBeforeRetry!.ZNumber, docBeforeRetry.DocNumber, reason);
+            return ApplyRecoveredDoc(receiptResponse, docBeforeRetry);
+        }
+
+        return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, docBeforeRetry);
+    }
+
+    private async Task<ReceiptResponse> RetryReceiptWithRecoveryAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string xmlData, LastEmittedDocStatus? docBeforeRetry)
+    {
+        for (var attempt = 0; attempt < _configuration.MaxNetworkRetries; attempt++)
+        {
+            await Task.Delay(1000);
+            try
+            {
+                _logger.LogWarning("({receiptreference}) Document not found — retrying receipt (attempt {attempt}/{max})...", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
+                var retryResponse = await _httpClient.SendCommandAsync(xmlData);
+                using var retryContent = await retryResponse.Content.ReadAsStreamAsync();
+                var retryResult = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(retryContent);
+                var retryFiscalResponse = await SetReceiptResponse(retryResult);
+                if (retryFiscalResponse.Success)
+                {
+                    _logger.LogInformation("({receiptreference}) Retry succeeded: Z#{zNum} Doc#{docNum}.", receiptRequest.cbReceiptReference, retryFiscalResponse.ZRepNumber, retryFiscalResponse.ReceiptNumber);
+                    _lastSuccessfulDoc = (retryFiscalResponse.ZRepNumber, retryFiscalResponse.ReceiptNumber);
+                    receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
+                    {
+                        RTSerialNumber = retryResult?.Receipt?.SerialNumber ?? "",
+                        RTZNumber = retryFiscalResponse.ZRepNumber,
+                        RTDocNumber = retryFiscalResponse.ReceiptNumber,
+                        RTDocMoment = retryFiscalResponse.ReceiptDateTime,
+                        RTDocType = "POSRECEIPT",
+                        RTCodiceLotteria = "",
+                        RTCustomerID = "",
+                    }).ToArray();
+                    return receiptResponse;
+                }
+
+                _logger.LogError("({receiptreference}) Retry attempt {attempt}/{max} failed with printer error: {error}", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries, retryFiscalResponse.SSCDErrorInfo?.Info);
+                receiptResponse.SetReceiptResponseErrored(retryFiscalResponse.SSCDErrorInfo?.Info ?? "");
+                return receiptResponse;
+            }
+            catch (Exception e) when (e is TaskCanceledException || e is HttpRequestException)
+            {
+                _logger.LogWarning("({receiptreference}) Network error on retry attempt {attempt}/{max} — checking if printer has printed...", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
+                var lastDoc = await ReadLastEmittedDocStatusAsync(receiptRequest.cbReceiptReference);
+                _logger.LogDebug("({receiptreference}) Current: Z#{z} Doc#{doc}, cache: Z#{bz} Doc#{bd}", receiptRequest.cbReceiptReference, lastDoc?.ZNumber, lastDoc?.DocNumber, _lastSuccessfulDoc?.ZNumber, _lastSuccessfulDoc?.DocNumber);
+
+                var baseline = _lastSuccessfulDoc ??
+                    (docBeforeRetry != null ? ((long ZNumber, long DocNumber)?)(docBeforeRetry.ZNumber, docBeforeRetry.DocNumber) : null);
+
+                if (baseline.HasValue && IsDocAdvanced(lastDoc, baseline.Value))
+                {
+                    _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.", receiptRequest.cbReceiptReference, lastDoc!.ZNumber, lastDoc.DocNumber);
+                    return ApplyRecoveredDoc(receiptResponse, lastDoc);
+                }
+            }
+            catch (Exception queryEx)
+            {
+                _logger.LogError(queryEx, "({receiptreference}) Unexpected error on attempt {attempt}/{max}.", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
+                break;
+            }
+        }
+
+        _logger.LogError("({receiptreference}) All recovery attempts failed — unable to determine printer state.", receiptRequest.cbReceiptReference);
+        receiptResponse.SetReceiptResponseErrored("epson-printer-network-error");
+        return receiptResponse;
+    }
+
+    private static bool IsDocAdvanced(LastEmittedDocStatus? doc, (long ZNumber, long DocNumber) baseline)
+    {
+        return doc != null && doc.IsFiscalDocument &&
+            (doc.ZNumber > baseline.ZNumber ||
+             (doc.ZNumber == baseline.ZNumber && doc.DocNumber > baseline.DocNumber));
+    }
+
+    private ReceiptResponse ApplyRecoveredDoc(ReceiptResponse receiptResponse, LastEmittedDocStatus doc)
+    {
+        receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
+        {
+            RTSerialNumber = doc.PrinterSN ?? "",
+            RTZNumber = doc.ZNumber,
+            RTDocNumber = doc.DocNumber,
+            RTDocMoment = doc.DocumentDateTime,
+            RTDocType = "POSRECEIPT",
+            RTCodiceLotteria = "",
+            RTCustomerID = "",
+        }).ToArray();
+        _lastSuccessfulDoc = (doc.ZNumber, doc.DocNumber);
+        return receiptResponse;
+    }
+
+    private async Task<LastEmittedDocStatus?> ReadLastEmittedDocStatusAsync(string receiptReference)
+    {
+        try
+        {
+            var command = new PrinterCommand() { DirectIO = DirectIO.GetLastEmittedDocStatusCommand() };
+            var content = SoapSerializer.Serialize(command);
+            var response = await _httpClient.SendCommandAsync(content);
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
+            var rawData = result?.CommandResponse?.ResponseData;
+            _logger.LogDebug("Last emitted document query response: success={success}, printerStatus={status}, rawData={raw}",
+                result?.Success, result?.CommandResponse?.PrinterStatus, rawData);
+            return LastEmittedDocStatus.Parse(rawData);
+        }
+        catch (Exception e) when (e is TaskCanceledException || e is HttpRequestException)
+        {
+            _logger.LogWarning(e, "({receiptreference}) Could not query printer status — proceeding to retry loop.", receiptReference);
+            return null;
         }
     }
 

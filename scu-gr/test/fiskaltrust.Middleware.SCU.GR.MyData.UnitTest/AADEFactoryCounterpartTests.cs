@@ -154,14 +154,17 @@ public class AADEFactoryCounterpartTests
         
         counterpart.Should().NotBeNull();
         counterpart!.country.Should().Be(expectedCountryType);
+        // Address is set whenever postalCode and city are provided
+        counterpart.address.Should().NotBeNull();
+        counterpart.address.postalCode.Should().Be("12345");
+        counterpart.address.city.Should().Be("Test City");
+
         if (countryCode == "GR")
         {
-            counterpart.address.Should().BeNull();
-            counterpart.name.Should().BeNull();
+            counterpart.name.Should().BeNull("domestic GR customers should not have name set");
         }
         else
         {
-            counterpart.address.Should().NotBeNull();
             counterpart.name.Should().Be($"{countryCode} Company Ltd");
         }
     }
