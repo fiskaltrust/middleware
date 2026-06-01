@@ -31,6 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
         {
+            
             var receiptCase = (request.ReceiptRequest.ftReceiptCase & 0xFFFF);
             if (receiptCase == (int) ReceiptCases.UnknownReceipt0x0000)
                 return await UnknownReceipt0x0000Async(request);

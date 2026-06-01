@@ -137,7 +137,20 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 receiptResponse.SetReceiptResponseErrored($"Printer error during daily closing. Status: {response.Status}");
                 return receiptResponse;
             }
-            var zNumber = long.TryParse(response.AddInfo?.NClose, out var z) ? z : -1;
+
+            // Z-report response often omits <nClose> — fall back to querying GetInfo for the post-closing ZSetNumber.
+            long zNumber;
+            if (long.TryParse(response.AddInfo?.NClose, out var z))
+            {
+                zNumber = z;
+            }
+            else
+            {
+                var info = await _printerClient.SendCommand<InfoResp>(new GetInfo());
+                zNumber = info.ZSetNumber;
+                _logger.LogDebug("Z-report response had no nClose, queried GetInfo: zSetNumber={Z}", zNumber);
+            }
+
             receiptResponse.ftState = ITConstants.BASE_STATE;
             receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(zNumber);
             return receiptResponse;
@@ -161,13 +174,30 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             if (!string.IsNullOrEmpty(lotteryCode))
                 records.Add(new SetLotteryCode { Code = lotteryCode });
 
-            records.AddRange(receiptRequest.cbChargeItems.Select(c => new PrintRecItem
+            var lineItems = receiptRequest.cbChargeItems.Where(c => !c.IsSubtotalDiscount() && !c.IsSubtotalSurcharge()).ToList();
+            var subtotalAdjustments = receiptRequest.cbChargeItems.Where(c => c.IsSubtotalDiscount() || c.IsSubtotalSurcharge()).ToList();
+
+            records.AddRange(lineItems.Select(c => new PrintRecItem
             {
                 Description = c.Description,
                 Quantity = Math.Abs(c.Quantity) * 1000,
                 UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
                 IdVat = GetIdVat(c.ftChargeItemCase)
             }));
+
+            if (subtotalAdjustments.Any())
+            {
+                foreach (var adj in subtotalAdjustments)
+                {
+                    records.Add(new PrintRecSubtotalAdjustment
+                    {
+                        AdjustmentType = adj.IsSubtotalDiscount() ? 1u : 2u,
+                        Description = adj.Description,
+                        Amount = Math.Round(Math.Abs(adj.Amount) * 100)
+                    });
+                }
+                records.Add(new PrintRecSubtotal());
+            }
 
             if (receiptRequest.cbPayItems?.Any() == true)
             {
@@ -474,13 +504,30 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                     records.Add(new PrintRecItem { Description = $"{customer.CustomerZip} {customer.CustomerCity}".Trim(), UnitPrice = 0, IdVat = 1 });
             }
 
-            records.AddRange(receiptRequest.cbChargeItems.Select(c => new PrintRecItem
+            var lineItems = receiptRequest.cbChargeItems.Where(c => !c.IsSubtotalDiscount() && !c.IsSubtotalSurcharge()).ToList();
+            var subtotalAdjustments = receiptRequest.cbChargeItems.Where(c => c.IsSubtotalDiscount() || c.IsSubtotalSurcharge()).ToList();
+
+            records.AddRange(lineItems.Select(c => new PrintRecItem
             {
                 Description = c.Description,
                 Quantity = Math.Abs(c.Quantity) * 1000,
                 UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
                 IdVat = GetIdVat(c.ftChargeItemCase)
             }));
+
+            if (subtotalAdjustments.Any())
+            {
+                foreach (var adj in subtotalAdjustments)
+                {
+                    records.Add(new PrintRecSubtotalAdjustment
+                    {
+                        AdjustmentType = adj.IsSubtotalDiscount() ? 1u : 2u,
+                        Description = adj.Description,
+                        Amount = Math.Round(Math.Abs(adj.Amount) * 100)
+                    });
+                }
+                records.Add(new PrintRecSubtotal());
+            }
 
             if (receiptRequest.cbPayItems?.Any() == true)
             {
