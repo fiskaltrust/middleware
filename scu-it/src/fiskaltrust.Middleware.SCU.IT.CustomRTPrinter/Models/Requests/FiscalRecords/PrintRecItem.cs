@@ -21,5 +21,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
 
         [XmlAttribute("idVat")]
         public uint IdVat { get; set; }
+
+        public bool ShouldSerializeIdVat() => IdVat != 0;
     }
 }

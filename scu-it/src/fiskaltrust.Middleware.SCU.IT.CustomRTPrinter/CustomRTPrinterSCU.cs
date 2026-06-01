@@ -174,6 +174,10 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             if (!string.IsNullOrEmpty(lotteryCode))
                 records.Add(new SetLotteryCode { Code = lotteryCode });
 
+            foreach (var c in receiptRequest.cbChargeItems)
+                _logger.LogDebug("ChargeItem '{Desc}' ftChargeItemCase=0x{Case:X16} amount={Amt} qty={Qty} → discount={D} surcharge={S}",
+                    c.Description, c.ftChargeItemCase, c.Amount, c.Quantity, c.IsSubtotalDiscount(), c.IsSubtotalSurcharge());
+
             var lineItems = receiptRequest.cbChargeItems.Where(c => !c.IsSubtotalDiscount() && !c.IsSubtotalSurcharge()).ToList();
             var subtotalAdjustments = receiptRequest.cbChargeItems.Where(c => c.IsSubtotalDiscount() || c.IsSubtotalSurcharge()).ToList();
 
@@ -191,8 +195,9 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 {
                     records.Add(new PrintRecSubtotalAdjustment
                     {
-                        AdjustmentType = adj.IsSubtotalDiscount() ? 1u : 2u,
-                        Description = adj.Description,
+                        AdjustmentType = adj.IsSubtotalDiscount() ? 3u : 4u, // 3=sconto importo, 4=maggiorazione importo (su subtotale, in centesimi)
+                        // Printer rejects long/complex descriptions on printRecSubtotalAdjustment (status=7); cap at 20 chars.
+                        Description = (adj.Description ?? "").Length > 20 ? adj.Description.Substring(0, 20) : adj.Description,
                         Amount = Math.Round(Math.Abs(adj.Amount) * 100)
                     });
                 }
@@ -521,8 +526,9 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 {
                     records.Add(new PrintRecSubtotalAdjustment
                     {
-                        AdjustmentType = adj.IsSubtotalDiscount() ? 1u : 2u,
-                        Description = adj.Description,
+                        AdjustmentType = adj.IsSubtotalDiscount() ? 3u : 4u, // 3=sconto importo, 4=maggiorazione importo (su subtotale, in centesimi)
+                        // Printer rejects long/complex descriptions on printRecSubtotalAdjustment (status=7); cap at 20 chars.
+                        Description = (adj.Description ?? "").Length > 20 ? adj.Description.Substring(0, 20) : adj.Description,
                         Amount = Math.Round(Math.Abs(adj.Amount) * 100)
                     });
                 }

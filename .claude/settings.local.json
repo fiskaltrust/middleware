@@ -44,7 +44,8 @@
       "Bash(xargs grep -l \"BeginRtDocRefund\\\\|BeginRtDocAnnulment\")",
       "Bash(Get-ChildItem *)",
       "Bash(git -C \"C:\\\\Users\\\\DanielScaini\\\\source\\\\repos\\\\middleware\" status)",
-      "Bash(git -C \"C:\\\\Users\\\\DanielScaini\\\\source\\\\repos\\\\middleware\" log --oneline -5)"
+      "Bash(git -C \"C:\\\\Users\\\\DanielScaini\\\\source\\\\repos\\\\middleware\" log --oneline -5)",
+      "Bash(python *)"
     ]
   }
 }
