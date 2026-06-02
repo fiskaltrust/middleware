@@ -150,7 +150,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
                 urlPrefix += "/";
             }
 
-            if (HasUrlReservation(urlPrefix))
+            if (HasUrlReservationForPort(baseAddress.Scheme, baseAddress.Port))
             {
                 return;
             }
@@ -159,7 +159,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
             _logger.LogWarning("No URL reservation found for {Url}. Run the following command once as administrator: netsh http add urlacl url={Url} user={User}", urlPrefix, urlPrefix, userName);
         }
 
-        private bool HasUrlReservation(string urlPrefix)
+        private bool HasUrlReservationForPort(string scheme, int port)
         {
             try
             {
@@ -172,7 +172,24 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Wcf
                 var process = Process.Start(psi);
                 var output = process.StandardOutput.ReadToEnd();
                 process.WaitForExit(5000);
-                return output.IndexOf(urlPrefix, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                // Consider any reservation on the same scheme and port as sufficient,
+                // regardless of the path portion of the URL.
+                var portToken = ":" + port.ToString(System.Globalization.CultureInfo.InvariantCulture) + "/";
+                foreach (var rawLine in output.Split('\n'))
+                {
+                    var line = rawLine.Trim();
+                    var schemeIdx = line.IndexOf(scheme + "://", StringComparison.OrdinalIgnoreCase);
+                    if (schemeIdx < 0)
+                    {
+                        continue;
+                    }
+                    if (line.IndexOf(portToken, schemeIdx, StringComparison.Ordinal) >= 0)
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
             catch
             {

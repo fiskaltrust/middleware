@@ -321,7 +321,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
             const long blockSize = 0x200; //512 byte
 
-            var v2 = !await proxy.IsV2Async();
             var softwareVersion = ConvertToVersion((int) status.SoftwareVersion);
             var hardwareVersion = ConvertToVersion((int) status.HardwareVersion);
 

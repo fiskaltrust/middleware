@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
         private static readonly bool performFactoryReset = false;
 
         public static void Main()
-        { 
+        {
             ftCashBoxConfiguration cashBoxConfiguration;
             if (useHelipad)
             {
@@ -57,14 +57,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
             config.Configuration.Add("accesstoken", "");
             config.Configuration.Add("useoffline", false);
-            config.Configuration.Add("sandbox", false);
+            config.Configuration.Add("sandbox", true);
             config.Configuration.Add("servicefolder", serviceFolder);
             config.Configuration.Add("configuration", JsonConvert.SerializeObject(cashBoxConfiguration));
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
-            //ADD SWISSBITV2
+            //only SWISSBIT usb testversion
             if (config.Package == "fiskaltrust.Middleware.SCU.DE.Swissbit")
             {
                 if (performFactoryReset)
