@@ -12,6 +12,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
+        /* in vs 2026 use Debug - Attach to Process and select testlauncher after starting it
+         */
         private static readonly bool useHelipad = false;
         private static readonly string cashBoxId = "";
         private static readonly string accessToken = "";
