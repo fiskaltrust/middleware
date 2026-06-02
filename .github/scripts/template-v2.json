@@ -48,7 +48,7 @@
     {
       "Id": "d2e06674-d153-4538-b0ef-dfdc234b0378",
       "Package": "fiskaltrust.Middleware.Helper.LocalPosSystemApi",
-      "Version": "latest",
+      "Version": "1.3.81-ci-131-g456a5b028b",
       "Configuration": {},
       "Url": [
         "http://localhost:1200/d2e06674-d153-4538-b0ef-dfdc234b0378"
