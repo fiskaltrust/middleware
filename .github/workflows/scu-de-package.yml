@@ -16,7 +16,6 @@ on:
           - fiskaltrust.Middleware.SCU.DE.Swissbit
           - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
           - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
-          - fiskaltrust.Middleware.SCU.DE.SwissbitV2
       deploySandbox:
         type: boolean
         default: false
