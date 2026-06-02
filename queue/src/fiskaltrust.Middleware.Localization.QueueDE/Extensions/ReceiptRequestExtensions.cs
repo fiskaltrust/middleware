@@ -422,7 +422,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         }
         private static string FormatAmount(decimal value)
         {
-            return string.Format(CultureInfo.InvariantCulture, "{0:0.00}", value);
+            return string.Format(CultureInfo.InvariantCulture, "{0:0.00###}", value);
         }
         public static DateTime GetReceiptActionStartMoment(this ReceiptRequest request)
         {
