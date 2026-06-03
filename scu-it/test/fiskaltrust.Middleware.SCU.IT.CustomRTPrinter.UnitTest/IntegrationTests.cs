@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,7 +8,9 @@ using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest;
 
 public class IntegrationTests
 {
-    private const string PrinterUrl      = "http://danisk89.homepc.it:5210/";
+    private const string PrinterUrl = "http://danisk89.homepc.it:5210/";
     private const string PrinterUsername = "STMTE501091";
     private const string PrinterPassword = "STMTE501091";
 
@@ -223,13 +225,13 @@ public class IntegrationTests
 
         var receiptRequest = new ReceiptRequest
         {
-            ftCashBoxID            = Guid.NewGuid().ToString(),
-            ftQueueID              = Guid.NewGuid().ToString(),
-            cbTerminalID           = "test-terminal",
-            cbReceiptReference     = $"TEST-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            ftReceiptCase          = 0x4954_2000_0000_0001, // PointOfSaleReceipt0x0001
-            cbReceiptMoment        = DateTime.UtcNow,
-            cbReceiptAmount        = 2.50m,
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
+            cbReceiptReference = $"TEST-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            ftReceiptCase = 0x4954_2000_0000_0001, // PointOfSaleReceipt0x0001
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 2.50m,
             cbChargeItems = new[]
             {
                 new ChargeItem
@@ -260,8 +262,8 @@ public class IntegrationTests
 
         var receiptResponse = new ReceiptResponse
         {
-            ftCashBoxID   = receiptRequest.ftCashBoxID,
-            ftQueueID     = receiptRequest.ftQueueID,
+            ftCashBoxID = receiptRequest.ftCashBoxID,
+            ftQueueID = receiptRequest.ftQueueID,
             ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = receiptRequest.cbReceiptReference
         };
@@ -293,14 +295,14 @@ public class IntegrationTests
 
         var req = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = $"REFUND-{DateTime.UtcNow:yyyyMMddHHmmss}",
             // IsRefund flag: bit 0x0000_0000_0100_0000
-            ftReceiptCase      = 0x4954_2000_0100_0001,
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 1.00m,
+            ftReceiptCase = 0x4954_2000_0100_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 1.00m,
             // nessun cbPreviousReceiptReference → refund non referenziato
             cbChargeItems = new[]
             {
@@ -320,9 +322,9 @@ public class IntegrationTests
 
         var resp = new ReceiptResponse
         {
-            ftCashBoxID        = req.ftCashBoxID,
-            ftQueueID          = req.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = req.ftCashBoxID,
+            ftQueueID = req.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = req.cbReceiptReference
         };
 
@@ -352,14 +354,14 @@ public class IntegrationTests
 
         var req = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = $"DN-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            ftReceiptCase      = 0x4954_2000_0000_0005, // DeliveryNote0x0005
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 5.00m,
-            cbCustomer         = """{"CustomerId":"IT12345678901","CustomerName":"Mario Rossi","CustomerStreet":"Via Roma 1","CustomerZip":"00100","CustomerCity":"Roma"}""",
+            ftReceiptCase = 0x4954_2000_0000_0005, // DeliveryNote0x0005
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 5.00m,
+            cbCustomer = """{"CustomerId":"IT12345678901","CustomerName":"Mario Rossi","CustomerStreet":"Via Roma 1","CustomerZip":"00100","CustomerCity":"Roma"}""",
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Prodotto A", Amount = 3.00m, Quantity = 1, ftChargeItemCase = 0x4954_2000_0000_0011 },
@@ -373,9 +375,9 @@ public class IntegrationTests
 
         var resp = new ReceiptResponse
         {
-            ftCashBoxID        = req.ftCashBoxID,
-            ftQueueID          = req.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = req.ftCashBoxID,
+            ftQueueID = req.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = req.cbReceiptReference
         };
 
@@ -409,23 +411,23 @@ public class IntegrationTests
 
         var req = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = $"RP-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            ftReceiptCase      = 0x4954_2000_0000_3010, // Reprint0x3010
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 0m,
-            cbChargeItems      = Array.Empty<ChargeItem>(),
-            cbPayItems         = Array.Empty<PayItem>()
+            ftReceiptCase = 0x4954_2000_0000_3010, // Reprint0x3010
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 0m,
+            cbChargeItems = Array.Empty<ChargeItem>(),
+            cbPayItems = Array.Empty<PayItem>()
         };
 
         // Le firme di riferimento devono già essere presenti in ReceiptResponse
         var resp = new ReceiptResponse
         {
-            ftCashBoxID        = req.ftCashBoxID,
-            ftQueueID          = req.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = req.ftCashBoxID,
+            ftQueueID = req.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = req.cbReceiptReference,
             ftSignatures = new[]
             {
@@ -486,13 +488,13 @@ public class IntegrationTests
 
         var req = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = $"NF-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            ftReceiptCase      = 0x4954_2000_0000_0003, // PointOfSaleReceiptWithoutObligation0x0003
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 0m,
+            ftReceiptCase = 0x4954_2000_0000_0003, // PointOfSaleReceiptWithoutObligation0x0003
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 0m,
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Buono omaggio",   Amount = 0m, Quantity = 1, ftChargeItemCase = 0x4954_2000_0000_0000 },
@@ -503,9 +505,9 @@ public class IntegrationTests
 
         var resp = new ReceiptResponse
         {
-            ftCashBoxID        = req.ftCashBoxID,
-            ftQueueID          = req.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = req.ftCashBoxID,
+            ftQueueID = req.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = req.cbReceiptReference
         };
 
@@ -656,13 +658,13 @@ public class IntegrationTests
 
             var req = new ReceiptRequest
             {
-                ftCashBoxID        = Guid.NewGuid().ToString(),
-                ftQueueID          = Guid.NewGuid().ToString(),
-                cbTerminalID       = "test-terminal",
+                ftCashBoxID = Guid.NewGuid().ToString(),
+                ftQueueID = Guid.NewGuid().ToString(),
+                cbTerminalID = "test-terminal",
                 cbReceiptReference = $"T20-{label}-{DateTime.UtcNow:yyyyMMddHHmmss}",
-                ftReceiptCase      = 0x4954_2000_0000_0001,
-                cbReceiptMoment    = DateTime.UtcNow,
-                cbReceiptAmount    = amount,
+                ftReceiptCase = 0x4954_2000_0000_0001,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptAmount = amount,
                 cbChargeItems = new[]
                 {
                     new ChargeItem
@@ -686,9 +688,9 @@ public class IntegrationTests
 
             var resp = new ReceiptResponse
             {
-                ftCashBoxID        = req.ftCashBoxID,
-                ftQueueID          = req.ftQueueID,
-                ftReceiptMoment    = DateTime.UtcNow,
+                ftCashBoxID = req.ftCashBoxID,
+                ftQueueID = req.ftQueueID,
+                ftReceiptMoment = DateTime.UtcNow,
                 cbReceiptReference = req.cbReceiptReference
             };
 
@@ -799,13 +801,13 @@ public class IntegrationTests
     private static ReceiptRequest BuildSingleItemReceipt(string tag, string description, long ftChargeItemCase, decimal amount) =>
         new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = $"{tag}-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            ftReceiptCase      = 0x4954_2000_0000_0001,
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = amount,
+            ftReceiptCase = 0x4954_2000_0000_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = amount,
             cbChargeItems = new[]
             {
                 new ChargeItem
@@ -830,9 +832,9 @@ public class IntegrationTests
     private static ReceiptResponse BuildReceiptResponse(string tag) =>
         new ReceiptResponse
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = $"{tag}-{DateTime.UtcNow:yyyyMMddHHmmss}"
         };
 
@@ -873,13 +875,13 @@ public class IntegrationTests
 
         var req = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = $"T25-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            ftReceiptCase      = 0x4954_2000_0000_0001,
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 1.00m,
+            ftReceiptCase = 0x4954_2000_0000_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 1.00m,
             cbChargeItems = new[]
             {
                 new ChargeItem
@@ -903,9 +905,9 @@ public class IntegrationTests
 
         var resp = new ReceiptResponse
         {
-            ftCashBoxID        = req.ftCashBoxID,
-            ftQueueID          = req.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = req.ftCashBoxID,
+            ftQueueID = req.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = req.cbReceiptReference
         };
 
@@ -940,13 +942,13 @@ public class IntegrationTests
         var receiptRef = $"T26-REC-{DateTime.UtcNow:yyyyMMddHHmmss}";
         var receiptReq = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = receiptRef,
-            ftReceiptCase      = 0x4954_2000_0000_0001,
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 3.50m,
+            ftReceiptCase = 0x4954_2000_0000_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 3.50m,
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Panino", Amount = 3.50m, Quantity = 1, ftChargeItemCase = 0x4954_2000_0000_0013L }
@@ -961,9 +963,9 @@ public class IntegrationTests
         PrintResult(receiptResult);
         AssertSuccess(receiptResult, "T26-scontrino");
 
-        var rtZNumber   = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long)SignatureTypesIT.RTZNumber).Data;
-        var rtDocNumber = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long)SignatureTypesIT.RTDocumentNumber).Data;
-        var rtDocMoment = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long)SignatureTypesIT.RTDocumentMoment).Data;
+        var rtZNumber = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTZNumber).Data;
+        var rtDocNumber = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTDocumentNumber).Data;
+        var rtDocMoment = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTDocumentMoment).Data;
         _out.WriteLine($"Riferimento: Z={rtZNumber}  Doc={rtDocNumber}  Momento={rtDocMoment}");
 
         await WaitForPrinterIdle();
@@ -988,14 +990,14 @@ public class IntegrationTests
 
         var refundReq = new ReceiptRequest
         {
-            ftCashBoxID                = Guid.NewGuid().ToString(),
-            ftQueueID                  = Guid.NewGuid().ToString(),
-            cbTerminalID               = "test-terminal",
-            cbReceiptReference         = $"T26-REFUND-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
+            cbReceiptReference = $"T26-REFUND-{DateTime.UtcNow:yyyyMMddHHmmss}",
             cbPreviousReceiptReference = receiptRef,
-            ftReceiptCase              = 0x4954_2000_0100_0001,
-            cbReceiptMoment            = DateTime.UtcNow,
-            cbReceiptAmount            = 3.50m,
+            ftReceiptCase = 0x4954_2000_0100_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 3.50m,
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Panino", Amount = -3.50m, Quantity = -1, ftChargeItemCase = 0x4954_2000_0000_0013L }
@@ -1007,9 +1009,9 @@ public class IntegrationTests
         };
         var refundResp = new ReceiptResponse
         {
-            ftCashBoxID        = refundReq.ftCashBoxID,
-            ftQueueID          = refundReq.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = refundReq.ftCashBoxID,
+            ftQueueID = refundReq.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = refundReq.cbReceiptReference,
             ftSignatures = new[]
             {
@@ -1038,13 +1040,13 @@ public class IntegrationTests
         var receiptRef = $"T27-REC-{DateTime.UtcNow:yyyyMMddHHmmss}";
         var receiptReq = new ReceiptRequest
         {
-            ftCashBoxID        = Guid.NewGuid().ToString(),
-            ftQueueID          = Guid.NewGuid().ToString(),
-            cbTerminalID       = "test-terminal",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
             cbReceiptReference = receiptRef,
-            ftReceiptCase      = 0x4954_2000_0000_0001,
-            cbReceiptMoment    = DateTime.UtcNow,
-            cbReceiptAmount    = 4.50m,
+            ftReceiptCase = 0x4954_2000_0000_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 4.50m,
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Pizza", Amount = 4.50m, Quantity = 1, ftChargeItemCase = 0x4954_2000_0000_0011L }
@@ -1059,9 +1061,9 @@ public class IntegrationTests
         PrintResult(receiptResult);
         AssertSuccess(receiptResult, "T27-scontrino");
 
-        var rtZNumber   = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long)SignatureTypesIT.RTZNumber).Data;
-        var rtDocNumber = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long)SignatureTypesIT.RTDocumentNumber).Data;
-        var rtDocMoment = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long)SignatureTypesIT.RTDocumentMoment).Data;
+        var rtZNumber = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTZNumber).Data;
+        var rtDocNumber = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTDocumentNumber).Data;
+        var rtDocMoment = receiptResult.ftSignatures.First(s => (s.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTDocumentMoment).Data;
         _out.WriteLine($"Riferimento: Z={rtZNumber}  Doc={rtDocNumber}  Momento={rtDocMoment}");
 
         await WaitForPrinterIdle();
@@ -1088,14 +1090,14 @@ public class IntegrationTests
 
         var refundReq = new ReceiptRequest
         {
-            ftCashBoxID                = Guid.NewGuid().ToString(),
-            ftQueueID                  = Guid.NewGuid().ToString(),
-            cbTerminalID               = "test-terminal",
-            cbReceiptReference         = $"T27-REFUND-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            ftCashBoxID = Guid.NewGuid().ToString(),
+            ftQueueID = Guid.NewGuid().ToString(),
+            cbTerminalID = "test-terminal",
+            cbReceiptReference = $"T27-REFUND-{DateTime.UtcNow:yyyyMMddHHmmss}",
             cbPreviousReceiptReference = receiptRef,
-            ftReceiptCase              = 0x4954_2000_0100_0001,
-            cbReceiptMoment            = DateTime.UtcNow,
-            cbReceiptAmount            = 4.50m,
+            ftReceiptCase = 0x4954_2000_0100_0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptAmount = 4.50m,
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Pizza", Amount = -4.50m, Quantity = -1, ftChargeItemCase = 0x4954_2000_0000_0011L }
@@ -1107,9 +1109,9 @@ public class IntegrationTests
         };
         var refundResp = new ReceiptResponse
         {
-            ftCashBoxID        = refundReq.ftCashBoxID,
-            ftQueueID          = refundReq.ftQueueID,
-            ftReceiptMoment    = DateTime.UtcNow,
+            ftCashBoxID = refundReq.ftCashBoxID,
+            ftQueueID = refundReq.ftQueueID,
+            ftReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = refundReq.cbReceiptReference,
             ftSignatures = new[]
             {
