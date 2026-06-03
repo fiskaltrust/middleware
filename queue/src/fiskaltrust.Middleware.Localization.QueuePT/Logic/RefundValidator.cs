@@ -117,13 +117,13 @@ public class RefundValidator
         if (!CaseDataIsEqual(originalItem.ftReceiptCaseData, refundItem.ftReceiptCaseData))
         {
             var extra = "";
-            if (originalItem.ftReceiptCaseData is JsonElement element)
+            if (originalItem.ftReceiptCaseData is JsonElement originalElement)
             {
-                extra += element.GetRawText();
+                extra += originalElement.GetRawText();
             }
-            if (refundItem.ftReceiptCaseData is JsonElement element)
+            if (refundItem.ftReceiptCaseData is JsonElement refundElement)
             {
-                extra += "|" + element.GetRawText();
+                extra += "|" + refundElement.GetRawText();
             }
             return (flowControl: false, value: Mismatch("ReceiptCaseData") + $" |{extra}|");
         }
