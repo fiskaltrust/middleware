@@ -174,6 +174,8 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             if (!string.IsNullOrEmpty(lotteryCode))
                 records.Add(new SetLotteryCode { Code = lotteryCode });
 
+            var customer = receiptRequest.GetCustomer();
+
             foreach (var c in receiptRequest.cbChargeItems)
                 _logger.LogDebug("ChargeItem '{Desc}' ftChargeItemCase=0x{Case:X16} amount={Amt} qty={Qty} → discount={D} surcharge={S}",
                     c.Description, c.ftChargeItemCase, c.Amount, c.Quantity, c.IsSubtotalDiscount(), c.IsSubtotalSurcharge());
@@ -203,6 +205,11 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 }
                 records.Add(new PrintRecSubtotal());
             }
+
+            // Customer fiscal code / VAT (scontrino parlante) — goes AFTER items/subtotal and BEFORE printRecTotal.
+            var customerCfOrVat = customer?.CustomerId ?? customer?.CustomerVATId;
+            if (!string.IsNullOrEmpty(customerCfOrVat))
+                records.Add(new FixedLines { Pitch = "B", Description = customerCfOrVat.Trim().ToUpperInvariant() });
 
             if (receiptRequest.cbPayItems?.Any() == true)
             {
@@ -247,7 +254,6 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             }
 
             receiptResponse.ftState = ITConstants.BASE_STATE;
-            var customer = receiptRequest.GetCustomer();
             var posReceiptSignature = new POSReceiptSignatureData
             {
                 RTSerialNumber = _serialnr,
@@ -535,6 +541,10 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 records.Add(new PrintRecSubtotal());
             }
 
+            var deliveryCfOrVat = customer?.CustomerId ?? customer?.CustomerVATId;
+            if (!string.IsNullOrEmpty(deliveryCfOrVat))
+                records.Add(new FixedLines { Pitch = "B", Description = deliveryCfOrVat.Trim().ToUpperInvariant() });
+
             if (receiptRequest.cbPayItems?.Any() == true)
             {
                 records.AddRange(receiptRequest.cbPayItems.Select(p => new PrintRecTotal
@@ -707,11 +717,22 @@ public sealed class CustomRTPrinterSCU : LegacySCU
 
     private async Task ResetPrinter()
     {
-        // Cancel any open fiscal document first (ReceiptStep > 0), then reset the command processor.
-        var status = await _printerClient.SendCommand<Response<InfoResp>>(new QueryPrinterStatus());
-        if (status.AddInfo?.ReceiptStep == "1")
-            _ = await _printerClient.CancelFiscalReceipt<Response<InfoResp>>();
-        _ = await _printerClient.SendCommand<Response<InfoResp>>(new ResetPrinter());
+        // Best-effort cleanup of printer state. Must never throw — callers rely on this in catch blocks.
+        try
+        {
+            var status = await _printerClient.SendCommand<Response<InfoResp>>(new QueryPrinterStatus());
+            if (status.AddInfo?.ReceiptStep == "1")
+            {
+                try { _ = await _printerClient.CancelFiscalReceipt<Response<InfoResp>>(); }
+                catch (Exception ex) { _logger.LogWarning(ex, "ResetPrinter: cancelFiscalReceipt failed (ignored)."); }
+            }
+            try { _ = await _printerClient.SendCommand<Response<InfoResp>>(new ResetPrinter()); }
+            catch (Exception ex) { _logger.LogWarning(ex, "ResetPrinter: resetPrinter command failed (ignored)."); }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ResetPrinter: queryPrinterStatus failed (ignored).");
+        }
     }
 
     private static uint GetPaymentType(long ftPayItemCase) =>

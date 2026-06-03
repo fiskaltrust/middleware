@@ -13,5 +13,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
 
         [XmlAttribute("paymentType")]
         public uint PaymentType { get; set; }
+
+        [XmlAttribute("paymentQty")]
+        public uint PaymentQty { get; set; } = 1;
     }
 }

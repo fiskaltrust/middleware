@@ -23,6 +23,9 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
         [XmlAnyElement()]
         public Records<IFiscalRecord> Records { get; set; }
 
+        [XmlElement("endFiscalReceipt")]
+        public EndFiscalReceipt EndFiscalReceipt { get; set; } = new();
+
         [XmlElement("endFiscalReceiptCut")]
         public EndFiscalReceiptCut EndFiscalReceiptCut { get; set; } = new();
     }
@@ -31,6 +34,11 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
 
     [XmlRoot("beginFiscalReceipt")]
     public class BeginFiscalReceipt
+    {
+    }
+
+    [XmlRoot("endFiscalReceipt")]
+    public class EndFiscalReceipt
     {
     }
 }

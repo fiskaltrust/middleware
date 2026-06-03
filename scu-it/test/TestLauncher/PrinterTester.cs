@@ -47,16 +47,79 @@ namespace TestLauncher
             await Task.Delay(90000);
 
             // ---------- Bisect: short vs long description, otherwise identical ----------
-            await Run("FINAL. SCU after fix: 10€ + 2€ surcharge (truncated desc to 20 chars)", async () =>
+            await Run("CF-1ITEM. single item via SCU model with VALID CF", async () =>
             {
-                // Simulates what SCU now generates for user's failing JSON:
-                // desc "DS Maggiorazione Subtotale" → truncated to "DS Maggiorazione Sub" (20 chars)
                 var records = new IFiscalRecord[]
                 {
-                    new PrintRecItem { Description = "DS Articolo Base", Quantity = 1000, UnitPrice = 1000, Department = 1, IdVat = 1 },
-                    new PrintRecSubtotalAdjustment { AdjustmentType = 4, Description = "DS Maggiorazione Sub", Amount = 200 },
-                    new PrintRecSubtotal(),
-                    new PrintRecTotal { Description = "DS Cash", Payment = 1200, PaymentType = 1 }
+                    new PrintRecItem { Description = "Farmaco", Quantity = 1000, UnitPrice = 500, Department = 1, IdVat = 3 },
+                    new FixedLines { Pitch = "B", Description = "SCNDNL89D06E253J" },
+                    new PrintRecTotal { Description = "Contanti", Payment = 500, PaymentType = 1 }
+                };
+                var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
+                return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
+            await Run("CF-MIRROR. identical to user's XML but via SCU model", async () =>
+            {
+                var records = new IFiscalRecord[]
+                {
+                    new PrintRecItem { Description = "Prodotto IVA 22%", Quantity = 1000, UnitPrice = 100, Department = 1, IdVat = 3 },
+                    new PrintRecItem { Description = "Prodotto IVA 22%", Quantity = 1000, UnitPrice = 100, Department = 1, IdVat = 3 },
+                    new PrintRecItem { Description = "Prodotto IVA 22%", Quantity = 1000, UnitPrice = 100, Department = 1, IdVat = 3 },
+                    new FixedLines { Pitch = "B", Description = "SCNDNL89D06E253J" },
+                    new PrintRecTotal { Description = "Contanti", Payment = 300, PaymentType = 1 }
+                };
+                var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
+                return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
+            // Also verify normal flow (no CF) still works after model change
+            await Run("CF-CONTROL. plain receipt with new model (no CF, must still work)", async () =>
+            {
+                var records = new IFiscalRecord[]
+                {
+                    new PrintRecItem { Description = "Caffe", Quantity = 1000, UnitPrice = 100, Department = 1, IdVat = 1 },
+                    new PrintRecTotal { Description = "Contanti", Payment = 100, PaymentType = 1 }
+                };
+                var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
+                return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
+            await Run("CF-RAW. user's exact XML via SendRawAsync", async () =>
+            {
+                var xml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<printerFiscalReceipt>
+    <dematerializedOn />
+    <beginFiscalReceipt></beginFiscalReceipt>
+    <printRecItem description=""Prodotto IVA 22%"" unitPrice=""100"" department=""1"" idVat=""3"" quantity=""1000"" />
+    <printRecItem description=""Prodotto IVA 22%"" unitPrice=""100"" department=""1"" idVat=""3"" quantity=""1000"" />
+    <printRecItem description=""Prodotto IVA 22%"" unitPrice=""100"" department=""1"" idVat=""3"" quantity=""1000"" />
+    <fixedLines description=""SCNDNL89D06E253J"" pitch=""B""></fixedLines>
+    <printRecTotal description=""Contanti"" payment=""300"" paymentType=""1"" paymentQty=""1"" />
+    <endFiscalReceipt></endFiscalReceipt>
+    <endFiscalReceiptCut></endFiscalReceiptCut>
+</printerFiscalReceipt>";
+                var raw = await client.SendRawAsync(xml);
+                Console.WriteLine($"  Raw response: {raw}");
+                var ok = raw.Contains("success=\"true\"");
+                return ($"ok={ok}", ok);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
+            await Run("LOTTERY. Sale 1×Caffè @1€ with setLotteryCode='ABCD1234'", async () =>
+            {
+                var records = new IFiscalRecord[]
+                {
+                    new SetLotteryCode { Code = "ABCD1234" },
+                    new PrintRecItem { Description = "Caffe", Quantity = 1000, UnitPrice = 100, Department = 1, IdVat = 1 },
+                    new PrintRecTotal { Description = "Contanti", Payment = 100, PaymentType = 1 }
                 };
                 var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
                 return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
