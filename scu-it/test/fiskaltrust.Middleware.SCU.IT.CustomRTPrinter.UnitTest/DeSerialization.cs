@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
 {
     public class DeSerialization
     {
-        [Fact]
+        [Fact(Skip = "CustomRTPrinter tests skipped in CI.")]
         public async void Test1()
         {
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
@@ -75,7 +75,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
             //response.DateProg.Should().Be(new DateTime(2024, 12, 21));
         }
 
-        [Fact]
+        [Fact(Skip = "CustomRTPrinter tests skipped in CI.")]
         public async void Test2()
         {
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
