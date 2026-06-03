@@ -116,18 +116,8 @@ public class RefundValidator
 
         if (!CaseDataIsEqual(originalItem.ftReceiptCaseData, refundItem.ftReceiptCaseData))
         {
-            var extra = "";
-            if (originalItem.ftReceiptCaseData is JsonElement originalElement)
-            {
-                extra += originalElement.GetRawText();
-            }
-            if (refundItem.ftReceiptCaseData is JsonElement refundElement)
-            {
-                extra += "|" + refundElement.GetRawText();
-            }
-            return (flowControl: false, value: Mismatch("ReceiptCaseData") + $" |{extra}|");
+            return (flowControl: false, value: Mismatch("ReceiptCaseData"));
         }
-
         // We ignore cbPreviousReceiptReference because it will be different
         // We ignore cbUser because it will be different
 
