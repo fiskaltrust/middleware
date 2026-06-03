@@ -183,13 +183,54 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             var lineItems = receiptRequest.cbChargeItems.Where(c => !c.IsSubtotalDiscount() && !c.IsSubtotalSurcharge()).ToList();
             var subtotalAdjustments = receiptRequest.cbChargeItems.Where(c => c.IsSubtotalDiscount() || c.IsSubtotalSurcharge()).ToList();
 
-            records.AddRange(lineItems.Select(c => new PrintRecItem
+            foreach (var c in lineItems)
             {
-                Description = c.Description,
-                Quantity = Math.Abs(c.Quantity) * 1000,
-                UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
-                IdVat = GetIdVat(c.ftChargeItemCase)
-            }));
+                if (c.IsTip() || c.IsMultiUseVoucher())
+                {
+                    // Tip / multi-use voucher → printed as item on a non-VAT department (programmed slot 11 on Custom RT, mirrors Epson).
+                    records.Add(new PrintRecItem
+                    {
+                        Description = c.Description,
+                        Quantity = Math.Abs(c.Quantity) * 1000,
+                        UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
+                        Department = TipVoucherDepartment
+                    });
+                }
+                else if (c.IsSingleUseVoucher() && c.Amount < 0)
+                {
+                    // Single-use voucher used as payment → discount adjustment on the last item.
+                    records.Add(new PrintRecItemAdjustment
+                    {
+                        AdjustmentType = 3,
+                        Description = c.Description,
+                        Amount = Math.Round(Math.Abs(c.Amount) * 100),
+                        IdVat = GetIdVat(c.ftChargeItemCase),
+                        Department = 1
+                    });
+                }
+                else if (c.Amount < 0)
+                {
+                    // Item-level discount on the previously printed item (adjustmentType=3 = amount-based discount).
+                    records.Add(new PrintRecItemAdjustment
+                    {
+                        AdjustmentType = 3,
+                        Description = c.Description,
+                        Amount = Math.Round(Math.Abs(c.Amount) * 100),
+                        IdVat = GetIdVat(c.ftChargeItemCase),
+                        Department = 1
+                    });
+                }
+                else
+                {
+                    records.Add(new PrintRecItem
+                    {
+                        Description = c.Description,
+                        Quantity = Math.Abs(c.Quantity) * 1000,
+                        UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
+                        IdVat = GetIdVat(c.ftChargeItemCase)
+                    });
+                }
+            }
 
             if (subtotalAdjustments.Any())
             {
@@ -518,13 +559,51 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             var lineItems = receiptRequest.cbChargeItems.Where(c => !c.IsSubtotalDiscount() && !c.IsSubtotalSurcharge()).ToList();
             var subtotalAdjustments = receiptRequest.cbChargeItems.Where(c => c.IsSubtotalDiscount() || c.IsSubtotalSurcharge()).ToList();
 
-            records.AddRange(lineItems.Select(c => new PrintRecItem
+            foreach (var c in lineItems)
             {
-                Description = c.Description,
-                Quantity = Math.Abs(c.Quantity) * 1000,
-                UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
-                IdVat = GetIdVat(c.ftChargeItemCase)
-            }));
+                if (c.IsTip() || c.IsMultiUseVoucher())
+                {
+                    records.Add(new PrintRecItem
+                    {
+                        Description = c.Description,
+                        Quantity = Math.Abs(c.Quantity) * 1000,
+                        UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
+                        Department = TipVoucherDepartment
+                    });
+                }
+                else if (c.IsSingleUseVoucher() && c.Amount < 0)
+                {
+                    records.Add(new PrintRecItemAdjustment
+                    {
+                        AdjustmentType = 3,
+                        Description = c.Description,
+                        Amount = Math.Round(Math.Abs(c.Amount) * 100),
+                        IdVat = GetIdVat(c.ftChargeItemCase),
+                        Department = 1
+                    });
+                }
+                else if (c.Amount < 0)
+                {
+                    records.Add(new PrintRecItemAdjustment
+                    {
+                        AdjustmentType = 3,
+                        Description = c.Description,
+                        Amount = Math.Round(Math.Abs(c.Amount) * 100),
+                        IdVat = GetIdVat(c.ftChargeItemCase),
+                        Department = 1
+                    });
+                }
+                else
+                {
+                    records.Add(new PrintRecItem
+                    {
+                        Description = c.Description,
+                        Quantity = Math.Abs(c.Quantity) * 1000,
+                        UnitPrice = c.Quantity == 0 || c.Amount == 0 ? 0 : Math.Round(Math.Abs(c.Amount) / Math.Abs(c.Quantity) * 100),
+                        IdVat = GetIdVat(c.ftChargeItemCase)
+                    });
+                }
+            }
 
             if (subtotalAdjustments.Any())
             {
@@ -686,6 +765,11 @@ public sealed class CustomRTPrinterSCU : LegacySCU
     }
 
     private const int PdfBusyStatus = 76;
+
+    // Department slot used on Custom RT for tip / multi-use voucher (mirrors Epson convention).
+    // Must be programmed on the printer as non-VAT (esente/non soggetto) for tips and at the
+    // appropriate rate for voucher use; if slot 11 isn't programmed, change this value.
+    private const uint TipVoucherDepartment = 11;
 
     private async Task<(long DocNumber, long ZNumber, DateTime DocMoment)> GetLastFiscalDocAsync()
     {

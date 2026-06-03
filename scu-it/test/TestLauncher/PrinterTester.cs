@@ -47,6 +47,48 @@ namespace TestLauncher
             await Task.Delay(90000);
 
             // ---------- Bisect: short vs long description, otherwise identical ----------
+            await Run("TIP. Pizza 10€ + Mancia 2€ on department 11 → total 12€", async () =>
+            {
+                var records = new IFiscalRecord[]
+                {
+                    new PrintRecItem { Description = "Pizza", Quantity = 1000, UnitPrice = 1000, Department = 1, IdVat = 3 },
+                    new PrintRecItem { Description = "Mancia", Quantity = 1000, UnitPrice = 200, Department = 11 },
+                    new PrintRecTotal { Description = "Cash", Payment = 1200, PaymentType = 1 }
+                };
+                var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
+                return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
+            await Run("MULTIVOUCHER. Pranzo 10€ + buono multiuso 5€ dept=11 → total 15€", async () =>
+            {
+                var records = new IFiscalRecord[]
+                {
+                    new PrintRecItem { Description = "Pranzo", Quantity = 1000, UnitPrice = 1000, Department = 1, IdVat = 3 },
+                    new PrintRecItem { Description = "Buono multiuso", Quantity = 1000, UnitPrice = 500, Department = 11 },
+                    new PrintRecTotal { Description = "Cash", Payment = 1500, PaymentType = 1 }
+                };
+                var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
+                return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
+            await Run("SINGLEVOUCHER. Pizza 10€ + buono monouso -5€ adjustment type=3 → total 5€", async () =>
+            {
+                var records = new IFiscalRecord[]
+                {
+                    new PrintRecItem { Description = "Pizza", Quantity = 1000, UnitPrice = 1000, Department = 1, IdVat = 3 },
+                    new PrintRecItemAdjustment { AdjustmentType = 3, Description = "Buono monouso", Amount = 500, IdVat = 3, Department = 1 },
+                    new PrintRecTotal { Description = "Cash", Payment = 500, PaymentType = 1 }
+                };
+                var resp = await client.SendFiscalReceipt<Response<InfoResp>>(records);
+                return ($"success={resp.Success} status={resp.Status} z={resp.AddInfo?.NClose} doc={resp.AddInfo?.FiscalDoc}", resp.Success);
+            });
+            await Delay(15000);
+            await ResetIfNeeded();
+
             await Run("CF-1ITEM. single item via SCU model with VALID CF", async () =>
             {
                 var records = new IFiscalRecord[]
