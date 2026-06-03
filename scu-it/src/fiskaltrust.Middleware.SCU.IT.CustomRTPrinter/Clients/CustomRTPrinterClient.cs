@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -9,36 +10,54 @@ using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
 {
     public class CustomRTPrinterClient
     {
+        // Shared HttpClient per DeviceUrl + serialized access per printer (single-threaded device).
+        private static readonly ConcurrentDictionary<string, HttpClient> _sharedClients = new();
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _gates = new();
+
         private readonly HttpClient _httpClient;
+        private readonly SemaphoreSlim _gate;
         private readonly string _commandUrl;
+        private readonly ILogger<CustomRTPrinterClient> _logger;
 
         public CustomRTPrinterClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
+            _gate = new SemaphoreSlim(1, 1);
         }
 
-        public CustomRTPrinterClient(CustomRTPrinterConfiguration configuration)
+        public CustomRTPrinterClient(CustomRTPrinterConfiguration configuration, ILogger<CustomRTPrinterClient> logger)
         {
             if (string.IsNullOrEmpty(configuration.DeviceUrl))
             {
                 throw new NullReferenceException("ServerUrl is not set.");
             }
 
-            _httpClient = new HttpClient
+            var key = configuration.DeviceUrl.TrimEnd('/');
+            _httpClient = _sharedClients.GetOrAdd(key, _ => new HttpClient
             {
                 BaseAddress = new Uri(configuration.DeviceUrl),
                 Timeout = TimeSpan.FromMilliseconds(configuration.ClientTimeoutMs),
-            };
+            });
+            _gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
 
             _commandUrl = $"xml/printer.htm";
-            var authenticationString = $"{configuration.Username}:{configuration.Password}";
-            var base64EncodedAuthenticationString = Convert.ToBase64String(System.Text.ASCIIEncoding.ASCII.GetBytes(authenticationString));
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString); 
+            _logger = logger;
+
+            if (!string.IsNullOrEmpty(configuration.Username) || !string.IsNullOrEmpty(configuration.Password))
+                SetBasicAuth(configuration.Username, configuration.Password);
+        }
+
+        public void SetBasicAuth(string username, string password)
+        {
+            var authenticationString = $"{username}:{password}";
+            var base64EncodedAuthenticationString = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes(authenticationString));
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString);
         }
 
         internal static string Serialize<T>(T obj)
@@ -60,7 +79,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
             return tmp;
         }
 
-        internal static T Deserialize<T>(string xml)
+        public static T Deserialize<T>(string xml)
         {
             using (var reader = new StringReader(xml))
             {
@@ -71,12 +90,46 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
         public async Task<TRes> SendAsync<TReq, TRes>(TReq request)
             where TRes : IResponse
         {
-            var response = await _httpClient.PostAsync(_commandUrl, new StringContent(Serialize(request), System.Text.Encoding.UTF8, MediaTypeNames.Text.Plain), CancellationToken.None);
-            if(response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            var xml = Serialize(request);
+
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
             {
-                throw new CustomRTPrinterException("Unauthorized access to the printer. Please check the printer configuration.");
+                const int maxAttempts = 3;
+                Exception lastError = null;
+                for (var attempt = 1; attempt <= maxAttempts; attempt++)
+                {
+                    try
+                    {
+                        _logger?.LogDebug("CustomRT → printer (attempt {Attempt}/{Max}):\n{Xml}", attempt, maxAttempts, xml);
+                        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(xml, System.Text.Encoding.UTF8, MediaTypeNames.Text.Plain), CancellationToken.None).ConfigureAwait(false);
+                        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                            throw new CustomRTPrinterException("Unauthorized access to the printer. Please check the printer configuration.");
+                        var responseXml = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        _logger?.LogDebug("CustomRT ← printer:\n{Xml}", responseXml);
+                        return Deserialize<TRes>(responseXml);
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        lastError = ex;
+                        _logger?.LogWarning("CustomRT transport error on attempt {Attempt}: {Msg}. Retrying...", attempt, ex.Message);
+                        if (attempt < maxAttempts)
+                            await Task.Delay(1000 * attempt).ConfigureAwait(false);
+                    }
+                    catch (IOException ex)
+                    {
+                        lastError = ex;
+                        _logger?.LogWarning("CustomRT IO error on attempt {Attempt}: {Msg}. Retrying...", attempt, ex.Message);
+                        if (attempt < maxAttempts)
+                            await Task.Delay(1000 * attempt).ConfigureAwait(false);
+                    }
+                }
+                throw new CustomRTPrinterException($"CustomRT printer unreachable after {maxAttempts} attempts: {lastError?.Message}", lastError);
             }
-            return Deserialize<TRes>(await response.Content.ReadAsStringAsync());
+            finally
+            {
+                _gate.Release();
+            }
         }
 
         public Task<TRes> SendFiscalReceipt<TRes>(IFiscalRecord[] records)
@@ -87,8 +140,22 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
             where TRes : IResponse
             => SendAsync<PrinterFiscalReport, TRes>(new PrinterFiscalReport(report));
 
+        public Task<TRes> SendNonFiscal<TRes>(INonFiscalRecord[] records)
+            where TRes : IResponse
+            => SendAsync<PrinterNonFiscal, TRes>(new PrinterNonFiscal(records));
+
         public Task<TRes> SendCommand<TRes>(ICommand command)
             where TRes : IResponse
             => SendAsync<PrinterCommand, TRes>(new PrinterCommand(command));
+
+        public Task<TRes> CancelFiscalReceipt<TRes>()
+            where TRes : IResponse
+            => SendAsync<PrinterFiscalReceiptCancel, TRes>(new PrinterFiscalReceiptCancel());
+
+        public async Task<string> SendRawAsync(string xmlBody)
+        {
+            var response = await _httpClient.PostAsync(_commandUrl, new StringContent(xmlBody, System.Text.Encoding.UTF8, MediaTypeNames.Text.Plain), CancellationToken.None);
+            return await response.Content.ReadAsStringAsync();
+        }
     }
 }
