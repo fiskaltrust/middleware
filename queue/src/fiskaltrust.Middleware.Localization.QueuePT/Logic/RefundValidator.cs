@@ -227,7 +227,7 @@ public class RefundValidator
         var refundCase = ((long)refundItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
         if (originalCase != refundCase)
         {
-            return (flowControl: false, value: Mismatch("ReceiptCase"));
+            return (flowControl: false, value: Mismatch("ftChargeItemCase"));
         }
 
         if (!CaseDataIsEqual(originalItem.ftChargeItemCaseData, refundItem.ftChargeItemCaseData))
