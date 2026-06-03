@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -106,14 +107,14 @@ public class RefundValidator
 
         // We ignore ftPOSSystemId cause it can be different
 
-        var originalCase = ((long) originalItem.ftReceiptCase) & 0x0000_0000_0000_FFFF;
-        var refundCase = ((long) refundItem.ftReceiptCase) & 0x0000_0000_0000_FFFF;
+        var originalCase = ((long)originalItem.ftReceiptCase) & 0x0000_0000_0000_FFFF;
+        var refundCase = ((long)refundItem.ftReceiptCase) & 0x0000_0000_0000_FFFF;
         if (originalCase != refundCase)
         {
             return (flowControl: false, value: Mismatch("ReceiptCase"));
         }
 
-        if (originalItem.ftReceiptCaseData != refundItem.ftReceiptCaseData)
+        if (!CaseDataIsEqual(originalItem.ftReceiptCaseData, refundItem.ftReceiptCaseData))
         {
             return (flowControl: false, value: Mismatch("ReceiptCaseData"));
         }
@@ -222,16 +223,16 @@ public class RefundValidator
             return (flowControl: false, value: Mismatch("VATRate"));
         }
 
-        var originalCase = ((long) originalItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
-        var refundCase = ((long) refundItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+        var originalCase = ((long)originalItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+        var refundCase = ((long)refundItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
         if (originalCase != refundCase)
         {
             return (flowControl: false, value: Mismatch("ReceiptCase"));
         }
 
-        if (originalItem.ftChargeItemCaseData != refundItem.ftChargeItemCaseData)
+        if (!CaseDataIsEqual(originalItem.ftChargeItemCaseData, refundItem.ftChargeItemCaseData))
         {
-            return (flowControl: false, value: Mismatch("cbCustomer"));
+            return (flowControl: false, value: Mismatch("ftChargeItemCaseData"));
         }
 
         if (Math.Abs(Math.Abs(originalItem.GetVATAmount()) - Math.Abs(refundItem.GetVATAmount())) > 0.001m)
@@ -328,14 +329,14 @@ public class RefundValidator
             }
         }
 
-        var originalCase = ((long) originalItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
-        var refundCase = ((long) refundItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
+        var originalCase = ((long)originalItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
+        var refundCase = ((long)refundItem.ftPayItemCase) & 0x0000_0000_0000_FFFF;
         if (originalCase != refundCase)
         {
             return (flowControl: false, value: Mismatch("ftPayItemCase"));
         }
 
-        if (originalItem.ftPayItemCaseData != refundItem.ftPayItemCaseData)
+        if (!CaseDataIsEqual(originalItem.ftPayItemCaseData, refundItem.ftPayItemCaseData))
         {
             return (flowControl: false, value: Mismatch("ftPayItemCaseData"));
         }
@@ -429,8 +430,8 @@ public class RefundValidator
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "VATRate");
             }
 
-            var originalCase = ((long) referenceItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
-            var refundCase = ((long) refundItem.chargeItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+            var originalCase = ((long)referenceItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
+            var refundCase = ((long)refundItem.chargeItem.ftChargeItemCase) & 0x0000_0000_0000_FFFF;
             if (originalCase != refundCase)
             {
                 return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "ChargeItemCase");
@@ -486,6 +487,33 @@ public class RefundValidator
             return ErrorMessagesPT.EEEE_PartialRefundItemsMismatch(originalReceiptReference, "PayItem OtherPayments Exceeded");
         }
         return null; // Validation passed
+    }
+
+    private static bool CaseDataIsEqual(object originalCaseData, object refundCaseData)
+    {
+
+        string? originalCaseDataString = originalCaseData switch
+        {
+            JsonElement element => element.GetRawText(),
+            string element => element,
+            _ => null
+        };
+
+        string? refundCaseDataString = refundCaseData switch
+        {
+            JsonElement element => element.GetRawText(),
+            string element => element,
+            _ => null
+        };
+
+        if (originalCaseDataString is not null && refundCaseDataString is not null)
+        {
+            return originalCaseDataString == refundCaseDataString;
+        }
+        else
+        {
+            return originalCaseData == refundCaseData;
+        }
     }
 
     private static bool AreOppositeWithTolerance(decimal original, decimal refundValue, decimal tolerance)
