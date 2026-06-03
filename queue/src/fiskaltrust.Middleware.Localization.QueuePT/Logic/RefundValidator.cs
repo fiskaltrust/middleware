@@ -493,7 +493,7 @@ public class RefundValidator
 
         string? originalCaseDataString = originalCaseData switch
         {
-            JsonElement element => element.GetRawText(),
+            JsonElement element => JsonNode.Parse(element.GetRawText()).ToJsonString(),
             string element => element,
             _ => null
         };
@@ -504,6 +504,17 @@ public class RefundValidator
             string element => element,
             _ => null
         };
+
+        try
+        {
+            originalCaseDataString = JsonNode.Parse(originalCaseDataString).ToJsonString();
+        }
+        catch { }
+        try
+        {
+            originalCaseDataString = JsonNode.Parse(originalCaseDataString).ToJsonString();
+        }
+        catch { }
 
         if (originalCaseDataString is not null && refundCaseDataString is not null)
         {
