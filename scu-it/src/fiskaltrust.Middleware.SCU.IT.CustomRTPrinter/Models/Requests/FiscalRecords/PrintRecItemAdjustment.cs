@@ -2,19 +2,18 @@ using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
 {
-    [XmlRoot("printRecItem")]
-    public class PrintRecItem : IFiscalRecord
+    [XmlRoot("printRecItemAdjustment")]
+    public class PrintRecItemAdjustment : IFiscalRecord
     {
+        // 1=percent discount, 2=percent surcharge, 3=amount discount, 4=amount surcharge (applied to last item).
+        [XmlAttribute("adjustmentType")]
+        public uint AdjustmentType { get; set; }
+
         [XmlAttribute("description")]
         public string Description { get; set; }
 
-        [XmlAttribute("quantity")]
-        public decimal Quantity { get; set; }
-
-        public bool ShouldSerializeQuantity() => Quantity != 0;
-
-        [XmlAttribute("unitPrice")]
-        public decimal UnitPrice { get; set; }
+        [XmlAttribute("amount")]
+        public decimal Amount { get; set; }
 
         [XmlAttribute("department")]
         public uint Department { get; set; } = 1;

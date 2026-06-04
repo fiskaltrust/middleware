@@ -147,7 +147,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
             yield return new object[]
             {
                 "Kassenbeleg-V1",
-                "Beleg^-1999.76519_-1999.76519_-1999.76519_-1999.76519_-1999.76519^-9998.83:Bar",
+                "Beleg^-1999.77_-1999.77_-1999.77_-1999.77_-1999.77^-9998.83:Bar",
                 JsonConvert.SerializeObject(
                 new ReceiptRequest()
                 {
@@ -251,7 +251,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
             yield return new object[]
             {
                 "Kassenbeleg-V1",
-                "Beleg^2000.23481_2000.23481_2000.23481_2000.23481_2000.23481^10001.17:Bar",
+                "Beleg^2000.23_2000.23_2000.23_2000.23_2000.23^10001.17:Bar",
                 JsonConvert.SerializeObject(
                 new ReceiptRequest()
                 {
@@ -356,7 +356,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
             yield return new object[]
                 {
                 "Kassenbeleg-V1",
-                "Beleg^2000.13_3000.23481_5483.12452_1000.9632_6371.12^17855.57:Bar",
+                "Beleg^2000.13_3000.23_5483.12_1000.96_6371.12^17855.57:Bar",
                 JsonConvert.SerializeObject(
                 new ReceiptRequest()
                 {
