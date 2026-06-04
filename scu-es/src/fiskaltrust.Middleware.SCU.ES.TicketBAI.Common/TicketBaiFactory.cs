@@ -217,7 +217,7 @@ public class TicketBaiFactory
         }
 
         var byNature = chargeItems
-            .GroupBy(ci => ci.ftChargeItemCase.NatureOfVat())
+            .GroupBy(ci => ci.ftChargeItemCase.NatureOfVatES())
             .Select(g => new { Mapping = TicketBaiNatureOfVatMapping.Map(g.Key), Items = g.ToList() })
             .ToList();
 
@@ -268,7 +268,7 @@ public class TicketBaiFactory
     private static IDClaveType[] GetClaves(ProcessRequest request)
     {
         var distinctClaves = request.ReceiptRequest.cbChargeItems
-            .Select(ci => TicketBaiNatureOfVatMapping.Map(ci.ftChargeItemCase.NatureOfVat()).ClaveRegimen)
+            .Select(ci => TicketBaiNatureOfVatMapping.Map(ci.ftChargeItemCase.NatureOfVatES()).ClaveRegimen)
             .Distinct()
             .ToArray();
 

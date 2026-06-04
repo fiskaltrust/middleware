@@ -4,10 +4,10 @@ using System.Xml.Linq;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.Common;
 using fiskaltrust.Middleware.SCU.ES.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 using FluentAssertions;
 
 namespace fiskaltrust.Middleware.SCU.ES.AcceptanceTest;
@@ -146,6 +146,55 @@ public class TicketBaiFactoryXmlAcceptanceTests
         var ticketBai = Build([goods, service], customer);
 
         AssertSnapshot(ticketBai, "foreign-export-goods-and-service.xml");
+    }
+
+    [Fact]
+    public void Domestic_UsualVat_MultipleRates_AllStandard()
+    {
+        // Regression lock for the pre-exempt-reasons behaviour: a plain multi-rate domestic
+        // invoice (every line UsualVatApplies) must still produce a single Sujeta/NoExenta/S1
+        // branch holding one DetalleIVA per VAT rate, with Claves=01. This is the most common
+        // standard invoice shape and was previously only covered indirectly inside the mixed test.
+        var ticketBai = Build([
+            Item(amount: 121m, vatRate: 21m, vatAmount: 21m, description: "Standard 21%",
+                ChargeItemCaseNatureOfVatES.UsualVatApplies),
+            Item(amount: 110m, vatRate: 10m, vatAmount: 10m, description: "Reduced 10%",
+                ChargeItemCaseNatureOfVatES.UsualVatApplies),
+            Item(amount: 104m, vatRate: 4m, vatAmount: 4m, description: "Super-reduced 4%",
+                ChargeItemCaseNatureOfVatES.UsualVatApplies)
+        ]);
+
+        AssertSnapshot(ticketBai, "domestic-usual-vat-multirate.xml");
+    }
+
+    [Fact]
+    public void Foreign_UsualVat_GoodsAndService_AllStandard()
+    {
+        // Regression lock for the pre-exempt-reasons behaviour: a foreign-recipient invoice with
+        // ordinary taxable goods and services must still produce DesgloseTipoOperacion with
+        // Entrega/Sujeta/NoExenta/S1 and PrestacionServicios/Sujeta/NoExenta/S1, Claves=01.
+        // Delivery and Tip each fall in only one of the factory's two TypeOfService lists,
+        // so each line lands in exactly one branch.
+        var goods = Item(amount: 121m, vatRate: 21m, vatAmount: 21m, description: "Standard goods",
+            ChargeItemCaseNatureOfVatES.UsualVatApplies);
+        goods.ftChargeItemCase = (ChargeItemCase)((long) goods.ftChargeItemCase | (long) ChargeItemCaseTypeOfService.Delivery);
+
+        var service = Item(amount: 110m, vatRate: 10m, vatAmount: 10m, description: "Standard service",
+            ChargeItemCaseNatureOfVatES.UsualVatApplies);
+        service.ftChargeItemCase = (ChargeItemCase)((long) service.ftChargeItemCase | (long) ChargeItemCaseTypeOfService.Tip);
+
+        var customer = new MiddlewareCustomer
+        {
+            CustomerCountry = "FR",
+            CustomerName = "French Customer",
+            CustomerVATId = "FR12345678901",
+            CustomerStreet = "1 Rue Example",
+            CustomerZip = "75001"
+        };
+
+        var ticketBai = Build([goods, service], customer);
+
+        AssertSnapshot(ticketBai, "foreign-usual-vat-goods-and-service.xml");
     }
 
     private static ChargeItem Item(decimal amount, decimal vatRate, decimal vatAmount, string description,

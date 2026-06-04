@@ -4,9 +4,9 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.Common.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 using FluentAssertions;
 using Xunit;
 

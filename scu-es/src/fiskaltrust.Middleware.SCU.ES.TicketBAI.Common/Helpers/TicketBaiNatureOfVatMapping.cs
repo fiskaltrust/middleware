@@ -1,5 +1,4 @@
 using System;
-using fiskaltrust.ifPOS.v2.es.Cases;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 

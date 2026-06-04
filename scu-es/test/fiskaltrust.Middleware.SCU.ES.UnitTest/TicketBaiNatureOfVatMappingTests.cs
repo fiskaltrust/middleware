@@ -1,4 +1,3 @@
-using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Common.Helpers;
 using FluentAssertions;
 using Xunit;
