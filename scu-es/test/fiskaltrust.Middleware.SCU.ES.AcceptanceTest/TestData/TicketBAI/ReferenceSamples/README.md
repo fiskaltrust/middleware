@@ -19,4 +19,4 @@ The samples were stripped of their `<ds:Signature>` blocks (sample placeholder, 
 
 \* The published sample for NN [50] puts reverse charge under `DesgloseTipoOperacion/PrestacionServicios` even though the recipient is domestic. The factory follows the domestic-first rule (recipient country → `DesgloseFactura`) and places reverse charge under `DesgloseFactura/Sujeta/NoExenta/S2`; the comparison test for NN [50] therefore asserts only the L9 / L11 codes and the `TipoNoExenta=S2` value, not the branch.
 
-NN [60] (`IE` foreign tax) currently has no value in `ChargeItemCaseNatureOfVatES`, so the factory can't produce it. The reference is kept as documentation; the corresponding test case is marked `Skip` until the upstream enum gains an `IE` variant.
+NN [60] (`IE` foreign tax) has a value in our local `ChargeItemCaseNatureOfVatES` (`ForeignTaxApplies`), but `TicketBaiNatureOfVatMapping` does not yet translate it to a `NoSujeta/Causa=IE` branch (and `ClaveRegimen` 08 is unconfirmed), so the factory can't produce it. The reference is kept as documentation; the corresponding test case is marked `Skip` until the mapper supports it.

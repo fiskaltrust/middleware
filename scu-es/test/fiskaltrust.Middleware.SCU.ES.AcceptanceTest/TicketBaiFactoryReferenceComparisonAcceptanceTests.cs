@@ -117,10 +117,11 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
         ExtractAllTipoNoExenta(reference).Should().Contain("S2");
     }
 
-    [Fact(Skip = "NN [60] (foreign tax IE) has no corresponding ChargeItemCaseNatureOfVatES value yet; reference kept as documentation.")]
+    [Fact(Skip = "NN [60] (foreign tax IE): ForeignTaxApplies exists in the enum but the mapper does not yet translate it to a NoSujeta/IE branch (and Clave 08 is unconfirmed); reference kept as documentation.")]
     public void NN60_ForeignTax_MatchesReference_IE_Clave08()
     {
-        // Placeholder: will be enabled when ChargeItemCaseNatureOfVatES gains an IE/foreign-tax variant.
+        // Placeholder: will be enabled when TicketBaiNatureOfVatMapping maps ForeignTaxApplies
+        // to NoSujeta/Causa=IE with the correct ClaveRegimen (08, pending confirmation).
     }
 
     private static void AssertMatchesReference(
