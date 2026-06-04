@@ -252,8 +252,10 @@ public static class ChargeItemValidations
     }
 
     /// <summary>
-    /// Validates that charge items with VAT rate 0 have a valid nature of VAT (exempt reason) specified.
-    /// Uses the TaxExemptionDictionary to provide detailed validation with proper exemption code references.
+    /// Validates that charge items with a 0% VAT rate carry an exemption / not-subject reason via
+    /// the Nature of VAT (NN) field. The queue only enforces that *some* non-usual nature is present;
+    /// validating the *specific* code is left to the SCU (VeriFactu / TicketBAI mappers), which own
+    /// the per-regulation set of supported reasons and reject anything they cannot map.
     /// Returns one ValidationResult per validation error found.
     /// </summary>
     public static IEnumerable<ValidationResult> Validate_ChargeItems_VATRate_ZeroVatRateNature(ReceiptRequest request)
@@ -266,44 +268,32 @@ public static class ChargeItemValidations
         for (var i = 0; i < request.cbChargeItems.Count; i++)
         {
             var chargeItem = request.cbChargeItems[i];
-            if(chargeItem.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Receivable)
+            if (chargeItem.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Receivable)
             {
                 continue;
             }
 
-            // Check if VAT rate is 0
-            if (Math.Abs(chargeItem.VATRate) < 0.001m)
+            // Only 0% VAT lines need an exemption reason.
+            if (Math.Abs(chargeItem.VATRate) >= 0.001m)
             {
-                // Check if a valid nature of VAT is specified
-                var natureOfVat = chargeItem.ftChargeItemCase.NatureOfVat();
+                continue;
+            }
 
-                // UsualVatApplies (0x0000) is not valid for zero VAT rate
-                if (natureOfVat == ChargeItemCaseNatureOfVatES.UsualVatApplies)
-                {
-                    yield return ValidationResult.Failed(new ValidationError(
-                        ErrorMessagesES.EEEE_ZeroVatRateMissingNature(i),
-                        "EEEE_ZeroVatRateMissingNature",
-                        "cbChargeItems.ftChargeItemCase",
-                        i
-                    )
-                    .WithContext("VATRate", chargeItem.VATRate)
-                    .WithContext("NatureOfVat", natureOfVat.ToString())
-                    .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
-                }
-                else
-                {
-                    var exemptionCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-                    yield return ValidationResult.Failed(new ValidationError(
-                        ErrorMessagesES.EEEE_UnknownTaxExemptionCode(i, exemptionCode),
-                        "EEEE_UnknownTaxExemptionCode",
-                        "cbChargeItems.ftChargeItemCase",
-                        i
-                    )
-                    .WithContext("VATRate", chargeItem.VATRate)
-                    .WithContext("NatureOfVat", natureOfVat.ToString())
-                    .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}")
-                    .WithContext("ExemptionCode", exemptionCode.ToString()));
-                }
+            // UsualVatApplies (0x0000) is not a valid reason for a zero-rated line — the caller must
+            // declare an exemption / not-subject nature. Any non-usual nature is accepted here; the
+            // SCU decides whether the specific code is supported for its regulation.
+            var natureOfVat = chargeItem.ftChargeItemCase.NatureOfVat();
+            if (natureOfVat == ChargeItemCaseNatureOfVatES.UsualVatApplies)
+            {
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesES.EEEE_ZeroVatRateMissingNature(i),
+                    "EEEE_ZeroVatRateMissingNature",
+                    "cbChargeItems.ftChargeItemCase",
+                    i
+                )
+                .WithContext("VATRate", chargeItem.VATRate)
+                .WithContext("NatureOfVat", natureOfVat.ToString())
+                .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
             }
         }
     }
