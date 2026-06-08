@@ -267,7 +267,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     CertificationIdentification = GetCertificationIdentification(),
                     MaxNumberOfClients = fccInfo.MaxNumberClients,
                     MaxNumberOfStartedTransactions = fccInfo.MaxNumberTransactions,
-                    CertificatesBase64 = new List<string> { tssDetails.LeafCertificate },
+                    CertificatesBase64 = NormalizeCertificate(tssDetails.LeafCertificate),
                     CurrentClientIds = clients.Select(x => x.ClientId),
                     SignatureAlgorithm = tssDetails.Algorithm,
                     CurrentLogMemorySize = -1,
@@ -309,6 +309,81 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
 
             return _configuration.CertificationId;
+        }
+
+        private List<string> NormalizeCertificate(string certificate)
+        {
+            if (string.IsNullOrWhiteSpace(certificate))
+            {
+                return new List<string>();
+            }
+
+            // If the FCC already returns a clean Base64 DER (no PEM markers), pass it through.
+            if (certificate.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return new List<string> { certificate.Trim() };
+            }
+
+            try
+            {
+                var certificates = new List<string>();
+                using (var stringReader = new StringReader(certificate))
+                {
+                    var pemReader = new Org.BouncyCastle.OpenSsl.PemReader(stringReader);
+
+                    object pemObject;
+                    while ((pemObject = pemReader.ReadObject()) != null)
+                    {
+                        if (pemObject is Org.BouncyCastle.X509.X509Certificate bcCert)
+                        {
+                            certificates.Add(Convert.ToBase64String(bcCert.GetEncoded()));
+                        }
+                        else if (pemObject is Org.BouncyCastle.Asn1.X509.X509CertificateStructure certStructure)
+                        {
+                            certificates.Add(Convert.ToBase64String(certStructure.GetEncoded()));
+                        }
+                    }
+                }
+
+                return certificates;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse certificate using BouncyCastle. Falling back to manual parsing.");
+                return NormalizeCertificateManual(certificate);
+            }
+        }
+
+        private static List<string> NormalizeCertificateManual(string certificate)
+        {
+            const string pemHeader = "-----BEGIN CERTIFICATE-----";
+            const string pemFooter = "-----END CERTIFICATE-----";
+            var certificates = new List<string>();
+
+            var startIndex = 0;
+            while (true)
+            {
+                var headerIndex = certificate.IndexOf(pemHeader, startIndex, StringComparison.OrdinalIgnoreCase);
+                if (headerIndex < 0)
+                {
+                    break;
+                }
+
+                var footerIndex = certificate.IndexOf(pemFooter, headerIndex, StringComparison.OrdinalIgnoreCase);
+                if (footerIndex < 0)
+                {
+                    break;
+                }
+
+                var bodyStart = headerIndex + pemHeader.Length;
+                var body = certificate.Substring(bodyStart, footerIndex - bodyStart);
+                var base64 = body.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace(" ", string.Empty).Trim();
+                certificates.Add(base64);
+
+                startIndex = footerIndex + pemFooter.Length;
+            }
+
+            return certificates;
         }
 
         public async Task<RegisterClientIdResponse> RegisterClientIdAsync(RegisterClientIdRequest request)
