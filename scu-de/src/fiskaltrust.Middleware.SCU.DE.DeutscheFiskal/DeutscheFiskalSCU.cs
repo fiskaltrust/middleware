@@ -266,8 +266,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 //                                                  but BIT-STRING padding bugs
                 //                                                  have been observed.
                 //
-                // Normalize to the raw point regardless of source, so the QR-code field matches
-                // the convention used by Swissbit / Epson-TSE / Diebold-Nixdorf TSEs.
+                // Normalize to the raw point regardless of source
+                //
                 var certificatePublicKeyBase64 = ExtractRawEcPublicKeyBase64(tssDetails);
 
                 _lastTseInfo = new TseInfo
@@ -935,6 +935,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
 
             // DER SubjectPublicKeyInfo: try the framework first.
+#if NET6_0_OR_GREATER
             try
             {
                 using var ecdsa = ECDsa.Create();
@@ -951,6 +952,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             {
                 // Fall through to manual ASN.1 walk.
             }
+#endif
 
             // Manual ASN.1 walk: SubjectPublicKeyInfo ::= SEQUENCE { AlgorithmIdentifier, BIT STRING }
             // BIT STRING value = 0x00 (unused-bits) || rawSec1Point
