@@ -254,8 +254,16 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 // TODO check how many items are returned by selfCheckResult.KeyInfos and how they behave
                 var activeKey = selfCheckResult.keyInfos.FirstOrDefault(x => x.state == KeyState.Active) ?? selfCheckResult.keyInfos.First();
 
-                var cert = new X509Certificate2(Convert.FromBase64String(tssDetails.LeafCertificate));
-                var certificatePublicKeyBase64 = Convert.ToBase64String(cert.GetPublicKey());
+                // Use the raw TSE public key reported by the FCC (/admin/tss-details -> "publicKey").
+                // It is the SEC1 uncompressed point (0x04 || X || Y) the TSE actually signs with and
+                // matches what verifier apps (Amadeus Verify, Fiskalycheck, ...) hash to validate the
+                // <kassen-seriennummer> / <public-key> consistency on the QR-code.
+                // Re-deriving it from the leaf certificate via X509Certificate2.GetPublicKey() can yield
+                // a byte sequence that differs from what the TSE emits (BIT STRING wrapping / padding
+                // depending on .NET version) and breaks that self-consistency check.
+                var certificatePublicKeyBase64 = !string.IsNullOrEmpty(tssDetails.PublicKey)
+                    ? tssDetails.PublicKey
+                    : Convert.ToBase64String(new X509Certificate2(Convert.FromBase64String(tssDetails.LeafCertificate)).GetPublicKey());
 
                 _lastTseInfo = new TseInfo
                 {
