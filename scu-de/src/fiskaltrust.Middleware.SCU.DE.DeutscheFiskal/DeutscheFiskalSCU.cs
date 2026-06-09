@@ -254,16 +254,21 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 // TODO check how many items are returned by selfCheckResult.KeyInfos and how they behave
                 var activeKey = selfCheckResult.keyInfos.FirstOrDefault(x => x.state == KeyState.Active) ?? selfCheckResult.keyInfos.First();
 
-                // Use the raw TSE public key reported by the FCC (/admin/tss-details -> "publicKey").
-                // It is the SEC1 uncompressed point (0x04 || X || Y) the TSE actually signs with and
-                // matches what verifier apps (Amadeus Verify, Fiskalycheck, ...) hash to validate the
-                // <kassen-seriennummer> / <public-key> consistency on the QR-code.
-                // Re-deriving it from the leaf certificate via X509Certificate2.GetPublicKey() can yield
-                // a byte sequence that differs from what the TSE emits (BIT STRING wrapping / padding
-                // depending on .NET version) and breaks that self-consistency check.
-                var certificatePublicKeyBase64 = !string.IsNullOrEmpty(tssDetails.PublicKey)
-                    ? tssDetails.PublicKey
-                    : Convert.ToBase64String(new X509Certificate2(Convert.FromBase64String(tssDetails.LeafCertificate)).GetPublicKey());
+                // The TSE's <public-key> field on the QR-code MUST be the raw SEC1 uncompressed
+                // EC point ( 0x04 || X || Y ), because that is what every BSI verifier app
+                // (Amadeus Verify, Fiskalycheck, ...) expects and what the <signatur-zaehler>
+                // signature is verified against.
+                //
+                // The FCC exposes the key in two places, both of which can be the DER-encoded
+                // SubjectPublicKeyInfo envelope instead of the raw point:
+                //   * tssDetails.PublicKey      -> usually SPKI ("MHYwEAYHKoZIzj0CAQYFK4EEACID...")
+                //   * tssDetails.LeafCertificate.GetPublicKey() -> raw SEC1 on most runtimes,
+                //                                                  but BIT-STRING padding bugs
+                //                                                  have been observed.
+                //
+                // Normalize to the raw point regardless of source, so the QR-code field matches
+                // the convention used by Swissbit / Epson-TSE / Diebold-Nixdorf TSEs.
+                var certificatePublicKeyBase64 = ExtractRawEcPublicKeyBase64(tssDetails);
 
                 _lastTseInfo = new TseInfo
                 {
@@ -880,6 +885,133 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 TseTimeStampFormat = _lastTseInfo.LogTimeFormat,
                 TimeStamp = transaction.LogTime
             };
+        }
+
+        /// <summary>
+        /// Returns the TSE's elliptic-curve public key as a Base64-encoded raw SEC1
+        /// uncompressed point (0x04 || X || Y), which is the form required by the
+        /// QR-code &lt;public-key&gt; field according to BSI TR-03151 and accepted by
+        /// fiscal verifier apps.
+        ///
+        /// The FCC returns the key either as
+        ///   * a raw SEC1 point already (NIST P-256 = 65 bytes, P-384 = 97 bytes, P-521 = 133 bytes), or
+        ///   * a DER-encoded SubjectPublicKeyInfo envelope, which must be unwrapped.
+        /// We fall back to the leaf certificate's public key when tssDetails.PublicKey
+        /// is missing.
+        /// </summary>
+        internal static string ExtractRawEcPublicKeyBase64(TssDetailsResponseDto tssDetails)
+        {
+            byte[] candidate = null;
+            if (!string.IsNullOrEmpty(tssDetails?.PublicKey))
+            {
+                candidate = Convert.FromBase64String(tssDetails.PublicKey);
+            }
+            else if (!string.IsNullOrEmpty(tssDetails?.LeafCertificate))
+            {
+                using var cert = new X509Certificate2(Convert.FromBase64String(tssDetails.LeafCertificate));
+                candidate = cert.GetPublicKey();
+            }
+
+            if (candidate == null || candidate.Length == 0)
+            {
+                return null;
+            }
+
+            return Convert.ToBase64String(NormalizeToSec1UncompressedPoint(candidate));
+        }
+
+        /// <summary>
+        /// Strips a DER-encoded SubjectPublicKeyInfo wrapper if present and returns the
+        /// raw SEC1 uncompressed EC point (0x04 || X || Y). If the input is already a
+        /// raw point it is returned unchanged.
+        /// </summary>
+        internal static byte[] NormalizeToSec1UncompressedPoint(byte[] bytes)
+        {
+            // Already a raw SEC1 uncompressed point.
+            if (bytes.Length > 0 && bytes[0] == 0x04 &&
+                (bytes.Length == 65 || bytes.Length == 97 || bytes.Length == 133))
+            {
+                return bytes;
+            }
+
+            // DER SubjectPublicKeyInfo: try the framework first.
+            try
+            {
+                using var ecdsa = ECDsa.Create();
+                ecdsa.ImportSubjectPublicKeyInfo(bytes, out _);
+                var p = ecdsa.ExportParameters(false);
+                var coordSize = p.Q.X.Length;
+                var raw = new byte[1 + (2 * coordSize)];
+                raw[0] = 0x04;
+                Buffer.BlockCopy(p.Q.X, 0, raw, 1, coordSize);
+                Buffer.BlockCopy(p.Q.Y, 0, raw, 1 + coordSize, coordSize);
+                return raw;
+            }
+            catch
+            {
+                // Fall through to manual ASN.1 walk.
+            }
+
+            // Manual ASN.1 walk: SubjectPublicKeyInfo ::= SEQUENCE { AlgorithmIdentifier, BIT STRING }
+            // BIT STRING value = 0x00 (unused-bits) || rawSec1Point
+            var bitString = TryFindBitString(bytes);
+            if (bitString != null && bitString.Length > 1 && bitString[0] == 0x00 && bitString[1] == 0x04)
+            {
+                var raw = new byte[bitString.Length - 1];
+                Buffer.BlockCopy(bitString, 1, raw, 0, raw.Length);
+                return raw;
+            }
+
+            // Last resort: return as-is so callers don't crash; verifiers will still reject it,
+            // but logs/CertificatesBase64 etc. remain populated.
+            return bytes;
+        }
+
+        private static byte[] TryFindBitString(byte[] der)
+        {
+            // Minimal scanner: walk the outer SEQUENCE and return the contents of the first
+            // top-level BIT STRING (tag 0x03) encountered.
+            try
+            {
+                if (der.Length < 2 || der[0] != 0x30) return null;
+                var (outerLen, outerHeader) = ReadAsn1Length(der, 1);
+                var offset = 1 + outerHeader;
+                var end = offset + outerLen;
+                while (offset < end && offset < der.Length)
+                {
+                    var tag = der[offset];
+                    var (len, headerLen) = ReadAsn1Length(der, offset + 1);
+                    var contentStart = offset + 1 + headerLen;
+                    if (tag == 0x03)
+                    {
+                        var content = new byte[len];
+                        Buffer.BlockCopy(der, contentStart, content, 0, len);
+                        return content;
+                    }
+                    offset = contentStart + len;
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+            return null;
+        }
+
+        private static (int length, int headerLength) ReadAsn1Length(byte[] der, int offset)
+        {
+            var first = der[offset];
+            if ((first & 0x80) == 0)
+            {
+                return (first, 1);
+            }
+            var lenOfLen = first & 0x7F;
+            var length = 0;
+            for (var i = 0; i < lenOfLen; i++)
+            {
+                length = (length << 8) | der[offset + 1 + i];
+            }
+            return (length, 1 + lenOfLen);
         }
 
         public void Dispose()
