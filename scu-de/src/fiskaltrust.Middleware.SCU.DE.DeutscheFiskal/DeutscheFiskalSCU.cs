@@ -43,16 +43,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         private readonly Task _fccInitializingTask;
         private TseInfo _lastTseInfo;
 
-        // TSE-issued client serial number, equivalent to FiskalySCU.cs's
-        // transaction.ClientSerialNumber. The FCC does not expose a per-client serial,
-        // so we derive the BSI TR-03151 spec value Base64(SHA256(rawPublicKey)).TrimEnd('=')
-        // from the TSE public key. This is a THIRD identifier, distinct from:
-        //   * the queue clientId (passed in via request.ClientId)
-        //   * the TSS hardware serial (tssDetails.SerialNumberHex / _lastTseInfo.SerialNumberOctet)
-        // It is what the QR-code &lt;kassen-seriennummer&gt; must contain so verifier apps
-        // (Amadeus Verify, Fiskalycheck, ...) accept the receipt.
-        private string _tseClientSerialNumber;
-
         public DeutscheFiskalSCU(ILogger<DeutscheFiskalSCU> logger, DeutscheFiskalSCUConfiguration configuration, IFccInitializationService fccInitializationService,
             IFccProcessHost fccProcessHost, IFccDownloadService fccDownloadService, FccErsApiProvider fccErsApiProvider, FccAdminApiProvider fccAdminApiProvider)
         {
@@ -279,13 +269,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 // Normalize to the raw point regardless of source
                 //
                 var certificatePublicKeyBase64 = ExtractRawEcPublicKeyBase64(tssDetails);
-
-                // Derive the TSE-issued client serial used for &lt;kassen-seriennummer&gt;.
-                // FiskalySCU receives this as transaction.ClientSerialNumber from the Fiskaly
-                // SDK; the FCC does not surface it, so we compute the BSI TR-03151 value
-                // Base64(SHA256(rawPublicKey)).TrimEnd('=') here. This identifier is
-                // distinct from the queue clientId and from the TSS hardware serial.
-                _tseClientSerialNumber = ComputeTseClientSerialNumber(certificatePublicKeyBase64);
 
                 _lastTseInfo = new TseInfo
                 {
@@ -850,9 +833,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             {
                 TransactionNumber = transaction.TransactionNumber,
                 TseSerialNumberOctet = transaction.SerialNumber,
-                // Same role as FiskalySCU.CreateStartTransactionResponse: ClientId is the
-                // TSE-issued client serial, NOT the queue clientId and NOT the TSS serial.
-                ClientId = _tseClientSerialNumber ?? clientId,
+                // SwissbitCloudV2 pattern: pure pass-through of the queue clientId. The TSE
+                // signs the LogMessage with whatever clientID it was handed at StartTransaction,
+                // so the QR's <kassen-seriennummer> must carry the same value or the
+                // <signatur> stops verifying against <public-key>.
+                ClientId = clientId,
                 TimeStamp = transaction.LogTime,
                 SignatureData = new TseSignatureData()
                 {
@@ -870,8 +855,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             {
                 TransactionNumber = transactionNumber,
                 TseSerialNumberOctet = _lastTseInfo.SerialNumberOctet,
-                // See CreateStartTransactionResponse: TSE-issued client serial.
-                ClientId = _tseClientSerialNumber ?? clientId,
+                // See CreateStartTransactionResponse: pure pass-through of the queue clientId.
+                ClientId = clientId,
                 ProcessDataBase64 = processData,
                 ProcessType = processType,
                 TimeStamp = transaction.LogTime ?? default,
@@ -891,8 +876,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             {
                 TransactionNumber = transactionNumber,
                 TseSerialNumberOctet = _lastTseInfo.SerialNumberOctet,
-                // See CreateStartTransactionResponse: TSE-issued client serial.
-                ClientId = _tseClientSerialNumber ?? clientId,
+                // See CreateStartTransactionResponse: pure pass-through of the queue clientId.
+                ClientId = clientId,
                 ProcessDataBase64 = processData,
                 ProcessType = processType,
                 StartTransactionTimeStamp = startTransactionLogTime,
@@ -939,30 +924,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
 
             return Convert.ToBase64String(NormalizeToSec1UncompressedPoint(candidate));
-        }
-
-        /// <summary>
-        /// Returns the TSE-issued client serial number that goes into the QR-code
-        /// &lt;kassen-seriennummer&gt; field per BSI TR-03151:
-        /// <code>Base64(SHA256(rawSec1UncompressedPublicKey)).TrimEnd('=')</code>
-        ///
-        /// This is the FCC equivalent of FiskalySCU's <c>transaction.ClientSerialNumber</c>
-        /// (see <c>FiskalySCU.CreateStartTransactionResponse</c> et al.). It is a separate
-        /// identifier from the queue clientId and the TSS hardware serial.
-        ///
-        /// Returns null when no public key is available so the caller can fall back to
-        /// the queue clientId without throwing.
-        /// </summary>
-        internal static string ComputeTseClientSerialNumber(string rawPublicKeyBase64)
-        {
-            if (string.IsNullOrEmpty(rawPublicKeyBase64))
-            {
-                return null;
-            }
-
-            var raw = Convert.FromBase64String(rawPublicKeyBase64);
-            using var sha256 = SHA256.Create();
-            return Convert.ToBase64String(sha256.ComputeHash(raw)).TrimEnd('=');
         }
 
         /// <summary>
