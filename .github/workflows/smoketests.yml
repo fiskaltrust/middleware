@@ -296,7 +296,7 @@ jobs:
            $requests = @(
                 @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }
                 @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
-                # @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
                 @{ Name = "Pos-receipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Pos-receipt.json" }
                 @{ Name = "Daily-closing-receipt";     Url = "$baseUrl$signPath"; File = "$baseFile/Daily-closing-receipt.json" }
                 @{ Name = "DSFinVK-Export";            Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/DSFinVK-Export.json" } else { "" } }
