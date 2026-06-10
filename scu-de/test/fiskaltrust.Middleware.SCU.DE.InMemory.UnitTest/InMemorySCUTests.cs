@@ -31,6 +31,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory.UnitTest
             transaction.Should().NotBeNull();
             transaction.ClientId.Should().Be(clientId);
             transaction.SignatureData.Should().NotBeNull();
+            Convert.FromBase64String(transaction.SignatureData.SignatureBase64);
         }
 
         [Fact]
@@ -49,7 +50,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory.UnitTest
         {
             var clientId = Guid.NewGuid().ToString();
             var queueItemId = Guid.NewGuid();
-            var processText = ProcessData +  clientId;
+            var processText = ProcessData + clientId;
 
             var StartTransactionRequest = new StartTransactionRequest()
             {
@@ -69,6 +70,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory.UnitTest
             updatedtransaction.Should().NotBeNull();
             updatedtransaction.ClientId.Should().Be(clientId);
             updatedtransaction.SignatureData.Should().NotBeNull();
+            Convert.FromBase64String(updatedtransaction.SignatureData.SignatureBase64);
             var rawdata = DecodeBase64(updatedtransaction.ProcessDataBase64);
             rawdata.Should().Contain(clientId);
             var lastRevisionForTransaction = await inMemorySCU.GetTransactionStateByNumberAsync(updatedtransaction.TransactionNumber).ConfigureAwait(false);
@@ -100,6 +102,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory.UnitTest
             var finishtransaction = await inMemorySCU.FinishTransactionAsync(finishTransactionRequest).ConfigureAwait(false);
             finishtransaction.Should().NotBeNull();
             finishtransaction.SignatureData.Should().NotBeNull();
+            Convert.FromBase64String(finishtransaction.SignatureData.SignatureBase64);
             finishtransaction.ClientId.Should().Be(clientId);
             finishtransaction.TransactionNumber.Should().Be(transaction.TransactionNumber);
             var rawdata = DecodeBase64(finishtransaction.ProcessDataBase64);
