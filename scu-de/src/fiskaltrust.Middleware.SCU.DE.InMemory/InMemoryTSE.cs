@@ -128,12 +128,11 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
                 }
 
             };
-            var SignatureValue = CreateSignatureData(transactionDto);
-            transactionDto.Signature = new TransactionSignatureDto()
+           transactionDto.Signature = new TransactionSignatureDto()
             {
                 Algorithm = SignatureAlgorithm,
                 SignatureCounter = (uint) Interlocked.Increment(ref _signatureCounter),
-                Value = SignatureValue != null ? Convert.ToBase64String(SignatureValue) : ""
+                Value = Convert.ToBase64String(CreateSignatureData(transactionDto) ?? Array.Empty<byte>())
             };
             return transactionDto;
         }
