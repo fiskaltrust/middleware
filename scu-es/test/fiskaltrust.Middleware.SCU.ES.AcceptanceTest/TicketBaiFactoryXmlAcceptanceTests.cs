@@ -47,7 +47,7 @@ public class TicketBaiFactoryXmlAcceptanceTests
     {
         var ticketBai = Build([
             Item(amount: 50m, vatRate: 0m, vatAmount: 0m, description: "Exported good",
-                ChargeItemCaseNatureOfVatES.ExteptArticle21)
+                ChargeItemCaseNatureOfVatES.Exports)
         ]);
 
         AssertSnapshot(ticketBai, "domestic-exempt-exports.xml");
@@ -58,7 +58,7 @@ public class TicketBaiFactoryXmlAcceptanceTests
     {
         var ticketBai = Build([
             Item(amount: 200m, vatRate: 0m, vatAmount: 0m, description: "Intra-EU delivery",
-                ChargeItemCaseNatureOfVatES.ExteptArticle25)
+                ChargeItemCaseNatureOfVatES.IntraCommunityDelivery)
         ]);
 
         AssertSnapshot(ticketBai, "domestic-exempt-intracommunity.xml");
@@ -97,9 +97,9 @@ public class TicketBaiFactoryXmlAcceptanceTests
             Item(amount: 100m, vatRate: 0m, vatAmount: 0m, description: "Reverse-charge service",
                 ChargeItemCaseNatureOfVatES.ReverseCharge),
             Item(amount: 50m, vatRate: 0m, vatAmount: 0m, description: "Exempt domestic",
-                ChargeItemCaseNatureOfVatES.ExteptArticle20),
+                ChargeItemCaseNatureOfVatES.ExemptedDomestic),
             Item(amount: 30m, vatRate: 0m, vatAmount: 0m, description: "Intra-EU delivery",
-                ChargeItemCaseNatureOfVatES.ExteptArticle25),
+                ChargeItemCaseNatureOfVatES.IntraCommunityDelivery),
             Item(amount: 80m, vatRate: 0m, vatAmount: 0m, description: "Not-subject art. 7/14",
                 ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14),
             Item(amount: 20m, vatRate: 0m, vatAmount: 0m, description: "Out-of-scope service",
@@ -116,7 +116,7 @@ public class TicketBaiFactoryXmlAcceptanceTests
             Item(amount: 121m, vatRate: 21m, vatAmount: 21m, description: "Product 21%",
                 ChargeItemCaseNatureOfVatES.UsualVatApplies),
             Item(amount: 50m, vatRate: 0m, vatAmount: 0m, description: "Exported good",
-                ChargeItemCaseNatureOfVatES.ExteptArticle21)
+                ChargeItemCaseNatureOfVatES.Exports)
         ]);
 
         AssertSnapshot(ticketBai, "domestic-mixed-with-exports.xml");
@@ -128,7 +128,7 @@ public class TicketBaiFactoryXmlAcceptanceTests
         // Pick TypeOfService values that fall in only one of the factory's two filter lists,
         // so each item lands in exactly one branch (Delivery → Entrega, Tip → PrestacionServicios).
         var goods = Item(amount: 50m, vatRate: 0m, vatAmount: 0m, description: "Exported good",
-            ChargeItemCaseNatureOfVatES.ExteptArticle21);
+            ChargeItemCaseNatureOfVatES.Exports);
         goods.ftChargeItemCase = (ChargeItemCase)((long) goods.ftChargeItemCase | (long) ChargeItemCaseTypeOfService.Delivery);
 
         var service = Item(amount: 110m, vatRate: 10m, vatAmount: 10m, description: "Standard service",

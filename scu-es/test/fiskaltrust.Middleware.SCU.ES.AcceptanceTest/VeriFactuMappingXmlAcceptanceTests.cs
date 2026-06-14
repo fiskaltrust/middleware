@@ -3,8 +3,8 @@ using System.IO;
 using System.Xml.Linq;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using FluentAssertions;
 using Xunit;
@@ -23,10 +23,6 @@ public class VeriFactuMappingXmlAcceptanceTests
     private const string FixedNif = "M0291081Q";
     private const string FixedEmisor = "Acceptance Test Emisor";
 
-    // Mirror of the QueueES shim constants used inside VeriFactuMapping for NN[60]/[80].
-    private const ChargeItemCaseNatureOfVatES ForeignTaxApplies = (ChargeItemCaseNatureOfVatES) 0x6000;
-    private const ChargeItemCaseNatureOfVatES ExcludedThirdParty = (ChargeItemCaseNatureOfVatES) 0x8000;
-
     private const ulong EsServiceFlag = 0x4752_2000_0000_0000;
 
     public static TheoryData<string, ChargeItemCaseNatureOfVatES, VeriFactuTaxRegime> Scenarios()
@@ -34,12 +30,12 @@ public class VeriFactuMappingXmlAcceptanceTests
         {
             // file name slug, NatureOfVat, regime
             { "usual-vat-mainland",       ChargeItemCaseNatureOfVatES.UsualVatApplies,        VeriFactuTaxRegime.MainlandVat },
-            { "export-article21-mainland", ChargeItemCaseNatureOfVatES.ExteptArticle21,       VeriFactuTaxRegime.MainlandVat },
-            { "exempt-article20-mainland", ChargeItemCaseNatureOfVatES.ExteptArticle20,       VeriFactuTaxRegime.MainlandVat },
+            { "export-article21-mainland", ChargeItemCaseNatureOfVatES.Exports,              VeriFactuTaxRegime.MainlandVat },
+            { "exempt-article20-mainland", ChargeItemCaseNatureOfVatES.ExemptedDomestic,     VeriFactuTaxRegime.MainlandVat },
             { "reverse-charge-mainland",   ChargeItemCaseNatureOfVatES.ReverseCharge,         VeriFactuTaxRegime.MainlandVat },
             { "non-subject-art7and14",     ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14, VeriFactuTaxRegime.MainlandVat },
-            { "foreign-tax-applies-NN60",  ForeignTaxApplies,                                 VeriFactuTaxRegime.MainlandVat },
-            { "excluded-third-party-NN80", ExcludedThirdParty,                                VeriFactuTaxRegime.MainlandVat },
+            { "foreign-tax-applies-NN60",  ChargeItemCaseNatureOfVatES.ForeignTaxApplies,     VeriFactuTaxRegime.MainlandVat },
+            { "excluded-third-party-NN80", ChargeItemCaseNatureOfVatES.ExcludedThirdParty,    VeriFactuTaxRegime.MainlandVat },
             { "usual-vat-igic",            ChargeItemCaseNatureOfVatES.UsualVatApplies,       VeriFactuTaxRegime.IGIC },
             { "usual-vat-ipsi",            ChargeItemCaseNatureOfVatES.UsualVatApplies,       VeriFactuTaxRegime.IPSI },
         };

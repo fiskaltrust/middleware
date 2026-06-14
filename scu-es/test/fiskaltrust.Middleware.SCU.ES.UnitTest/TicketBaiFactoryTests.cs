@@ -102,7 +102,7 @@ public class TicketBaiFactoryTests
         var factory = new TicketBaiFactory(BuildConfig());
 
         var ticketBai = factory.ConvertTo(BuildRequest([
-            ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ExteptArticle21)
+            ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.Exports)
         ]));
 
         var desglose = ticketBai.Factura.TipoDesglose.Item.Should().BeOfType<DesgloseFacturaType>().Subject;
@@ -142,8 +142,8 @@ public class TicketBaiFactoryTests
             ChargeItem(amount: 121m, vatRate: 21m, vatAmount: 21m, ChargeItemCaseNatureOfVatES.UsualVatApplies),
             ChargeItem(amount: 110m, vatRate: 10m, vatAmount: 10m, ChargeItemCaseNatureOfVatES.UsualVatApplies),
             ChargeItem(amount: 100m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ReverseCharge),
-            ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ExteptArticle20),
-            ChargeItem(amount: 30m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ExteptArticle25),
+            ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ExemptedDomestic),
+            ChargeItem(amount: 30m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.IntraCommunityDelivery),
             ChargeItem(amount: 80m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14),
             ChargeItem(amount: 20m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.NotSubjectLocationRules)
         ]));
@@ -176,7 +176,7 @@ public class TicketBaiFactoryTests
 
         var ticketBai = factory.ConvertTo(BuildRequest([
             ChargeItem(amount: 121m, vatRate: 21m, vatAmount: 21m, ChargeItemCaseNatureOfVatES.UsualVatApplies),
-            ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ExteptArticle21)
+            ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.Exports)
         ]));
 
         ticketBai.Factura.DatosFactura.Claves.Should().HaveCount(2);
@@ -194,7 +194,7 @@ public class TicketBaiFactoryTests
         var entregaItem = ChargeItem(amount: 121m, vatRate: 21m, vatAmount: 21m, ChargeItemCaseNatureOfVatES.UsualVatApplies);
         entregaItem.ftChargeItemCase = (ChargeItemCase)((long) entregaItem.ftChargeItemCase | (long) ChargeItemCaseTypeOfService.Delivery);
 
-        var serviceItem = ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.ExteptArticle21);
+        var serviceItem = ChargeItem(amount: 50m, vatRate: 0m, vatAmount: 0m, ChargeItemCaseNatureOfVatES.Exports);
         serviceItem.ftChargeItemCase = (ChargeItemCase)((long) serviceItem.ftChargeItemCase | (long) ChargeItemCaseTypeOfService.OtherService);
 
         var customer = new { CustomerCountry = "FR", CustomerName = "Some FR Customer" };

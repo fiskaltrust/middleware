@@ -28,7 +28,7 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
     {
         AssertMatchesReference(
             "010_TBAI-export-transaction.xml",
-            nature: ChargeItemCaseNatureOfVatES.ExteptArticle21,
+            nature: ChargeItemCaseNatureOfVatES.Exports,
             withForeignCustomer: true,
             typeOfService: ChargeItemCaseTypeOfService.Delivery);
     }
@@ -38,7 +38,7 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
     {
         AssertMatchesReference(
             "007_TBAI-exempt-transaction-Art-25-intra-community-trade.xml",
-            nature: ChargeItemCaseNatureOfVatES.ExteptArticle25,
+            nature: ChargeItemCaseNatureOfVatES.IntraCommunityDelivery,
             withForeignCustomer: true,
             typeOfService: ChargeItemCaseTypeOfService.Delivery);
     }
@@ -48,7 +48,7 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
     {
         AssertMatchesReference(
             "005_TBAI-exempt-transaction-Art-22.xml",
-            nature: ChargeItemCaseNatureOfVatES.ExteptArticle22,
+            nature: ChargeItemCaseNatureOfVatES.TransactionsTreatedAsExports,
             withForeignCustomer: true,
             typeOfService: ChargeItemCaseTypeOfService.Delivery);
     }
@@ -58,7 +58,7 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
     {
         AssertMatchesReference(
             "006_TBAI-exempt-transaction-Art-23-24.xml",
-            nature: ChargeItemCaseNatureOfVatES.ExteptArticle23And24,
+            nature: ChargeItemCaseNatureOfVatES.CustomsAndTaxExemptions,
             withForeignCustomer: true,
             typeOfService: ChargeItemCaseTypeOfService.Delivery);
     }
@@ -86,7 +86,7 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
     {
         AssertMatchesReference(
             "004_TBAI-exempt-domestic-transaction-Art-20.xml",
-            nature: ChargeItemCaseNatureOfVatES.ExteptArticle20,
+            nature: ChargeItemCaseNatureOfVatES.ExemptedDomestic,
             withForeignCustomer: false);
     }
 
@@ -95,7 +95,7 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
     {
         AssertMatchesReference(
             "008_TBAI-exempt-transaction-others.xml",
-            nature: ChargeItemCaseNatureOfVatES.ExteptOthers,
+            nature: ChargeItemCaseNatureOfVatES.OtherExemptions,
             withForeignCustomer: false);
     }
 
@@ -117,11 +117,13 @@ public class TicketBaiFactoryReferenceComparisonAcceptanceTests
         ExtractAllTipoNoExenta(reference).Should().Contain("S2");
     }
 
-    [Fact(Skip = "NN [60] (foreign tax IE): ForeignTaxApplies exists in the enum but the mapper does not yet translate it to a NoSujeta/IE branch (and Clave 08 is unconfirmed); reference kept as documentation.")]
+    [Fact]
     public void NN60_ForeignTax_MatchesReference_IE_Clave08()
     {
-        // Placeholder: will be enabled when TicketBaiNatureOfVatMapping maps ForeignTaxApplies
-        // to NoSujeta/Causa=IE with the correct ClaveRegimen (08, pending confirmation).
+        AssertMatchesReference(
+            "021_TBAI-domestic-not-subject-transaction-foreign-tax.xml",
+            nature: ChargeItemCaseNatureOfVatES.ForeignTaxApplies,
+            withForeignCustomer: false);
     }
 
     private static void AssertMatchesReference(
