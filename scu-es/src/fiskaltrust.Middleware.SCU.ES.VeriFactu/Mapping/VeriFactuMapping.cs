@@ -172,6 +172,11 @@ public class VeriFactuMapping
 
         ValidateOperacionCombination(impuesto, item);
 
+        // AEAT rejects (Incorrecto 1237/1238) TipoImpositivo and CuotaRepercutida on exempt
+        // (OperacionExenta E1–E6) or not-subject (CalificacionOperacion N1/N2) operations — only
+        // subject operations (S1/S2) may carry them. Leaving them null omits the elements.
+        var chargesVat = item is CalificacionOperacion.S1 or CalificacionOperacion.S2;
+
         return new Detalle
         {
             // L1 Impuesto: 01 VAT mainland, 02 IPSI (Ceuta/Melilla), 03 IGIC (Canary Islands), 05 Other.
@@ -180,8 +185,8 @@ public class VeriFactuMapping
             ClaveRegimen = claveRegimen,
             BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
             Item = item,
-            TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
-            CuotaRepercutida = chargeItem.GetVATAmount().ToVeriFactuNumber()
+            TipoImpositivo = chargesVat ? chargeItem.VATRate.ToVeriFactuNumber() : null,
+            CuotaRepercutida = chargesVat ? chargeItem.GetVATAmount().ToVeriFactuNumber() : null
         };
     }
 
