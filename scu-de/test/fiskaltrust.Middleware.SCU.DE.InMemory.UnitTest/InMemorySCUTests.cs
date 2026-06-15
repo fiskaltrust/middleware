@@ -31,6 +31,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory.UnitTest
             transaction.Should().NotBeNull();
             transaction.ClientId.Should().Be(clientId);
             transaction.SignatureData.Should().NotBeNull();
+            transaction.SignatureData.PublicKeyBase64.Should().NotBeNull();
             Convert.FromBase64String(transaction.SignatureData.SignatureBase64);
         }
 
@@ -105,6 +106,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory.UnitTest
             Convert.FromBase64String(finishtransaction.SignatureData.SignatureBase64);
             finishtransaction.ClientId.Should().Be(clientId);
             finishtransaction.TransactionNumber.Should().Be(transaction.TransactionNumber);
+            finishtransaction.TseTimeStampFormat.Should().NotBeNull();
             var rawdata = DecodeBase64(finishtransaction.ProcessDataBase64);
             rawdata.Should().Contain(clientId);
         }
