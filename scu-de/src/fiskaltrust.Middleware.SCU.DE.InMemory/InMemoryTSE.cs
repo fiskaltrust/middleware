@@ -116,23 +116,25 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
                     RawData = new RawData()
                     {
                         ProcessData = processData,
-                        ProcessType = processType
-                    }
+                        ProcessType = processType,
+                    },
                 },
                 CertificateSerial = id.ToString(),
                 ClientSerialNumber = clientId,
 
                 Log = new TransactionLogDto()
                 {
-                    Timestamp = (long) Utilities.ToUnixTime(DateTime.Now)
-                }
+                    Timestamp = (long) Utilities.ToUnixTime(DateTime.Now),
+                    TimestampFormat = LogTimeFormat,
+                },
 
             };
-           transactionDto.Signature = new TransactionSignatureDto()
+            transactionDto.Signature = new TransactionSignatureDto()
             {
                 Algorithm = SignatureAlgorithm,
                 SignatureCounter = (uint) Interlocked.Increment(ref _signatureCounter),
-                Value = Convert.ToBase64String(CreateSignatureData(transactionDto) ?? Array.Empty<byte>())
+                Value = Convert.ToBase64String(CreateSignatureData(transactionDto) ?? Array.Empty<byte>()),
+                PublicKey = TssPublicKey,
             };
             return transactionDto;
         }
