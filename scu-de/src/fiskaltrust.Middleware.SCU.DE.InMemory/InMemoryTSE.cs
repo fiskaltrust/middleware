@@ -107,8 +107,8 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
                 var base64EncodedBytes = Convert.FromBase64String(processData64);
                 processData = Encoding.UTF8.GetString(base64EncodedBytes);
             }
-          
-            var transactionDto =  new TransactionDto()
+
+            var transactionDto = new TransactionDto()
             {
                 TimeStart = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc),
                 Schema = new TransactionDataDto()
@@ -116,25 +116,27 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
                     RawData = new RawData()
                     {
                         ProcessData = processData,
-                        ProcessType = processType
-                    }
+                        ProcessType = processType,
+                    },
                 },
                 CertificateSerial = id.ToString(),
                 ClientSerialNumber = clientId,
 
                 Log = new TransactionLogDto()
                 {
-                    Timestamp = (long) Utilities.ToUnixTime(DateTime.Now)
-                }
+                    Timestamp = (long) Utilities.ToUnixTime(DateTime.Now),
+                    TimestampFormat = LogTimeFormat,
+                },
 
             };
             transactionDto.Signature = new TransactionSignatureDto()
             {
                 Algorithm = SignatureAlgorithm,
                 SignatureCounter = (uint) Interlocked.Increment(ref _signatureCounter),
-                Value = Encoding.UTF8.GetString(CreateSignatureData(transactionDto))
+                Value = Convert.ToBase64String(CreateSignatureData(transactionDto) ?? Array.Empty<byte>()),
+                PublicKey = TssPublicKey,
             };
-             return transactionDto;
+            return transactionDto;
         }
 
         public static ExportDataResponse CreateExportDataResponse(ExportDataRequest request)
@@ -196,7 +198,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
                 .Reverse()
                 .ToArray();
             signatureData.WriteOctetString(byteSerial);
-            _ = signatureData.PushSequence(); 
+            _ = signatureData.PushSequence();
             signatureData.WriteObjectIdentifier(SignatureAlgorithm);
             signatureData.PopSequence();
             signatureData.WriteInteger(_signatureCounter);
@@ -204,7 +206,8 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
             return signatureData.Encode();
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
 
             Dispose(true);
             GC.SuppressFinalize(this);
