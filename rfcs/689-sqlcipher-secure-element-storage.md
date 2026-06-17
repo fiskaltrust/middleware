@@ -1,6 +1,6 @@
 - Feature Name: `sqlite_sqlcipher_secure_element_storage`
 - Start Date: 2026-06-17
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
+- RFC PR: [fiskaltrust/middleware#689](https://github.com/fiskaltrust/middleware/pull/689)
 <!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
 - Markets: `AT`, `DE`, `FR`, `IT`, `ME`
 
