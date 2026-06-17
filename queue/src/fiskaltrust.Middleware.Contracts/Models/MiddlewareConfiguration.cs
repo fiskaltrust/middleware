@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Contracts.Models
 {
@@ -13,10 +14,6 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public bool AllowUnsafeScuSwitch { get; set; }
         public bool IsSandbox { get; set; }
         public string ServiceFolder { get; set; }
-       // Looks like this can cause troubles on android
-// #if !ANDROID
-//         public Action<string> OnMessage { get; set; }
-// #endif
         public string ProcessingVersion { get; set; }
         public string AssemblyName { get; set; }
         public Version AssemblyVersion { get; set; }
