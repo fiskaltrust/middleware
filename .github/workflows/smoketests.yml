@@ -101,7 +101,7 @@ jobs:
 
           $pass= $env:FT_SMOKETESTS_PASSWORD
           if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
-           $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=pass678!;TrustServerCertificate=True;"
+           $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=${{ secrets.FT_SMOKETESTS_PASSWORD }};TrustServerCertificate=True;"
            $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
           }
            echo "pass=$pass"
@@ -162,7 +162,7 @@ jobs:
               sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
           }
           elseif($isLinux){
-            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=pass678!" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=${{ secrets.FT_SMOKETESTS_PASSWORD }}" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
           }
 
       - name: Download launcher package for ${{inputs.platform}}--launcherVersion=${{inputs.launcherVersion}}--package=${{inputs.queuePackage}}-${{inputs.queueVersion}}
