@@ -8,6 +8,12 @@ on:
       - reopened
       - labeled
       - unlabeled
+      - edited
+      - ready_for_review
+      - review_requested
+      - review_request_removed
+      - auto_merge_enabled
+      - auto_merge_disabled
 
 jobs:
   labeler:
