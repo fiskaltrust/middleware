@@ -161,7 +161,6 @@ jobs:
               sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
           }
           elseif($isLinux){
-            $pass ="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
             docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$env:FT_SMOKETESTS_PASSWORD" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
           }
 
