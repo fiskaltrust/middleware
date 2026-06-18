@@ -142,7 +142,7 @@ jobs:
 
           # Set a known root password
           $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
-          & $mysqladmin -u root password "$env:FT_SMOKETESTS_PASSWORD"
+          & $mysqladmin -u root password $env:FT_SMOKETESTS_PASSWORD
 
           # Verify connection
           $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
