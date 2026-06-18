@@ -99,11 +99,12 @@ jobs:
           $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
           $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
-          $pass="$env:FT_SMOKETESTS_PASSWORD"
+          $pass= $env:FT_SMOKETESTS_PASSWORD
           if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
            $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
            $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
           }
+           echo "connectionString=$connectionString"
 
           if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
            $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
