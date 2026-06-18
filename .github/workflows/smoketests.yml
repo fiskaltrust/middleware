@@ -266,13 +266,16 @@ jobs:
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
-          $readinessPort = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { 1200 } else { 1500 }
+          $templateFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/template-v2.json" } else { ".github/scripts/template.json" }
+          $template = Get-Content $templateFile | ConvertFrom-Json
+          $urlSource = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $template.helpers[0].Url[0] } else { $template.ftQueues[0].Url[0] }
+          $port = [int]([regex]::Match($urlSource, ':(\d+)/').Groups[1].Value)
           $maxAttempts = 30
           for ($i = 1; $i -le $maxAttempts; $i++) {
             if ($isWindows) {
-                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port $readinessPort -WarningAction SilentlyContinue).TcpTestSucceeded
+                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port $port -WarningAction SilentlyContinue).TcpTestSucceeded
             } else {
-               bash -c "nc -z localhost $readinessPort"
+               bash -c "nc -z localhost $port"
                $tcpReady = ($LASTEXITCODE -eq 0)
             }
 
@@ -287,9 +290,9 @@ jobs:
 
           #....Send requests....
           if ($tcpReady) {
-           $queueUrl = "http://localhost:1500/${{ env.queueId }}"
+           $queueUrl = "http://localhost:$port/${{ env.queueId }}"
            $helperId = "d2e06674-d153-4538-b0ef-dfdc234b0378"
-           $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "http://localhost:1200/$helperId" } else { $queueUrl }
+           $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "http://localhost:$port/$helperId" } else { "http://localhost:$port/${{ env.queueId }}"}
            $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
