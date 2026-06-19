@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories
                 return _serviceProvider.GetRequiredService<DisabledQueueReceiptCommand>();
             }
             // In the process of switching SCUs, and receipt is not finish-switch
-            if (queue.IsActive() && queueDE.ftSignaturCreationUnitDEId == null && !request.IsFinishScuSwitchReceipt())
+            if (queue.IsActive() && queueDE.ftSignaturCreationUnitDEId == null && !request.IsFinishScuSwitchReceipt() && !(request.IsInitiateScuSwitchReceipt() && request.IsVoid()))
             {
                 return _serviceProvider.GetRequiredService<DisabledScuReceiptCommand>();
             }
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories
             }
 
             // In failed mode, don't even try to access the SCU
-            if (queueDE.SSCDFailCount > 0 && !request.IsZeroReceipt() && !request.IsFailTransactionReceipt() && !request.IsOutOfOperationReceipt() && !request.IsInitiateScuSwitchReceipt() && !request.IsFinishScuSwitchReceipt())
+            if (queueDE.SSCDFailCount > 0 && !request.IsZeroReceipt() && !request.IsFailTransactionReceipt() && !request.IsOutOfOperationReceipt() && !request.IsInitiateScuSwitchReceiptForce() && !request.IsFinishScuSwitchReceipt())
             {
                 return _serviceProvider.GetRequiredService<SSCDFailedReceiptCommand>();
             }
