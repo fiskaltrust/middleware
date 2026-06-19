@@ -15,7 +15,6 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
             Include(new SupportedVatRates());
             Include(new SupportedChargeItemCases());
             Include(new VatRateCategory());
-            Include(new ZeroVatNature());
             Include(new AmountMustNotBeZero());
         });
     }
@@ -125,32 +124,6 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     })
                     .WithErrorCode("VatRateMismatch");
             });
-        }
-    }
-
-    public class ZeroVatNature : AbstractValidator<ReceiptRequest>
-    {
-        public ZeroVatNature()
-        {
-            // RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
-            // {
-            //     chargeItem.RuleFor(x => x.VATRate)
-            //         .Must((item, vatRate) =>
-            //         {
-            //             if (Math.Abs(vatRate) > 0.001m)
-            //                 return true;
-
-            //             return item.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) || item.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatES.UsualVatApplies;
-            //         })
-            //         .WithMessage(item =>
-            //         {
-            //             var natureValue = item.ftChargeItemCase.NatureOfVat();
-            //             if (natureValue == ChargeItemCaseNatureOfVatES.UsualVatApplies)
-            //                 return "Zero VAT rate requires a valid exemption reason via the Nature of VAT field.";
-            //             return $"Unknown tax exemption code '0x{(long) natureValue:X4}'.";
-            //         })
-            //         .WithErrorCode("ZeroVatNature");
-            // });
         }
     }
 }
