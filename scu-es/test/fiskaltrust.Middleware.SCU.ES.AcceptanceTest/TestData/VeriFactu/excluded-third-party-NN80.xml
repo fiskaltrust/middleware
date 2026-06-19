@@ -13,9 +13,7 @@
       <Impuesto>01</Impuesto>
       <ClaveRegimen>01</ClaveRegimen>
       <CalificacionOperacion>N1</CalificacionOperacion>
-      <TipoImpositivo>0.00</TipoImpositivo>
       <BaseImponibleOimporteNoSujeto>10.00</BaseImponibleOimporteNoSujeto>
-      <CuotaRepercutida>0.00</CuotaRepercutida>
     </DetalleDesglose>
   </Desglose>
   <CuotaTotal xmlns="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd">0.00</CuotaTotal>

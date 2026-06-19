@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><T:TicketBai xmlns:T="urn:ticketbai:emision" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/XMLSchema ticketbai.xsd">
+	<Cabecera>
+		<IDVersionTBAI>1.2</IDVersionTBAI>
+	</Cabecera>
+	<Sujetos>
+		<Emisor>
+			<NIF>M0291081Q</NIF>
+			<ApellidosNombreRazonSocial>Thomas Steininger</ApellidosNombreRazonSocial>
+		</Emisor>
+		<Destinatarios>
+			<IDDestinatario>
+                <IDOtro>
+                    <CodigoPais>AT</CodigoPais>
+                    <IDType></IDType>
+                    <ID>ATU79547901</ID>
+                </IDOtro>
+				<ApellidosNombreRazonSocial>fiskaltrust consulting gmbH</ApellidosNombreRazonSocial>
+				<CodigoPostal>5020</CodigoPostal>
+				<Direccion>Alpenstraße 99a, Salzburg</Direccion>
+			</IDDestinatario>
+		</Destinatarios>
+		<VariosDestinatarios>N</VariosDestinatarios>
+		<EmitidaPorTercerosODestinatario>N</EmitidaPorTercerosODestinatario>
+	</Sujetos>
+	<Factura>
+		<CabeceraFactura>
+			<SerieFactura>A2021</SerieFactura>
+			<NumFactura>123</NumFactura>
+			<FechaExpedicionFactura>04-11-2021</FechaExpedicionFactura>
+			<HoraExpedicionFactura>10:41:23</HoraExpedicionFactura>
+			<FacturaSimplificada>N</FacturaSimplificada>
+			<FacturaEmitidaSustitucionSimplificada>N</FacturaEmitidaSustitucionSimplificada>
+        </CabeceraFactura>
+		<DatosFactura>
+            <DescripcionFactura>Ventas por comercio electrónico a otros países de la UE</DescripcionFactura>
+			<DetallesFactura>
+				<IDDetalleFactura>
+					<DescripcionDetalle>Artículo 1 Ejemplo</DescripcionDetalle>
+					<Cantidad>1</Cantidad>
+					<ImporteUnitario>23.356</ImporteUnitario>
+					<Descuento>2.00</Descuento>
+					<ImporteTotal>25.84</ImporteTotal>
+				</IDDetalleFactura>
+				<IDDetalleFactura>
+					<DescripcionDetalle>Artículo 2 xxx </DescripcionDetalle>
+					<Cantidad>1.50</Cantidad>
+					<ImporteUnitario>18.2</ImporteUnitario>
+					<ImporteTotal>33.03</ImporteTotal>
+				</IDDetalleFactura>
+				<IDDetalleFactura>
+					<DescripcionDetalle>Artículo 3 aaaaaaaa </DescripcionDetalle>
+					<Cantidad>18</Cantidad>
+					<ImporteUnitario>1.40</ImporteUnitario>
+					<ImporteTotal>30.49</ImporteTotal>
+				</IDDetalleFactura>
+			</DetallesFactura>
+			<ImporteTotalFactura>89.36</ImporteTotalFactura>
+			<Claves>
+				<IDClave>
+					<ClaveRegimenIvaOpTrascendencia>01</ClaveRegimenIvaOpTrascendencia>
+				</IDClave>
+			</Claves>
+		</DatosFactura>
+		<TipoDesglose>
+			<DesgloseFactura>
+                <NoSujeta>
+                    <DetalleNoSujeta>
+                        <Causa>RL</Causa>
+                        <Importe>89.36</Importe>
+                    </DetalleNoSujeta>
+                </NoSujeta>
+			</DesgloseFactura>
+		</TipoDesglose>
+	</Factura>
+	<HuellaTBAI>
+        <Software>
+			<LicenciaTBAI>TBAGIXuwierwwer009</LicenciaTBAI>
+			<EntidadDesarrolladora>
+				<NIF>12121212T</NIF>
+			</EntidadDesarrolladora>
+			<Nombre>nombre 9</Nombre>
+			<Version>1.0.4</Version>
+		</Software>
+		<NumSerieDispositivo>12332413</NumSerieDispositivo>
+	</HuellaTBAI>
+</T:TicketBai>

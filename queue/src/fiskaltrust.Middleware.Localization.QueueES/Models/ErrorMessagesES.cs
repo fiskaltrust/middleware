@@ -81,15 +81,6 @@ public static class ErrorMessagesES
         $"EEEE_Void does not match the original invoice '{originalReceiptReference}'. All articles from the original invoice must be properly voided with matching quantities and amounts.";
 
     /// <summary>
-    /// Error message for missing nature of VAT (exempt reason) when VAT rate is 0
-    /// </summary>
-    public static string EEEE_ZeroVatRateMissingNature(int position) =>
-        $"EEEE_Charge item at position {position}: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. ";
-
-    public static string EEEE_UnknownTaxExemptionCode(int i, int exemptionCode) =>
-        $"EEEE_Charge item at position {i}: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Spanish tax exemption code.";
-
-    /// <summary>
     /// Error message for discount exceeding the article amount
     /// </summary>
     public static string EEEE_DiscountExceedsArticleAmount(int position, string description, decimal discountAmount, decimal articleAmount) =>

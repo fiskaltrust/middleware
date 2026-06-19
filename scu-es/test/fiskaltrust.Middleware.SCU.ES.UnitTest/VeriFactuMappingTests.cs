@@ -2,8 +2,8 @@ using System;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using FluentAssertions;
 using Xunit;
@@ -12,11 +12,6 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest;
 
 public class VeriFactuMappingTests
 {
-    // Mirror of the QueueES shim constants used inside VeriFactuMapping for NN[60]/[80].
-    // Kept in sync with ChargeItemCaseNatureOfVatES values in queue/src.
-    private const ChargeItemCaseNatureOfVatES ForeignTaxApplies = (ChargeItemCaseNatureOfVatES) 0x6000;
-    private const ChargeItemCaseNatureOfVatES ExcludedThirdParty = (ChargeItemCaseNatureOfVatES) 0x8000;
-
     private const ulong EsServiceFlag = 0x4752_2000_0000_0000;
 
     public static TheoryData<ChargeItemCaseNatureOfVatES, Impuesto, IdOperacionesTrascendenciaTributaria, object> NatureOfVatTuples()
@@ -25,19 +20,19 @@ public class VeriFactuMappingTests
         // Regime: MainlandVat (L1 = 01) for all rows in this matrix.
         return new TheoryData<ChargeItemCaseNatureOfVatES, Impuesto, IdOperacionesTrascendenciaTributaria, object>
         {
-            { ChargeItemCaseNatureOfVatES.UsualVatApplies,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.S1 },
-            { ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14,   Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N1 },
-            { ChargeItemCaseNatureOfVatES.NotSubjectLocationRules,   Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N2 },
-            { ChargeItemCaseNatureOfVatES.ExteptArticle20,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, OperacionExenta.E1 },
-            { ChargeItemCaseNatureOfVatES.ExteptArticle21,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item02, OperacionExenta.E2 },
-            { ChargeItemCaseNatureOfVatES.ExteptArticle22,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item02, OperacionExenta.E3 },
-            { ChargeItemCaseNatureOfVatES.ExteptArticle23And24,      Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item02, OperacionExenta.E4 },
-            { ChargeItemCaseNatureOfVatES.ExteptArticle25,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, OperacionExenta.E5 },
-            { ChargeItemCaseNatureOfVatES.ExteptOthers,              Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, OperacionExenta.E6 },
-            { ChargeItemCaseNatureOfVatES.ReverseCharge,             Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.S2 },
+            { ChargeItemCaseNatureOfVatES.UsualVatApplies,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.S1 }, // NN [00]
+            { ChargeItemCaseNatureOfVatES.NotSubjectLocationRules,   Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N2 }, // NN [20]
+            { ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14,   Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N1 }, // NN [21]
+            { ChargeItemCaseNatureOfVatES.Exports,                   Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item02, OperacionExenta.E2 },        // NN [10]
+            { ChargeItemCaseNatureOfVatES.IntraCommunityDelivery,    Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, OperacionExenta.E5 },        // NN [11]
+            { ChargeItemCaseNatureOfVatES.TransactionsTreatedAsExports, Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item02, OperacionExenta.E3 },     // NN [13]
+            { ChargeItemCaseNatureOfVatES.CustomsAndTaxExemptions,   Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item02, OperacionExenta.E4 },        // NN [14]
+            { ChargeItemCaseNatureOfVatES.ExemptedDomestic,          Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, OperacionExenta.E1 },        // NN [30]
+            { ChargeItemCaseNatureOfVatES.OtherExemptions,           Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, OperacionExenta.E6 },        // NN [31]
+            { ChargeItemCaseNatureOfVatES.ReverseCharge,             Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.S2 }, // NN [50]
             // NN[60] / NN[80] have no dedicated L9/L10 key in VeriFactu; mapper routes to N1.
-            { ForeignTaxApplies,                                     Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N1 },
-            { ExcludedThirdParty,                                    Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N1 },
+            { ChargeItemCaseNatureOfVatES.ForeignTaxApplies,         Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N1 }, // NN [60]
+            { ChargeItemCaseNatureOfVatES.ExcludedThirdParty,        Impuesto.Item01, IdOperacionesTrascendenciaTributaria.Item01, CalificacionOperacion.N1 }, // NN [80]
         };
     }
 
