@@ -146,7 +146,7 @@ jobs:
 
           # Verify connection
           $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
-          & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
+          & $mysql -u root "-p$env:FT_SMOKETESTS_PASSWORD" -e "SELECT VERSION();"
 
           Write-Host "✅ MySQL root password successfully set and verified."
 
