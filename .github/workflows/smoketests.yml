@@ -1,5 +1,4 @@
-﻿name: Smoke Tests
-run-name: "Smoke Tests | ${{ inputs.queuePackage }} ${{ inputs.queueVersion }} | ${{ inputs.platform }} | Launcher ${{ inputs.launcherVersion }}"
+﻿name: smoketests
 
 on:
   workflow_dispatch:
