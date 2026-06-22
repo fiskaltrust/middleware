@@ -118,10 +118,12 @@ jobs:
           $cashboxId  = $response.cashBoxId
           $accessToken = $response.accessToken
           $queueId = $response.configuration.ftQueues[0].Id
+          $helperId =  if ("${{ inputs.launcherVersion }}" -eq "v2.0") {$response.configuration.helpers[0].Id}
 
           echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
           echo "accessToken=$accessToken" >> $env:GITHUB_ENV
           echo "queueId=$queueId"       >> $env:GITHUB_ENV
+          echo "helperId=$helperId"       >> $env:GITHUB_ENV
 
       - name: Install MySQL and run service
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
@@ -297,8 +299,8 @@ jobs:
           #....Send requests....
           if ($tcpReady) {
            $queueUrl = "http://localhost:$port/${{ env.queueId }}"
-           $helperId = "d2e06674-d153-4538-b0ef-dfdc234b0378"
-           $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "http://localhost:$port/$helperId" } else { "http://localhost:$port/${{ env.queueId }}"}
+           $helperUrl = "http://localhost:$port/${{ env.$helperId }}"
+           $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
            $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
