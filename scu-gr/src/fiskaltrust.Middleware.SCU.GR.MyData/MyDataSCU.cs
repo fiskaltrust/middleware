@@ -208,6 +208,7 @@ public class MyDataSCU : IGRSSCD
         if ((int) response.StatusCode >= 500)
         {
             SetErrorAndLog(request,"Error while sending the request to MyData API. Please check the logs for more details.");
+            SignatureItemFactoryGR.AddTransmissionFailure2Signature(request);
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
