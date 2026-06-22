@@ -1,0 +1,7 @@
+{
+  "cbReceiptReference": "daily-closing-{{current_moment}}",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [],
+  "cbPayItems": [],
+  "ftReceiptCase": 4919373352344231953
+}
