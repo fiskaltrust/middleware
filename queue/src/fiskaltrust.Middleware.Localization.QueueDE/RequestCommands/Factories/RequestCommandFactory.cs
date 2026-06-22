@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories
             }
 
             // In failed mode, don't even try to access the SCU
-            if (queueDE.SSCDFailCount > 0 && !request.IsZeroReceipt() && !request.IsFailTransactionReceipt() && !request.IsOutOfOperationReceipt() && !request.IsInitiateScuSwitchReceiptForce() && !request.IsFinishScuSwitchReceipt())
+            if (queueDE.SSCDFailCount > 0 && !request.IsZeroReceipt() && !request.IsFailTransactionReceipt() && !request.IsOutOfOperationReceipt() && !request.IsInitiateScuSwitchReceipt() && !request.IsFinishScuSwitchReceipt())
             {
                 return _serviceProvider.GetRequiredService<SSCDFailedReceiptCommand>();
             }
