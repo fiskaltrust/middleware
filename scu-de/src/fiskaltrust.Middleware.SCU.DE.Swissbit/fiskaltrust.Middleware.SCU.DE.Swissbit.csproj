@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="runtimes\**">
+        <None Update="runtimesv2\**">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>

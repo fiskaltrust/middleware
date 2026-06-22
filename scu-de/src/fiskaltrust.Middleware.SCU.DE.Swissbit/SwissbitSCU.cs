@@ -42,9 +42,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private TimeSpan _selftestInterval = TimeSpan.FromHours(24);
         private uint _hwSelftestIntervalSeconds = 0;
         private ISwissbitProxy _proxy = null;
-        private DateTime _nextSyncTime;
 
-        // Never change these values, as all existing installations are depending on them
+        // Never change these values, as all existing installations are dependent on them
         private readonly byte[] _adminPuk = Encoding.ASCII.GetBytes("123456");
         private readonly byte[] _seed = Encoding.ASCII.GetBytes("SwissbitSwissbit");
 
@@ -59,7 +58,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
             EnsureDevicePathIsCorrect();
 
-            _selftestTimer = new Timer(SelftestCallback, null, Timeout.Infinite, Timeout.Infinite);
+            // Create the timer first (disabled) so SelftestAsync can call _selftestTimer.Change()
+            // during initialization without a NullReferenceException.
+            _selftestTimer = new Timer(SelftestCallback, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
             try
             {
@@ -75,6 +76,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 _logger.LogCritical(ex, "An error occured while initializing the Swissbit SCU.");
                 throw;
             }
+
+            // At this point, SelftestAsync (called by ReadTseInfoAsync inside GetProxy) has already
+            // updated _selftestInterval from the TSE's TimeUntilNextSelfTest. If SelftestAsync
+            // successfully called _selftestTimer.Change(), the timer is already running with the
+            // correct interval. Otherwise, kick it off now with whatever interval we have.
+            _selftestTimer.Change(_selftestInterval, _selftestInterval);
         }
 
         private ISwissbitProxy GetProxy([CallerMemberName] string memberName = "", [CallerLineNumber] int sourceLineNumber = 0)
@@ -87,14 +94,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     try
                     {
-                        //maybe move to proxy
                         if (!Directory.Exists(_configuration.DevicePath))
                         {
                             throw new SwissbitException($"The Swissbit TSE cannot be found at {_configuration.DevicePath}.");
                         }
 
-                        _logger.LogDebug("Try to initialize SwissbitProxy with devicePath {_configuration.DevicePath}", _configuration.DevicePath);
+                        _logger.LogDebug($"Try to initialize SwissbitProxy with devicePath {_configuration.DevicePath}", _configuration.DevicePath);
                         _proxy = new SwissbitProxy(_configuration.DevicePath, Encoding.ASCII.GetBytes(_configuration.AdminPin), Encoding.ASCII.GetBytes(_configuration.TimeAdminPin), _nativeFunctionPointerFactory, _lockingHelper, _logger);
+
                         ReadTseInfoAsync(_proxy, true).GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
@@ -178,14 +185,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             {
                 _logger.LogWarning("Tried to call UpdateTime, but the Ctss Interface hasn´t been activated.");
             }
-            else if (!tseStatus.HasChangedTimeAdminPin)
-            {
-                _logger.LogWarning("Tried to call UpdateTime, but the TimeAdmin Pin has never been changed.");
-            }
             else
             {
                 await proxy.TseUpdateTimeAsync();
-                _nextSyncTime = currentTime.AddSeconds(tseStatus.MaxTimeSynchronizationDelay);
+                currentTime.AddSeconds(tseStatus.MaxTimeSynchronizationDelay);
             }
         }
 
@@ -204,6 +207,20 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
         private async Task SelftestAsync(ISwissbitProxy proxy, bool force = false)
         {
+            var tseState = await proxy.GetInitializationState();
+
+            if (tseState == TseStates.Uninitialized)
+            {
+                try
+                {
+                    await proxy.TseSetupAsync(_seed, _adminPuk, Encoding.ASCII.GetBytes(_configuration.AdminPin), Encoding.ASCII.GetBytes(_configuration.TimeAdminPin));
+                }
+                catch (SwissbitException ex) 
+                {
+                    _logger.LogDebug(ex, "TseSetup skipped: TSE already initialized.");
+                }
+            }
+
             if (!force && await proxy.HasPassedSelfTestAsync())
             {
                 _logger.LogDebug("Self test already passed, skipping.");
@@ -290,12 +307,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 _logger.LogDebug("Initializing WORM library..");
                 await proxy.InitAsync();
                 await SelftestAsync(proxy);
+
                 await UpdateTimeAsync(proxy);
 
-                if (await proxy.UpdateFirmwareAsync(_configuration.EnableFirmwareUpdate))
-                {
-                    await SelftestAsync(proxy);
-                }
                 await UpdateTimeAsync(GetProxy());
             }
 
@@ -306,7 +320,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             };
 
             const long blockSize = 0x200; //512 byte
-
 
             var softwareVersion = ConvertToVersion((int) status.SoftwareVersion);
             var hardwareVersion = ConvertToVersion((int) status.HardwareVersion);
@@ -571,14 +584,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         {
                             // If the TSE log memory is too full, this call takes too long, and transactions cannot be canceled anymore - basically creating a deadlock.
                             // Thus, we skip reading the timestamp of the start-transaction and fall-back to the one of the finish-transaction.
-                            if (!IsCancellationTransaction(request) || LastTseInfo?.CurrentLogMemorySize < _configuration.TooLargeToExportThreshold)
-                            {
-                                startTransactionTimeStamp = await GetStartTransactionTimeStamp(GetProxy(), request.TransactionNumber);
-                            }
-                            else
-                            {
-                                _logger.LogWarning("Could not set StartTransactionTimestamp, as the TSE's log storage is too full to extract it. Used finish-transaction log time as fallback value.");
-                            }
+                            startTransactionTimeStamp = await GetStartTransactionTimeStamp(GetProxy(), request.TransactionNumber);
                         }
 
                         var response = new FinishTransactionResponse()

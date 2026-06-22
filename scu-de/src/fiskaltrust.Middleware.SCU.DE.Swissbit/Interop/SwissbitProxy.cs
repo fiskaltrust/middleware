@@ -114,7 +114,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         {
             await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
             {
+                if (context == IntPtr.Zero)
+                {
+                    return;
+                }
+
                 var result = _nativeFunctionPointer.func_worm_cleanup(context);
+                context = IntPtr.Zero;
                 if (throwException)
                 {
                     result.ThrowIfError();
@@ -156,9 +162,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                         CreatedSignatures = _nativeFunctionPointer.func_worm_info_createdSignatures(infoPtr),
                         HardwareVersion = _nativeFunctionPointer.func_worm_info_hardwareVersion(infoPtr),
                         SoftwareVersion = _nativeFunctionPointer.func_worm_info_softwareVersion(infoPtr),
-                        HasChangedAdminPin = _nativeFunctionPointer.func_worm_info_hasChangedAdminPin(infoPtr) != 0,
-                        HasChangedPuk = _nativeFunctionPointer.func_worm_info_hasChangedPuk(infoPtr) != 0,
-                        HasChangedTimeAdminPin = _nativeFunctionPointer.func_worm_info_hasChangedTimeAdminPin(infoPtr) != 0,
                         HasPassedSelfTest = _nativeFunctionPointer.func_worm_info_hasPassedSelfTest(infoPtr) != 0,
                         HasValidTime = _nativeFunctionPointer.func_worm_info_hasValidTime(infoPtr) != 0,
                         initializationState = _nativeFunctionPointer.func_worm_info_initializationState(infoPtr),
@@ -182,7 +185,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 
                     _logger.LogTrace("GetTseStatusAsync: Reading customization identifier from TSE..");
                     _nativeFunctionPointer.func_worm_info_customizationIdentifier(infoPtr, ref idPtr, idLengthPtr);
-                    status.CustomizationIdentifier = Marshal.PtrToStringAnsi(idPtr, Marshal.ReadInt16(idLengthPtr));
+                    // Fix: ReadInt32 instead of ReadInt16 — the C API declares int* idLength (4 bytes)
+                    status.CustomizationIdentifier = Marshal.PtrToStringAnsi(idPtr, Marshal.ReadInt32(idLengthPtr));
 
                     _logger.LogTrace("GetTseStatusAsync: Reading public key from TSE..");
                     _nativeFunctionPointer.func_worm_info_tsePublicKey(infoPtr, ref publicKeyPtr, publicKeyLengthPtr);
@@ -249,8 +253,20 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                         clientIdPtr)
                         .ThrowIfError();
 
-                    _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_ADMIN).ThrowIfError();
-                    _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_TIME_ADMIN).ThrowIfError();
+                    // In Swissbit TSE API v6.0.0, worm_tse_setup no longer leaves users
+                    // logged in after completion. Ignore logout failures to stay compatible
+                    // with both old and new SDK versions.
+                    var adminLogout = _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_ADMIN);
+                    if (adminLogout != WormError.WORM_ERROR_NOERROR && adminLogout != WormError.WORM_ERROR_AUTHENTICATION_USER_NOT_LOGGED_IN)
+                    {
+                        adminLogout.ThrowIfError();
+                    }
+
+                    var timeAdminLogout = _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_TIME_ADMIN);
+                    if (timeAdminLogout != WormError.WORM_ERROR_NOERROR && timeAdminLogout != WormError.WORM_ERROR_AUTHENTICATION_USER_NOT_LOGGED_IN)
+                    {
+                        timeAdminLogout.ThrowIfError();
+                    }
                 }
                 finally
                 {
@@ -290,7 +306,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 }
                 finally
                 {
-                    _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_ADMIN);
+                    // Fix: was logging out WORM_USER_ADMIN but logged in WORM_USER_TIME_ADMIN
+                    _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_TIME_ADMIN);
                 }
             });
         }
@@ -351,6 +368,19 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             });
         }
 
+        public async Task TseFactoryReset(bool throwException = true)
+        {
+            await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                var error = _nativeFunctionPointer.func_worm_tse_factoryReset(context);
+                if (throwException)
+                {
+                    error.ThrowIfError();
+                }
+
+            });
+        }
+
         public async Task<List<string>> TseGetRegisteredClientsAsync()
         {
             return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
@@ -405,7 +435,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
             {
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
-                var processDataPtr = Marshal.AllocHGlobal(processData.Length);
+                // Fix: guard against zero-length allocation — AllocHGlobal(0) is platform-dependent
+                var processDataPtr = Marshal.AllocHGlobal(Math.Max(processData.Length, 1));
                 var processTypePtr = Marshal.StringToHGlobalAnsi(processType);
                 var transactionResponsePtr = IntPtr.Zero;
                 var serialNumberPtr = new IntPtr();
@@ -414,7 +445,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var signatureLengthPtr = Marshal.AllocHGlobal(sizeof(UInt64));
                 try
                 {
-                    Marshal.Copy(processData, 0, processDataPtr, processData.Length);
+                    if (processData.Length > 0)
+                    {
+                        Marshal.Copy(processData, 0, processDataPtr, processData.Length);
+                    }
 
                     transactionResponsePtr = _nativeFunctionPointer.func_worm_transaction_response_new(context);
 
@@ -470,7 +504,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
             {
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
-                var processDataPtr = Marshal.AllocHGlobal(processData.Length);
+                // Fix: guard against zero-length allocation
+                var processDataPtr = Marshal.AllocHGlobal(Math.Max(processData.Length, 1));
                 var processTypePtr = Marshal.StringToHGlobalAnsi(processType);
                 var transactionResponsePtr = IntPtr.Zero;
                 var serialNumberPtr = new IntPtr();
@@ -479,7 +514,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var signatureLengthPtr = Marshal.AllocHGlobal(sizeof(UInt64));
                 try
                 {
-                    Marshal.Copy(processData, 0, processDataPtr, processData.Length);
+                    if (processData.Length > 0)
+                    {
+                        Marshal.Copy(processData, 0, processDataPtr, processData.Length);
+                    }
 
                     transactionResponsePtr = _nativeFunctionPointer.func_worm_transaction_response_new(context);
 
@@ -538,7 +576,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
             {
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
-                var processDataPtr = Marshal.AllocHGlobal(processData.Length);
+                // Fix: guard against zero-length allocation
+                var processDataPtr = Marshal.AllocHGlobal(Math.Max(processData.Length, 1));
                 var processTypePtr = Marshal.StringToHGlobalAnsi(processType);
                 var transactionResponsePtr = IntPtr.Zero;
                 var serialNumberPtr = new IntPtr();
@@ -547,7 +586,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var signatureLengthPtr = Marshal.AllocHGlobal(sizeof(UInt64));
                 try
                 {
-                    Marshal.Copy(processData, 0, processDataPtr, processData.Length);
+                    if (processData.Length > 0)
+                    {
+                        Marshal.Copy(processData, 0, processDataPtr, processData.Length);
+                    }
 
                     transactionResponsePtr = _nativeFunctionPointer.func_worm_transaction_response_new(context);
 
@@ -643,17 +685,23 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         {
             await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
             {
+                // Fix: store delegate in local variable to prevent GC collection during native call
+                var callbackDelegate = new WormExportTarCallback((IntPtr chunk, uint chunkLength, IntPtr callbackData) =>
+                {
+                    var chunkBytes = new byte[chunkLength];
+                    Marshal.Copy(chunk, chunkBytes, 0, (int) chunkLength);
+                    stream.Write(chunkBytes, 0, (int) chunkLength);
+                    return WormError.WORM_ERROR_NOERROR;
+                });
+                var callbackPtr = Marshal.GetFunctionPointerForDelegate(callbackDelegate);
+
                 _nativeFunctionPointer.func_worm_export_tar(
                     context,
-                    Marshal.GetFunctionPointerForDelegate(new WormExportTarCallback((IntPtr chunk, uint chunkLength, IntPtr callbackData) =>
-                    {
-                        var chunkBytes = new byte[chunkLength];
-                        Marshal.Copy(chunk, chunkBytes, 0, (int) chunkLength);
-                        stream.Write(chunkBytes, 0, (int) chunkLength);
-                        return WormError.WORM_ERROR_NOERROR;
-                    })),
+                    callbackPtr,
                     IntPtr.Zero)
                     .ThrowIfError();
+
+                GC.KeepAlive(callbackDelegate);
             });
         }
 
@@ -674,13 +722,15 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var lastSignatureCounterPtr = Marshal.AllocHGlobal(sizeof(UInt64));
                 try
                 {
-                    var callback = Marshal.GetFunctionPointerForDelegate(new WormExportTarIncrementalCallback((IntPtr chunk, uint chunkLength, UInt32 processedBlocks, UInt32 totalBlocks, IntPtr callbackData) =>
+                    // Fix: store delegate in local variable to prevent GC collection during native call
+                    var callbackDelegate = new WormExportTarIncrementalCallback((IntPtr chunk, uint chunkLength, UInt32 processedBlocks, UInt32 totalBlocks, IntPtr callbackData) =>
                     {
                         var chunkBytes = new byte[chunkLength];
                         Marshal.Copy(chunk, chunkBytes, 0, (int) chunkLength);
                         stream.Write(chunkBytes, 0, (int) chunkLength);
                         return WormError.WORM_ERROR_NOERROR;
-                    }));
+                    });
+                    var callback = Marshal.GetFunctionPointerForDelegate(callbackDelegate);
 
                     if (lastStateBytes.Length == 0)
                     {
@@ -704,6 +754,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                             .ThrowIfError();
                     }
 
+                    GC.KeepAlive(callbackDelegate);
+
                     var newStateBytes = new byte[stateSize];
                     Marshal.Copy(newStatePtr, newStateBytes, 0, stateSize);
                     return newStateBytes;
@@ -723,17 +775,20 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
                 try
                 {
-
-                    var callback = Marshal.GetFunctionPointerForDelegate(new WormExportTarCallback((IntPtr chunk, uint chunkLength, IntPtr callbackData) =>
-                   {
-                       var chunkBytes = new byte[chunkLength];
-                       Marshal.Copy(chunk, chunkBytes, 0, (int) chunkLength);
-                       stream.Write(chunkBytes, 0, (int) chunkLength);
-                       return WormError.WORM_ERROR_NOERROR;
-                   }));
+                    // Fix: store delegate in local variable to prevent GC collection during native call
+                    var callbackDelegate = new WormExportTarCallback((IntPtr chunk, uint chunkLength, IntPtr callbackData) =>
+                    {
+                        var chunkBytes = new byte[chunkLength];
+                        Marshal.Copy(chunk, chunkBytes, 0, (int) chunkLength);
+                        stream.Write(chunkBytes, 0, (int) chunkLength);
+                        return WormError.WORM_ERROR_NOERROR;
+                    });
+                    var callback = Marshal.GetFunctionPointerForDelegate(callbackDelegate);
 
                     _nativeFunctionPointer.func_worm_export_tar_filtered_time(context, startDateUnixTime, endDateUnixTime, clientIdPtr, callback, IntPtr.Zero)
                         .ThrowIfError();
+
+                    GC.KeepAlive(callbackDelegate);
                 }
                 finally
                 {
@@ -749,15 +804,19 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
                 try
                 {
-                    var callback = Marshal.GetFunctionPointerForDelegate(new WormExportTarCallback((IntPtr chunk, uint chunkLength, IntPtr callbackData) =>
+                    // Fix: store delegate in local variable to prevent GC collection during native call
+                    var callbackDelegate = new WormExportTarCallback((IntPtr chunk, uint chunkLength, IntPtr callbackData) =>
                     {
                         var chunkBytes = new byte[chunkLength];
                         Marshal.Copy(chunk, chunkBytes, 0, (int) chunkLength);
                         stream.Write(chunkBytes, 0, (int) chunkLength);
                         return WormError.WORM_ERROR_NOERROR;
-                    }));
+                    });
+                    var callback = Marshal.GetFunctionPointerForDelegate(callbackDelegate);
 
                     _nativeFunctionPointer.func_worm_export_tar_filtered_transaction(context, startTransactionNumber, endTransactionNumber, clientIdPtr, callback, IntPtr.Zero).ThrowIfError();
+
+                    GC.KeepAlive(callbackDelegate);
                 }
                 finally
                 {
@@ -796,25 +855,91 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 
         public async Task DeleteStoredDataAsync() => await _lockingHelper.PerformWithLock(_hwSemaphore, () => _nativeFunctionPointer.func_worm_export_deleteStoredData(context).ThrowIfError());
 
+        // Fix: added lock, proper worm_info_free, and try/finally for all three methods below
         public async Task<bool> HasValidTimeAsync()
         {
-            var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
-            _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
-            return await Task.FromResult(_nativeFunctionPointer.func_worm_info_hasValidTime(infoPtr) != 0);
+            return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
+                try
+                {
+                    _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
+                    return _nativeFunctionPointer.func_worm_info_hasValidTime(infoPtr) != 0;
+                }
+                finally
+                {
+                    if (infoPtr != IntPtr.Zero)
+                    {
+                        _nativeFunctionPointer.func_worm_info_free(infoPtr);
+                    }
+                }
+            });
         }
 
         public async Task<bool> HasPassedSelfTestAsync()
         {
-            var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
-            _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
-            return await Task.FromResult(_nativeFunctionPointer.func_worm_info_hasPassedSelfTest(infoPtr) != 0);
+            return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
+                try
+                {
+                    _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
+                    return _nativeFunctionPointer.func_worm_info_hasPassedSelfTest(infoPtr) != 0;
+                }
+                finally
+                {
+                    if (infoPtr != IntPtr.Zero)
+                    {
+                        _nativeFunctionPointer.func_worm_info_free(infoPtr);
+                    }
+                }
+            });
         }
 
         public async Task<TseStates> GetInitializationState()
         {
-            var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
-            _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
-            return await Task.FromResult(_nativeFunctionPointer.func_worm_info_initializationState(infoPtr).ToTseStates());
+            return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
+                try
+                {
+                    _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
+                    return _nativeFunctionPointer.func_worm_info_initializationState(infoPtr).ToTseStates();
+                }
+                finally
+                {
+                    if (infoPtr != IntPtr.Zero)
+                    {
+                        _nativeFunctionPointer.func_worm_info_free(infoPtr);
+                    }
+                }
+            });
+        }
+
+        public async Task<bool> IsV2Async()
+        {
+            return await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
+                try
+                {
+                    _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
+
+                    // Software version is encoded as: 2 bytes major | 1 byte minor | 1 byte patch
+                    var softwareVersion = _nativeFunctionPointer.func_worm_info_softwareVersion(infoPtr);
+                    var major = (softwareVersion >> 16) & 0xFFFF;
+
+                    // Swissbit V2 TSEs use major version >= 2
+                    return major >= 2;
+                }
+                finally
+                {
+                    if (infoPtr != IntPtr.Zero)
+                    {
+                        _nativeFunctionPointer.func_worm_info_free(infoPtr);
+                    }
+                }
+            });
         }
 
         public void Dispose()

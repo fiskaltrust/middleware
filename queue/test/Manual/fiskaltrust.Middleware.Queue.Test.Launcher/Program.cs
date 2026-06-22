@@ -40,6 +40,15 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 serviceFolder = Directory.GetCurrentDirectory();
             }
 
+            var serviceCollectionForChecker = new ServiceCollection();
+            serviceCollectionForChecker.AddStandardLoggers(LogLevel.Debug);
+            using (var checkerProvider = serviceCollectionForChecker.BuildServiceProvider())
+            {
+                var checkerLogger = checkerProvider.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger(typeof(Helpers.UrlReservationChecker).FullName);
+                Helpers.UrlReservationChecker.CheckQueueUrlReservations(cashBoxConfiguration, checkerLogger);
+            }
+
             var config = cashBoxConfiguration.ftQueues[0];
 
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop;
 
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 {
@@ -172,40 +173,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         [DllImport("WormAPI")]
         internal static extern int worm_info_isDataImportInProgress(IntPtr info);
 
-        /* Returns whether the initial PUK has been changed.
+        // Removed in Swissbit TSE API v6.0.0:
+        // - worm_info_hasChangedPuk
+        // - worm_info_hasChangedAdminPin
+        // - worm_info_hasChangedTimeAdminPin
 
-        @param[in] info Info reference
-        */
-        //WORMAPI int WORMAPI_CALL worm_info_hasChangedPuk(const WormInfo* info);
-        [DllImport("WormAPI")]
-        internal static extern int worm_info_hasChangedPuk(IntPtr info);
-
-        /* Returns whether the initial *Admin* PIN has been changed.
-
-        @param[in] info Info reference
-        */
-        //WORMAPI int WORMAPI_CALL worm_info_hasChangedAdminPin(const WormInfo* info);
-        [DllImport("WormAPI")]
-        internal static extern int worm_info_hasChangedAdminPin(IntPtr info);
-
-        /* Returns whether the initial *TimeAdmin* PIN has been changed.
-
-        @param[in] info Info reference
-        */
-        //WORMAPI int WORMAPI_CALL worm_info_hasChangedTimeAdminPin(const WormInfo* info);
-        [DllImport("WormAPI")]
-        internal static extern int worm_info_hasChangedTimeAdminPin(IntPtr info);
-
-        /* Returns the timeout in seconds after which the next self test must be run.
-
-        If this reaches 0, all following commands will fail until the self test is
-        executed again.
-
-        @param[in] info Info reference
-        @returns the timeout
-        @see @ref worm_tse_runSelfTest
-        */
-        //WORMAPI uint32_t WORMAPI_CALL worm_info_timeUntilNextSelfTest(const WormInfo* info);
         [DllImport("WormAPI")]
         internal static extern uint worm_info_timeUntilNextSelfTest(IntPtr info);
 
