@@ -424,7 +424,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     }
                 }
                 catch { }
-                await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
+                var clientids = await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
+                _logger.LogInformation("Deregistered TSE Clients {}", string.Join(", ", clientids.ClientIds));
                 if (!request.IsModifyClientIdOnlyRequest())
                 {
                     await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
@@ -482,7 +483,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 (true, 0x0006) => (0x4445_0000_0800_0006, "Yearly-closing receipt was processed, and a master data update was performed."),
                 (false, 0x0006) => (0x4445_0000_0000_0006, "Yearly-closing receipt was processed."),
                 // Migration receipt executes a daily closing as well
-                (true, 0x0019) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  
+                (true, 0x0019) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),
                 (false, 0x0019) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
                 _ => throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} is not supported for master data update.")
             };
