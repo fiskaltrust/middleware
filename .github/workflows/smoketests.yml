@@ -299,7 +299,7 @@ jobs:
           #....Send requests....
           if ($tcpReady) {
            $queueUrl = "http://localhost:$port/${{ env.queueId }}"
-           $helperUrl = "http://localhost:$port/${{ env.$helperId }}"
+           $helperUrl = "http://localhost:$port/${{ env.helperId }}"
            $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
            $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
