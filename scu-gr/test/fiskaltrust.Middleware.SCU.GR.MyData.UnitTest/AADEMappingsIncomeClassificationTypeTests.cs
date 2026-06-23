@@ -432,4 +432,61 @@ public class AADEMappingsIncomeClassificationTypeTests
     }
 
     #endregion
+
+    #region Tests for Tip (S=3) on PointOfSaleReceipt (11.1)
+
+    [Fact]
+    public void GetIncomeClassificationType_ServiceCharge_S2_On_11_1_ReturnsCat1_3()
+    {
+        // Arrange
+        var receiptRequest = CreateReceiptRequest(ReceiptCase.PointOfSaleReceipt0x0001);
+        var chargeItem = CreateChargeItem(amount: 1.0m, vatAmount: 0.19m, typeOfService: ChargeItemCaseTypeOfService.OtherService);
+
+        // Act
+        var result = AADEMappings.GetIncomeClassificationType(receiptRequest, chargeItem);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_3);
+        result.classificationType.Should().Be(IncomeClassificationValueType.E3_561_003);
+        result.classificationTypeSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GetIncomeClassificationType_OwnerTip_S3_Taxable_On_11_1_ShouldFallbackToCat1_3_NotCat1_95()
+    {
+        // Arrange
+        var receiptRequest = CreateReceiptRequest(ReceiptCase.PointOfSaleReceipt0x0001);
+        var chargeItem = CreateChargeItem(amount: 1.0m, vatAmount: 0.19m, typeOfService: ChargeItemCaseTypeOfService.Tip);
+
+        // Act
+        var result = AADEMappings.GetIncomeClassificationType(receiptRequest, chargeItem);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.classificationCategory.Should().NotBe(IncomeClassificationCategoryType.category1_95,
+            because: "AADE rejects category1_95 on invoiceType 11.1 with error 313");
+        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_3,
+            because: "S=3 owner tip on 11.1 must fall back to category1_3 (other service revenue)");
+        result.classificationType.Should().Be(IncomeClassificationValueType.E3_561_007);
+        result.classificationTypeSpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GetIncomeClassificationType_OwnerTip_S3_Taxable_On_1_1_ShouldKeepCat1_95()
+    {
+        // Arrange — invoice type (t=1), NOT retail receipt
+        var receiptRequest = CreateReceiptRequest(ReceiptCase.InvoiceB2B0x1002);
+        var chargeItem = CreateChargeItem(amount: 1.0m, vatAmount: 0.19m, typeOfService: ChargeItemCaseTypeOfService.Tip);
+
+        // Act
+        var result = AADEMappings.GetIncomeClassificationType(receiptRequest, chargeItem);
+
+        // Assert — category1_95 is valid on 1.1 invoice type, no fallback should trigger
+        result.Should().NotBeNull();
+        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95,
+            because: "category1_95 is allowed on invoice types (1.x/2.x), fallback must NOT fire here");
+    }
+
+    #endregion
 }

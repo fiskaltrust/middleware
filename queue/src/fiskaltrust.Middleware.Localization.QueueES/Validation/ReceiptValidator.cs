@@ -103,12 +103,6 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
             yield return result;
         }
 
-        // Validate zero VAT rate items have proper exempt reasons
-        foreach (var result in ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(_receiptRequest))
-        {
-            yield return result;
-        }
-
         // Validate that discounts do not exceed article amounts
         foreach (var result in ChargeItemValidations.Validate_ChargeItems_DiscountExceedsArticleAmount(_receiptRequest))
         {

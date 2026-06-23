@@ -407,4 +407,54 @@ public class AADEMappingsIncomeClassificationValueTypeTests
     }
 
     #endregion
+
+    // Add this region to the existing file:
+    // scu-gr/test/fiskaltrust.Middleware.SCU.GR.MyData.UnitTest/AADEMappingsIncomeClassificationValueTypeTests.cs
+
+    #region Tests for Tip (S=3) classification value type
+
+    [Fact]
+    public void GetIncomeClassificationValueType_ServiceCharge_S2_On_Receipt_ReturnsE3_561_003()
+    {
+        // Arrange
+        var receiptRequest = CreateReceiptRequest(ReceiptCase.PointOfSaleReceipt0x0001);
+        var chargeItem = CreateChargeItem(ChargeItemCaseTypeOfService.OtherService);
+
+        // Act
+        var result = AADEMappings.GetIncomeClassificationValueType(receiptRequest, chargeItem);
+
+        // Assert
+        result.Should().Be(IncomeClassificationValueType.E3_561_003);
+    }
+
+    [Fact]
+    public void GetIncomeClassificationValueType_OwnerTip_S3_On_Receipt_ShouldReturnE3_561_007_NotE3_561_003()
+    {
+        // Arrange
+        var receiptRequest = CreateReceiptRequest(ReceiptCase.PointOfSaleReceipt0x0001);
+        var chargeItem = CreateChargeItem(ChargeItemCaseTypeOfService.Tip);
+
+        // Act
+        var result = AADEMappings.GetIncomeClassificationValueType(receiptRequest, chargeItem);
+
+        // Assert — Owner tip on receipt falls back to E3_561_007 + category1_3
+        result.Should().Be(IncomeClassificationValueType.E3_561_007,
+            because: "S=3 owner tip on 11.1 must use E3_561_007 as part of the category1_3 fallback");
+    }
+
+    [Fact]
+    public void GetIncomeClassificationValueType_OwnerTip_S3_On_Invoice_ReturnsE3_561_007_NoChange()
+    {
+        // Arrange
+        var receiptRequest = CreateReceiptRequest(ReceiptCase.InvoiceB2B0x1002);
+        var chargeItem = CreateChargeItem(ChargeItemCaseTypeOfService.Tip);
+
+        // Act
+        var result = AADEMappings.GetIncomeClassificationValueType(receiptRequest, chargeItem);
+
+        // Assert
+        result.Should().Be(IncomeClassificationValueType.E3_561_007);
+    }
+
+    #endregion
 }

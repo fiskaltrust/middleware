@@ -252,63 +252,6 @@ public static class ChargeItemValidations
     }
 
     /// <summary>
-    /// Validates that charge items with VAT rate 0 have a valid nature of VAT (exempt reason) specified.
-    /// Uses the TaxExemptionDictionary to provide detailed validation with proper exemption code references.
-    /// Returns one ValidationResult per validation error found.
-    /// </summary>
-    public static IEnumerable<ValidationResult> Validate_ChargeItems_VATRate_ZeroVatRateNature(ReceiptRequest request)
-    {
-        if (request.cbChargeItems == null || request.cbChargeItems.Count == 0)
-        {
-            yield break;
-        }
-
-        for (var i = 0; i < request.cbChargeItems.Count; i++)
-        {
-            var chargeItem = request.cbChargeItems[i];
-            if(chargeItem.ftChargeItemCase.TypeOfService() == ChargeItemCaseTypeOfService.Receivable)
-            {
-                continue;
-            }
-
-            // Check if VAT rate is 0
-            if (Math.Abs(chargeItem.VATRate) < 0.001m)
-            {
-                // Check if a valid nature of VAT is specified
-                var natureOfVat = chargeItem.ftChargeItemCase.NatureOfVat();
-
-                // UsualVatApplies (0x0000) is not valid for zero VAT rate
-                if (natureOfVat == ChargeItemCaseNatureOfVatES.UsualVatApplies)
-                {
-                    yield return ValidationResult.Failed(new ValidationError(
-                        ErrorMessagesES.EEEE_ZeroVatRateMissingNature(i),
-                        "EEEE_ZeroVatRateMissingNature",
-                        "cbChargeItems.ftChargeItemCase",
-                        i
-                    )
-                    .WithContext("VATRate", chargeItem.VATRate)
-                    .WithContext("NatureOfVat", natureOfVat.ToString())
-                    .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
-                }
-                else
-                {
-                    var exemptionCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-                    yield return ValidationResult.Failed(new ValidationError(
-                        ErrorMessagesES.EEEE_UnknownTaxExemptionCode(i, exemptionCode),
-                        "EEEE_UnknownTaxExemptionCode",
-                        "cbChargeItems.ftChargeItemCase",
-                        i
-                    )
-                    .WithContext("VATRate", chargeItem.VATRate)
-                    .WithContext("NatureOfVat", natureOfVat.ToString())
-                    .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}")
-                    .WithContext("ExemptionCode", exemptionCode.ToString()));
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// Validates that discounts and extras do not exceed the amount of their associated article.
     /// Groups charge items similar to SAFT export: main items with their modifiers (discounts/extras).
     /// Returns one ValidationResult per validation error found.
