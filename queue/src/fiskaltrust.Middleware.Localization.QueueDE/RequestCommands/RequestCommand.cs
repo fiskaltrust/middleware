@@ -425,7 +425,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 }
                 catch { }
                 var clientids = await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
-                _logger.LogInformation("Deregistered TSE Clients {}", string.Join(", ", clientids.ClientIds));
+                if (clientids?.ClientIds is not null)
+                { _logger.LogInformation("Deregistered TSE Clients {}", string.Join(", ", clientids.ClientIds)); }
                 if (!request.IsModifyClientIdOnlyRequest())
                 {
                     await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
