@@ -807,6 +807,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.ReportInfo?.PrinterStatus) ?? "");
             }
+            // #549: reboot the Epson printer after a successful daily closing — it sometimes gets stuck during the day.
+            await SendRebootCommandAsync();
             return receiptResponse;
         }
         catch (Exception e)
@@ -850,6 +852,12 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     private async Task<ProcessResponse> PerformRebootAsync(ReceiptResponse receiptResponse)
     {
+        await SendRebootCommandAsync();
+        return ProcessResponseHelpers.CreateResponse(receiptResponse, SignatureFactory.CreateZeroReceiptSignatures().ToList());
+    }
+
+    private async Task SendRebootCommandAsync()
+    {
         try
         {
             // Sent immediately; a directIO restart blocks the response, so the printer reboots without replying.
@@ -860,7 +868,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             // ponytail: reboot drops the connection before answering (protocol note [3]: FP_NO_ANSWER) — expected, not an error.
             _logger.LogInformation(e, "Reboot command sent; the printer restarts without responding.");
         }
-        return ProcessResponseHelpers.CreateResponse(receiptResponse, SignatureFactory.CreateZeroReceiptSignatures().ToList());
     }
 
     private async Task<HttpResponseMessage> LoginAsync() => await _httpClient.SendCommandAsync(EpsonCommandFactory.LoginCommand(_configuration.Password));
