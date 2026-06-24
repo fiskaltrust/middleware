@@ -39,9 +39,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            if (request.IsVoid())
+            {
+                return await ExecuteVoidAsync(queue, queueDE, request, queueItem);
+            }
+
             _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
+
 
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
@@ -193,6 +199,151 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
             _logger.LogInformation("Disconnected from SCU with ID '{ScuId}'.", specifiedSourceScuId);
             _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteAsync [exit].");
+            return new RequestCommandResponse()
+            {
+                ActionJournals = actionJournals,
+                ReceiptResponse = receiptResponse,
+                Signatures = signatures,
+                TransactionNumber = transactionNumber
+            };
+        }
+        private async Task<RequestCommandResponse> ExecuteVoidAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            _logger.LogTrace("InitScuSwitchReceiptCommand.ExecuteVoidAsync [enter].");
+            var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
+            var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
+
+            ThrowIfNoImplicitFlow(request);
+            ThrowIfTraining(request);
+
+            var ajs = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
+            var lastInitiateSwitchJournal = ajs.OrderBy(x => x.Moment).LastOrDefault(x => x.Type == $"{0x4445000000000003:X}-{nameof(InitiateSCUSwitch)}");
+            var initiateSwitchNotification = (!string.IsNullOrEmpty(lastInitiateSwitchJournal?.DataJson)
+                ? JsonConvert.DeserializeObject<InitiateSCUSwitch>(lastInitiateSwitchJournal.DataJson)
+                : null) ?? throw new Exception($"The SCU switch can't be voided because it is not in progress. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
+
+            if (queueDE.ftSignaturCreationUnitDEId != null && !(queueDE.ftSignaturCreationUnitDEId == initiateSwitchNotification.SourceSCUId))
+            {
+                throw new Exception($"The SCU switch can't be voided because it is not in progress. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
+            }
+
+            queueDE.ftSignaturCreationUnitDEId = initiateSwitchNotification.SourceSCUId;
+            await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
+            _logger.LogInformation("Connected to SCU with ID '{ScuId}'.", queueDE.ftSignaturCreationUnitDEId);
+
+            bool success = false;
+            ulong? transactionNumber = null;
+            List<SignaturItem> signatures = new() { };
+            string clientId = null;
+            string signatureAlgorithm = null;
+            string publicKeyBase64 = null;
+            string serialnumberOctet = null;
+
+            try
+            {
+                await _deSSCDProvider.RegisterCurrentScuAsync().ConfigureAwait(false);
+                _certificationIdentification = null;
+
+                (transactionNumber, signatures, clientId, signatureAlgorithm, publicKeyBase64, serialnumberOctet) = await ProcessInitialOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, false).ConfigureAwait(false);
+                success = true;
+            }
+            catch (Exception ex)
+            {
+                if (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+                {
+                    _logger.LogDebug(ex, "TSE not reachable.");
+                }
+
+                if (!request.IsInitiateScuSwitchReceiptForce() && !_middlewareConfiguration.AllowUnsafeScuSwitch)
+                {
+                    queueDE.ftSignaturCreationUnitDEId = null;
+                    await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
+
+                    throw;
+                }
+            }
+
+            var actionJournals = new List<ftActionJournal>();
+            var typeNumber = 0x4445000000000003;
+
+            var notification = new FinishSCUSwitch()
+            {
+                CashBoxId = Guid.Parse(request.ftCashBoxID),
+                QueueId = queueItem.ftQueueId,
+                Moment = DateTime.UtcNow,
+                CashBoxIdentification = clientId ?? "",
+                SourceSCUId = initiateSwitchNotification.SourceSCUId,
+                TargetSCUId = initiateSwitchNotification.SourceSCUId,
+                TargetSCUSignatureAlgorithm = signatureAlgorithm ?? "",
+                TargetSCUPublicKeyBase64 = publicKeyBase64 ?? "",
+                TargetSCUSerialNumberOctet = serialnumberOctet ?? "",
+                Version = "V0"
+            };
+
+            if (success)
+            {
+                signatures.Add(_signatureFactory.CreateFinishScuSwitchSignature(queue.ftQueueId, clientId, serialnumberOctet));
+                signatures.Add(
+                        new SignaturItem()
+                        {
+                            ftSignatureType = typeNumber,
+                            ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.AZTEC,
+                            Caption = $"SCU mit Queue verbunden. Kassenseriennummer: {clientId}, TSE-Seriennummer: {serialnumberOctet}, Queue-ID: {queue.ftQueueId}, SCU-ID: {initiateSwitchNotification.SourceSCUId}",
+                            Data = JsonConvert.SerializeObject(notification)
+                        }
+                    );
+
+                actionJournals.Add(
+                        new ftActionJournal()
+                        {
+                            ftActionJournalId = Guid.NewGuid(),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Moment = DateTime.UtcNow,
+                            Priority = -1,
+                            TimeStamp = 0,
+                            Message = $"SCU mit Queue verbunden. Kassenseriennummer: {clientId}, TSE-Seriennummer: {serialnumberOctet}, Queue-ID: {queue.ftQueueId}, SCU-ID: {initiateSwitchNotification.SourceSCUId}",
+                            Type = $"{typeNumber:X}-{nameof(FinishSCUSwitch)}",
+                            DataJson = JsonConvert.SerializeObject(notification)
+                        }
+                    );
+            }
+            else
+            {
+                signatures.Add(
+                        new SignaturItem()
+                        {
+                            ftSignatureType = typeNumber,
+                            ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.AZTEC,
+                            Caption = $"SCU mit Queue verbunden. Queue-ID: {queue.ftQueueId}, SCU-ID: {initiateSwitchNotification.SourceSCUId}",
+                            Data = JsonConvert.SerializeObject(notification)
+                        }
+                    );
+
+                actionJournals.Add(
+                        new ftActionJournal()
+                        {
+                            ftActionJournalId = Guid.NewGuid(),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Moment = DateTime.UtcNow,
+                            Priority = -1,
+                            TimeStamp = 0,
+                            Message = $"SCU mit Queue verbunden. Queue-ID: {queue.ftQueueId}, SCU-ID: {initiateSwitchNotification.SourceSCUId}",
+                            Type = $"{typeNumber:X}-{nameof(FinishSCUSwitch)}",
+                            DataJson = JsonConvert.SerializeObject(notification)
+                        }
+                    );
+            }
+
+            receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, transactionNumber);
+            receiptResponse.ftSignatures = signatures.ToArray();
+            if (success)
+            {
+                (receiptResponse.ftStateData, _) = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
+            }
+
+            _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteVoidAsync [exit].");
             return new RequestCommandResponse()
             {
                 ActionJournals = actionJournals,

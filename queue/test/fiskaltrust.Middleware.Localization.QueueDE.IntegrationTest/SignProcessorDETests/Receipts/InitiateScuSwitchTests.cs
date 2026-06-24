@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
@@ -202,6 +203,201 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ),
                 "The target SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: *, Mode: 65536, ModeConfigurationJson: {\"TargetScuId\": \"*\"}; Target SCU: *, Mode: 0, ModeConfigurationJson: {\"SourceScuId\": \"*\"})", true, false).ConfigureAwait(false);
         }
+
+
+        [Fact]
+        public async Task SignProcessor_InitScuSwitchReceiptAndThenVoid_ShouldReset()
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "Request.json")));
+            var expectedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "Response.json")));
+            var queueItem = new ftQueueItem
+            {
+                cbReceiptMoment = receiptRequest.cbReceiptMoment,
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                cbTerminalID = receiptRequest.cbTerminalID,
+                country = "DE",
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                ftQueueItemId = Guid.Parse(expectedResponse.ftQueueItemID),
+                ftQueueRow = expectedResponse.ftQueueRow,
+                request = JsonConvert.SerializeObject(receiptRequest),
+                requestHash = "test request hash"
+            };
+            var queue = new ftQueue
+            {
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                StartMoment = DateTime.UtcNow
+            };
+
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
+            var actionJournalRepository = new InMemoryActionJournalRepository(new List<ftActionJournal>
+            {
+                CreateftActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, 0)
+            });
+            var configurationRepository = _fixture.CreateConfigurationRepository(false, null, null, true, true);
+            var scuId = (await configurationRepository.GetQueueDEListAsync()).First().ftSignaturCreationUnitDEId;
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,
+                actionJournalRepository, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
+                new InMemoryFailedStartTransactionRepository(), new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config,
+                new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
+
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            foreach (var a in actionJournals)
+            {
+                await actionJournalRepository.InsertAsync(a);
+            }
+            receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
+                .Excluding(x => x.ftReceiptMoment)
+                .Excluding(x => x.ftReceiptIdentification)
+                .Excluding(x => x.ftSignatures));
+            receiptResponse.ftSignatures.Length.Should().Be(expectedResponse.ftSignatures.Length);
+            receiptResponse.ftSignatures.Where(x => x.Caption.Equals("TSE-Trennungs-Beleg")).Should().HaveCount(1);
+
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0004_0000;
+            var (voidReceiptResponse, voidActionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+
+            voidReceiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
+                .Excluding(x => x.ftReceiptMoment)
+                .Excluding(x => x.ftReceiptIdentification)
+                .Excluding(x => x.ftSignatures)
+                .Excluding(x => x.ftStateData));
+            voidReceiptResponse.ftSignatures.Length.Should().Be(16);
+            voidReceiptResponse.ftSignatures.Where(x => x.Caption.Equals("TSE-Verbindungs-Beleg")).Should().HaveCount(1);
+
+            voidActionJournals.Should().HaveCount(1);
+            voidActionJournals[0].Message.Should().Be($"SCU mit Queue verbunden. Kassenseriennummer: , TSE-Seriennummer: , Queue-ID: {receiptRequest.ftQueueID}, SCU-ID: {scuId}");
+        }
+
+
+        [Fact]
+        public async Task SignProcessor_InitScuSwitchReceiptAndThenVoidWithBrokenSourceSCU_ShouldFail()
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "Request.json")));
+            var expectedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "Response.json")));
+            var queueItem = new ftQueueItem
+            {
+                cbReceiptMoment = receiptRequest.cbReceiptMoment,
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                cbTerminalID = receiptRequest.cbTerminalID,
+                country = "DE",
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                ftQueueItemId = Guid.Parse(expectedResponse.ftQueueItemID),
+                ftQueueRow = expectedResponse.ftQueueRow,
+                request = JsonConvert.SerializeObject(receiptRequest),
+                requestHash = "test request hash"
+            };
+            var queue = new ftQueue
+            {
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                StartMoment = DateTime.UtcNow
+            };
+
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
+            var actionJournalRepository = new InMemoryActionJournalRepository(new List<ftActionJournal>
+            {
+                CreateftActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, 0)
+            });
+            var configurationRepository = _fixture.CreateConfigurationRepository(false, null, null, true, true);
+            var scuId = (await configurationRepository.GetQueueDEListAsync()).First().ftSignaturCreationUnitDEId;
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,
+                actionJournalRepository, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
+                new InMemoryFailedStartTransactionRepository(), new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config,
+                new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
+
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            foreach (var a in actionJournals)
+            {
+                await actionJournalRepository.InsertAsync(a);
+            }
+            receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
+                .Excluding(x => x.ftReceiptMoment)
+                .Excluding(x => x.ftReceiptIdentification)
+                .Excluding(x => x.ftSignatures));
+            receiptResponse.ftSignatures.Length.Should().Be(expectedResponse.ftSignatures.Length);
+
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0004_0000;
+            _fixture.InMemorySCU.ShouldFail = true;
+            Func<Task> action = async () => await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            await action.Should().ThrowAsync<Exception>();
+        }
+
+        [Fact]
+        public async Task SignProcessor_InitScuSwitchReceiptAndThenVoidWithBrokenSourceSCUAndForceFlag_ShouldReset()
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "Request.json")));
+            var expectedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "UnreachableResponse.json")));
+            var queueItem = new ftQueueItem
+            {
+                cbReceiptMoment = receiptRequest.cbReceiptMoment,
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                cbTerminalID = receiptRequest.cbTerminalID,
+                country = "DE",
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                ftQueueItemId = Guid.Parse(expectedResponse.ftQueueItemID),
+                ftQueueRow = expectedResponse.ftQueueRow,
+                request = JsonConvert.SerializeObject(receiptRequest),
+                requestHash = "test request hash"
+            };
+            var queue = new ftQueue
+            {
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                StartMoment = DateTime.UtcNow
+            };
+
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
+            var actionJournalRepository = new InMemoryActionJournalRepository(new List<ftActionJournal>
+            {
+                CreateftActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, 0)
+            });
+            var configurationRepository = _fixture.CreateConfigurationRepository(false, null, null, true, true);
+            var scuId = (await configurationRepository.GetQueueDEListAsync()).First().ftSignaturCreationUnitDEId;
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,
+                actionJournalRepository, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
+                new InMemoryFailedStartTransactionRepository(), new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config,
+                new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
+
+            _fixture.InMemorySCU.ShouldFail = true;
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x4000_0000;
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            foreach (var a in actionJournals)
+            {
+                await actionJournalRepository.InsertAsync(a);
+            }
+            receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
+                .Excluding(x => x.ftReceiptMoment)
+                .Excluding(x => x.ftReceiptIdentification)
+                .Excluding(x => x.ftSignatures));
+            receiptResponse.ftSignatures.Length.Should().Be(expectedResponse.ftSignatures.Length);
+
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0004_0000;
+            var (voidReceiptResponse, voidActionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+
+            voidReceiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
+                .Excluding(x => x.ftReceiptMoment)
+                .Excluding(x => x.ftReceiptIdentification)
+                .Excluding(x => x.ftSignatures)
+                .Excluding(x => x.ftStateData));
+            voidReceiptResponse.ftSignatures.Length.Should().Be(1);
+            voidReceiptResponse.ftSignatures.Where(x => x.Caption.Equals("TSE-Verbindungs-Beleg")).Should().HaveCount(0);
+
+            voidActionJournals.Should().HaveCount(1);
+            voidActionJournals[0].Message.Should().Be($"SCU mit Queue verbunden. Queue-ID: {receiptRequest.ftQueueID}, SCU-ID: {scuId}");
+        }
+
 
         private ftActionJournal CreateftActionJournal(Guid ftQueueId, Guid ftQueueItemId, int ftReceiptNumerator)
         {
