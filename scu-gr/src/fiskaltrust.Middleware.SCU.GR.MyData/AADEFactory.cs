@@ -184,7 +184,7 @@ public class AADEFactory
             .Select(x => CreateExpensesClassificationSummary(x))
             .ToList();
 
-        var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
+        var (resolvedSeries, resolvedAa) = ResolveSeriesAndAa(receiptResponse);
         var paymentMethods = GetPayments(receiptRequest);
         var issuer = CreateIssuer(receiptRequest);
         var inv = new AadeBookInvoiceType
@@ -192,8 +192,8 @@ public class AADEFactory
             issuer = issuer,
             invoiceHeader = new InvoiceHeaderType
             {
-                series = receiptResponse.ftCashBoxIdentification,
-                aa = identification.ToString(),
+                series = resolvedSeries,
+                aa = resolvedAa,
                 issueDate = AADEMappings.GetLocalTime(receiptRequest),
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
                 currency = CurrencyType.EUR,
@@ -1714,5 +1714,36 @@ public class AADEFactory
             xmlSerializer.Serialize(xmlWriter, doc);
             return stringWriter.ToString();
         }
+    }
+
+    private static (string series, string aa) ResolveSeriesAndAa(ReceiptResponse receiptResponse)
+    {
+        // Preferred path: the QueueGR processor pre-appends "{series}-{aa}" to
+        // ftReceiptIdentification before invoking the SCU. This mirrors the convention
+        // every other country queue uses (ES/FR/AT/PT all append a country segment
+        // after the "#"). The handwritten and mydataoverride paths overwrite
+        // invoiceHeader.series / .aa on the doc afterwards via the existing override
+        // logic; the suffix on ftReceiptIdentification stays as the reserved values
+        // and is rewritten by MyDataSCU after AADE confirms the actually-submitted
+        // values.
+        var hashIdx = receiptResponse.ftReceiptIdentification?.IndexOf('#') ?? -1;
+        if (hashIdx >= 0 && hashIdx < receiptResponse.ftReceiptIdentification!.Length - 1)
+        {
+            var countrySegment = receiptResponse.ftReceiptIdentification.Substring(hashIdx + 1);
+            var dashIdx = countrySegment.LastIndexOf('-');
+            if (dashIdx > 0 && dashIdx < countrySegment.Length - 1)
+            {
+                return (countrySegment.Substring(0, dashIdx), countrySegment.Substring(dashIdx + 1));
+            }
+        }
+
+        // Legacy fallback: derive aa from the generic ftReceiptIdentification ("ft{N}#"),
+        // series from ftCashBoxIdentification. Kept so existing tests (and callers that
+        // set ftReceiptIdentification directly without a country segment) continue to
+        // work without modification.
+        var identification = long.Parse(
+            receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0],
+            System.Globalization.NumberStyles.HexNumber);
+        return (receiptResponse.ftCashBoxIdentification, identification.ToString());
     }
 }

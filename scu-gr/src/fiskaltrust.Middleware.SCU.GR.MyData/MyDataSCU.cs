@@ -297,7 +297,7 @@ public class MyDataSCU : IGRSSCD
                         var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
-                        request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                        SetCountrySuffix(request.ReceiptResponse, doc.invoice[0].invoiceHeader.series, doc.invoice[0].invoiceHeader.aa);
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {
                             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.HashPayload));
@@ -358,6 +358,20 @@ public class MyDataSCU : IGRSSCD
     {
         _logger.LogError("myDATA error for receipt '{ReceiptReference}' (QueueItemId: {QueueItemId}): {Error}", request.ReceiptRequest.cbReceiptReference, request.ReceiptResponse.ftQueueItemID, errorMessage);
         request.ReceiptResponse.SetReceiptResponseError(errorMessage);
+    }
+
+    private static void SetCountrySuffix(ReceiptResponse response, string series, string aa)
+    {
+        // Rewrite the country segment after "#" so it always reflects the (series, aa)
+        // that actually went to AADE. The QueueGR processor pre-appends its reserved
+        // values before invoking the SCU; if a handwritten or mydataoverride path
+        // replaced them on the doc, the suffix changes here so the country processor
+        // can detect the mismatch (via EndsWith on its reservation) and skip the
+        // counter commit.
+        var identification = response.ftReceiptIdentification ?? string.Empty;
+        var hashIdx = identification.IndexOf('#');
+        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
+        response.ftReceiptIdentification = prefix + $"{series}-{aa}";
     }
 
     public class AADEEErrorResponse
