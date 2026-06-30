@@ -49,7 +49,8 @@ public class CustomRTServerSCUTests : IDisposable
                 CurrentGrandTotal = 0,
                 RTServerSerialNumber = "TESTSERIAL",
                 LastSignature = "testsig",
-                CashHmacKey = "testkey"
+                CashHmacKey = "dGVzdGtleQ==" // base64("testkey"); GenerateQRCodeData requires a valid base64 HMAC key
+
             }
         };
         File.WriteAllText(
@@ -114,6 +115,30 @@ public class CustomRTServerSCUTests : IDisposable
         result.ReceiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
     }
 
+    [Fact]
+    public async Task ProcessReceiptAsync_PointOfSaleReceiptWithLotteryCode_EmitsLotterySignature()
+    {
+        var sut = CreateSut();
+        var request = CreateRequest((long) ITReceiptCases.PointOfSaleReceipt0x0001);
+        request.ReceiptRequest.ftReceiptCaseData = JsonConvert.SerializeObject(new ReceiptCaseLotteryData
+        {
+            servizi_lotteriadegliscontrini_gov_it = new servizi_lotteriadegliscontrini_gov_it { codicelotteria = "ABCD1234" }
+        });
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        result.ReceiptResponse.ftSignatures.Should().Contain(s => s.Caption == "<rt-lottery-id>" && s.Data == "ABCD1234");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_PointOfSaleReceiptWithoutLotteryCode_OmitsLotterySignature()
+    {
+        var sut = CreateSut();
+        var result = await sut.ProcessReceiptAsync(CreateRequest((long) ITReceiptCases.PointOfSaleReceipt0x0001));
+
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "<rt-lottery-id>");
+    }
+
     // Fix #581a
     [Theory]
     [InlineData(0x4954_2000_0000_2012L)]   // MonthlyClosing0x2012
@@ -125,5 +150,70 @@ public class CustomRTServerSCUTests : IDisposable
 
         result.ReceiptResponse.ftSignatures.Should().Contain(s => s.Caption == "rt-server-dailyclosing-error");
         result.ReceiptResponse.ftState.Should().Be(0x4954_2001_EEEE_EEEE);
+    }
+
+    [Fact]
+    public void GenerateFiscalDocument_WithLotteryCode_EmbedsLotteryClientCodeInFiscalData()
+    {
+        var queueIdentification = new QueueIdentification { CashUuId = _cashBoxId, CashHmacKey = Convert.ToBase64String(new byte[] { 1, 2, 3, 4 }) };
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = (long) ITReceiptCases.PointOfSaleReceipt0x0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbChargeItems = Array.Empty<ChargeItem>(),
+            cbPayItems = Array.Empty<PayItem>(),
+            ftReceiptCaseData = JsonConvert.SerializeObject(new ReceiptCaseLotteryData
+            {
+                servizi_lotteriadegliscontrini_gov_it = new servizi_lotteriadegliscontrini_gov_it { codicelotteria = "ABCD1234" }
+            })
+        };
+
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, queueIdentification);
+
+        fiscalDocument.document.Should().BeOfType<DocumentDataLottery>();
+        ((DocumentDataLottery) fiscalDocument.document).lottery_client_code.Should().Be("ABCD1234");
+        commercialDocument.fiscalData.Should().Contain("\"lottery_client_code\":\"ABCD1234\"");
+    }
+
+    [Fact]
+    public void EnqueueDocument_RoutesLotteryAndNormalDocumentsToDistinctCacheFiles()
+    {
+        var cacheDir = Path.Combine(_tempDir, "queuecache");
+        var config = new CustomRTServerConfiguration
+        {
+            ServerUrl = "http://127.0.0.1:1/",
+            Password = "test",
+            SendReceiptsSync = false, // cache to disk; unreachable server means files are never deleted
+            CacheDirectory = cacheDir,
+            RTServerHttpTimeoutInMs = 100
+        };
+        var client = new CustomRTServerClient(config, NullLogger<CustomRTServerClient>.Instance);
+        using var queue = new CustomRTServerCommunicationQueue(_scuId, client, NullLogger<CustomRTServerCommunicationQueue>.Instance, config);
+
+        var doc = new CommercialDocument { fiscalData = "{}", qrData = new QrCodeData() };
+        queue.EnqueueDocument(_cashBoxId, doc, 3, 541, isLottery: true).GetAwaiter().GetResult();
+        queue.EnqueueDocument(_cashBoxId, doc, 3, 542, isLottery: false).GetAwaiter().GetResult();
+
+        var files = Directory.GetFiles(Path.Combine(cacheDir, _cashBoxId));
+        files.Should().Contain(f => f.EndsWith("_commercialdocumentlottery.json"));
+        files.Should().Contain(f => f.EndsWith("_commercialdocument.json") && !f.EndsWith("_commercialdocumentlottery.json"));
+    }
+
+    [Fact]
+    public void GenerateFiscalDocument_WithoutLotteryCode_DoesNotEmbedLotteryClientCode()
+    {
+        var queueIdentification = new QueueIdentification { CashUuId = _cashBoxId, CashHmacKey = Convert.ToBase64String(new byte[] { 1, 2, 3, 4 }) };
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = (long) ITReceiptCases.PointOfSaleReceipt0x0001,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbChargeItems = Array.Empty<ChargeItem>(),
+            cbPayItems = Array.Empty<PayItem>()
+        };
+
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, queueIdentification);
+
+        fiscalDocument.document.Should().NotBeOfType<DocumentDataLottery>();
+        commercialDocument.fiscalData.Should().NotContain("lottery_client_code");
     }
 }
