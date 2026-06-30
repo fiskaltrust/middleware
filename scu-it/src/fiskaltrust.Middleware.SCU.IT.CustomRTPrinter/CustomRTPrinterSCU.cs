@@ -545,6 +545,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             await EnsurePrinterReadyAsync();
             var records = new List<IFiscalRecord>();
 
+            var lotteryCode = receiptRequest.GetLotteryData()?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria ?? "";
             var customer = receiptRequest.GetCustomer();
             if (customer != null)
             {
@@ -660,7 +661,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 RTDocNumber = long.TryParse(response.AddInfo?.FiscalDoc, out var dfd) ? dfd : 0,
                 RTDocMoment = response.AddInfo?.DateTime ?? DateTime.UtcNow,
                 RTDocType = "POSRECEIPT",
-                RTCodiceLotteria = "",
+                RTCodiceLotteria = lotteryCode,
                 RTCustomerID = customer?.CustomerId ?? ""
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignature).ToArray();
