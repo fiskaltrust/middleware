@@ -327,7 +327,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0004_0000;
             _fixture.InMemorySCU.ShouldFail = true;
             Func<Task> action = async () => await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            try
+            {
             await action.Should().ThrowAsync<Exception>();
+            }
+            finally
+            {
+                _fixture.InMemorySCU.ShouldFail = false;
+            }
         }
 
         [Fact]
