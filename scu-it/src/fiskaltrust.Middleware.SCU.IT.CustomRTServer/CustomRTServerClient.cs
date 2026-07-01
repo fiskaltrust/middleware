@@ -191,15 +191,7 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
         return await PerformCallToRTServerAsync<CancelCashRegisterResponse>("/updateCashRegister.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
-    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentLotteryAsync(string cashuuid, FDocumentLottery fiscalData, QrCodeData qrCodeData)
-    {
-        var request = new
-        {
-            fiscalData,
-            qrCodeData
-        };
-        return await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocumentLottery.php", cashuuid, JsonConvert.SerializeObject(request));
-    }
+    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentLotteryAsync(string cashuuid, CommercialDocument commercialDocument) => await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocumentLottery.php", cashuuid, JsonConvert.SerializeObject(commercialDocument));
 
     public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayLotteryAsync(string cashuuid, List<CommercialDocument> commercialDocuments)
     {

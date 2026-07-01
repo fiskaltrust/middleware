@@ -120,26 +120,28 @@ public static class CustomRTServerMapping
     public static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int docType)
     {
         (var totalAmount, var vatAmount, var items) = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1);
+        var lotteryCode = receiptRequest.GetLotteryData()?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria;
+        DocumentData document = string.IsNullOrEmpty(lotteryCode)
+            ? new DocumentData()
+            : new DocumentDataLottery { lottery_client_code = lotteryCode! };
+        document.cashuuid = queueIdentification.CashUuId;
+        document.doctype = docType;
+        document.dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss");
+        document.docnumber = queueIdentification.LastDocNumber + 1;
+        document.docznumber = queueIdentification.LastZNumber + 1;
+        document.amount = ConvertToFullAmountInt(totalAmount);
+        document.fiscalcode = "";
+        document.vatcode = "";
+        document.fiscaloperator = "";
+        document.businessname = null;
+        document.prevSignature = queueIdentification.LastSignature;
+        document.grandTotal = queueIdentification.CurrentGrandTotal;
+        document.referenceClosurenumber = -1;
+        document.referenceDocnumber = -1;
+        document.referenceDtime = null;
         var fiscalDocument = new FDocument
         {
-            document = new DocumentData
-            {
-                cashuuid = queueIdentification.CashUuId,
-                doctype = docType,
-                dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
-                docnumber = queueIdentification.LastDocNumber + 1,
-                docznumber = queueIdentification.LastZNumber + 1,
-                amount = ConvertToFullAmountInt(totalAmount),
-                fiscalcode = "",
-                vatcode = "",
-                fiscaloperator = "",
-                businessname = null,
-                prevSignature = queueIdentification.LastSignature,
-                grandTotal = queueIdentification.CurrentGrandTotal,
-                referenceClosurenumber = -1,
-                referenceDocnumber = -1,
-                referenceDtime = null,
-            },
+            document = document,
             items = items,
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
         };

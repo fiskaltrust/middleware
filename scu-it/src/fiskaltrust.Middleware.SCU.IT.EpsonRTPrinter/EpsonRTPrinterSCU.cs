@@ -198,6 +198,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return fiscalReceiptResponse;
     }
 
+    private static string GetLotteryCode(ReceiptRequest receiptRequest)
+        => receiptRequest.GetLotteryData()?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria ?? "";
+
     public async Task<ReceiptResponse> PerformProtocolReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         string? data = null;
@@ -255,7 +258,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
-                RTCodiceLotteria = "",
+                RTCodiceLotteria = GetLotteryCode(receiptRequest),
                 RTCustomerID = "", // Todo dread customerid from data
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
@@ -311,7 +314,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
-                RTCodiceLotteria = "",
+                RTCodiceLotteria = GetLotteryCode(receiptRequest),
                 RTCustomerID = "", // Todo dread customerid from data
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
@@ -353,7 +356,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             var reason = hasProgressed ? "progression detected" : "amount matches, no cache";
             _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} ({reason}) — printer already printed, skipping retry.",
                 receiptRequest.cbReceiptReference, docBeforeRetry!.ZNumber, docBeforeRetry.DocNumber, reason);
-            return ApplyRecoveredDoc(receiptResponse, docBeforeRetry);
+            return ApplyRecoveredDoc(receiptResponse, docBeforeRetry, GetLotteryCode(receiptRequest));
         }
 
         return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, docBeforeRetry);
@@ -382,7 +385,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                         RTDocNumber = retryFiscalResponse.ReceiptNumber,
                         RTDocMoment = retryFiscalResponse.ReceiptDateTime,
                         RTDocType = "POSRECEIPT",
-                        RTCodiceLotteria = "",
+                        RTCodiceLotteria = GetLotteryCode(receiptRequest),
                         RTCustomerID = "",
                     }).ToArray();
                     return receiptResponse;
@@ -404,7 +407,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 if (baseline.HasValue && IsDocAdvanced(lastDoc, baseline.Value))
                 {
                     _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.", receiptRequest.cbReceiptReference, lastDoc!.ZNumber, lastDoc.DocNumber);
-                    return ApplyRecoveredDoc(receiptResponse, lastDoc);
+                    return ApplyRecoveredDoc(receiptResponse, lastDoc, GetLotteryCode(receiptRequest));
                 }
             }
             catch (Exception queryEx)
@@ -426,7 +429,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
              (doc.ZNumber == baseline.ZNumber && doc.DocNumber > baseline.DocNumber));
     }
 
-    private ReceiptResponse ApplyRecoveredDoc(ReceiptResponse receiptResponse, LastEmittedDocStatus doc)
+    private ReceiptResponse ApplyRecoveredDoc(ReceiptResponse receiptResponse, LastEmittedDocStatus doc, string lotteryCode)
     {
         receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
         {
@@ -435,7 +438,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             RTDocNumber = doc.DocNumber,
             RTDocMoment = doc.DocumentDateTime,
             RTDocType = "POSRECEIPT",
-            RTCodiceLotteria = "",
+            RTCodiceLotteria = lotteryCode,
             RTCustomerID = "",
         }).ToArray();
         _lastSuccessfulDoc = (doc.ZNumber, doc.DocNumber);
