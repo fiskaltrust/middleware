@@ -21,7 +21,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     internal class InitiateScuSwitchReceiptCommand : RequestCommand
     {
         private readonly IActionJournalRepository _actionJournalRepository;
-        private readonly QueueDEConfiguration _queueDEConfiguration;
 
         public override string ReceiptName => "Initiate-SCU-switch receipt";
 
@@ -34,7 +33,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                   middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         {
             _actionJournalRepository = actionJournalRepository;
-            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
