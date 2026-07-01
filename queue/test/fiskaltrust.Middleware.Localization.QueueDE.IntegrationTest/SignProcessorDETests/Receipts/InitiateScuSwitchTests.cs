@@ -274,10 +274,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var scuId = (await configurationRepository.GetQueueDEListAsync()).First().ftSignaturCreationUnitDEId;
             var config = new MiddlewareConfiguration
             {
-                Configuration = new Dictionary<string, object>()
-                {
-                    {"AllowUnsafeScuSwitch", "false"}
-                },
+                Configuration = new Dictionary<string, object>(),
                 ProcessingVersion = "test"
             };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,
