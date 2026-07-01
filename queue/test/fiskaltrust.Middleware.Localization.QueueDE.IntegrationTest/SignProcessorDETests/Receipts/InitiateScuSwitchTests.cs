@@ -204,7 +204,44 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 "The target SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: *, Mode: 65536, ModeConfigurationJson: {\"TargetScuId\": \"*\"}; Target SCU: *, Mode: 0, ModeConfigurationJson: {\"SourceScuId\": \"*\"})", true, false).ConfigureAwait(false);
         }
 
+        [Fact]
+        public async Task QueueDEConfiguration_AllowUnsafeScuSwitch_Default_ShouldBeTrue()
+        {
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>()
+                {
+                },
+                ProcessingVersion = "test"
+            };
+            var queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config);
+            queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeTrue();
+        }
+        [Fact]
+        public async Task QueueDEConfiguration_AllowUnsafeScuSwitch_ShouldParse()
+        {
+            var configFalse = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>()
+                {
+                    {"AllowUnsafeScuSwitch", "false"}
+                },
+                ProcessingVersion = "test"
+            };
+            var queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), configFalse);
+            queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeFalse();
 
+            var configTrue = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>()
+                {
+                    {"AllowUnsafeScuSwitch", "true"}
+                },
+                ProcessingVersion = "test"
+            };
+            queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), configTrue);
+            queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeTrue();
+        }
         [Fact]
         public async Task SignProcessor_InitScuSwitchReceiptAndThenVoid_ShouldReset()
         {
@@ -237,7 +274,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var scuId = (await configurationRepository.GetQueueDEListAsync()).First().ftSignaturCreationUnitDEId;
             var config = new MiddlewareConfiguration
             {
-                Configuration = new Dictionary<string, object>(),
+                Configuration = new Dictionary<string, object>()
+                {
+                    {"AllowUnsafeScuSwitch", "false"}
+                },
                 ProcessingVersion = "test"
             };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,

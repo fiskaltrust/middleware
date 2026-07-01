@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     internal class InitiateScuSwitchReceiptCommand : RequestCommand
     {
         private readonly IActionJournalRepository _actionJournalRepository;
-        private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
         public override string ReceiptName => "Initiate-SCU-switch receipt";
 
@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                   middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         {
             _actionJournalRepository = actionJournalRepository;
-            _middlewareConfiguration = middlewareConfiguration;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
@@ -58,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 ? JsonConvert.DeserializeAnonymousType(lastDailyClosingJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator
                 : -1;
 
-            if (!request.IsInitiateScuSwitchReceiptForce() && !_middlewareConfiguration.AllowUnsafeScuSwitch && (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
+            if (!request.IsInitiateScuSwitchReceiptForce() && !_queueDEConfiguration.AllowUnsafeScuSwitch && (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
             {
                 var reachable = false;
                 try
@@ -254,7 +254,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     _logger.LogDebug(ex, "TSE not reachable.");
                 }
 
-                if (!request.IsInitiateScuSwitchReceiptForce() && !_middlewareConfiguration.AllowUnsafeScuSwitch)
+                if (!request.IsInitiateScuSwitchReceiptForce() && !_queueDEConfiguration.AllowUnsafeScuSwitch)
                 {
                     queueDE.ftSignaturCreationUnitDEId = null;
                     await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
