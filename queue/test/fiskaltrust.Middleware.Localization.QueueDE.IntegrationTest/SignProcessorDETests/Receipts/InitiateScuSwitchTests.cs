@@ -244,6 +244,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), configTrue);
             queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeTrue();
         }
+
         [Fact]
         public async Task SignProcessor_InitScuSwitchReceiptAndThenVoid_ShouldReset()
         {
@@ -436,7 +437,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             voidActionJournals.Should().HaveCount(1);
             voidActionJournals[0].Message.Should().Be($"SCU mit Queue verbunden. Queue-ID: {receiptRequest.ftQueueID}, SCU-ID: {scuId}");
         }
-
 
         private ftActionJournal CreateftActionJournal(Guid ftQueueId, Guid ftQueueItemId, int ftReceiptNumerator)
         {
