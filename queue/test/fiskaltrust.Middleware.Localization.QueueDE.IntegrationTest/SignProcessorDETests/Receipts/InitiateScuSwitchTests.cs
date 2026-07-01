@@ -217,6 +217,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config);
             queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeTrue();
         }
+
         [Fact]
         public async Task QueueDEConfiguration_AllowUnsafeScuSwitch_ShouldParse()
         {
