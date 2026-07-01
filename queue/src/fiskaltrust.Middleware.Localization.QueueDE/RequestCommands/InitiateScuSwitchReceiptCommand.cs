@@ -58,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 ? JsonConvert.DeserializeAnonymousType(lastDailyClosingJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator
                 : -1;
 
-            if (!request.IsInitiateScuSwitchReceiptForce() && !_queueDEConfiguration.AllowUnsafeScuSwitch && (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
+            if (!request.IsInitiateScuSwitchReceiptForce() && (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
             {
                 var reachable = false;
                 try
@@ -254,7 +254,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     _logger.LogDebug(ex, "TSE not reachable.");
                 }
 
-                if (!request.IsInitiateScuSwitchReceiptForce() && !_queueDEConfiguration.AllowUnsafeScuSwitch)
+                if (!request.IsInitiateScuSwitchReceiptForce())
                 {
                     queueDE.ftSignaturCreationUnitDEId = null;
                     await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);

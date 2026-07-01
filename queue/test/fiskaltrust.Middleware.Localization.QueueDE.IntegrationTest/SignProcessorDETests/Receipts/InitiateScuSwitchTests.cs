@@ -206,46 +206,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         }
 
         [Fact]
-        public async Task QueueDEConfiguration_AllowUnsafeScuSwitch_Default_ShouldBeTrue()
-        {
-            var config = new MiddlewareConfiguration
-            {
-                Configuration = new Dictionary<string, object>()
-                {
-                },
-                ProcessingVersion = "test"
-            };
-            var queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config);
-            queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeTrue();
-        }
-
-        [Fact]
-        public async Task QueueDEConfiguration_AllowUnsafeScuSwitch_ShouldParse()
-        {
-            var configFalse = new MiddlewareConfiguration
-            {
-                Configuration = new Dictionary<string, object>()
-                {
-                    {"AllowUnsafeScuSwitch", "false"}
-                },
-                ProcessingVersion = "test"
-            };
-            var queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), configFalse);
-            queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeFalse();
-
-            var configTrue = new MiddlewareConfiguration
-            {
-                Configuration = new Dictionary<string, object>()
-                {
-                    {"AllowUnsafeScuSwitch", "true"}
-                },
-                ProcessingVersion = "test"
-            };
-            queueDEConfiguration = QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), configTrue);
-            queueDEConfiguration.AllowUnsafeScuSwitch.Should().BeTrue();
-        }
-
-        [Fact]
         public async Task SignProcessor_InitScuSwitchReceiptAndThenVoid_ShouldReset()
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "InitiateScuSwitchReceipt", "Request.json")));
