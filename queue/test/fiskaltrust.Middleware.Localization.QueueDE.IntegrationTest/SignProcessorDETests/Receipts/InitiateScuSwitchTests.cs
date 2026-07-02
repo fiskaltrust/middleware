@@ -177,6 +177,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ),
             "The source SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: *, Mode: 0, ModeConfigurationJson: {\"TargetScuId\": \"*\"})").ConfigureAwait(false);
         }
+
         [Fact]
         public async Task InitScuSwitchReceipt_TargetScuIsNoSwitchSource_ExpectException()
         {
@@ -203,7 +204,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ),
                 "The target SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: *, Mode: 65536, ModeConfigurationJson: {\"TargetScuId\": \"*\"}; Target SCU: *, Mode: 0, ModeConfigurationJson: {\"SourceScuId\": \"*\"})", true, false).ConfigureAwait(false);
         }
-
 
         [Fact]
         public async Task SignProcessor_InitScuSwitchReceiptAndThenVoid_ShouldReset()
@@ -327,7 +327,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0004_0000;
             _fixture.InMemorySCU.ShouldFail = true;
             Func<Task> action = async () => await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            try
+            {
             await action.Should().ThrowAsync<Exception>();
+            }
+            finally
+            {
+                _fixture.InMemorySCU.ShouldFail = false;
+            }
         }
 
         [Fact]
@@ -397,7 +404,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             voidActionJournals.Should().HaveCount(1);
             voidActionJournals[0].Message.Should().Be($"SCU mit Queue verbunden. Queue-ID: {receiptRequest.ftQueueID}, SCU-ID: {scuId}");
         }
-
 
         private ftActionJournal CreateftActionJournal(Guid ftQueueId, Guid ftQueueItemId, int ftReceiptNumerator)
         {
