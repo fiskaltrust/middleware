@@ -161,8 +161,17 @@ public sealed class EpsonRTServerSCU : LegacySCU
             var tillId = receiptResponse.ftCashBoxIdentification;
             if (_configuration.AutoProgramTillMap)
             {
-                await _client.CreateTillsAsync(_configuration.Username, _configuration.Password, new[] { tillId }).ConfigureAwait(false);
-                await _client.RebootWebServerAsync().ConfigureAwait(false);
+                // createTills REPLACES the whole till map: read the current map first and only reprogram when
+                // our till is missing, keeping all existing tills (the device may be shared with other queues).
+                var tillMapResponse = await _client.GetTillMapAsync().ConfigureAwait(false);
+                var existingTills = ParseTillIds(tillMapResponse.RawResponse);
+                if (!existingTills.Contains(tillId))
+                {
+                    await _client.CreateTillsAsync(_configuration.Username, _configuration.Password, existingTills.Concat(new[] { tillId }), new[] { tillId }).ConfigureAwait(false);
+                    await _client.RebootWebServerAsync().ConfigureAwait(false);
+                    // The on-board web server needs a moment to come back after the map change.
+                    await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                }
             }
             await InitializeTillStateAsync(receiptResponse, requestToken: true).ConfigureAwait(false);
             return (SignatureFactory.CreateInitialOperationSignatures().ToList(), StateOk);
@@ -253,10 +262,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
         var document = EpsonRTServerMapping.BuildFiscalDocument(receiptRequest, tillState, docType, referenceZNumber, referenceDocNumber, referenceDocMoment, referenceTillId);
         var response = await SendDocumentAsync(tillState, document).ConfigureAwait(false);
 
-        if (response != null && EpsonRTServerErrorCodes.IsChainError(response.CodeAsInt))
+        if (response != null && EpsonRTServerErrorCodes.IsLocalStateOutOfSync(response.CodeAsInt))
         {
-            // The local CCDC chain is out of sync with the server (-21 blockchain / -22 hash). Per the security
-            // protocol the recovery is a fresh Token: reseed the chain and counters, rebuild the document once.
+            // The local state is out of sync with the server (-21 blockchain / -22 hash / -23 daily amount /
+            // -25 receipt number, e.g. after an externally triggered closure). Per the security protocol the
+            // recovery is a fresh Token: reseed the chain and counters, rebuild the document and retry once.
             _logger.LogWarning("RT Server reported {code} ({description}); requesting a new token and retrying once.",
                 response.Code, EpsonRTServerErrorCodes.Describe(response.CodeAsInt));
             tillState = await InitializeTillStateAsync(receiptResponse, requestToken: true).ConfigureAwait(false);
@@ -323,7 +333,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
         {
             await _queue.ProcessAllReceipts(tillState.TillId).ConfigureAwait(false);
             await _client.CreateDailyClosureAsync(tillState.TillId, 0).ConfigureAwait(false);
-            var zReport = await _client.PrintServerZReportAsync().ConfigureAwait(false);
+            if (_configuration.PerformServerZReportOnDailyClosing)
+            {
+                // Device-wide operation (transmits to the tax authority, long busy window) — opt-in only.
+                _ = await _client.PrintServerZReportAsync().ConfigureAwait(false);
+            }
 
             var currentZNumber = tillState.LastZNumber;
             // Re-seed the till for the next session (new Z number, reset counters, new token chain).
@@ -433,6 +447,14 @@ public sealed class EpsonRTServerSCU : LegacySCU
         try { return await _client.GetFiscalInformationAsync(tillId).ConfigureAwait(false); }
         catch (Exception ex) { _logger.LogWarning(ex, "Failed to read fiscal information for till {tillId}.", tillId); return null; }
     }
+
+    /// <summary>Extracts the till ids from the raw tillMap report (nested tillCountN elements).</summary>
+    private static List<string> ParseTillIds(string rawTillMapResponse)
+        => System.Text.RegularExpressions.Regex.Matches(rawTillMapResponse, "tillId=\"([^\"]+)\"")
+            .Cast<System.Text.RegularExpressions.Match>()
+            .Select(x => x.Groups[1].Value)
+            .Distinct()
+            .ToList();
 
     private static long ParseAmountToCents(string? amount)
     {

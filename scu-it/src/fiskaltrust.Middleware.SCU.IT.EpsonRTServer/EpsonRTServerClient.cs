@@ -51,25 +51,29 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         public Task<RtServerResponse> CreateTokenAsync(string tillId)
             => SendToFpServerAsync($"<createToken><till tillId=\"{tillId}\" /></createToken>");
 
-        public Task<RtServerResponse> CreateTillsAsync(string userId, string password, IEnumerable<string> tillIds)
+        public Task<RtServerResponse> CreateTillsAsync(string userId, string password, IEnumerable<string> tillMap, IEnumerable<string> tillsToAdd)
         {
-            var tills = tillIds.ToList();
             var body = new StringBuilder();
             body.Append("<createTills>");
             body.Append($"<user userId=\"{userId}\" password=\"{password}\" />");
-            foreach (var tillId in tills)
+            foreach (var tillId in tillsToAdd)
             {
                 body.Append($"<change add=\"{tillId}\" />");
             }
             body.Append("<tills>");
-            foreach (var tillId in tills)
+            foreach (var tillId in tillMap)
             {
-                body.Append($"<till tillId=\"{tillId}\" zRepNumber=\"0001\" />");
+                // zRepNumber is intentionally omitted: it is only meant for SD-card substitution and a value
+                // lower than the till's current Z number makes the RT Server reject the whole map.
+                body.Append($"<till tillId=\"{tillId}\" />");
             }
             body.Append("</tills>");
             body.Append("</createTills>");
             return SendToFpServerAsync(body.ToString());
         }
+
+        public Task<RtServerResponse> GetTillMapAsync()
+            => SendToFpServerAsync("<createReport><tillMap /></createReport>");
 
         public Task<RtServerResponse> CreateReceiptAsync(string createReceiptXml)
             => SendToFpServerAsync(createReceiptXml);
@@ -105,6 +109,31 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         private async Task<RtServerResponse> PerformAsync(string endpoint, string bodyXml)
         {
+            var response = await PerformOnceAsync(endpoint, bodyXml).ConfigureAwait(false);
+            // -8 "Server busy" is transient (e.g. while a daily closure or Z report is being processed):
+            // retry with a delay instead of failing the operation.
+            for (var attempt = 0; response.CodeAsInt == -8 && attempt < _configuration.ServerBusyRetries; attempt++)
+            {
+                _logger.LogWarning("RT Server is busy ({status}); retrying '{endpoint}' in {delay} ms (attempt {attempt}/{max}).",
+                    response.Status, endpoint, _configuration.ServerBusyRetryDelayInMs, attempt + 1, _configuration.ServerBusyRetries);
+                await Task.Delay(_configuration.ServerBusyRetryDelayInMs).ConfigureAwait(false);
+                response = await PerformOnceAsync(endpoint, bodyXml).ConfigureAwait(false);
+            }
+
+            if (!response.Success && response.CodeAsInt < 0)
+            {
+                var description = EpsonRTServerErrorCodes.Describe(response.CodeAsInt);
+                _logger.LogError("Calling '{endpoint}' failed with code {code} ({status}): {description}. Raw: {raw}", endpoint, response.Code, response.Status, description, response.RawResponse);
+                if (!_configuration.IgnoreRTServerErrors)
+                {
+                    throw new EpsonRTServerCommunicationException($"Calling '{endpoint}' failed with code {response.Code} ({response.Status}): {description}", response.CodeAsInt);
+                }
+            }
+            return response;
+        }
+
+        private async Task<RtServerResponse> PerformOnceAsync(string endpoint, string bodyXml)
+        {
             var payload = WrapInSoapEnvelope(bodyXml);
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, endpoint)
             {
@@ -120,17 +149,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 throw new EpsonRTServerCommunicationException($"The RT Server returned HTTP {(int) result.StatusCode} ({result.ReasonPhrase}) for '{endpoint}'. Content: {content}", -1);
             }
 
-            var response = RtServerResponse.Parse(content);
-            if (!response.Success && response.CodeAsInt < 0)
-            {
-                var description = EpsonRTServerErrorCodes.Describe(response.CodeAsInt);
-                _logger.LogError("Calling '{endpoint}' failed with code {code} ({status}): {description}. Raw: {raw}", endpoint, response.Code, response.Status, description, content);
-                if (!_configuration.IgnoreRTServerErrors)
-                {
-                    throw new EpsonRTServerCommunicationException($"Calling '{endpoint}' failed with code {response.Code} ({response.Status}): {description}", response.CodeAsInt);
-                }
-            }
-            return response;
+            return RtServerResponse.Parse(content);
         }
 
         private static string WrapInSoapEnvelope(string bodyXml) => $"""

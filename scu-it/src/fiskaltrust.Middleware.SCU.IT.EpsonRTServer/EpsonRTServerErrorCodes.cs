@@ -55,7 +55,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         public static string Describe(int code) => _codes.TryGetValue(code, out var description) ? description : "Unknown RT Server error code";
 
-        /// <summary>Blockchain/hash errors: the local CCDC chain is out of sync — a new Token must be requested.</summary>
-        public static bool IsChainError(int code) => code == -21 || code == -22;
+        /// <summary>
+        /// Errors indicating that the LOCAL state (CCDC chain seed, daily amount or document counter) is out of
+        /// sync with the RT Server: -21 blockchain, -22 hash, -23 daily amount, -25 receipt number. All of them
+        /// are recoverable by requesting a new Token, which carries the authoritative counters.
+        /// </summary>
+        public static bool IsLocalStateOutOfSync(int code) => code is (-21) or (-22) or (-23) or (-25);
     }
 }

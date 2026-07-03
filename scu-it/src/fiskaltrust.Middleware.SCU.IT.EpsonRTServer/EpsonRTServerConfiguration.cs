@@ -49,6 +49,25 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         public int MaxDocumentSendRetries { get; set; } = 5;
 
         /// <summary>
+        /// How many times a request is retried when the RT Server answers -8 "Server busy" (a transient
+        /// condition, e.g. while a daily closure or Z report is being processed).
+        /// </summary>
+        public int ServerBusyRetries { get; set; } = 5;
+
+        /// <summary>
+        /// Delay between -8 "Server busy" retries.
+        /// </summary>
+        public int ServerBusyRetryDelayInMs { get; set; } = 2000;
+
+        /// <summary>
+        /// If true, the daily-closing receipt also requests a SERVER-level Z report (printZReport) after closing
+        /// the till. The server Z is a device-wide operation that transmits the daily takings to the tax
+        /// authority and keeps the device busy for a long time; on multi-till installations it should be left
+        /// to the RT Server's own schedule, therefore the default is false (till closure only).
+        /// </summary>
+        public bool PerformServerZReportOnDailyClosing { get; set; }
+
+        /// <summary>
         /// The HTTP client timeout used when communicating with the RT Server.
         /// </summary>
         public int RTServerHttpTimeoutInMs { get; set; } = 15000;

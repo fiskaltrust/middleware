@@ -9,8 +9,15 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// <summary>Requests a Token for a till (initialises the CCDC blockchain). fpserver.cgi / createToken.</summary>
         Task<RtServerResponse> CreateTokenAsync(string tillId);
 
-        /// <summary>Programs the complete till map on the RT Server. fpserver.cgi / createTills.</summary>
-        Task<RtServerResponse> CreateTillsAsync(string userId, string password, IEnumerable<string> tillIds);
+        /// <summary>
+        /// Programs the complete till map on the RT Server. fpserver.cgi / createTills.
+        /// IMPORTANT: the RT Server REPLACES the whole map with <paramref name="tillMap"/> — it must contain
+        /// the existing tills plus the added ones, otherwise other tills are removed from the device.
+        /// </summary>
+        Task<RtServerResponse> CreateTillsAsync(string userId, string password, IEnumerable<string> tillMap, IEnumerable<string> tillsToAdd);
+
+        /// <summary>Reads the current till map. fpserver.cgi / createReport / tillMap.</summary>
+        Task<RtServerResponse> GetTillMapAsync();
 
         /// <summary>Emits a fiscal receipt. The full &lt;createReceipt&gt; body (incl. hash chain) is built by the mapping.</summary>
         Task<RtServerResponse> CreateReceiptAsync(string createReceiptXml);

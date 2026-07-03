@@ -120,12 +120,35 @@ The cache cannot lag arbitrarily; two hard constraints from the spec / V11.1 tax
 **Operational recommendation:** alarm when `DocumentsInCache > 0` for more than ~45 minutes, and never let
 the cache survive past midnight.
 
-### Chain-error recovery
+### State-sync recovery
 
-If the server answers `-21 blockchain error` or `-22 hash error`, the local chain is out of sync. The SCU
-automatically requests a **new token**, reseeds the counters, rebuilds the document and retries **once**.
-On any rejection the local chain does **not** advance (otherwise every subsequent document would be refused
-too). State persistence is atomic (write-temp-then-swap) so a crash cannot corrupt the chain seed.
+If the server answers `-21 blockchain`, `-22 hash`, `-23 daily amount` or `-25 receipt number`, the local
+state (chain seed and/or counters) is out of sync — e.g. after an externally triggered closure. The SCU
+automatically requests a **new token** (which carries the authoritative counters), reseeds, rebuilds the
+document and retries **once**. On any rejection the local chain does **not** advance (otherwise every
+subsequent document would be refused too). State persistence is atomic (write-temp-then-swap) so a crash
+cannot corrupt the chain seed.
+
+### Server busy (-8)
+
+`-8 Server busy` is transient (e.g. while a closure or Z report is being processed): every request is
+retried up to `ServerBusyRetries` times with `ServerBusyRetryDelayInMs` between attempts.
+
+### Daily closing and the server-level Z report
+
+The fiskaltrust daily-closing receipt maps to the **till** closure (`createDailyClosure`), after draining the
+cache. The **server-level** Z report (`printZReport` on `fpmate.cgi`) is a device-wide operation that
+transmits the daily takings to the tax authority and keeps the device busy for a long time; on multi-till
+installations it must be left to the RT Server's own schedule. It is therefore **opt-in** via
+`PerformServerZReportOnDailyClosing` (default `false`). Repeatedly triggering server Z reports in short
+succession can render the device unresponsive for extended periods.
+
+### Till map programming
+
+`createTills` **replaces the entire till map**. During the initial-operation receipt (with
+`AutoProgramTillMap`), the SCU first reads the current map (`createReport/tillMap`) and only reprograms it —
+preserving all existing tills — when the queue's till is missing. `zRepNumber` is intentionally omitted in
+the map (it is only meant for SD-card substitution).
 
 ---
 
@@ -168,6 +191,8 @@ in async mode the POS never perceives the device round-trip.
 | `SendReceiptsSync` | `true` | Set `false` for offline-resilient queue mode (recommended) |
 | `IgnoreRTServerErrors` | `false` | `true` logs rejections instead of throwing — the chain still does not advance on rejection |
 | `MaxDocumentSendRetries` | `5` | Rejections before a cached document is parked in `failed/` |
+| `ServerBusyRetries` / `ServerBusyRetryDelayInMs` | `5` / `2000` | Retry policy for transient `-8 Server busy` |
+| `PerformServerZReportOnDailyClosing` | `false` | Opt-in server-level Z report after the till closure (see above) |
 | `RTServerHttpTimeoutInMs` | `15000` | HTTP client timeout |
 | `DisableSSLValidation` | `false` | Devices ship with self-signed certificates — usually needed |
 | `AutoProgramTillMap` | `true` | Programs the till (`createTills`) during the initial-operation receipt |
