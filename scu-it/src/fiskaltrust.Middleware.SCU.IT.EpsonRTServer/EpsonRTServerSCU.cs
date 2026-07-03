@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
@@ -27,6 +29,10 @@ public sealed class EpsonRTServerSCU : LegacySCU
     private readonly string _scuCacheFolder;
 
     private Dictionary<Guid, TillState> _tillStates = new();
+
+    // The SCU is registered as scoped, so multiple instances can process receipts for the same SCU id
+    // concurrently. Serialize per SCU id to protect the CCDC chain counters and the state-cache file.
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> _scuLocks = new();
 
     private string StateCacheFilePath => Path.Combine(_scuCacheFolder, $"{_id}_epsonrtserver_statecache.json");
 
@@ -65,6 +71,8 @@ public sealed class EpsonRTServerSCU : LegacySCU
 
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
+        var scuLock = _scuLocks.GetOrAdd(_id, _ => new SemaphoreSlim(1, 1));
+        await scuLock.WaitAsync().ConfigureAwait(false);
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
@@ -139,6 +147,10 @@ public sealed class EpsonRTServerSCU : LegacySCU
             };
             request.ReceiptResponse.ftState = StateFailed;
             return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+        }
+        finally
+        {
+            scuLock.Release();
         }
     }
 
@@ -239,10 +251,30 @@ public sealed class EpsonRTServerSCU : LegacySCU
         }
 
         var document = EpsonRTServerMapping.BuildFiscalDocument(receiptRequest, tillState, docType, referenceZNumber, referenceDocNumber, referenceDocMoment, referenceTillId);
+        var response = await SendDocumentAsync(tillState, document).ConfigureAwait(false);
 
-        await _queue.EnqueueDocument(tillState.TillId, document.CreateReceiptXml, document.ZNumber, document.DocNumber).ConfigureAwait(false);
+        if (response != null && EpsonRTServerErrorCodes.IsChainError(response.CodeAsInt))
+        {
+            // The local CCDC chain is out of sync with the server (-21 blockchain / -22 hash). Per the security
+            // protocol the recovery is a fresh Token: reseed the chain and counters, rebuild the document once.
+            _logger.LogWarning("RT Server reported {code} ({description}); requesting a new token and retrying once.",
+                response.Code, EpsonRTServerErrorCodes.Describe(response.CodeAsInt));
+            tillState = await InitializeTillStateAsync(receiptResponse, requestToken: true).ConfigureAwait(false);
+            document = EpsonRTServerMapping.BuildFiscalDocument(receiptRequest, tillState, docType, referenceZNumber, referenceDocNumber, referenceDocMoment, referenceTillId);
+            response = await SendDocumentAsync(tillState, document).ConfigureAwait(false);
+        }
 
-        // Advance the local blockchain state (Section A of the next document = this document's CCDC).
+        if (response != null && !response.Success && response.CodeAsInt < 0)
+        {
+            // Rejected: do NOT advance the local chain, otherwise every following document would be refused too.
+            throw new EpsonRTServerCommunicationException(
+                $"The RT Server rejected the document with code {response.Code}: {EpsonRTServerErrorCodes.Describe(response.CodeAsInt)}",
+                response.CodeAsInt);
+        }
+
+        // Advance the local blockchain state (Section A of the next document = this document's CCDC). In async
+        // mode (response == null) the document is cached on disk and the chain advances optimistically so
+        // follow-up documents keep chaining while offline.
         tillState.LastFingerPrint = document.Ccdc;
         tillState.LastDocNumber = document.DocNumber;
         if (docType == 0)
@@ -266,6 +298,23 @@ public sealed class EpsonRTServerSCU : LegacySCU
             RTReferenceDocMoment = document.ReferenceDocMoment
         };
         return SignatureFactory.CreateDocumentoCommercialeSignatures(signatureData);
+    }
+
+    /// <summary>
+    /// Sends the document through the queue. Client-side rejection exceptions carrying an RT error code are
+    /// converted into an inspectable response so the chain-recovery logic can react to -21/-22 regardless of
+    /// the IgnoreRTServerErrors setting.
+    /// </summary>
+    private async Task<RtServerResponse?> SendDocumentAsync(TillState tillState, FiscalDocumentResult document)
+    {
+        try
+        {
+            return await _queue.EnqueueDocument(tillState.TillId, document.CreateReceiptXml, document.ZNumber, document.DocNumber).ConfigureAwait(false);
+        }
+        catch (EpsonRTServerCommunicationException ex) when (ex.ResponseCode < 0)
+        {
+            return new RtServerResponse { Success = false, Code = ex.ResponseCode.ToString(), Status = ex.Message };
+        }
     }
 
     private async Task<(List<SignaturItem> signatures, long ftState)> PerformDailyClosingAsync(ReceiptResponse receiptResponse, TillState tillState)
@@ -321,6 +370,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
     {
         var queueId = Guid.Parse(receiptResponse.ftQueueID);
         var tillId = receiptResponse.ftCashBoxIdentification;
+        if (string.IsNullOrEmpty(tillId) || tillId.Length != 8)
+        {
+            throw new InvalidOperationException(
+                $"The ftCashBoxIdentification '{tillId}' is not a valid Epson RT Server till id: it must be exactly 8 characters (4-char store id + 4-char till id) and present in the RT Server till map.");
+        }
 
         var serverInfo = await _client.GetServerInfoAsync().ConfigureAwait(false);
         var serverTime = await SafeGetServerTimeAsync().ConfigureAwait(false);
@@ -394,9 +448,19 @@ public sealed class EpsonRTServerSCU : LegacySCU
 
     private void LoadStateFromDisk()
     {
-        if (File.Exists(StateCacheFilePath))
+        if (!File.Exists(StateCacheFilePath))
+        {
+            return;
+        }
+        try
         {
             _tillStates = JsonConvert.DeserializeObject<Dictionary<Guid, TillState>>(File.ReadAllText(StateCacheFilePath)) ?? new Dictionary<Guid, TillState>();
+        }
+        catch (JsonException ex)
+        {
+            // A corrupt cache is recoverable: the state is re-seeded from the server (token + fiscalInformation).
+            _logger.LogWarning(ex, "The state cache '{path}' is corrupt and will be rebuilt from the RT Server.", StateCacheFilePath);
+            _tillStates = new Dictionary<Guid, TillState>();
         }
     }
 
@@ -406,6 +470,17 @@ public sealed class EpsonRTServerSCU : LegacySCU
         {
             Directory.CreateDirectory(_scuCacheFolder);
         }
-        File.WriteAllText(StateCacheFilePath, JsonConvert.SerializeObject(_tillStates));
+        // Write-temp-then-swap: a crash mid-write must not corrupt the chain state (the fingerprint in this
+        // file is the Section A of the next document).
+        var tempPath = StateCacheFilePath + ".tmp";
+        File.WriteAllText(tempPath, JsonConvert.SerializeObject(_tillStates));
+        if (File.Exists(StateCacheFilePath))
+        {
+            File.Replace(tempPath, StateCacheFilePath, null);
+        }
+        else
+        {
+            File.Move(tempPath, StateCacheFilePath);
+        }
     }
 }

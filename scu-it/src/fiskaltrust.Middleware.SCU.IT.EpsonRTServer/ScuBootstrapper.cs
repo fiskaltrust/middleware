@@ -19,7 +19,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
             _ = serviceCollection
                 .AddSingleton(configuration)
-                .AddScoped<IEpsonRTServerClient, EpsonRTServerClient>()
+                // Singleton: the client owns an HttpClient — one instance per SCU avoids socket exhaustion.
+                .AddSingleton<IEpsonRTServerClient, EpsonRTServerClient>()
                 .AddSingleton(x => new EpsonRTServerCommunicationQueue(Id, x.GetRequiredService<IEpsonRTServerClient>(), x.GetRequiredService<ILogger<EpsonRTServerCommunicationQueue>>(), x.GetRequiredService<EpsonRTServerConfiguration>()))
                 .AddScoped<IITSSCD>(x => new EpsonRTServerSCU(Id, x.GetRequiredService<ILogger<EpsonRTServerSCU>>(), x.GetRequiredService<EpsonRTServerConfiguration>(), x.GetRequiredService<IEpsonRTServerClient>(), x.GetRequiredService<EpsonRTServerCommunicationQueue>()));
         }

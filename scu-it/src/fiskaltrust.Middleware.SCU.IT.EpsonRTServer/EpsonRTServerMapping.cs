@@ -39,15 +39,14 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
             var recAmount = GetReceiptTotal(receiptRequest, docType);
             var recVat = GetReceiptVat(receiptRequest, docType);
-            var payments = GetPaymentTotals(receiptRequest);
-            var paidAmount = payments.Values.Sum();
+            var payments = GetPaymentTotals(receiptRequest, recAmount);
 
             var newDailyAmountCents = tillState.CurrentDailyAmount + (docType == 0 ? ToCents(recAmount) : 0);
             var dailyAmount = newDailyAmountCents / 100m;
 
             var printerFiscalReceipt = BuildPrinterFiscalReceipt(
                 receiptRequest, tillState, docType, docNumber, zNumber, moment,
-                recAmount, recVat, dailyAmount, payments, paidAmount,
+                recAmount, recVat, dailyAmount, payments,
                 referenceZNumber, referenceDocNumber, referenceDocMoment, referenceTillId);
 
             var sectionA = tillState.LastFingerPrint;
@@ -77,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         private static string BuildPrinterFiscalReceipt(
             ReceiptRequest receiptRequest, TillState tillState, int docType, long docNumber, long zNumber, DateTime moment,
-            decimal recAmount, decimal recVat, decimal dailyAmount, Dictionary<int, decimal> payments, decimal paidAmount,
+            decimal recAmount, decimal recVat, decimal dailyAmount, PaymentTotals payments,
             long? referenceZNumber, long? referenceDocNumber, DateTime? referenceDocMoment, string? referenceTillId)
         {
             var sb = new StringBuilder();
@@ -109,8 +108,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 sb.Append($" paymentType=\"{paymentType.PaymentType}\" index=\"{paymentType.Index}\" />");
             }
 
-            if (payments.Count == 0)
+            if ((receiptRequest.cbPayItems?.Length ?? 0) == 0)
             {
+                // No pay items: fall back to a single cash payment covering the receipt total. The cash bucket in
+                // fiscalInformation is aligned by GetPaymentTotals so the amounts stay consistent (error -38).
                 sb.Append($"<printRecTotal description=\"CONTANTE\" payment=\"{FormatAmount(recAmount)}\" paymentType=\"0\" index=\"0\" />");
             }
 
@@ -139,12 +140,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             sb.Append($" recAmount=\"{FormatAmount(recAmount)}\"");
             sb.Append($" recVAT=\"{FormatAmount(recVat)}\"");
             sb.Append($" docType=\"{docType}\"");
-            sb.Append($" cashAmount=\"{FormatAmount(payments.TryGetValue(0, out var cash) ? cash : 0)}\"");
-            sb.Append($" checkAmount=\"{FormatAmount(payments.TryGetValue(1, out var check) ? check : 0)}\"");
-            sb.Append($" ePayAmount=\"{FormatAmount(payments.TryGetValue(2, out var epay) ? epay : 0)}\"");
-            sb.Append($" ticketAmount=\"{FormatAmount(payments.TryGetValue(3, out var ticket) ? ticket : 0)}\"");
-            sb.Append($" changeAmount=\"{FormatAmount(0)}\"");
+            // Payment buckets per Metadata Guide 3.8 (XML 7.1 attributes; the deprecated noPayAmount is not used).
+            // Semantics validated against the device (-39 otherwise): the buckets contain the TENDERED amounts,
+            // changeAmount the change due, and paidAmount the NET amount paid (tendered - change == recAmount).
+            var changeAmount = Math.Max(0, payments.Paid - recAmount);
+            var paidAmount = payments.Paid - changeAmount;
+            sb.Append($" cashAmount=\"{FormatAmount(payments.Cash)}\"");
+            sb.Append($" checkAmount=\"{FormatAmount(payments.Check)}\"");
+            sb.Append($" ePayAmount=\"{FormatAmount(payments.EPay)}\"");
+            sb.Append($" ticketAmount=\"{FormatAmount(payments.Ticket)}\"");
+            if (payments.TicketNum > 0)
+            {
+                sb.Append($" ticketNum=\"{payments.TicketNum}\"");
+            }
+            sb.Append($" changeAmount=\"{FormatAmount(changeAmount)}\"");
             sb.Append($" paidAmount=\"{FormatAmount(paidAmount)}\"");
+            sb.Append($" discountPayment=\"{FormatAmount(payments.Discount)}\"");
+            sb.Append($" noPayAmountGoods=\"{FormatAmount(payments.NoPayGoods)}\"");
+            sb.Append($" noPayAmountServices=\"{FormatAmount(payments.NoPayServices)}\"");
+            sb.Append($" noPayAmountInvoices=\"{FormatAmount(payments.NoPayInvoices)}\"");
+            sb.Append($" noPayAmountSSN=\"{FormatAmount(payments.NoPaySSN)}\"");
             if (!string.IsNullOrEmpty(tillState.RTServerSerialNumber))
             {
                 sb.Append($" rtSerialNumber=\"{tillState.RTServerSerialNumber}\"");
@@ -279,14 +294,58 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             return Math.Round(gross - (gross / (1m + (ci.VATRate / 100m))), 2, MidpointRounding.AwayFromZero);
         }
 
-        private static Dictionary<int, decimal> GetPaymentTotals(ReceiptRequest receiptRequest)
+        /// <summary>
+        /// Per-method payment totals used to fill the fiscalInformation buckets (Metadata Guide 3.8):
+        /// paymentType 0=cash, 1=cheque, 2=electronic, 3=ticket (+ticket count), 4=not-paid services,
+        /// 5=not-paid goods, 6=not-paid invoice, 7=not-paid SSN, 8/9=payment discount.
+        /// </summary>
+        internal sealed class PaymentTotals
         {
-            var totals = new Dictionary<int, decimal>();
-            foreach (var payItem in receiptRequest.cbPayItems ?? Array.Empty<PayItem>())
+            public decimal Cash;
+            public decimal Check;
+            public decimal EPay;
+            public decimal Ticket;
+            public decimal NoPayGoods;
+            public decimal NoPayServices;
+            public decimal NoPayInvoices;
+            public decimal NoPaySSN;
+            public decimal Discount;
+            public int TicketNum;
+
+            public decimal Paid => Cash + Check + EPay + Ticket + NoPayGoods + NoPayServices + NoPayInvoices + NoPaySSN + Discount;
+        }
+
+        private static PaymentTotals GetPaymentTotals(ReceiptRequest receiptRequest, decimal recAmount)
+        {
+            var totals = new PaymentTotals();
+            var payItems = receiptRequest.cbPayItems ?? Array.Empty<PayItem>();
+            if (payItems.Length == 0)
             {
-                var type = GetEpsonPaymentType(payItem).PaymentType;
+                // Keep in sync with the fallback cash printRecTotal emitted in BuildPrinterFiscalReceipt.
+                totals.Cash = recAmount;
+                return totals;
+            }
+
+            foreach (var payItem in payItems)
+            {
                 var amount = Math.Abs(payItem.Amount);
-                totals[type] = (totals.TryGetValue(type, out var current) ? current : 0) + amount;
+                switch (GetEpsonPaymentType(payItem).PaymentType)
+                {
+                    case 0: totals.Cash += amount; break;
+                    case 1: totals.Check += amount; break;
+                    case 2: totals.EPay += amount; break;
+                    case 3:
+                        totals.Ticket += amount;
+                        totals.TicketNum += Math.Max(1, (int) Math.Abs(payItem.Quantity));
+                        break;
+                    case 4: totals.NoPayServices += amount; break;
+                    case 5: totals.NoPayGoods += amount; break;
+                    case 6: totals.NoPayInvoices += amount; break;
+                    case 7: totals.NoPaySSN += amount; break;
+                    case 8:
+                    case 9: totals.Discount += amount; break;
+                    default: totals.Cash += amount; break;
+                }
             }
             return totals;
         }
@@ -300,19 +359,22 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         private static string Escape(string? value) => SecurityElement.Escape(value ?? string.Empty) ?? string.Empty;
 
         // VAT index mapping — mirrors EpsonRTPrinter.GetVatGroup (same Epson fiscal engine).
+        // Unknown cases throw instead of silently defaulting to a VAT rate: emitting the wrong rate on a
+        // fiscal document is worse than failing the receipt.
         public static int GetVatId(ChargeItem chargeItem)
         {
             if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
             {
                 return (chargeItem.ftChargeItemCase & 0xF000) switch
                 {
-                    0x8000 => 10,
-                    0x2000 => 11,
-                    0x1000 => 12,
-                    0x3000 => 13,
-                    0x4000 => 14,
-                    0x5000 => 15,
-                    _ => 0
+                    0x8000 => 10, // EE - Esclusa
+                    0x2000 => 11, // NS - Non soggetta
+                    0x1000 => 12, // NI - Non imponibile
+                    0x3000 => 13, // ES - Esente
+                    0x4000 => 14, // RM - Regime del margine
+                    0x5000 => 15, // AL - Operazione non IVA
+                    0x0000 => 0,  // not taxable (Esente N4)
+                    _ => throw new NotSupportedException($"The ftChargeItemCase 0x{chargeItem.ftChargeItemCase:X} has no VAT-nature mapping for the Epson RT Server.")
                 };
             }
 
@@ -323,8 +385,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 0x3 => 1, // 22%
                 0x4 => 4, // 5%
                 0x7 => 13, // 0%
-                0x8 => 0, // not taxable
-                _ => 1
+                _ => throw new NotSupportedException($"The ftChargeItemCase 0x{chargeItem.ftChargeItemCase:X} has no VAT-index mapping for the Epson RT Server.")
             };
         }
 

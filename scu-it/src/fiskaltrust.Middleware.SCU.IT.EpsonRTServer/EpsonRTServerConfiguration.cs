@@ -43,6 +43,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         public bool IgnoreRTServerErrors { get; set; } = false;
 
         /// <summary>
+        /// How many times the communication queue retries a cached document that the RT Server actively rejects
+        /// before parking it in the "failed" subfolder. Network failures do not count towards this limit.
+        /// </summary>
+        public int MaxDocumentSendRetries { get; set; } = 5;
+
+        /// <summary>
         /// The HTTP client timeout used when communicating with the RT Server.
         /// </summary>
         public int RTServerHttpTimeoutInMs { get; set; } = 15000;

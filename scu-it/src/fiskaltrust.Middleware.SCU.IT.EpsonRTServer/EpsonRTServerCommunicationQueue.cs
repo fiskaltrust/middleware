@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         private bool _requestCancellation;
         private bool _processingReceipts;
+        private readonly Dictionary<string, int> _rejectionCounts = new();
 
         public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration)
         {
@@ -51,12 +53,15 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             _ = Task.Run(ProcessReceiptsInBackground);
         }
 
-        public async Task EnqueueDocument(string tillId, string createReceiptXml, long zRepNumber, long docNumber)
+        /// <summary>
+        /// Sends the document synchronously (returning the server response so the caller can react to
+        /// rejections, e.g. blockchain errors) or caches it on disk for the background queue (returns null).
+        /// </summary>
+        public async Task<Models.RtServerResponse?> EnqueueDocument(string tillId, string createReceiptXml, long zRepNumber, long docNumber)
         {
             if (_configuration.SendReceiptsSync)
             {
-                await _client.CreateReceiptAsync(createReceiptXml).ConfigureAwait(false);
-                return;
+                return await _client.CreateReceiptAsync(createReceiptXml).ConfigureAwait(false);
             }
 
             var tillFolder = Path.Combine(_documentsPath, tillId);
@@ -66,6 +71,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             }
             var fileName = $"{DateTime.UtcNow.Ticks}__{zRepNumber:D4}-{docNumber:D4}{DocumentSuffix}";
             File.WriteAllText(Path.Combine(tillFolder, fileName), createReceiptXml);
+            return null;
         }
 
         public async Task ProcessReceiptsInBackground()
@@ -90,8 +96,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                                 _processingReceipts = false;
                                 return;
                             }
-                            await _client.CreateReceiptAsync(File.ReadAllText(document)).ConfigureAwait(false);
-                            File.Delete(document);
+                            if (!await SendCachedDocumentAsync(document).ConfigureAwait(false))
+                            {
+                                // Rejected but not yet parked: stop this till's sequence to preserve the
+                                // blockchain order; retried on the next cycle.
+                                break;
+                            }
                         }
                     }
                 }
@@ -122,8 +132,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 }
                 foreach (var document in Directory.GetFiles(tillFolder, DocumentSearchPattern).OrderBy(x => x))
                 {
-                    await _client.CreateReceiptAsync(File.ReadAllText(document)).ConfigureAwait(false);
-                    File.Delete(document);
+                    if (!await SendCachedDocumentAsync(document).ConfigureAwait(false))
+                    {
+                        throw new EpsonRTServerCommunicationException($"The RT Server rejected the cached document '{Path.GetFileName(document)}'; daily closing cannot proceed until the cache is drained.", -1);
+                    }
                 }
             }
             catch (Exception ex)
@@ -136,6 +148,54 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 _requestCancellation = false;
                 _ = Task.Run(ProcessReceiptsInBackground);
             }
+        }
+
+        /// <summary>
+        /// Sends one cached document. Returns true when the file was consumed (accepted by the server, or
+        /// parked in the "failed" subfolder after too many rejections), false when it was rejected and should
+        /// be retried later. Network exceptions propagate to the caller (the device is simply unreachable).
+        /// </summary>
+        private async Task<bool> SendCachedDocumentAsync(string documentPath)
+        {
+            Models.RtServerResponse? response = null;
+            var rejected = false;
+            try
+            {
+                response = await _client.CreateReceiptAsync(File.ReadAllText(documentPath)).ConfigureAwait(false);
+                rejected = response != null && !response.Success && response.CodeAsInt < 0;
+            }
+            catch (EpsonRTServerCommunicationException ex)
+            {
+                _logger.LogError(ex, "The RT Server rejected the cached document {document}.", Path.GetFileName(documentPath));
+                rejected = true;
+            }
+
+            if (!rejected)
+            {
+                File.Delete(documentPath);
+                _rejectionCounts.Remove(documentPath);
+                return true;
+            }
+
+            _rejectionCounts[documentPath] = (_rejectionCounts.TryGetValue(documentPath, out var count) ? count : 0) + 1;
+            _logger.LogWarning("Cached document {document} was rejected by the RT Server (code {code}, attempt {attempt}/{max}).",
+                Path.GetFileName(documentPath), response?.Code ?? "n/a", _rejectionCounts[documentPath], _configuration.MaxDocumentSendRetries);
+
+            if (_rejectionCounts[documentPath] >= _configuration.MaxDocumentSendRetries)
+            {
+                // Poison document: park it so it stops blocking the queue. It stays on disk for manual analysis.
+                var failedFolder = Path.Combine(Path.GetDirectoryName(documentPath)!, "failed");
+                if (!Directory.Exists(failedFolder))
+                {
+                    Directory.CreateDirectory(failedFolder);
+                }
+                File.Move(documentPath, Path.Combine(failedFolder, Path.GetFileName(documentPath)));
+                _rejectionCounts.Remove(documentPath);
+                _logger.LogError("Cached document {document} was rejected {max} times and has been moved to '{failedFolder}'. It will NOT be transmitted automatically.",
+                    Path.GetFileName(documentPath), _configuration.MaxDocumentSendRetries, failedFolder);
+                return true;
+            }
+            return false;
         }
 
         public long GetCountOfDocumentsForInCache()

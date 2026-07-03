@@ -138,7 +138,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             var items = new[]
             {
                 new ChargeItem { Amount = 10.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 },
-                new ChargeItem { Amount = -3.00m, Quantity = 1, Description = "Buono", VATRate = 22m, ftChargeItemCase = 0x40 }
+                new ChargeItem { Amount = -3.00m, Quantity = 1, Description = "Buono", VATRate = 22m, ftChargeItemCase = 0x43 }
             };
             var doc = EpsonRTServerMapping.BuildFiscalDocument(RequestWith(items, 7.00m), NewTillState(), 0);
 
@@ -152,7 +152,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             var items = new[]
             {
                 new ChargeItem { Amount = 10.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 },
-                new ChargeItem { Amount = 4.00m, Quantity = 1, Description = "Storno", VATRate = 22m, ftChargeItemCase = 0x0000_0000_0001_0000 }
+                new ChargeItem { Amount = 4.00m, Quantity = 1, Description = "Storno", VATRate = 22m, ftChargeItemCase = 0x0000_0000_0001_0003 }
             };
             var doc = EpsonRTServerMapping.BuildFiscalDocument(RequestWith(items, 6.00m), NewTillState(), 0);
 
@@ -172,6 +172,73 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
 
             doc.CreateReceiptXml.Should().Contain("<printRecMessage message=\"Nota descrittiva\" />");
             doc.AmountCents.Should().Be(1000);
+        }
+
+        [Fact]
+        public void BuildFiscalDocument_CashOverpayment_Should_Compute_ChangeAmount()
+        {
+            var items = new[] { new ChargeItem { Amount = 8.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 } };
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(RequestWith(items, 10.00m), NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                // Device-validated semantics: buckets carry the tendered amounts, paidAmount the NET amount
+                // (tendered - change); paidAmount != recAmount is rejected with -39.
+                doc.CreateReceiptXml.Should().Contain("cashAmount=\"10.00\"");
+                doc.CreateReceiptXml.Should().Contain("changeAmount=\"2.00\"");
+                doc.CreateReceiptXml.Should().Contain("paidAmount=\"8.00\"");
+                doc.CreateReceiptXml.Should().Contain("recAmount=\"8.00\"");
+            }
+        }
+
+        [Fact]
+        public void BuildFiscalDocument_NotPaid_Should_Fill_NoPayBucket()
+        {
+            var items = new[] { new ChargeItem { Amount = 5.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 } };
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = 0x0001,
+                cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0),
+                cbChargeItems = items,
+                cbPayItems = new[] { new PayItem { Amount = 5.00m, Quantity = 1, Description = "NON RISCOSSO", ftPayItemCase = 0x07 } } // -> paymentType 5 (not paid goods)
+            };
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(request, NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("noPayAmountGoods=\"5.00\"");
+                doc.CreateReceiptXml.Should().Contain("cashAmount=\"0.00\"");
+                doc.CreateReceiptXml.Should().Contain("paidAmount=\"5.00\"");
+            }
+        }
+
+        [Fact]
+        public void BuildFiscalDocument_NoPayItems_Should_Align_CashBucket_With_Fallback_Total()
+        {
+            var items = new[] { new ChargeItem { Amount = 7.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 } };
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = 0x0001,
+                cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0),
+                cbChargeItems = items,
+                cbPayItems = Array.Empty<PayItem>()
+            };
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(request, NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<printRecTotal description=\"CONTANTE\" payment=\"7.00\"");
+                doc.CreateReceiptXml.Should().Contain("cashAmount=\"7.00\"");
+                doc.CreateReceiptXml.Should().Contain("paidAmount=\"7.00\"");
+                doc.CreateReceiptXml.Should().Contain("changeAmount=\"0.00\"");
+            }
+        }
+
+        [Fact]
+        public void GetVatId_Should_Throw_For_Unknown_Case()
+        {
+            var act = () => EpsonRTServerMapping.GetVatId(new ChargeItem { ftChargeItemCase = 0x5 });
+            act.Should().Throw<NotSupportedException>().WithMessage("*no VAT-index mapping*");
         }
 
         [Theory]

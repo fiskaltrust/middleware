@@ -123,10 +123,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             var response = RtServerResponse.Parse(content);
             if (!response.Success && response.CodeAsInt < 0)
             {
-                _logger.LogError("Calling '{endpoint}' failed with code {code} ({status}). Raw: {raw}", endpoint, response.Code, response.Status, content);
+                var description = EpsonRTServerErrorCodes.Describe(response.CodeAsInt);
+                _logger.LogError("Calling '{endpoint}' failed with code {code} ({status}): {description}. Raw: {raw}", endpoint, response.Code, response.Status, description, content);
                 if (!_configuration.IgnoreRTServerErrors)
                 {
-                    throw new EpsonRTServerCommunicationException($"Calling '{endpoint}' failed with code {response.Code} ({response.Status}).", response.CodeAsInt);
+                    throw new EpsonRTServerCommunicationException($"Calling '{endpoint}' failed with code {response.Code} ({response.Status}): {description}", response.CodeAsInt);
                 }
             }
             return response;
