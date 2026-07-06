@@ -810,7 +810,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.ReportInfo?.PrinterStatus) ?? "");
             }
-            if (_configuration.AutoRebootEnable)
+            if (_configuration.ForceRebootAfterDailyClosing)
             {
                 // #549: the printer sometimes gets stuck during the day; a post-closing reboot clears it.
                 await SendRebootCommandAsync();

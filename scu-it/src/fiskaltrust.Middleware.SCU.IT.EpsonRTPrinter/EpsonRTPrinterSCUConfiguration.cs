@@ -33,6 +33,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         /// Opt-in workaround for printers that occasionally get stuck during the day (#549).
         /// Does not affect the manual (zero-receipt) reboot request.
         /// </summary>
-        public bool AutoRebootEnable { get; set; } = false;
+        public bool ForceRebootAfterDailyClosing { get; set; } = false;
     }
 }

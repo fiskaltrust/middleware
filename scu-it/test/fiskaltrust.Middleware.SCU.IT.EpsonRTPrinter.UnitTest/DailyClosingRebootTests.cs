@@ -16,8 +16,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
         private static ReceiptRequest DailyClosing() => new() { ftReceiptCase = 0x4954_2000_0000_2011 };
 
-        private static EpsonRTPrinterSCU CreateSut(IEpsonFpMateClient client, bool autoRebootEnable = false) =>
-            new(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration { AutoRebootEnable = autoRebootEnable }, client);
+        private static EpsonRTPrinterSCU CreateSut(IEpsonFpMateClient client, bool forceReboot = false) =>
+            new(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration { ForceRebootAfterDailyClosing = forceReboot }, client);
 
         private static Mock<IEpsonFpMateClient> ClientReturning(ReportResponse zReportResult)
         {
@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         public async Task DailyClosing_WhenEnabledAndZReportSucceeds_SendsRebootCommand()
         {
             var client = ClientReturning(new ReportResponse { Success = true, ReportInfo = new ReportInfo { ZRepNumber = "1", PrinterStatus = "00000000" } });
-            var sut = CreateSut(client.Object, autoRebootEnable: true);
+            var sut = CreateSut(client.Object, forceReboot: true);
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
 
@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         public async Task DailyClosing_WhenEnabledAndZReportFails_DoesNotReboot()
         {
             var client = ClientReturning(new ReportResponse { Success = false, Code = "1", Status = "1" });
-            var sut = CreateSut(client.Object, autoRebootEnable: true);
+            var sut = CreateSut(client.Object, forceReboot: true);
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
 
