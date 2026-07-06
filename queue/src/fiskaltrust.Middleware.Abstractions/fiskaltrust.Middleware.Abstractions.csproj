@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <PackageDescription>Abstract types that are internally used by the fiskaltrust.Middleware and the fiskaltrust.Launcher.</PackageDescription>
-        <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;net461;net6.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
