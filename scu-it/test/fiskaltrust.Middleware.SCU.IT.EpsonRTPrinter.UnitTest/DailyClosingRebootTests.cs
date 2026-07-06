@@ -16,8 +16,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
         private static ReceiptRequest DailyClosing() => new() { ftReceiptCase = 0x4954_2000_0000_2011 };
 
-        private static EpsonRTPrinterSCU CreateSut(IEpsonFpMateClient client) =>
-            new(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration(), client);
+        private static EpsonRTPrinterSCU CreateSut(IEpsonFpMateClient client, bool autoRebootEnable = false) =>
+            new(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration { AutoRebootEnable = autoRebootEnable }, client);
 
         private static Mock<IEpsonFpMateClient> ClientReturning(ReportResponse zReportResult)
         {
@@ -29,10 +29,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         }
 
         [Fact]
-        public async Task DailyClosing_WhenZReportSucceeds_SendsRebootCommand()
+        public async Task DailyClosing_WhenEnabledAndZReportSucceeds_SendsRebootCommand()
         {
             var client = ClientReturning(new ReportResponse { Success = true, ReportInfo = new ReportInfo { ZRepNumber = "1", PrinterStatus = "00000000" } });
-            var sut = CreateSut(client.Object);
+            var sut = CreateSut(client.Object, autoRebootEnable: true);
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
 
@@ -40,9 +40,20 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         }
 
         [Fact]
-        public async Task DailyClosing_WhenZReportFails_DoesNotReboot()
+        public async Task DailyClosing_WhenEnabledAndZReportFails_DoesNotReboot()
         {
             var client = ClientReturning(new ReportResponse { Success = false, Code = "1", Status = "1" });
+            var sut = CreateSut(client.Object, autoRebootEnable: true);
+
+            await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
+
+            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p))), Times.Never);
+        }
+
+        [Fact]
+        public async Task DailyClosing_WhenDisabled_DoesNotReboot()
+        {
+            var client = ClientReturning(new ReportResponse { Success = true, ReportInfo = new ReportInfo { ZRepNumber = "1", PrinterStatus = "00000000" } });
             var sut = CreateSut(client.Object);
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });

@@ -27,5 +27,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         public string? Password { get; set; }
 
         public string? AdditionalTrailerLines { get; set;}
+
+        /// <summary>
+        /// Automatically reboots the RT printer after a successful daily closing (Z report).
+        /// Opt-in workaround for printers that occasionally get stuck during the day (#549).
+        /// Does not affect the manual (zero-receipt) reboot request.
+        /// </summary>
+        public bool AutoRebootEnable { get; set; } = false;
     }
 }
