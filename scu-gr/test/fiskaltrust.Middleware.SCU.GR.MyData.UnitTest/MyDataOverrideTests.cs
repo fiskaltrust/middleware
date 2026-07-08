@@ -5,6 +5,7 @@ using System.Xml.Serialization;
 using System.IO;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
@@ -1215,6 +1216,48 @@ public class MyDataOverrideTests
 
         error.Should().NotBeNull();
         error!.Exception.Message.Should().Contain("99.9");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_DeliveryNoteTransport_With92Override_NoCustomer_Succeeds()
+    {
+        // ΣΔΑ (9.2, collective dispatch) has no determined recipient. The receipt case
+        // (delivery note + transport) maps to 9.3, which requires customer info, but the
+        // 9.2 override must relax that so the document can be produced without a customer
+        // (regression for the market-gr#243 unblock).
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+            .WithCase(ReceiptCase.DeliveryNote0x0005)
+            .WithFlag(ReceiptCaseFlagsGR.HasTransportInformation);
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "9.2" } } } } };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item92);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_DeliveryNoteTransport_With91Override_NoCustomer_StillRequiresCustomer()
+    {
+        // The override only WAIVES the customer-info requirement when the target type itself
+        // does not need it. 9.1 (Delivery Note) still identifies a recipient, so overriding a
+        // delivery-note case to 9.1 without a customer must still fail validation.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000)
+            .WithCase(ReceiptCase.DeliveryNote0x0005)
+            .WithFlag(ReceiptCaseFlagsGR.HasTransportInformation);
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "9.1" } } } } };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("Customer info is required");
     }
 
     // === PHASE 2: INCOME CLASSIFICATION OVERRIDE TESTS ===

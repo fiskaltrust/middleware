@@ -448,25 +448,16 @@ public class AADEFactory
         // single-vehicle info remains settable via InvoiceHeaderTypeOverride.VehicleNumber.
     }
 
-    private static readonly Dictionary<string, InvoiceType> InvoiceTypeMap = typeof(InvoiceType)
-        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-        .ToDictionary(
-            f => f.GetCustomAttributes(typeof(System.Xml.Serialization.XmlEnumAttribute), false)
-                  .Cast<System.Xml.Serialization.XmlEnumAttribute>()
-                  .FirstOrDefault()?.Name ?? f.Name,
-            f => (InvoiceType) f.GetValue(null)!,
-            StringComparer.OrdinalIgnoreCase);
-
     private static void ApplyInvoiceHeaderOverride(AadeBookInvoiceType invoice, InvoiceHeaderTypeOverride headerOverride)
     {
         // Apply invoice type override
         if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
         {
-            if (!InvoiceTypeMap.TryGetValue(headerOverride.InvoiceType, out var invoiceType))
+            if (!AADEMappings.InvoiceTypeOverrideMap.TryGetValue(headerOverride.InvoiceType, out var invoiceType))
             {
                 throw new ArgumentException(
                     $"Invalid invoiceType override value '{headerOverride.InvoiceType}'. " +
-                    $"Allowed values: {string.Join(", ", InvoiceTypeMap.Keys.OrderBy(k => k))}");
+                    $"Allowed values: {string.Join(", ", AADEMappings.InvoiceTypeOverrideMap.Keys.OrderBy(k => k))}");
             }
             invoice.invoiceHeader.invoiceType = invoiceType;
         }

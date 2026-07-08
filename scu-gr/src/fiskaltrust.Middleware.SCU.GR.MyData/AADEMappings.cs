@@ -439,6 +439,41 @@ public static class AADEMappings
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
+    /// <summary>
+    /// Maps an <c>invoiceType</c> override string (the AADE XML enum value, e.g. "9.2") to the
+    /// matching <see cref="InvoiceType"/>. Built once via reflection over the enum's
+    /// <see cref="System.Xml.Serialization.XmlEnumAttribute"/> values (case-insensitive). Shared
+    /// by the header-override application (<c>AADEFactory.ApplyInvoiceHeaderOverride</c>) and by
+    /// <see cref="GetEffectiveInvoiceType"/> so both resolve an override string identically.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, InvoiceType> InvoiceTypeOverrideMap = typeof(InvoiceType)
+        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        .ToDictionary(
+            f => f.GetCustomAttributes(typeof(System.Xml.Serialization.XmlEnumAttribute), false)
+                  .Cast<System.Xml.Serialization.XmlEnumAttribute>()
+                  .FirstOrDefault()?.Name ?? f.Name,
+            f => (InvoiceType) f.GetValue(null)!,
+            StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Returns the invoice type that will actually be emitted: the <c>invoiceType</c> override
+    /// from the mydataoverride payload when present and recognized, otherwise the type derived
+    /// from the receipt case (<see cref="GetInvoiceType"/>). Used by validation so the
+    /// customer-info requirement can be evaluated against the effective type.
+    /// </summary>
+    public static InvoiceType GetEffectiveInvoiceType(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData))
+        {
+            var overrideType = caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
+            if (!string.IsNullOrEmpty(overrideType) && InvoiceTypeOverrideMap.TryGetValue(overrideType!, out var overridden))
+            {
+                return overridden;
+            }
+        }
+        return GetInvoiceType(receiptRequest);
+    }
+
     public static int GetVATCategory(ChargeItem chargeItem)
     {
         if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.UnknownService)

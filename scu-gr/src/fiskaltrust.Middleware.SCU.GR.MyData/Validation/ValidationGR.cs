@@ -28,7 +28,15 @@ public class ValidationGR
             return (false, new MiddlewareValidationError("ChargePayItemsMismatch", "The sum of the charge items must be equal to the sum of the pay items."));
         }
 
-        if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest)) && !receiptRequest.ContainsCustomerInfo())
+        // Customer-info requirement is driven by the receipt-case type, but an invoiceType
+        // override can RELAX it: e.g. overriding a delivery-note case (which maps to 9.3 and
+        // normally requires customer info) to 9.2 (ΣΔΑ / collective dispatch) — which has no
+        // determined recipient — must be allowed without a customer. Require customer info only
+        // when both the base type and the effective (possibly overridden) type require it, so an
+        // override can waive the requirement but never bypasses it for a type that still needs it.
+        if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest))
+            && AADEMappings.RequiresCustomerInfo(AADEMappings.GetEffectiveInvoiceType(receiptRequest))
+            && !receiptRequest.ContainsCustomerInfo())
         {
             return (false, new MiddlewareValidationError("CustomerInfoRequired", "Customer info is required for this invoice type."));
         }
