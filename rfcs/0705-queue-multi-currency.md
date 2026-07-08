@@ -2,7 +2,7 @@
 - Start Date: 2026-07-08
 - RFC PR: [fiskaltrust/middleware#705](https://github.com/fiskaltrust/middleware/pull/705)
 <!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
-- Markets: `PL`, `DK`, and every non-EUR market (no behavioural change for EUR markets)
+- Markets: `PL`, `DK`, and every non-EUR market (EUR markets unaffected except requests sending an explicit non-EUR currency)
 
 # Summary
 
@@ -30,10 +30,10 @@ Expected outcome: a Polish queue signs and totalizes in PLN, a German queue in E
 
 Every queue operates in exactly **one currency at a time**, fixed by *which market and localization version the queue is* — not something the POS picks per receipt, and not a setting an operator configures. That currency stays stable while the queue runs; the one exception is a deliberate, multi-step **currency changeover** (see [below](#currency-changeover)).
 
-- **EUR markets** (AT, DE, FR, IT, ES, PT, GR, …): the queue currency is EUR. Because `Currency` defaults to EUR and is *omitted from the JSON when it equals EUR*, existing POS integrations keep working with **no change at all**.
+- **EUR markets** (AT, DE, FR, IT, ES, PT, GR, …): the queue currency is EUR. Because `Currency` defaults to EUR and is *omitted from the JSON when it equals EUR*, existing POS integrations that send EUR or omit the field keep working with **no change**. The one exception: a request that *explicitly* sends a non-EUR `Currency` — silently ignored today in AT/DE/FR/IT/GR — will start being **rejected** (see the breaking-change note below).
 - **Non-EUR markets** (PL → PLN, DK → DKK): the queue currency is the local currency. The POS **must** set `Currency` accordingly. If it omits the field, the value defaults to EUR, which does not match the queue currency, and the request is **rejected**.
 
-This is a breaking change **only for non-EUR markets** — which is defensible, because EUR markets are the default and the majority, and non-EUR markets are onboarded deliberately.
+This is a breaking change chiefly for **non-EUR markets**, which are onboarded deliberately — but it is **not** fully transparent for EUR markets either. Today AT/DE/FR/IT/GR *ignore* `Currency`, so a live v2 integration that sends an explicit non-EUR `Currency` (say `USD`) to a German queue is silently accepted now, but will be **rejected** once `CurrencyMustMatchMarket(EUR)` is wired in. EUR-market requests that send `EUR` or omit the field are unaffected; requests carrying an explicit non-EUR currency are the breaking case, and must be found in the [rollout audit](#unresolved-questions) before the rule goes live.
 
 ## Examples
 
@@ -72,12 +72,14 @@ The receipt is accepted; the totalizer accumulates `10.00` **in PLN**.
 
 ## Currency changeover
 
-A queue's currency is stable while it runs, but it is **not** immutable forever — a country can change its currency (e.g. a future €-adoption). This must never happen silently on an existing queue; it is a deliberate, multi-step process. Two supported paths:
+A queue's currency is stable while it runs, but it is **not** immutable forever — a country can change its currency (e.g. a future €-adoption). This must never happen silently on an existing queue; it is a deliberate, multi-step process.
 
-1. **Two transition versions.** Ship the changeover as a pair of localization versions — the current-currency version and the new-currency version — and switch the queue's behaviour from one to the other at a defined point in time X.
-2. **A new queue** *(cleaner)* — start a fresh queue in the new currency from time X.
+The crux is the **sum counters**: the totalizers accumulate across the queue's whole life and this RFC does *not* reset them (see [§3](#3-totalizers--no-schema-change-semantics-documented)). So a changeover **must establish a fresh counter boundary at the switch point X** — the queue currency and its totalizers have to turn over *together*. If a queue simply started accepting the new currency at X, the first new-currency receipt would be added onto the old-currency total, producing exactly the mixed-currency total this RFC exists to prevent. Two supported paths:
 
-An in-place default that keys off "the country's current currency" is explicitly **not** supported: it would retroactively reinterpret amounts already totalized in the old currency.
+1. **A new queue** *(recommended)* — start a fresh queue in the new currency from X. Its totalizers begin at zero in the new currency, so nothing is ever mixed. This is the clean default.
+2. **Two transition versions on the same queue** — ship a pair of localization versions (current-currency and new-currency) that switch behaviour at X, **and reset/segment the affected totalizers at X** so the new-currency run starts from a fresh boundary (the same rollover mechanism FR already uses for shift/day/month/year totals). Without that reset this path is **invalid**, because it mixes currencies in the totalizer.
+
+An in-place switch that flips the currency but keeps accumulating into the old total is explicitly **not** supported: it would retroactively reinterpret and mix amounts already totalized in the old currency.
 
 # Reference-level explanation
 
@@ -145,22 +147,28 @@ They keep summing `ChargeItem.Amount` / `PayItem.Amount` as plain decimals. **Co
 
 ## 4. Changeover mechanics
 
-`GetQueueCurrency(version)` is the single switch point. A changeover ships as **two transition versions** of the localization — current-currency and new-currency — with the switch at an effective version/date X; the recommended operational path is a fresh queue. No existing totalizer is ever retro-reinterpreted.
+`GetQueueCurrency(version)` is the single switch point, but the switch is **not totalizer-safe on its own**: because [§3](#3-totalizers--no-schema-change-semantics-documented) keeps the totalizers accumulating unchanged, flipping the currency at X on a live queue would add new-currency receipts onto the old-currency total. A changeover therefore has to turn the totalizers over together with the currency:
+
+- **New queue (recommended)** — a fresh queue starts its totalizers at zero in the new currency; nothing is mixed.
+- **Same queue, two transition versions** — only valid if the affected totalizers are **reset/segmented at X**, reusing the existing FR rollover mechanism (`ResetShiftTotalizer` / `ResetDailyTotalizers` / …). Otherwise the post-X total is a PLN+EUR mix and its signature is meaningless.
+
+Either way, no pre-X and post-X amounts are ever summed into the same total, and no existing totalizer is retro-reinterpreted.
 
 ## 5. Corner cases
 
 - **Omitted `Currency` in a non-EUR market** → defaults to EUR → rejected. (Desired.)
 - **Receipt `PLN` but a line item defaulted to EUR** → item-consistency rule rejects it. (Forces the POS to be explicit — the intended hard check.)
-- **EUR market** → default EUR passes both rules → no POS change, no new behaviour.
+- **EUR market, EUR or omitted currency** → passes both rules → no POS change, no new behaviour.
+- **EUR market, explicit non-EUR currency** (e.g. `USD` sent to a German queue) → *ignored* today in AT/DE/FR/IT/GR, **rejected** after this change. This is the one EUR-market breaking case.
 - **v1 requests** → no `Currency` field → unaffected, EUR-implicit; not accepted by v2-only non-EUR markets.
 - **Foreign-currency payment** (paying an EUR receipt with USD cash) is **not** this feature. The DE `PayItemExtensions.GetCurrency` stub (returns `"???"`, `// TODO`) and the ME `CurrencyDetails.ExchangeRateToEuro` model are the separate FX-payment surface and stay out of scope (see [Future possibilities](#future-possibilities)).
 
 # Drawbacks
 
-- **Breaking change for non-EUR markets.** A POS must now send the correct currency — and, under the item-consistency rule, on line and pay items too — or be rejected. Argued acceptable because EUR markets (the default and the majority) are untouched.
+- **Breaking change for non-EUR markets** (plus a narrow EUR-market case). A non-EUR POS must now send the correct currency — and, under the item-consistency rule, on line and pay items too — or be rejected. EUR markets are untouched *except* for requests that explicitly send a non-EUR `Currency`, which AT/DE/FR/IT/GR ignore today but would reject after this change; that cohort must be found in the rollout audit before wiring the rule in.
 - **Item-level verbosity.** Requiring currency on every line/pay item in non-EUR markets is more work for POS integrators. (Alternative discussed in [Unresolved questions](#unresolved-questions).)
 - **Per-market wiring risk.** Every market's `ReceiptValidations` must opt into the rule; a forgotten market silently stays EUR-assuming. Mitigated by wiring through the shared `MarketValidator` with an explicit per-market currency, so a missing currency is a compile-time gap rather than a silent default.
-- **Manual changeover.** Currency changeover is an operational step (new version or new queue); there is no automatic in-place switch — by design.
+- **Manual changeover.** A currency changeover must turn the totalizers over with the currency — a fresh queue (recommended), or a same-queue version switch that resets the totalizers at X. There is no automatic in-place switch — by design — and a same-queue switch that forgets the reset silently mixes currencies.
 
 # Rationale and alternatives
 
@@ -185,9 +193,9 @@ The chosen design — **currency = f(market, version)**, enforced by validation,
 
 - **Where the (market, version) → currency constant lives**: a per-module constant surfaced through `MarketValidator`, or a shared registry keyed by `CountryCode`? Recommendation: per-market constant in the v2 localization module.
 - **Item-level strictness**: must `ChargeItem.Currency` / `PayItem.Currency` be explicitly set to the market currency (safest, most verbose), or may they be left defaulted and *inherit* the receipt currency? Inheriting is friendlier but cannot distinguish "explicit EUR" from "defaulted EUR" (both serialize away), risking a silent mislabel. Recommendation: require an explicit match; revisit if POS feedback is strong.
-- **Canonical changeover path**: new-version flip vs. forced new queue — pick one as the documented default. Discussion leaned toward a new queue as the cleaner option.
+- **Canonical changeover path**: this RFC recommends a **new queue** as the default, because it is the only path that is totalizer-safe without extra reset logic. The same-queue two-version path stays available but must reset the totalizers at X. Confirm whether the same-queue path is worth supporting at all, or whether changeovers should simply mandate a new queue.
 - **Error-code stability**: keep `OnlyEuroCurrencySupported` verbatim for EUR markets (message / certification stability) or replace it everywhere with a generic `CurrencyMustMatchMarket`? Certification impact to confirm.
-- **Rollout audit**: does any live market beyond ES/PT currently emit a non-EUR `Currency` that would suddenly start failing? Audit before rollout.
+- **Rollout audit**: do any live EUR-market integrations (AT/DE/FR/IT/GR, which ignore `Currency` today) currently send an explicit non-EUR `Currency` that `CurrencyMustMatchMarket(EUR)` would suddenly reject? Audit and coordinate before wiring the rule in.
 
 # Future possibilities
 
