@@ -778,6 +778,18 @@ public class AADEFactory
             row.invoiceDetailTypeSpecified = true;
         }
 
+        // Line-level movement purpose (myDATA v2.0.1) — per-row counterpart of the header
+        // movePurpose / otherMovePurposeTitle.
+        if (detailOverride.MovePurposeLine.HasValue)
+        {
+            row.movePurposeLine = detailOverride.MovePurposeLine.Value;
+            row.movePurposeLineSpecified = true;
+        }
+        if (!string.IsNullOrEmpty(detailOverride.OtherMovePurposeLineTitle))
+        {
+            row.otherMovePurposeLineTitle = detailOverride.OtherMovePurposeLineTitle;
+        }
+
         if (detailOverride.Dienergia != null)
         {
             row.dienergia = new ShipType
