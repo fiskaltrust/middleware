@@ -439,6 +439,21 @@ public static class AADEMappings
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
+    /// <summary>
+    /// Maps an <c>invoiceType</c> override string (the AADE XML enum value, e.g. "9.2") to the
+    /// matching <see cref="InvoiceType"/>. Built once via reflection over the enum's
+    /// <see cref="System.Xml.Serialization.XmlEnumAttribute"/> values (case-insensitive). Used by
+    /// the header-override application (<c>AADEFactory.ApplyInvoiceHeaderOverride</c>).
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, InvoiceType> InvoiceTypeOverrideMap = typeof(InvoiceType)
+        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        .ToDictionary(
+            f => f.GetCustomAttributes(typeof(System.Xml.Serialization.XmlEnumAttribute), false)
+                  .Cast<System.Xml.Serialization.XmlEnumAttribute>()
+                  .FirstOrDefault()?.Name ?? f.Name,
+            f => (InvoiceType) f.GetValue(null)!,
+            StringComparer.OrdinalIgnoreCase);
+
     public static int GetVATCategory(ChargeItem chargeItem)
     {
         if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.UnknownService)
@@ -588,7 +603,9 @@ public static class AADEMappings
         {
             InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 or InvoiceType.Item93 => true,
             InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
-            _ => throw new NotSupportedException($"The invoice type '{invoiceType.GetXmlEnumAttributeValueFromEnum()}' is not supported"),
+            // Any invoice type not listed above (incl. the v2.0.1 delivery-note types
+            // 9.1/9.2/10.1/10.2) falls back to false rather than throwing.
+            _ => false,
         };
     }
 

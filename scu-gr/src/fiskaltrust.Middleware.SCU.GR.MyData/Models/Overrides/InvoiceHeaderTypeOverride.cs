@@ -60,6 +60,9 @@ public class InvoiceHeaderTypeOverride
     [JsonPropertyName("reverseDeliveryNotePurpose")]
     public int? ReverseDeliveryNotePurpose { get; set; }
 
+    [JsonPropertyName("toWeigh")]
+    public bool? ToWeigh { get; set; }
+
     [JsonPropertyName("series")]
     public string? Series { get; set; }
 
