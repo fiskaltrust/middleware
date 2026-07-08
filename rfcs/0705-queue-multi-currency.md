@@ -1,7 +1,7 @@
 - Feature Name: `queue_multi_currency`
 - Start Date: 2026-07-08
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
-- Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+- RFC PR: [fiskaltrust/middleware#705](https://github.com/fiskaltrust/middleware/pull/705)
+<!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
 - Markets: `PL`, `DK`, and every non-EUR market (no behavioural change for EUR markets)
 
 # Summary
