@@ -442,9 +442,8 @@ public static class AADEMappings
     /// <summary>
     /// Maps an <c>invoiceType</c> override string (the AADE XML enum value, e.g. "9.2") to the
     /// matching <see cref="InvoiceType"/>. Built once via reflection over the enum's
-    /// <see cref="System.Xml.Serialization.XmlEnumAttribute"/> values (case-insensitive). Shared
-    /// by the header-override application (<c>AADEFactory.ApplyInvoiceHeaderOverride</c>) and by
-    /// <see cref="GetEffectiveInvoiceType"/> so both resolve an override string identically.
+    /// <see cref="System.Xml.Serialization.XmlEnumAttribute"/> values (case-insensitive). Used by
+    /// the header-override application (<c>AADEFactory.ApplyInvoiceHeaderOverride</c>).
     /// </summary>
     public static readonly IReadOnlyDictionary<string, InvoiceType> InvoiceTypeOverrideMap = typeof(InvoiceType)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
@@ -454,25 +453,6 @@ public static class AADEMappings
                   .FirstOrDefault()?.Name ?? f.Name,
             f => (InvoiceType) f.GetValue(null)!,
             StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Returns the invoice type that will actually be emitted: the <c>invoiceType</c> override
-    /// from the mydataoverride payload when present and recognized, otherwise the type derived
-    /// from the receipt case (<see cref="GetInvoiceType"/>). Used by validation so the
-    /// customer-info requirement can be evaluated against the effective type.
-    /// </summary>
-    public static InvoiceType GetEffectiveInvoiceType(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var caseData))
-        {
-            var overrideType = caseData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
-            if (!string.IsNullOrEmpty(overrideType) && InvoiceTypeOverrideMap.TryGetValue(overrideType!, out var overridden))
-            {
-                return overridden;
-            }
-        }
-        return GetInvoiceType(receiptRequest);
-    }
 
     public static int GetVATCategory(ChargeItem chargeItem)
     {
@@ -621,16 +601,11 @@ public static class AADEMappings
     {
         return invoiceType switch
         {
-            // Delivery / dispatch notes (Παραστατικά Διακίνησης). 9.1 (Delivery Note),
-            // 10.1 / 10.2 (v2.0.1 movement documents) identify a recipient, like the
-            // existing 9.3. 9.2 (Συγκεντρωτικό Δελτίο Αποστολής / ΣΔΑ, collective dispatch)
-            // is issued before the recipient is known, so it does not require customer info.
-            // NOTE: today these are only reached defensively — GetInvoiceType never returns
-            // 9.1/9.2/10.1/10.2, and the invoiceType override is applied after validation —
-            // so the split has no runtime effect yet; it encodes the intended AADE semantics.
-            InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 or InvoiceType.Item91 or InvoiceType.Item93 or InvoiceType.Item101 or InvoiceType.Item102 => true,
-            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item92 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
-            _ => throw new NotSupportedException($"The invoice type '{invoiceType.GetXmlEnumAttributeValueFromEnum()}' is not supported"),
+            InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 or InvoiceType.Item93 => true,
+            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+            // Any invoice type not listed above (incl. the v2.0.1 delivery-note types
+            // 9.1/9.2/10.1/10.2) falls back to false rather than throwing.
+            _ => false,
         };
     }
 
