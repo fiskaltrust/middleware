@@ -38,7 +38,7 @@ public class AADEFactory
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
-            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+            throw new ArgumentException("Receipt base address is required for myDATA v2.0.1", nameof(receiptBaseAddress));
         }
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
@@ -442,10 +442,10 @@ public class AADEFactory
             invoice.counterpart = counterpart;
         }
 
-        if (invoiceOverride.OtherTransportDetails != null)
-        {
-            invoice.otherTransportDetails = [.. invoiceOverride.OtherTransportDetails.Select(t => new TransportDetailType { vehicleNumber = t.VehicleNumber })];
-        }
+        // Invoice-level `otherTransportDetails` was removed from the AADE invoice schema in
+        // v2.0.1 (multi-vehicle transport moved to the separate e-transport API surface:
+        // RegisterTransfer / TransportTypes). The former override has therefore been dropped;
+        // single-vehicle info remains settable via InvoiceHeaderTypeOverride.VehicleNumber.
     }
 
     private static readonly Dictionary<string, InvoiceType> InvoiceTypeMap = typeof(InvoiceType)
@@ -627,6 +627,13 @@ public class AADEFactory
         {
             invoice.invoiceHeader.reverseDeliveryNote = headerOverride.ReverseDeliveryNote.Value;
             invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
+        }
+
+        // Apply toWeigh (delivery-note flag added in myDATA v2.0.1)
+        if (headerOverride.ToWeigh.HasValue)
+        {
+            invoice.invoiceHeader.toWeigh = headerOverride.ToWeigh.Value;
+            invoice.invoiceHeader.toWeighSpecified = true;
         }
 
         // Apply series

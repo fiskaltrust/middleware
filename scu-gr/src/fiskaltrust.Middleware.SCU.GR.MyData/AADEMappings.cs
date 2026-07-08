@@ -586,8 +586,15 @@ public static class AADEMappings
     {
         return invoiceType switch
         {
-            InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 or InvoiceType.Item93 => true,
-            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+            // Delivery / dispatch notes (Παραστατικά Διακίνησης). 9.1 (Delivery Note),
+            // 10.1 / 10.2 (v2.0.1 movement documents) identify a recipient, like the
+            // existing 9.3. 9.2 (Συγκεντρωτικό Δελτίο Αποστολής / ΣΔΑ, collective dispatch)
+            // is issued before the recipient is known, so it does not require customer info.
+            // NOTE: today these are only reached defensively — GetInvoiceType never returns
+            // 9.1/9.2/10.1/10.2, and the invoiceType override is applied after validation —
+            // so the split has no runtime effect yet; it encodes the intended AADE semantics.
+            InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 or InvoiceType.Item91 or InvoiceType.Item93 or InvoiceType.Item101 or InvoiceType.Item102 => true,
+            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item92 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
             _ => throw new NotSupportedException($"The invoice type '{invoiceType.GetXmlEnumAttributeValueFromEnum()}' is not supported"),
         };
     }
