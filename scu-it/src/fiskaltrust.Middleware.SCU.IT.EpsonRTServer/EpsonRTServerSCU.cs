@@ -19,7 +19,9 @@ public sealed class EpsonRTServerSCU : LegacySCU
     private const long StateFailed = 0x4954_2001_EEEE_EEEE;
     private const long StateOk = 0x4954_2000_0000_0000;
     private const long SignatureTypeError = 0x4954_2000_0000_3000;
-    private const long SignatureTypeWarning = 0x4954_2000_0000_2000;
+    // The 0x...0020_.... group flags the signature as internal/technical so it is NOT rendered on the fiscal
+    // document (PDF) shown to the customer — used for non-blocking anomaly warnings.
+    private const long SignatureTypeWarning = 0x4954_2000_0020_2000;
 
     private readonly Guid _id;
     private readonly ILogger<EpsonRTServerSCU> _logger;
@@ -274,9 +276,12 @@ public sealed class EpsonRTServerSCU : LegacySCU
             response = await SendDocumentAsync(tillState, document).ConfigureAwait(false);
         }
 
-        if (response != null && !response.Success && response.CodeAsInt < 0)
+        if (response != null && !response.Success && response.CodeAsInt < 0
+            && !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(response.CodeAsInt))
         {
-            // Rejected: do NOT advance the local chain, otherwise every following document would be refused too.
+            // Blocking rejection ("Receipt not accepted"): do NOT advance the local chain, otherwise every
+            // following document would be refused too. Codes flagged as "accepted with error in log" are NOT
+            // rejections — they fall through, the chain advances and a warning signature is added below.
             throw new EpsonRTServerCommunicationException(
                 $"The RT Server rejected the document with code {response.Code}: {EpsonRTServerErrorCodes.Describe(response.CodeAsInt)}",
                 response.CodeAsInt);
@@ -307,7 +312,24 @@ public sealed class EpsonRTServerSCU : LegacySCU
             RTReferenceDocNumber = document.ReferenceDocNumber,
             RTReferenceDocMoment = document.ReferenceDocMoment
         };
-        return SignatureFactory.CreateDocumentoCommercialeSignatures(signatureData);
+        var signatures = SignatureFactory.CreateDocumentoCommercialeSignatures(signatureData).ToList();
+
+        // The RT Server accepted the document but flagged a non-blocking anomaly (logged only). Surface it as
+        // a warning signature (kept off the fiscal PDF via SignatureTypeWarning). -43/-44 additionally mean the
+        // lottery code was not registered.
+        if (response != null && EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(response.CodeAsInt))
+        {
+            signatures.Add(new SignaturItem
+            {
+                Caption = EpsonRTServerErrorCodes.IsLotteryNotRegistered(response.CodeAsInt)
+                    ? "rt-server-lottery-not-registered"
+                    : "rt-server-receipt-warning",
+                Data = $"{response.Code}: {EpsonRTServerErrorCodes.Describe(response.CodeAsInt)}",
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = SignatureTypeWarning
+            });
+        }
+        return signatures;
     }
 
     /// <summary>

@@ -162,12 +162,29 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             try
             {
                 response = await _client.CreateReceiptAsync(File.ReadAllText(documentPath)).ConfigureAwait(false);
-                rejected = response != null && !response.Success && response.CodeAsInt < 0;
+                // "Accepted with error in log" codes are NOT rejections: the document is fiscally registered,
+                // so it must be consumed (not parked). Only genuine "Receipt not accepted" / unknown negatives
+                // count as rejected.
+                rejected = response != null && !response.Success && response.CodeAsInt < 0
+                    && !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(response.CodeAsInt);
+                if (response != null && !rejected && response.CodeAsInt != 0)
+                {
+                    _logger.LogWarning("Cached document {document} was accepted by the RT Server with warning code {code} ({description}).",
+                        Path.GetFileName(documentPath), response.Code, EpsonRTServerErrorCodes.Describe(response.CodeAsInt));
+                }
             }
             catch (EpsonRTServerCommunicationException ex)
             {
-                _logger.LogError(ex, "The RT Server rejected the cached document {document}.", Path.GetFileName(documentPath));
-                rejected = true;
+                rejected = !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(ex.ResponseCode);
+                if (rejected)
+                {
+                    _logger.LogError(ex, "The RT Server rejected the cached document {document}.", Path.GetFileName(documentPath));
+                }
+                else
+                {
+                    _logger.LogWarning(ex, "Cached document {document} was accepted by the RT Server with warning code {code} ({description}).",
+                        Path.GetFileName(documentPath), ex.ResponseCode, EpsonRTServerErrorCodes.Describe(ex.ResponseCode));
+                }
             }
 
             if (!rejected)

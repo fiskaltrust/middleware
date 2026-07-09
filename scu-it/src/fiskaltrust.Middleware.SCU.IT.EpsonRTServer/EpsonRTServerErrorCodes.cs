@@ -61,5 +61,29 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// are recoverable by requesting a new Token, which carries the authoritative counters.
         /// </summary>
         public static bool IsLocalStateOutOfSync(int code) => code is (-21) or (-22) or (-23) or (-25);
+
+        /// <summary>
+        /// On a createReceipt these codes mean "Receipt accepted with error in log file": per the RT Server
+        /// "effects of the errors on the RT Server behaviour" table (Create Receipt column) the document IS
+        /// fiscally registered by the server, the negative code is only an anomaly to log (a NON-blocking
+        /// warning), not a rejection. Therefore the document must be consumed / the chain advanced, with a
+        /// warning surfaced — never parked as failed nor treated as a failure.
+        ///
+        /// Covered: -27, -35, -36..-52 (-43/-44 are accepted but the lottery code is NOT registered, see
+        /// <see cref="IsLotteryNotRegistered"/>). -21..-25 are deliberately excluded here: they are handled by
+        /// the Token-reseed recovery (<see cref="IsLocalStateOutOfSync"/>) pending device validation of whether
+        /// the receipt is really accepted for those codes. Genuine rejections ("Receipt not accepted": -1..-8,
+        /// -20, -28, -29, -32, -33, -34) and any unknown negative code are intentionally NOT included, so they
+        /// keep being treated as blocking rejections.
+        /// </summary>
+        public static bool IsReceiptAcceptedWithWarning(int code)
+            => code == -27 || code == -35 || (code <= -36 && code >= -52);
+
+        /// <summary>
+        /// -43 / -44: the receipt is accepted but "not managed as a lottery receipt" — the deferred lottery
+        /// code was ignored by the RT Server. A dedicated warning is surfaced so the anomaly (lottery code not
+        /// registered) is visible.
+        /// </summary>
+        public static bool IsLotteryNotRegistered(int code) => code is (-43) or (-44);
     }
 }

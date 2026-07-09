@@ -211,6 +211,26 @@ in the RT Server till map.
 - `-38`/`-39` payment vs. fiscal-information mismatches
 - `-52` till deemed offline (V11.1)
 
+### createReceipt: blocking rejection vs. accepted-with-warning
+
+Per the RT Server "effects of the errors on the RT Server behaviour" table (**Create Receipt**
+column), most negative codes on a `createReceipt` mean **"Receipt accepted with error in log
+file"** — the document **is fiscally registered by the server**; the code is only a non-blocking
+anomaly to log. Only a subset means **"Receipt not accepted"** (a real, blocking rejection). The
+SCU classifies accordingly (`EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning`):
+
+| Class | Codes | SCU behaviour |
+|---|---|---|
+| **Rejected (blocking)** | `-1..-8`, `-20`, `-28`, `-29`, `-32`, `-33`, `-34`, and any unknown negative | Sync: throw, chain does **not** advance. Queue: retry, park in `failed/` after `MaxDocumentSendRetries`. |
+| **Accepted with warning** | `-27`, `-35`, `-36..-52` | Document consumed / chain advanced; a warning `SignaturItem` (`rt-server-receipt-warning`) is added. Never parked. `-52` (till offline, V11.1) is the common case. |
+| **Lottery not registered** | `-43`, `-44` | Accepted, but the deferred lottery code was ignored → warning `rt-server-lottery-not-registered`. |
+| **State out of sync** | `-21..-25` | Token-reseed recovery (see above) — kept separate pending device validation of whether the receipt is truly accepted for these codes. |
+
+The warning signatures use `SignatureTypeWarning` (`0x4954_2000_0020_2000`); the `0020` group keeps
+them off the customer-facing fiscal document (PDF). In **async** mode the accept/warning happens in
+the background queue after the receipt already returned `StateOk`, so the warning is logged
+(`LogWarning`) rather than placed on the original receipt.
+
 ## Known limitations / follow-ups
 
 - **Instant lottery** (`createReport/codeRequest` with CEK AES encryption against the RT public key) is not

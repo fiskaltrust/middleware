@@ -142,6 +142,53 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Fact]
+        public async Task ProcessReceiptAsync_Should_Advance_And_Warn_When_Accepted_With_Warning()
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>())).ReturnsAsync(Error(-52, "till offline"));
+            var scu = CreateScu(client, out _);
+
+            var queueId = Guid.NewGuid();
+            var first = await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+            var second = await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+
+            using (new AssertionScope())
+            {
+                // -52 ("till offline") is "Receipt accepted with error in log file": not a failure, the chain
+                // advances and a warning (kept off the fiscal PDF) is surfaced.
+                ((ulong) first.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+                first.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "rt-server-receipt-warning" && x.Data.Contains("-52"));
+                first.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<rt-doc-number>" && x.Data == "0001");
+                second.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<rt-doc-number>" && x.Data == "0002");
+                // Not a state-out-of-sync recovery: no extra token is requested.
+                client.Verify(x => x.CreateTokenAsync("FISK0001"), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_Should_Fail_And_Not_Advance_On_Blocking_Rejection()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Error(-32, "refund or void not possible"));
+            var scu = CreateScu(client, out _);
+
+            var queueId = Guid.NewGuid();
+            var first = await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+            var second = await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+
+            using (new AssertionScope())
+            {
+                // -32 is "Receipt not accepted": blocking, the chain must not advance.
+                ((ulong) first.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+                ((ulong) second.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+                sentDocuments.Should().OnlyContain(x => x.Contains("recNumber=\"0001\""));
+            }
+        }
+
+        [Fact]
         public async Task ProcessReceiptAsync_Should_Fail_For_Invalid_TillId()
         {
             var client = CreateClientMock();
