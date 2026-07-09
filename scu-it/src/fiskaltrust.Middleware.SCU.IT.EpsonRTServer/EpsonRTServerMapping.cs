@@ -214,6 +214,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 {
                     AppendItem("printRecItemVoid", sb, ci, Math.Abs(ci.Quantity), AbsUnitPrice(ci));
                 }
+                else if (ci.IsTip() || ci.IsMultiUseVoucher())
+                {
+                    // Tip / multi-use voucher: outside the taxable base -> a Non soggetta (NS) sale line,
+                    // mirroring the dedicated non-VAT department 11 of the EpsonRTPrinter / CustomRTPrinter SCUs.
+                    AppendItem("printRecItem", sb, ci, Math.Abs(ci.Quantity), AbsUnitPrice(ci));
+                }
                 else if (ci.IsSingleUseVoucher() && ci.Amount < 0)
                 {
                     AppendItemAdjustment(sb, 12, ci); // single-use voucher (buono monouso)
@@ -236,7 +242,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             sb.Append($" description=\"{Escape(ci.Description)}\"");
             sb.Append($" quantity=\"{FormatQuantity(quantity)}\"");
             sb.Append($" unitPrice=\"{FormatAmount(unitPrice)}\"");
-            sb.Append($" vatID=\"{GetVatId(ci)}\"");
+            sb.Append($" vatID=\"{ResolveItemVatId(ci)}\"");
             sb.Append(" type=\"B\" ateco=\"0\" />");
         }
 
@@ -246,7 +252,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             sb.Append($" adjustmentType=\"{adjustmentType}\"");
             sb.Append($" description=\"{Escape(ci.Description)}\"");
             sb.Append($" amount=\"{FormatAmount(Math.Abs(ci.Amount))}\"");
-            sb.Append($" vatID=\"{GetVatId(ci)}\"");
+            sb.Append($" vatID=\"{ResolveItemVatId(ci)}\"");
             sb.Append(" type=\"B\" ateco=\"0\" />");
         }
 
@@ -279,6 +285,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             if (ci.IsSubtotalDiscount()) return -1;
             if (ci.IsSubtotalSurcharge()) return 1;
             if (ci.IsVoid()) return -1;
+            if (ci.IsTip() || ci.IsMultiUseVoucher()) return 1; // emitted as a positive Non-soggetta sale line
             if (ci.IsSingleUseVoucher() && ci.Amount < 0) return -1;
             if (ci.Amount < 0) return -1;
             return 1;
@@ -360,33 +367,56 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         // VAT index mapping — mirrors EpsonRTPrinter.GetVatGroup (same Epson fiscal engine).
         // Unknown cases throw instead of silently defaulting to a VAT rate: emitting the wrong rate on a
-        // fiscal document is worse than failing the receipt.
+        // fiscal document is worse than failing the receipt. Tips and vouchers are the documented exceptions
+        // and are routed through ResolveItemVatId (they carry no own VAT nibble).
         public static int GetVatId(ChargeItem chargeItem)
+            => TryGetVatId(chargeItem, out var vatId)
+                ? vatId
+                : throw new NotSupportedException($"The ftChargeItemCase 0x{chargeItem.ftChargeItemCase:X} has no VAT-index mapping for the Epson RT Server.");
+
+        private static bool TryGetVatId(ChargeItem chargeItem, out int vatId)
         {
             if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
             {
-                return (chargeItem.ftChargeItemCase & 0xF000) switch
+                switch (chargeItem.ftChargeItemCase & 0xF000)
                 {
-                    0x8000 => 10, // EE - Esclusa
-                    0x2000 => 11, // NS - Non soggetta
-                    0x1000 => 12, // NI - Non imponibile
-                    0x3000 => 13, // ES - Esente
-                    0x4000 => 14, // RM - Regime del margine
-                    0x5000 => 15, // AL - Operazione non IVA
-                    0x0000 => 0,  // not taxable (Esente N4)
-                    _ => throw new NotSupportedException($"The ftChargeItemCase 0x{chargeItem.ftChargeItemCase:X} has no VAT-nature mapping for the Epson RT Server.")
-                };
+                    case 0x8000: vatId = 10; return true; // EE - Esclusa
+                    case 0x2000: vatId = 11; return true; // NS - Non soggetta
+                    case 0x1000: vatId = 12; return true; // NI - Non imponibile
+                    case 0x3000: vatId = 13; return true; // ES - Esente
+                    case 0x4000: vatId = 14; return true; // RM - Regime del margine
+                    case 0x5000: vatId = 15; return true; // AL - Operazione non IVA
+                    case 0x0000: vatId = 0; return true;  // not taxable (Esente N4)
+                    default: vatId = -1; return false;
+                }
             }
 
-            return (chargeItem.ftChargeItemCase & 0xF) switch
+            switch (chargeItem.ftChargeItemCase & 0xF)
             {
-                0x1 => 2, // 10%
-                0x2 => 3, // 4%
-                0x3 => 1, // 22%
-                0x4 => 4, // 5%
-                0x7 => 13, // 0%
-                _ => throw new NotSupportedException($"The ftChargeItemCase 0x{chargeItem.ftChargeItemCase:X} has no VAT-index mapping for the Epson RT Server.")
-            };
+                case 0x1: vatId = 2; return true;  // 10%
+                case 0x2: vatId = 3; return true;  // 4%
+                case 0x3: vatId = 1; return true;  // 22%
+                case 0x4: vatId = 4; return true;  // 5%
+                case 0x7: vatId = 13; return true; // 0%
+                default: vatId = -1; return false;
+            }
+        }
+
+        // Resolves the vatID for an emitted item line. Tips and multi-use vouchers are outside the taxable
+        // base (Non soggetta, NS = index 11), mirroring the dedicated non-VAT department 11 of the sibling
+        // EpsonRTPrinter / CustomRTPrinter SCUs. Single-use vouchers carry the item's own VAT when specified
+        // and fall back to NS when the VAT nibble is absent. Genuine goods stay strict (GetVatId throws).
+        private static int ResolveItemVatId(ChargeItem chargeItem)
+        {
+            if (chargeItem.IsTip() || chargeItem.IsMultiUseVoucher())
+            {
+                return 11;
+            }
+            if (chargeItem.IsSingleUseVoucher())
+            {
+                return TryGetVatId(chargeItem, out var vatId) ? vatId : 11;
+            }
+            return GetVatId(chargeItem);
         }
 
         public struct EpsonPaymentType

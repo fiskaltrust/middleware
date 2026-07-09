@@ -147,6 +147,60 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Fact]
+        public void BuildFiscalDocument_Tip_Should_Emit_NonSoggetta_Item_And_Add_To_Total()
+        {
+            var items = new[]
+            {
+                new ChargeItem { Amount = 10.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 },
+                new ChargeItem { Amount = 2.00m, Quantity = 1, Description = "Mancia", ftChargeItemCase = 0x4954_2000_0000_0030 }
+            };
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(RequestWith(items, 12.00m), NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                // Tip -> Non soggetta (NS, vatID 11) sale line, no exception.
+                doc.CreateReceiptXml.Should().Contain("<printRecItem description=\"Mancia\" quantity=\"1\" unitPrice=\"2.00\" vatID=\"11\" type=\"B\" ateco=\"0\" />");
+                doc.CreateReceiptXml.Should().Contain("recAmount=\"12.00\"");
+                doc.AmountCents.Should().Be(1200);
+            }
+        }
+
+        [Fact]
+        public void BuildFiscalDocument_SingleUseVoucher_WithoutVat_Should_Not_Throw_And_Default_To_NS()
+        {
+            var items = new[]
+            {
+                new ChargeItem { Amount = 10.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 },
+                new ChargeItem { Amount = -3.00m, Quantity = 1, Description = "Buono", ftChargeItemCase = 0x4954_2000_0000_0040 }
+            };
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(RequestWith(items, 7.00m), NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                // Single-use voucher without a VAT nibble -> adjustment 12 with the NS fallback (vatID 11).
+                doc.CreateReceiptXml.Should().Contain("<printRecItemAdjustment adjustmentType=\"12\" description=\"Buono\" amount=\"3.00\" vatID=\"11\"");
+                doc.AmountCents.Should().Be(700);
+            }
+        }
+
+        [Fact]
+        public void BuildFiscalDocument_MultiUseVoucher_Should_Emit_NonSoggetta_Item()
+        {
+            var items = new[]
+            {
+                new ChargeItem { Amount = 10.00m, Quantity = 1, Description = "Prodotto", VATRate = 22m, ftChargeItemCase = 0x3 },
+                new ChargeItem { Amount = 5.00m, Quantity = 1, Description = "Buono multiuso", ftChargeItemCase = 0x4954_2000_0000_0048 }
+            };
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(RequestWith(items, 15.00m), NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<printRecItem description=\"Buono multiuso\" quantity=\"1\" unitPrice=\"5.00\" vatID=\"11\" type=\"B\" ateco=\"0\" />");
+                doc.AmountCents.Should().Be(1500);
+            }
+        }
+
+        [Fact]
         public void BuildFiscalDocument_VoidItem_Should_Emit_PrintRecItemVoid()
         {
             var items = new[]
