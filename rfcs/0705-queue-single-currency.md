@@ -1,34 +1,33 @@
-- Feature Name: `queue_multi_currency`
+- Feature Name: `queue_single_currency`
 - Start Date: 2026-07-08
 - RFC PR: [fiskaltrust/middleware#705](https://github.com/fiskaltrust/middleware/pull/705)
 <!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
-- Markets: `PL`, `DK`, and every non-EUR market (EUR markets unaffected except requests sending an explicit non-EUR currency)
+- Markets: all — the rule lives in shared `localization.v2`; behavioural impact falls on non-EUR markets (`PL`, `DK`, …) and on EUR-market requests that send an explicit non-EUR currency
 
 # Summary
 
-A Queue processes and totalizes monetary amounts in a **single currency at a time** — the **queue currency** — fixed by the queue's **market and localization version**, not assumed to be EUR and not chosen per-receipt. It stays stable while the queue runs and changes only through a deliberate, multi-step currency changeover. The v2 `Currency` field (already present on `ReceiptRequest`, `ChargeItem` and `PayItem`) becomes authoritative and is **hard-validated**: a request whose currency does not match the queue currency is rejected, so mixed-currency receipts are impossible by construction. No change to the v2 data format is required; this is a middleware validation and totalizer-semantics change scoped to the v2 processing pipeline.
+A Queue processes and totalizes monetary amounts in a **single currency** — the **queue currency** — determined by its **market** (and, only where a currency changeover is scheduled, the middleware version). The v2 `Currency` field (already present on `ReceiptRequest`, `ChargeItem` and `PayItem`) is **hard-validated** against that currency: a request whose currency does not match is rejected, so a queue can never accumulate more than one currency and its sum counters can stay naïve. This is largely a **specification-and-consolidation** effort: ES and PT already enforce EUR inside their own localizations, and this RFC lifts that enforcement into the shared `localization.v2` layer as one uniform rule so every market — including non-EUR markets such as PL — gets it the same way. No change to the v2 data format is required and the totalizers are unchanged; an *optional* changeover mechanism is described for the rare case of a market changing its currency.
 
 # Motivation
 
-Non-EUR markets — Poland (PLN) is the immediate driver, Denmark (DKK) already has a queue table — need the Queue to operate in local currency. Today the middleware implicitly treats everything as EUR:
+Currency handling in the queue is today **ad-hoc and unspecified**, and that becomes a problem as we onboard non-EUR markets (Poland/PLN is the immediate driver; Denmark/DKK already has a queue table):
 
-- Most markets (AT, DE, FR, IT, GR) **ignore** the `Currency` field entirely and silently assume EUR.
-- ES and PT **actively reject** anything that is not EUR (`CurrencyMustBeEur` → `OnlyEuroCurrencySupported`).
-- There is no country→currency configuration to build on.
+- Most markets (AT, DE, FR, IT, GR) **ignore** the `Currency` field and effectively assume EUR — a non-EUR value is silently accepted and then mislabelled.
+- ES and PT **already enforce the right thing**, but each inside its own localization: a hardcoded rule rejecting anything that is not EUR (`CurrencyMustBeEur` → `OnlyEuroCurrencySupported`).
 
-A Polish POS therefore cannot be served correctly: either its amounts are silently mislabelled as EUR, or (in an ES/PT-style market) it is rejected outright.
+So the rule that *should* hold everywhere — **a queue accepts exactly one, market-correct currency** — exists only as bespoke code in two markets. Serving Poland is not blocked by anything deep; it just means writing yet another bespoke rule (a `CurrencyMustBePln`), with nothing shared and nothing written down.
 
-The problem is sharpest at the **sum counters (Summenzähler)**. Every queue totalizer — the generic `ftQueue.ftReceiptTotalizer`, the AT `ftCashTotalizer`, and the ~150 per-rate/per-payment totalizers on `ftQueueFR` — is a plain single-currency `decimal` that blindly sums `ChargeItem.Amount`. These totals feed the receipt-chain hashes and country signatures. If two currencies ever entered one queue you would literally be adding PLN to EUR, and every signature built on that total would be meaningless. The counter must not be a naïve `10 € + 10 PLN + 10 USD = 30`.
+This RFC does **not** change that fundamental behaviour, and the middleware keeps EUR as the default. What it adds is: (1) a **specification** of the single-currency rule; (2) **lifting the implementation out of the individual market localizations into the shared `localization.v2` layer**, so every market enforces its correct currency the same way; and (3) an *optional* mechanism for the rare currency-changeover case.
 
-The queue total is **not an accounting revenue figure** — it is a technical running sum for the receipt chain. So we do not need multi-currency totalizers or FX conversion. We need one enforceable rule guaranteeing that everything in a given queue is in one known currency.
+The rule matters most at the **sum counters (Summenzähler)**. Every queue totalizer — the generic `ftQueue.ftReceiptTotalizer`, the AT `ftCashTotalizer`, the ~150 per-rate/per-payment totalizers on `ftQueueFR` — is a plain `decimal` that *blindly* sums `ChargeItem.Amount`, and these totals feed the receipt-chain hashes and signatures. We **want** those counters to stay naïve — no per-currency logic, no FX. So the rule we enforce is precisely *"only accept receipts we can sum naïvely"*, i.e. all in the one queue currency. A queue can then never add PLN to EUR, because the off-currency receipt is rejected before it is ever counted.
 
-Expected outcome: a Polish queue signs and totalizes in PLN, a German queue in EUR, and the middleware refuses anything inconsistent instead of silently mislabelling it.
+Expected outcome: one specified, uniform rule in `localization.v2` under which a Polish queue signs and totalizes in PLN and a German queue in EUR — every market the same way — and the middleware refuses anything inconsistent instead of silently mislabelling it.
 
 # Guide-level explanation
 
 ## The new concept: queue currency
 
-Every queue operates in exactly **one currency at a time**, fixed by *which market and localization version the queue is* — not something the POS picks per receipt, and not a setting an operator configures. That currency stays stable while the queue runs; the one exception is a deliberate, multi-step **currency changeover** (see [below](#currency-changeover)). This is the same idea as a **book currency** in accounting: every entry is kept in one currency, and a foreign tender is handled separately by recording its exchange rate — never by mixing currencies in the books (see [Foreign-currency payments](#future-possibilities)).
+Every queue operates in exactly **one currency at a time**, fixed by its **market** (and, only where a currency changeover is scheduled, the middleware version) — not something the POS picks per receipt, and not a setting an operator configures. That currency stays stable while the queue runs; the one exception is a deliberate, staged **currency changeover** (see [below](#currency-changeover)). This is the same idea as a **book currency** in accounting: every entry is kept in one currency, and a foreign tender is handled separately by recording its exchange rate — never by mixing currencies in the books (see [Foreign-currency payments](#future-possibilities)).
 
 - **EUR markets** (AT, DE, FR, IT, ES, PT, GR, …): the queue currency is EUR. Because `Currency` defaults to EUR and is *omitted from the JSON when it equals EUR*, existing POS integrations that send EUR or omit the field keep working with **no change**. The one exception: a request that *explicitly* sends a non-EUR `Currency` — silently ignored today in AT/DE/FR/IT/GR — will start being **rejected** (see the breaking-change note below).
 - **Non-EUR markets** (PL → PLN, DK → DKK): the queue currency is the local currency. The POS **must** set `Currency` accordingly. If it omits the field, the value defaults to EUR, which does not match the queue currency, and the request is **rejected**.
@@ -72,12 +71,12 @@ The receipt is accepted; the totalizer accumulates `10.00` **in PLN**.
 
 ## Currency changeover
 
-A queue's currency is stable while it runs, but it is **not** immutable forever — a country can change its currency (e.g. a future €-adoption). This must never happen silently on an existing queue; it is a deliberate, multi-step process.
+Changeover is an **optional** part of this RFC — the single-currency rule above stands on its own and needs none of it. It only matters if a country changes its currency (e.g. a future €-adoption), which must never happen silently on an existing queue. Whether we build any *in-place* mechanism at all is an [open question](#unresolved-questions); the recommended path needs no new feature, and the paths below are described for completeness.
 
 The crux is the **sum counters**: the totalizers accumulate across the queue's whole life and this RFC does *not* reset them (see [§3](#3-totalizers--no-schema-change-semantics-documented)). So a changeover **must establish a fresh counter boundary at the switch point X** — the queue currency and its totalizers have to turn over *together*. If a queue simply started accepting the new currency at X, the first new-currency receipt would be added onto the old-currency total, producing exactly the mixed-currency total this RFC exists to prevent. Two supported paths:
 
 1. **A new queue** *(recommended)* — start a fresh queue in the new currency from X. Its totalizers begin at zero in the new currency, so nothing is ever mixed. This is the clean default.
-2. **Two transition versions on the same queue** — ship a pair of localization versions (current-currency and new-currency) that switch behaviour at X, **and reset/segment the affected totalizers at X** so the new-currency run starts from a fresh boundary (the same rollover mechanism FR already uses for shift/day/month/year totals). Without that reset this path is **invalid**, because it mixes currencies in the totalizer.
+2. **Two transition versions on the same queue** — ship a pair of middleware releases (current-currency and new-currency) that switch behaviour at X, **and reset/segment the affected totalizers at X** so the new-currency run starts from a fresh boundary (the same rollover mechanism FR already uses for shift/day/month/year totals). Without that reset this path is **invalid**, because it mixes currencies in the totalizer.
 
 An in-place switch that flips the currency but keeps accumulating into the old total is explicitly **not** supported: it would retroactively reinterpret and mix amounts already totalized in the old currency.
 
@@ -91,9 +90,9 @@ An in-place switch that flips the currency but keeps accumulating into the old t
 
 `Currency` already exists as a 179-value ISO-4217 enum (`EUR=0`, `PLN=8`, `DKK=5`, `USD=12`, …) on `ReceiptRequest`, `ChargeItem` and `PayItem` in the external **`fiskaltrust.interface`** package. It defaults to `EUR` (the enum's zero value), serializes as a string, and is omitted from output when it equals the default. We build on this as-is. We deliberately **do not** change its default (see [Rationale](#rationale-and-alternatives)).
 
-## 1. Deriving the queue currency (market + version → currency)
+## 1. Deriving the queue currency (from the market)
 
-No new column is added to `ftQueue`. The queue already carries `CountryCode` ([`storage/src/fiskaltrust.storage/Models/ftQueue.cs`](../storage/src/fiskaltrust.storage/Models/ftQueue.cs)), which selects the market localization. The queue currency is a **hardcoded function of (market, localization version)**, owned by each market's v2 localization module. For a market with a scheduled changeover the function branches on version (or effective date); otherwise it is a single constant.
+No new column is added to `ftQueue`. The queue already carries `CountryCode` ([`storage/src/fiskaltrust.storage/Models/ftQueue.cs`](../storage/src/fiskaltrust.storage/Models/ftQueue.cs)), which selects the market localization. The queue currency is a **hardcoded function of the market**, owned by each market's v2 localization module — for almost every market a single constant (`EUR`, `PLN`, …). *Version* enters only for a scheduled currency changeover, and by *version* we mean the **middleware release version** (recorded as `ProcessingVersion` on the queue item), **not** the v1/v2 architecture: a market undergoing a changeover branches on that version (or an effective date) to return the old currency before the switch and the new one after, while every other market ignores version entirely.
 
 ```cs
 // pseudo code — owned by each market's v2 localization module
@@ -177,9 +176,9 @@ The chosen design — **currency = f(market, version)**, enforced by validation,
 - **Alternative A — a `Currency` field on the Queue (`ftQueue.Currency`).** Rejected. It adds a persisted, configurable dimension that can drift or be misconfigured, and it does not answer changeover (what happens to the stored value mid-life?). Deriving from market+version keeps a single source of truth and makes changeover an explicit version bump. *This is the conclusion reached in discussion: the country and the version define a hardcoded currency, not a queue field.*
 - **Alternative B — a per-country default value for the `Currency` datatype.** Rejected. Changing the type's default per country breaks on a currency changeover and muddies serialization (omit-when-default is defined by the enum's zero being EUR). The type default stays EUR globally; correctness is enforced by validation instead.
 - **Alternative C — use `PosSystemMasterData.BaseCurrency`.** Rejected. It exists but is unused, configurable master data — same drift/misconfiguration risk as a queue field, and it is not version-aware for changeover.
-- **Alternative D — multi-currency totalizers (mixing currencies within one queue total).** Rejected. This mirrors a core accounting principle: just as ledger entries are kept in a single **book currency**, the queue accumulates in a single market-locked currency — the two are equivalent. Mixing currencies in one total would demand FX rates, a rounding policy, and per-currency columns (consider FR's already-150 totalizers × N currencies) for no benefit, since the queue total is a technical receipt-chain sum, not cross-currency revenue. This does **not** reject *foreign-currency payments*: accepting a foreign tender against a book-currency receipt is legitimate and normal, but — exactly as in accounting — it is recorded as an exchange rate on the individual pay item (see [Future possibilities](#future-possibilities)), and never mixes currencies in the total.
+- **Alternative D — mixed-currency totalizers (accumulating more than one currency in one queue total).** Rejected. This mirrors a core accounting principle: just as ledger entries are kept in a single **book currency**, the queue accumulates in a single market-locked currency — the two are equivalent. Mixing currencies in one total would demand FX rates, a rounding policy, and per-currency columns (consider FR's already-150 totalizers × N currencies) for no benefit, since the queue total is a technical receipt-chain sum, not cross-currency revenue. This does **not** reject *foreign-currency payments*: accepting a foreign tender against a book-currency receipt is legitimate and normal, but — exactly as in accounting — it is recorded as an exchange rate on the individual pay item (see [Future possibilities](#future-possibilities)), and never mixes currencies in the total.
 
-**Impact of not doing this:** non-EUR markets (PL, DK) cannot be served correctly; totalizers and the signatures built on them risk silently mixing currencies; and ES/PT's ad-hoc EUR gate remains the only currency handling in the middleware.
+**Impact of not doing this:** currency enforcement stays bespoke and unspecified — ES/PT keep their own hardcoded EUR gates, markets that ignore `Currency` keep silently mislabelling non-EUR values, and every new non-EUR market (PL, DK) needs its own from-scratch rule with nothing shared and no written spec to certify against.
 
 # Prior art
 
@@ -200,4 +199,4 @@ The chosen design — **currency = f(market, version)**, enforced by validation,
 # Future possibilities
 
 - **Foreign-currency payments** — accepting a foreign tender against a book-currency (queue-currency) receipt: e.g. take in 100 USD, give change in local currency. The receipt stays in the queue currency; the foreign tender is proven by a recorded **exchange rate on each pay item**, so this lives at the `PayItem` level, not in the totalizer. The data model already carries the hooks — `PayItem.Currency`, the `PayItemCaseFlags.ForeignCurrency` flag, DE's foreign-cash pay-item cases (`IsCashForeignCurrency`, with the still-stubbed `GetCurrency`), Montenegro's `CurrencyDetails { CurrencyCode, ExchangeRateToEuro }`, and Belgium's `ForeignCurrencyInput` — so completing it is mostly wiring (record the rate per pay item) rather than new data structures. Distinct from, and compatible with, the queue's market-locked currency.
-- **Multi-currency reporting / telemetry** — convert the queue currency to a reporting/base currency (`PosSystemMasterData.BaseCurrency`) for cross-market dashboards. A read-side concern, not queue semantics.
+- **Cross-currency reporting / telemetry** — convert each queue's currency to a common reporting/base currency (`PosSystemMasterData.BaseCurrency`) for cross-market dashboards. A read-side concern, not queue semantics.
