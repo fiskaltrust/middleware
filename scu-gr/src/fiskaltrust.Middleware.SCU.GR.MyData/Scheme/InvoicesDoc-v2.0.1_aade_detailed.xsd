@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- edited with XMLSpy v2011 sp1 (http://www.altova.com) by End User (free.org) -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:inv="http://www.aade.gr/myDATA/invoice/v1.0" 
-					targetNamespace="http://www.aade.gr/myDATA/invoice/v1.0" elementFormDefault="qualified" version="1.0.12">
-	<xs:include schemaLocation="SimpleTypes-v1.0.12.xsd"/>
+					targetNamespace="http://www.aade.gr/myDATA/invoice/v1.0" elementFormDefault="qualified" version="2.0.1">
+	<xs:include schemaLocation="TransportTypes-v2.0.1.xsd"/>
+	<xs:include schemaLocation="SimpleTypes-v2.0.1.xsd"/>
 	<xs:element name="InvoicesDoc">
 		<xs:annotation>
 			<xs:documentation>Παραστατικό ΑΑΔΕ</xs:documentation>
@@ -100,15 +100,31 @@
 					<xs:documentation>QR Code Url</xs:documentation>
 				</xs:annotation>
 			</xs:element>
-			<xs:element name="otherTransportDetails" type="inv:TransportDetailType" minOccurs="0" maxOccurs="unbounded">
+			<!--<xs:element name="otherTransportDetails" type="inv:TransportDetailType" minOccurs="0" maxOccurs="unbounded">
 				<xs:annotation>
 					<xs:documentation>Λοιπές Λεπτομέρειες Διακίνησης (Ορισμός - Αλλαγή Μτφ Μέσων, Μεταφορτώσεις, κλπ)</xs:documentation>
 				</xs:annotation>
-			</xs:element>
+			</xs:element>-->
 			<xs:element name="downloadingInvoiceUrl" type="xs:string" minOccurs="0">
 				<xs:annotation>
 					<xs:documentation>Url με το οποίο ο λήπτης του παραστατικού θα μπορεί να το λαμβάνει</xs:documentation>
 				</xs:annotation>
+			</xs:element>
+			<xs:element name="packingsDeclarations" type="inv:PackingsDeclaration" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Δηλώσεις Συσκευασιών</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="invoiceDeliveryStatus" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Κατάσταση (Status) Παραστατικού Δελτίου Διακίνησης </xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:byte">
+						<xs:minInclusive value="1"/>
+						<xs:maxInclusive value="8"/>
+					</xs:restriction>
+				</xs:simpleType>
 			</xs:element>
 		</xs:sequence>
 	</xs:complexType>
@@ -171,21 +187,21 @@
 			</xs:element>
 			<xs:element name="dispatchDate" type="xs:date" minOccurs="0">
 				<xs:annotation>
-					<xs:documentation>Ημερομηνία  Έναρξης Αποστολής</xs:documentation>
+					<xs:documentation>Ημερομηνία  Έναρξης Αποστολής (Προγραμματισμένη - Σχεδιασμένη - Εκτιμώμενη)</xs:documentation>
 				</xs:annotation>
 			</xs:element>
 			<xs:element name="dispatchTime" type="xs:time" minOccurs="0">
 				<xs:annotation>
-					<xs:documentation>Ώρα Έναρξης Αποστολής</xs:documentation>
+					<xs:documentation>Ώρα Έναρξης Αποστολής (Προγραμματισμένη - Σχεδιασμένη - Εκτιμώμενη)</xs:documentation>
 				</xs:annotation>
 			</xs:element>
 			<xs:element name="vehicleNumber" minOccurs="0">
 				<xs:annotation>
-					<xs:documentation>Αριθμός Οχήματος</xs:documentation>
+					<xs:documentation>Αριθμός Οχήματος (Προγραμματισμένο - Σχεδιασμένο)</xs:documentation>
 				</xs:annotation>
 				<xs:simpleType>
 					<xs:annotation>
-						<xs:documentation>Αριθμός Μεταφορικού Μέσου</xs:documentation>
+						<xs:documentation>Αριθμός Μεταφορικού Μέσου (Προγραμματισμένο - Σχεδιασμένο)</xs:documentation>
 					</xs:annotation>
 					<xs:restriction base="xs:string">
 						<xs:maxLength value="150"/>
@@ -276,6 +292,11 @@
 			<xs:element name="reverseDeliveryNotePurpose" type="inv:ReverseDeliveryNotePurposeType" minOccurs="0">
 				<xs:annotation>
 					<xs:documentation>Αιτία Έκδοσης Αντίστροφης Διακίνησης</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="toWeigh" type="xs:boolean" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Ένδειξη Προς Ζύγιση</xs:documentation>
 				</xs:annotation>
 			</xs:element>
 		</xs:sequence>
@@ -475,6 +496,27 @@
 				<xs:annotation>
 					<xs:documentation>Ένδειξη μη συμμετοχής στο ΦΠΑ (έσοδα – εκροές)</xs:documentation>
 				</xs:annotation>
+			</xs:element>
+			<xs:element name="movePurposeLine" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Σκοπός Διακίνησης Γραμμής</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="1"/>
+						<xs:maxInclusive value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="otherMovePurposeLineTitle" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Τίτλος της Λοιπής Αιτίας Διακίνησης Γραμμής</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="150"/>
+					</xs:restriction>
+				</xs:simpleType>
 			</xs:element>
 		</xs:sequence>
 	</xs:complexType>
@@ -762,21 +804,7 @@
 				</xs:annotation>
 			</xs:element>
 		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="TransportDetailType">
-		<xs:sequence>
-			<xs:element name="vehicleNumber">
-				<xs:annotation>
-					<xs:documentation>Αριθμός Μεταφορικού Μέσου</xs:documentation>
-				</xs:annotation>
-				<xs:simpleType>
-					<xs:restriction base="xs:string">
-						<xs:maxLength value="50"/>
-					</xs:restriction>
-				</xs:simpleType>
-			</xs:element>
-		</xs:sequence>
-	</xs:complexType>
+	</xs:complexType>	
 	<xs:complexType name="OtherDeliveryNoteHeaderType">
 		<xs:sequence>
 			<xs:element name="loadingAddress" type="inv:AddressType">
@@ -816,6 +844,11 @@
 			<xs:element name="Signature" type="xs:string">
 				<xs:annotation>
 					<xs:documentation>Υπογραφή</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="EndToEndReferenceID" type="xs:string" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Το μοναδικό αναγνωριστικό αιτήματος πληρωμής (για πληρωμές IRIS)</xs:documentation>
 				</xs:annotation>
 			</xs:element>
 		</xs:sequence>

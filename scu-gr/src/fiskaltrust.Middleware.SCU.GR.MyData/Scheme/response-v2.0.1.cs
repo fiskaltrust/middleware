@@ -1099,9 +1099,15 @@ public partial class AadeBookInvoiceType {
     
     private string qrCodeUrlField;
     
-    private TransportDetailType[] otherTransportDetailsField;
-    
     private string downloadingInvoiceUrlField;
+    
+    private PackagingDetailType[][] packingsDeclarationsField;
+    
+    private sbyte invoiceDeliveryStatusField;
+    
+    private bool invoiceDeliveryStatusFieldSpecified;
+    
+    private DeliveryEventType[] deliveryLifecycleField;
     
     /// <remarks/>
     public string uid {
@@ -1270,23 +1276,63 @@ public partial class AadeBookInvoiceType {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlElementAttribute("otherTransportDetails")]
-    public TransportDetailType[] otherTransportDetails {
-        get {
-            return this.otherTransportDetailsField;
-        }
-        set {
-            this.otherTransportDetailsField = value;
-        }
-    }
-    
-    /// <remarks/>
     public string downloadingInvoiceUrl {
         get {
             return this.downloadingInvoiceUrlField;
         }
         set {
             this.downloadingInvoiceUrlField = value;
+        }
+    }
+    
+    /// <remarks/>
+    // MANUAL POST-GENERATION EDIT (re-apply after regenerating from XSD):
+    // The 'packingsDeclarations' element (type PackingsDeclaration, a wrapper around an
+    // unbounded 'Packages') is flattened by xsd.exe into a jagged PackagingDetailType[][],
+    // which the XmlSerializer cannot construct ("Cannot convert PackagingDetailType[] to
+    // PackagingDetailType") — this breaks serialization of the ENTIRE InvoicesDoc. It belongs
+    // to the v2.0.1 e-transport surface, which is out of scope for this SCU and never populated
+    // here, so it is excluded from (de)serialization. Faithful support (a proper
+    // PackingsDeclaration wrapper type) should be added when the delivery-note API is implemented.
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public PackagingDetailType[][] packingsDeclarations {
+        get {
+            return this.packingsDeclarationsField;
+        }
+        set {
+            this.packingsDeclarationsField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public sbyte invoiceDeliveryStatus {
+        get {
+            return this.invoiceDeliveryStatusField;
+        }
+        set {
+            this.invoiceDeliveryStatusField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool invoiceDeliveryStatusSpecified {
+        get {
+            return this.invoiceDeliveryStatusFieldSpecified;
+        }
+        set {
+            this.invoiceDeliveryStatusFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlArrayItemAttribute("deliveryEvents", IsNullable=false)]
+    public DeliveryEventType[] deliveryLifecycle {
+        get {
+            return this.deliveryLifecycleField;
+        }
+        set {
+            this.deliveryLifecycleField = value;
         }
     }
 }
@@ -2304,6 +2350,10 @@ public partial class InvoiceHeaderType {
     
     private bool reverseDeliveryNotePurposeFieldSpecified;
     
+    private bool toWeighField;
+    
+    private bool toWeighFieldSpecified;
+    
     /// <remarks/>
     public string series {
         get {
@@ -2734,6 +2784,27 @@ public partial class InvoiceHeaderType {
             this.reverseDeliveryNotePurposeFieldSpecified = value;
         }
     }
+    
+    /// <remarks/>
+    public bool toWeigh {
+        get {
+            return this.toWeighField;
+        }
+        set {
+            this.toWeighField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool toWeighSpecified {
+        get {
+            return this.toWeighFieldSpecified;
+        }
+        set {
+            this.toWeighFieldSpecified = value;
+        }
+    }
 }
 
 /// <remarks/>
@@ -2835,8 +2906,24 @@ public enum InvoiceType {
     Item86,
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlEnumAttribute("9.1")]
+    Item91,
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlEnumAttribute("9.2")]
+    Item92,
+    
+    /// <remarks/>
     [System.Xml.Serialization.XmlEnumAttribute("9.3")]
     Item93,
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlEnumAttribute("10.1")]
+    Item101,
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlEnumAttribute("10.2")]
+    Item102,
     
     /// <remarks/>
     [System.Xml.Serialization.XmlEnumAttribute("11.1")]
@@ -3698,6 +3785,8 @@ public partial class ProviderSignatureType {
     
     private string signatureField;
     
+    private string endToEndReferenceIDField;
+    
     /// <remarks/>
     public string SigningAuthor {
         get {
@@ -3715,6 +3804,16 @@ public partial class ProviderSignatureType {
         }
         set {
             this.signatureField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string EndToEndReferenceID {
+        get {
+            return this.endToEndReferenceIDField;
+        }
+        set {
+            this.endToEndReferenceIDField = value;
         }
     }
 }
@@ -3859,6 +3958,12 @@ public partial class InvoiceRowType {
     private bool notVAT195Field;
     
     private bool notVAT195FieldSpecified;
+    
+    private int movePurposeLineField;
+    
+    private bool movePurposeLineFieldSpecified;
+    
+    private string otherMovePurposeLineTitleField;
     
     /// <remarks/>
     public int lineNumber {
@@ -4380,6 +4485,37 @@ public partial class InvoiceRowType {
             this.notVAT195FieldSpecified = value;
         }
     }
+    
+    /// <remarks/>
+    public int movePurposeLine {
+        get {
+            return this.movePurposeLineField;
+        }
+        set {
+            this.movePurposeLineField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool movePurposeLineSpecified {
+        get {
+            return this.movePurposeLineFieldSpecified;
+        }
+        set {
+            this.movePurposeLineFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string otherMovePurposeLineTitle {
+        get {
+            return this.otherMovePurposeLineTitleField;
+        }
+        set {
+            this.otherMovePurposeLineTitleField = value;
+        }
+    }
 }
 
 /// <remarks/>
@@ -4808,9 +4944,247 @@ public partial class InvoiceSummaryType {
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public partial class PackagingDetailType {
+    
+    private int packagingTypeField;
+    
+    private int quantityField;
+    
+    private string otherPackagingTypeTitleField;
+    
+    /// <remarks/>
+    public int packagingType {
+        get {
+            return this.packagingTypeField;
+        }
+        set {
+            this.packagingTypeField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public int quantity {
+        get {
+            return this.quantityField;
+        }
+        set {
+            this.quantityField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string otherPackagingTypeTitle {
+        get {
+            return this.otherPackagingTypeTitleField;
+        }
+        set {
+            this.otherPackagingTypeTitleField = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public partial class DeliveryEventType {
+    
+    private string eventTypeField;
+    
+    private System.DateTime eventTimestampField;
+    
+    private string actorVatField;
+    
+    private long markField;
+    
+    private bool markFieldSpecified;
+    
+    private object itemField;
+    
+    /// <remarks/>
+    public string eventType {
+        get {
+            return this.eventTypeField;
+        }
+        set {
+            this.eventTypeField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public System.DateTime eventTimestamp {
+        get {
+            return this.eventTimestampField;
+        }
+        set {
+            this.eventTimestampField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string actorVat {
+        get {
+            return this.actorVatField;
+        }
+        set {
+            this.actorVatField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public long mark {
+        get {
+            return this.markField;
+        }
+        set {
+            this.markField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool markSpecified {
+        get {
+            return this.markFieldSpecified;
+        }
+        set {
+            this.markFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute("outcomeDetails", typeof(OutcomeDetailsType))]
+    [System.Xml.Serialization.XmlElementAttribute("rejectionDetails", typeof(RejectionDetailsType))]
+    [System.Xml.Serialization.XmlElementAttribute("transportDetails", typeof(TransportDetailType))]
+    public object Item {
+        get {
+            return this.itemField;
+        }
+        set {
+            this.itemField = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public partial class OutcomeDetailsType {
+    
+    private DeliveryOutcomeType outcomeField;
+    
+    private bool deliveredWithoutRecipientField;
+    
+    private bool deliveredWithoutRecipientFieldSpecified;
+    
+    private PackagingDetailType[] deliveredPackagingField;
+    
+    /// <remarks/>
+    public DeliveryOutcomeType outcome {
+        get {
+            return this.outcomeField;
+        }
+        set {
+            this.outcomeField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public bool deliveredWithoutRecipient {
+        get {
+            return this.deliveredWithoutRecipientField;
+        }
+        set {
+            this.deliveredWithoutRecipientField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool deliveredWithoutRecipientSpecified {
+        get {
+            return this.deliveredWithoutRecipientFieldSpecified;
+        }
+        set {
+            this.deliveredWithoutRecipientFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute("deliveredPackaging")]
+    public PackagingDetailType[] deliveredPackaging {
+        get {
+            return this.deliveredPackagingField;
+        }
+        set {
+            this.deliveredPackagingField = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public enum DeliveryOutcomeType {
+    
+    /// <remarks/>
+    FULL,
+    
+    /// <remarks/>
+    PARTIAL,
+    
+    /// <remarks/>
+    NONE,
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public partial class RejectionDetailsType {
+    
+    private string reasonField;
+    
+    /// <remarks/>
+    public string reason {
+        get {
+            return this.reasonField;
+        }
+        set {
+            this.reasonField = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
 public partial class TransportDetailType {
     
     private string vehicleNumberField;
+    
+    private int transportTypeField;
+    
+    private System.DateTime timeStampField;
+    
+    private bool timeStampFieldSpecified;
+    
+    private string carrierVatNumberField;
+    
+    private string pNumberField;
+    
+    private LocationType locationField;
     
     /// <remarks/>
     public string vehicleNumber {
@@ -4819,6 +5193,100 @@ public partial class TransportDetailType {
         }
         set {
             this.vehicleNumberField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public int transportType {
+        get {
+            return this.transportTypeField;
+        }
+        set {
+            this.transportTypeField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public System.DateTime timeStamp {
+        get {
+            return this.timeStampField;
+        }
+        set {
+            this.timeStampField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool timeStampSpecified {
+        get {
+            return this.timeStampFieldSpecified;
+        }
+        set {
+            this.timeStampFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string carrierVatNumber {
+        get {
+            return this.carrierVatNumberField;
+        }
+        set {
+            this.carrierVatNumberField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string pNumber {
+        get {
+            return this.pNumberField;
+        }
+        set {
+            this.pNumberField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public LocationType location {
+        get {
+            return this.locationField;
+        }
+        set {
+            this.locationField = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public partial class LocationType {
+    
+    private decimal longitudeField;
+    
+    private decimal latitudeField;
+    
+    /// <remarks/>
+    public decimal longitude {
+        get {
+            return this.longitudeField;
+        }
+        set {
+            this.longitudeField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public decimal latitude {
+        get {
+            return this.latitudeField;
+        }
+        set {
+            this.latitudeField = value;
         }
     }
 }
@@ -4982,13 +5450,18 @@ public partial class ResponseType {
     [System.Xml.Serialization.XmlElementAttribute("authenticationCode", typeof(string))]
     [System.Xml.Serialization.XmlElementAttribute("cancellationMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("classificationMark", typeof(long))]
+    [System.Xml.Serialization.XmlElementAttribute("deliveryOutcomeMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("errors", typeof(ResponseTypeErrors))]
     [System.Xml.Serialization.XmlElementAttribute("invoiceMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("invoiceUid", typeof(string))]
     [System.Xml.Serialization.XmlElementAttribute("paymentMethodMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("qrUrl", typeof(string))]
+    [System.Xml.Serialization.XmlElementAttribute("recallId", typeof(string))]
     [System.Xml.Serialization.XmlElementAttribute("receptionEmails", typeof(receptionEmailsType))]
     [System.Xml.Serialization.XmlElementAttribute("receptionProviders", typeof(receptionProvidersType))]
+    [System.Xml.Serialization.XmlElementAttribute("rejectMark", typeof(long))]
+    [System.Xml.Serialization.XmlElementAttribute("statementId", typeof(string))]
+    [System.Xml.Serialization.XmlElementAttribute("transferMark", typeof(long))]
     [System.Xml.Serialization.XmlChoiceIdentifierAttribute("ItemsElementName")]
     public object[] Items {
         get {
@@ -5155,6 +5628,9 @@ public enum ItemsChoiceType {
     classificationMark,
     
     /// <remarks/>
+    deliveryOutcomeMark,
+    
+    /// <remarks/>
     errors,
     
     /// <remarks/>
@@ -5170,8 +5646,20 @@ public enum ItemsChoiceType {
     qrUrl,
     
     /// <remarks/>
+    recallId,
+    
+    /// <remarks/>
     receptionEmails,
     
     /// <remarks/>
     receptionProviders,
+    
+    /// <remarks/>
+    rejectMark,
+    
+    /// <remarks/>
+    statementId,
+    
+    /// <remarks/>
+    transferMark,
 }
