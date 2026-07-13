@@ -180,8 +180,9 @@ public class AADEFactory
             return;
         }
 
-        var baseItems = items.Where(ci => !ci.IsDiscountOrExtra() && !ci.IsVoucherRedeem()).ToList();
-        var totalBaseGross = baseItems.Sum(ci => ci.Amount);
+        var grouped = receiptRequest.GetGroupedChargeItems();
+        var baseLines = grouped.Select(g => g.chargeItem).Where(c => !IsBasketDiscount(c)).ToList();
+        var totalBaseGross = baseLines.Sum(c => c.Amount);
         if (totalBaseGross <= 0m)
         {
             throw new Exception("A whole-basket discount requires base charge items with a positive total amount.");
@@ -196,37 +197,36 @@ public class AADEFactory
 
         var shares = new Dictionary<ChargeItem, decimal>();
         var allocated = 0m;
-        foreach (var b in baseItems)
+        foreach (var line in baseLines)
         {
-            var share = Math.Round(basketSum * b.Amount / totalBaseGross, 2, MidpointRounding.AwayFromZero);
-            shares[b] = share;
+            var share = Math.Round(basketSum * line.Amount / totalBaseGross, 2, MidpointRounding.AwayFromZero);
+            shares[line] = share;
             allocated += share;
         }
         var remainder = basketSum - allocated;
-        if (remainder != 0m && baseItems.Count > 0)
+        if (remainder != 0m)
         {
-            var largest = baseItems.OrderByDescending(b => b.Amount).First();
-            shares[largest] += remainder;
+            shares[baseLines.OrderByDescending(c => c.Amount).First()] += remainder;
         }
 
         var rebuilt = new List<ChargeItem>();
-        foreach (var ci in items)
+        foreach (var (chargeItem, modifiers) in grouped)
         {
-            if (IsBasketDiscount(ci))
+            if (!IsBasketDiscount(chargeItem))
             {
-                continue;
+                rebuilt.Add(chargeItem);
             }
-            rebuilt.Add(ci);
-            if (shares.TryGetValue(ci, out var share) && share != 0m)
+            rebuilt.AddRange(modifiers.Where(m => !IsBasketDiscount(m)));
+            if (shares.TryGetValue(chargeItem, out var share) && share != 0m)
             {
                 rebuilt.Add(new ChargeItem
                 {
-                    Position = ci.Position,
+                    Position = chargeItem.Position,
                     Quantity = 1,
-                    Description = ci.Description,
+                    Description = chargeItem.Description,
                     Amount = share,
-                    VATRate = ci.VATRate,
-                    ftChargeItemCase = ci.ftChargeItemCase.WithFlag(ChargeItemCaseFlags.ExtraOrDiscount)
+                    VATRate = chargeItem.VATRate,
+                    ftChargeItemCase = chargeItem.ftChargeItemCase.WithFlag(ChargeItemCaseFlags.ExtraOrDiscount)
                 });
             }
         }
