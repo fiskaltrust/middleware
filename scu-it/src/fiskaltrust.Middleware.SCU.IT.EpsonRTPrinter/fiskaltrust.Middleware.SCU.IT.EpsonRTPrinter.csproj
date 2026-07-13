@@ -35,10 +35,4 @@
             Include="..\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj"
             PrivateAssets="all" />
     </ItemGroup>
-
-    <ItemGroup>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest</_Parameter1>
-        </AssemblyAttribute>
-    </ItemGroup>
 </Project>

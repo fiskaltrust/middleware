@@ -37,8 +37,7 @@ public class Helpers
 
     public static bool IsConnectionException(Exception e)
     {
-        if (e is EpsonNoResponseException ||
-            e.GetType().IsAssignableFrom(typeof(EndpointNotFoundException)) ||
+        if (e.GetType().IsAssignableFrom(typeof(EndpointNotFoundException)) ||
             e.GetType().IsAssignableFrom(typeof(WebException)) ||
             e.GetType().IsAssignableFrom(typeof(CommunicationException)) ||
             e.GetType().IsAssignableFrom(typeof(TaskCanceledException)) ||

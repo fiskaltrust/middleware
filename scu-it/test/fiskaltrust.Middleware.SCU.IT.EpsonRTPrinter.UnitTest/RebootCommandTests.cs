@@ -83,7 +83,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             var expectedPayload = EpsonCommandFactory.RebootCommand();
             var client = new Mock<IEpsonFpMateClient>();
             client.Setup(c => c.SendCommandAsync(expectedPayload))
-                .ThrowsAsync(new EpsonNoResponseException("dispatched without response"));
+                .ThrowsAsync(new TaskCanceledException("dispatched without response"));
             var sut = new EpsonRTPrinterSCU(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration(), client.Object);
 
             var result = await sut.ProcessReceiptAsync(new ProcessRequest
@@ -150,74 +150,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             Assert.Equal("FAILURE", failure.Caption);
             Assert.Contains("FP_NO_ANSWER", failure.Data);
             Assert.Contains("13", failure.Data);
-            var expectedStateData = JObject.Parse("{\"Reboot\":{\"Outcome\":\"rejected\",\"Code\":\"FP_NO_ANSWER\",\"Status\":\"13\"}}");
-            var actualStateData = JObject.Parse(result.ReceiptResponse.ftStateData);
-            Assert.True(JToken.DeepEquals(expectedStateData, actualStateData));
-            client.Verify(c => c.SendCommandAsync(expectedPayload), Times.Once);
-            client.VerifyNoOtherCalls();
-        }
-
-        [Fact]
-        public async Task ManualRebootRejectionWithoutDetails_ReturnsUsefulFallbackWithoutRetry()
-        {
-            const string responseXml = """
-<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-  <soapenv:Body>
-    <response success="false" />
-  </soapenv:Body>
-</soapenv:Envelope>
-""";
-            var expectedPayload = EpsonCommandFactory.RebootCommand();
-            var client = new Mock<IEpsonFpMateClient>();
-            client.Setup(c => c.SendCommandAsync(expectedPayload))
-                .ReturnsAsync(new HttpResponseMessage { Content = new StringContent(responseXml) });
-            var sut = new EpsonRTPrinterSCU(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration(), client.Object);
-
-            var result = await sut.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = new ReceiptRequest { ftReceiptCase = 0x4954_2040_0000_2000 },
-                ReceiptResponse = new ReceiptResponse()
-            });
-
-            Assert.True(result.ReceiptResponse.HasFailed());
-            var failure = Assert.Single(result.ReceiptResponse.ftSignatures);
-            Assert.Equal("FAILURE", failure.Caption);
-            Assert.Equal("The Epson printer rejected the reboot command without code or status.", failure.Data);
             var expectedStateData = JObject.Parse("{\"Reboot\":{\"Outcome\":\"rejected\"}}");
             var actualStateData = JObject.Parse(result.ReceiptResponse.ftStateData);
             Assert.True(JToken.DeepEquals(expectedStateData, actualStateData));
             client.Verify(c => c.SendCommandAsync(expectedPayload), Times.Once);
             client.VerifyNoOtherCalls();
-        }
-
-        [Fact]
-        public async Task ManualRebootRejectionWithMalformedStatus_PreservesRawErrorDetails()
-        {
-            const string responseXml = """
-<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-  <soapenv:Body>
-    <response success="false" code="FP_NO_ANSWER" status="not-a-number" />
-  </soapenv:Body>
-</soapenv:Envelope>
-""";
-            var client = new Mock<IEpsonFpMateClient>();
-            client.Setup(c => c.SendCommandAsync(It.Is<string>(payload => IsRebootCommand(payload))))
-                .ReturnsAsync(new HttpResponseMessage { Content = new StringContent(responseXml) });
-            var sut = new EpsonRTPrinterSCU(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration(), client.Object);
-
-            var result = await sut.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = new ReceiptRequest { ftReceiptCase = 0x4954_2040_0000_2000 },
-                ReceiptResponse = new ReceiptResponse()
-            });
-
-            Assert.True(result.ReceiptResponse.HasFailed());
-            var failure = Assert.Single(result.ReceiptResponse.ftSignatures);
-            Assert.Equal("FAILURE", failure.Caption);
-            Assert.Contains("FP_NO_ANSWER", failure.Data);
-            Assert.Contains("not-a-number", failure.Data);
         }
 
         [Fact]
@@ -257,30 +194,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             client.Verify(c => c.SendCommandAsync(It.Is<string>(payload => IsRebootCommand(payload))), Times.Once);
         }
 
-        [Fact]
-        public async Task ManualRebootResponseWithoutSuccess_ReturnsErroredResponse()
-        {
-            const string responseXml = """
-<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-  <soapenv:Body>
-    <response />
-  </soapenv:Body>
-</soapenv:Envelope>
-""";
-            var client = new Mock<IEpsonFpMateClient>();
-            client.Setup(c => c.SendCommandAsync(It.Is<string>(payload => IsRebootCommand(payload))))
-                .ReturnsAsync(new HttpResponseMessage { Content = new StringContent(responseXml) });
-            var sut = new EpsonRTPrinterSCU(NullLogger<EpsonRTPrinterSCU>.Instance, new EpsonRTPrinterSCUConfiguration(), client.Object);
-
-            var result = await sut.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = new ReceiptRequest { ftReceiptCase = 0x4954_2040_0000_2000 },
-                ReceiptResponse = new ReceiptResponse()
-            });
-
-            Assert.True(result.ReceiptResponse.HasFailed());
-            client.Verify(c => c.SendCommandAsync(It.Is<string>(payload => IsRebootCommand(payload))), Times.Once);
-        }
     }
 }

@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             client.Setup(c => c.SendCommandAsync(It.Is<string>(payload => !IsRebootCommand(payload))))
                 .ReturnsAsync(new HttpResponseMessage { Content = new StringContent(reportXml) });
             client.Setup(c => c.SendCommandAsync(expectedPayload))
-                .ThrowsAsync(new EpsonNoResponseException("dispatched without response"));
+                .ThrowsAsync(new TaskCanceledException("dispatched without response"));
             var sut = CreateSut(client.Object, forceReboot: true);
 
             var result = await sut.ProcessReceiptAsync(new ProcessRequest

@@ -813,7 +813,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             if (_configuration.ForceRebootAfterDailyClosing)
             {
                 // #549: the printer sometimes gets stuck during the day; a post-closing reboot clears it.
-                _ = await SendRebootCommandAsync();
+                await SendRebootCommandAsync();
             }
             return receiptResponse;
         }
@@ -859,19 +859,13 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private async Task<ProcessResponse> PerformRebootAsync(ReceiptResponse receiptResponse)
     {
         var result = await SendRebootCommandAsync();
-        var stateData = JsonConvert.SerializeObject(new { Reboot = result });
-        if (result.Outcome == "rejected")
-        {
-            var error = string.IsNullOrEmpty(result.Code) && string.IsNullOrEmpty(result.Status)
-                ? "The Epson printer rejected the reboot command without code or status."
-                : GetErrorInfo(result.Code, result.Status, null).Info;
-            receiptResponse.SetReceiptResponseErrored(error);
-            return ProcessResponseHelpers.CreateResponse(receiptResponse, stateData, new List<SignaturItem>());
-        }
-        return ProcessResponseHelpers.CreateResponse(receiptResponse, stateData, SignatureFactory.CreateZeroReceiptSignatures().ToList());
+        var outcome = result == null ? "no-response" : result.Success ? "acknowledged" : "rejected";
+        if (result?.Success == false)
+            receiptResponse.SetReceiptResponseErrored($"The Epson printer rejected the reboot command. Code: {result.Code ?? "unknown"}, status: {result.Status ?? "unknown"}.");
+        return ProcessResponseHelpers.CreateResponse(receiptResponse, JsonConvert.SerializeObject(new { Reboot = new { Outcome = outcome } }), SignatureFactory.CreateZeroReceiptSignatures().ToList());
     }
 
-    private async Task<RebootCommandResult> SendRebootCommandAsync()
+    private async Task<PrinterCommandResponse?> SendRebootCommandAsync()
     {
         try
         {
@@ -879,50 +873,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
             if (result == null || !result.SuccessSpecified)
-            {
                 throw new InvalidOperationException("The reboot response did not contain an explicit success attribute.");
-            }
-            if (!result.Success)
-            {
-                var rejectedResult = RebootCommandResult.Rejected(result.Code, result.Status);
-                _logger.LogWarning("Reboot command outcome: {outcome}, code: {code}, status: {status}; physical reboot unconfirmed.", rejectedResult.Outcome, rejectedResult.Code, rejectedResult.Status);
-                return rejectedResult;
-            }
-
-            var rebootResult = RebootCommandResult.Acknowledged();
-            _logger.LogInformation("Reboot command outcome: {outcome}, physical reboot not confirmed.", rebootResult.Outcome);
-            return rebootResult;
+            _logger.LogInformation("Reboot command outcome: {outcome}, code: {code}, status: {status}; physical reboot unconfirmed.", result.Success ? "acknowledged" : "rejected", result.Code, result.Status);
+            return result;
         }
-        catch (EpsonNoResponseException e)
+        catch (TaskCanceledException e)
         {
-            var rebootResult = RebootCommandResult.NoResponse();
-            _logger.LogInformation(e, "Reboot command outcome: {outcome}; command dispatched without response; physical reboot not confirmed.", rebootResult.Outcome);
-            return rebootResult;
+            _logger.LogInformation(e, "Reboot command outcome: no-response; command dispatched without response; physical reboot unconfirmed.");
+            return null;
         }
-    }
-
-    private sealed class RebootCommandResult
-    {
-        public string Outcome { get; }
-
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public string? Code { get; }
-
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public string? Status { get; }
-
-        private RebootCommandResult(string outcome, string? code, string? status)
-        {
-            Outcome = outcome;
-            Code = code;
-            Status = status;
-        }
-
-        public static RebootCommandResult Acknowledged() => new("acknowledged", null, null);
-
-        public static RebootCommandResult NoResponse() => new("no-response", null, null);
-
-        public static RebootCommandResult Rejected(string? code, string? status) => new("rejected", code, status);
     }
 
     private async Task<HttpResponseMessage> LoginAsync() => await _httpClient.SendCommandAsync(EpsonCommandFactory.LoginCommand(_configuration.Password));
@@ -938,8 +897,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
         if (status != null)
         {
-            var statusInfo = int.TryParse(status, out var parsedStatus) ? _errorCodeFactory.GetStatusInfo(parsedStatus) : status;
-            errorInf += $"\n Status {status}: {statusInfo}";
+            errorInf += $"\n Status {status}: {_errorCodeFactory.GetStatusInfo(int.Parse(status))}";
         }
         var state = Helpers.GetPrinterStatus(printerStatus);
         if (state != null)
