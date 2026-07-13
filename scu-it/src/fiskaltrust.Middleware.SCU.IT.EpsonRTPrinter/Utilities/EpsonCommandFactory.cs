@@ -287,7 +287,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         // Restart printer via directIO 4034 (Communication Protocol 7.00, H1=4;H2=034):
         // data = PARAM(01 Web server) + INDEX(98 Restart printer) + FUNCTION(00) + STRING(64-byte space pad).
-        // Note [3]: a directIO restart blocks the XML response (FP_NO_ANSWER), so no meaningful reply is returned.
+        // INDEX 98 may acknowledge the command or interrupt the response while the restart begins.
         public static string RebootCommand()
         {
             var data = "019800" + new string(' ', 64);

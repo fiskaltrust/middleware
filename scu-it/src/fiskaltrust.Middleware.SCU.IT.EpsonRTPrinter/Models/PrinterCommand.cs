@@ -38,6 +38,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         [XmlAttribute(AttributeName = "success")]
         public bool Success { get; set; }
 
+        [XmlIgnore]
+        public bool SuccessSpecified { get; set; }
+
         [XmlAttribute(AttributeName = "code")]
         public string? Code { get; set; }
 
