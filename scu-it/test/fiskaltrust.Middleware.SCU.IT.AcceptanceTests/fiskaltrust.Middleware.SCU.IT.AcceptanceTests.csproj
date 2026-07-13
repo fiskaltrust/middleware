@@ -19,6 +19,7 @@
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.csproj" />
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.csproj" />
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.CustomRTServer\fiskaltrust.Middleware.SCU.IT.CustomRTServer.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.EpsonRTServer\fiskaltrust.Middleware.SCU.IT.EpsonRTServer.csproj" />
     </ItemGroup>
 
     <ItemGroup>
