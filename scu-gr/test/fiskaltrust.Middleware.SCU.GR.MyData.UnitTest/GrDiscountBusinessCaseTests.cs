@@ -381,6 +381,69 @@ public class GrDiscountBusinessCaseTests
         zero.incomeClassification[0].amount.Should().Be(0m);
     }
 
+    // Calculation coverage
+
+    [Theory] // arithmetic: finalGross = parentGross + modifier, vat re-derived at the line's rate, net = finalGross - vat
+    [InlineData(24, 10.00, -5.45, 3.67, 0.88)]
+    [InlineData(24, 124.00, -24.00, 80.65, 19.35)]
+    [InlineData(24, 10.00, -9.99, 0.01, 0.00)]   // near-zero
+    [InlineData(13, 15.00, -7.50, 6.64, 0.86)]
+    [InlineData(13, 113.00, -13.00, 88.50, 11.50)]
+    [InlineData(6, 10.00, -5.00, 4.72, 0.28)]
+    public void Fold_RecomputesNetAndVat(decimal vatRate, decimal parentGross, decimal modifier, decimal expectedNet, decimal expectedVat)
+    {
+        var request = B2C("GR-calc-fold", new[]
+        {
+            Good(1.0m, parentGross, vatRate),
+            DiscountModifier(1.1m, modifier, vatRate)
+        }, paid: parentGross + modifier);
+
+        var (doc, error) = CreateFactory().MapToInvoicesDoc(request, CreateResponse(request));
+
+        error.Should().BeNull();
+        AssertFoldedLine(doc!.invoice[0].invoiceDetails[0], expectedNet, expectedVat);
+    }
+
+    [Theory] // basket discount distributed by gross; second row exercises the remainder landing on the largest line
+    [InlineData(10.00, 5.00, 7.00, -12.00, 3.67, 1.83, 2.56, 10.00)]
+    [InlineData(10.00, 10.00, 10.00, -10.00, 5.37, 5.38, 5.38, 20.00)]
+    public void BasketDiscount_DistributesByGross(decimal g1, decimal g2, decimal g3, decimal discount, decimal net1, decimal net2, decimal net3, decimal totalGross)
+    {
+        var request = B2C("GR-calc-basket", new[]
+        {
+            Good(1.0m, g1), Good(2.0m, g2), Good(3.0m, g3),
+            BasketDiscount(discount)
+        }, paid: g1 + g2 + g3 + discount);
+
+        var (doc, error) = CreateFactory().MapToInvoicesDoc(request, CreateResponse(request));
+
+        error.Should().BeNull();
+        var d = doc!.invoice[0].invoiceDetails;
+        d.Should().HaveCount(3, "the basket discount is distributed, not emitted as its own line");
+        d[0].netValue.Should().Be(net1);
+        d[1].netValue.Should().Be(net2);
+        d[2].netValue.Should().Be(net3);
+        d.Should().OnlyContain(l => !l.deductionsAmountSpecified);
+        doc.invoice[0].invoiceSummary.totalGrossValue.Should().Be(totalGross);
+        doc.invoice[0].invoiceSummary.totalDeductionsAmount.Should().Be(0m);
+    }
+
+    [Theory] // a basket discount larger than the basket total cannot be distributed → rejected
+    [InlineData(23.00)]
+    [InlineData(50.00)]
+    public void BasketDiscount_ExceedsBasket_IsRejected(decimal discountAbs)
+    {
+        var request = B2C("GR-calc-basket-exceed", new[]
+        {
+            Good(1.0m, 10m), Good(2.0m, 5m), Good(3.0m, 7m),   // basket total = 22
+            BasketDiscount(-discountAbs)
+        }, paid: 22m - discountAbs);
+
+        var (_, error) = CreateFactory().MapToInvoicesDoc(request, CreateResponse(request));
+
+        error.Should().NotBeNull("a basket discount exceeding the basket total must be rejected");
+    }
+
     private static void AssertFoldedLine(InvoiceRowType line, decimal expectedNet, decimal expectedVat)
     {
         line.netValue.Should().Be(expectedNet, "discount folds into netValue");
