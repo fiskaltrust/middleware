@@ -144,6 +144,9 @@ public class AADEFactory
             {
                 throw new Exception(validationError?.ErrorMessage ?? "Invalid receipt request.");
             }
+
+            DistributeBasketDiscounts(receiptRequest);
+
             var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, receiptReferences);
             var doc = new InvoicesDoc
             {
@@ -158,6 +161,76 @@ public class AADEFactory
                 Exception = ex
             });
         }
+    }
+
+    // A whole-basket (rate-agnostic) discount is signalled by the ExtraOrDiscount flag together
+    // with VATRate 0 and Position 0 (case 0x..._0004_0010). It belongs to no single line, so it is
+    // distributed across all base lines by gross rather than attached to one line.
+    private static bool IsBasketDiscount(ChargeItem ci)
+        => ci.IsDiscountOrExtra() && ci.VATRate == 0m && ci.Position == 0m;
+
+    // Replaces a whole-basket discount with one discount modifier per base line, proportional to
+    // each line's gross. The rounding remainder is assigned to the largest line so the shares sum
+    // exactly to the basket discount. The per-line modifiers then flow through the normal fold.
+    private static void DistributeBasketDiscounts(ReceiptRequest receiptRequest)
+    {
+        var items = receiptRequest.cbChargeItems;
+        if (items is null || !items.Any(IsBasketDiscount))
+        {
+            return;
+        }
+
+        var baseItems = items.Where(ci => !ci.IsDiscountOrExtra() && !ci.IsVoucherRedeem()).ToList();
+        var totalBaseGross = baseItems.Sum(ci => ci.Amount);
+        if (totalBaseGross <= 0m)
+        {
+            throw new Exception("A whole-basket discount requires base charge items with a positive total amount.");
+        }
+
+        var basketSum = items.Where(IsBasketDiscount).Sum(d => d.Amount);
+        if (Math.Abs(basketSum) > totalBaseGross)
+        {
+            throw new Exception(
+                $"The whole-basket discount {Math.Abs(basketSum)} exceeds the total basket amount {totalBaseGross}.");
+        }
+
+        var shares = new Dictionary<ChargeItem, decimal>();
+        var allocated = 0m;
+        foreach (var b in baseItems)
+        {
+            var share = Math.Round(basketSum * b.Amount / totalBaseGross, 2, MidpointRounding.AwayFromZero);
+            shares[b] = share;
+            allocated += share;
+        }
+        var remainder = basketSum - allocated;
+        if (remainder != 0m && baseItems.Count > 0)
+        {
+            var largest = baseItems.OrderByDescending(b => b.Amount).First();
+            shares[largest] += remainder;
+        }
+
+        var rebuilt = new List<ChargeItem>();
+        foreach (var ci in items)
+        {
+            if (IsBasketDiscount(ci))
+            {
+                continue;
+            }
+            rebuilt.Add(ci);
+            if (shares.TryGetValue(ci, out var share) && share != 0m)
+            {
+                rebuilt.Add(new ChargeItem
+                {
+                    Position = ci.Position,
+                    Quantity = 1,
+                    Description = ci.Description,
+                    Amount = share,
+                    VATRate = ci.VATRate,
+                    ftChargeItemCase = ci.ftChargeItemCase.WithFlag(ChargeItemCaseFlags.ExtraOrDiscount)
+                });
+            }
+        }
+        receiptRequest.cbChargeItems = rebuilt;
     }
 
     private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
@@ -1327,8 +1400,66 @@ public class AADEFactory
             }
             if (grouped.modifiers.Count > 0)
             {
-                invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
-                invoiceRow.deductionsAmountSpecified = true;
+                // A discount/extra modifier is folded into the line's netValue/vatAmount — it is
+                // NOT reported as deductionsAmount (a statutory withholding; cf. AADE rule 241).
+                var modGrossSum = grouped.modifiers.Sum(m => m.Amount);
+                if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+                {
+                    modGrossSum = -modGrossSum;
+                }
+
+                var parentGross = invoiceRow.netValue + invoiceRow.vatAmount;
+                var finalGross = parentGross + modGrossSum;
+
+                // A modifier may not exceed the line it attaches to (that would drive the line negative).
+                var realFinalGross = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -finalGross : finalGross;
+                if (realFinalGross < 0m)
+                {
+                    throw new Exception(
+                        $"The discount/extra of {Math.Abs(modGrossSum)} on line {invoiceRow.lineNumber} exceeds the line amount {Math.Abs(parentGross)}. " +
+                        "Split the discount per line, or send it as a whole-basket discount (ExtraOrDiscount + VATRate 0 + Position 0).");
+                }
+
+                var vatRate = x.VATRate;
+                var finalVat = vatRate == 0m
+                    ? 0m
+                    : Math.Round(finalGross / (100m + vatRate) * vatRate, 2, MidpointRounding.AwayFromZero);
+
+                invoiceRow.vatAmount = finalVat;
+                invoiceRow.netValue = finalGross - finalVat;
+
+                if (grouped.modifiers.Any(m => m.IsDiscount()))
+                {
+                    invoiceRow.discountOption = true;
+                    invoiceRow.discountOptionSpecified = true;
+                }
+
+                if (invoiceRow.incomeClassification != null)
+                {
+                    foreach (var ic in invoiceRow.incomeClassification)
+                    {
+                        ic.amount = invoiceRow.netValue;
+                    }
+                }
+                if (invoiceRow.expensesClassification != null)
+                {
+                    foreach (var ec in invoiceRow.expensesClassification)
+                    {
+                        ec.amount = invoiceRow.netValue;
+                    }
+                }
+            }
+
+            // A resulting zero-net line on an invoice type that enforces rule 222 (e.g. 1.1) must
+            // carry recType=6 with no classification. Retail 11.x keeps its normal classification.
+            if (invoiceRow.netValue == 0m
+                && AADEMappings.EnforcesZeroLineRecType(AADEMappings.GetInvoiceType(receiptRequest)))
+            {
+                invoiceRow.vatAmount = 0m;
+                invoiceRow.recType = 6;
+                invoiceRow.recTypeSpecified = true;
+                invoiceRow.incomeClassification = null;
+                invoiceRow.expensesClassification = null;
             }
             // Apply line-level mydataoverride from ftChargeItemCaseData
             if (x.ftChargeItemCaseData != null)

@@ -852,4 +852,17 @@ public static class AADEMappings
         }
         return purpose;
     }
+
+    /// <summary>
+    /// Whether a netValue=0 line must be emitted with recType=6 (and no income/expenses
+    /// classification) for the given invoice type. myDATA rule 222 enforces this on 1.x
+    /// invoices; retail 11.x accepts a zero-net line keeping its normal classification.
+    /// </summary>
+    public static bool EnforcesZeroLineRecType(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item11 => true,
+        InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113
+            or InvoiceType.Item114 or InvoiceType.Item115 => false,
+        _ => false
+    };
 }

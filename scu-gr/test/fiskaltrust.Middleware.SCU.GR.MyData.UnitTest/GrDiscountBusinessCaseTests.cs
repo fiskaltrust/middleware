@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
@@ -138,7 +138,7 @@ public class GrDiscountBusinessCaseTests
 
     // ===== #103 — entire-sum discount, MANUAL per-line entry point =====
 
-    [Fact] // businesscase 103_A — verified accepted-but-non-compliant (deductions) on sandbox
+    [Fact] // businesscase 103_A
     public void Case103A_PerLineDiscount_Uniform_B2C_FoldsIntoNetNoDeductions()
     {
         var request = B2C("GR-103-A", new[]
@@ -283,7 +283,6 @@ public class GrDiscountBusinessCaseTests
     }
 
     [Fact] // businesscase 103_C — anti-pattern: single trailing discount larger than its line.
-    // DESIGN DECISION (confirm): the middleware should REJECT this rather than emit a doc AADE
     // rejects with rule 241 (deduction/negative net). The sanctioned path is the basket discount (103_F).
     public void Case103C_TrailingDiscountExceedsLine_IsRejected()
     {
@@ -359,7 +358,7 @@ public class GrDiscountBusinessCaseTests
         zero.incomeClassification.Should().BeNullOrEmpty();
     }
 
-    [Fact] // businesscase 110_RetailReceipt_ZeroLine — REGRESSION GUARD, green today
+    [Fact] // businesscase 110_RetailReceipt_ZeroLine — REGRESSION GUARD
     public void Case110_Retail_ZeroLine_KeepsClassificationNoRecType()
     {
         var request = B2C("GR-110-A", new[]
