@@ -117,17 +117,6 @@ public static class SignatureFactory
             });
         }
 
-        if (!string.IsNullOrEmpty(data.RTCodiceLotteria))
-        {
-            signatureItems.Add(new SignaturItem
-            {
-                Caption = "<rt-lottery-id>",
-                Data = data.RTCodiceLotteria,
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTLotteryID
-            });
-        }
-
         if (!string.IsNullOrEmpty(data.RTCustomerID))
         {
             signatureItems.Add(new SignaturItem
@@ -169,6 +158,17 @@ public static class SignatureFactory
                 Data = data.RTReferenceDocMoment.Value.ToString("yyyy-MM-dd"),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
+            });
+        }
+
+        if (!string.IsNullOrEmpty(data.RTCodiceLotteria))
+        {
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-lottery-id>",
+                Data = data.RTCodiceLotteria,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTLotteryID
             });
         }
         return signatureItems;

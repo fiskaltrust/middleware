@@ -1,0 +1,8 @@
+{
+  "cbReceiptReference": "INIT",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [],
+  "cbPayItems": [],
+  "ftReceiptCase": 4919373352344240129,
+  "cbUser": "Admin"
+}

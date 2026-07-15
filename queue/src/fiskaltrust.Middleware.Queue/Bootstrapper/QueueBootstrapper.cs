@@ -49,8 +49,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 // Key handling is based on this condition to ensure that we are handling it case insensitive
-                LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
-                AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
+                LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null
             };
 
             services.AddSingleton(sp =>

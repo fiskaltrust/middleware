@@ -312,7 +312,8 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     private async Task<List<SignaturItem>> ProcessFiscalDocumentAsync(ReceiptResponse receiptResponse, QueueIdentification cashuuid, CommercialDocument commercialDocument, FDocument fiscalDocument)
     {
-        await _customRTServerCommunicationQueue.EnqueueDocument(receiptResponse.ftCashBoxIdentification, commercialDocument, fiscalDocument.document.docznumber, fiscalDocument.document.docnumber);
+        var isLottery = fiscalDocument.document is DocumentDataLottery;
+        await _customRTServerCommunicationQueue.EnqueueDocument(receiptResponse.ftCashBoxIdentification, commercialDocument, fiscalDocument.document.docznumber, fiscalDocument.document.docnumber, isLottery);
         UpdatedCashUUID(receiptResponse, fiscalDocument.document, commercialDocument.qrData);
         var docType = "";
         if (fiscalDocument.document.doctype == 5)
@@ -335,7 +336,7 @@ public sealed class CustomRTServerSCU : LegacySCU
             RTDocMoment = DateTime.Parse(fiscalDocument.document.dtime),
             RTDocType = docType,
             RTServerSHAMetadata = commercialDocument.qrData.shaMetadata,
-            RTCodiceLotteria = "",
+            RTCodiceLotteria = (fiscalDocument.document as DocumentDataLottery)?.lottery_client_code ?? "",
             RTCustomerID = "",
             RTReferenceZNumber = fiscalDocument.document.referenceClosurenumber,
             RTReferenceDocNumber = fiscalDocument.document.referenceDocnumber,

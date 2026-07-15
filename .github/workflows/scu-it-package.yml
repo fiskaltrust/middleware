@@ -10,6 +10,7 @@ on:
           - fiskaltrust.Middleware.SCU.IT.CustomRTPrinter
           - fiskaltrust.Middleware.SCU.IT.CustomRTServer
           - fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
+          - fiskaltrust.Middleware.SCU.IT.EpsonRTServer
       deploySandbox:
         type: boolean
         default: false

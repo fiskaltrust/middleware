@@ -22,10 +22,19 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
         [XmlElement("dateTime")]
         public string DateTimeString { get; set; }
 
+        private static readonly string[] _dateFormats = { "dd/MM/yyyy HH:mm:ss", "dd/MM/yyyy" };
+
         [XmlIgnore]
         public DateTime DateTime
         {
-            get => DateTime.ParseExact(DateTimeString, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+            get
+            {
+                if (string.IsNullOrEmpty(DateTimeString))
+                    return System.DateTime.UtcNow;
+                return System.DateTime.TryParseExact(DateTimeString, _dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)
+                    ? dt
+                    : System.DateTime.UtcNow;
+            }
             set => DateTimeString = value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
         }
 

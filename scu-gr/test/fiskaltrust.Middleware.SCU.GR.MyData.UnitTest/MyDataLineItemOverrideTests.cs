@@ -164,5 +164,37 @@ public class MyDataLineItemOverrideTests
         details[1].discountOptionSpecified.Should().BeTrue();
         details[1].discountOption.Should().BeTrue("second item flags VAT as deductible");
     }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithMovePurposeLineOverride_ShouldSetLineMovementPurpose()
+    {
+        // Line-level movement purpose was added to InvoiceRowType in myDATA v2.0.1.
+        var factory = CreateFactory();
+        var caseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoicedetails = new
+                    {
+                        movePurposeLine = 1,
+                        otherMovePurposeLineTitle = "Sample transfer"
+                    }
+                }
+            }
+        };
+        var request = CreateRequest(CreateChargeItem(100, 24, caseData));
+        var response = CreateResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var line = doc!.invoice[0].invoiceDetails[0];
+        line.movePurposeLineSpecified.Should().BeTrue();
+        line.movePurposeLine.Should().Be(1);
+        line.otherMovePurposeLineTitle.Should().Be("Sample transfer");
+    }
     #endregion
 }

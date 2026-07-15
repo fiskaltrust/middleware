@@ -24,6 +24,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.csproj" />
+      <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.csproj" />
     </ItemGroup>
 
 </Project>

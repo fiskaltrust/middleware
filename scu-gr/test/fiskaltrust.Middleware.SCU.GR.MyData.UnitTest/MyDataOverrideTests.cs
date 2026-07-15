@@ -205,6 +205,42 @@ public class MyDataOverrideTests
     }
 
     [Fact]
+    public void MapToInvoicesDoc_WithToWeighOverride_ShouldSetToWeigh()
+    {
+        // Arrange
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            toWeigh = true
+                        }
+                    }
+                }
+            }
+        };
+
+        var response = CreateBasicReceiptResponse(request);
+
+        // Act
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        // Assert
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.toWeighSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceHeader.toWeigh.Should().BeTrue();
+    }
+
+    [Fact]
     public void MapToInvoicesDoc_WithLoadingAddressOverride_ShouldSetLoadingAddress()
     {
         // Arrange
@@ -1114,7 +1150,11 @@ public class MyDataOverrideTests
     [InlineData("8.4", InvoiceType.Item84)]
     [InlineData("8.5", InvoiceType.Item85)]
     [InlineData("8.6", InvoiceType.Item86)]
+    [InlineData("9.1", InvoiceType.Item91)]
+    [InlineData("9.2", InvoiceType.Item92)]
     [InlineData("9.3", InvoiceType.Item93)]
+    [InlineData("10.1", InvoiceType.Item101)]
+    [InlineData("10.2", InvoiceType.Item102)]
     [InlineData("11.1", InvoiceType.Item111)]
     [InlineData("11.2", InvoiceType.Item112)]
     [InlineData("11.3", InvoiceType.Item113)]

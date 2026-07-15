@@ -37,6 +37,10 @@ public static class ReceiptCaseHelper
 
     public static bool IsXReportZeroReceipt(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0001_0000_0000) > 0x0000;
 
+    // Local ZeroReceipt flags 0x01..0x20 are already taken (XReport, ZReport, FuoriServizio Entry/Exit, FileSearch, FileExtraction
+    // - see SCU.IT.TRS ReceiptCase). 0x40 is the next free bit and signals an RT printer reboot.
+    public static bool IsRebootRequest(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0040_0000_0000) > 0x0000;
+
     public static bool IsVoid(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0001_0000) > 0x0000;
 
     public static bool IsVoid(this PayItem payItem) => (payItem.ftPayItemCase & 0x0000_0000_0001_0000) > 0x0000;

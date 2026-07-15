@@ -8,8 +8,12 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using Version = fiskaltrust.Middleware.SCU.ES.VeriFactu.Models.Version;
+// Use the VeriFactu-owned, NN-byte-correct nature enum rather than the (wrong) interface enum of the
+// same name imported via fiskaltrust.ifPOS.v2.es.Cases.
+using ChargeItemCaseNatureOfVatES = fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.ChargeItemCaseNatureOfVatES;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
@@ -161,12 +165,17 @@ public class VeriFactuMapping
 
     private Detalle BuildDetalle(ChargeItem chargeItem)
     {
-        var nature = chargeItem.ftChargeItemCase.NatureOfVat();
+        var nature = chargeItem.ftChargeItemCase.NatureOfVatES();
         var item = MapNatureOfVatToOperacion(nature, chargeItem.ftChargeItemCase);
         var impuesto = ResolveImpuesto(_veriFactuSCUConfiguration.TaxRegime);
         var claveRegimen = ResolveClaveRegimen(nature, _veriFactuSCUConfiguration.TaxRegime);
 
         ValidateOperacionCombination(impuesto, item);
+
+        // AEAT rejects (Incorrecto 1237/1238) TipoImpositivo and CuotaRepercutida on exempt
+        // (OperacionExenta E1–E6) or not-subject (CalificacionOperacion N1/N2) operations — only
+        // subject operations (S1/S2) may carry them. Leaving them null omits the elements.
+        var chargesVat = item is CalificacionOperacion.S1 or CalificacionOperacion.S2;
 
         return new Detalle
         {
@@ -176,37 +185,32 @@ public class VeriFactuMapping
             ClaveRegimen = claveRegimen,
             BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
             Item = item,
-            TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
-            CuotaRepercutida = chargeItem.GetVATAmount().ToVeriFactuNumber()
+            TipoImpositivo = chargesVat ? chargeItem.VATRate.ToVeriFactuNumber() : null,
+            CuotaRepercutida = chargesVat ? chargeItem.GetVATAmount().ToVeriFactuNumber() : null
         };
     }
-
-    // Mirror of QueueES values not yet upstreamed to fiskaltrust.interface.
-    // Remove once ChargeItemCaseNatureOfVatES carries these in the NuGet enum.
-    internal const ChargeItemCaseNatureOfVatES ForeignTaxApplies = (ChargeItemCaseNatureOfVatES) 0x6000;
-    internal const ChargeItemCaseNatureOfVatES ExcludedThirdParty = (ChargeItemCaseNatureOfVatES) 0x8000;
 
     private static object MapNatureOfVatToOperacion(ChargeItemCaseNatureOfVatES nature, ChargeItemCase chargeItemCase) => nature switch
     {
         // If CalificacionOperacion is S1 and BaseImponibleACoste is not filled in, TipoImpositivo and CuotaRepercutida are mandatory.
-        ChargeItemCaseNatureOfVatES.UsualVatApplies => CalificacionOperacion.S1,
+        ChargeItemCaseNatureOfVatES.UsualVatApplies => CalificacionOperacion.S1,                  // NN [00]
 
-        ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14 => CalificacionOperacion.N1,
-        ChargeItemCaseNatureOfVatES.NotSubjectLocationRules => CalificacionOperacion.N2,
+        ChargeItemCaseNatureOfVatES.NotSubjectLocationRules => CalificacionOperacion.N2,          // NN [20]
+        ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14 => CalificacionOperacion.N1,          // NN [21]
 
-        ChargeItemCaseNatureOfVatES.ExteptArticle20 => OperacionExenta.E1,
-        ChargeItemCaseNatureOfVatES.ExteptArticle21 => OperacionExenta.E2,
-        ChargeItemCaseNatureOfVatES.ExteptArticle22 => OperacionExenta.E3,
-        ChargeItemCaseNatureOfVatES.ExteptArticle23And24 => OperacionExenta.E4,
-        ChargeItemCaseNatureOfVatES.ExteptArticle25 => OperacionExenta.E5,
-        ChargeItemCaseNatureOfVatES.ExteptOthers => OperacionExenta.E6,
+        ChargeItemCaseNatureOfVatES.Exports => OperacionExenta.E2,                                // NN [10]
+        ChargeItemCaseNatureOfVatES.IntraCommunityDelivery => OperacionExenta.E5,                 // NN [11]
+        ChargeItemCaseNatureOfVatES.TransactionsTreatedAsExports => OperacionExenta.E3,           // NN [13]
+        ChargeItemCaseNatureOfVatES.CustomsAndTaxExemptions => OperacionExenta.E4,                // NN [14]
+        ChargeItemCaseNatureOfVatES.ExemptedDomestic => OperacionExenta.E1,                       // NN [30]
+        ChargeItemCaseNatureOfVatES.OtherExemptions => OperacionExenta.E6,                        // NN [31]
 
-        ChargeItemCaseNatureOfVatES.ReverseCharge => CalificacionOperacion.S2,
+        ChargeItemCaseNatureOfVatES.ReverseCharge => CalificacionOperacion.S2,                    // NN [50]
 
         // VeriFactu has no dedicated L9/L10 key for "foreign tax applies" (NN[60]) or "excluded" (NN[80]);
         // they are routed via L1 (Impuesto) and categorised under non-subject "others" (N1).
-        ForeignTaxApplies => CalificacionOperacion.N1,
-        ExcludedThirdParty => CalificacionOperacion.N1,
+        ChargeItemCaseNatureOfVatES.ForeignTaxApplies => CalificacionOperacion.N1,                // NN [60]
+        ChargeItemCaseNatureOfVatES.ExcludedThirdParty => CalificacionOperacion.N1,               // NN [80]
 
         _ => throw new Exception($"Invalid charge item case {chargeItemCase}")
     };
@@ -223,9 +227,9 @@ public class VeriFactuMapping
     private static IdOperacionesTrascendenciaTributaria ResolveClaveRegimen(ChargeItemCaseNatureOfVatES nature, VeriFactuTaxRegime regime) => nature switch
     {
         // Exports / treated-as-exports / customs exemptions use ClaveRegimen 02 ("Export operations").
-        ChargeItemCaseNatureOfVatES.ExteptArticle21 => IdOperacionesTrascendenciaTributaria.Item02,
-        ChargeItemCaseNatureOfVatES.ExteptArticle22 => IdOperacionesTrascendenciaTributaria.Item02,
-        ChargeItemCaseNatureOfVatES.ExteptArticle23And24 => IdOperacionesTrascendenciaTributaria.Item02,
+        ChargeItemCaseNatureOfVatES.Exports => IdOperacionesTrascendenciaTributaria.Item02,                      // NN [10]
+        ChargeItemCaseNatureOfVatES.TransactionsTreatedAsExports => IdOperacionesTrascendenciaTributaria.Item02, // NN [13]
+        ChargeItemCaseNatureOfVatES.CustomsAndTaxExemptions => IdOperacionesTrascendenciaTributaria.Item02,      // NN [14]
         _ => IdOperacionesTrascendenciaTributaria.Item01
     };
 

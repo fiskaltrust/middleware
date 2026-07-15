@@ -14,6 +14,9 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
             Report = new Records<IReport>(new[] { report });
         }
 
+        [XmlElement("dematerializedOn", IsNullable = false)]
+        public DematerializedOn DematerializedOn { get; set; } = new();
+
         [XmlAnyElement()]
         public Records<IReport> Report { get; set; }
     }

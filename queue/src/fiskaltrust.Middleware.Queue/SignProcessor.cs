@@ -27,7 +27,6 @@ namespace fiskaltrust.Middleware.Queue
 
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly SignatureFactory _signatureFactory;
-        //private readonly Action<string> _onMessage;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -47,7 +46,6 @@ namespace fiskaltrust.Middleware.Queue
             _actionJournalRepository = actionJournalRepository;
             _cryptoHelper = cryptoHelper;
             _middlewareConfiguration = middlewareConfiguration;
-            //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
         }
 
@@ -203,7 +201,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
@@ -250,7 +248,6 @@ namespace fiskaltrust.Middleware.Queue
             }
             finally
             {
-                OnMessage(queueItem, receiptJournal);
                 foreach (var actionJournal in actionjournals)
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
@@ -258,25 +255,6 @@ namespace fiskaltrust.Middleware.Queue
                 await _countrySpecificSignProcessor.FinalTaskAsync(queue, queueItem, data, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
             }
         }
-
-#pragma warning disable IDE0060 // Remove unused parameter
-        private void OnMessage(ftQueueItem queueItem, ftReceiptJournal receiptJournal)
-        {
-            // Temporary uncomment this, as it's throwing an exception when used after 5 minutes due to the runtime service object being disposed
-            //try
-            //{
-            //    _onMessage?.Invoke(JsonConvert.SerializeObject(new ReceiptProcessedMessage
-            //    {
-            //        QueueItem = queueItem,
-            //        ReceiptJournal = receiptJournal
-            //    }));
-            //}
-            //catch (Exception ex)
-            //{
-            //    _logger.LogError(ex, "An error occurred while executing the OnMessage event. This is most likely caused by an exception in another component.");
-            //}
-        }
-#pragma warning restore IDE0060 // Remove unused parameter
 
         private async Task<ftQueueItem> GetExistingQueueItemOrNullAsync(ReceiptRequest data)
         {

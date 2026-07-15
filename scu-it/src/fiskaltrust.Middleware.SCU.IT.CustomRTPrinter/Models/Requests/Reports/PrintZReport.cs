@@ -6,6 +6,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
     public class PrintZReport : IReport
     {
         [XmlAttribute("description")]
-        public string Description { get; set; }
+        public string Description { get; set; } = "";
     }
 }

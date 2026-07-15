@@ -203,3 +203,9 @@ scu-it-epsonrtprinter:
       - any-glob-to-any-file:
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.Abstraction/**/*"
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter/**/*"
+
+scu-it-epsonrtserver:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "scu-it/src/fiskaltrust.Middleware.SCU.IT.Abstraction/**/*"
+          - "scu-it/src/fiskaltrust.Middleware.SCU.IT.EpsonRTServer/**/*"
