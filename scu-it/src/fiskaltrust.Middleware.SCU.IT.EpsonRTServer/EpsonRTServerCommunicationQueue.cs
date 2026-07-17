@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         private bool _processingReceipts;
         private readonly Dictionary<string, int> _rejectionCounts = new();
 
-        public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration)
+        public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration, Func<string>? personalFolderProvider = null)
         {
             _id = id;
             _client = client;
@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             var cacheFolder = configuration.ServiceFolder;
             if (string.IsNullOrEmpty(cacheFolder))
             {
-                cacheFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                cacheFolder = (personalFolderProvider ?? (() => Environment.GetFolderPath(Environment.SpecialFolder.Personal)))();
             }
 
             _documentsPath = Path.Combine(cacheFolder!, "epsonrtservercache", id.ToString());

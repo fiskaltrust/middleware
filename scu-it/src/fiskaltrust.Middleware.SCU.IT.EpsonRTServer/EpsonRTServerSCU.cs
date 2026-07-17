@@ -29,6 +29,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
     private readonly IEpsonRTServerClient _client;
     private readonly EpsonRTServerCommunicationQueue _queue;
     private readonly string _scuCacheFolder;
+    private bool _persistDisabled;
 
     private Dictionary<Guid, TillState> _tillStates = new();
 
@@ -38,7 +39,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
 
     private string StateCacheFilePath => Path.Combine(_scuCacheFolder, $"{_id}_epsonrtserver_statecache.json");
 
-    public EpsonRTServerSCU(Guid id, ILogger<EpsonRTServerSCU> logger, EpsonRTServerConfiguration configuration, IEpsonRTServerClient client, EpsonRTServerCommunicationQueue queue)
+    public EpsonRTServerSCU(Guid id, ILogger<EpsonRTServerSCU> logger, EpsonRTServerConfiguration configuration, IEpsonRTServerClient client, EpsonRTServerCommunicationQueue queue, Func<string>? personalFolderProvider = null)
     {
         _id = id;
         _logger = logger;
@@ -46,8 +47,9 @@ public sealed class EpsonRTServerSCU : LegacySCU
         _client = client;
         _queue = queue;
 
+        var personalFolder = personalFolderProvider ?? (() => Environment.GetFolderPath(Environment.SpecialFolder.Personal));
         _scuCacheFolder = string.IsNullOrEmpty(configuration.ServiceFolder)
-            ? Environment.GetFolderPath(Environment.SpecialFolder.Personal)
+            ? personalFolder()
             : configuration.ServiceFolder!;
     }
 
@@ -492,7 +494,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
 
     private void LoadStateFromDisk()
     {
-        if (!File.Exists(StateCacheFilePath))
+        if (string.IsNullOrEmpty(_scuCacheFolder) || !File.Exists(StateCacheFilePath))
         {
             return;
         }
@@ -500,31 +502,45 @@ public sealed class EpsonRTServerSCU : LegacySCU
         {
             _tillStates = JsonConvert.DeserializeObject<Dictionary<Guid, TillState>>(File.ReadAllText(StateCacheFilePath)) ?? new Dictionary<Guid, TillState>();
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            // A corrupt cache is recoverable: the state is re-seeded from the server (token + fiscalInformation).
-            _logger.LogWarning(ex, "The state cache '{path}' is corrupt and will be rebuilt from the RT Server.", StateCacheFilePath);
+            // A corrupt/unreadable cache is recoverable: the state is re-seeded from the server (token + fiscalInformation).
+            _logger.LogWarning(ex, "The state cache '{path}' could not be read and will be rebuilt from the RT Server.", StateCacheFilePath);
             _tillStates = new Dictionary<Guid, TillState>();
         }
     }
 
     private void PersistState()
     {
-        if (!Directory.Exists(_scuCacheFolder))
+        if (_persistDisabled || string.IsNullOrEmpty(_scuCacheFolder))
         {
-            Directory.CreateDirectory(_scuCacheFolder);
+            return;
         }
-        // Write-temp-then-swap: a crash mid-write must not corrupt the chain state (the fingerprint in this
-        // file is the Section A of the next document).
-        var tempPath = StateCacheFilePath + ".tmp";
-        File.WriteAllText(tempPath, JsonConvert.SerializeObject(_tillStates));
-        if (File.Exists(StateCacheFilePath))
+        try
         {
-            File.Replace(tempPath, StateCacheFilePath, null);
+            if (!Directory.Exists(_scuCacheFolder))
+            {
+                Directory.CreateDirectory(_scuCacheFolder);
+            }
+            // Write-temp-then-swap: a crash mid-write must not corrupt the chain state (the fingerprint in this
+            // file is the Section A of the next document).
+            var tempPath = StateCacheFilePath + ".tmp";
+            File.WriteAllText(tempPath, JsonConvert.SerializeObject(_tillStates));
+            if (File.Exists(StateCacheFilePath))
+            {
+                File.Replace(tempPath, StateCacheFilePath, null);
+            }
+            else
+            {
+                File.Move(tempPath, StateCacheFilePath);
+            }
         }
-        else
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            File.Move(tempPath, StateCacheFilePath);
+            // No writable service folder (e.g. stateless cloud host): till state is a pure cache re-seeded from
+            // the RT Server via createToken, so persistence is best-effort. Disable to avoid repeated churn.
+            _persistDisabled = true;
+            _logger.LogWarning(ex, "Could not persist Epson RT Server till state to '{folder}'; continuing in-memory (state is re-seeded from the device via createToken).", _scuCacheFolder);
         }
     }
 }
