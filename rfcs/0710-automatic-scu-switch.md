@@ -33,7 +33,6 @@ The current SCU switch process is designed that way because for hardware TSEs yo
 
 When switching to a cloud TSE, that manual step is not needed, which means that in some cases we can automatically perform the SCU switch.  
 With the process this RFC describes, we'll be able to make it possible to automatically switch to supported SCUs during daily closing.
-
 The automatic SCU switch is generally possible if the target SCU is a cloud TSE.
 
 This automation enables us to:
