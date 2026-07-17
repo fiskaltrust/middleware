@@ -502,10 +502,10 @@ public sealed class EpsonRTServerSCU : LegacySCU
         {
             _tillStates = JsonConvert.DeserializeObject<Dictionary<Guid, TillState>>(File.ReadAllText(StateCacheFilePath)) ?? new Dictionary<Guid, TillState>();
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (JsonException ex)
         {
-            // A corrupt/unreadable cache is recoverable: the state is re-seeded from the server (token + fiscalInformation).
-            _logger.LogWarning(ex, "The state cache '{path}' could not be read and will be rebuilt from the RT Server.", StateCacheFilePath);
+            // A corrupt cache is recoverable: the state is re-seeded from the server (token + fiscalInformation).
+            _logger.LogWarning(ex, "The state cache '{path}' is corrupt and will be rebuilt from the RT Server.", StateCacheFilePath);
             _tillStates = new Dictionary<Guid, TillState>();
         }
     }
