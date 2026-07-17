@@ -1,7 +1,7 @@
 - Feature Name: `automatic_scu_switch`
 - Start Date: 2026-07-17
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
-- Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+- RFC PR: [fiskaltrust/middleware#710](https://github.com/fiskaltrust/middleware/pull/710)
+<!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
 - Markets: `DE` + `v2`
 
 # Summary
