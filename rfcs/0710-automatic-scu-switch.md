@@ -101,7 +101,6 @@ If the SCU switch cannot be performed automatically, the current behaviour is us
 If a TSE outage deleted the source TSE of some users this workflow can be automatically used to switch the queue to a new TSE.
 
 > ***Meta:** I'm not exactly sure how the TSE exchange workflow currently works so that section might need corrections*  
-> *\- @volllly*
 
 # Reference-level explanation
 
@@ -118,11 +117,7 @@ Each SCU also contains a `"ModeConfigurationJson"` key where we can add addition
 We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of both source and target SCUs, which is false by default.
 
 <details>
-<summary>
-
-**Example Cashbox Configuration:**
-
-</summary>
+<summary>Example Cashbox Configuration</summary>
 
 ```json
 {
