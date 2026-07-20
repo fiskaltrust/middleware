@@ -81,12 +81,22 @@ When an automatic SCU switch is configured, the middleware detects this when it'
 The middleware then automatically performs the following during processing of the daily closing:
 1. A daily-closing receipt
 2. A GetTseInfo call to the target SCU
-3. An init-SCU-switch receipt (with the force flag behaviour)
+3. An init-SCU-switch receipt
 4. A finish-SCU-switch receipt
 
 The signatures of the daily closing response will contain all signatures done by the daily-closing, init-SCU-switch and finish-SCU-switch receipts.
 
 After the daily-closing receipt is processed the target SCU is used by the queue.
+
+## Force behaviour
+
+Per default the automatic SCU switch will not be attempted if the source SCU is unreachable.
+That way we ensure that no TAR-Files are lost and all steps of the SCU switch process are executed.
+
+If it is known that the source SCU is broken the automatic SCU switch can be configured to be forced.
+If configured so the automatic SCU switch uses the force flag behaviour of the init-SCU-switch receipt.
+
+That means that the daily-closing must not succeed for the automatic SCU switch process to start which can lead to lost TAR-Files.
 
 ## Error handling
 
@@ -96,19 +106,20 @@ Each of those steps is recoverable, and after daily closing, the queue is either
 
 ### daily-closing fails
 
-If the daily closing fails because the source SCU is not reachable, the daily closing will be processed as a failed receipt, but the automatic SCU switch process will continue.
+If the daily closing fails because the source SCU is not reachable, the daily closing will be processed as a failed receipt, and the automatic SCU switch process will not be initiated.
 
 ### GetTseInfo to target SCU fails
 
 If the GetTseInfo call to the target SCU fails, the switch process is not performed, an error will be logged, and an error message will be returned in the receipt signatures.
 
-The daily closing is just processed like a normal daily closing.
+The daily closing is processed like a normal daily closing.
 
 ### init-SCU-switch fails
 
 If the init-SCU-switch receipt fails (e.g. because the source SCU is not reachable), an error will be logged, but the source SCU will be disconnected from the queue and the switch process will continue.
+We have downloaded the TAR-File before during the daily closing so we're not loosing any data in that case. Only the client is maybe not deregistered.
 
-This is the same behaviour as the init-SCU-switch receipt with a force flag has.
+This uses the same behaviour the manual init-SCU-switch receipt has.
 
 ### finish-SCU-switch fails
 
@@ -149,6 +160,7 @@ The `"Mode"` parameter of each SCU indicates if it's a source SCU (`0x10000`) or
 Each SCU also contains a `"ModeConfigurationJson"` key where we can add additional information (currently this contains only the respective other SCU ID).
 
 We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of both source and target SCUs, which is false by default.
+We also add an optional `"ForceInitSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of the source SCU, which is false by default.
 
 <details>
 <summary>Example Cashbox Configuration</summary>
@@ -173,7 +185,7 @@ We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfig
             "TimeStamp": 639184995866783260,
             "TseInfoJson": null,
             "Mode": 65536,
-            "ModeConfigurationJson": "{\"TargetScuId\":\"80de521c-407f-4f97-bbe6-057acbb5fa40\",\"PerformSwitchOnDailyClosing\":true}"
+            "ModeConfigurationJson": "{\"TargetScuId\":\"80de521c-407f-4f97-bbe6-057acbb5fa40\",\"PerformSwitchOnDailyClosing\":true,\"ForceInitSwitchOnDailyClosing\":true}"
           }
         ],
       }
@@ -186,10 +198,12 @@ We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfig
 
 ## Trigger of the automatic SCU switch
 
-After (successful or unsuccessful) processing of the daily-closing receipt and before returning the ReceiptResponse, the queue checks if the `ModeConfigurationJson` of the current SCU has `PerformSwitchOnDailyClosing` set to `true`,
+After successful processing of the daily-closing receipt and before returning the ReceiptResponse, the queue checks if the `ModeConfigurationJson` of the current SCU has `PerformSwitchOnDailyClosing` set to `true`,
 if it has a `TargetScuId` configured, and if the matching target SCU's `ModeConfigurationJson` also has `PerformSwitchOnDailyClosing` set to `true`.
 
 If all of that is true the automatic SCU switch process is started.
+
+If processing of the daily-closing receipt is unsuccessful but the `ForceInitSwitchOnDailyClosing` parameter in the source SCUs `ModeConfigurationJson` is set to true the SCU switch process will also be started but with the force init-SCU-switch flag behaviour.
 
 ## Process
 
@@ -241,7 +255,15 @@ This has the advantage of being explicit but the disadvantage of requiring a spe
 
 # Unresolved questions
 
-- Do we need another parameter in the `ModeConfigurationJson` to specify that the automatic init-SCU-switch should be done with the force flag?
+- ~Do we need another parameter in the `ModeConfigurationJson` to specify that the automatic init-SCU-switch should be done with the force flag?~ Yes. Skipping the TAR-File export from the source TSE that happens during the daily-closing is dangerous and should require explicit opt in.
 - If something fails, should the queue void the init-SCU-switch and return to the source SCU, or just force-connect itself to the target SCU even if the target SCU will not work?
 - Should we create an all-in-one-SCU-switch receipt instead?
 - Should we require a receipt case flag to be set on the daily closing for the automatic switch to be triggered? (Maybe we could also reuse the update masterdata flag)
+
+# Future possibilities
+
+## TSE sanity check
+
+The Queue/SCU should perform a sanity check to verify that the connected TSE is the correct TSE.
+
+The Queue can e.g. verify that the certificate serialnumber returned by the TSE matches with what the queue has stored in the `ftSignaturCreationUnitDE` table.
