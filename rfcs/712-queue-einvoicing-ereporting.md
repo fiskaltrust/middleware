@@ -1,6 +1,6 @@
 - Feature Name: `queue_einvoicing_ereporting`
 - Start Date: 2026-07-13
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
+- RFC PR: [fiskaltrust/middleware#712](https://github.com/fiskaltrust/middleware/pull/712)
 <!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
 - Markets: `ES`, `GR`, `PT` (all markets on the v2 shared localization; `IT` and further markets once they are onboarded to the v2 integration)
 
