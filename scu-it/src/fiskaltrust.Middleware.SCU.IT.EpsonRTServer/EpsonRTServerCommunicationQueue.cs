@@ -22,34 +22,44 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         private readonly ILogger<EpsonRTServerCommunicationQueue> _logger;
         private readonly EpsonRTServerConfiguration _configuration;
         private readonly string _documentsPath;
+        private readonly bool _diskCacheAvailable;
 
         private bool _requestCancellation;
         private bool _processingReceipts;
         private readonly Dictionary<string, int> _rejectionCounts = new();
 
-        public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration)
+        public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration, Func<string>? personalFolderProvider = null)
         {
             _id = id;
             _client = client;
             _logger = logger;
             _configuration = configuration;
 
+            var personalFolder = personalFolderProvider ?? (() => Environment.GetFolderPath(Environment.SpecialFolder.Personal));
             var cacheFolder = configuration.ServiceFolder;
             if (string.IsNullOrEmpty(cacheFolder))
             {
-                cacheFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                cacheFolder = personalFolder();
             }
-
-            _documentsPath = Path.Combine(cacheFolder!, "epsonrtservercache", id.ToString());
+            _documentsPath = Path.Combine(string.IsNullOrEmpty(cacheFolder) ? "." : cacheFolder!, "epsonrtservercache", id.ToString());
             if (!string.IsNullOrEmpty(configuration.CacheDirectory))
             {
                 _documentsPath = configuration.CacheDirectory!;
             }
+
+            _diskCacheAvailable = !string.IsNullOrEmpty(configuration.CacheDirectory) || !string.IsNullOrEmpty(cacheFolder);
+            if (!_diskCacheAvailable)
+            {
+                // Stateless host (no writable folder): the on-disk offline buffer cannot survive a restart, so
+                // documents are always sent synchronously and the background drain is not started.
+                _logger.LogWarning("No writable cache folder for the Epson RT Server queue; documents are sent synchronously (offline buffering disabled).");
+                return;
+            }
+
             if (!Directory.Exists(_documentsPath))
             {
                 Directory.CreateDirectory(_documentsPath);
             }
-
             _ = Task.Run(ProcessReceiptsInBackground);
         }
 
@@ -59,7 +69,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// </summary>
         public async Task<Models.RtServerResponse?> EnqueueDocument(string tillId, string createReceiptXml, long zRepNumber, long docNumber)
         {
-            if (_configuration.SendReceiptsSync)
+            if (_configuration.SendReceiptsSync || !_diskCacheAvailable)
             {
                 return await _client.CreateReceiptAsync(createReceiptXml).ConfigureAwait(false);
             }
@@ -76,6 +86,14 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         public async Task ProcessReceiptsInBackground()
         {
+            if (!_diskCacheAvailable)
+            {
+                // Belt-and-suspenders: there is no disk cache to drain, and _documentsPath was never created,
+                // so never touch it even if this ever gets invoked despite the guard in ProcessAllReceipts.
+                _processingReceipts = false;
+                return;
+            }
+
             while (true)
             {
                 _processingReceipts = true;
@@ -118,6 +136,14 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
         public async Task ProcessAllReceipts(string tillId)
         {
+            if (!_diskCacheAvailable)
+            {
+                // No disk cache means nothing to drain; skip so the `finally` below never restarts the
+                // background drain against a cache folder that was never created (it would loop forever
+                // throwing DirectoryNotFoundException every ~2s).
+                return;
+            }
+
             _requestCancellation = true;
             while (_processingReceipts)
             {

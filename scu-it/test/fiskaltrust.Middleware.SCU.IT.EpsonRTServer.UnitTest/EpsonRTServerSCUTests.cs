@@ -201,5 +201,65 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             ((ulong) result.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Data.Contains("8 characters"));
         }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_Should_Not_Crash_And_Reseed_Once_When_No_Writable_Folder()
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>())).ReturnsAsync(Ok(("fingerPrint", "ignored")));
+
+            var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = true };
+            var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object,
+                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration, personalFolderProvider: () => string.Empty);
+            var scu = new EpsonRTServerSCU(Guid.NewGuid(), NullLogger<EpsonRTServerSCU>.Instance,
+                configuration, client.Object, queue, personalFolderProvider: () => string.Empty);
+
+            var queueId = Guid.NewGuid();
+            var first = await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+            var second = await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+
+            using (new AssertionScope())
+            {
+                ((ulong) first.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+                ((ulong) second.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+                first.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<rt-doc-number>" && x.Data == "0001");
+                second.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<rt-doc-number>" && x.Data == "0002");
+                // In-memory state survived across receipts on one instance -> token requested only once.
+                client.Verify(x => x.CreateTokenAsync("FISK0001"), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_Should_Not_Crash_When_Service_Folder_Is_Unwritable()
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>())).ReturnsAsync(Ok(("fingerPrint", "ignored")));
+
+            // A FILE where a directory is expected makes Directory.CreateDirectory throw (cross-platform).
+            var filePath = Path.Combine(Path.GetTempPath(), $"epsonrtserver-unwritable-{Guid.NewGuid()}");
+            File.WriteAllText(filePath, "x");
+            var cacheDir = Path.Combine(Path.GetTempPath(), $"epsonrtserver-cache-{Guid.NewGuid()}");
+            try
+            {
+                // ServiceFolder = the file (breaks the SCU state cache path); CacheDirectory = a real dir so the queue is fine.
+                var configuration = new EpsonRTServerConfiguration
+                {
+                    ServerUrl = "https://localhost", SendReceiptsSync = true, ServiceFolder = filePath, CacheDirectory = cacheDir
+                };
+                var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object,
+                    NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+                var scu = new EpsonRTServerSCU(Guid.NewGuid(), NullLogger<EpsonRTServerSCU>.Instance,
+                    configuration, client.Object, queue);
+
+                var result = await scu.ProcessReceiptAsync(SaleProcessRequest());
+
+                ((ulong) result.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+            }
+            finally
+            {
+                File.Delete(filePath);
+                if (Directory.Exists(cacheDir)) Directory.Delete(cacheDir, true);
+            }
+        }
     }
 }
