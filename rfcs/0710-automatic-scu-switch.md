@@ -45,9 +45,9 @@ We can catch those cases before they occur with the automatic switch)
 The process this RFC describes, makes it possible to automatically switch to cloud SCUs during daily closing.
 
 This automation enables us to:
-- Bundle the error prone manual SCU switch process into a single receipt
-- Perform SCU switches where the only posdealer interaction happens in the portal
-- Allow our support to switch queues over to a new working SCU (e.g. if a cloud TSE outage leads to broken/deleted TSEs) without posdealer interaction
+- Bundle the error prone manual SCU switch process into a single receipt that automatically handles all errors
+- Perform SCU switches where the only PosDealer interaction happens in the portal. No input by the PosOperator or PosSystem is needed.
+- Allow our support to switch queues over to a new working SCU (e.g. if a cloud TSE outage leads to broken/deleted TSEs) without PosDealer interaction and without the need for the PosSystem to implement the SCU-switch process.
 
 The automatic SCU switch reuses all of the logic and processes from the init-SCU-switch and finish-SCU-switch receipts.  
 Because of this we mostly don't need to think about legal implications or downstream processes.
