@@ -7,6 +7,7 @@
 # Summary
 
 In this RFC we introduce the possibility to configure an SCU switch to be performed automatically by the queue during daily closing.
+The init-SCU-switch and finish-SCU-switch receipts are then executed automatically during processing of the next daily closing receipt.
 
 > ***Note:** This RFC describes the topic in terms of the German market, as this is currently the only market where such a process is needed.*  
 > *For other markets, the same applies; just replace TSE with the SSCD of the market and replace the market code `DE` with the correct market code.*
@@ -29,21 +30,55 @@ The SCU switch currently is a five-step process:
 
 </details>
 
-The current SCU switch process is designed that way because for hardware TSEs you need to physically switch the TSE devices out in the middle of the process.
+The current SCU switch process is designed that way because of the assumption that you need to physically switch the TSE devices out in the middle of the process.
+This assumption turned out to be mostly irrelevant with the advent of cloud TSEs.
 
-When switching to a cloud TSE, that manual step is not needed, which means that in some cases we can automatically perform the SCU switch.  
-With the process this RFC describes, we'll be able to make it possible to automatically switch to supported SCUs during daily closing.
-The automatic SCU switch is generally possible if the target SCU is a cloud TSE.
+When switching to a cloud TSE, there is no physical device that needs to be switched out and that manual step is not needed anymore.
+Because of this when switching to a cloud TSE we can automatically perform the SCU switch.
+
+When switching to a cloud TSE we can already check if the target SCU is reachable before starting the process with the init-SCU-switch.
+If the target SCU is not reachable we can abort the process before it starts.
+(With the manual SCU switch process we have to first perform the init-SCU-switch before we can check if the target SCU is reachable.
+If the switch is incorrectly configured or the target SCU broken this sometimes leads to broken states that _have_ to be reset with a void init-SCU-switch receipt.
+We can catch those cases before they occur with the automatic switch)
+
+The process this RFC describes, makes it possible to automatically switch to cloud SCUs during daily closing.
 
 This automation enables us to:
-- Perform SCU switches where the only user interaction happens in the portal
-- Automatically switch queues over to a new working SCU if a cloud TSE outage leads to deleted TSEs
+- Bundle the error prone manual SCU switch process into a single receipt
+- Perform SCU switches where the only posdealer interaction happens in the portal
+- Allow our support to switch queues over to a new working SCU (e.g. if a cloud TSE outage leads to broken/deleted TSEs) without posdealer interaction
+
+The automatic SCU switch reuses all of the logic and processes from the init-SCU-switch and finish-SCU-switch receipts.  
+Because of this we mostly don't need to think about legal implications or downstream processes.
+We know that the init-SCU-switch works and we know that the finish-SCU-switch works. That's why we can execute them automatically and bundle them into the daily closing receipt.
+(In the manual process the daily-closing receipt also needs to happen immediately before the init-SCU-switch receipt is sent).
+
+
+<details>
+<summary>
+
+Aside on automatically switching hardware TSEs
+
+</summary>
+
+Technically with this RFC it is also possible to switch from one hardware TSE to another hardware TSE automatically if both are plugged into different ports at the same time.
+
+E.g. if the source SCUs TSE path is `D:/` and target SCUs TSE path is `E:/` the switch could automatically be performed.
+
+This would require both TSEs to be plugged in during the daily-closing,
+would require careful configuration of the CashBox
+and synchronization of the CashBox rebuild with the hardware setup.
+
+For those reasons the manual switch is still the preferred method when switching to a hardware TSE.
+
+</details>
 
 # Guide-level explanation
 
 When an automatic SCU switch is configured, the middleware detects this when it's performing a daily closing.
 
-The middleware then implicitly performs the following during processing of the daily closing:
+The middleware then automatically performs the following during processing of the daily closing:
 1. A daily-closing receipt
 2. A GetTseInfo call to the target SCU
 3. An init-SCU-switch receipt (with the force flag behaviour)
@@ -51,7 +86,7 @@ The middleware then implicitly performs the following during processing of the d
 
 The signatures of the daily closing response will contain all signatures done by the daily-closing, init-SCU-switch and finish-SCU-switch receipts.
 
-After that the target SCU is used by the queue.
+After the daily-closing receipt is processed the target SCU is used by the queue.
 
 ## Error handling
 
@@ -208,3 +243,5 @@ This has the advantage of being explicit but the disadvantage of requiring a spe
 
 - Do we need another parameter in the `ModeConfigurationJson` to specify that the automatic init-SCU-switch should be done with the force flag?
 - If something fails, should the queue void the init-SCU-switch and return to the source SCU, or just force-connect itself to the target SCU even if the target SCU will not work?
+- Should we create an all-in-one-SCU-switch receipt instead?
+- Should we require a receipt case flag to be set on the daily closing for the automatic switch to be triggered? (Maybe we could also reuse the update masterdata flag)
