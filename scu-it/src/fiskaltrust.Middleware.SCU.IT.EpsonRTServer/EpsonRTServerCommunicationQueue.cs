@@ -47,12 +47,25 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 _documentsPath = configuration.CacheDirectory!;
             }
 
-            _diskCacheAvailable = !string.IsNullOrEmpty(configuration.CacheDirectory) || !string.IsNullOrEmpty(cacheFolder);
+            // Host-injected signal (set by the launcher on CloudCashbox): a folder resolving on a stateless host
+            // (e.g. Environment.SpecialFolder.Personal -> "/root" on the cloud image, root, no $HOME) still looks
+            // writable, so the folder heuristic alone cannot be trusted there. LauncherEnvironment="cloud"
+            // overrides it explicitly.
+            var stateless = string.Equals(configuration.LauncherEnvironment?.Trim(), "cloud", StringComparison.OrdinalIgnoreCase);
+            _diskCacheAvailable = (!string.IsNullOrEmpty(configuration.CacheDirectory) || !string.IsNullOrEmpty(cacheFolder)) && !stateless;
             if (!_diskCacheAvailable)
             {
-                // Stateless host (no writable folder): the on-disk offline buffer cannot survive a restart, so
-                // documents are always sent synchronously and the background drain is not started.
-                _logger.LogWarning("No writable cache folder for the Epson RT Server queue; documents are sent synchronously (offline buffering disabled).");
+                // Stateless host (no writable folder, or explicitly flagged stateless via LauncherEnvironment):
+                // the on-disk offline buffer cannot survive a restart, so documents are always sent
+                // synchronously and the background drain is not started.
+                if (!_configuration.SendReceiptsSync)
+                {
+                    _logger.LogWarning("SendReceiptsSync=false requested but this host is stateless (LauncherEnvironment='{launcherEnvironment}') or has no persistent cache folder; enforcing synchronous signing to avoid losing fiscal documents on restart.", configuration.LauncherEnvironment);
+                }
+                else
+                {
+                    _logger.LogWarning("No writable cache folder for the Epson RT Server queue; documents are sent synchronously (offline buffering disabled).");
+                }
                 return;
             }
 

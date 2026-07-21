@@ -91,6 +91,16 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// Overrides the folder used by the communication queue to cache pending documents.
         /// </summary>
         public string? CacheDirectory { get; set; }
+
+        /// <summary>
+        /// Host-injected signal describing where the SCU is running. Set to "cloud" by the launcher on
+        /// CloudCashbox: those hosts are stateless (pods are recycled and have no persistent disk), so the
+        /// folder-based disk-cache heuristic cannot be trusted (e.g. on the cloud image
+        /// <see cref="Environment.SpecialFolder.Personal"/> resolves to "/root", which looks writable but does
+        /// not survive a restart). When this is "cloud" the communication queue forces synchronous signing so
+        /// no fiscal document is ever buffered where it could be lost on restart.
+        /// </summary>
+        public string? LauncherEnvironment { get; set; }
     }
 
     public class AccountMasterData
