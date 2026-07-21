@@ -79,12 +79,12 @@ For those reasons the manual switch is still the preferred method when switching
 When an automatic SCU switch is configured, the middleware detects this when it's performing a daily closing.
 
 The middleware then automatically performs the following during processing of the daily closing:
-1. A daily-closing receipt
+1. The processes of the daily-closing receipt
 2. A GetTseInfo call to the target SCU
 3. An init-SCU-switch receipt
 4. A finish-SCU-switch receipt
 
-The signatures of the daily closing response will contain all signatures done by the daily-closing, init-SCU-switch and finish-SCU-switch receipts.
+The signatures of the daily closing response will contain all signatures done by the daily-closing, init-SCU-switch and finish-SCU-switch receipts in that order.
 
 After the daily-closing receipt is processed the target SCU is used by the queue.
 
@@ -96,7 +96,7 @@ That way we ensure that no TAR-Files are lost and all steps of the SCU switch pr
 If it is known that the source SCU is broken the automatic SCU switch can be configured to be forced.
 If configured so the automatic SCU switch uses the force flag behaviour of the init-SCU-switch receipt.
 
-That means that the daily-closing must not succeed for the automatic SCU switch process to start which can lead to lost TAR-Files.
+That means that the daily-closing does not need to succeed for the forced automatic SCU switch process to start which can lead to lost TAR-Files.
 
 ## Error handling
 
@@ -117,7 +117,7 @@ The daily closing is processed like a normal daily closing.
 ### init-SCU-switch fails
 
 If the init-SCU-switch receipt fails (e.g. because the source SCU is not reachable), an error will be logged, but the source SCU will be disconnected from the queue and the switch process will continue.
-We have downloaded the TAR-File before during the daily closing so we're not loosing any data in that case. Only the client is maybe not deregistered.
+We have downloaded the TAR-File before during the daily closing so we're not losing any data in that case. Only the client is maybe not deregistered.
 
 This uses the same behaviour the manual init-SCU-switch receipt has.
 
@@ -156,8 +156,8 @@ We'll take advantage of the fact that we know if the SCU switch can be performed
 
 The source SCU and target SCU are written into the `init_ftSignaturCreationUnitDE` key in the queue configuration.
 
-The `"Mode"` parameter of each SCU indicates if it's a source SCU (`0x10000`) or a target SCU (`0x20000`).
-Each SCU also contains a `"ModeConfigurationJson"` key where we can add additional information (currently this contains only the respective other SCU ID).
+The `"Mode"` parameter of each SCU indicates if it's a source SCU (`0x1_0000`) or a target SCU (`0x2_0000`).
+Each SCU also contains a `"ModeConfigurationJson"` key where we can add additional information (currently this contains only the respective other SCU ID. So the source SCU with mode `0x1_0000` contains the key `"TargetScuId"` pointing to the respective target SCU and vice versa.).
 
 We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of both source and target SCUs, which is false by default.
 We also add an optional `"ForceInitSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of the source SCU, which is false by default.
@@ -176,7 +176,7 @@ We also add an optional `"ForceInitSwitchOnDailyClosing"` parameter to the `"Mod
             "Url": "[\"grpc://localhost:1401\"]",
             "TimeStamp": 639177283121740740,
             "TseInfoJson": null,
-            "Mode": 131072,
+            "Mode": 131072, // 0x2_0000 (target scu)
             "ModeConfigurationJson": "{\"SourceScuId\":\"b100aee6-8c39-45fe-94d5-8c169dcc6e1e\",\"PerformSwitchOnDailyClosing\":true}"
           },
           {
@@ -184,10 +184,10 @@ We also add an optional `"ForceInitSwitchOnDailyClosing"` parameter to the `"Mod
             "Url": "[\"grpc://localhost:18007\"]",
             "TimeStamp": 639184995866783260,
             "TseInfoJson": null,
-            "Mode": 65536,
+            "Mode": 65536, // 0x1_0000 (source scu)
             "ModeConfigurationJson": "{\"TargetScuId\":\"80de521c-407f-4f97-bbe6-057acbb5fa40\",\"PerformSwitchOnDailyClosing\":true,\"ForceInitSwitchOnDailyClosing\":true}"
           }
-        ],
+        ]
       }
     }
   ]
