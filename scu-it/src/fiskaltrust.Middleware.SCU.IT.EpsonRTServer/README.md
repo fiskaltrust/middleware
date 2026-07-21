@@ -145,9 +145,9 @@ succession can render the device unresponsive for extended periods.
 
 ### Till map programming
 
-`createTills` **replaces the entire till map**. During the initial-operation receipt (with
-`AutoProgramTillMap`), the SCU first reads the current map (`createReport/tillMap`) and only reprograms it —
-preserving all existing tills — when the queue's till is missing. `zRepNumber` is intentionally omitted in
+`createTills` **replaces the entire till map**. During the initial-operation receipt the SCU first reads the
+current map (`createReport/tillMap`) and only reprograms it — preserving all existing tills — when the
+queue's till is missing. `zRepNumber` is intentionally omitted in
 the map (it is only meant for SD-card substitution).
 
 ---
@@ -195,7 +195,6 @@ in async mode the POS never perceives the device round-trip.
 | `PerformServerZReportOnDailyClosing` | `false` | Opt-in server-level Z report after the till closure (see above) |
 | `RTServerHttpTimeoutInMs` | `15000` | HTTP client timeout |
 | `DisableSSLValidation` | `false` | Devices ship with self-signed certificates — usually needed |
-| `AutoProgramTillMap` | `true` | Programs the till (`createTills`) during the initial-operation receipt |
 | `ServiceFolder` / `CacheDirectory` | personal folder | State cache and document queue locations |
 
 The `ftCashBoxIdentification` **must be exactly 8 characters** (4-char store id + 4-char till id) and present
