@@ -1,5 +1,3 @@
-using System;
-
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 {
     public class EpsonRTServerConfiguration
@@ -19,17 +17,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// HTTP Basic authentication password for the RT Server. Default device password is "epson".
         /// </summary>
         public string Password { get; set; } = "epson";
-
-        /// <summary>
-        /// Optional JSON with the account master data (AccountId, VatId, TaxId, ...), mirroring the Custom RT Server SCU.
-        /// </summary>
-        public string AccountMasterData { get; set; } = string.Empty;
-
-        /// <summary>
-        /// If true the till map (createTills) is programmed automatically during the initial-operation receipt.
-        /// The default device till map has to contain the till id otherwise.
-        /// </summary>
-        public bool AutoProgramTillMap { get; set; } = true;
 
         /// <summary>
         /// If true fiscal receipts are sent to the RT Server synchronously; otherwise they are cached locally and
@@ -91,24 +78,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// Overrides the folder used by the communication queue to cache pending documents.
         /// </summary>
         public string? CacheDirectory { get; set; }
-    }
-
-    public class AccountMasterData
-    {
-        public Guid AccountId { get; set; }
-
-        public string? AccountName { get; set; }
-
-        public string? Street { get; set; }
-
-        public string? Zip { get; set; }
-
-        public string? City { get; set; }
-
-        public string? Country { get; set; }
-
-        public string? TaxId { get; set; }
-
-        public string? VatId { get; set; }
     }
 }
