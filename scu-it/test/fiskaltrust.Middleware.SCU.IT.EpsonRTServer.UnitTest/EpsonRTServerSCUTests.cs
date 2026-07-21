@@ -68,6 +68,38 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             }
         };
 
+        // IT country prefix 0x4954 + InitialOperationReceipt0x4001 (only the low 16 bits are actually checked
+        // by IsInitialOperationReceipt(), but this mirrors the real ftReceiptCase seen on the wire).
+        private static ProcessRequest InitOperationProcessRequest(Guid? queueId = null) => new()
+        {
+            ReceiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = 5283883447184539649, // 0x4954_2000_0000_4001
+                cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0),
+                cbChargeItems = Array.Empty<ChargeItem>(),
+                cbPayItems = Array.Empty<PayItem>()
+            },
+            ReceiptResponse = new ReceiptResponse
+            {
+                ftQueueID = (queueId ?? Guid.NewGuid()).ToString(),
+                ftCashBoxIdentification = "FISK0001",
+                ftSignatures = Array.Empty<SignaturItem>()
+            }
+        };
+
+        /// <summary>Builds a fake createReport/tillMap raw response containing the given till ids (nested tillCountN elements, matching ParseTillIds).</summary>
+        private static RtServerResponse TillMapResponse(params string[] tillIds)
+        {
+            var addInfo = string.Concat(tillIds.Select((id, i) => $"<tillCount{i + 1} tillId=\"{id}\"/>"));
+            return new RtServerResponse
+            {
+                Success = true,
+                Code = "0",
+                Status = "OK",
+                RawResponse = $"<response success=\"true\" code=\"0\" status=\"OK\"><addInfo>{addInfo}</addInfo></response>"
+            };
+        }
+
         [Fact]
         public async Task ProcessReceiptAsync_Sale_Should_Advance_Chain_On_Acceptance()
         {
@@ -259,6 +291,42 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             {
                 File.Delete(filePath);
                 if (Directory.Exists(cacheDir)) Directory.Delete(cacheDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_InitOperation_Should_Program_Till_When_Missing_From_Map()
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.GetTillMapAsync()).ReturnsAsync(TillMapResponse("FISK0002"));
+            client.Setup(x => x.CreateTillsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(Ok());
+            client.Setup(x => x.RebootWebServerAsync()).ReturnsAsync(Ok());
+            var scu = CreateScu(client, out _);
+
+            var result = await scu.ProcessReceiptAsync(InitOperationProcessRequest());
+
+            using (new AssertionScope())
+            {
+                ((ulong) result.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+                client.Verify(x => x.CreateTillsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()), Times.Once);
+                client.Verify(x => x.RebootWebServerAsync(), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_InitOperation_Should_Skip_Programming_When_Till_Already_In_Map()
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.GetTillMapAsync()).ReturnsAsync(TillMapResponse("FISK0001", "FISK0002"));
+            var scu = CreateScu(client, out _);
+
+            var result = await scu.ProcessReceiptAsync(InitOperationProcessRequest());
+
+            using (new AssertionScope())
+            {
+                ((ulong) result.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+                client.Verify(x => x.CreateTillsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()), Times.Never);
+                client.Verify(x => x.RebootWebServerAsync(), Times.Never);
             }
         }
     }
