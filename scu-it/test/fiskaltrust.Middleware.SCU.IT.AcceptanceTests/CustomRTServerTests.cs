@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             }),
             SendReceiptsSync = true,
             IgnoreRTServerErrors = false,
-            DisabelSSLValidation = true
+            DisableSSLValidation = true
         };
 
         protected override string SerialNumber => "96SRT001239";
