@@ -242,7 +242,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
 
             var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = true };
             var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object,
-                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration, personalFolderProvider: () => string.Empty);
+                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
             var scu = new EpsonRTServerSCU(Guid.NewGuid(), NullLogger<EpsonRTServerSCU>.Instance,
                 configuration, client.Object, queue, personalFolderProvider: () => string.Empty);
 

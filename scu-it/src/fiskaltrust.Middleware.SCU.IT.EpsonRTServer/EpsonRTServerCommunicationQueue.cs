@@ -28,31 +28,32 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         private bool _processingReceipts;
         private readonly Dictionary<string, int> _rejectionCounts = new();
 
-        public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration, Func<string>? personalFolderProvider = null)
+        public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration)
         {
             _id = id;
             _client = client;
             _logger = logger;
             _configuration = configuration;
 
-            var personalFolder = personalFolderProvider ?? (() => Environment.GetFolderPath(Environment.SpecialFolder.Personal));
+            // The durable location is only ever the explicitly configured folder. There is deliberately no
+            // fallback (e.g. to SpecialFolder.Personal): a stateless/cloud host that never configures a
+            // folder must never buffer fiscal documents to ephemeral (or unexpectedly cloud-synced) disk.
             var cacheFolder = configuration.ServiceFolder;
-            if (string.IsNullOrEmpty(cacheFolder))
-            {
-                cacheFolder = personalFolder();
-            }
             _documentsPath = Path.Combine(string.IsNullOrEmpty(cacheFolder) ? "." : cacheFolder!, "epsonrtservercache", id.ToString());
             if (!string.IsNullOrEmpty(configuration.CacheDirectory))
             {
                 _documentsPath = configuration.CacheDirectory!;
             }
 
-            _diskCacheAvailable = !string.IsNullOrEmpty(configuration.CacheDirectory) || !string.IsNullOrEmpty(cacheFolder);
+            _diskCacheAvailable = !string.IsNullOrEmpty(configuration.CacheDirectory) || !string.IsNullOrEmpty(configuration.ServiceFolder);
             if (!_diskCacheAvailable)
             {
-                // Stateless host (no writable folder): the on-disk offline buffer cannot survive a restart, so
+                // No persistent folder configured: the on-disk offline buffer cannot survive a restart, so
                 // documents are always sent synchronously and the background drain is not started.
-                _logger.LogWarning("No writable cache folder for the Epson RT Server queue; documents are sent synchronously (offline buffering disabled).");
+                if (!_configuration.SendReceiptsSync)
+                {
+                    _logger.LogWarning("SendReceiptsSync=false requested but no persistent ServiceFolder/CacheDirectory is configured; enforcing synchronous signing to avoid losing fiscal documents on restart.");
+                }
                 return;
             }
 

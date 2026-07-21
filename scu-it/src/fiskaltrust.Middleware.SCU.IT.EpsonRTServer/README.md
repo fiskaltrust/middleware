@@ -93,7 +93,10 @@ Two modes, selected by `SendReceiptsSync`:
 **Synchronous (`true`)** — the caller waits for the `createReceipt` round-trip (~266 ms over WAN, less on
 LAN). A device outage fails the receipt immediately.
 
-**Asynchronous (`false`)** — recommended for production:
+**Asynchronous (`false`)** — recommended for production, but **requires an explicitly configured
+`ServiceFolder` (or `CacheDirectory`)**: this is the only durable location the queue will ever use to buffer
+documents. If neither is configured, there is no fallback — the SCU logs a warning and enforces synchronous
+signing instead, so a stateless/cloud host can never buffer fiscal documents to ephemeral disk:
 
 1. The CCDC is computed locally, so the POS gets its signatures (doc number, CCDC, QR data) **immediately**,
    even with the device unreachable. The document is cached on disk
@@ -188,7 +191,7 @@ in async mode the POS never perceives the device round-trip.
 |---|---|---|
 | `ServerUrl` | — (required) | e.g. `https://192.168.1.10` — `cgi-bin/*.cgi` is appended automatically |
 | `Username` / `Password` | `epson` / `epson` | HTTP Basic auth (device default user) |
-| `SendReceiptsSync` | `true` | Set `false` for offline-resilient queue mode (recommended) |
+| `SendReceiptsSync` | `true` | Set `false` for offline-resilient queue mode (recommended); requires an explicitly configured `ServiceFolder`/`CacheDirectory` — otherwise synchronous signing is enforced regardless of this setting |
 | `IgnoreRTServerErrors` | `false` | `true` logs rejections instead of throwing — the chain still does not advance on rejection |
 | `MaxDocumentSendRetries` | `5` | Rejections before a cached document is parked in `failed/` |
 | `ServerBusyRetries` / `ServerBusyRetryDelayInMs` | `5` / `2000` | Retry policy for transient `-8 Server busy` |
