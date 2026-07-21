@@ -93,7 +93,7 @@ public static class SignatureFactory
              new SignaturItem
             {
                 Caption = "<rt-doc-moment>",
-                Data = data.RTDocMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                Data = data.RTDocMoment.ToString("o"),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTDocumentMoment
             },

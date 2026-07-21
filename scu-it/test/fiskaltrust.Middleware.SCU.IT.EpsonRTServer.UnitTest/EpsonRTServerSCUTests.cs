@@ -96,6 +96,21 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Fact]
+        public async Task ProcessReceiptAsync_Sale_Should_Format_Utc_Document_Moment_As_Iso8601()
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>())).ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out _);
+            var request = SaleProcessRequest();
+            request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0, DateTimeKind.Utc);
+
+            var result = await scu.ProcessReceiptAsync(request);
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(
+                x => x.Caption == "<rt-doc-moment>" && x.Data == "2026-07-02T12:00:00.0000000Z");
+        }
+
+        [Fact]
         public async Task ProcessReceiptAsync_Should_Not_Advance_Chain_When_Server_Rejects()
         {
             var sentDocuments = new List<string>();
