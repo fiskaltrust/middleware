@@ -50,17 +50,13 @@ This automation enables us to:
 - Allow our support to switch queues over to a new working SCU (e.g. if a cloud TSE outage leads to broken/deleted TSEs) without PosDealer interaction and without the need for the PosSystem to implement the SCU-switch process.
 
 The automatic SCU switch reuses all of the logic and processes from the init-SCU-switch and finish-SCU-switch receipts.  
-Because of this we mostly don't need to think about legal implications or downstream processes.
+Because of this we don't need to think about legal implications or downstream processes.
 We know that the init-SCU-switch works and we know that the finish-SCU-switch works. That's why we can execute them automatically and bundle them into the daily closing receipt.
 (In the manual process the daily-closing receipt also needs to happen immediately before the init-SCU-switch receipt is sent).
 
 
 <details>
-<summary>
-
-Aside on automatically switching hardware TSEs
-
-</summary>
+<summary>Aside on automatically switching hardware TSEs</summary>
 
 Technically with this RFC it is also possible to switch from one hardware TSE to another hardware TSE automatically if both are plugged into different ports at the same time.
 
@@ -159,7 +155,7 @@ The source SCU and target SCU are written into the `init_ftSignaturCreationUnitD
 The `"Mode"` parameter of each SCU indicates if it's a source SCU (`0x1_0000`) or a target SCU (`0x2_0000`).
 Each SCU also contains a `"ModeConfigurationJson"` key where we can add additional information (currently this contains only the respective other SCU ID. So the source SCU with mode `0x1_0000` contains the key `"TargetScuId"` pointing to the respective target SCU and vice versa.).
 
-We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of both source and target SCUs, which is false by default.
+We add an optional `"PerformSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of the target SCU, which is false by default.
 We also add an optional `"ForceInitSwitchOnDailyClosing"` parameter to the `"ModeConfigurationJson"` of the source SCU, which is false by default.
 
 <details>
@@ -177,7 +173,7 @@ We also add an optional `"ForceInitSwitchOnDailyClosing"` parameter to the `"Mod
             "TimeStamp": 639177283121740740,
             "TseInfoJson": null,
             "Mode": 131072, // 0x2_0000 (target scu)
-            "ModeConfigurationJson": "{\"SourceScuId\":\"b100aee6-8c39-45fe-94d5-8c169dcc6e1e\",\"PerformSwitchOnDailyClosing\":true}"
+            "ModeConfigurationJson": "{\"SourceScuId\":\"b100aee6-8c39-45fe-94d5-8c169dcc6e1e\"}"
           },
           {
             "ftSignaturCreationUnitDEId": "b100aee6-8c39-45fe-94d5-8c169dcc6e1e",
@@ -243,7 +239,7 @@ Imagine configuring the SCU switch like you usually do and then trying to perfor
 2. Unbeknownst to you, the SCU switch is performed
 3. You do an init-SCU-switch receipt and get the message that it is not configured correctly.
 
-It also packs quite a lot of things that can fail into one receipt.
+(Mitigated by [improving the error message](<0710-automatic-scu-switch#Already performed SCU switch>))
 
 # Rationale and alternatives
 
@@ -257,8 +253,8 @@ This has the advantage of being explicit but the disadvantage of requiring a spe
 
 - ~Do we need another parameter in the `ModeConfigurationJson` to specify that the automatic init-SCU-switch should be done with the force flag?~ Yes. Skipping the TAR-File export from the source TSE that happens during the daily-closing is dangerous and should require explicit opt in.
 - If something fails, should the queue void the init-SCU-switch and return to the source SCU, or just force-connect itself to the target SCU even if the target SCU will not work?
-- Should we create an all-in-one-SCU-switch receipt instead?
-- Should we require a receipt case flag to be set on the daily closing for the automatic switch to be triggered? (Maybe we could also reuse the update masterdata flag)
+- ~Should we create an all-in-one-SCU-switch receipt instead?~ No.
+- ~Should we require a receipt case flag to be set on the daily closing for the automatic switch to be triggered? (Maybe we could also reuse the update masterdata flag)~ No. Both this and the all-in-one-SCU-switch receipt idea would improve current manual approach by packing the functionality into one receipt and thus allowing for a less error prone switch process. But they still require implementation from the PosCreator and interaction from the PosSystem. With checking availability of the target SCU we have a save success and failure path so performing the switch automatically is no risk. And with the explcit force configuration we allow automatic switching with broken source SCUs.
 
 # Future possibilities
 
@@ -267,3 +263,9 @@ This has the advantage of being explicit but the disadvantage of requiring a spe
 The Queue/SCU should perform a sanity check to verify that the connected TSE is the correct TSE.
 
 The Queue can e.g. verify that the certificate serialnumber returned by the TSE matches with what the queue has stored in the `ftSignaturCreationUnitDE` table.
+
+## Already performed SCU switch
+
+Improve the error message of the init-SCU-switch receipt in case the SCU switch has already been performed.
+
+If the configured target SCU is already the current SCU we know that the SCU switch has already been performed. In that case we can return a helpful error message.
