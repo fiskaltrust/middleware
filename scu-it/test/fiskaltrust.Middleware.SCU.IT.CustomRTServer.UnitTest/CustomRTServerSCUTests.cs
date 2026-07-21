@@ -95,6 +95,16 @@ public class CustomRTServerSCUTests : IDisposable
     };
 
     [Fact]
+    public void Deserialize_Config()
+    {
+        JsonConvert.DeserializeObject<CustomRTServerConfiguration>("""{}""").DisableSSLValidation.Should().BeFalse();
+        JsonConvert.DeserializeObject<CustomRTServerConfiguration>("""{"DisableSSLValidation": true}""").DisableSSLValidation.Should().BeTrue();
+        JsonConvert.DeserializeObject<CustomRTServerConfiguration>("""{"DisableSSLValidation": false}""").DisableSSLValidation.Should().BeFalse();
+        JsonConvert.DeserializeObject<CustomRTServerConfiguration>("""{"DisabelSSLValidation": true}""").DisableSSLValidation.Should().BeTrue();
+        JsonConvert.DeserializeObject<CustomRTServerConfiguration>("""{"DisabelSSLValidation": false}""").DisableSSLValidation.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ProcessReceiptAsync_ProtocolUnspecified0x3000_ReturnsNoOp()
     {
         var sut = CreateSut();

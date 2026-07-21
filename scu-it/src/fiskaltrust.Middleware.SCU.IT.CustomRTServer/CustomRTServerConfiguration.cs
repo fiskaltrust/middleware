@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
 {
@@ -11,7 +12,10 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
         public bool SendReceiptsSync { get; set; }
         public bool IgnoreRTServerErrors { get; set; } = true;
         public int RTServerHttpTimeoutInMs { get; set; } = 5000;
-        public bool DisabelSSLValidation { get; set; }
+        [JsonProperty("DisableSSLValidation")]
+        public bool DisableSSLValidation { get; set; }
+        [JsonProperty("DisabelSSLValidation")]
+        private bool _disabelSSLValidation { set { DisableSSLValidation = value; } }
         public string? ServiceFolder { get; set; }
         public string? CacheDirectory { get; set; }
     }
