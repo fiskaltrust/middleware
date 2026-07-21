@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
@@ -20,7 +21,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
 
             var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = false };
             var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object,
-                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration, personalFolderProvider: () => string.Empty);
+                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
 
             var response = await queue.EnqueueDocument("FISK0001", "<createReceipt/>", 1, 1);
 
@@ -39,7 +40,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
 
             var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = false };
             var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object,
-                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration, personalFolderProvider: () => string.Empty);
+                NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
 
             // Reached on every daily closing (EpsonRTServerSCU.PerformDailyClosingAsync). With no disk cache
             // there is nothing to drain, so this must be a no-op that never touches the (never-created) cache path.
@@ -64,6 +65,45 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
                 }
                 ((bool)processingField.GetValue(queue)!).Should().BeFalse(
                     "the background drain must never (re)start when there is no writable cache folder");
+            }
+        }
+
+        [Fact]
+        public async Task EnqueueDocument_Should_Cache_To_Disk_When_ServiceFolder_Is_Explicitly_Configured()
+        {
+            // On-prem pin: an explicitly configured ServiceFolder is the durable location that unlocks
+            // async signing. This must keep working exactly as before the fallback removal.
+            var serviceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-onprem-pin-" + Guid.NewGuid());
+            try
+            {
+                var client = new Mock<IEpsonRTServerClient>();
+                var id = Guid.NewGuid();
+
+                var configuration = new EpsonRTServerConfiguration
+                {
+                    ServerUrl = "https://localhost",
+                    SendReceiptsSync = false,
+                    ServiceFolder = serviceFolder
+                };
+                var queue = new EpsonRTServerCommunicationQueue(id, client.Object,
+                    NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+
+                var response = await queue.EnqueueDocument("FISK0001", "<createReceipt/>", 1, 1);
+
+                using (new AssertionScope())
+                {
+                    response.Should().BeNull("with an explicit ServiceFolder configured, signing is asynchronous");
+                    var tillFolder = Path.Combine(serviceFolder, "epsonrtservercache", id.ToString(), "FISK0001");
+                    Directory.Exists(tillFolder).Should().BeTrue();
+                    Directory.GetFiles(tillFolder, "*_createreceipt.xml").Should().HaveCount(1);
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(serviceFolder))
+                {
+                    Directory.Delete(serviceFolder, recursive: true);
+                }
             }
         }
     }
