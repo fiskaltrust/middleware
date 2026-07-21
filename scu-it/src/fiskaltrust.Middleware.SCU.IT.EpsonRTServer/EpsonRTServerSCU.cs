@@ -163,19 +163,16 @@ public sealed class EpsonRTServerSCU : LegacySCU
         try
         {
             var tillId = receiptResponse.ftCashBoxIdentification;
-            if (_configuration.AutoProgramTillMap)
+            // createTills REPLACES the whole till map: read the current map first and only reprogram when
+            // our till is missing, keeping all existing tills (the device may be shared with other queues).
+            var tillMapResponse = await _client.GetTillMapAsync().ConfigureAwait(false);
+            var existingTills = ParseTillIds(tillMapResponse.RawResponse);
+            if (!existingTills.Contains(tillId))
             {
-                // createTills REPLACES the whole till map: read the current map first and only reprogram when
-                // our till is missing, keeping all existing tills (the device may be shared with other queues).
-                var tillMapResponse = await _client.GetTillMapAsync().ConfigureAwait(false);
-                var existingTills = ParseTillIds(tillMapResponse.RawResponse);
-                if (!existingTills.Contains(tillId))
-                {
-                    await _client.CreateTillsAsync(_configuration.Username, _configuration.Password, existingTills.Concat(new[] { tillId }), new[] { tillId }).ConfigureAwait(false);
-                    await _client.RebootWebServerAsync().ConfigureAwait(false);
-                    // The on-board web server needs a moment to come back after the map change.
-                    await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                }
+                await _client.CreateTillsAsync(_configuration.Username, _configuration.Password, existingTills.Concat(new[] { tillId }), new[] { tillId }).ConfigureAwait(false);
+                await _client.RebootWebServerAsync().ConfigureAwait(false);
+                // The on-board web server needs a moment to come back after the map change.
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             }
             await InitializeTillStateAsync(receiptResponse, requestToken: true).ConfigureAwait(false);
             return (SignatureFactory.CreateInitialOperationSignatures().ToList(), StateOk);
