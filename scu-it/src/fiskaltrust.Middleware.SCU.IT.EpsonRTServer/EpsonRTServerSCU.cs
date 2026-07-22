@@ -248,10 +248,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
             }
             else if (string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
             {
-                // Unreferenced refund/void: use neutral references and the current moment.
+                // Unreferenced refund/void: use neutral references and the current moment (converted to the
+                // RT Server's local time, consistent with the receipt's own dateTime).
                 referenceZNumber = 0;
                 referenceDocNumber = 0;
-                referenceDocMoment = receiptRequest.cbReceiptMoment;
+                referenceDocMoment = EpsonRTServerMapping.ToRtServerLocalTime(receiptRequest.cbReceiptMoment, tillState.SrtUtcOffset);
                 referenceTillId = tillState.TillId;
             }
             else
