@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             => SendToFpServerAsync("<createReport><tillMap /></createReport>");
 
         public Task<RtServerResponse> CreateReceiptAsync(string createReceiptXml)
-            => SendToFpServerAsync(createReceiptXml);
+            => PerformAsync(FpServerEndpoint, createReceiptXml, acceptReceiptWarnings: true);
 
         public Task<RtServerResponse> CreateDailyClosureAsync(string tillId, int closureType)
             => SendToFpServerAsync($"<createDailyClosure><till tillId=\"{tillId}\" closureType=\"{closureType}\" /></createDailyClosure>");
@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         private Task<RtServerResponse> SendToFpMateAsync(string bodyXml)
             => PerformAsync($"{FpMateEndpoint}?timeout={_configuration.ServerCommandTimeoutInMs}", bodyXml);
 
-        private async Task<RtServerResponse> PerformAsync(string endpoint, string bodyXml)
+        private async Task<RtServerResponse> PerformAsync(string endpoint, string bodyXml, bool acceptReceiptWarnings = false)
         {
             var response = await PerformOnceAsync(endpoint, bodyXml).ConfigureAwait(false);
             // -8 "Server busy" is transient (e.g. while a daily closure or Z report is being processed):
@@ -123,10 +123,17 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             if (!response.Success && response.CodeAsInt < 0)
             {
                 var description = EpsonRTServerErrorCodes.Describe(response.CodeAsInt);
-                _logger.LogError("Calling '{endpoint}' failed with code {code} ({status}): {description}. Raw: {raw}", endpoint, response.Code, response.Status, description, response.RawResponse);
-                if (!_configuration.IgnoreRTServerErrors)
+                if (acceptReceiptWarnings && EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(response.CodeAsInt))
                 {
-                    throw new EpsonRTServerCommunicationException($"Calling '{endpoint}' failed with code {response.Code} ({response.Status}): {description}", response.CodeAsInt);
+                    _logger.LogWarning("Calling '{endpoint}' was accepted with warning code {code} ({status}): {description}. Raw: {raw}", endpoint, response.Code, response.Status, description, response.RawResponse);
+                }
+                else
+                {
+                    _logger.LogError("Calling '{endpoint}' failed with code {code} ({status}): {description}. Raw: {raw}", endpoint, response.Code, response.Status, description, response.RawResponse);
+                    if (!_configuration.IgnoreRTServerErrors)
+                    {
+                        throw new EpsonRTServerCommunicationException($"Calling '{endpoint}' failed with code {response.Code} ({response.Status}): {description}", response.CodeAsInt);
+                    }
                 }
             }
             return response;
