@@ -1,4 +1,5 @@
-﻿namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
+﻿
+namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 {
     public class FunctionPointerFactory : INativeFunctionPointerFactory
     {
@@ -22,9 +23,6 @@
             func_worm_info_isExportEnabledIfCspTestFails = NativeWormAPI.worm_info_isExportEnabledIfCspTestFails,
             func_worm_info_initializationState = NativeWormAPI.worm_info_initializationState,
             func_worm_info_isDataImportInProgress = NativeWormAPI.worm_info_isDataImportInProgress,
-            func_worm_info_hasChangedPuk = NativeWormAPI.worm_info_hasChangedPuk,
-            func_worm_info_hasChangedAdminPin = NativeWormAPI.worm_info_hasChangedAdminPin,
-            func_worm_info_hasChangedTimeAdminPin = NativeWormAPI.worm_info_hasChangedTimeAdminPin,
             func_worm_info_timeUntilNextSelfTest = NativeWormAPI.worm_info_timeUntilNextSelfTest,
             func_worm_info_startedTransactions = NativeWormAPI.worm_info_startedTransactions,
             func_worm_info_maxStartedTransactions = NativeWormAPI.worm_info_maxStartedTransactions,

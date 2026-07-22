@@ -174,45 +174,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate int worm_info_isDataImportInProgress(IntPtr info);
 
-        /* Returns whether the initial PUK has been changed.
+        // Removed in Swissbit TSE API v6.0.0:
+        // - worm_info_hasChangedPuk
+        // - worm_info_hasChangedAdminPin
+        // - worm_info_hasChangedTimeAdminPin
 
-        @param[in] info Info reference
-        */
-        //WORMAPI int WORMAPI_CALL worm_info_hasChangedPuk(const WormInfo* info);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate int worm_info_hasChangedPuk(IntPtr info);
-
-        /* Returns whether the initial *Admin* PIN has been changed.
-
-        @param[in] info Info reference
-        */
-        //WORMAPI int WORMAPI_CALL worm_info_hasChangedAdminPin(const WormInfo* info);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate int worm_info_hasChangedAdminPin(IntPtr info);
-
-
-
-
-
-        /* Returns whether the initial *TimeAdmin* PIN has been changed.
-
-        @param[in] info Info reference
-        */
-        //WORMAPI int WORMAPI_CALL worm_info_hasChangedTimeAdminPin(const WormInfo* info);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate int worm_info_hasChangedTimeAdminPin(IntPtr info);
-
-
-        /* Returns the timeout in seconds after which the next self test must be run.
-
-        If this reaches 0, all following commands will fail until the self test is
-        executed again.
-
-        @param[in] info Info reference
-        @returns the timeout
-        @see @ref worm_tse_runSelfTest
-        */
-        //WORMAPI uint32_t WORMAPI_CALL worm_info_timeUntilNextSelfTest(const WormInfo* info);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate UInt32 worm_info_timeUntilNextSelfTest(IntPtr info);
 
@@ -2108,9 +2074,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public worm_info_isExportEnabledIfCspTestFails func_worm_info_isExportEnabledIfCspTestFails { get; set; }
         public worm_info_initializationState func_worm_info_initializationState { get; set; }
         public worm_info_isDataImportInProgress func_worm_info_isDataImportInProgress { get; set; }
-        public worm_info_hasChangedPuk func_worm_info_hasChangedPuk { get; set; }
-        public worm_info_hasChangedAdminPin func_worm_info_hasChangedAdminPin { get; set; }
-        public worm_info_hasChangedTimeAdminPin func_worm_info_hasChangedTimeAdminPin { get; set; }
+        // Removed in v6.0.0: func_worm_info_hasChangedPuk, func_worm_info_hasChangedAdminPin, func_worm_info_hasChangedTimeAdminPin
         public worm_info_timeUntilNextSelfTest func_worm_info_timeUntilNextSelfTest { get; set; }
         public worm_info_startedTransactions func_worm_info_startedTransactions { get; set; }
         public worm_info_maxStartedTransactions func_worm_info_maxStartedTransactions { get; set; }
