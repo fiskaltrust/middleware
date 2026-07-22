@@ -35,9 +35,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         {
             var docNumber = tillState.LastDocNumber + 1;
             var zNumber = tillState.LastZNumber;
-            // cbReceiptMoment is UTC, but the RT Server records the LOCAL emission time (Metadata Guide 3.8:
-            // dateTime "YYYYMMDDThhmmss" + srtUtcOffset 1=winter/2=summer). Convert with the device-reported
-            // offset so the time is correct on any host (the cloud host runs in UTC; ToLocalTime would be wrong).
+            // The RT Server records the LOCAL emission time (Metadata Guide 3.8: dateTime "YYYYMMDDThhmmss"
+            // + srtUtcOffset 1=winter/2=summer). cbReceiptMoment is defined as UTC (fiskaltrust interface-doc),
+            // so convert with the device-reported offset — correct on any host (the cloud host runs in UTC,
+            // where ToLocalTime would be wrong).
             var moment = ToRtServerLocalTime(receiptRequest.cbReceiptMoment, tillState.SrtUtcOffset);
 
             var recAmount = GetReceiptTotal(receiptRequest, docType);
@@ -78,13 +79,18 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         }
 
         /// <summary>
-        /// Converts a UTC receipt moment to the RT Server's local wall-clock time using the device-reported
-        /// <paramref name="srtUtcOffset"/> (1 = winter/+1h, 2 = summer/+2h). Returns an Unspecified-kind value
-        /// so it formats without a timezone designator, as the metadata format requires.
+        /// Converts the receipt moment to the RT Server's local wall-clock time using the device-reported
+        /// <paramref name="srtUtcOffset"/> (1 = winter/+1h, 2 = summer/+2h). cbReceiptMoment is defined as UTC
+        /// (fiskaltrust interface-doc: "Must be provided in UTC"); since the DateTimeKind is not guaranteed
+        /// after deserialization, a Local value is normalised via ToUniversalTime and a zoneless (Unspecified)
+        /// value is honoured as UTC per that contract. Returns an Unspecified-kind value so it formats without
+        /// a timezone designator, as the metadata format requires.
         /// </summary>
         public static DateTime ToRtServerLocalTime(DateTime moment, int srtUtcOffset)
         {
-            var utc = moment.Kind == DateTimeKind.Local ? moment.ToUniversalTime() : moment;
+            var utc = moment.Kind == DateTimeKind.Local
+                ? moment.ToUniversalTime()
+                : DateTime.SpecifyKind(moment, DateTimeKind.Utc);
             return DateTime.SpecifyKind(utc.AddHours(srtUtcOffset), DateTimeKind.Unspecified);
         }
 

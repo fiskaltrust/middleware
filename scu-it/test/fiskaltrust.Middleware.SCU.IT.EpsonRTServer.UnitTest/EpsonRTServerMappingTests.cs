@@ -91,6 +91,46 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             }
         }
 
+        [Fact]
+        public void BuildFiscalDocument_UnreferencedRefund_Should_Omit_RefDateTime()
+        {
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(SaleRequest(), NewTillState(), 1, 0, 0, null, "FISK0001");
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<beginFiscalReceipt docType=\"1\"");
+                doc.CreateReceiptXml.Should().NotContain("refDateTime=");
+                doc.ReferenceDocMoment.Should().BeNull();
+            }
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Utc)]
+        [InlineData(DateTimeKind.Unspecified)]
+        public void ToRtServerLocalTime_Should_Treat_Utc_And_Zoneless_As_Utc(DateTimeKind kind)
+        {
+            var moment = DateTime.SpecifyKind(new DateTime(2026, 7, 2, 12, 0, 0), kind);
+
+            var local = EpsonRTServerMapping.ToRtServerLocalTime(moment, 2);
+
+            using (new AssertionScope())
+            {
+                local.Should().Be(new DateTime(2026, 7, 2, 14, 0, 0));
+                local.Kind.Should().Be(DateTimeKind.Unspecified);
+            }
+        }
+
+        [Fact]
+        public void ToRtServerLocalTime_Should_Normalise_Local_Kind_Independent_Of_Host()
+        {
+            // A Local value is converted to UTC first, so the result does not depend on the host time zone.
+            var localKind = new DateTime(2026, 7, 2, 12, 0, 0, DateTimeKind.Utc).ToLocalTime();
+
+            var local = EpsonRTServerMapping.ToRtServerLocalTime(localKind, 2);
+
+            local.Should().Be(new DateTime(2026, 7, 2, 14, 0, 0));
+        }
+
         private static ReceiptRequest RequestWith(ChargeItem[] items, decimal cashPayment) => new()
         {
             ftReceiptCase = 0x0001,
