@@ -187,6 +187,19 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
+        public async Task ProcessPosReceipt_UnreferencedRefund_ShouldBeAcceptedCleanly()
+        {
+            var request = Sale(-2.00m, "RESO SENZA RIF");
+            request.ftReceiptCase = 0x4954_2000_0100_0001; // refund flag, no cbPreviousReceiptReference -> ND
+            var result = await GetSUT().ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = request, ReceiptResponse = NewReceiptResponse });
+            using var scope = new AssertionScope();
+            AssertDocumentSignatures(result);
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType)).Subject.Data.Should().Be("REFUND");
+            // #633: an ND refund carrying a real refDateTime is accepted with no reference warning (-35/-45).
+            result.ReceiptResponse.ftSignatures.Should().NotContain(x => x.Caption == "rt-server-receipt-warning");
+        }
+
+        [Fact]
         public async Task ProcessZeroReceipt_ShouldReport_DeviceState()
         {
             var request = new ReceiptRequest
