@@ -378,5 +378,51 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
                 client.Verify(x => x.RebootWebServerAsync(), Times.Never);
             }
         }
+
+        [Fact]
+        public async Task Realign_Should_Reseed_Till_State_To_The_Current_Device_Session()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var configuration = new EpsonRTServerConfiguration
+            {
+                ServerUrl = "https://localhost",
+                SendReceiptsSync = true,
+                ServiceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-tests", Guid.NewGuid().ToString())
+            };
+            Directory.CreateDirectory(configuration.ServiceFolder!);
+            var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object, NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+            var scu = new EpsonRTServerSCU(Guid.NewGuid(), NullLogger<EpsonRTServerSCU>.Instance, configuration, client.Object, queue);
+            try
+            {
+                var queueId = Guid.NewGuid();
+                await scu.ProcessReceiptAsync(SaleProcessRequest(queueId)); // seeds session 0743
+
+                // The RT Server rolls to a new session (forced/daily closure); a fresh token now reports Z 0799.
+                var newSessionToken = "99SEA004010FISK0001" + "12345" + "20260723" + "0799" + "0001" + "000000000";
+                client.Setup(x => x.CreateTokenAsync("FISK0001")).ReturnsAsync(Ok(("token", newSessionToken)));
+
+                queue.TillStateRealigner.Should().NotBeNull("the SCU must wire the queue's realign hook");
+                await queue.TillStateRealigner!("FISK0001");
+
+                sentDocuments.Clear();
+                await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+
+                using (new AssertionScope())
+                {
+                    sentDocuments.Should().ContainSingle();
+                    sentDocuments[0].Should().Contain("zRepNumber=\"0799\"");
+                    sentDocuments[0].Should().Contain("recNumber=\"0001\"");
+                }
+            }
+            finally
+            {
+                queue.Dispose();
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
     }
 }
