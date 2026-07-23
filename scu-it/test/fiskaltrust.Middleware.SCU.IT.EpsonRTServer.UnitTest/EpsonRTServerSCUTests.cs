@@ -101,6 +101,55 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Fact]
+        public async Task ProcessReceiptAsync_Should_Record_Local_Time_From_Utc_Moment_Summer()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock(); // GetServerTimeAsync -> srtUtcOffset "2" (summer)
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out _);
+
+            var request = SaleProcessRequest();
+            request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0, DateTimeKind.Utc);
+
+            var result = await scu.ProcessReceiptAsync(request);
+
+            using (new AssertionScope())
+            {
+                // 12:00 UTC + srtUtcOffset 2 => 14:00 local, sent to the device without a timezone designator.
+                sentDocuments.Should().ContainSingle().Which.Should().Contain("dateTime=\"20260702T140000\"");
+                result.ReceiptResponse.ftSignatures.Should().Contain(
+                    x => x.Caption == "<rt-doc-moment>" && x.Data == "2026-07-02 14:00:00");
+            }
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_Should_Record_Local_Time_From_Utc_Moment_Winter()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.GetServerTimeAsync()).ReturnsAsync(Ok(("srtUtcOffset", "1"))); // winter
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out _);
+
+            var request = SaleProcessRequest();
+            request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 1, 15, 12, 0, 0, DateTimeKind.Utc);
+
+            var result = await scu.ProcessReceiptAsync(request);
+
+            using (new AssertionScope())
+            {
+                // 12:00 UTC + srtUtcOffset 1 => 13:00 local.
+                sentDocuments.Should().ContainSingle().Which.Should().Contain("dateTime=\"20260115T130000\"");
+                result.ReceiptResponse.ftSignatures.Should().Contain(
+                    x => x.Caption == "<rt-doc-moment>" && x.Data == "2026-01-15 13:00:00");
+            }
+        }
+
+        [Fact]
         public async Task ProcessReceiptAsync_Sale_Should_Advance_Chain_On_Acceptance()
         {
             var sentDocuments = new List<string>();
