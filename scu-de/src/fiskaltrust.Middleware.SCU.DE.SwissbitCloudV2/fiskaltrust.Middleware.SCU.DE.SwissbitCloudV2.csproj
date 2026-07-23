@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware implementation for the swissbitcloud v2 TSE.</Description>
-        <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;net461;net6.0</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
