@@ -28,6 +28,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         private bool _processingReceipts;
         private readonly Dictionary<string, int> _rejectionCounts = new();
 
+        // Invoked (with the till id) when a cached document is rejected because the RT Server session/chain moved
+        // on (-21/-22/-23/-25). The SCU wires this to reseed the till's token; the drain cannot do it itself as
+        // it holds no till state.
+        public Func<string, Task>? TillStateRealigner { get; set; }
+
         public EpsonRTServerCommunicationQueue(Guid id, IEpsonRTServerClient client, ILogger<EpsonRTServerCommunicationQueue> logger, EpsonRTServerConfiguration configuration)
         {
             _id = id;
@@ -106,23 +111,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
                 try
                 {
-                    foreach (var directory in Directory.GetDirectories(_documentsPath))
-                    {
-                        foreach (var document in Directory.GetFiles(directory, DocumentSearchPattern).OrderBy(x => x))
-                        {
-                            if (_requestCancellation)
-                            {
-                                _processingReceipts = false;
-                                return;
-                            }
-                            if (!await SendCachedDocumentAsync(document).ConfigureAwait(false))
-                            {
-                                // Rejected but not yet parked: stop this till's sequence to preserve the
-                                // blockchain order; retried on the next cycle.
-                                break;
-                            }
-                        }
-                    }
+                    await DrainPendingAsync(canRealign: true).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -131,6 +120,33 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 finally
                 {
                     await Task.Delay(2000).ConfigureAwait(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Drains every till's cached documents once, in blockchain order. On an out-of-sync rejection the
+        /// document is parked and, when <paramref name="canRealign"/> is set, the till's token is realigned to
+        /// the device's current session (see <see cref="SendCachedDocumentAsync"/>).
+        /// </summary>
+        private async Task DrainPendingAsync(bool canRealign)
+        {
+            var realignedTills = new HashSet<string>();
+            foreach (var directory in Directory.GetDirectories(_documentsPath))
+            {
+                foreach (var document in Directory.GetFiles(directory, DocumentSearchPattern).OrderBy(x => x))
+                {
+                    if (_requestCancellation)
+                    {
+                        _processingReceipts = false;
+                        return;
+                    }
+                    if (!await SendCachedDocumentAsync(document, canRealign, realignedTills).ConfigureAwait(false))
+                    {
+                        // Rejected but not yet parked: stop this till's sequence to preserve the blockchain
+                        // order; retried on the next cycle.
+                        break;
+                    }
                 }
             }
         }
@@ -157,9 +173,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 {
                     return;
                 }
+                // canRealign: false — the daily-closing drain runs under the SCU lock and reseeds the token
+                // itself afterwards; realigning here would re-enter that non-reentrant lock and deadlock.
+                var realignedTills = new HashSet<string>();
                 foreach (var document in Directory.GetFiles(tillFolder, DocumentSearchPattern).OrderBy(x => x))
                 {
-                    if (!await SendCachedDocumentAsync(document).ConfigureAwait(false))
+                    if (!await SendCachedDocumentAsync(document, canRealign: false, realignedTills).ConfigureAwait(false))
                     {
                         throw new EpsonRTServerCommunicationException($"The RT Server rejected the cached document '{Path.GetFileName(document)}'; daily closing cannot proceed until the cache is drained.", -1);
                     }
@@ -182,27 +201,30 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// parked in the "failed" subfolder after too many rejections), false when it was rejected and should
         /// be retried later. Network exceptions propagate to the caller (the device is simply unreachable).
         /// </summary>
-        private async Task<bool> SendCachedDocumentAsync(string documentPath)
+        private async Task<bool> SendCachedDocumentAsync(string documentPath, bool canRealign, ISet<string> realignedTills)
         {
             Models.RtServerResponse? response = null;
             var rejected = false;
+            var code = 0;
             try
             {
                 response = await _client.CreateReceiptAsync(File.ReadAllText(documentPath)).ConfigureAwait(false);
+                code = response?.CodeAsInt ?? 0;
                 // "Accepted with error in log" codes are NOT rejections: the document is fiscally registered,
                 // so it must be consumed (not parked). Only genuine "Receipt not accepted" / unknown negatives
                 // count as rejected.
-                rejected = response != null && !response.Success && response.CodeAsInt < 0
-                    && !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(response.CodeAsInt);
-                if (response != null && !rejected && response.CodeAsInt != 0)
+                rejected = response != null && !response.Success && code < 0
+                    && !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(code);
+                if (response != null && !rejected && code != 0)
                 {
                     _logger.LogWarning("Cached document {document} was accepted by the RT Server with warning code {code} ({description}).",
-                        Path.GetFileName(documentPath), response.Code, EpsonRTServerErrorCodes.Describe(response.CodeAsInt));
+                        Path.GetFileName(documentPath), response.Code, EpsonRTServerErrorCodes.Describe(code));
                 }
             }
             catch (EpsonRTServerCommunicationException ex)
             {
-                rejected = !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(ex.ResponseCode);
+                code = ex.ResponseCode;
+                rejected = !EpsonRTServerErrorCodes.IsReceiptAcceptedWithWarning(code);
                 if (rejected)
                 {
                     _logger.LogError(ex, "The RT Server rejected the cached document {document}.", Path.GetFileName(documentPath));
@@ -210,7 +232,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 else
                 {
                     _logger.LogWarning(ex, "Cached document {document} was accepted by the RT Server with warning code {code} ({description}).",
-                        Path.GetFileName(documentPath), ex.ResponseCode, EpsonRTServerErrorCodes.Describe(ex.ResponseCode));
+                        Path.GetFileName(documentPath), code, EpsonRTServerErrorCodes.Describe(code));
                 }
             }
 
@@ -221,25 +243,45 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 return true;
             }
 
+            // Out-of-sync (-21/-22/-23/-25): the RT Server session/chain has moved on (e.g. a forced or daily
+            // closure, Metadata Guide §3.4.7); replaying the same document number can never succeed. Realign the
+            // till to the device's current session so subsequent documents are built correctly, then park this
+            // one — it belongs to a closed session and must never be resent (that would double-register it).
+            if (EpsonRTServerErrorCodes.IsLocalStateOutOfSync(code))
+            {
+                var tillId = Path.GetFileName(Path.GetDirectoryName(documentPath))!;
+                if (canRealign && TillStateRealigner != null && realignedTills.Add(tillId))
+                {
+                    await TillStateRealigner(tillId).ConfigureAwait(false);
+                }
+                ParkDocument(documentPath, $"the RT Server session moved on (code {code}); it belongs to a closed session");
+                return true;
+            }
+
             _rejectionCounts[documentPath] = (_rejectionCounts.TryGetValue(documentPath, out var count) ? count : 0) + 1;
             _logger.LogWarning("Cached document {document} was rejected by the RT Server (code {code}, attempt {attempt}/{max}).",
-                Path.GetFileName(documentPath), response?.Code ?? "n/a", _rejectionCounts[documentPath], _configuration.MaxDocumentSendRetries);
+                Path.GetFileName(documentPath), response?.Code ?? code.ToString(), _rejectionCounts[documentPath], _configuration.MaxDocumentSendRetries);
 
             if (_rejectionCounts[documentPath] >= _configuration.MaxDocumentSendRetries)
             {
-                // Poison document: park it so it stops blocking the queue. It stays on disk for manual analysis.
-                var failedFolder = Path.Combine(Path.GetDirectoryName(documentPath)!, "failed");
-                if (!Directory.Exists(failedFolder))
-                {
-                    Directory.CreateDirectory(failedFolder);
-                }
-                File.Move(documentPath, Path.Combine(failedFolder, Path.GetFileName(documentPath)));
-                _rejectionCounts.Remove(documentPath);
-                _logger.LogError("Cached document {document} was rejected {max} times and has been moved to '{failedFolder}'. It will NOT be transmitted automatically.",
-                    Path.GetFileName(documentPath), _configuration.MaxDocumentSendRetries, failedFolder);
+                ParkDocument(documentPath, $"it was rejected {_configuration.MaxDocumentSendRetries} times");
                 return true;
             }
             return false;
+        }
+
+        /// <summary>Moves a document that cannot be transmitted into the "failed" subfolder for manual review.</summary>
+        private void ParkDocument(string documentPath, string reason)
+        {
+            var failedFolder = Path.Combine(Path.GetDirectoryName(documentPath)!, "failed");
+            if (!Directory.Exists(failedFolder))
+            {
+                Directory.CreateDirectory(failedFolder);
+            }
+            File.Move(documentPath, Path.Combine(failedFolder, Path.GetFileName(documentPath)));
+            _rejectionCounts.Remove(documentPath);
+            _logger.LogError("Cached document {document} was parked in '{failedFolder}' because {reason}. It will NOT be transmitted automatically and needs manual review.",
+                Path.GetFileName(documentPath), failedFolder, reason);
         }
 
         public long GetCountOfDocumentsForInCache()

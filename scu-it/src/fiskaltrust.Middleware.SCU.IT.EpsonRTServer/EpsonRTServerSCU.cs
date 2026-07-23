@@ -46,6 +46,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
         _configuration = configuration;
         _client = client;
         _queue = queue;
+        _queue.TillStateRealigner = RealignTillStateAsync;
 
         var personalFolder = personalFolderProvider ?? (() => Environment.GetFolderPath(Environment.SpecialFolder.Personal));
         _scuCacheFolder = string.IsNullOrEmpty(configuration.ServiceFolder)
@@ -429,34 +430,74 @@ public sealed class EpsonRTServerSCU : LegacySCU
 
         if (requestToken)
         {
-            var tokenResponse = await _client.CreateTokenAsync(tillId).ConfigureAwait(false);
-            var token = tokenResponse.GetAddInfo("token");
-            if (string.IsNullOrEmpty(token))
-            {
-                _logger.LogWarning("createToken for till {tillId} did not return a token in addInfo. The blockchain seed may be incorrect. Raw: {raw}", tillId, tokenResponse.RawResponse);
-            }
-            tillState.LastFingerPrint = token ?? string.Empty;
-            tillState.TokenInitialized = true;
-
-            // The token carries the authoritative Z number, next expected document number and daily amount for
-            // the current session (validated against firmware 6.01). Prefer it over the ambiguous fiscalInformation
-            // recNumber. LastDocNumber is stored as "last issued", so it is one less than the next expected number.
-            var parsedToken = EpsonToken.TryParse(token);
-            if (parsedToken != null)
-            {
-                tillState.LastZNumber = parsedToken.ZRepNumber;
-                tillState.LastDocNumber = parsedToken.NextDocNumber - 1;
-                tillState.CurrentDailyAmount = parsedToken.DailyAmountCents;
-                if (string.IsNullOrEmpty(tillState.RTServerSerialNumber))
-                {
-                    tillState.RTServerSerialNumber = parsedToken.SerialNumber;
-                }
-            }
+            await ReseedFromTokenAsync(tillState).ConfigureAwait(false);
         }
 
         _tillStates[queueId] = tillState;
         PersistState();
         return tillState;
+    }
+
+    /// <summary>
+    /// Requests a fresh token and adopts the RT Server's authoritative session counters (Z number, next
+    /// document number, daily amount) into <paramref name="tillState"/>. The token is the canonical CCDC seed,
+    /// so this both seeds a new till and realigns one whose session moved on the device. LastDocNumber is stored
+    /// as "last issued", one less than the token's next expected number.
+    /// </summary>
+    private async Task ReseedFromTokenAsync(TillState tillState)
+    {
+        var tokenResponse = await _client.CreateTokenAsync(tillState.TillId).ConfigureAwait(false);
+        var token = tokenResponse.GetAddInfo("token");
+        if (string.IsNullOrEmpty(token))
+        {
+            _logger.LogWarning("createToken for till {tillId} did not return a token in addInfo. The blockchain seed may be incorrect. Raw: {raw}", tillState.TillId, tokenResponse.RawResponse);
+        }
+        tillState.LastFingerPrint = token ?? string.Empty;
+        tillState.TokenInitialized = true;
+
+        var parsedToken = EpsonToken.TryParse(token);
+        if (parsedToken != null)
+        {
+            tillState.LastZNumber = parsedToken.ZRepNumber;
+            tillState.LastDocNumber = parsedToken.NextDocNumber - 1;
+            tillState.CurrentDailyAmount = parsedToken.DailyAmountCents;
+            if (string.IsNullOrEmpty(tillState.RTServerSerialNumber))
+            {
+                tillState.RTServerSerialNumber = parsedToken.SerialNumber;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Realigns the till to the RT Server's current session after the offline queue hit an out-of-sync
+    /// rejection (-21/-22/-25). Requests a fresh token (Metadata Guide §3.4.7) so subsequent documents build on
+    /// the live session. Takes the same per-SCU lock as receipt processing; invoked only from the background
+    /// drain — never the daily-closing path, which already holds that (non-reentrant) lock.
+    /// </summary>
+    private async Task RealignTillStateAsync(string tillId)
+    {
+        var scuLock = _scuLocks.GetOrAdd(_id, _ => new SemaphoreSlim(1, 1));
+        await scuLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            LoadStateFromDisk();
+            var matches = _tillStates.Values.Where(x => x.TillId == tillId).ToList();
+            if (matches.Count == 0)
+            {
+                _logger.LogWarning("Cannot realign till {tillId}: no cached state found; it will be re-seeded on the next receipt.", tillId);
+                return;
+            }
+            foreach (var tillState in matches)
+            {
+                await ReseedFromTokenAsync(tillState).ConfigureAwait(false);
+            }
+            PersistState();
+            _logger.LogWarning("Realigned till {tillId} to the RT Server's current session after an out-of-sync rejection in the offline queue.", tillId);
+        }
+        finally
+        {
+            scuLock.Release();
+        }
     }
 
     private async Task<RtServerResponse?> SafeGetServerTimeAsync()

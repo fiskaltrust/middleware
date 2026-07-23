@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -104,6 +105,82 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
                 {
                     Directory.Delete(serviceFolder, recursive: true);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ProcessAllReceipts_Should_Park_Out_Of_Sync_Document_Instead_Of_Throwing()
+        {
+            var serviceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-oos-" + Guid.NewGuid());
+            var client = new Mock<IEpsonRTServerClient>();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .ReturnsAsync(new RtServerResponse { Success = false, Code = "-25", Status = "receipt number error" });
+            var id = Guid.NewGuid();
+            var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = false, ServiceFolder = serviceFolder };
+            var queue = new EpsonRTServerCommunicationQueue(id, client.Object, NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+            try
+            {
+                await queue.EnqueueDocument("FISK0001", "<createReceipt/>", 798, 15);
+
+                Func<Task> act = () => queue.ProcessAllReceipts("FISK0001");
+
+                using (new AssertionScope())
+                {
+                    // -25 (receipt number error) means the RT Server session moved on; replaying the same
+                    // document can never succeed, so the daily-closing drain must park it and continue, not throw.
+                    await act.Should().NotThrowAsync();
+                    var tillFolder = Path.Combine(serviceFolder, "epsonrtservercache", id.ToString(), "FISK0001");
+                    Directory.GetFiles(tillFolder, "*_createreceipt.xml").Should().BeEmpty();
+                    Directory.GetFiles(Path.Combine(tillFolder, "failed"), "*_createreceipt.xml").Should().HaveCount(1);
+                    // The daily-closing path runs under the SCU lock and must NOT realign (would deadlock).
+                    client.Verify(x => x.CreateTokenAsync(It.IsAny<string>()), Times.Never);
+                }
+            }
+            finally
+            {
+                queue.Dispose();
+                if (Directory.Exists(serviceFolder)) Directory.Delete(serviceFolder, recursive: true);
+            }
+        }
+
+        [Fact]
+        public async Task Background_Drain_Should_Realign_Till_And_Park_On_Out_Of_Sync()
+        {
+            var serviceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-realign-" + Guid.NewGuid());
+            var client = new Mock<IEpsonRTServerClient>();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .ReturnsAsync(new RtServerResponse { Success = false, Code = "-25", Status = "receipt number error" });
+            var id = Guid.NewGuid();
+            var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = false, ServiceFolder = serviceFolder };
+            var queue = new EpsonRTServerCommunicationQueue(id, client.Object, NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+            var realigned = new List<string>();
+            queue.TillStateRealigner = tillId => { lock (realigned) { realigned.Add(tillId); } return Task.CompletedTask; };
+            try
+            {
+                await queue.EnqueueDocument("FISK0001", "<createReceipt/>", 798, 15);
+
+                // The background drain (started in the ctor) picks up the cached document.
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < deadline)
+                {
+                    lock (realigned) { if (realigned.Count > 0) break; }
+                    await Task.Delay(50);
+                }
+
+                using (new AssertionScope())
+                {
+                    lock (realigned) { realigned.Should().ContainSingle().Which.Should().Be("FISK0001"); }
+                    var tillFolder = Path.Combine(serviceFolder, "epsonrtservercache", id.ToString(), "FISK0001");
+                    var deadline2 = DateTime.UtcNow.AddSeconds(2);
+                    while (DateTime.UtcNow < deadline2 && Directory.GetFiles(tillFolder, "*_createreceipt.xml").Length > 0) await Task.Delay(50);
+                    Directory.GetFiles(tillFolder, "*_createreceipt.xml").Should().BeEmpty();
+                    Directory.GetFiles(Path.Combine(tillFolder, "failed"), "*_createreceipt.xml").Should().HaveCount(1);
+                }
+            }
+            finally
+            {
+                queue.Dispose();
+                if (Directory.Exists(serviceFolder)) Directory.Delete(serviceFolder, recursive: true);
             }
         }
     }
