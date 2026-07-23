@@ -248,10 +248,12 @@ public sealed class EpsonRTServerSCU : LegacySCU
             }
             else if (string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
             {
-                // Unreferenced refund/void: use neutral references and the current moment.
+                // Unreferenced refund/void: no original document exists, so its emission moment is unknown.
+                // Send neutral references and omit the reference date (referenceDocMoment stays null) rather
+                // than inventing one from cbReceiptMoment (~today): the device logs the missing reference
+                // (-45, accepted with warning) but still registers the document.
                 referenceZNumber = 0;
                 referenceDocNumber = 0;
-                referenceDocMoment = receiptRequest.cbReceiptMoment;
                 referenceTillId = tillState.TillId;
             }
             else
