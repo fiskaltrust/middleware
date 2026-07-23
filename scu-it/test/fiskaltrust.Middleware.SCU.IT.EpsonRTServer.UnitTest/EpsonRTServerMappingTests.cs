@@ -104,6 +104,18 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             }
         }
 
+        [Fact]
+        public void BuildFiscalDocument_UnreferencedRefund_Should_Emit_ND_RefundVoidType()
+        {
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(SaleRequest(), NewTillState(), 1, 0, 0, null, "FISK0001");
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<beginFiscalReceipt docType=\"1\" refRefundVoidType=\"ND\" />");
+                doc.CreateReceiptXml.Should().NotContain("refZRepNum=");
+            }
+        }
+
         [Theory]
         [InlineData(DateTimeKind.Utc)]
         [InlineData(DateTimeKind.Unspecified)]
