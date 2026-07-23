@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -244,9 +245,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             }
 
             // Out-of-sync (-21/-22/-23/-25): the RT Server session/chain has moved on (e.g. a forced or daily
-            // closure, Metadata Guide §3.4.7); replaying the same document number can never succeed. Realign the
-            // till to the device's current session so subsequent documents are built correctly, then park this
-            // one — it belongs to a closed session and must never be resent (that would double-register it).
+            // closure, Metadata Guide §3.4.7). Realign the till to the device's current session so subsequent
+            // documents are built correctly. This document must never be resent (that would double-register it):
+            // if the device confirms it already stored it (these codes register the receipt with an anomaly)
+            // consume the redundant local copy, otherwise park it for manual review.
             if (EpsonRTServerErrorCodes.IsLocalStateOutOfSync(code))
             {
                 var tillId = Path.GetFileName(Path.GetDirectoryName(documentPath))!;
@@ -254,7 +256,15 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 {
                     await TillStateRealigner(tillId).ConfigureAwait(false);
                 }
-                ParkDocument(documentPath, $"the RT Server session moved on (code {code}); it belongs to a closed session");
+                if (await IsAlreadyRegisteredAsync(documentPath, tillId).ConfigureAwait(false))
+                {
+                    _logger.LogWarning("Cached document {document} is already registered on the RT Server (code {code}); consuming the redundant local copy.",
+                        Path.GetFileName(documentPath), code);
+                    File.Delete(documentPath);
+                    _rejectionCounts.Remove(documentPath);
+                    return true;
+                }
+                ParkDocument(documentPath, $"the RT Server session moved on (code {code}) and it is not registered on the device");
                 return true;
             }
 
@@ -282,6 +292,43 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             _rejectionCounts.Remove(documentPath);
             _logger.LogError("Cached document {document} was parked in '{failedFolder}' because {reason}. It will NOT be transmitted automatically and needs manual review.",
                 Path.GetFileName(documentPath), failedFolder, reason);
+        }
+
+        /// <summary>
+        /// Confirms whether the RT Server already stored this document: reads it back by its original
+        /// coordinates and suffix-matches the device's prefixed CCDC (dateTime+till+Z+rec+ccdc) against the
+        /// CCDC in the cached document. Any read failure (e.g. -31 file not found) is treated as "not
+        /// confirmed" so the document is preserved (parked), never consumed on doubt.
+        /// </summary>
+        private async Task<bool> IsAlreadyRegisteredAsync(string documentPath, string tillId)
+        {
+            try
+            {
+                var (zRep, rec, date, ccdc) = ParseReceiptCoordinates(File.ReadAllText(documentPath));
+                if (string.IsNullOrEmpty(ccdc) || string.IsNullOrEmpty(date))
+                {
+                    return false;
+                }
+                var stored = await _client.GetReceiptAsync(tillId, zRep, rec, date!).ConfigureAwait(false);
+                var storedHash = stored?.GetAddInfo("hash");
+                return !string.IsNullOrEmpty(storedHash) && storedHash!.EndsWith(ccdc!, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not confirm whether cached document {document} is already registered; treating it as not registered.", Path.GetFileName(documentPath));
+                return false;
+            }
+        }
+
+        private static (long zRep, long rec, string? date, string? ccdc) ParseReceiptCoordinates(string createReceiptXml)
+        {
+            long ParseLong(string pattern) => long.TryParse(Regex.Match(createReceiptXml, pattern).Groups[1].Value, out var value) ? value : 0;
+            string? ParseString(string pattern) { var match = Regex.Match(createReceiptXml, pattern); return match.Success ? match.Groups[1].Value : null; }
+            return (
+                ParseLong("zRepNumber=\"(\\d+)\""),
+                ParseLong("recNumber=\"(\\d+)\""),
+                ParseString("dateTime=\"(\\d{8})T"),
+                ParseString("receiptSecurity><hash fingerPrint=\"([^\"]+)\""));
         }
 
         public long GetCountOfDocumentsForInCache()

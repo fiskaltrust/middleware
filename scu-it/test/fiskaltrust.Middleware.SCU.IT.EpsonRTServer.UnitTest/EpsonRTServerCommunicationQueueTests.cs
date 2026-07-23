@@ -183,5 +183,83 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
                 if (Directory.Exists(serviceFolder)) Directory.Delete(serviceFolder, recursive: true);
             }
         }
+
+        private const string OutOfSyncReceiptXml =
+            "<createReceipt><receipt><hash fingerPrint=\"SEED\"/><printerFiscalReceipt>"
+            + "<fiscalInformation zRepNumber=\"0798\" recNumber=\"0015\" dateTime=\"20260723T095711\" />"
+            + "</printerFiscalReceipt></receipt><receiptSecurity><hash fingerPrint=\"CCDC0015\" /></receiptSecurity></createReceipt>";
+
+        [Fact]
+        public async Task Background_Drain_Should_Consume_Out_Of_Sync_Document_Already_Registered_On_Device()
+        {
+            var serviceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-consume-" + Guid.NewGuid());
+            var client = new Mock<IEpsonRTServerClient>();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .ReturnsAsync(new RtServerResponse { Success = false, Code = "-25", Status = "receipt number error" });
+            // Device confirms it already stored the receipt: the read returns the prefixed CCDC (dateTime+till+Z+rec+ccdc).
+            client.Setup(x => x.GetReceiptAsync("FISK0005", 798, 15, "20260723"))
+                .ReturnsAsync(new RtServerResponse { Success = true, Code = "0", Status = "OK",
+                    AddInfo = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["hash"] = "20260723T095711FISK000507980015CCDC0015" } });
+            var id = Guid.NewGuid();
+            var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = false, ServiceFolder = serviceFolder };
+            var queue = new EpsonRTServerCommunicationQueue(id, client.Object, NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+            queue.TillStateRealigner = _ => Task.CompletedTask;
+            try
+            {
+                await queue.EnqueueDocument("FISK0005", OutOfSyncReceiptXml, 798, 15);
+                var tillFolder = Path.Combine(serviceFolder, "epsonrtservercache", id.ToString(), "FISK0005");
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < deadline && Directory.GetFiles(tillFolder, "*_createreceipt.xml").Length > 0) await Task.Delay(50);
+
+                using (new AssertionScope())
+                {
+                    // A document the device already registered is consumed (not parked): no takings loss, no double-send.
+                    await Task.Delay(100);
+                    Directory.GetFiles(tillFolder, "*_createreceipt.xml").Should().BeEmpty();
+                    var failed = Path.Combine(tillFolder, "failed");
+                    (Directory.Exists(failed) ? Directory.GetFiles(failed, "*_createreceipt.xml").Length : 0).Should().Be(0);
+                }
+            }
+            finally
+            {
+                queue.Dispose();
+                if (Directory.Exists(serviceFolder)) Directory.Delete(serviceFolder, recursive: true);
+            }
+        }
+
+        [Fact]
+        public async Task Background_Drain_Should_Park_Out_Of_Sync_Document_Not_Registered_On_Device()
+        {
+            var serviceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-notreg-" + Guid.NewGuid());
+            var client = new Mock<IEpsonRTServerClient>();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .ReturnsAsync(new RtServerResponse { Success = false, Code = "-25", Status = "receipt number error" });
+            // Device does not have it: the read-back throws -31 (file not found).
+            client.Setup(x => x.GetReceiptAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<string>()))
+                .ThrowsAsync(new EpsonRTServerCommunicationException("file not found", -31));
+            var id = Guid.NewGuid();
+            var configuration = new EpsonRTServerConfiguration { ServerUrl = "https://localhost", SendReceiptsSync = false, ServiceFolder = serviceFolder };
+            var queue = new EpsonRTServerCommunicationQueue(id, client.Object, NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+            queue.TillStateRealigner = _ => Task.CompletedTask;
+            try
+            {
+                await queue.EnqueueDocument("FISK0005", OutOfSyncReceiptXml, 798, 15);
+                var tillFolder = Path.Combine(serviceFolder, "epsonrtservercache", id.ToString(), "FISK0005");
+                var failed = Path.Combine(tillFolder, "failed");
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < deadline && !(Directory.Exists(failed) && Directory.GetFiles(failed, "*_createreceipt.xml").Length == 1)) await Task.Delay(50);
+
+                using (new AssertionScope())
+                {
+                    Directory.GetFiles(tillFolder, "*_createreceipt.xml").Should().BeEmpty();
+                    Directory.GetFiles(failed, "*_createreceipt.xml").Should().HaveCount(1);
+                }
+            }
+            finally
+            {
+                queue.Dispose();
+                if (Directory.Exists(serviceFolder)) Directory.Delete(serviceFolder, recursive: true);
+            }
+        }
     }
 }
