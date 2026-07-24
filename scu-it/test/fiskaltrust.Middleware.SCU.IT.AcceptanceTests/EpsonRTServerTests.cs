@@ -2,9 +2,12 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
@@ -184,6 +187,90 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             voidResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType)).Subject.Data.Should().Be("VOID");
             voidResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
             voidResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+        }
+
+        // #634/PR #727: a POS receipt whose charge items omit the VAT nibble (ftChargeItemCase & 0xF == 0x0)
+        // but carry a numeric VATRate must be mapped to the correct department index (22->1, 10->2, 4->3, 5->4)
+        // and accepted by the device cleanly (no anomaly warning). Device-confirmed: the RT Server's own VAT table
+        // (fiscalInformation/vatCount) reports vatId 1=22%, 2=10%, 3=4%, 4=5%, matching this mapping.
+        [Fact]
+        public async Task ProcessPosReceipt_VatFallbackFromVatRate_ShouldBeAcceptedCleanly()
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            new ScuBootstrapper
+            {
+                Id = _queueId,
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))!
+            }.ConfigureServices(services);
+            services.RemoveAll<IEpsonRTServerClient>();
+            services.AddSingleton<IEpsonRTServerClient>(sp => new CapturingClient(
+                new EpsonRTServerClient(sp.GetRequiredService<EpsonRTServerConfiguration>(), sp.GetRequiredService<ILogger<EpsonRTServerClient>>())));
+            var provider = services.BuildServiceProvider();
+            var capturing = (CapturingClient) provider.GetRequiredService<IEpsonRTServerClient>();
+            var itsscd = provider.GetRequiredService<IITSSCD>();
+
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = 0x4954_2000_0000_0001,
+                cbReceiptMoment = DateTime.Now,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbChargeItems = new[]
+                {
+                    VatRateFallbackItem(12.20m, 22m, "IVA22"),
+                    VatRateFallbackItem(11.00m, 10m, "IVA10"),
+                    VatRateFallbackItem(10.40m, 4m, "IVA04"),
+                    VatRateFallbackItem(10.50m, 5m, "IVA05")
+                },
+                cbPayItems = new[] { new PayItem { Amount = 44.10m, Quantity = 1, Description = "CONTANTE", ftPayItemCase = 0x4954_2000_0000_0000 } }
+            };
+
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = request, ReceiptResponse = NewReceiptResponse });
+
+            using var scope = new AssertionScope();
+            AssertDocumentSignatures(result);
+            result.ReceiptResponse.ftSignatures.Should().NotContain(x => x.Caption == "rt-server-receipt-warning");
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType)).Subject.Data.Should().Be("POSRECEIPT");
+            // The #727 fallback must map each item's VATRate to the correct department index.
+            capturing.CreateReceiptCalls.Last().Request.Should()
+                .Contain("vatID=\"1\"").And.Contain("vatID=\"2\"").And.Contain("vatID=\"3\"").And.Contain("vatID=\"4\"");
+        }
+
+        private static ChargeItem VatRateFallbackItem(decimal amount, decimal vatRate, string description) => new()
+        {
+            Amount = amount,
+            Quantity = 1,
+            Description = description,
+            VATRate = vatRate,
+            ftChargeItemCase = 0x4954_2000_0000_0000 // VAT nibble 0x0 -> exercises the VATRate fallback (PR #727)
+        };
+
+        private sealed class CapturingClient : IEpsonRTServerClient
+        {
+            private readonly IEpsonRTServerClient _inner;
+            public readonly List<(string Request, RtServerResponse Response)> CreateReceiptCalls = new();
+
+            public CapturingClient(IEpsonRTServerClient inner) => _inner = inner;
+
+            public async Task<RtServerResponse> CreateReceiptAsync(string createReceiptXml)
+            {
+                var response = await _inner.CreateReceiptAsync(createReceiptXml);
+                CreateReceiptCalls.Add((createReceiptXml, response));
+                return response;
+            }
+
+            public Task<RtServerResponse> CreateTokenAsync(string tillId) => _inner.CreateTokenAsync(tillId);
+            public Task<RtServerResponse> CreateTillsAsync(string userId, string password, IEnumerable<string> tillMap, IEnumerable<string> tillsToAdd) => _inner.CreateTillsAsync(userId, password, tillMap, tillsToAdd);
+            public Task<RtServerResponse> GetTillMapAsync() => _inner.GetTillMapAsync();
+            public Task<RtServerResponse> CreateDailyClosureAsync(string tillId, int closureType) => _inner.CreateDailyClosureAsync(tillId, closureType);
+            public Task<RtServerResponse> GetServerInfoAsync() => _inner.GetServerInfoAsync();
+            public Task<RtServerResponse> GetServerTimeAsync() => _inner.GetServerTimeAsync();
+            public Task<RtServerResponse> GetFirmwareVersionAsync() => _inner.GetFirmwareVersionAsync();
+            public Task<RtServerResponse> GetFiscalInformationAsync(string tillId) => _inner.GetFiscalInformationAsync(tillId);
+            public Task<RtServerResponse> GetReceiptAsync(string tillId, long zRepNumber, long recNumber, string date) => _inner.GetReceiptAsync(tillId, zRepNumber, recNumber, date);
+            public Task<RtServerResponse> GetPublicKeyAsync() => _inner.GetPublicKeyAsync();
+            public Task<RtServerResponse> PrintServerZReportAsync() => _inner.PrintServerZReportAsync();
+            public Task<RtServerResponse> RebootWebServerAsync() => _inner.RebootWebServerAsync();
         }
 
         [Fact]
