@@ -107,14 +107,22 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             {
                 sb.Append("<beginFiscalReceipt />");
             }
-            else
+            else if (referenceDocMoment.HasValue)
             {
                 sb.Append($"<beginFiscalReceipt docType=\"{docType}\"");
                 if (referenceZNumber.HasValue) sb.Append($" refZRepNum=\"{referenceZNumber.Value:D4}\"");
                 if (referenceDocNumber.HasValue) sb.Append($" refRecNum=\"{referenceDocNumber.Value:D4}\"");
-                if (referenceDocMoment.HasValue) sb.Append($" refDateTime=\"{referenceDocMoment.Value:yyyyMMddTHHmmss}\"");
+                sb.Append($" refDateTime=\"{referenceDocMoment.Value:yyyyMMddTHHmmss}\"");
                 if (!string.IsNullOrEmpty(referenceTillId)) sb.Append($" refTillID=\"{referenceTillId}\"");
                 sb.Append(" />");
+            }
+            else
+            {
+                // Unreferenced refund/void: no traceable original (Metadata Guide 3.7.2 "ND"). Emit the ND type with
+                // the receipt's own moment as refDateTime: zeroed reference numbers are logged as a wrong reference
+                // (-35) and an omitted/zeroed time as a reference-document error (-45); ND with a real datetime is
+                // accepted cleanly (device-confirmed on Fiberland).
+                sb.Append($"<beginFiscalReceipt docType=\"{docType}\" refDateTime=\"{moment:yyyyMMddTHHmmss}\" refRefundVoidType=\"ND\" />");
             }
 
             AppendChargeItemLines(sb, receiptRequest, docType);
