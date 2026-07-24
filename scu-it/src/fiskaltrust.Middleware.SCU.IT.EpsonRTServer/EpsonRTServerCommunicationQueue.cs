@@ -327,7 +327,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             return (
                 ParseLong("zRepNumber=\"(\\d+)\""),
                 ParseLong("recNumber=\"(\\d+)\""),
-                ParseString("dateTime=\"(\\d{8})T"),
+                // Leading space so the pattern matches fiscalInformation's dateTime, not a refund/void refDateTime.
+                ParseString(" dateTime=\"(\\d{8})T"),
                 ParseString("receiptSecurity><hash fingerPrint=\"([^\"]+)\""));
         }
 
