@@ -453,8 +453,21 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 case 0x3: vatId = 1; return true;  // 22%
                 case 0x4: vatId = 4; return true;  // 5%
                 case 0x7: vatId = 13; return true; // 0%
+                // No VAT nibble (0x0): honour the item's stated VATRate so receipts that omit ftChargeItemCase
+                // are not rejected; unrecognised rates stay strict (fall through to throw).
+                case 0x0: return TryGetVatIdFromVatRate(chargeItem.VATRate, out vatId);
                 default: vatId = -1; return false;
             }
+        }
+
+        private static bool TryGetVatIdFromVatRate(decimal vatRate, out int vatId)
+        {
+            if (vatRate == 22m) { vatId = 1; return true; }
+            if (vatRate == 10m) { vatId = 2; return true; }
+            if (vatRate == 5m) { vatId = 4; return true; }
+            if (vatRate == 4m) { vatId = 3; return true; }
+            vatId = -1;
+            return false;
         }
 
         // Resolves the vatID for an emitted item line. Tips and multi-use vouchers are outside the taxable

@@ -346,6 +346,23 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Theory]
+        [InlineData(22, 1)]
+        [InlineData(10, 2)]
+        [InlineData(5, 4)]
+        [InlineData(4, 3)]
+        public void GetVatId_Should_Fall_Back_To_VatRate_When_Case_Nibble_Unspecified(double vatRate, int expectedVatId)
+        {
+            EpsonRTServerMapping.GetVatId(new ChargeItem { ftChargeItemCase = 0x0, VATRate = (decimal) vatRate }).Should().Be(expectedVatId);
+        }
+
+        [Fact]
+        public void GetVatId_Should_Throw_For_Unspecified_Case_Without_Recognised_VatRate()
+        {
+            var act = () => EpsonRTServerMapping.GetVatId(new ChargeItem { ftChargeItemCase = 0x0, VATRate = 0m });
+            act.Should().Throw<NotSupportedException>().WithMessage("*no VAT-index mapping*");
+        }
+
+        [Theory]
         [InlineData(0x00, 0)] // cash
         [InlineData(0x03, 1)] // cheque
         [InlineData(0x04, 2)] // electronic
