@@ -187,6 +187,26 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
+        public async Task ProcessPosReceipt_Lottery_CardOverpayment_ShouldBeAcceptedCleanly()
+        {
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = 0x4954_2000_0000_0001,
+                cbReceiptMoment = DateTime.Now,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbChargeItems = new[] { new ChargeItem { Amount = 3.30m, Quantity = 1, Description = "COFFEE", VATRate = 22m, ftChargeItemCase = 0x4954_2000_0000_0003 } },
+                cbPayItems = new[] { new PayItem { Amount = 3.50m, Quantity = 1, Description = "CARTA", ftPayItemCase = 0x4954_2000_0000_0004 } },
+                ftReceiptCaseData = "{\"servizi_lotteriadegliscontrini_gov_it\":{\"codicelotteria\":\"ABCD1234\"}}"
+            };
+            var result = await GetSUT().ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = request, ReceiptResponse = NewReceiptResponse });
+            using var scope = new AssertionScope();
+            AssertDocumentSignatures(result);
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTLotteryID)).Subject.Data.Should().Be("ABCD1234");
+            // #636: card tender clamped to the total -> device accepts with no payment warning (-39).
+            result.ReceiptResponse.ftSignatures.Should().NotContain(x => x.Caption == "rt-server-receipt-warning");
+        }
+
+        [Fact]
         public async Task ProcessPosReceipt_UnreferencedRefund_ShouldBeAcceptedCleanly()
         {
             var request = Sale(-2.00m, "RESO SENZA RIF");

@@ -353,5 +353,29 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         {
             EpsonRTServerMapping.GetEpsonPaymentType(new PayItem { ftPayItemCase = payItemCase }).PaymentType.Should().Be(expectedPaymentType);
         }
+
+        [Fact]
+        public void BuildFiscalDocument_NonCashOverpayment_Should_Clamp_To_Total_And_Emit_No_Change()
+        {
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = 0x0001,
+                cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0),
+                cbChargeItems = new[] { new ChargeItem { Amount = 3.30m, Quantity = 1, Description = "Coffee", VATRate = 22m, ftChargeItemCase = 0x3 } },
+                cbPayItems = new[] { new PayItem { Amount = 3.50m, Quantity = 1, Description = "CARTA", ftPayItemCase = 0x04 } },
+                ftReceiptCaseData = "{\"servizi_lotteriadegliscontrini_gov_it\":{\"codicelotteria\":\"ABCD1234\"}}"
+            };
+
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(request, NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<printRecTotal description=\"CARTA\" payment=\"3.30\" paymentType=\"2\"");
+                doc.CreateReceiptXml.Should().Contain("ePayAmount=\"3.30\"");
+                doc.CreateReceiptXml.Should().Contain("changeAmount=\"0.00\"");
+                doc.CreateReceiptXml.Should().Contain("paidAmount=\"3.30\"");
+                doc.CreateReceiptXml.Should().Contain("recAmount=\"3.30\"");
+            }
+        }
     }
 }

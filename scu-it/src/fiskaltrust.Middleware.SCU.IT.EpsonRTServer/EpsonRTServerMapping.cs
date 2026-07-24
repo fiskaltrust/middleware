@@ -127,16 +127,18 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
 
             AppendChargeItemLines(sb, receiptRequest, docType);
 
-            foreach (var payItem in receiptRequest.cbPayItems ?? Array.Empty<PayItem>())
+            var payItems = receiptRequest.cbPayItems ?? Array.Empty<PayItem>();
+            var paymentAmounts = GetEffectivePaymentAmounts(payItems, recAmount);
+            for (var i = 0; i < payItems.Length; i++)
             {
-                var paymentType = GetEpsonPaymentType(payItem);
+                var paymentType = GetEpsonPaymentType(payItems[i]);
                 sb.Append("<printRecTotal");
-                sb.Append($" description=\"{Escape(payItem.Description)}\"");
-                sb.Append($" payment=\"{FormatAmount(Math.Abs(payItem.Amount))}\"");
+                sb.Append($" description=\"{Escape(payItems[i].Description)}\"");
+                sb.Append($" payment=\"{FormatAmount(paymentAmounts[i])}\"");
                 sb.Append($" paymentType=\"{paymentType.PaymentType}\" index=\"{paymentType.Index}\" />");
             }
 
-            if ((receiptRequest.cbPayItems?.Length ?? 0) == 0)
+            if (payItems.Length == 0)
             {
                 // No pay items: fall back to a single cash payment covering the receipt total. The cash bucket in
                 // fiscalInformation is aligned by GetPaymentTotals so the amounts stay consistent (error -38).
@@ -361,17 +363,18 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 return totals;
             }
 
-            foreach (var payItem in payItems)
+            var amounts = GetEffectivePaymentAmounts(payItems, recAmount);
+            for (var i = 0; i < payItems.Length; i++)
             {
-                var amount = Math.Abs(payItem.Amount);
-                switch (GetEpsonPaymentType(payItem).PaymentType)
+                var amount = amounts[i];
+                switch (GetEpsonPaymentType(payItems[i]).PaymentType)
                 {
                     case 0: totals.Cash += amount; break;
                     case 1: totals.Check += amount; break;
                     case 2: totals.EPay += amount; break;
                     case 3:
                         totals.Ticket += amount;
-                        totals.TicketNum += Math.Max(1, (int) Math.Abs(payItem.Quantity));
+                        totals.TicketNum += Math.Max(1, (int) Math.Abs(payItems[i].Quantity));
                         break;
                     case 4: totals.NoPayServices += amount; break;
                     case 5: totals.NoPayGoods += amount; break;
@@ -383,6 +386,30 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 }
             }
             return totals;
+        }
+
+        // Only cash (paymentType 0) may be tendered above the amount still owed (the surplus becomes changeAmount).
+        // Every other method is clamped to the outstanding balance: the device forbids change on non-cash payments
+        // (Metadata Guide 3.4.2/3.8.1) and rejects an over-tendered non-cash printRecTotal with -39.
+        private static decimal[] GetEffectivePaymentAmounts(PayItem[] payItems, decimal recAmount)
+        {
+            var amounts = new decimal[payItems.Length];
+            var nonCashOutstanding = recAmount;
+            for (var i = 0; i < payItems.Length; i++)
+            {
+                var tendered = Math.Abs(payItems[i].Amount);
+                if (GetEpsonPaymentType(payItems[i]).PaymentType == 0)
+                {
+                    amounts[i] = tendered;
+                }
+                else
+                {
+                    var capped = Math.Min(tendered, Math.Max(0m, nonCashOutstanding));
+                    amounts[i] = capped;
+                    nonCashOutstanding -= capped;
+                }
+            }
+            return amounts;
         }
 
         private static long ToCents(decimal value) => (long) Math.Round(value * 100, MidpointRounding.AwayFromZero);
