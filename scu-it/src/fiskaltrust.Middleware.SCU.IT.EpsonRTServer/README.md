@@ -243,3 +243,6 @@ the background queue after the receipt already returned `StateOk`, so the warnin
   `recTotTicketNum` on `printRecTotal` are not emitted yet.
 - Reprint and non-fiscal print receipt cases are not handled (printer-oriented; not part of the RT Server
   model).
+
+<!-- Sandbox deployment trigger for scu-it/EpsonRTServer (no functional change). -->
+
