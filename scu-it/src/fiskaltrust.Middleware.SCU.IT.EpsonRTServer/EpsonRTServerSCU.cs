@@ -36,6 +36,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
     // The SCU is registered as scoped, so multiple instances can process receipts for the same SCU id
     // concurrently. Serialize per SCU id to protect the CCDC chain counters and the state-cache file.
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> _scuLocks = new();
+    private static readonly TimeSpan RealignLockTimeout = TimeSpan.FromSeconds(30);
 
     private string StateCacheFilePath => Path.Combine(_scuCacheFolder, $"{_id}_epsonrtserver_statecache.json");
 
@@ -477,7 +478,14 @@ public sealed class EpsonRTServerSCU : LegacySCU
     private async Task RealignTillStateAsync(string tillId)
     {
         var scuLock = _scuLocks.GetOrAdd(_id, _ => new SemaphoreSlim(1, 1));
-        await scuLock.WaitAsync().ConfigureAwait(false);
+        // Bounded wait: a concurrent daily closing holds this lock while ProcessAllReceipts busy-waits for the
+        // background drain to finish; blocking here would deadlock the two. On timeout, skip — the drain retries
+        // the realignment on its next cycle (realignedTills is scoped to a single cycle).
+        if (!await scuLock.WaitAsync(RealignLockTimeout).ConfigureAwait(false))
+        {
+            _logger.LogWarning("Could not acquire the SCU lock to realign till {tillId} within {timeout}; skipping (the offline drain will retry).", tillId, RealignLockTimeout);
+            return;
+        }
         try
         {
             LoadStateFromDisk();
