@@ -195,10 +195,6 @@ Reusable workflow for deploying packages to an environment.
 
 Validates that PRs have required labels.
 
-### Check Linked Issue (`check-linked-issue.yml`)
-
-Validates that PRs are linked to issues.
-
 ### CLA (`cla.yml`)
 
 Contributor License Agreement checking.
@@ -206,10 +202,6 @@ Contributor License Agreement checking.
 ### Manual Merging (`manual-merging.yml`)
 
 Makes sure that release PRs can not be merged manually.
-
-### Remove No Issue Label (`remove-no-issue-label.yml`)
-
-Automatically removes `no-issue` label when an issue is linked.
 
 ### Smoketests (`smoketests.yml`)
 
@@ -328,7 +320,6 @@ Runs smoke tests for release verification.
 │      package                - Creates v1 (NuGet) and v2 (zip) packages                  │
 │      deploy-v1-packages     - Deploys NuGet packages to Azure Storage                   │
 │      deploy-v2-packages     - Deploys zip packages to Azure Storage                     │
-│      check-linked-issue     - Validates PR has linked issue                             │
 │                                                                                         │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -349,10 +340,6 @@ Runs smoke tests for release verification.
 │                                                                                         │
 │      package.yml ─────────────────► build, sign, package                                │
 │      deploy.yml ──────────────────► deploy-v1-packages, deploy-v2-packages              │
-│                                                                                         │
-│    Utility Workflows:                                                                   │
-│                                                                                         │
-│      check-linked-issue.yml ──────► check-linked-issue                                  │
 │                                                                                         │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
