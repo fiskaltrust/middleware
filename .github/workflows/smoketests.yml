@@ -34,6 +34,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  actions: write
 
 env:
   launcher: "fiskaltrust.service.launcher"
@@ -193,7 +194,14 @@ jobs:
           }
 
           $output = "$launcher.$cashboxId.zip"
-          Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
+          $downloadResponse = Invoke-WebRequest -Uri $url -Headers $headers -OutFile $output -PassThru
+          $contentDisposition = [string]$downloadResponse.Headers['Content-Disposition']
+          $launcherPackageVersion = ""
+          $cdMatch = [regex]::Match($contentDisposition, "(\d+\.\d+\.\d+(?:\.\d+)?)")
+          if ($cdMatch.Success) { $launcherPackageVersion = $cdMatch.Groups[1].Value }
+
+          echo "launcherPackageVersion=$launcherPackageVersion" >> $env:GITHUB_ENV
+          echo "launcherContentDisposition=$contentDisposition" >> $env:GITHUB_ENV
 
       - name: Extract launcher package
         shell: pwsh
@@ -365,6 +373,88 @@ jobs:
             #....Stop launcher....
             Write-Host "Stopping launcher process..."
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+
+      - name: Resolve package versions
+        if: always()
+        shell: pwsh
+        run: |
+          $rawLog = if (Test-Path "test-output.log") { Get-Content "test-output.log" -Raw } else { "" }
+          $log = $rawLog -replace "\x1b\[[0-9;]*[A-Za-z]", ""
+
+          $queuePkg = "${{ inputs.queuePackage }}"
+          $isV2 = "${{ inputs.launcherVersion }}" -eq "v2.0"
+
+          if ($isV2) {
+            $queueMatch    = [regex]::Match($log, "Downloading package $([regex]::Escape($queuePkg))-(.+)\.")
+            $scuMatch      = [regex]::Match($log, "Downloading package (fiskaltrust\.Middleware\.SCU\.[^-]+)-(.+)\.")
+            $helperMatch   = [regex]::Match($log, "Downloading package fiskaltrust\.Middleware\.Helper\.LocalPosSystemApi-(.+)\.")
+            $launcherMatch = [regex]::Match($log, "fiskaltrust\.Launcher:\s*(\S+)")
+            $helperVersion = if ($helperMatch.Success) { $helperMatch.Groups[1].Value } else { "unknown" }
+          } else {
+            $queueMatch    = [regex]::Match($log, "Downloading $([regex]::Escape($queuePkg))\s+(\S+)\s+updates")
+            $scuMatch      = [regex]::Match($log, "Downloading (fiskaltrust\.Middleware\.SCU\.[^\s]+)\s+(\S+)\s+updates")
+            $launcherMatch = [regex]::Match($log, "fiskaltrust\.Launcher-(\S+)")
+            $helperVersion = "n/a"
+          }
+
+          $queueVersion = if ($queueMatch.Success) { $queueMatch.Groups[1].Value } else { "unknown" }
+          $scuPackage   = if ($scuMatch.Success) { $scuMatch.Groups[1].Value } else { "unknown" }
+          $scuVersion   = if ($scuMatch.Success) { $scuMatch.Groups[2].Value } else { "unknown" }
+
+          $launcherVersion = if ($launcherMatch.Success) { $launcherMatch.Groups[1].Value } else { "${{ env.launcherPackageVersion }}" }
+          if (-not $launcherVersion) { $launcherVersion = "unknown" }
+
+          echo "resolvedQueueVersion=$queueVersion"       >> $env:GITHUB_ENV
+          echo "resolvedScuPackage=$scuPackage"           >> $env:GITHUB_ENV
+          echo "resolvedScuVersion=$scuVersion"           >> $env:GITHUB_ENV
+          echo "resolvedHelperVersion=$helperVersion"     >> $env:GITHUB_ENV
+          echo "resolvedLauncherVersion=$launcherVersion" >> $env:GITHUB_ENV
+
+      - name: Annotate resolved versions
+        if: always()
+        shell: pwsh
+        run: |
+          $queuePkg = "${{ inputs.queuePackage }}"
+          $queueVersion = "${{ env.resolvedQueueVersion }}"
+          $scuPackage = "${{ env.resolvedScuPackage }}"
+          $scuVersion = "${{ env.resolvedScuVersion }}"
+          $helperVersion = "${{ env.resolvedHelperVersion }}"
+          $launcherVersion = "${{ env.resolvedLauncherVersion }}"
+
+          $lines = @(
+            "Queue Package: $queuePkg"
+            "Queue Version: $queueVersion"
+            "SCU Package: $scuPackage"
+            "SCU Version: $scuVersion"
+          )
+          if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
+            $lines += "LocalPosSystemApi Helper Version: $helperVersion"
+          }
+          $lines += "Launcher Version: $launcherVersion"
+
+          Write-Host "::notice title=Smoke Test Package Versions::$($lines -join '%0A')"
+
+          $unresolved = @($queueVersion, $scuVersion, $launcherVersion) | Where-Object { $_ -eq "unknown" }
+          if ($unresolved.Count -gt 0) {
+            $detail = "Could not parse one or more versions from test-output.log ($($unresolved -join ', ')) - regex patterns in the 'Resolve package versions' step may need adjusting to match the actual log format."
+            if ($launcherVersion -eq "unknown") {
+              $detail += " Launcher download Content-Disposition header seen: '${{ env.launcherContentDisposition }}'"
+            }
+            Write-Host "::warning title=Smoke Test Version Resolution::$detail"
+          }
+
+      - name: Update run name
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $launcherVersion = "${{ env.resolvedLauncherVersion }}"
+          $launcherLabel = if ($launcherVersion -ne "unknown") { "${{ inputs.launcherVersion }} ($launcherVersion)" } else { "${{ inputs.launcherVersion }}" }
+
+          $runName = "Smoke Tests | ${{ inputs.platform }} | Launcher $launcherLabel | ${{ inputs.queuePackage }} ${{ env.resolvedQueueVersion }}"
+
+          gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --method PATCH --field name="$runName"
 
       - name: Upload test output
         if: always()
