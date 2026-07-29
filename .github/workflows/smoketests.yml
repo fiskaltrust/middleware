@@ -1,4 +1,8 @@
 ﻿name: smoketests
+run-name: >
+  Smoke Tests | ${{ inputs.platform }} |
+  Launcher ${{ inputs.launcherVersion }} |
+  ${{ inputs.queuePackage }} ${{ inputs.queueVersion }}
 
 on:
   workflow_dispatch:
@@ -34,7 +38,6 @@ on:
 permissions:
   id-token: write
   contents: read
-  actions: write
 
 env:
   launcher: "fiskaltrust.service.launcher"
@@ -442,19 +445,6 @@ jobs:
             }
             Write-Host "::warning title=Smoke Test Version Resolution::$detail"
           }
-
-      - name: Update run name
-        if: always()
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $launcherVersion = "${{ env.resolvedLauncherVersion }}"
-          $launcherLabel = if ($launcherVersion -ne "unknown") { "${{ inputs.launcherVersion }} ($launcherVersion)" } else { "${{ inputs.launcherVersion }}" }
-
-          $runName = "Smoke Tests | ${{ inputs.platform }} | Launcher $launcherLabel | ${{ inputs.queuePackage }} ${{ env.resolvedQueueVersion }}"
-
-          gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --method PATCH --field name="$runName"
 
       - name: Upload test output
         if: always()
