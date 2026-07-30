@@ -375,7 +375,11 @@ jobs:
 
             #....Stop launcher....
             Write-Host "Stopping launcher process..."
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            if ($isWindows) {
+              taskkill /PID $process.Id /T /F
+            } else {
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            }
 
       - name: Resolve package versions
         if: always()
