@@ -301,7 +301,7 @@ jobs:
            $queueUrl = "http://localhost:$port/${{ env.queueId }}"
            $helperUrl = "http://localhost:$port/${{ env.helperId }}"
            $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
-           $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v3/sign" } else { "/json/v1/Sign" }
+           $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
@@ -358,12 +358,15 @@ jobs:
                       }
                   } 
                   if ($result -eq "success") {
+                     Write-Host "::notice::✅ $($req.Name) request succeeded"
                      Write-Host "Response: $($response | ConvertTo-Json)"
                   } else {
+                     Write-Host "::error::❌ $($req.Name) request failed — ftState indicates failure"
                      Write-Error "Response is failed ❌: $($response | ConvertTo-Json)"
                   }
                 }
                 catch {
+                    Write-Host "::error::❌ $($req.Name) request failed — $($_.Exception.Message)"
                     Write-Error "$($req.Name) request failed: $_"
                     Write-Host "Error details: $($_.Exception.Message)"
                 }
