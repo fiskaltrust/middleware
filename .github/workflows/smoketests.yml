@@ -349,9 +349,21 @@ jobs:
                   } else {
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
-                  Write-Host "Response: $($response | ConvertTo-Json)"
-
-                } 
+                  $response.ftState = 4996180840622780142
+                  $result = "success"
+                  if ($req.Url -match "/sign|/Sign") {
+                      $ftState = [uint64]$response.ftState
+                      $lower32 = $ftState -band 0xFFFFFFFF
+                      if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
+                          $result = "failure"
+                      }
+                  } 
+                  if ($result -eq "success") {
+                     Write-Host "Response: $($response | ConvertTo-Json)"
+                  } else {
+                     Write-Error "❌ Response is failed: $($response | ConvertTo-Json)"
+                  }
+                }
                 catch {
                     Write-Error "$($req.Name) request failed: $_"
                     Write-Host "Error details: $($_.Exception.Message)"
