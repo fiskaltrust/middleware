@@ -375,7 +375,8 @@ jobs:
                 }                
              }
                 Write-Host "::notice::$notice"
-                if ($ftstateError) {
+                Write-Host "ftstateError = $ftstateError"
+                if ($ftstateError eq true) {
                   Write-Error "$($req.Name) request failed: $_"
                 }
             }
