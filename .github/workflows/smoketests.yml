@@ -370,7 +370,7 @@ jobs:
                     Write-Host "Error details: $($_.Exception.Message)"
                 }
              }
-                echo "::notice::$notice"
+                $notice -replace "%0A", "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
             }
             else {
               Write-Error "Launcher failed to start within the expected time."
