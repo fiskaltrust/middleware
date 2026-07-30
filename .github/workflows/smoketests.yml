@@ -305,7 +305,7 @@ jobs:
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
-                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json";}
+                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }
                 @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
                 @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
                 @{ Name = "Pos-receipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Pos-receipt.json" }
@@ -316,7 +316,7 @@ jobs:
                 @{ Name = "Receipt-Journal-Export";    Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=2&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Receipt-Journal-Export.json" } else { "" } }
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
-            $ErrorActionPreference = "stop"
+            $ErrorActionPreference = "Stop"
             $ftstateError = $false
             $notice = "%0A"
             foreach ($req in $requests) {
@@ -341,8 +341,7 @@ jobs:
                         "x-cashbox-accesstoken"  = "${{ env.accessToken }}"
                         "x-operation-id"         = [guid]::NewGuid().ToString()
                     }
-                }
-                
+                }                
                 try {
 
                   if ($null -ne $body) {
@@ -369,7 +368,7 @@ jobs:
                 catch {
                     Write-Error "$($req.Name) request failed: $_"
                     Write-Host "Error details: $($_.Exception.Message)"
-                }                
+                }
              }
                 Write-Host "::notice::$notice"
             }
