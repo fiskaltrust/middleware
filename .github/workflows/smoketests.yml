@@ -316,7 +316,6 @@ jobs:
                 @{ Name = "Receipt-Journal-Export";    Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=2&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Receipt-Journal-Export.json" } else { "" } }
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
-
             $ftstateError = $false
             $notice = "%0A"
             foreach ($req in $requests) {
@@ -358,7 +357,6 @@ jobs:
                       if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
                         $ftstateError = $true;
                         $result= "❌ $($req.Name) request failed — ftState indicates failure%0A"
-                        Write-Error "❌ $($req.Name) request failed — ftState indicates failure" -ErrorAction Continue
                       }
                   }                  
                   $notice += $result
@@ -381,6 +379,10 @@ jobs:
             #....Stop launcher....
             Write-Host "Stopping launcher process..."
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            
+            if ($ftstateError) {
+                  exit 1
+            }
 
       - name: Upload test output
         if: always()
