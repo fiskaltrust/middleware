@@ -316,6 +316,7 @@ jobs:
                 @{ Name = "Receipt-Journal-Export";    Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=2&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Receipt-Journal-Export.json" } else { "" } }
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
+            $ErrorActionPreference = "stop"
             $ftstateError = $false
             $notice = "%0A"
             foreach ($req in $requests) {
@@ -350,7 +351,7 @@ jobs:
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }    
                   $result = "✅ $($req.Name) request succeeded%0A"
-                  if ($req.Name -match "ZeroReceipt") {
+                  if ($req.Name -match "Pos-receipt") {
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
                       $result = ""
