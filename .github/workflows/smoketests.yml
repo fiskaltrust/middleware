@@ -328,7 +328,7 @@ jobs:
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
 
-            $ErrorActionPreference = "Stop"
+            $failureReasons = @()
             foreach ($req in $requests) {
                 Write-Host "`n--- Sending $($req.Name) request ---"
                 $body = $null
@@ -364,13 +364,14 @@ jobs:
 
                 } 
                 catch {
-                    Write-Error "$($req.Name) request failed: $_"
-                    Write-Host "Error details: $($_.Exception.Message)"
+                    Write-Host "::warning::$($req.Name) request failed: $($_.Exception.Message)"
+                    $failureReasons += "$($req.Name) request failed: $($_.Exception.Message)"
                 }
              }
             }
             else {
-              Write-Error "Launcher failed to start within the expected time."
+              Write-Host "::warning::Launcher failed to start within the expected time."
+              $failureReasons = @("Launcher failed to start within the expected time.")
             }
 
             #....Stop launcher....
@@ -380,6 +381,12 @@ jobs:
             } else {
               Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
               sudo pkill -9 -f "${{ env.launcher }}"
+            }
+
+            if ($failureReasons.Count -gt 0) {
+              Write-Host "Smoke test failures:"
+              $failureReasons | ForEach-Object { Write-Host " - $_" }
+              throw "Smoke test failed: $($failureReasons.Count) issue(s) - see warnings above."
             }
 
       - name: Resolve package versions
