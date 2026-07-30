@@ -308,7 +308,11 @@ jobs:
           }
 
           #....Send requests....
-          if ($tcpReady) {
+          $failureReasons = @()
+          if ($process.HasExited) {
+            $failureReasons += "Launcher process exited early with code $($process.ExitCode). Check test-output.log."
+          }
+          elseif ($tcpReady) {
            $queueUrl = "http://localhost:$port/${{ env.queueId }}"
            $helperUrl = "http://localhost:$port/${{ env.helperId }}"
            $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
@@ -328,19 +332,19 @@ jobs:
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
 
-            $failureReasons = @()
             foreach ($req in $requests) {
                 Write-Host "`n--- Sending $($req.Name) request ---"
                 $body = $null
-                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {       
-                 $bodyTemplate = Get-Content $req.File -Raw 
+                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {
+                 $bodyTemplate = Get-Content $req.File -Raw
                  $body = $bodyTemplate -replace "{{cashbox_id}}", "${{ env.cashboxId }}" -replace "{{current_moment}}", (Get-Date).ToString("o")
                 }
                 $contentType = "application/json"
+                $url = $req.Url
                 if($isLinux -or $isMacos){
-                    $req.Url = $req.Url.Replace("/json/v1/Echo", "/echo");
-                    $req.Url = $req.Url.Replace("/json/v1/Sign", "/sign");
-                    $req.Url = $req.Url.Replace("/json/v0/Journal", "/journal");
+                    $url = $url.Replace("/json/v1/Echo", "/echo");
+                    $url = $url.Replace("/json/v1/Sign", "/sign");
+                    $url = $url.Replace("/json/v0/Journal", "/journal");
                     if ($req.Name -like "*Export*" -and "${{ inputs.launcherVersion }}" -ne "v2.0") {$contentType = "text/plain"}
                 }
 
@@ -356,22 +360,32 @@ jobs:
                 try {
 
                   if ($null -ne $body) {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
                   Write-Host "Response: $($response | ConvertTo-Json)"
 
-                } 
+                }
                 catch {
-                    Write-Host "::warning::$($req.Name) request failed: $($_.Exception.Message)"
-                    $failureReasons += "$($req.Name) request failed: $($_.Exception.Message)"
+                    $statusCode = $_.Exception.Response?.StatusCode.value__
+                    $reasonPhrase = $_.Exception.Response?.ReasonPhrase
+                    $respBody = ""
+                    try {
+                      if ($_.Exception.Response) {
+                        $respBody = $_.Exception.Response.Content.ReadAsStringAsync().Result
+                      }
+                    } catch {}
+
+                    $detail = "$($req.Name) failed. Url=$url Status=$statusCode $reasonPhrase Message=$($_.Exception.Message) Body=$respBody"
+                    Write-Host "::warning::$detail"
+                    $failureReasons += $detail
                 }
              }
             }
             else {
               Write-Host "::warning::Launcher failed to start within the expected time."
-              $failureReasons = @("Launcher failed to start within the expected time.")
+              $failureReasons += "Launcher failed to start within the expected time."
             }
 
             #....Stop launcher....
