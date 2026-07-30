@@ -350,24 +350,22 @@ jobs:
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
-                  }                  
+                  }    
+                  $result = "✅ $($req.Name) request succeeded%0A"
                   if ($req.Name -match "ZeroReceipt") {
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
+                      $result = ""
                       if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
                         $ftstateError = $true;
-                        $notice += "❌ $($req.Name) request failed — ftState indicates failure%0A"
-                        Write-Host "::group::❌ $($req.Name) —  request failed — ftState indicates failure"
-                        Write-Host ($response | ConvertTo-Json)
-                        Write-Host "::endgroup::"
+                        $result= "❌ $($req.Name) request failed — ftState indicates failure%0A"
                       }
-                  } 
-                  if (-not $ftstateError -and $req.Name -match "ZeroReceipt") {
-                      $notice += "✅ $($req.Name) request succeeded%0A"
-                      Write-Host "::group::✅ $($req.Name) — request succeeded"
-                      Write-Host ($response | ConvertTo-Json)
-                      Write-Host "::endgroup::"
-                  }
+                  }                  
+                  $notice += $result
+                  Write-Host "::group::$result"
+                  Write-Host ($response | ConvertTo-Json)
+                  Write-Host "::endgroup::"
+                 
                 }
                 catch {
                     Write-Error "$($req.Name) request failed: $_"
@@ -375,7 +373,6 @@ jobs:
                 }                
              }
                 Write-Host "::notice::$notice"
-                Write-Host "ftstateError = $ftstateError"
                 if ($ftstateError) {
                   Write-Error "$($req.Name) request failed: $_"
                 }
