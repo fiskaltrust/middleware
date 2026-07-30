@@ -453,8 +453,20 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path "test-output.log") {
-            $log = Get-Content "test-output.log" -Raw
-            $log -replace "\x1b\[[0-9;]*[A-Za-z]", "" | Set-Content -Path "test-output.log" -NoNewline
+            $cleaned = $false
+            for ($i = 1; $i -le 5; $i++) {
+              try {
+                $log = Get-Content "test-output.log" -Raw
+                $log -replace "\x1b\[[0-9;]*[A-Za-z]", "" | Set-Content -Path "test-output.log" -NoNewline -ErrorAction Stop
+                $cleaned = $true
+                break
+              } catch {
+                Start-Sleep -Seconds 2
+              }
+            }
+            if (-not $cleaned) {
+              Write-Host "::warning title=Log Cleanup Skipped::test-output.log was locked by another process and could not be cleaned of ANSI escape codes - the uploaded artifact will contain them raw."
+            }
           }
 
       - name: Upload test output
