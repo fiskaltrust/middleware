@@ -366,7 +366,7 @@ jobs:
                   }
                 }
                 catch {
-                    Write-Host "::error::❌ $($req.Name) request failed
+                    Write-Host "::error::❌ $($req.Name) request failed"
                     Write-Error "$($req.Name) request failed: $_"
                     Write-Host "Error details: $($_.Exception.Message)"
                 }
