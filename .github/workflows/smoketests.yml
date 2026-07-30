@@ -1,8 +1,8 @@
 ﻿name: smoketests
 run-name: >
-  Smoke Tests | ${{ inputs.platform }} |
+  ${{ inputs.platform }} |
   Launcher ${{ inputs.launcherVersion }} |
-  ${{ inputs.queuePackage }} ${{ inputs.queueVersion }}
+  ${{ inputs.queuePackage }}
 
 on:
   workflow_dispatch:
@@ -424,18 +424,20 @@ jobs:
           $helperVersion = "${{ env.resolvedHelperVersion }}"
           $launcherVersion = "${{ env.resolvedLauncherVersion }}"
 
-          $lines = @(
-            "Queue Package: $queuePkg"
-            "Queue Version: $queueVersion"
-            "SCU Package: $scuPackage"
-            "SCU Version: $scuVersion"
+          $fields = @(
+            @{ Title = "Queue Package"; Value = $queuePkg }
+            @{ Title = "Queue Version"; Value = $queueVersion }
+            @{ Title = "SCU Package"; Value = $scuPackage }
+            @{ Title = "SCU Version"; Value = $scuVersion }
           )
           if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
-            $lines += "LocalPosSystemApi Helper Version: $helperVersion"
+            $fields += @{ Title = "LocalPosSystemApi Helper Version"; Value = $helperVersion }
           }
-          $lines += "Launcher Version: $launcherVersion"
+          $fields += @{ Title = "Launcher Version"; Value = $launcherVersion }
 
-          Write-Host "::notice title=Smoke Test Package Versions::$($lines -join '%0A')"
+          foreach ($field in $fields) {
+            Write-Host "::notice title=$($field.Title)::$($field.Value)"
+          }
 
           $unresolved = @($queueVersion, $scuVersion, $launcherVersion) | Where-Object { $_ -eq "unknown" }
           if ($unresolved.Count -gt 0) {
@@ -444,6 +446,15 @@ jobs:
               $detail += " Launcher download Content-Disposition header seen: '${{ env.launcherContentDisposition }}'"
             }
             Write-Host "::warning title=Smoke Test Version Resolution::$detail"
+          }
+
+      - name: Clean log artifact
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "test-output.log") {
+            $log = Get-Content "test-output.log" -Raw
+            $log -replace "\x1b\[[0-9;]*[A-Za-z]", "" | Set-Content -Path "test-output.log" -NoNewline
           }
 
       - name: Upload test output
