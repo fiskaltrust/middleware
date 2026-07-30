@@ -318,7 +318,7 @@ jobs:
             )
 
             $ErrorActionPreference = "Stop"
-            $ftstateError = false
+            $ftstateError = $false
             $notice = ""
             foreach ($req in $requests) {
                 Write-Host "`n--- Sending $($req.Name) request ---"
@@ -355,7 +355,7 @@ jobs:
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
                       if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
-                        $ftstateError = true;
+                        $ftstateError = $true;
                         $notice += "❌ $($req.Name) request failed — ftState indicates failure%0A"
                         Write-Host "::group::❌ $($req.Name) —  request failed — ftState indicates failure"
                         Write-Host ($response | ConvertTo-Json)
@@ -376,7 +376,7 @@ jobs:
              }
                 Write-Host "::notice::$notice"
                 Write-Host "ftstateError = $ftstateError"
-                if ($ftstateError eq true) {
+                if ($ftstateError) {
                   Write-Error "$($req.Name) request failed: $_"
                 }
             }
