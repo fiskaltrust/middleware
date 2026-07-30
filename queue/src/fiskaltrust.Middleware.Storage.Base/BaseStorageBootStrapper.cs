@@ -31,6 +31,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 QueuesGR = ParseParameter<List<ftQueueGR>>(configuration, "init_ftQueueGR") ?? new List<ftQueueGR>(),
                 QueuesIT = ParseParameter<List<ftQueueIT>>(configuration, "init_ftQueueIT") ?? new List<ftQueueIT>(),
                 QueuesME = ParseParameter<List<ftQueueME>>(configuration, "init_ftQueueME") ?? new List<ftQueueME>(),
+                QueuesPL = ParseParameter<List<ftQueuePL>>(configuration, "init_ftQueuePL") ?? new List<ftQueuePL>(),
                 CashBox = ParseParameter<ftCashBox>(configuration, "init_ftCashBox"),
                 SignaturCreationUnitsAT = ParseParameter<List<ftSignaturCreationUnitAT>>(configuration, "init_ftSignaturCreationUnitAT") ?? new List<ftSignaturCreationUnitAT>(),
                 SignaturCreationUnitsBE = ParseParameter<List<ftSignaturCreationUnitBE>>(configuration, "init_ftSignaturCreationUnitBE") ?? new List<ftSignaturCreationUnitBE>(),
@@ -40,6 +41,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 SignaturCreationUnitsGR = ParseParameter<List<ftSignaturCreationUnitGR>>(configuration, "init_ftSignaturCreationUnitGR") ?? new List<ftSignaturCreationUnitGR>(),
                 SignaturCreationUnitsME = ParseParameter<List<ftSignaturCreationUnitME>>(configuration, "init_ftSignaturCreationUnitME") ?? new List<ftSignaturCreationUnitME>(),
                 SignaturCreationUnitsIT = ParseParameter<List<ftSignaturCreationUnitIT>>(configuration, "init_ftSignaturCreationUnitIT") ?? new List<ftSignaturCreationUnitIT>(),
+                SignaturCreationUnitsPL = ParseParameter<List<ftSignaturCreationUnitPL>>(configuration, "init_ftSignaturCreationUnitPL") ?? new List<ftSignaturCreationUnitPL>(),
                 MasterData = ParseParameter<MasterDataConfiguration>(configuration, "init_masterData")
             };
         }
@@ -146,6 +148,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 InitQueueGRAsync(config.QueuesGR, configurationRepository),
                 InitQueueMEAsync(config.QueuesME, configurationRepository),
                 InitQueueITAsync(config.QueuesIT, configurationRepository),
+                InitQueuePLAsync(config.QueuesPL, configurationRepository),
                 InitSignaturCreationUnitATAsync(config.SignaturCreationUnitsAT, configurationRepository),
                 InitSignaturCreationUnitBEAsync(config.SignaturCreationUnitsBE, configurationRepository),
                 InitSignaturCreationUnitFRAsync(config.SignaturCreationUnitsFR, configurationRepository),
@@ -154,6 +157,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 InitSignaturCreationUnitGRAsync(config.SignaturCreationUnitsGR, configurationRepository),
                 InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig),
                 InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository),
+                InitSignaturCreationUnitPLAsync(config.SignaturCreationUnitsPL, configurationRepository),
             };
             await Task.WhenAll(tasks);
         }
@@ -339,6 +343,17 @@ namespace fiskaltrust.Middleware.Storage.Base
                 }
             }
         }
+        private async Task InitQueuePLAsync(List<ftQueuePL> queuesPL, IConfigurationRepository configurationRepository)
+        {
+            foreach (var item in queuesPL)
+            {
+                var dbQueuePl = await configurationRepository.GetQueuePLAsync(item.ftQueuePLId).ConfigureAwait(false);
+                if (dbQueuePl == null)
+                {
+                    await configurationRepository.InsertOrUpdateQueuePLAsync(item).ConfigureAwait(false);
+                }
+            }
+        }
         private async Task InitQueueMEAsync(List<ftQueueME> queuesME, IConfigurationRepository configurationRepository)
         {
             foreach (var item in queuesME)
@@ -516,6 +531,18 @@ namespace fiskaltrust.Middleware.Storage.Base
                 if (scu == null)
                 {
                     await configurationRepository.InsertOrUpdateSignaturCreationUnitGRAsync(item).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private async Task InitSignaturCreationUnitPLAsync(List<ftSignaturCreationUnitPL> signaturCreationUnitsPL, IConfigurationRepository configurationRepository)
+        {
+            foreach (var item in signaturCreationUnitsPL)
+            {
+                var scu = await configurationRepository.GetSignaturCreationUnitPLAsync(item.ftSignaturCreationUnitPLId).ConfigureAwait(false);
+                if (scu == null)
+                {
+                    await configurationRepository.InsertOrUpdateSignaturCreationUnitPLAsync(item).ConfigureAwait(false);
                 }
             }
         }
