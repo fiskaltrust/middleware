@@ -337,7 +337,9 @@ public sealed class CustomRTServerSCU : LegacySCU
             RTDocType = docType,
             RTServerSHAMetadata = commercialDocument.qrData.shaMetadata,
             RTCodiceLotteria = (fiscalDocument.document as DocumentDataLottery)?.lottery_client_code ?? "",
-            RTCustomerID = "",
+            RTCustomerID = string.IsNullOrEmpty(fiscalDocument.document.fiscalcode)
+                ? fiscalDocument.document.vatcode
+                : fiscalDocument.document.fiscalcode,
             RTReferenceZNumber = fiscalDocument.document.referenceClosurenumber,
             RTReferenceDocNumber = fiscalDocument.document.referenceDocnumber,
             RTReferenceDocMoment = string.IsNullOrEmpty(fiscalDocument.document.referenceDtime) ? null : DateTime.Parse(fiscalDocument.document.referenceDtime)
