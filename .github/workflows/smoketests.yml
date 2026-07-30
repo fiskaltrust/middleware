@@ -379,6 +379,7 @@ jobs:
               taskkill /PID $process.Id /T /F
             } else {
               Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+              sudo pkill -9 -f "${{ env.launcher }}"
             }
 
       - name: Resolve package versions
