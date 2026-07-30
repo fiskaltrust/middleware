@@ -370,7 +370,7 @@ jobs:
                     Write-Host "Error details: $($_.Exception.Message)"
                 }
              }
-                Write-Host "::notice::$notice"
+                echo "::notice::$notice"
             }
             else {
               Write-Error "Launcher failed to start within the expected time."
