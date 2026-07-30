@@ -362,7 +362,7 @@ jobs:
                         Write-Host "::endgroup::"
                       }
                   } 
-                  if (-not $ftstateError) {
+                  if (-not $ftstateError -and $req.Name -match "ZeroReceipt") {
                       $notice += "✅ $($req.Name) request succeeded%0A"
                       Write-Host "::group::✅ $($req.Name) — request succeeded"
                       Write-Host ($response | ConvertTo-Json)
