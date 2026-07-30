@@ -349,9 +349,11 @@ jobs:
                   } else {
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
-                  $response.ftState = 4996180840622780142
+                  Write-Host "Response: $($response.ftState)"
                   $result = "success"
                   if ($req.Url -match "/sign|/Sign") {
+                      $response.ftState = 4996180840622780142
+                       Write-Host "Response- change: $($response.ftState)"
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
                       if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
