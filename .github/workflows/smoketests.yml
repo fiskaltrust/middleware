@@ -305,7 +305,7 @@ jobs:
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
-                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }
+                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json";}
                 @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
                 @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
                 @{ Name = "Pos-receipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Pos-receipt.json" }
@@ -349,26 +349,28 @@ jobs:
                   } else {
                         $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
-                  $result = "success"
+                  $ftstateError = false
                   if ($req.Name -match "Pos-receipt") {
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
                       if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
-                          $result = "failure"
+                        $ftstateError = true;
+                        Write-Error ""
                       }
                   } 
-                  if ($result -eq "success") {
-                     Write-Host "::notice::✅ $($req.Name) request succeeded"
-                     Write-Host "Response: $($response | ConvertTo-Json)"
-                  } else {
-                     Write-Host "::error::❌ $($req.Name) request failed — ftState indicates failure"
-                     Write-Host "Response: $($response | ConvertTo-Json)"
-                  }
+                  Write-Host "::notice::✅ $($req.Name) request succeeded"
+                  Write-Host "Response: $($response | ConvertTo-Json)"
                 }
                 catch {
+                 if ($ftstateError) {
+                     Write-Error "::error::❌ $($req.Name) request failed — ftState indicates failure"
+                     Write-Host "Response: $($response | ConvertTo-Json)"
+                 }
+                 else {
                     Write-Host "::error::❌ $($req.Name) request failed"
-                    Write-Error "$($req.Name) request failed: $_"
+                    Write-Error "$_"
                     Write-Host "Error details: $($_.Exception.Message)"
+                    }
                 }
              }
             }
