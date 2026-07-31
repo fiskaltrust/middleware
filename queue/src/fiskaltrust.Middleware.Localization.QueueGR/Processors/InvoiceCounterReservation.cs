@@ -68,7 +68,7 @@ internal static class InvoiceCounterReservation
 
         var response = await SubmitWithSegmentAsync(request, reservedSeries, reservedAa, sscdCall);
 
-        if (IsInvoiceFilingCase(request.ReceiptRequest) && IsDuplicateAaError(response.ReceiptResponse))
+        if (IsDuplicateAaError(response.ReceiptResponse))
         {
             // "Number consumed, advance": AADE proved the reserved aa is already filed,
             // so move the persisted counter past it — and nothing else. This receipt
@@ -183,27 +183,6 @@ internal static class InvoiceCounterReservation
             response.ReceiptResponse.ftReceiptIdentification = originalReceiptIdentification;
         }
         return response;
-    }
-
-    private static bool IsInvoiceFilingCase(ReceiptRequest request)
-    {
-        // The advance reads a 233 as "this aa is consumed at AADE", which is only
-        // meaningful for submissions the SCU routes to SendInvoices. Pay0x3005 and
-        // voided delivery notes go to the payment-methods / cancellation endpoints
-        // instead: their errors never describe the queue's invoice numbering, and
-        // their reservations are never consumed on success either (no mark) — so
-        // advancing on a 233-shaped failure there would burn a number for good.
-        // Better to skip a heal than to skip a number: anything that is not certainly
-        // an invoice submission fails without touching the counter.
-        if (request.ftReceiptCase.IsCase(ReceiptCase.Pay0x3005))
-        {
-            return false;
-        }
-        if (request.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005) && request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
-        {
-            return false;
-        }
-        return true;
     }
 
     private static bool IsDuplicateAaError(ReceiptResponse response)
