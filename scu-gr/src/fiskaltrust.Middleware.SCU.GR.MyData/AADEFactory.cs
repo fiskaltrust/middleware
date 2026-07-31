@@ -627,16 +627,16 @@ public class AADEFactory
             invoice.invoiceHeader.toWeighSpecified = true;
         }
 
-        // Apply series
-        if (!string.IsNullOrEmpty(headerOverride.Series))
+        // Overriding the document numbering is not supported: series/aa are assigned by
+        // the middleware's invoice counter (or taken inbound for handwritten documents),
+        // and an override silently renumbering the doc would desynchronize the counter
+        // from what AADE has on file. Reject loudly instead of silently ignoring the
+        // fields so integrators get immediate feedback.
+        if (!string.IsNullOrEmpty(headerOverride.Series) || !string.IsNullOrEmpty(headerOverride.Aa))
         {
-            invoice.invoiceHeader.series = headerOverride.Series;
-        }
-
-        // Apply aa (sequential number)
-        if (!string.IsNullOrEmpty(headerOverride.Aa))
-        {
-            invoice.invoiceHeader.aa = headerOverride.Aa;
+            throw new ArgumentException(
+                "Overriding invoiceHeader.series or invoiceHeader.aa via mydataoverride is not supported. " +
+                "The middleware assigns the invoice numbering; for caller-numbered paper documents use the HandWritten flag with Series/AA in ftReceiptCaseData.GR.");
         }
 
         // Apply issue date

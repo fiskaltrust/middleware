@@ -112,12 +112,13 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task OverridePath_SuffixMismatch_DoesNotAdvanceCounter()
+    public async Task UnexpectedForeignSegmentOnSuccess_DoesNotAdvanceCounter_AndWritesActionJournal()
     {
-        // Simulates handwritten or mydataoverride: the SCU comes back successful, but
-        // the (series, aa) that ended up on the AADE doc isn't the one we reserved
-        // (because the override replaced it). The country processor must NOT commit
-        // our reservation in that case — those documents are caller-numbered.
+        // Defensive: with handwritten numbering taken inbound and series/aa overrides
+        // via mydataoverride rejected, a successful response always carries the
+        // reserved segment. If it ever doesn't (a numbering bug), the counter must not
+        // advance and the anomaly must be surfaced via an action journal — but the
+        // receipt itself must not fail, since AADE already filed the document.
         var queue = TestHelpers.CreateQueue();
         var queueGR = new ftQueueGR
         {
@@ -127,7 +128,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 41,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "HANDWRITTEN", aa: 7777, mark: 999000111L);
+        var grSSCDMock = SetupSscdMock(success: true, series: "FOREIGN", aa: 7777, mark: 999000111L);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -136,9 +137,12 @@ public class InvoiceCounterReservationTests
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
-        await processor.PointOfSaleReceipt0x0001Async(request);
+        var result = await processor.PointOfSaleReceipt0x0001Async(request);
 
         configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+        result.receiptResponse.ftState.IsState(State.Success).Should().BeTrue();
+        result.actionJournals.Should().ContainSingle()
+            .Which.Message.Should().Contain("does not carry the reserved segment 'CB-A-42'");
     }
 
     [Fact]
@@ -446,10 +450,10 @@ public class InvoiceCounterReservationTests
     [Fact]
     public async Task OverrideBetweenAutoReceipts_DoesNotShiftAutoSequence()
     {
-        // A receipt that submits under a caller-supplied (series, aa) — handwritten or
-        // mydataoverride — must not advance the auto counter. The next auto receipt
-        // therefore picks up at the value following the *last auto-committed* one,
-        // not at the value following the override.
+        // Defensive sequence-resilience: even if a successful response ever came back
+        // with a foreign (series, aa) — which no supported path produces anymore — the
+        // auto counter must not advance, and the next auto receipt picks up at the
+        // value following the *last auto-committed* one.
         var queue = TestHelpers.CreateQueue();
         var queueGR = new ftQueueGR
         {

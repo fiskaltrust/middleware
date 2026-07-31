@@ -50,6 +50,29 @@ internal static class InvoiceCounterReservation
             queueGR.LastInvoiceQueueItemId = response.ReceiptResponse.ftQueueItemID;
             queueGR.LastInvoiceMark = TryExtractMark(response.ReceiptResponse);
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
+            return new ProcessCommandResponse(response.ReceiptResponse, []);
+        }
+
+        if (response.ReceiptResponse.ftState.IsState(State.Success))
+        {
+            // Should never happen: handwritten numbering is taken inbound before a
+            // reservation is made and series/aa overrides via mydataoverride are
+            // rejected, so a successful response always carries the reserved segment.
+            // If it doesn't, a document was filed at AADE with numbering the queue does
+            // not know about. The receipt must not fail (AADE already filed it — failing
+            // would lose the mark) and the counter must not advance (the reserved aa was
+            // not consumed); surface the anomaly via an action journal instead.
+            return new ProcessCommandResponse(response.ReceiptResponse,
+            [
+                new ftActionJournal
+                {
+                    ftActionJournalId = Guid.NewGuid(),
+                    ftQueueId = request.queue.ftQueueId,
+                    ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
+                    Moment = DateTime.UtcNow,
+                    Message = $"QueueGR invoice counter: successful response does not carry the reserved segment '{reservedSeries}-{reservedAa}' (ftReceiptIdentification: '{response.ReceiptResponse.ftReceiptIdentification}'). The counter was not advanced. This indicates a numbering bug and must be investigated.",
+                },
+            ]);
         }
 
         return new ProcessCommandResponse(response.ReceiptResponse, []);
@@ -121,10 +144,9 @@ internal static class InvoiceCounterReservation
         // Commit only if AADE confirmed the submission *and* it used our reservation.
         // MyDataSCU rewrites the country segment after "#" with the (series, aa) that
         // actually went to AADE on a successful submission. Handwritten documents are
-        // taken inbound before a reservation is ever made, so the only remaining path
-        // that can legitimately produce a different segment is a mydataoverride
-        // carrying its own Series/Aa — those documents are caller-numbered too and must
-        // not advance the counter.
+        // taken inbound before a reservation is ever made and series/aa overrides via
+        // mydataoverride are rejected, so a successful response that fails this check
+        // indicates a numbering bug — the caller journals it and does not advance.
         if (!response.ftState.IsState(State.Success))
         {
             return false;
