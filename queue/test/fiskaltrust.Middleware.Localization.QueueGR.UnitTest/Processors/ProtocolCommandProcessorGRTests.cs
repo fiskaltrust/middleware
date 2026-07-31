@@ -1,6 +1,9 @@
 ﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -59,12 +62,79 @@ public class ProtocolCommandProcessorGRTests
         var queueStorageProviderMock = new Mock<IQueueStorageProvider>();
         queueStorageProviderMock.Setup(x => x.GetReceiptReferencesIfNecessaryAsync(It.IsAny<ProcessCommandRequest>()))
             .ReturnsAsync(new List<(ReceiptRequest, ReceiptResponse)>());
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         result.receiptResponse.Should().Be(scuResponse);
         result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000);
+    }
+
+    [Fact]
+    public async Task Order0x3004_ConsumesInvoiceCounter_WhenInvoiceIsFiled()
+    {
+        // Orders are submitted to myDATA via SendInvoices like receipts, so they draw
+        // from the same invoice counter. The mark gate decides whether an aa was
+        // consumed: a filed order (mark present) advances the counter.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepo = new Mock<IConfigurationRepository>();
+        configRepo.Setup(x => x.GetQueueGRAsync(It.IsAny<Guid>())).ReturnsAsync(queueGR);
+        configRepo.Setup(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>())).Returns(Task.CompletedTask);
+
+        var capturedIdentifications = new List<string>();
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                capturedIdentifications.Add(req.ReceiptResponse.ftReceiptIdentification!);
+                req.ReceiptResponse.ftState = req.ReceiptResponse.ftState.WithState(State.Success);
+                req.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = "invoiceMark",
+                    Data = "400001",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureTypeGR.Mark.As<SignatureType>(),
+                });
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        var queueStorageProviderMock = new Mock<IQueueStorageProvider>();
+        queueStorageProviderMock.Setup(x => x.GetReceiptReferencesIfNecessaryAsync(It.IsAny<ProcessCommandRequest>()))
+            .ReturnsAsync(new List<(ReceiptRequest, ReceiptResponse)>());
+
+        var processor = new ProtocolCommandProcessorGR(
+            grSSCDMock.Object,
+            queueStorageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepo.Object)));
+
+        var receiptRequest = new ReceiptRequest
+        {
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.Order0x3004),
+            cbReceiptMoment = DateTime.UtcNow,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            ftState = (State) 0x4752_2000_0000_0000,
+            ftCashBoxIdentification = "CB-A",
+            ftQueueID = queue.ftQueueId,
+            ftQueueItemID = Guid.NewGuid(),
+            ftQueueRow = 1,
+            ftReceiptIdentification = "ft1#",
+            ftReceiptMoment = DateTime.UtcNow,
+        };
+
+        await processor.Order0x3004Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
+
+        capturedIdentifications.Should().Equal("ft1#CB-A-42");
+        queueGR.InvoiceNumerator.Should().Be(42);
+        queueGR.LastInvoiceMark.Should().Be(400001);
+        configRepo.Verify(x => x.InsertOrUpdateQueueGRAsync(queueGR), Times.Once);
     }
 
     [Theory]
@@ -96,7 +166,7 @@ public class ProtocolCommandProcessorGRTests
         var queueStorageProviderMock = new Mock<IQueueStorageProvider>();
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -135,7 +205,7 @@ public class ProtocolCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
 
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -174,7 +244,7 @@ public class ProtocolCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
 
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 

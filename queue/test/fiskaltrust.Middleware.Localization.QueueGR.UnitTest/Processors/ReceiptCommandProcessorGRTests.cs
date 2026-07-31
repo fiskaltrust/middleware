@@ -62,7 +62,7 @@ public class ReceiptCommandProcessorGRTests
         var queueStorageProviderMock = new Mock<IQueueStorageProvider>(MockBehavior.Strict);
         queueStorageProviderMock.Setup(x => x.GetReceiptReferencesIfNecessaryAsync(It.IsAny<ProcessCommandRequest>())).ReturnsAsync([]);
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object);
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueStorageProviderMock.Object, TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -93,7 +93,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>(), TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -125,7 +125,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>(), TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -179,7 +179,7 @@ public class ReceiptCommandProcessorGRTests
                 ReceiptResponse = scuResponse,
             });
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>(), TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -213,7 +213,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, Mock.Of<IQueueStorageProvider>(), TestHelpers.CreateConfigurationRepositoryStub());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
