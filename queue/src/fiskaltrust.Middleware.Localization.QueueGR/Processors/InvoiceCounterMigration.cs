@@ -69,10 +69,12 @@ public static class InvoiceCounterMigration
         // old mydataoverride path could file a caller-chosen aa into the queue's own
         // series (an aa-only override kept series = CashBoxIdentification). If such
         // out-of-order values exist and the newest own-series aa is not the largest,
-        // this seed is too low and the next reservation is rejected by AADE as a
-        // duplicate (233) — a loud, per-receipt failure that needs a manual counter
-        // correction, since nothing self-heals 233 yet. Overrides into the own series
-        // are rejected since c43de72a, so only pre-existing history can trigger this.
+        // this seed is too low and reservations are rejected by AADE as duplicates
+        // (233) — a loud, per-receipt failure. InvoiceCounterReservation treats each
+        // 233 as "number consumed" and advances the counter by one, so the queue works
+        // itself out of a too-low seed unattended: one failed submission per missing
+        // number. Overrides into the own series are rejected since c43de72a, so only
+        // pre-existing history can trigger this.
         //
         // Success responses without a segment (zero receipts, closings, lifecycle
         // receipts) and submissions in a foreign series (handwritten) are skipped.

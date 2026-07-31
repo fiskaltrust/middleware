@@ -47,6 +47,7 @@ public class ProtocolCommandProcessorGR(
         InvoiceCounterReservation.InvokeWithCounterAsync(
             request,
             _configurationRepository,
+            _queueStorageProvider,
             async () =>
             {
                 var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
