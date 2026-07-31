@@ -53,17 +53,26 @@ public static class InvoiceCounterMigration
         }
     }
 
+    /// <summary>
+    /// Rows per GetByQueueRowRangeAsync query. Small enough to bound the queue items
+    /// held in memory (requests and responses included), large enough that the common
+    /// case — the newest submission lies within the last few hundred rows — is a single
+    /// roundtrip to storage.
+    /// </summary>
+    private const int ChunkSize = 500;
+
     private static async Task<long> GetLastSubmittedAaAsync(
         IMiddlewareQueueItemRepository queueItemRepository,
         string invoiceSeries,
         long lastQueueRow)
     {
         // Walk newest → oldest and stop at the FIRST successful response carrying a
-        // "{series}-{aa}" segment in the queue's own series. On Azure Table Storage
-        // every GetByQueueRowAsync is an unpartitioned filter query, so this early exit
-        // is what keeps queue start cheap: on any queue that ever submitted, only the
-        // NoOps and failed attempts since the last real submission are read — walking
-        // the complete history here caused a read storm on large queues.
+        // "{series}-{aa}" segment in the queue's own series. The history is read in
+        // row-range chunks — one storage query per ChunkSize rows instead of one per
+        // row (per-row reads caused a read storm on Azure Table Storage, where every
+        // ftQueueRow lookup is an unpartitioned filter query). The range query gives no
+        // ordering guarantee (partition-key schemes differ between eras), so each chunk
+        // is ordered client-side before the newest-first scan.
         //
         // Accepted risk of seeding from the newest instead of the history maximum: the
         // old mydataoverride path could file a caller-chosen aa into the queue's own
@@ -78,33 +87,47 @@ public static class InvoiceCounterMigration
         // receipts) and submissions in a foreign series (handwritten) are skipped.
         // Error responses are skipped too: failed attempts must never count as
         // submitted.
-        for (var row = lastQueueRow; row >= 1; row--)
+        for (var chunkEnd = lastQueueRow; chunkEnd >= 1; chunkEnd -= ChunkSize)
         {
-            var queueItem = await queueItemRepository.GetByQueueRowAsync(row);
-            if (string.IsNullOrEmpty(queueItem?.response))
+            var chunkStart = Math.Max(1, chunkEnd - ChunkSize + 1);
+            var chunk = new List<ftQueueItem>();
+            await foreach (var queueItem in queueItemRepository.GetByQueueRowRangeAsync(chunkStart, chunkEnd))
             {
-                continue;
+                chunk.Add(queueItem);
             }
-            ReceiptResponse? response;
-            try
+            foreach (var queueItem in chunk.OrderByDescending(x => x.ftQueueRow))
             {
-                response = JsonSerializer.Deserialize<ReceiptResponse>(queueItem!.response);
-            }
-            catch (JsonException)
-            {
-                continue;
-            }
-            if (response == null || !response.ftState.IsState(State.Success))
-            {
-                continue;
-            }
-            if (CountrySegment.TryParse(response.ftReceiptIdentification, out var series, out var aa)
-                && string.Equals(series, invoiceSeries, StringComparison.Ordinal))
-            {
-                return aa;
+                if (TryGetSubmittedAa(queueItem, invoiceSeries, out var aa))
+                {
+                    return aa;
+                }
             }
         }
         return 0;
+    }
+
+    private static bool TryGetSubmittedAa(ftQueueItem queueItem, string invoiceSeries, out long aa)
+    {
+        aa = 0;
+        if (string.IsNullOrEmpty(queueItem?.response))
+        {
+            return false;
+        }
+        ReceiptResponse? response;
+        try
+        {
+            response = JsonSerializer.Deserialize<ReceiptResponse>(queueItem!.response);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        if (response == null || !response.ftState.IsState(State.Success))
+        {
+            return false;
+        }
+        return CountrySegment.TryParse(response.ftReceiptIdentification, out var series, out aa)
+            && string.Equals(series, invoiceSeries, StringComparison.Ordinal);
     }
 }
 

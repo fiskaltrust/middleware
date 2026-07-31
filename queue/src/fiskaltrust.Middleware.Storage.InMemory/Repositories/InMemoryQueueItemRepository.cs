@@ -23,6 +23,8 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
 
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow) => await Task.FromResult(Data.Values.FirstOrDefault(x => x.ftQueueRow == queueRow)).ConfigureAwait(false);
 
+        public IAsyncEnumerable<ftQueueItem> GetByQueueRowRangeAsync(long fromInclusive, long toInclusive) => Data.Values.Where(x => x.ftQueueRow >= fromInclusive && x.ftQueueRow <= toInclusive).ToAsyncEnumerable();
+
         public override IAsyncEnumerable<ftQueueItem> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive) => Data.Select(x => x.Value).Where(x => x.TimeStamp >= fromInclusive && x.TimeStamp <= toInclusive).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();
 
         public override IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)

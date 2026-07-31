@@ -78,12 +78,13 @@ public class InvoiceCounterMigrationTests
     }
 
     [Fact]
-    public async Task UpgradedQueue_StopsWalkingAtTheNewestOwnSeriesSubmission()
+    public async Task UpgradedQueue_ReadsHistoryInRowRangeChunks_AndStopsAtTheFirstChunkWithASubmission()
     {
-        // The read-storm guard itself: rows older than the newest own-series submission
-        // must never be read at queue start.
+        // The read-storm guard itself: the history is read in row-range chunks (one
+        // storage query per chunk, newest range first) and the walk ends with the chunk
+        // containing the newest own-series submission — older ranges are never queried.
         var queue = TestHelpers.CreateQueue();
-        queue.ftQueuedRow = 4;
+        queue.ftQueuedRow = 1200; // three chunks of 500: [701..1200], [201..700], [1..200]
         var queueGR = new ftQueueGR
         {
             ftQueueGRId = queue.ftQueueId,
@@ -92,25 +93,25 @@ public class InvoiceCounterMigrationTests
             InvoiceNumerator = 0,
         };
         var configRepoMock = SetupConfigRepo(queueGR, queue);
-        var readRows = new List<long>();
-        var repo = new Mock<IMiddlewareQueueItemRepository>();
+        var queriedRanges = new List<(long From, long To)>();
         var items = new[]
         {
-            HistoryItem(2, success: true, "ft2#CB-A-9"),
-            HistoryItem(3, success: true, "ft3#"),
-            HistoryItem(4, success: false, "ft4#"),
+            HistoryItem(100, success: true, "ft1#CB-A-90"),   // older submission — must stay unread
+            HistoryItem(900, success: true, "ft2#CB-A-870"),  // newest own-series submission
+            HistoryItem(1100, success: true, "ft3#"),         // closing (NoOp)
         };
-        repo.Setup(x => x.GetByQueueRowAsync(It.IsAny<long>()))
-            .ReturnsAsync((long row) =>
+        var repo = new Mock<IMiddlewareQueueItemRepository>();
+        repo.Setup(x => x.GetByQueueRowRangeAsync(It.IsAny<long>(), It.IsAny<long>()))
+            .Returns((long from, long to) =>
             {
-                readRows.Add(row);
-                return items.FirstOrDefault(x => x.ftQueueRow == row);
+                queriedRanges.Add((from, to));
+                return items.Where(x => x.ftQueueRow >= from && x.ftQueueRow <= to).ToAsyncEnumerable();
             });
 
         await InvoiceCounterMigration.EnsureMigratedAsync(configRepoMock.Object, repo.Object, queue.ftQueueId, Mock.Of<ILogger>());
 
-        queueGR.InvoiceNumerator.Should().Be(9);
-        readRows.Should().Equal(4L, 3L, 2L); // row 1 stays unread
+        queueGR.InvoiceNumerator.Should().Be(870);
+        queriedRanges.Should().Equal((701L, 1200L)); // a single roundtrip — older chunks stay unread
     }
 
     [Fact]
@@ -294,11 +295,19 @@ public class InvoiceCounterMigrationTests
         return repo;
     }
 
+    /// <summary>
+    /// Serves the row-range reads the migration walks the history with. Items are
+    /// returned in ascending row order — the opposite of the walk direction — so every
+    /// test exercises the client-side ordering the range contract requires.
+    /// </summary>
     private static IMiddlewareQueueItemRepository QueueItemRepo(params ftQueueItem[] queueItems)
     {
         var repo = new Mock<IMiddlewareQueueItemRepository>();
-        repo.Setup(x => x.GetByQueueRowAsync(It.IsAny<long>()))
-            .ReturnsAsync((long row) => queueItems.FirstOrDefault(x => x.ftQueueRow == row));
+        repo.Setup(x => x.GetByQueueRowRangeAsync(It.IsAny<long>(), It.IsAny<long>()))
+            .Returns((long from, long to) => queueItems
+                .Where(x => x.ftQueueRow >= from && x.ftQueueRow <= to)
+                .OrderBy(x => x.ftQueueRow)
+                .ToAsyncEnumerable());
         return repo.Object;
     }
 

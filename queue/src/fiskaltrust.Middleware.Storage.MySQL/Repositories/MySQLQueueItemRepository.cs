@@ -47,6 +47,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
+        public async IAsyncEnumerable<ftQueueItem> GetByQueueRowRangeAsync(long fromInclusive, long toInclusive)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftQueueItem>("SELECT * FROM ftQueueItem WHERE ftQueueRow >= @from AND ftQueueRow <= @to", new { from = fromInclusive, to = toInclusive }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
         public async Task InsertOrUpdateAsync(ftQueueItem entity)
         {
             EntityUpdated(entity);
