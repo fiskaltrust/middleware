@@ -1737,10 +1737,11 @@ public class AADEFactory
         // ftReceiptIdentification before invoking the SCU — reserved values for
         // automatic receipts, the caller's values for handwritten documents (taken
         // inbound by the queue). This mirrors the convention every other country queue
-        // uses (ES/FR/AT/PT all append a country segment after the "#"). The queue is
-        // the single writer of that segment: nothing rewrites it afterwards, series/aa
-        // overrides via mydataoverride are rejected, and the handwritten block below
-        // re-applies the same payload values this segment was built from.
+        // uses (ES/FR/AT/PT all append a country segment after the "#"). The doc
+        // numbering can never diverge from that segment: series/aa overrides via
+        // mydataoverride are rejected, the handwritten block below re-applies the same
+        // payload values this segment was built from, and MyDataSCU's success-path
+        // write-back is therefore an identity on queue-driven paths.
         var hashIdx = receiptResponse.ftReceiptIdentification?.IndexOf('#') ?? -1;
         if (hashIdx >= 0 && hashIdx < receiptResponse.ftReceiptIdentification!.Length - 1)
         {

@@ -310,6 +310,7 @@ public class MyDataSCU : IGRSSCD
                         var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
+                        SetCountrySuffix(request.ReceiptResponse, doc.invoice[0].invoiceHeader.series, doc.invoice[0].invoiceHeader.aa);
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {
                             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.HashPayload));
@@ -364,6 +365,20 @@ public class MyDataSCU : IGRSSCD
                         .Replace('+', '-')
                         .Replace('/', '_');
         return base64;
+    }
+
+    private static void SetCountrySuffix(ReceiptResponse response, string series, string aa)
+    {
+        // Write the filed (series, aa) back into the country segment after "#" so the
+        // response is self-describing for every consumer — including direct SCU callers
+        // that did not pre-append a segment. On queue-driven paths this is an identity
+        // operation: AADEFactory derives the document numbering from the very segment
+        // the queue stamped. The invoice counter does NOT depend on this write-back —
+        // commits are gated on the invoiceMark signature.
+        var identification = response.ftReceiptIdentification ?? string.Empty;
+        var hashIdx = identification.IndexOf('#');
+        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
+        response.ftReceiptIdentification = prefix + $"{series}-{aa}";
     }
 
     private void SetErrorAndLog(ProcessRequest request, string errorMessage)

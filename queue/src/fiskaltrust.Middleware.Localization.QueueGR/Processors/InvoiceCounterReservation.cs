@@ -110,8 +110,9 @@ internal static class InvoiceCounterReservation
     {
         // Pre-append the country segment to ftReceiptIdentification, following the same
         // convention every other country queue uses (ES/FR/AT/PT all append after "#").
-        // AADEFactory derives the document numbering from this segment; nothing rewrites
-        // it afterwards — the queue is its single writer.
+        // AADEFactory derives the document numbering from this segment; on success
+        // MyDataSCU writes the filed values back into it — an identity operation here,
+        // since the doc numbering comes from this very segment.
         var originalReceiptIdentification = request.ReceiptResponse.ftReceiptIdentification;
         request.ReceiptResponse.ftReceiptIdentification += $"{series}-{aa}";
 
