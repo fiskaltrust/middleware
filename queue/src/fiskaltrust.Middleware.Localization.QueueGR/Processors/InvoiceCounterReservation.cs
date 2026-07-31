@@ -67,9 +67,23 @@ internal static class InvoiceCounterReservation
         // AADE confirms what was actually submitted, so an override path (handwritten
         // or mydataoverride) produces a segment different from our reservation and the
         // commit check below correctly skips advancing the counter.
+        var originalReceiptIdentification = request.ReceiptResponse.ftReceiptIdentification;
         request.ReceiptResponse.ftReceiptIdentification += $"{reservedSeries}-{reservedAa}";
 
-        var response = await sscdCall();
+        ProcessResponse response;
+        try
+        {
+            response = await sscdCall();
+        }
+        catch
+        {
+            // The SCU call failed outright, so the reservation was never confirmed.
+            // Failed receipts must persist exactly the identification they had before
+            // this feature existed ("ft{N:X}#") — restore it before the exception
+            // reaches SignProcessor, which persists the response as failed.
+            request.ReceiptResponse.ftReceiptIdentification = originalReceiptIdentification;
+            throw;
+        }
 
         if (WasReservedCounterUsed(response.ReceiptResponse, reservedSeries, reservedAa))
         {
@@ -78,6 +92,16 @@ internal static class InvoiceCounterReservation
             queueGR.LastInvoiceQueueItemId = response.ReceiptResponse.ftQueueItemID;
             queueGR.LastInvoiceMark = TryExtractMark(response.ReceiptResponse);
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
+        }
+        else if (!response.ReceiptResponse.ftState.IsState(State.Success))
+        {
+            // MyDataSCU rewrites the country segment only on success, so an
+            // unsuccessful response still carries our unconfirmed reservation. Failed
+            // receipts must look exactly like they did before this feature — restore
+            // the pre-reservation identification. (A successful response that didn't
+            // use the reservation keeps its segment: it holds the handwritten or
+            // override values that actually went to AADE, same as the old behaviour.)
+            response.ReceiptResponse.ftReceiptIdentification = originalReceiptIdentification;
         }
 
         return new ProcessCommandResponse(response.ReceiptResponse, []);

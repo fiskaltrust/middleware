@@ -72,8 +72,46 @@ public class InvoiceCounterReservationTests
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
-        await processor.PointOfSaleReceipt0x0001Async(request);
+        var result = await processor.PointOfSaleReceipt0x0001Async(request);
 
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+        // Failed receipts must persist exactly the identification they had before the
+        // reservation existed — the unconfirmed "{series}-{aa}" segment is removed.
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+    }
+
+    [Fact]
+    public async Task SscdException_RestoresIdentification_AndDoesNotAdvanceCounter()
+    {
+        // If the SCU call throws (e.g. myDATA unreachable), SignProcessor persists the
+        // response as failed. That failed receipt must carry the exact pre-reservation
+        // identification — same behaviour as before this feature — and the counter must
+        // not advance.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ThrowsAsync(new HttpRequestException("myDATA unreachable"));
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
+
+        var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
+
+        var act = () => processor.PointOfSaleReceipt0x0001Async(request);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        request.ReceiptResponse.ftReceiptIdentification.Should().Be("ft1#");
         configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
     }
 
