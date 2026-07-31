@@ -362,12 +362,19 @@ public class MyDataSCU : IGRSSCD
 
     private static void SetCountrySuffix(ReceiptResponse response, string series, string aa)
     {
-        // Rewrite the country segment after "#" so it always reflects the (series, aa)
-        // that actually went to AADE. The QueueGR processor pre-appends its reserved
-        // values before invoking the SCU; if a handwritten or mydataoverride path
-        // replaced them on the doc, the suffix changes here so the country processor
-        // can detect the mismatch (via EndsWith on its reservation) and skip the
-        // counter commit.
+        // Enforces the invariant everything downstream relies on: a successful response
+        // carries "{series}-{aa}" after the "#", and the values are exactly what AADE
+        // filed. The queue pre-appends the same values for the auto and handwritten
+        // paths, so there this rewrite is an identity operation. It is load-bearing for:
+        //  - mydataoverride: an override can replace series/aa on the doc after the
+        //    queue reserved its own values. The rewrite is how the queue detects that
+        //    its reservation was not used (segment comparison) and skips the counter
+        //    commit — without it the reserved aa would be committed although it never
+        //    went to AADE.
+        //  - Order0x3004/Pay0x3005: they invoke the SCU without a pre-appended segment,
+        //    so the rewrite degrades to the historical append.
+        //  - History truthfulness: the queue-start counter migration seeds from these
+        //    segments, which is only sound because they always match what AADE filed.
         var identification = response.ftReceiptIdentification ?? string.Empty;
         var hashIdx = identification.IndexOf('#');
         var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";

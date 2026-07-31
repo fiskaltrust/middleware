@@ -332,6 +332,52 @@ public class AADEFactoryTests
     }
 
     [Fact]
+    public void MapToInvoicesDoc_WithDashedSeriesInCountrySuffix_SplitsAtLastDash()
+    {
+        // CashBoxIdentifications regularly contain dashes (GUID-like values), so the
+        // series in the country segment may itself be dashed. The aa must be split off
+        // at the LAST dash of the segment.
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Amount = 100,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24,
+                },
+            ],
+            cbPayItems = [new PayItem { Amount = 100 }],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = 100,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftCashBoxIdentification = "ignored-when-suffix-present",
+            ftReceiptIdentification = "ft7#e9c02867-fbd6-4c50-88e6-6b6892dcbf2b-105",
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "Test" },
+        }, "https://test.receipts.example.com");
+
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.series.Should().Be("e9c02867-fbd6-4c50-88e6-6b6892dcbf2b");
+        doc!.invoice[0].invoiceHeader.aa.Should().Be("105");
+    }
+
+    [Fact]
     public void MapToInvoicesDoc_Handwritten_OverridesSuffixBasedSeriesAndAa()
     {
         // Handwritten payload must win over the auto-reserved (series, aa) that the
