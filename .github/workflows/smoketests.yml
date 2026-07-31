@@ -310,7 +310,9 @@ jobs:
           #....Send requests....
           $failureReasons = @()
           if ($process.HasExited) {
-            $failureReasons += "Launcher process exited early with code $($process.ExitCode). Check test-output.log."
+            $detail = "Launcher process exited early with code $($process.ExitCode). Check test-output.log."
+            Write-Host "::warning::$detail"
+            $failureReasons += $detail
           }
           elseif ($tcpReady) {
            $queueUrl = "http://localhost:$port/${{ env.queueId }}"
@@ -396,6 +398,7 @@ jobs:
               Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
               sudo pkill -9 -f "${{ env.launcher }}"
             }
+            $global:LASTEXITCODE = 0
 
             if ($failureReasons.Count -gt 0) {
               Write-Host "Smoke test failures:"
