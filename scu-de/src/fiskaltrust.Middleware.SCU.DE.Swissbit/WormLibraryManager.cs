@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private const string LINUX_LIB = "libWormAPI.so";
         private const string WINDOWS_LIB = "WormAPI.dll";
         
-        private const string PATH_RUNTIMES = "runtimes";
+        private const string PATH_RUNTIMES = "runtimesv2";
         private const string PATH_NATIVE = "native";
 
         private static readonly string _win32LibraryFile = Path.Combine(PATH_RUNTIMES, "win-x86", PATH_NATIVE, WINDOWS_LIB);
@@ -27,7 +27,23 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 : SelectPathBasedOnArchitecture();
 
             var currentDirectory = Path.GetDirectoryName(Assembly.GetAssembly(typeof(SwissbitSCU)).Location);
-            File.Copy(Path.Combine(currentDirectory, libraryFile), Path.Combine(currentDirectory, Path.GetFileName(libraryFile)), true);
+            var source = Path.Combine(currentDirectory, libraryFile);
+            var destination = Path.Combine(currentDirectory, Path.GetFileName(libraryFile));
+
+            try
+            {
+                File.Copy(source, destination, true);
+            }
+            catch (IOException)
+            {
+                // The native library is already loaded by another process or a previous
+                // instance. If the file already exists we can safely skip the copy,
+                // since it will be loaded from the existing location.
+                if (!File.Exists(destination))
+                {
+                    throw;
+                }
+            }
         }
 
         private static string SelectPathBasedOnArchitecture()

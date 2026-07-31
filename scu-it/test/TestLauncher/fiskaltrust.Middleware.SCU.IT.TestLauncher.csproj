@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net461;net6</TargetFrameworks>
+        <TargetFrameworks>net461;net6.0</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <Deterministic>true</Deterministic>
         <LangVersion>8.0</LangVersion>
@@ -24,6 +24,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.csproj" />
+      <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.csproj" />
     </ItemGroup>
 
 </Project>

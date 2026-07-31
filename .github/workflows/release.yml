@@ -1,9 +1,14 @@
 name: "Release"
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - queue/**/v*
+      - scu-at/**/v*
+      - scu-de/**/v*
+      - scu-es/**/v*
+      - scu-it/**/v*
 
-run-name: Release ${{ github.event.release.tag_name }}
+run-name: Release ${{ github.ref_name }}
 
 permissions:
   checks: write
@@ -17,7 +22,7 @@ jobs:
     steps:
       - name: Validate tag format
         run: |
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${{ github.ref_name }}"
           if [[ "$TAG" =~ ^(queue|scu-at|scu-de|scu-es|scu-it)/.+/v.* ]]; then
             echo "✅ Tag '$TAG' matches expected pattern"
           else
@@ -27,31 +32,31 @@ jobs:
 
   test-queue:
     needs: [check-tag]
-    if: startsWith(github.event.release.tag_name, 'queue/')
+    if: startsWith(github.ref, 'refs/tags/queue/')
     uses: ./.github/workflows/queue-build.yml
     secrets: inherit
 
   test-scu-at:
     needs: [check-tag]
-    if: startsWith(github.event.release.tag_name, 'scu-at/')
+    if: startsWith(github.ref, 'refs/tags/scu-at/')
     uses: ./.github/workflows/scu-at-build.yml
     secrets: inherit
 
   test-scu-de:
     needs: [check-tag]
-    if: startsWith(github.event.release.tag_name, 'scu-de/')
+    if: startsWith(github.ref, 'refs/tags/scu-de/')
     uses: ./.github/workflows/scu-de-build.yml
     secrets: inherit
 
   test-scu-es:
     needs: [check-tag]
-    if: startsWith(github.event.release.tag_name, 'scu-es/')
+    if: startsWith(github.ref, 'refs/tags/scu-es/')
     uses: ./.github/workflows/scu-es-build.yml
     secrets: inherit
 
   test-scu-it:
     needs: [check-tag]
-    if: startsWith(github.event.release.tag_name, 'scu-it/')
+    if: startsWith(github.ref, 'refs/tags/scu-it/')
     uses: ./.github/workflows/scu-it-build.yml
     secrets: inherit
 
@@ -68,7 +73,7 @@ jobs:
       - id: meta
         shell: pwsh
         run: |
-          if(!("${{ github.event.release.tag_name }}" -match "([a-z-]+)/([^/]+)/v.*")) {
+          if(!("${{ github.ref }}" -match "refs/tags/([a-z-]+)/([^/]+)/v.*")) {
             throw "Invalid tag format"
           }
           $directory = $matches[1]
@@ -88,7 +93,7 @@ jobs:
           Write-Output "project=$project" >> $env:GITHUB_OUTPUT
 
   test-queue-acceptance:
-    if: startsWith(github.event.release.tag_name, 'queue/')
+    if: startsWith(github.ref, 'refs/tags/queue/')
     concurrency:
       group: queue-acceptance-tests
     needs: [meta, test-queue]

@@ -5,6 +5,14 @@ using System.Text.Json;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
 {
+    public enum VeriFactuTaxRegime
+    {
+        MainlandVat,
+        IPSI,
+        IGIC,
+        Other
+    }
+
     public class VeriFactuSCUConfiguration
     {
         public string BaseUrl { get; set; } = "https://prewww10.aeat.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP";
@@ -12,6 +20,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
         public X509Certificate2 Certificate { get; set; } = null!;
         public string Nif { get; set; } = null!;
         public string NombreRazonEmisor { get; set; } = null!;
+        public VeriFactuTaxRegime TaxRegime { get; set; } = VeriFactuTaxRegime.MainlandVat;
 
         public static VeriFactuSCUConfiguration FromConfiguration(Dictionary<string, object> configuration)
         {
@@ -43,6 +52,12 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
             if (configuration.ContainsKey("NombreRazonEmisor") && configuration["NombreRazonEmisor"] != null)
             {
                 config.NombreRazonEmisor = configuration["NombreRazonEmisor"].ToString()!;
+            }
+
+            if (configuration.ContainsKey("TaxRegime") && configuration["TaxRegime"] != null &&
+                Enum.TryParse<VeriFactuTaxRegime>(configuration["TaxRegime"].ToString(), ignoreCase: true, out var parsedRegime))
+            {
+                config.TaxRegime = parsedRegime;
             }
 
             return config;

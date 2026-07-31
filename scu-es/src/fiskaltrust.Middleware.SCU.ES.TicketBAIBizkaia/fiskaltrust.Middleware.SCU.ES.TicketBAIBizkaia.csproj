@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware implementation of the Ticket BAI SCU for Spain (Basque).</Description>
-        <TargetFramework>net8</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
     </PropertyGroup>

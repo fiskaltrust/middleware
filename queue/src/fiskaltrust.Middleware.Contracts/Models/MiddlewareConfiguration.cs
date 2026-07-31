@@ -10,10 +10,8 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public int ReceiptRequestMode { get; set; }
         public int TarFileChunkSize { get; set; } = 1024 * 1024; // 1 MB
         public int JournalChunkSize { get; set; } = 1024 * 1024; // 1 MB
-        public bool AllowUnsafeScuSwitch { get; set; }
         public bool IsSandbox { get; set; }
         public string ServiceFolder { get; set; }
-        public Action<string> OnMessage { get; set; }
         public string ProcessingVersion { get; set; }
         public string AssemblyName { get; set; }
         public Version AssemblyVersion { get; set; }

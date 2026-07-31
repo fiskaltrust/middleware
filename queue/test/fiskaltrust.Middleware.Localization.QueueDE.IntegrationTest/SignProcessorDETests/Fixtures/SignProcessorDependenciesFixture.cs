@@ -95,7 +95,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     ftSignaturCreationUnitDEId = _signaturCreationUnitDETargetId,
                     Mode = targetIsScuSwitch ? 0x20000 : 0x00000,
                     ModeConfigurationJson = $"{{\"SourceScuId\": \"{_signaturCreationUnitDEId}\"}}"
-
                 }).ConfigureAwait(false);
 
 

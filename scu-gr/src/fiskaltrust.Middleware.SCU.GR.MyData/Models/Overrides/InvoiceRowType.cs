@@ -23,6 +23,14 @@ public class InvoiceRowTypeOverride
     [JsonPropertyName("lineComments")]
     public string? LineComments { get; set; }
 
+    // Line-level movement purpose (myDATA v2.0.1). Per-row counterpart of the header
+    // movePurpose / otherMovePurposeTitle.
+    [JsonPropertyName("movePurposeLine")]
+    public int? MovePurposeLine { get; set; }
+
+    [JsonPropertyName("otherMovePurposeLineTitle")]
+    public string? OtherMovePurposeLineTitle { get; set; }
+
     [JsonPropertyName("incomeClassification")]
     public List<IncomeClassificationOverride>? IncomeClassification { get; set; }
 

@@ -83,6 +83,24 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
         [XmlIgnore()]
         public bool VatSplit { get => VatSplitBooleano.ToBoolean(); set => VatSplitBooleano = value.ToBooleano(); }
 
+        [XmlElement("deferreflottery")]
+        public Booleano DeferreLotteryBooleano { get; set; }
+
+        [XmlIgnore()]
+        public bool DeferreLottery { get => DeferreLotteryBooleano.ToBoolean(); set => DeferreLotteryBooleano = value.ToBooleano(); }
+
+        [XmlElement("instantlottery")]
+        public Booleano InstantLotteryBooleano { get; set; }
+
+        [XmlIgnore()]
+        public bool InstantLottery { get => InstantLotteryBooleano.ToBoolean(); set => InstantLotteryBooleano = value.ToBooleano(); }
+
+        [XmlElement("lottkeyfrom")]
+        public string LottKeyFrom { get; set; }
+
+        [XmlElement("lottkeyto")]
+        public string LottKeyTo { get; set; }
+
         [XmlElement("privatekey")]
         public Booleano PrivateKeyBooleano { get; set; }
 

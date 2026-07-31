@@ -8,8 +8,12 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using Version = fiskaltrust.Middleware.SCU.ES.VeriFactu.Models.Version;
+// Use the VeriFactu-owned, NN-byte-correct nature enum rather than the (wrong) interface enum of the
+// same name imported via fiskaltrust.ifPOS.v2.es.Cases.
+using ChargeItemCaseNatureOfVatES = fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.ChargeItemCaseNatureOfVatES;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
@@ -124,36 +128,7 @@ public class VeriFactuMapping
             },
             DescripcionOperacion = "test", // TODO: add descrpiton?,
                                            // FacturaSinIdentifDestinatarioArt61d = Booleano.S, // TODO: do we need this art. 61d?
-            Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
-            {
-                // 01 Value added tax (VAT)
-                // 02 Tax on Production, Services and Imports (IPSI) for Ceuta and Melilla
-                // 03 Canary Islands Indirect General Tax (IGIC)
-                // 05 Other
-                Impuesto = Impuesto.Item01,
-                // we'll have to check these in detail
-                ClaveRegimen = IdOperacionesTrascendenciaTributaria.Item01,
-                BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
-                Item = chargeItem.ftChargeItemCase.NatureOfVat() switch
-                {
-                    ChargeItemCaseNatureOfVatES.UsualVatApplies => CalificacionOperacion.S1, // If CalificacionOperacion is S1 and BaseImponibleACoste is not filled in, TipoImpositivo and CuotaRepercutida are mandatory.
-
-                    ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14 => CalificacionOperacion.N1, // TODO: Document
-                    ChargeItemCaseNatureOfVatES.NotSubjectLocationRules => CalificacionOperacion.N2, // TODO: Document
-
-                    ChargeItemCaseNatureOfVatES.ExteptArticle20 => OperacionExenta.E1, // TODO: Document
-                    ChargeItemCaseNatureOfVatES.ExteptArticle21 => OperacionExenta.E2, // TODO: Document
-                    ChargeItemCaseNatureOfVatES.ExteptArticle22 => OperacionExenta.E3, // TODO: Document
-                    ChargeItemCaseNatureOfVatES.ExteptArticle23And24 => OperacionExenta.E4, // TODO: Document
-                    ChargeItemCaseNatureOfVatES.ExteptArticle25 => OperacionExenta.E5, // TODO: Document
-                    ChargeItemCaseNatureOfVatES.ExteptOthers => OperacionExenta.E6, // TODO: Document
-
-                    ChargeItemCaseNatureOfVatES.ReverseCharge => CalificacionOperacion.S2,
-                    _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
-                },
-                TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
-                CuotaRepercutida = chargeItem.GetVATAmount().ToVeriFactuNumber()
-            }).ToArray(),
+            Desglose = receiptRequest.cbChargeItems.Select(chargeItem => BuildDetalle(chargeItem)).ToArray(),
             CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
             Encadenamiento = new RegistroFacturacionAltaEncadenamiento
@@ -186,6 +161,86 @@ public class VeriFactuMapping
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
         return (!_signXml || _veriFactuSCUConfiguration.Certificate is null) ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
+    }
+
+    private Detalle BuildDetalle(ChargeItem chargeItem)
+    {
+        var nature = chargeItem.ftChargeItemCase.NatureOfVatES();
+        var item = MapNatureOfVatToOperacion(nature, chargeItem.ftChargeItemCase);
+        var impuesto = ResolveImpuesto(_veriFactuSCUConfiguration.TaxRegime);
+        var claveRegimen = ResolveClaveRegimen(nature, _veriFactuSCUConfiguration.TaxRegime);
+
+        ValidateOperacionCombination(impuesto, item);
+
+        // AEAT rejects (Incorrecto 1237/1238) TipoImpositivo and CuotaRepercutida on exempt
+        // (OperacionExenta E1–E6) or not-subject (CalificacionOperacion N1/N2) operations — only
+        // subject operations (S1/S2) may carry them. Leaving them null omits the elements.
+        var chargesVat = item is CalificacionOperacion.S1 or CalificacionOperacion.S2;
+
+        return new Detalle
+        {
+            // L1 Impuesto: 01 VAT mainland, 02 IPSI (Ceuta/Melilla), 03 IGIC (Canary Islands), 05 Other.
+            Impuesto = impuesto,
+            // L8A ClaveRegimen (shared XML element for L8A / L8B; AEAT validates allowed values per L1).
+            ClaveRegimen = claveRegimen,
+            BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
+            Item = item,
+            TipoImpositivo = chargesVat ? chargeItem.VATRate.ToVeriFactuNumber() : null,
+            CuotaRepercutida = chargesVat ? chargeItem.GetVATAmount().ToVeriFactuNumber() : null
+        };
+    }
+
+    private static object MapNatureOfVatToOperacion(ChargeItemCaseNatureOfVatES nature, ChargeItemCase chargeItemCase) => nature switch
+    {
+        // If CalificacionOperacion is S1 and BaseImponibleACoste is not filled in, TipoImpositivo and CuotaRepercutida are mandatory.
+        ChargeItemCaseNatureOfVatES.UsualVatApplies => CalificacionOperacion.S1,                  // NN [00]
+
+        ChargeItemCaseNatureOfVatES.NotSubjectLocationRules => CalificacionOperacion.N2,          // NN [20]
+        ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14 => CalificacionOperacion.N1,          // NN [21]
+
+        ChargeItemCaseNatureOfVatES.Exports => OperacionExenta.E2,                                // NN [10]
+        ChargeItemCaseNatureOfVatES.IntraCommunityDelivery => OperacionExenta.E5,                 // NN [11]
+        ChargeItemCaseNatureOfVatES.TransactionsTreatedAsExports => OperacionExenta.E3,           // NN [13]
+        ChargeItemCaseNatureOfVatES.CustomsAndTaxExemptions => OperacionExenta.E4,                // NN [14]
+        ChargeItemCaseNatureOfVatES.ExemptedDomestic => OperacionExenta.E1,                       // NN [30]
+        ChargeItemCaseNatureOfVatES.OtherExemptions => OperacionExenta.E6,                        // NN [31]
+
+        ChargeItemCaseNatureOfVatES.ReverseCharge => CalificacionOperacion.S2,                    // NN [50]
+
+        // VeriFactu has no dedicated L9/L10 key for "foreign tax applies" (NN[60]) or "excluded" (NN[80]);
+        // they are routed via L1 (Impuesto) and categorised under non-subject "others" (N1).
+        ChargeItemCaseNatureOfVatES.ForeignTaxApplies => CalificacionOperacion.N1,                // NN [60]
+        ChargeItemCaseNatureOfVatES.ExcludedThirdParty => CalificacionOperacion.N1,               // NN [80]
+
+        _ => throw new Exception($"Invalid charge item case {chargeItemCase}")
+    };
+
+    private static Impuesto ResolveImpuesto(VeriFactuTaxRegime regime) => regime switch
+    {
+        VeriFactuTaxRegime.MainlandVat => Impuesto.Item01,
+        VeriFactuTaxRegime.IPSI => Impuesto.Item02,
+        VeriFactuTaxRegime.IGIC => Impuesto.Item03,
+        VeriFactuTaxRegime.Other => Impuesto.Item05,
+        _ => throw new Exception($"Unsupported tax regime {regime}")
+    };
+
+    private static IdOperacionesTrascendenciaTributaria ResolveClaveRegimen(ChargeItemCaseNatureOfVatES nature, VeriFactuTaxRegime regime) => nature switch
+    {
+        // Exports / treated-as-exports / customs exemptions use ClaveRegimen 02 ("Export operations").
+        ChargeItemCaseNatureOfVatES.Exports => IdOperacionesTrascendenciaTributaria.Item02,                      // NN [10]
+        ChargeItemCaseNatureOfVatES.TransactionsTreatedAsExports => IdOperacionesTrascendenciaTributaria.Item02, // NN [13]
+        ChargeItemCaseNatureOfVatES.CustomsAndTaxExemptions => IdOperacionesTrascendenciaTributaria.Item02,      // NN [14]
+        _ => IdOperacionesTrascendenciaTributaria.Item01
+    };
+
+    private static void ValidateOperacionCombination(Impuesto impuesto, object item)
+    {
+        // AEAT rejects L8B (IGIC-specific keys) when L1 != 03. The current Detalle uses a single
+        // ClaveRegimen field for both L8A and L8B; this guard is reserved for future IGIC-specific codes.
+        if (item is not CalificacionOperacion && item is not OperacionExenta)
+        {
+            throw new Exception($"Detalle.Item must be CalificacionOperacion or OperacionExenta, got {item?.GetType()}.");
+        }
     }
 
     private object GetEncadenamientoFacturaAnteriorAlta(ReceiptRequest? lastReceiptRequest, ReceiptResponse? lastReceiptResponse)

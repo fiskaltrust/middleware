@@ -27,6 +27,7 @@ public static class CustomRTServerMapping
             refCashUuid = "ND";
         }
         (var totalAmount, var vatAmount, var items) = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1);
+        (var fiscalcode, var vatcode) = GetCustomerDataForReceiptRequest(receiptRequest);
         var fiscalDocument = new FDocument
         {
             document = new DocumentData
@@ -37,8 +38,8 @@ public static class CustomRTServerMapping
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
                 amount = ConvertToFullAmountInt(totalAmount),
-                fiscalcode = "",
-                vatcode = "",
+                fiscalcode = fiscalcode,
+                vatcode = vatcode,
                 fiscaloperator = "",
                 businessname = null,
                 prevSignature = queueIdentification.LastSignature,
@@ -77,6 +78,7 @@ public static class CustomRTServerMapping
             refCashUuid = "ND";
         }
         (var totalAmount, var vatAmount, var items) = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1);
+        (var fiscalcode, var vatcode) = GetCustomerDataForReceiptRequest(receiptRequest);
 
         var fiscalDocument = new FDocument
         {
@@ -88,8 +90,8 @@ public static class CustomRTServerMapping
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
                 amount = ConvertToFullAmountInt(totalAmount),
-                fiscalcode = "",
-                vatcode = "",
+                fiscalcode = fiscalcode,
+                vatcode = vatcode,
                 fiscaloperator = "",
                 businessname = null,
                 prevSignature = queueIdentification.LastSignature,
@@ -120,26 +122,29 @@ public static class CustomRTServerMapping
     public static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int docType)
     {
         (var totalAmount, var vatAmount, var items) = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1);
+        var lotteryCode = receiptRequest.GetLotteryData()?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria;
+        DocumentData document = string.IsNullOrEmpty(lotteryCode)
+            ? new DocumentData()
+            : new DocumentDataLottery { lottery_client_code = lotteryCode! };
+        document.cashuuid = queueIdentification.CashUuId;
+        document.doctype = docType;
+        document.dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss");
+        document.docnumber = queueIdentification.LastDocNumber + 1;
+        document.docznumber = queueIdentification.LastZNumber + 1;
+        document.amount = ConvertToFullAmountInt(totalAmount);
+        // The lottery code and the customer identification are not mutually exclusive here: both are sent
+        // on the same document, so this also applies to the DocumentDataLottery branch above.
+        (document.fiscalcode, document.vatcode) = GetCustomerDataForReceiptRequest(receiptRequest);
+        document.fiscaloperator = "";
+        document.businessname = null;
+        document.prevSignature = queueIdentification.LastSignature;
+        document.grandTotal = queueIdentification.CurrentGrandTotal;
+        document.referenceClosurenumber = -1;
+        document.referenceDocnumber = -1;
+        document.referenceDtime = null;
         var fiscalDocument = new FDocument
         {
-            document = new DocumentData
-            {
-                cashuuid = queueIdentification.CashUuId,
-                doctype = docType,
-                dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
-                docnumber = queueIdentification.LastDocNumber + 1,
-                docznumber = queueIdentification.LastZNumber + 1,
-                amount = ConvertToFullAmountInt(totalAmount),
-                fiscalcode = "",
-                vatcode = "",
-                fiscaloperator = "",
-                businessname = null,
-                prevSignature = queueIdentification.LastSignature,
-                grandTotal = queueIdentification.CurrentGrandTotal,
-                referenceClosurenumber = -1,
-                referenceDocnumber = -1,
-                referenceDtime = null,
-            },
+            document = document,
             items = items,
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
         };
@@ -166,6 +171,26 @@ public static class CustomRTServerMapping
         qrCode.signature = GlobalTools.CreateHMAC(Convert.FromBase64String(key), qrCode.shaMetadata);
         return qrCode;
     }
+
+    /// <summary>
+    /// Reads the customer identification from cbCustomer. By convention across the IT SCUs
+    /// (cf. CustomRTPrinterSCU) Customer.CustomerId carries the codice fiscale and
+    /// Customer.CustomerVATId the partita IVA, so each one maps to its own document field.
+    /// Both values are forwarded as-is: validating their shape is handled separately.
+    /// </summary>
+    public static (string fiscalcode, string vatcode) GetCustomerDataForReceiptRequest(ReceiptRequest receiptRequest)
+    {
+        var customer = receiptRequest.GetCustomer();
+        return (Normalize(customer?.CustomerId), NormalizeVatId(customer?.CustomerVATId));
+    }
+
+    private static string NormalizeVatId(string? vatId)
+    {
+        var vat = Normalize(vatId);
+        return vat.StartsWith("IT", StringComparison.Ordinal) ? vat.Substring(2) : vat;
+    }
+
+    private static string Normalize(string? value) => value?.Trim().ToUpperInvariant() ?? "";
 
     public static bool InverseAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();
 

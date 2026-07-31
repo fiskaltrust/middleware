@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var firstSearchedEntryTimeStamp = allEntries[5].TimeStamp;
             var lastSearchedEntryTimeStamp = allEntries[1].TimeStamp;
 
-            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>) sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
+            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>)sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(5));
             actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
             var firstSearchedEntryTimeStamp = allEntries[1].TimeStamp;
 
-            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
+            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>)sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1));
             actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
@@ -114,7 +114,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
             var firstSearchedEntryTimeStamp = allEntries[1].TimeStamp;
 
-            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp, 2).ToListAsync();
+            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>)sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp, 2).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(2));
             actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
@@ -128,7 +128,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var sutIterate = await CreateRepository(expectedEntries);
             var sutInsert = await CreateRepository(Array.Empty<ftQueueItem>());
 
-            await foreach (var entry in ((IMiddlewareRepository<ftQueueItem>) sutIterate).GetEntriesOnOrAfterTimeStampAsync(0, 2))
+            await foreach (var entry in ((IMiddlewareRepository<ftQueueItem>)sutIterate).GetEntriesOnOrAfterTimeStampAsync(0, 2))
             {
                 await sutInsert.InsertOrUpdateAsync(StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>());
             }
@@ -211,8 +211,10 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var expectedEntry = entries[4];
             var request = JsonConvert.DeserializeObject<ReceiptRequest>(expectedEntry.request);
             var chargeitems = request.cbChargeItems.ToList();
-            for (var i = 0; i < 600; i++)
+            for (var i = 0; i < 10000; i++)
             {
+                chargeitems[0].Amount = chargeitems[0].Amount + 1;
+                chargeitems[0].Quantity = chargeitems[0].Quantity + 1;
                 chargeitems.Add(chargeitems[0]);
             }
             request.cbChargeItems = chargeitems.ToArray();

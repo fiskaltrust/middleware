@@ -32,7 +32,7 @@ public class MyDataSCU : IGRSSCD
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
-            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+            throw new ArgumentException("Receipt base address is required for myDATA v2.0.1", nameof(receiptBaseAddress));
         }
 
         _receiptBaseAddress = receiptBaseAddress;

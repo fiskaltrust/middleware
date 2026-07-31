@@ -25,7 +25,7 @@ public class CustomRTServerClient
             throw new NullReferenceException("ServerUrl is not set.");
         }
 
-        if (customRTServerConfiguration.DisabelSSLValidation)
+        if (customRTServerConfiguration.DisableSSLValidation)
         {
             var handler = new HttpClientHandler
             {
@@ -191,15 +191,7 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
         return await PerformCallToRTServerAsync<CancelCashRegisterResponse>("/updateCashRegister.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
-    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentLotteryAsync(string cashuuid, FDocumentLottery fiscalData, QrCodeData qrCodeData)
-    {
-        var request = new
-        {
-            fiscalData,
-            qrCodeData
-        };
-        return await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocumentLottery.php", cashuuid, JsonConvert.SerializeObject(request));
-    }
+    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentLotteryAsync(string cashuuid, CommercialDocument commercialDocument) => await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocumentLottery.php", cashuuid, JsonConvert.SerializeObject(commercialDocument));
 
     public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayLotteryAsync(string cashuuid, List<CommercialDocument> commercialDocuments)
     {
@@ -230,7 +222,7 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
             var data = JsonConvert.DeserializeObject<TResponse>(resultContent);
             if (data.responseCode != 0)
             {
-                #pragma warning disable
+#pragma warning disable
                 try
                 {
                     ThrowExceptionForErrorCode(endpoint, data);
@@ -238,7 +230,7 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Calling endpoint '{endpoint}' failed with error code {data.responseCode}. {data.responseDesc}");
-                    if(!_customRTServerConfiguration.IgnoreRTServerErrors)
+                    if (!_customRTServerConfiguration.IgnoreRTServerErrors)
                     {
                         throw;
                     }

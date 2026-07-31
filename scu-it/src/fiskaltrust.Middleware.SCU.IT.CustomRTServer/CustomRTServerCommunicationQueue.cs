@@ -55,12 +55,22 @@ public class CustomRTServerCommunicationQueue : IDisposable
         _ = Task.Run(ProcessReceiptsInBackground);
     }
 
-    public async Task EnqueueDocument(string cashuuid, CommercialDocument commercialDocument, long zRepNumber, long docNumber)
+    private const string DocumentSuffix = "_commercialdocument.json";
+    private const string LotteryDocumentSuffix = "_commercialdocumentlottery.json";
+    private const string DocumentSearchPattern = "*_commercialdocument*.json";
+
+    private static bool IsLotteryFile(string path) => path.EndsWith(LotteryDocumentSuffix, StringComparison.OrdinalIgnoreCase);
+
+    private Task SendDocumentAsync(string cashuuid, CommercialDocument commercialDocument, bool isLottery)
+        => isLottery
+            ? _client.InsertFiscalDocumentLotteryAsync(cashuuid, commercialDocument)
+            : _client.InsertFiscalDocumentAsync(cashuuid, commercialDocument);
+
+    public async Task EnqueueDocument(string cashuuid, CommercialDocument commercialDocument, long zRepNumber, long docNumber, bool isLottery = false)
     {
         if (_customRTServerConfiguration.SendReceiptsSync)
         {
-            await _client.InsertFiscalDocumentAsync(cashuuid, commercialDocument);
-
+            await SendDocumentAsync(cashuuid, commercialDocument, isLottery);
         }
         else
         {
@@ -68,7 +78,8 @@ public class CustomRTServerCommunicationQueue : IDisposable
             {
                 Directory.CreateDirectory(Path.Combine(_documentsPath, cashuuid));
             }
-            File.WriteAllText(Path.Combine(_documentsPath, cashuuid, $"{DateTime.UtcNow.Ticks}__{zRepNumber.ToString().PadLeft(4, '0')}-{docNumber.ToString().PadLeft(4, '0')}_commercialdocument.json"), JsonConvert.SerializeObject(commercialDocument));
+            var suffix = isLottery ? LotteryDocumentSuffix : DocumentSuffix;
+            File.WriteAllText(Path.Combine(_documentsPath, cashuuid, $"{DateTime.UtcNow.Ticks}__{zRepNumber.ToString().PadLeft(4, '0')}-{docNumber.ToString().PadLeft(4, '0')}{suffix}"), JsonConvert.SerializeObject(commercialDocument));
         }
     }
 
@@ -89,7 +100,7 @@ public class CustomRTServerCommunicationQueue : IDisposable
                 foreach (var directory in Directory.GetDirectories(_documentsPath))
                 {
                     var cashuuid = Path.GetFileName(directory);
-                    foreach (var document in Directory.GetFiles(directory, "*_commercialdocument.json").OrderBy(x => x))
+                    foreach (var document in Directory.GetFiles(directory, DocumentSearchPattern).OrderBy(x => x))
                     {
                         if (_requestCancellation)
                         {
@@ -97,8 +108,7 @@ public class CustomRTServerCommunicationQueue : IDisposable
                             return;
                         }
 
-                        var fileName = Path.GetFileNameWithoutExtension(document);
-                        await _client.InsertFiscalDocumentAsync(cashuuid, JsonConvert.DeserializeObject<CommercialDocument>(File.ReadAllText(document)));
+                        await SendDocumentAsync(cashuuid, JsonConvert.DeserializeObject<CommercialDocument>(File.ReadAllText(document)), IsLotteryFile(document));
                         File.Delete(document);
                     }
                 }
@@ -120,7 +130,7 @@ public class CustomRTServerCommunicationQueue : IDisposable
         var count = 0;
         foreach (var directory in Directory.GetDirectories(_documentsPath))
         {
-            count += Directory.GetFiles(directory, $"*_commercialdocument.json").Length;
+            count += Directory.GetFiles(directory, DocumentSearchPattern).Length;
         }
         return count;
     }
@@ -131,7 +141,7 @@ public class CustomRTServerCommunicationQueue : IDisposable
         {
             return 0;
         }
-        return Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), $"*_commercialdocument.json")?.Length ?? 0;
+        return Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), DocumentSearchPattern)?.Length ?? 0;
     }
 
     public async Task ProcessAllReceipts(string cashuuid)
@@ -148,9 +158,9 @@ public class CustomRTServerCommunicationQueue : IDisposable
                 return;
             }
 
-            foreach (var document in Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), $"*_commercialdocument.json").OrderBy(x => x))
+            foreach (var document in Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), DocumentSearchPattern).OrderBy(x => x))
             {
-                await _client.InsertFiscalDocumentAsync(cashuuid, JsonConvert.DeserializeObject<CommercialDocument>(File.ReadAllText(document)));
+                await SendDocumentAsync(cashuuid, JsonConvert.DeserializeObject<CommercialDocument>(File.ReadAllText(document)), IsLotteryFile(document));
                 File.Delete(document);
             }
         }

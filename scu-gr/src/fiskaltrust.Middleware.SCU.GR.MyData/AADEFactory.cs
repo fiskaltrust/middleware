@@ -38,7 +38,7 @@ public class AADEFactory
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
-            throw new ArgumentException("Receipt base address is required for myDATA v1.0.12", nameof(receiptBaseAddress));
+            throw new ArgumentException("Receipt base address is required for myDATA v2.0.1", nameof(receiptBaseAddress));
         }
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
@@ -442,31 +442,22 @@ public class AADEFactory
             invoice.counterpart = counterpart;
         }
 
-        if (invoiceOverride.OtherTransportDetails != null)
-        {
-            invoice.otherTransportDetails = [.. invoiceOverride.OtherTransportDetails.Select(t => new TransportDetailType { vehicleNumber = t.VehicleNumber })];
-        }
+        // Invoice-level `otherTransportDetails` was removed from the AADE invoice schema in
+        // v2.0.1 (multi-vehicle transport moved to the separate e-transport API surface:
+        // RegisterTransfer / TransportTypes). The former override has therefore been dropped;
+        // single-vehicle info remains settable via InvoiceHeaderTypeOverride.VehicleNumber.
     }
-
-    private static readonly Dictionary<string, InvoiceType> InvoiceTypeMap = typeof(InvoiceType)
-        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-        .ToDictionary(
-            f => f.GetCustomAttributes(typeof(System.Xml.Serialization.XmlEnumAttribute), false)
-                  .Cast<System.Xml.Serialization.XmlEnumAttribute>()
-                  .FirstOrDefault()?.Name ?? f.Name,
-            f => (InvoiceType) f.GetValue(null)!,
-            StringComparer.OrdinalIgnoreCase);
 
     private static void ApplyInvoiceHeaderOverride(AadeBookInvoiceType invoice, InvoiceHeaderTypeOverride headerOverride)
     {
         // Apply invoice type override
         if (!string.IsNullOrEmpty(headerOverride.InvoiceType))
         {
-            if (!InvoiceTypeMap.TryGetValue(headerOverride.InvoiceType, out var invoiceType))
+            if (!AADEMappings.InvoiceTypeOverrideMap.TryGetValue(headerOverride.InvoiceType, out var invoiceType))
             {
                 throw new ArgumentException(
                     $"Invalid invoiceType override value '{headerOverride.InvoiceType}'. " +
-                    $"Allowed values: {string.Join(", ", InvoiceTypeMap.Keys.OrderBy(k => k))}");
+                    $"Allowed values: {string.Join(", ", AADEMappings.InvoiceTypeOverrideMap.Keys.OrderBy(k => k))}");
             }
             invoice.invoiceHeader.invoiceType = invoiceType;
         }
@@ -629,6 +620,13 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNoteSpecified = true;
         }
 
+        // Apply toWeigh (delivery-note flag added in myDATA v2.0.1)
+        if (headerOverride.ToWeigh.HasValue)
+        {
+            invoice.invoiceHeader.toWeigh = headerOverride.ToWeigh.Value;
+            invoice.invoiceHeader.toWeighSpecified = true;
+        }
+
         // Apply series
         if (!string.IsNullOrEmpty(headerOverride.Series))
         {
@@ -778,6 +776,18 @@ public class AADEFactory
         {
             row.invoiceDetailType = detailOverride.InvoiceDetailType.Value;
             row.invoiceDetailTypeSpecified = true;
+        }
+
+        // Line-level movement purpose (myDATA v2.0.1) — per-row counterpart of the header
+        // movePurpose / otherMovePurposeTitle.
+        if (detailOverride.MovePurposeLine.HasValue)
+        {
+            row.movePurposeLine = detailOverride.MovePurposeLine.Value;
+            row.movePurposeLineSpecified = true;
+        }
+        if (!string.IsNullOrEmpty(detailOverride.OtherMovePurposeLineTitle))
+        {
+            row.otherMovePurposeLineTitle = detailOverride.OtherMovePurposeLineTitle;
         }
 
         if (detailOverride.Dienergia != null)
@@ -1430,12 +1440,7 @@ public class AADEFactory
                         var requestUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolRequest).Query);
                         var responesUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolResponse).Query);
                         payment.transactionId = responesUri["aadeTransactionId"];
-
-                        payment.ProvidersSignature = new ProviderSignatureType
-                        {
-                            Signature = requestUri["aadeProviderSignature"],
-                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
-                        };
+                        AssignProvidersSignature(payment, requestUri["aadeProviderSignature"], receiptRequest);
                     }
                 }
                 else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
@@ -1446,13 +1451,8 @@ public class AADEFactory
                     })!;
                     if (providerCloudRestApi.Provider is PayItemCaseProviderVivaWallet vivaPayment)
                     {
-
                         payment.transactionId = vivaPayment.ProtocolResponse?.aadeTransactionId;
-                        payment.ProvidersSignature = new ProviderSignatureType
-                        {
-                            Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
-                        };
+                        AssignProvidersSignature(payment, vivaPayment.ProtocolRequest?.aadeProviderSignature, receiptRequest);
                     }
                 }
                 else
@@ -1463,19 +1463,16 @@ public class AADEFactory
                         using var jsonDoc = JsonDocument.Parse(payItemCaseDataJson);
                         if (jsonDoc.RootElement.TryGetProperty("aadeSignatureData", out var aadeSignatureDataElement))
                         {
-                            if (aadeSignatureDataElement.TryGetProperty("aadeProviderSignature", out var aadeProviderSignatureElement) && aadeProviderSignatureElement.ValueKind == JsonValueKind.String)
-                            {
-
-                                payment.ProvidersSignature = new ProviderSignatureType
-                                {
-                                    Signature = aadeProviderSignatureElement.GetString(),
-                                    SigningAuthor = VIVA_FISCAL_PROVIDER_ID
-                                };
-                            }
-
+                            // transactionId first: AssignProvidersSignature inspects payment.transactionId
+                            // to decide whether the signature is meaningful for this receipt.
                             if (aadeSignatureDataElement.TryGetProperty("aadeTransactionId", out var aadeTransactionIdElement) && aadeTransactionIdElement.ValueKind == JsonValueKind.String)
                             {
                                 payment.transactionId = aadeTransactionIdElement.GetString();
+                            }
+
+                            if (aadeSignatureDataElement.TryGetProperty("aadeProviderSignature", out var aadeProviderSignatureElement) && aadeProviderSignatureElement.ValueKind == JsonValueKind.String)
+                            {
+                                AssignProvidersSignature(payment, aadeProviderSignatureElement.GetString(), receiptRequest);
                             }
                         }
                     }
@@ -1484,6 +1481,24 @@ public class AADEFactory
             }
             return payment;
         }).ToList();
+    }
+
+    // For ECommerce receipts the ProvidersSignature is only meaningful when paired with a real
+    // aadeTransactionId — skip assigning it otherwise so we don't transmit an attestation that
+    // has no transaction to attest. Call only after payment.transactionId has been set.
+    private static void AssignProvidersSignature(PaymentMethodDetailType payment, string? signature, ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.ECommerce0x0004)
+            && string.IsNullOrEmpty(payment.transactionId))
+        {
+            return;
+        }
+
+        payment.ProvidersSignature = new ProviderSignatureType
+        {
+            Signature = signature,
+            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
+        };
     }
 
     public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)

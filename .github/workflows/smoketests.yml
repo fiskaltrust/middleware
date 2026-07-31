@@ -82,6 +82,8 @@ jobs:
 
       - name: Create cashbox
         shell: pwsh
+        env:
+          FT_SMOKETESTS_PASSWORD: ${{ secrets.FT_SMOKETESTS_PASSWORD }}
         run: |
           $description = "Cashbox-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss')"
           $url = "https://templates-sandbox.fiskaltrust.cloud/api/v1/configuration?outlet_number=1&description=$description"
@@ -92,16 +94,17 @@ jobs:
             "Content-Type" = "application/json"
           }
 
-          $body = Get-Content ".github/scripts/template.json" -Raw | ConvertFrom-Json
+          $templateFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/template-v2.json" } else { ".github/scripts/template.json" }
+          $body = Get-Content $templateFile -Raw | ConvertFrom-Json
           $body.ftQueues[0].Package = "${{ inputs.queuePackage }}"
           $body.ftQueues[0].Version = "${{ inputs.queueVersion }}"
 
-          $pass="${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+          $pass= $env:FT_SMOKETESTS_PASSWORD
           if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.EF') {             
            $connectionString = $isWindows ? "Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TestDb;Integrated Security=True;" : "Server=localhost,1433;Database=fiskaltrustdb;User Id=sa;Password=$pass;TrustServerCertificate=True;"
            $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
           }
-
+          
           if ("${{ inputs.queuePackage }}" -eq 'fiskaltrust.Middleware.Queue.MySQL') {
            $connectionString = "Server=localhost;Port=3306;Uid=root;Pwd=$pass;"
            $body.ftQueues[0].Configuration | Add-Member -NotePropertyName "connectionstring" -NotePropertyValue "$connectionString"
@@ -115,13 +118,17 @@ jobs:
           $cashboxId  = $response.cashBoxId
           $accessToken = $response.accessToken
           $queueId = $response.configuration.ftQueues[0].Id
+          $helperId =  if ("${{ inputs.launcherVersion }}" -eq "v2.0") {$response.configuration.helpers[0].Id}
 
           echo "cashboxId=$cashboxId"   >> $env:GITHUB_ENV
           echo "accessToken=$accessToken" >> $env:GITHUB_ENV
           echo "queueId=$queueId"       >> $env:GITHUB_ENV
+          echo "helperId=$helperId"       >> $env:GITHUB_ENV
 
       - name: Install MySQL and run service
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.MySQL' }}
+        env:
+          FT_SMOKETESTS_PASSWORD: ${{ secrets.FT_SMOKETESTS_PASSWORD }}
         run: |
           choco install mysql --params "'/port:3306'" -y
 
@@ -137,24 +144,26 @@ jobs:
 
           # Set a known root password
           $mysqladmin = 'C:\tools\mysql\current\bin\mysqladmin.exe'
-          & $mysqladmin -u root password "${{ secrets.FT_SMOKETESTS_PASSWORD }}"
+          & $mysqladmin -u root password $env:FT_SMOKETESTS_PASSWORD
 
           # Verify connection
           $mysql = 'C:\tools\mysql\current\bin\mysql.exe'
-          & $mysql -u root -pmy-secret-pw -e "SELECT VERSION();"
+          & $mysql -u root "-p$env:FT_SMOKETESTS_PASSWORD" -e "SELECT VERSION();"
 
           Write-Host "✅ MySQL root password successfully set and verified."
 
       - name: Start LocalDB
         if: ${{ inputs.queuePackage == 'fiskaltrust.Middleware.Queue.EF' }}
         shell: pwsh
+        env:
+          FT_SMOKETESTS_PASSWORD: ${{ secrets.FT_SMOKETESTS_PASSWORD }}
         run: |
           if($isWindows){
               sqllocaldb create MSSQLLocalDB -s
               sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT @@VERSION" 
           }
           elseif($isLinux){
-            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=${{ secrets.FT_SMOKETESTS_PASSWORD }}" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+            docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$env:FT_SMOKETESTS_PASSWORD" -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
           }
 
       - name: Download launcher package for ${{inputs.platform}}--launcherVersion=${{inputs.launcherVersion}}--package=${{inputs.queuePackage}}-${{inputs.queueVersion}}
@@ -200,7 +209,7 @@ jobs:
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
       - name: Install Mono if platform is Ubuntu
-        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest'  && inputs.launcherVersion == 'v1.3') }}
+        if: ${{ inputs.platform == 'ubuntu-latest' || (inputs.platform == 'macos-latest' && inputs.launcherVersion == 'v1.3') }}
         run: |
           if [[ "${{ inputs.platform }}" == "ubuntu-latest" ]]; then
              
@@ -265,15 +274,19 @@ jobs:
           Write-Host "Waiting for launcher to become ready (max 60s)"
           Start-Sleep -Seconds 60
 
+          $templateFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/template-v2.json" } else { ".github/scripts/template.json" }
+          $template = Get-Content $templateFile | ConvertFrom-Json
+          $urlSource = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $template.helpers[0].Url[0] } else { $template.ftQueues[0].Url[0] }
+          $port = [int]([regex]::Match($urlSource, ':(\d+)/').Groups[1].Value)
           $maxAttempts = 30
           for ($i = 1; $i -le $maxAttempts; $i++) {
             if ($isWindows) {
-                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port 1500 -WarningAction SilentlyContinue).TcpTestSucceeded
+                $tcpReady = (Test-NetConnection -ComputerName "localhost" -Port $port -WarningAction SilentlyContinue).TcpTestSucceeded
             } else {
-               bash -c "nc -z localhost 1500"
+               bash -c "nc -z localhost $port"
                $tcpReady = ($LASTEXITCODE -eq 0)
             }
-            
+
             if ($tcpReady) {
                 Write-Host "Launcher is ready!"
                 break
@@ -281,23 +294,27 @@ jobs:
 
             Write-Host "Launcher not ready yet, waiting 5s... (Attempt $i/$maxAttempts)"
             Start-Sleep -Seconds 5
-          } 
+          }
 
           #....Send requests....
           if ($tcpReady) {
-           $baseUrl = "http://localhost:1500/${{ env.queueId }}"
-           $baseFile = ".github/scripts/requests"
+           $queueUrl = "http://localhost:$port/${{ env.queueId }}"
+           $helperUrl = "http://localhost:$port/${{ env.helperId }}"
+           $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
+           $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
+           $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
+           $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
-                @{ Name = "Echo";                      Url = "$baseUrl/json/v1/Echo"; File = "$baseFile/Echo.json" }
-                @{ Name = "ZeroReceipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Zero-receipt.json" }
-                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Initial-operation-receipt.json" }
-                @{ Name = "Pos-receipt";               Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Pos-receipt.json" }
-                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl/json/v1/Sign"; File = "$baseFile/Daily-closing-receipt.json" }
-                @{ Name = "DSFinVK-Export";            Url = "$baseUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00"; File = "" }
-                # @{ Name = "Tar-Export-from-middleware";Url = "$baseUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
-                @{ Name = "Action-Journal-Export";     Url = "$baseUrl/json/v0/Journal?type=1&from=0&to=00"; File = "" }
-                @{ Name = "Receipt-Journal-Export";    Url = "$baseUrl/json/v0/Journal?type=2&from=0&to=00"; File = "" }
-                @{ Name = "QueueItem-Export";          Url = "$baseUrl/json/v0/Journal?type=3&from=0&to=00"; File = "" }
+                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }
+                @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
+                @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
+                @{ Name = "Pos-receipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Pos-receipt.json" }
+                @{ Name = "Daily-closing-receipt";     Url = "$baseUrl$signPath"; File = "$baseFile/Daily-closing-receipt.json" }
+                @{ Name = "DSFinVK-Export";            Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/DSFinVK-Export.json" } else { "" } }
+                # @{ Name = "Tar-Export-from-middleware";Url = "$queueUrl/json/v0/Journal?type=4919338167972134915"; File = "" }
+                @{ Name = "Action-Journal-Export";     Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=1&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Action-Journal-Export.json" } else { "" } }
+                @{ Name = "Receipt-Journal-Export";    Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=2&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/Receipt-Journal-Export.json" } else { "" } }
+                @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
 
             $ErrorActionPreference = "Stop"
@@ -313,15 +330,24 @@ jobs:
                     $req.Url = $req.Url.Replace("/json/v1/Echo", "/echo");
                     $req.Url = $req.Url.Replace("/json/v1/Sign", "/sign");
                     $req.Url = $req.Url.Replace("/json/v0/Journal", "/journal");
-                    if ($req.Name -like "*Export*") {$contentType = "text/plain"}
+                    if ($req.Name -like "*Export*" -and "${{ inputs.launcherVersion }}" -ne "v2.0") {$contentType = "text/plain"}
+                }
+
+                $headers = @{}
+                if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
+                    $headers = @{
+                        "x-cashbox-id"           = "${{ env.cashboxId }}"
+                        "x-cashbox-accesstoken"  = "${{ env.accessToken }}"
+                        "x-operation-id"         = [guid]::NewGuid().ToString()
+                    }
                 }
 
                 try {
 
                   if ($null -ne $body) {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
                   Write-Host "Response: $($response | ConvertTo-Json)"
 

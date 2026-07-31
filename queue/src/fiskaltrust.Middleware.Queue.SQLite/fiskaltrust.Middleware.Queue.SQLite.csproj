@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an SQLite storage provider.</Description>
-        <TargetFrameworks>netstandard2.0;netstandard2.1;net461;net6</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;netstandard2.1;net461;net6.0</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
@@ -37,8 +37,10 @@
 
     <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
-        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.11" GeneratePathProperty="true" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(BuildingForAndroid)' != 'true' AND '$(TargetFramework)' != 'net461'">
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.11" GeneratePathProperty="true" />
     </ItemGroup>
 
     <ItemGroup>

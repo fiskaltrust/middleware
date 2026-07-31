@@ -40,5 +40,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public Task ExportTarFilteredTransactionAsync(Stream stream, UInt64 startTransactionNumber, UInt64 endTransactionNumber, string clientId);
         public Task<byte[]> GetLogMessageCertificateAsync();
         public Task DeleteStoredDataAsync();
+
+        public Task TseFactoryReset(bool throwException = true);
+        public Task<bool> IsV2Async();
     }
 }

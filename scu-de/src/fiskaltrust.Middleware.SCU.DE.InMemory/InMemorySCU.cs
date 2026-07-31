@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
         {
             try
             {
-                 _ = request ?? throw new ArgumentNullException(nameof(request));
+                _ = request ?? throw new ArgumentNullException(nameof(request));
                 var content = CreateTransaction(request.ClientId, request.ProcessType, request.ProcessDataBase64, "ACTIVE");
                 var transaction = _inMemoryTSE.StartTransactionAsync(content);
                 _ = _transactionsStates.TryAdd(transaction.Number, transaction.LatestRevision);
