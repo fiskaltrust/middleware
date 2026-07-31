@@ -30,7 +30,8 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var configurationRepository = storageProvider.CreateConfigurationRepository();
-        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider));
+        var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
+        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, queueItemRepository), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, queueItemRepository), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider));
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorGR.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorGR(storageProvider, GetFromConfig(configuration) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
@@ -6,8 +7,10 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -32,7 +35,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -63,7 +67,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -93,7 +98,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -119,7 +125,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -155,7 +162,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -168,16 +176,15 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task UpgradedQueue_SeedsInvoiceNumeratorFromFtReceiptNumerator()
+    public async Task UpgradedQueue_ContinuesAtLastSubmittedAaPlusOne()
     {
-        // Queues activated before the InvoiceNumerator-based fix had been submitting
-        // receipts with aa derived from ftReceiptNumerator. The migration seeds
-        // InvoiceNumerator from ftReceiptNumerator so the first post-upgrade reserved
-        // aa lands strictly above anything AADE could already have on file, accepting
-        // a one-aa cosmetic gap in exchange for a guaranteed collision-free upgrade
-        // even on queues where a pre-upgrade attempt crashed after AADE-success.
+        // Queues activated before this code shipped carry the last submitted aa in the
+        // "{series}-{aa}" segment the old MyDataSCU appended to ftReceiptIdentification
+        // on every AADE success. The migration must continue exactly at
+        // last-submitted-aa + 1: zero receipts, closings and failed attempts advanced
+        // ftReceiptNumerator in the meantime, and none of that may shift the sequence.
         var queue = TestHelpers.CreateQueue();
-        queue.ftReceiptNumerator = 17;  // queue was submitting receipts pre-upgrade
+        queue.ftReceiptNumerator = 40;  // inflated by NoOps — must be irrelevant
         var queueGR = new ftQueueGR
         {
             ftQueueGRId = queue.ftQueueId,
@@ -186,21 +193,200 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 0, // never written under the new code yet
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 18, mark: 999L);
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+        var queueItemRepository = TestHelpers.CreateQueueItemRepositoryStub(
+            HistoryItem(row: 5, success: true, "ft11#CB-A-17"),   // last real AADE submission
+            HistoryItem(row: 6, success: true, "ft12#"),          // daily closing (NoOp, no segment)
+            HistoryItem(row: 7, success: true, "ft13#"),          // zero receipt (NoOp, no segment)
+            HistoryItem(row: 8, success: false, "ft14#"));        // failed old-code submission
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            queueItemRepository);
 
-        var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001, queueRow: 9));
 
-        await processor.PointOfSaleReceipt0x0001Async(request);
+        capturedAa.Should().Equal(18L);
+        queueGR.InvoiceSeries.Should().Be("CB-A");
+        queueGR.InvoiceNumerator.Should().Be(18);
+        // Two writes: the persisted migration seed (17), then the successful commit (18).
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(queueGR), Times.Exactly(2));
+    }
 
-        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
-            q.InvoiceSeries == "CB-A" &&
-            q.InvoiceNumerator == 18)),
-            Times.Once);
+    [Fact]
+    public async Task UpgradedQueue_IgnoresForeignSeriesSubmissions()
+    {
+        // Handwritten / mydataoverride submissions carry a caller-supplied series in
+        // their segment. They are caller-numbered and must not seed the auto counter.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+        var queueItemRepository = TestHelpers.CreateQueueItemRepositoryStub(
+            HistoryItem(row: 1, success: true, "ft1#CB-A-17"),
+            HistoryItem(row: 2, success: true, "ft2#HANDWRITTEN-9999"));
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            queueItemRepository);
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001, queueRow: 3));
+
+        capturedAa.Should().Equal(18L);
+        queueGR.InvoiceNumerator.Should().Be(18);
+    }
+
+    [Fact]
+    public async Task UpgradedQueue_FailedNewCodeAttempt_DoesNotDriftSeed()
+    {
+        // A failed submission made by THIS code persists the reserved segment on its
+        // response together with an error state. If the migration scan runs again (the
+        // seed write itself failed or crashed), it must not mistake that failed attempt
+        // for a submission — otherwise every retry would drift the seed one up and
+        // reintroduce gaps.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+        var queueItemRepository = TestHelpers.CreateQueueItemRepositoryStub(
+            HistoryItem(row: 1, success: true, "ft1#CB-A-17"),
+            HistoryItem(row: 2, success: false, "ft2#CB-A-18"));  // failed new-code attempt
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            queueItemRepository);
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001, queueRow: 3));
+
+        capturedAa.Should().Equal(18L);  // 18 is reused, not skipped
+        queueGR.InvoiceNumerator.Should().Be(18);
+    }
+
+    [Fact]
+    public async Task UpgradedQueue_NeverSubmitted_StartsAtAa1()
+    {
+        // An upgraded queue that only ever produced NoOps (closings, zero receipts)
+        // has no submission history — it must start numbering at aa = 1 no matter how
+        // far the NoOps advanced ftReceiptNumerator.
+        var queue = TestHelpers.CreateQueue();
+        queue.ftReceiptNumerator = 40;
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+        var queueItemRepository = TestHelpers.CreateQueueItemRepositoryStub(
+            HistoryItem(row: 1, success: true, "ft1#"),
+            HistoryItem(row: 2, success: true, "ft2#"),
+            HistoryItem(row: 3, success: true, "ft3#"));
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            queueItemRepository);
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001, queueRow: 4));
+
+        capturedAa.Should().Equal(1L);
+        queueGR.InvoiceNumerator.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpgradedQueue_MigrationSeedIsPersisted_EvenWhenFirstSubmissionFails()
+    {
+        // The seed is written immediately after the history scan, so the scan runs at
+        // most once per queue and the migration outcome is observable even if the first
+        // post-upgrade submission fails.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = SetupSscdMock(success: false, series: "CB-A", aa: 18, mark: null);
+        var queueItemRepository = TestHelpers.CreateQueueItemRepositoryStub(
+            HistoryItem(row: 1, success: true, "ft1#CB-A-17"));
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            queueItemRepository);
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001, queueRow: 2));
+
+        queueGR.InvoiceSeries.Should().Be("CB-A");
+        queueGR.InvoiceNumerator.Should().Be(17);  // seed only — the failed attempt must not commit 18
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(queueGR), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.ZeroReceipt0x2000)]
+    [InlineData(ReceiptCase.OneReceipt0x2001)]
+    [InlineData(ReceiptCase.ShiftClosing0x2010)]
+    [InlineData(ReceiptCase.DailyClosing0x2011)]
+    [InlineData(ReceiptCase.MonthlyClosing0x2012)]
+    [InlineData(ReceiptCase.YearlyClosing0x2013)]
+    public async Task DailyOperations_AreNoOps_AndNeverTouchTheInvoiceCounter(ReceiptCase receiptCase)
+    {
+        // GR routes zero receipts and all closings to GRFallBackOperations.NoOp: no SCU
+        // call, no counter reservation, no "{series}-{aa}" segment on the identification.
+        // DailyOperationsCommandProcessorGR has no storage dependency at all, so these
+        // receipt cases can neither consume nor advance an aa.
+        var queue = TestHelpers.CreateQueue();
+        var queueItem = TestHelpers.CreateQueueItem();
+        var receiptRequest = new ReceiptRequest
+        {
+            ftCashBoxID = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(receiptCase),
+            cbReceiptMoment = DateTime.UtcNow,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            ftState = (State) 0x4752_2000_0000_0000,
+            ftCashBoxIdentification = "CB-A",
+            ftQueueID = queue.ftQueueId,
+            ftQueueItemID = Guid.NewGuid(),
+            ftQueueRow = 1,
+            ftReceiptIdentification = "ft1#",
+            ftReceiptMoment = DateTime.UtcNow,
+        };
+
+        var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, new DailyOperationsCommandProcessorGR(), null!, null!);
+        var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
+
+        result.receiptResponse.Should().Be(receiptResponse);
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
     }
 
     [Fact]
@@ -223,16 +409,17 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
         await processor.PointOfSaleReceipt0x0001Async(request);
 
-        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
-            q.InvoiceSeries == "CB-A" &&
-            q.InvoiceNumerator == 1)),
-            Times.Once);
+        queueGR.InvoiceSeries.Should().Be("CB-A");
+        queueGR.InvoiceNumerator.Should().Be(1);
+        // Two writes: the persisted migration seed (0), then the successful commit (1).
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(queueGR), Times.Exactly(2));
     }
 
     private static Mock<IConfigurationRepository> SetupConfigRepoMock(ftQueueGR queueGR)
@@ -263,7 +450,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         for (var i = 0; i < 5; i++)
         {
@@ -312,7 +500,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // succeeds, aa=1
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // fails, attempts aa=2
@@ -363,7 +552,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            TestHelpers.CreateQueueItemRepositoryStub());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // auto, aa=1, commits
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // override, suffix mismatch, no commit
@@ -474,7 +664,7 @@ public class InvoiceCounterReservationTests
         return mock;
     }
 
-    private static ProcessCommandRequest BuildRequest(ftQueue queue, ReceiptCase receiptCase)
+    private static ProcessCommandRequest BuildRequest(ftQueue queue, ReceiptCase receiptCase, long queueRow = 1)
     {
         var receiptRequest = new ReceiptRequest
         {
@@ -488,10 +678,35 @@ public class InvoiceCounterReservationTests
             ftCashBoxIdentification = "CB-A",
             ftQueueID = queue.ftQueueId,
             ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
+            ftQueueRow = queueRow,
             ftReceiptIdentification = "ft1#",
             ftReceiptMoment = DateTime.UtcNow,
         };
         return new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
+    }
+
+    /// <summary>
+    /// A historical queue item as the pre-upgrade code persisted it: the response of an
+    /// AADE-submitted receipt carries "{series}-{aa}" after the "#", NoOps and failed
+    /// submissions don't (failed new-code attempts do, but with an error state).
+    /// </summary>
+    private static ftQueueItem HistoryItem(long row, bool success, string receiptIdentification)
+    {
+        var response = new ReceiptResponse
+        {
+            ftState = ((State) 0x4752_2000_0000_0000).WithState(success ? State.Success : State.Error),
+            ftCashBoxIdentification = "CB-A",
+            ftQueueID = Guid.NewGuid(),
+            ftQueueItemID = Guid.NewGuid(),
+            ftQueueRow = row,
+            ftReceiptIdentification = receiptIdentification,
+            ftReceiptMoment = DateTime.UtcNow,
+        };
+        return new ftQueueItem
+        {
+            ftQueueItemId = response.ftQueueItemID,
+            ftQueueRow = row,
+            response = JsonSerializer.Serialize(response),
+        };
     }
 }
