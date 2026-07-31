@@ -368,7 +368,7 @@ public class CustomRTServerSCUTests : IDisposable
     [InlineData("RSSMRA80A01H501", "RSSMRA80A01H501")]        // too short
     [InlineData("RSSMRA80A01H501UU", "RSSMRA80A01H501UU")]    // too long
     [InlineData("  rssmra80a01h501u  ", "RSSMRA80A01H501U")]  // trimmed and upper-cased, not validated
-    public void GenerateFiscalDocument_DoesNotValidateCustomerIdShape(string customerId, string expected)
+    public void GenerateFiscalDocument_ForwardsCustomerIdWithoutRevalidating(string customerId, string expected)
     {
         var receiptRequest = CreateReceiptRequest($$"""{"CustomerId":"{{customerId}}"}""");
 

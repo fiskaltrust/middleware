@@ -312,6 +312,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
         }
         PersistState();
 
+        var customer = receiptRequest.GetCustomer();
         var signatureData = new POSReceiptSignatureData
         {
             RTSerialNumber = tillState.RTServerSerialNumber,
@@ -321,7 +322,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
             RTDocType = docType switch { 1 => "REFUND", 3 => "VOID", _ => "POSRECEIPT" },
             RTServerSHAMetadata = document.Ccdc,
             RTCodiceLotteria = document.LotteryCode,
-            RTCustomerID = "",
+            // Reports what was actually sent: printRecTaxID is suppressed when a lottery code is present,
+            // because the two are mutually exclusive (see EpsonRTServerMapping).
+            RTCustomerID = string.IsNullOrEmpty(document.LotteryCode)
+                ? ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId)
+                : "",
             RTReferenceZNumber = document.ReferenceZNumber,
             RTReferenceDocNumber = document.ReferenceDocNumber,
             RTReferenceDocMoment = document.ReferenceDocMoment
