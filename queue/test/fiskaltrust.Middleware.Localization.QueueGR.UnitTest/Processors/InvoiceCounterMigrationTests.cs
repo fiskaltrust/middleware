@@ -47,14 +47,16 @@ public class InvoiceCounterMigrationTests
     }
 
     [Fact]
-    public async Task UpgradedQueue_SeedsAtMaxOwnSeriesAa_NotAtNewest()
+    public async Task UpgradedQueue_SeedsAtNewestOwnSeriesAa_EvenWhenHigherValuesExistFurtherBack()
     {
-        // A historical aa-only mydataoverride could file a caller-chosen aa into the
-        // queue's own series. If such a submission is newer than the last automatic one
-        // and carries a LOWER aa, a newest-based seed would restart below already-filed
-        // values and every following reservation would collide at AADE (233, which
-        // nothing self-heals yet). The seed must therefore be the maximum own-series
-        // aa, not the newest.
+        // The seed is deliberately the NEWEST own-series aa, not the history maximum:
+        // the walk stops at the first hit, so queue start doesn't scan the complete
+        // history (on Azure Table Storage every row read is an unpartitioned filter
+        // query — the full walk caused a read storm on large queues). Accepted risk: a
+        // historical aa-only mydataoverride that filed out-of-order values further back
+        // (here: the automatic 17 is older than the override's 5) makes this seed too
+        // low, and the next reservation fails loudly at AADE as a duplicate (233) until
+        // the counter is corrected manually — see GetLastSubmittedAaAsync.
         var queue = TestHelpers.CreateQueue();
         queue.ftQueuedRow = 3;
         var queueGR = new ftQueueGR
@@ -72,7 +74,43 @@ public class InvoiceCounterMigrationTests
 
         await InvoiceCounterMigration.EnsureMigratedAsync(configRepoMock.Object, queueItemRepository, queue.ftQueueId, Mock.Of<ILogger>());
 
-        queueGR.InvoiceNumerator.Should().Be(17);
+        queueGR.InvoiceNumerator.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task UpgradedQueue_StopsWalkingAtTheNewestOwnSeriesSubmission()
+    {
+        // The read-storm guard itself: rows older than the newest own-series submission
+        // must never be read at queue start.
+        var queue = TestHelpers.CreateQueue();
+        queue.ftQueuedRow = 4;
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = null!,
+            InvoiceNumerator = 0,
+        };
+        var configRepoMock = SetupConfigRepo(queueGR, queue);
+        var readRows = new List<long>();
+        var repo = new Mock<IMiddlewareQueueItemRepository>();
+        var items = new[]
+        {
+            HistoryItem(2, success: true, "ft2#CB-A-9"),
+            HistoryItem(3, success: true, "ft3#"),
+            HistoryItem(4, success: false, "ft4#"),
+        };
+        repo.Setup(x => x.GetByQueueRowAsync(It.IsAny<long>()))
+            .ReturnsAsync((long row) =>
+            {
+                readRows.Add(row);
+                return items.FirstOrDefault(x => x.ftQueueRow == row);
+            });
+
+        await InvoiceCounterMigration.EnsureMigratedAsync(configRepoMock.Object, repo.Object, queue.ftQueueId, Mock.Of<ILogger>());
+
+        queueGR.InvoiceNumerator.Should().Be(9);
+        readRows.Should().Equal(4L, 3L, 2L); // row 1 stays unread
     }
 
     [Fact]

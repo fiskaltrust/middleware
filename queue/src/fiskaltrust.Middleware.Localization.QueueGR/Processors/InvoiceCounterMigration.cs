@@ -27,22 +27,19 @@ public static class InvoiceCounterMigration
             return;
         }
 
-        // The seed must guarantee that the first counter-based aa is strictly above
-        // every aa AADE already has on file in the queue's own series.
-        // ftReceiptNumerator cannot provide that: it advances for every successful
-        // receipt, including zero receipts and closings that never reach AADE. Instead
-        // we recover the submitted aa values from the queue-item history: the
-        // pre-counter MyDataSCU appended "{series}-{aa}" to ftReceiptIdentification on
-        // every successful submission (and only then), so successful responses carrying
-        // the queue's own series are exactly the invoices filed under it. NoOp receipts
-        // never carry that segment and can therefore never influence the counter.
+        // The seed comes from the queue-item history: the pre-counter MyDataSCU
+        // appended "{series}-{aa}" to ftReceiptIdentification on every successful
+        // submission (and only then), so successful responses carrying the queue's own
+        // series are exactly the invoices filed under it. ftReceiptNumerator cannot
+        // provide the seed: it advances for every successful receipt, including zero
+        // receipts and closings that never reach AADE.
         var queue = await configurationRepository.GetQueueAsync(queueId);
         queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
-        queueGR.InvoiceNumerator = await GetMaxSubmittedAaAsync(queueItemRepository, queueGR.InvoiceSeries, queue.ftQueuedRow);
+        queueGR.InvoiceNumerator = await GetLastSubmittedAaAsync(queueItemRepository, queueGR.InvoiceSeries, queue.ftQueuedRow);
         await configurationRepository.InsertOrUpdateQueueGRAsync(queueGR);
 
         logger.LogInformation(
-            "QueueGR invoice counter migration for queue {QueueId}: seeded InvoiceSeries '{InvoiceSeries}' at InvoiceNumerator {InvoiceNumerator} (ftReceiptNumerator: {ReceiptNumerator}, rows scanned: {Rows}).",
+            "QueueGR invoice counter migration for queue {QueueId}: seeded InvoiceSeries '{InvoiceSeries}' at InvoiceNumerator {InvoiceNumerator} (ftReceiptNumerator: {ReceiptNumerator}, ftQueuedRow: {QueuedRow}).",
             queueId, queueGR.InvoiceSeries, queueGR.InvoiceNumerator, queue.ftReceiptNumerator, queue.ftQueuedRow);
         if (queueGR.InvoiceNumerator > queue.ftReceiptNumerator)
         {
@@ -56,30 +53,31 @@ public static class InvoiceCounterMigration
         }
     }
 
-    private static async Task<long> GetMaxSubmittedAaAsync(
+    private static async Task<long> GetLastSubmittedAaAsync(
         IMiddlewareQueueItemRepository queueItemRepository,
         string invoiceSeries,
         long lastQueueRow)
     {
-        // Walk the complete queue-item history and take the MAXIMUM aa among successful
-        // responses carrying a "{series}-{aa}" segment in the queue's own series — not
-        // the newest one. The old mydataoverride path could file a caller-chosen aa
-        // into the queue's own series (an aa-only override kept series =
-        // CashBoxIdentification): if such a submission is newer than the last automatic
-        // one, a newest-based seed would restart below already-filed values and every
-        // following reservation would collide at AADE (error 233, which nothing
-        // self-heals yet). The maximum is collision-free by construction.
+        // Walk newest → oldest and stop at the FIRST successful response carrying a
+        // "{series}-{aa}" segment in the queue's own series. On Azure Table Storage
+        // every GetByQueueRowAsync is an unpartitioned filter query, so this early exit
+        // is what keeps queue start cheap: on any queue that ever submitted, only the
+        // NoOps and failed attempts since the last real submission are read — walking
+        // the complete history here caused a read storm on large queues.
+        //
+        // Accepted risk of seeding from the newest instead of the history maximum: the
+        // old mydataoverride path could file a caller-chosen aa into the queue's own
+        // series (an aa-only override kept series = CashBoxIdentification). If such
+        // out-of-order values exist and the newest own-series aa is not the largest,
+        // this seed is too low and the next reservation is rejected by AADE as a
+        // duplicate (233) — a loud, per-receipt failure that needs a manual counter
+        // correction, since nothing self-heals 233 yet. Overrides into the own series
+        // are rejected since c43de72a, so only pre-existing history can trigger this.
         //
         // Success responses without a segment (zero receipts, closings, lifecycle
         // receipts) and submissions in a foreign series (handwritten) are skipped.
         // Error responses are skipped too: failed attempts must never count as
         // submitted.
-        //
-        // The walk is one GetByQueueRowAsync per row (a filtered query on Azure Table
-        // Storage, which finds rows regardless of their partition-key era) and runs
-        // once per queue: the seed is persisted right after, and the queue-start gate
-        // keeps receipts waiting until it completed.
-        var maxAa = 0L;
         for (var row = lastQueueRow; row >= 1; row--)
         {
             var queueItem = await queueItemRepository.GetByQueueRowAsync(row);
@@ -101,13 +99,12 @@ public static class InvoiceCounterMigration
                 continue;
             }
             if (CountrySegment.TryParse(response.ftReceiptIdentification, out var series, out var aa)
-                && string.Equals(series, invoiceSeries, StringComparison.Ordinal)
-                && aa > maxAa)
+                && string.Equals(series, invoiceSeries, StringComparison.Ordinal))
             {
-                maxAa = aa;
+                return aa;
             }
         }
-        return maxAa;
+        return 0;
     }
 }
 
