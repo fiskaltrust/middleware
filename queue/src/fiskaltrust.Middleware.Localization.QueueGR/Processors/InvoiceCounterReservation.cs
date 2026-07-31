@@ -1,9 +1,11 @@
+using System.Globalization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
@@ -15,18 +17,27 @@ internal static class InvoiceCounterReservation
         AsyncLazy<IConfigurationRepository> configurationRepository,
         Func<Task<ProcessResponse>> sscdCall)
     {
+        var configRepo = await configurationRepository;
+        var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
+
         // Handwritten documents are caller-numbered: the merchant already stamped
         // (series, aa) on the paper original, so the queue takes them inbound verbatim.
-        // No reservation is made, the counter never advances and no storage is touched.
-        // Full validation of the handwritten payload stays in the SCU.
+        // No reservation is made and the counter is never read or written. Full
+        // validation of the handwritten payload stays in the SCU — except for one
+        // queue-level rule: the handwritten series must not be the queue's own invoice
+        // series, otherwise the caller could file numbers the counter doesn't know
+        // about and a later automatic reservation would collide at AADE.
         if (TryGetHandwrittenNumbering(request.ReceiptRequest, out var handwrittenSeries, out var handwrittenAa))
         {
+            if (string.Equals(handwrittenSeries, queueGR.InvoiceSeries, StringComparison.Ordinal))
+            {
+                request.ReceiptResponse.SetReceiptResponseError(
+                    $"The handwritten Series '{handwrittenSeries}' equals the queue's own invoice series. Numbering in this series is assigned exclusively by the middleware — use a dedicated series for handwritten documents.");
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
+            }
             var handwrittenResponse = await SubmitWithSegmentAsync(request, handwrittenSeries, handwrittenAa, sscdCall);
             return new ProcessCommandResponse(handwrittenResponse.ReceiptResponse, []);
         }
-
-        var configRepo = await configurationRepository;
-        var queueGR = await configRepo.GetQueueGRAsync(request.queue.ftQueueId);
 
         // The invoice counter is initialized once at queue start (InvoiceCounterMigration
         // is awaited before any receipt is processed) and at activation for fresh queues.
@@ -55,9 +66,14 @@ internal static class InvoiceCounterReservation
         if (response.ReceiptResponse.ftState.IsState(State.Success) && mark != null)
         {
             queueGR.InvoiceNumerator = reservedAa;
-            queueGR.LastInvoiceMoment = request.ReceiptRequest.cbReceiptMoment;
+            queueGR.LastInvoiceMoment = response.ReceiptResponse.ftReceiptMoment;
             queueGR.LastInvoiceQueueItemId = response.ReceiptResponse.ftQueueItemID;
             queueGR.LastInvoiceMark = mark;
+            // Accepted-risk window (shared with the ES processors): if this write fails
+            // after AADE filed the invoice, the aa is consumed at AADE while the counter
+            // stays behind — retries re-reserve it and AADE answers 233 until the
+            // planned 233 self-heal ships, which must treat this direction as "number
+            // consumed, advance".
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
         }
 
@@ -137,7 +153,7 @@ internal static class InvoiceCounterReservation
         var markSignature = response.ftSignatures?
             .FirstOrDefault(s => string.Equals(s.Caption, "invoiceMark", StringComparison.Ordinal)
                 && s.ftSignatureType.IsType(SignatureTypeGR.Mark));
-        return markSignature != null && long.TryParse(markSignature.Data, out var mark)
+        return markSignature != null && long.TryParse(markSignature.Data, NumberStyles.None, CultureInfo.InvariantCulture, out var mark)
             ? mark
             : (long?) null;
     }

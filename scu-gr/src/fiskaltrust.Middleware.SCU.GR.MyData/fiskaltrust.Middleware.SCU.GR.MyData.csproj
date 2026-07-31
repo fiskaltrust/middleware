@@ -37,4 +37,8 @@
       <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.SCU.GR.MyData.UnitTest" />
+    </ItemGroup>
+
 </Project>

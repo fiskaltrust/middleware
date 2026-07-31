@@ -42,11 +42,66 @@ public class InvoiceCounterReservationTests
         var result = await processor.PointOfSaleReceipt0x0001Async(request);
 
         result.receiptResponse.ftState.IsState(State.Success).Should().BeTrue();
+        // The reserved segment must survive on the persisted identification: the POS
+        // receives the series/aa through it, and the queue-start migration seeds from
+        // exactly this segment.
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#CB-A-42");
         configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
             q.InvoiceNumerator == 42 &&
             q.InvoiceSeries == "CB-A" &&
             q.LastInvoiceMark == 999000111L)),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task CommitFailureAfterFiledInvoice_RetryReusesSameAa_Phase2Target()
+    {
+        // Pins the accepted-risk window the reserve-then-commit design creates: the
+        // invoice was filed (Success + mark) but persisting the counter fails. The aa
+        // is consumed at AADE while the counter stays behind, so retries re-reserve the
+        // same aa — which AADE will reject as 233 until the planned self-heal ships.
+        // That self-heal must treat this direction as "number consumed, advance".
+        var queue = TestHelpers.CreateQueue();
+        // Like the Azure repository, every read returns a fresh instance reflecting the
+        // last successfully persisted state (numerator 41 — the first write fails).
+        var configRepoMock = new Mock<IConfigurationRepository>();
+        configRepoMock.Setup(x => x.GetQueueGRAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(() => new ftQueueGR
+            {
+                ftQueueGRId = queue.ftQueueId,
+                CashBoxIdentification = "CB-A",
+                InvoiceSeries = "CB-A",
+                InvoiceNumerator = 41,
+            });
+        var writeAttempts = 0;
+        ftQueueGR? persisted = null;
+        configRepoMock.Setup(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()))
+            .Returns((ftQueueGR q) =>
+            {
+                if (++writeAttempts == 1)
+                {
+                    throw new InvalidOperationException("storage down");
+                }
+                persisted = q;
+                return Task.CompletedTask;
+            });
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        var firstAttempt = () => processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+        await firstAttempt.Should().ThrowAsync<InvalidOperationException>();
+
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+
+        // Both attempts reserved the same aa — in production the second submission
+        // would collide at AADE because the first one was already filed.
+        capturedAa.Should().Equal(42L, 42L);
+        persisted!.InvoiceNumerator.Should().Be(42);
     }
 
     [Fact]
@@ -220,13 +275,20 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task Handwritten_TakesCallerNumberingInbound_AndNeverTouchesStorage()
+    public async Task Handwritten_TakesCallerNumberingInbound_AndNeverWritesCounter()
     {
         // Handwritten documents are caller-numbered: the queue stamps the merchant's
-        // (series, aa) inbound and never makes a reservation. The strict repository
-        // mock proves the counter is neither read nor written.
+        // (series, aa) inbound and never makes a reservation — the counter is read
+        // (for the own-series guard) but never written.
         var queue = TestHelpers.CreateQueue();
-        var configRepoMock = new Mock<IConfigurationRepository>(MockBehavior.Strict);
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
         var capturedIdentifications = new List<string>();
         var grSSCDMock = new Mock<IGRSSCD>();
         grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
@@ -246,14 +308,22 @@ public class InvoiceCounterReservationTests
 
         capturedIdentifications.Should().Equal("ft1#HW-9999");
         result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#HW-9999");
-        configRepoMock.VerifyNoOtherCalls();
+        queueGR.InvoiceNumerator.Should().Be(41);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handwritten_Failure_RestoresIdentification_AndNeverTouchesStorage()
+    public async Task Handwritten_Failure_RestoresIdentification_AndNeverWritesCounter()
     {
         var queue = TestHelpers.CreateQueue();
-        var configRepoMock = new Mock<IConfigurationRepository>(MockBehavior.Strict);
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
         var grSSCDMock = new Mock<IGRSSCD>();
         grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
             .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
@@ -270,7 +340,46 @@ public class InvoiceCounterReservationTests
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
 
         result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
-        configRepoMock.VerifyNoOtherCalls();
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handwritten_WithQueueOwnSeries_IsRejectedBeforeTheScu()
+    {
+        // Numbering in the queue's own series is assigned exclusively by the counter.
+        // A handwritten payload using that series could file numbers the counter does
+        // not know about, and a later automatic reservation would collide at AADE —
+        // reject it before anything is submitted.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict); // must never be called
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            Mock.Of<IQueueStorageProvider>(),
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "CB-A", 9999));
+
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+    }
+
+    [Fact]
+    public void MarkSignatureContract_IsPinnedAgainstScuGr()
+    {
+        // Mirrors the pin in scu-gr's AADEFactoryTests: the commit gate matches
+        // signatures captioned "invoiceMark" with this exact type value, which
+        // duplicates scu-gr's SignatureTypeGR.Mark. If either side drifts, the counter
+        // silently stops advancing and every invoice re-submits the same aa.
+        ((long) SignatureTypeGR.Mark).Should().Be(0x4752_2000_0000_0014);
     }
 
     [Fact]

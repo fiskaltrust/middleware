@@ -377,13 +377,83 @@ public class AADEFactoryTests
         doc!.invoice[0].invoiceHeader.aa.Should().Be("105");
     }
 
+    [Theory]
+    [InlineData(-5L)]
+    [InlineData(0L)]
+    public void MapToInvoicesDoc_Handwritten_WithNonPositiveAA_ShouldReturnError(long handwrittenAa)
+    {
+        // Must stay aligned with the queue's inbound gate (AA > 0): a payload the queue
+        // treats as incomplete must never be accepted here, otherwise the document is
+        // filed under the caller's values while the queue commits its own reservation.
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Amount = 100,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24,
+                },
+            ],
+            cbPayItems = [new PayItem { Amount = 100 }],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001).WithFlag(ReceiptCaseFlags.HandWritten),
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    MerchantVATID = "Test",
+                    Series = "HW",
+                    AA = handwrittenAa,
+                    HashAlg = "SHA256",
+                    HashPayload = "irrelevant — validation fails before the hash is checked",
+                },
+            },
+            cbReceiptAmount = 100,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftCashBoxIdentification = "CB-A",
+            ftReceiptIdentification = "ft7#CB-A-42",
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "Test" },
+        }, "https://test.receipts.example.com");
+
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("greater than 0");
+    }
+
+    [Fact]
+    public void MarkSignatureContract_IsPinnedForTheQueueCommitGate()
+    {
+        // The QueueGR invoice counter commits a reservation only when the response
+        // carries a signature captioned "invoiceMark" typed as SignatureTypeGR.Mark.
+        // The queue project duplicates that enum value; if either the value or the
+        // caption drifts here, the counter silently stops advancing and every invoice
+        // re-submits the same aa.
+        ((long) SignatureTypeGR.Mark).Should().Be(0x4752_2000_0000_0014);
+        ItemsChoiceType.invoiceMark.ToString().Should().Be("invoiceMark");
+    }
+
     [Fact]
     public void MapToInvoicesDoc_Handwritten_OverridesSuffixBasedSeriesAndAa()
     {
-        // Handwritten payload must win over the auto-reserved (series, aa) that the
-        // country processor pre-appended to ftReceiptIdentification. The doc carries
-        // the merchant's values; the country processor will then detect this via the
-        // suffix-rewrite-and-compare safeguard and skip the counter commit.
+        // In production the queue takes handwritten numbering inbound, so the segment
+        // in ftReceiptIdentification already carries the merchant's values and this
+        // override re-applies the same payload. This test pins the layering for a
+        // caller that stamped a different segment: the handwritten payload is the
+        // authoritative source for the doc's (series, aa).
         var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
         var merchantId = "Test";
         var handwrittenSeries = "HW";

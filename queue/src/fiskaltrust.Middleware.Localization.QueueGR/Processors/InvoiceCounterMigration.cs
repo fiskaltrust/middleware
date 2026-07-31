@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
@@ -17,7 +18,8 @@ public static class InvoiceCounterMigration
     public static async Task EnsureMigratedAsync(
         IConfigurationRepository configurationRepository,
         IMiddlewareQueueItemRepository queueItemRepository,
-        Guid queueId)
+        Guid queueId,
+        ILogger logger)
     {
         var queueGR = await configurationRepository.GetQueueGRAsync(queueId);
         if (!string.IsNullOrEmpty(queueGR.InvoiceSeries))
@@ -25,46 +27,58 @@ public static class InvoiceCounterMigration
             return;
         }
 
-        // The seed must guarantee that the first counter-based aa is exactly
-        // last-submitted-aa + 1. ftReceiptNumerator cannot provide that: it advances for
-        // every successful receipt, including zero receipts and daily/monthly/yearly
-        // closings that never reach AADE. Instead we recover the last aa that actually
-        // went to AADE from the queue-item history: the pre-counter MyDataSCU appended
-        // "{series}-{aa}" to ftReceiptIdentification on every successful submission (and
-        // only then), so the newest successful response carrying the queue's own series
-        // is exactly the last submitted invoice. NoOp receipts never carry that segment
-        // and can therefore never influence the counter.
-        //
-        // Deliberate residual risk: an attempt that AADE accepted but that was stored as
-        // failed on our side (timeout/crash between AADE's 200 OK and persisting the
-        // response) has no success response in the history, so its aa is re-reserved and
-        // AADE will reject the resubmission with error 233 (duplicate uid) instead of us
-        // skipping a number. Gap-free continuity is the requirement here; recovering
-        // from 233 is the planned self-heal follow-up.
+        // The seed must guarantee that the first counter-based aa is strictly above
+        // every aa AADE already has on file in the queue's own series.
+        // ftReceiptNumerator cannot provide that: it advances for every successful
+        // receipt, including zero receipts and closings that never reach AADE. Instead
+        // we recover the submitted aa values from the queue-item history: the
+        // pre-counter MyDataSCU appended "{series}-{aa}" to ftReceiptIdentification on
+        // every successful submission (and only then), so successful responses carrying
+        // the queue's own series are exactly the invoices filed under it. NoOp receipts
+        // never carry that segment and can therefore never influence the counter.
         var queue = await configurationRepository.GetQueueAsync(queueId);
         queueGR.InvoiceSeries = queueGR.CashBoxIdentification;
-        queueGR.InvoiceNumerator = await GetLastSubmittedAaAsync(queueItemRepository, queueGR.InvoiceSeries, queue.ftQueuedRow);
+        queueGR.InvoiceNumerator = await GetMaxSubmittedAaAsync(queueItemRepository, queueGR.InvoiceSeries, queue.ftQueuedRow);
         await configurationRepository.InsertOrUpdateQueueGRAsync(queueGR);
+
+        logger.LogInformation(
+            "QueueGR invoice counter migration for queue {QueueId}: seeded InvoiceSeries '{InvoiceSeries}' at InvoiceNumerator {InvoiceNumerator} (ftReceiptNumerator: {ReceiptNumerator}, rows scanned: {Rows}).",
+            queueId, queueGR.InvoiceSeries, queueGR.InvoiceNumerator, queue.ftReceiptNumerator, queue.ftQueuedRow);
+        if (queueGR.InvoiceNumerator > queue.ftReceiptNumerator)
+        {
+            // Automatic numbering always used aa == ftReceiptNumerator, so a seed above
+            // it can only come from a historical caller-numbered submission (an aa-only
+            // mydataoverride into the queue's own series). The continuation is safe —
+            // strictly above everything filed — but the jump deserves to be visible.
+            logger.LogWarning(
+                "QueueGR invoice counter migration for queue {QueueId}: the seed {InvoiceNumerator} exceeds ftReceiptNumerator {ReceiptNumerator} — a historical submission carried a caller-chosen aa in the queue's own series. The sequence continues above it.",
+                queueId, queueGR.InvoiceNumerator, queue.ftReceiptNumerator);
+        }
     }
 
-    private static async Task<long> GetLastSubmittedAaAsync(
+    private static async Task<long> GetMaxSubmittedAaAsync(
         IMiddlewareQueueItemRepository queueItemRepository,
         string invoiceSeries,
         long lastQueueRow)
     {
-        // Walk the queue-item history backwards until we find the newest response that
-        // was (a) successful and (b) carries a "{series}-{aa}" segment in the queue's
-        // own series — i.e. the last invoice that was actually submitted to AADE.
-        // Success responses without a segment (zero receipts, closings, lifecycle
-        // receipts) and submissions in a foreign series (handwritten / mydataoverride)
-        // are skipped. Error responses are skipped too: failed attempts must never count
-        // as submitted.
+        // Walk the complete queue-item history and take the MAXIMUM aa among successful
+        // responses carrying a "{series}-{aa}" segment in the queue's own series — not
+        // the newest one. The old mydataoverride path could file a caller-chosen aa
+        // into the queue's own series (an aa-only override kept series =
+        // CashBoxIdentification): if such a submission is newer than the last automatic
+        // one, a newest-based seed would restart below already-filed values and every
+        // following reservation would collide at AADE (error 233, which nothing
+        // self-heals yet). The maximum is collision-free by construction.
         //
-        // The scan is unbounded on purpose. Capping it and falling back to a guess
-        // could re-issue an aa that AADE already has on file. The cost self-limits:
-        // queues that submit regularly find the segment within the last few rows, and
-        // queues that never submitted are small because they only ever collected NoOps.
-        // The scan runs once per queue — the seed is persisted right after.
+        // Success responses without a segment (zero receipts, closings, lifecycle
+        // receipts) and submissions in a foreign series (handwritten) are skipped.
+        // Error responses are skipped too: failed attempts must never count as
+        // submitted.
+        //
+        // The walk is one GetByQueueRowAsync per row — a partition-scoped point read on
+        // Azure Table Storage — and runs once per queue: the seed is persisted right
+        // after, and the queue-start gate keeps receipts waiting until it completed.
+        var maxAa = 0L;
         for (var row = lastQueueRow; row >= 1; row--)
         {
             var queueItem = await queueItemRepository.GetByQueueRowAsync(row);
@@ -86,11 +100,43 @@ public static class InvoiceCounterMigration
                 continue;
             }
             if (CountrySegment.TryParse(response.ftReceiptIdentification, out var series, out var aa)
-                && string.Equals(series, invoiceSeries, StringComparison.Ordinal))
+                && string.Equals(series, invoiceSeries, StringComparison.Ordinal)
+                && aa > maxAa)
             {
-                return aa;
+                maxAa = aa;
             }
         }
-        return 0;
+        return maxAa;
+    }
+}
+
+/// <summary>
+/// Runs the migration eagerly at queue construction and is awaited before every
+/// receipt. A faulted attempt is retried on the next receipt instead of being cached
+/// forever, so a transient storage error at startup only fails the receipts processed
+/// during the outage — not every receipt until the process restarts.
+/// </summary>
+public sealed class InvoiceCounterMigrationGate
+{
+    private readonly Func<Task> _migrate;
+    private readonly object _sync = new();
+    private Task _attempt;
+
+    public InvoiceCounterMigrationGate(Func<Task> migrate)
+    {
+        _migrate = migrate;
+        _attempt = Task.Run(migrate);
+    }
+
+    public Task EnsureMigratedAsync()
+    {
+        lock (_sync)
+        {
+            if (_attempt.IsFaulted || _attempt.IsCanceled)
+            {
+                _attempt = Task.Run(_migrate);
+            }
+            return _attempt;
+        }
     }
 }

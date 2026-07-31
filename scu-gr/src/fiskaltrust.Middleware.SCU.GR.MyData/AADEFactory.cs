@@ -272,9 +272,14 @@ public class AADEFactory
             }
 
 
-            if (data?.GR?.AA == null || data?.GR?.AA == 0)
+            // Must stay aligned with the queue's inbound gate
+            // (InvoiceCounterReservation.TryGetHandwrittenNumbering requires AA > 0): a
+            // payload the queue treats as incomplete must never be accepted here,
+            // otherwise the document would be filed under the caller's values while the
+            // queue committed its own reservation.
+            if (data?.GR?.AA is not > 0)
             {
-                throw new Exception("When using Handwritten receipts the AA must be provided in the ftReceiptCaseData payload.");
+                throw new Exception("When using Handwritten receipts the AA must be provided in the ftReceiptCaseData payload and must be greater than 0.");
             }
 
             if (string.IsNullOrEmpty(data?.GR?.MerchantVATID))
@@ -1729,13 +1734,13 @@ public class AADEFactory
     private static (string series, string aa) ResolveSeriesAndAa(ReceiptResponse receiptResponse)
     {
         // Preferred path: the QueueGR processor pre-appends "{series}-{aa}" to
-        // ftReceiptIdentification before invoking the SCU. This mirrors the convention
-        // every other country queue uses (ES/FR/AT/PT all append a country segment
-        // after the "#"). The handwritten and mydataoverride paths overwrite
-        // invoiceHeader.series / .aa on the doc afterwards via the existing override
-        // logic; the suffix on ftReceiptIdentification stays as the reserved values
-        // and is rewritten by MyDataSCU after AADE confirms the actually-submitted
-        // values.
+        // ftReceiptIdentification before invoking the SCU — reserved values for
+        // automatic receipts, the caller's values for handwritten documents (taken
+        // inbound by the queue). This mirrors the convention every other country queue
+        // uses (ES/FR/AT/PT all append a country segment after the "#"). The queue is
+        // the single writer of that segment: nothing rewrites it afterwards, series/aa
+        // overrides via mydataoverride are rejected, and the handwritten block below
+        // re-applies the same payload values this segment was built from.
         var hashIdx = receiptResponse.ftReceiptIdentification?.IndexOf('#') ?? -1;
         if (hashIdx >= 0 && hashIdx < receiptResponse.ftReceiptIdentification!.Length - 1)
         {

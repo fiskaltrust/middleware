@@ -29,6 +29,13 @@ public class MyDataSCU : IGRSSCD
     private readonly ILogger<MyDataSCU> _logger;
 
     public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration, ILogger<MyDataSCU>? logger = null)
+        : this(CreateHttpClient(username, subscriptionKey, baseAddress), receiptBaseAddress, sandbox, masterDataConfiguration, logger)
+    {
+    }
+
+    // Test seam: lets unit tests drive ProcessReceiptAsync against a stubbed HttpClient
+    // without touching the public surface.
+    internal MyDataSCU(HttpClient httpClient, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration, ILogger<MyDataSCU>? logger = null)
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
@@ -49,12 +56,18 @@ public class MyDataSCU : IGRSSCD
             };
         }
         _logger = logger ?? NullLogger<MyDataSCU>.Instance;
-        _httpClient = new HttpClient()
+        _httpClient = httpClient;
+    }
+
+    private static HttpClient CreateHttpClient(string username, string subscriptionKey, string baseAddress)
+    {
+        var httpClient = new HttpClient()
         {
             BaseAddress = new Uri(baseAddress)
         };
-        _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
-        _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
+        httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
+        httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
+        return httpClient;
     }
 
     public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
