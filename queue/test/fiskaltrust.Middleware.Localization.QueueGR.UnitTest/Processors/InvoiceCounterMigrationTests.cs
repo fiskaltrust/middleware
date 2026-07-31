@@ -80,15 +80,29 @@ public class InvoiceCounterMigrationTests
     {
         // A transient storage error at startup must only fail the receipts processed
         // during the outage — the next receipt retries the migration instead of
-        // rethrowing a permanently cached failure until process restart.
+        // rethrowing a permanently cached failure until process restart. The first
+        // attempt is held open with a TaskCompletionSource so the test observes the
+        // in-flight failure deterministically (a receipt arriving only after the fault
+        // would already trigger the retry and never see the exception).
         var calls = 0;
-        var gate = new InvoiceCounterMigrationGate(() =>
-            Interlocked.Increment(ref calls) == 1
-                ? Task.FromException(new InvalidOperationException("storage down"))
-                : Task.CompletedTask);
+        var firstAttemptStarted = new TaskCompletionSource();
+        var firstAttemptRelease = new TaskCompletionSource();
+        var gate = new InvoiceCounterMigrationGate(async () =>
+        {
+            if (Interlocked.Increment(ref calls) == 1)
+            {
+                firstAttemptStarted.SetResult();
+                await firstAttemptRelease.Task;
+                throw new InvalidOperationException("storage down");
+            }
+        });
 
-        var firstReceipt = () => gate.EnsureMigratedAsync();
-        await firstReceipt.Should().ThrowAsync<InvalidOperationException>();
+        await firstAttemptStarted.Task;
+        var receiptDuringOutage = gate.EnsureMigratedAsync(); // joins the running first attempt
+        firstAttemptRelease.SetResult();                      // first attempt now faults
+
+        var awaitingReceipt = () => receiptDuringOutage;
+        await awaitingReceipt.Should().ThrowAsync<InvalidOperationException>();
 
         await gate.EnsureMigratedAsync(); // retried and succeeded
 
