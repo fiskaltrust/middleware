@@ -175,7 +175,8 @@ public class MyDataSCUProcessReceiptTests
                     [
                         new ResponseTypeErrors
                         {
-                            error = [new ErrorType { message = "Invoice with the same numbering has already been transmitted", code = "233" }],
+                            // Official 233 wording per myDATA API v1.0.10 §7.2.
+                            error = [new ErrorType { message = "UID: ABC123 has already been sent", code = "233" }],
                         },
                     ],
                 },
@@ -226,7 +227,7 @@ public class MyDataSCUProcessReceiptTests
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeTrue();
         var failure = result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "FAILURE").Subject;
-        failure.Data.Should().Be("{\"AADEError\":\"ValidationError\",\"Errors\":[{\"message\":\"Invoice with the same numbering has already been transmitted\",\"code\":\"233\"}]}");
+        failure.Data.Should().Be("{\"AADEError\":\"ValidationError\",\"Errors\":[{\"message\":\"UID: ABC123 has already been sent\",\"code\":\"233\"}]}");
     }
 
     private static string SerializeResponseDoc(ResponseDoc responseDoc)

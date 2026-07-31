@@ -67,14 +67,16 @@ public static class InvoiceCounterMigration
         //
         // Accepted risk of seeding from the newest instead of the history maximum: the
         // old mydataoverride path could file a caller-chosen aa into the queue's own
-        // series (an aa-only override kept series = CashBoxIdentification). If such
-        // out-of-order values exist and the newest own-series aa is not the largest,
-        // this seed is too low and reservations are rejected by AADE as duplicates
-        // (233) — a loud, per-receipt failure. InvoiceCounterReservation treats each
-        // 233 as "number consumed" and advances the counter by one, so the queue works
-        // itself out of a too-low seed unattended: one failed submission per missing
-        // number. Overrides into the own series are rejected since c43de72a, so only
-        // pre-existing history can trigger this.
+        // series (an aa-only override kept series = CashBoxIdentification), so the
+        // newest own-series aa is not necessarily the largest and a too-low seed can
+        // re-issue numbers used further back. AADE's duplicate detection is UID-based
+        // (a hash over issuer, issue date, branch, invoice type, series and aa —
+        // myDATA API v1.0.10 §7.2, error 233 "UID has already been sent"): a same-day
+        // re-issue is rejected as 233 and InvoiceCounterReservation advances the
+        // counter past it ("number consumed"), while a re-issue on a later date has a
+        // different UID and files as a new invoice — the sequence continues, at the
+        // price of a re-used aa in the series history. Overrides into the own series
+        // are rejected since c43de72a, so only pre-existing history can trigger this.
         //
         // Success responses without a segment (zero receipts, closings, lifecycle
         // receipts) and submissions in a foreign series (handwritten) are skipped.

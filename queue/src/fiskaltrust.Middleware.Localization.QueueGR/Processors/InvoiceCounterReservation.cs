@@ -16,10 +16,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 internal static class InvoiceCounterReservation
 {
     /// <summary>
-    /// AADE rejects a submission whose (issuer, series, aa) is already filed with
-    /// validation error 233. The queue is the single writer of its own series
-    /// (handwritten numbering into the own series and series/aa overrides are both
-    /// rejected), so a 233 on a reservation can only mean the counter is behind AADE —
+    /// myDATA validation error 233 — "UID: {uid} has already been sent" (myDATA API
+    /// v1.0.10 §7.2, the only duplicate-transmission code in the error table; the
+    /// check runs on the provider channel, which is how this SCU submits). The UID is
+    /// AADE's hash over the invoice identity (issuer VAT, issue date, branch, invoice
+    /// type, series, aa), so a 233 proves an invoice identical to this reservation —
+    /// including its (series, aa) — is already filed. The queue is the single writer
+    /// of its own series (handwritten numbering into the own series and series/aa
+    /// overrides are both rejected), so that can only mean the counter is behind AADE:
     /// the reserved number is consumed.
     /// </summary>
     private const string DuplicateAaAadeErrorCode = "233";
@@ -70,17 +74,17 @@ internal static class InvoiceCounterReservation
 
         if (IsDuplicateAaError(response.ReceiptResponse))
         {
-            // "Number consumed, advance": AADE proved the reserved aa is already filed,
-            // so move the persisted counter past it — and nothing else. This receipt
-            // still fails (no automatic resubmission; the POS retry loop is the retry
-            // mechanism), but the next attempt reserves a fresh number instead of
-            // re-reserving the same one forever. This heals both known directions one
-            // number per submission: the commit write below failing after AADE filed
-            // the invoice, and a queue-start seed below historical out-of-order values
-            // (see InvoiceCounterMigration). Handwritten documents never get here —
-            // they returned above, before the reservation. Their numbering is
-            // caller-owned, so a handwritten 233 is the caller's duplicate to fix and
-            // must never move the queue's counter.
+            // "Number consumed, advance": AADE proved an invoice identical to this
+            // reservation is already filed, so move the persisted counter past the
+            // rejected aa — and nothing else. This receipt still fails (no automatic
+            // resubmission; the POS retry loop is the retry mechanism), but the next
+            // attempt reserves a fresh number instead of re-reserving the same one
+            // forever. This heals the retry after the commit write below failed
+            // (identical resubmission, same UID → 233) and same-day re-issues caused
+            // by a too-low queue-start seed (see InvoiceCounterMigration). Handwritten
+            // documents never get here — they returned above, before the reservation.
+            // Their numbering is caller-owned, so a handwritten 233 is the caller's
+            // duplicate to fix and must never move the queue's counter.
             queueGR.InvoiceNumerator = reservedAa;
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
             // Two sinks on purpose: the action journal is the durable per-queue audit

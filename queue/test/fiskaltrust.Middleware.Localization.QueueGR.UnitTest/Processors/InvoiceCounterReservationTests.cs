@@ -175,9 +175,11 @@ public class InvoiceCounterReservationTests
     public async Task TooLowSeed_HealsOneNumberPerSubmission_UntilItClearsTheFiledRange()
     {
         // A queue-start seed below historical out-of-order values (see
-        // InvoiceCounterMigration): AADE already has aa 1..8 on file while the counter
+        // InvoiceCounterMigration), emulating the same-day case where the re-issued
+        // numbers produce identical UIDs: AADE has aa 1..8 on file while the counter
         // says 5. Every submission is rejected once and advances the counter by one —
         // the queue works itself out unattended, one failed receipt per missing number.
+        // (A re-issue on a later date has a different UID and files without a 233.)
         var queue = TestHelpers.CreateQueue();
         var queueGR = new ftQueueGR
         {
