@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
@@ -6,15 +7,32 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
 internal static class InvoiceCounterReservation
 {
+    /// <summary>
+    /// myDATA validation error 233 — "UID: {uid} has already been sent" (myDATA API
+    /// v1.0.10 §7.2, the only duplicate-transmission code in the error table; the
+    /// check runs on the provider channel, which is how this SCU submits). The UID is
+    /// AADE's hash over the invoice identity (issuer VAT, issue date, branch, invoice
+    /// type, series, aa), so a 233 proves an invoice identical to this reservation —
+    /// including its (series, aa) — is already filed. The queue is the single writer
+    /// of its own series (handwritten numbering into the own series and series/aa
+    /// overrides are both rejected), so that can only mean the counter is behind AADE:
+    /// the reserved number is consumed.
+    /// </summary>
+    private const string DuplicateAaAadeErrorCode = "233";
+
     public static async Task<ProcessCommandResponse> InvokeWithCounterAsync(
         ProcessCommandRequest request,
         AsyncLazy<IConfigurationRepository> configurationRepository,
+        IQueueStorageProvider queueStorageProvider,
+        ILogger logger,
         Func<Task<ProcessResponse>> sscdCall)
     {
         var configRepo = await configurationRepository;
@@ -54,6 +72,34 @@ internal static class InvoiceCounterReservation
 
         var response = await SubmitWithSegmentAsync(request, reservedSeries, reservedAa, sscdCall);
 
+        if (IsDuplicateAaError(response.ReceiptResponse))
+        {
+            // "Number consumed, advance": AADE proved an invoice identical to this
+            // reservation is already filed, so move the persisted counter past the
+            // rejected aa — and nothing else. This receipt still fails (no automatic
+            // resubmission; the POS retry loop is the retry mechanism), but the next
+            // attempt reserves a fresh number instead of re-reserving the same one
+            // forever. This heals the retry after the commit write below failed
+            // (identical resubmission, same UID → 233) and same-day re-issues caused
+            // by a too-low queue-start seed (see InvoiceCounterMigration). Handwritten
+            // documents never get here — they returned above, before the reservation.
+            // Their numbering is caller-owned, so a handwritten 233 is the caller's
+            // duplicate to fix and must never move the queue's counter.
+            queueGR.InvoiceNumerator = reservedAa;
+            await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
+            // Two sinks on purpose: the action journal is the durable per-queue audit
+            // trail, the structured warning is what OpenTelemetry/AppInsights pick up
+            // for alerting across queues.
+            await queueStorageProvider.CreateActionJournalAsync(
+                $"AADE rejected aa {reservedAa} in series '{reservedSeries}' as a duplicate (233) — the invoice counter was behind AADE. The counter advanced to {reservedAa}; the next submission reserves aa {reservedAa + 1}.",
+                $"{response.ReceiptResponse.ftState:X}",
+                response.ReceiptResponse.ftQueueItemID);
+            logger.LogWarning(
+                "AADE rejected aa {RejectedAa} in series '{InvoiceSeries}' as a duplicate (233) for queue {QueueId} (queue item {QueueItemId}) — the invoice counter was behind AADE. Advanced InvoiceNumerator to {InvoiceNumerator}; the next submission reserves aa {NextAa}.",
+                reservedAa, reservedSeries, request.queue.ftQueueId, response.ReceiptResponse.ftQueueItemID, queueGR.InvoiceNumerator, queueGR.InvoiceNumerator + 1);
+            return new ProcessCommandResponse(response.ReceiptResponse, []);
+        }
+
         // Commit gate: AADE's invoiceMark is the proof that an invoice was actually
         // filed. The SCU may legitimately answer Success without submitting one —
         // delivery-note cancellations and Pay0x3005 payment methods go to different
@@ -71,9 +117,8 @@ internal static class InvoiceCounterReservation
             queueGR.LastInvoiceMark = mark;
             // Accepted-risk window (shared with the ES processors): if this write fails
             // after AADE filed the invoice, the aa is consumed at AADE while the counter
-            // stays behind — retries re-reserve it and AADE answers 233 until the
-            // planned 233 self-heal ships, which must treat this direction as "number
-            // consumed, advance".
+            // stays behind — the retry re-reserves it, AADE answers 233 once, and the
+            // duplicate-aa advance above moves the counter past it.
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
         }
 
@@ -142,6 +187,53 @@ internal static class InvoiceCounterReservation
             response.ReceiptResponse.ftReceiptIdentification = originalReceiptIdentification;
         }
         return response;
+    }
+
+    private static bool IsDuplicateAaError(ReceiptResponse response)
+    {
+        if (!response.ftState.IsState(State.Error))
+        {
+            return false;
+        }
+        // MyDataSCU surfaces AADE rejections as a FAILURE signature whose Data is the
+        // serialized AADEEErrorResponse: {"AADEError":"...","Errors":[{"message":"...",
+        // "code":"..."}]}. The property names duplicate scu-gr's AADEEErrorResponse and
+        // the xsd-generated ErrorType — if either side drifts, the advance silently
+        // stops triggering and a 233 fails the receipt without moving the counter,
+        // exactly as it did before the heal existed.
+        foreach (var signature in response.ftSignatures ?? [])
+        {
+            if (!string.Equals(signature.Caption, "FAILURE", StringComparison.Ordinal) || string.IsNullOrEmpty(signature.Data))
+            {
+                continue;
+            }
+            try
+            {
+                using var document = JsonDocument.Parse(signature.Data);
+                if (document.RootElement.ValueKind != JsonValueKind.Object
+                    || !document.RootElement.TryGetProperty("Errors", out var errors)
+                    || errors.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+                foreach (var error in errors.EnumerateArray())
+                {
+                    if (error.ValueKind == JsonValueKind.Object
+                        && error.TryGetProperty("code", out var code)
+                        && code.ValueKind == JsonValueKind.String
+                        && string.Equals(code.GetString(), DuplicateAaAadeErrorCode, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Not every FAILURE carries the AADE error JSON (mapping and transport
+                // errors are plain text) — those are never duplicate-aa rejections.
+            }
+        }
+        return false;
     }
 
     private static long? TryExtractMark(ReceiptResponse response)

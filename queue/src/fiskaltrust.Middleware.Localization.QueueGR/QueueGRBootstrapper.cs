@@ -41,7 +41,7 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         var invoiceCounterMigration = new InvoiceCounterMigrationGate(async () =>
             await InvoiceCounterMigration.EnsureMigratedAsync(await configurationRepository, await queueItemRepository, id, migrationLogger));
 
-        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository));
+        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<ReceiptCommandProcessorGR>()), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<InvoiceCommandProcessorGR>()), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<ProtocolCommandProcessorGR>()));
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, async (request, response, queue, queueItem) =>
         {
             await invoiceCounterMigration.EnsureMigratedAsync();

@@ -35,7 +35,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -54,16 +55,18 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task CommitFailureAfterFiledInvoice_RetryReusesSameAa_Phase2Target()
+    public async Task CommitFailureAfterFiledInvoice_RetryGets233Once_ThenContinuesOnAFreshNumber()
     {
-        // Pins the accepted-risk window the reserve-then-commit design creates: the
-        // invoice was filed (Success + mark) but persisting the counter fails. The aa
-        // is consumed at AADE while the counter stays behind, so retries re-reserve the
-        // same aa — which AADE will reject as 233 until the planned self-heal ships.
-        // That self-heal must treat this direction as "number consumed, advance".
+        // The accepted-risk window of the reserve-then-commit design: the invoice was
+        // filed (Success + mark) but persisting the counter fails, so aa 42 is consumed
+        // at AADE while the counter stays at 41. The retry re-reserves 42, AADE rejects
+        // it as a duplicate (233), and the "number consumed, advance" handling moves the
+        // counter to 42 — the attempt after that files under 43 instead of colliding
+        // forever.
         var queue = TestHelpers.CreateQueue();
         // Like the Azure repository, every read returns a fresh instance reflecting the
         // last successfully persisted state (numerator 41 — the first write fails).
+        var persistedNumerator = 41L;
         var configRepoMock = new Mock<IConfigurationRepository>();
         configRepoMock.Setup(x => x.GetQueueGRAsync(It.IsAny<Guid>()))
             .ReturnsAsync(() => new ftQueueGR
@@ -71,10 +74,9 @@ public class InvoiceCounterReservationTests
                 ftQueueGRId = queue.ftQueueId,
                 CashBoxIdentification = "CB-A",
                 InvoiceSeries = "CB-A",
-                InvoiceNumerator = 41,
+                InvoiceNumerator = persistedNumerator,
             });
         var writeAttempts = 0;
-        ftQueueGR? persisted = null;
         configRepoMock.Setup(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()))
             .Returns((ftQueueGR q) =>
             {
@@ -82,26 +84,209 @@ public class InvoiceCounterReservationTests
                 {
                     throw new InvalidOperationException("storage down");
                 }
-                persisted = q;
+                persistedNumerator = q.InvoiceNumerator;
                 return Task.CompletedTask;
             });
         var capturedAa = new List<long>();
-        var grSSCDMock = SetupAutoEchoSscdMock(capturedAa);
+        var grSSCDMock = SetupAadeDedupSscdMock(capturedAa);
+        var storageProviderMock = new Mock<IQueueStorageProvider>();
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            storageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
+
+        // Filed at AADE as 42, but the commit write fails.
+        var firstAttempt = () => processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+        await firstAttempt.Should().ThrowAsync<InvalidOperationException>();
+
+        // The retry re-reserves 42 → 233 → the counter advances, the receipt still fails.
+        var retry = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+        retry.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        persistedNumerator.Should().Be(42);
+
+        // The next attempt files under the fresh number.
+        var next = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+        next.receiptResponse.ftState.IsState(State.Success).Should().BeTrue();
+        next.receiptResponse.ftReceiptIdentification.Should().Be("ft1#CB-A-43");
+
+        capturedAa.Should().Equal(42L, 42L, 43L);
+        persistedNumerator.Should().Be(43);
+        storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.Is<string>(m => m.Contains("233")), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DuplicateAa_AdvancesTheCounterAndWritesAnActionJournal_ButDoesNotResubmit()
+    {
+        // "Number consumed, advance": a 233 moves the persisted counter past the
+        // rejected aa and leaves an audit trail in the action journal, but the receipt
+        // itself still fails — there is no automatic resubmission. The POS retry loop
+        // is the retry mechanism.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var scuCalls = 0;
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                scuCalls++;
+                SetAadeError(req.ReceiptResponse, code: "233");
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        var storageProviderMock = new Mock<IQueueStorageProvider>();
+        var loggerMock = new Mock<ILogger>();
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            storageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            loggerMock.Object);
+
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+
+        scuCalls.Should().Be(1); // no resubmission within the call
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        // Failed receipts keep the pre-reservation identification — the segment is the
+        // durable marker of a FILED number and this receipt filed nothing.
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        // The advance must be observable in OpenTelemetry/AppInsights: a Warning-level
+        // log entry, in addition to the durable action journal below.
+        loggerMock.Verify(x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("233")),
+                It.IsAny<Exception?>(),
+                (Func<It.IsAnyType, Exception?, string>) It.IsAny<object>()),
+            Times.Once);
+        queueGR.InvoiceNumerator.Should().Be(42);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(queueGR), Times.Once);
+        storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.Is<string>(m => m.Contains("233")), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TooLowSeed_HealsOneNumberPerSubmission_UntilItClearsTheFiledRange()
+    {
+        // A queue-start seed below historical out-of-order values (see
+        // InvoiceCounterMigration), emulating the same-day case where the re-issued
+        // numbers produce identical UIDs: AADE has aa 1..8 on file while the counter
+        // says 5. Every submission is rejected once and advances the counter by one —
+        // the queue works itself out unattended, one failed receipt per missing number.
+        // (A re-issue on a later date has a different UID and files without a 233.)
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 5,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var capturedAa = new List<long>();
+        var grSSCDMock = SetupAadeDedupSscdMock(capturedAa, alreadyFiledUpTo: 8);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
-        var firstAttempt = () => processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
-        await firstAttempt.Should().ThrowAsync<InvalidOperationException>();
+        var results = new List<ProcessCommandResponse>();
+        for (var i = 0; i < 4; i++)
+        {
+            results.Add(await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001)));
+        }
 
-        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+        capturedAa.Should().Equal(6L, 7L, 8L, 9L);
+        results[0].receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        results[1].receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        results[2].receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        results[3].receiptResponse.ftState.IsState(State.Success).Should().BeTrue();
+        results[3].receiptResponse.ftReceiptIdentification.Should().Be("ft1#CB-A-9");
+        queueGR.InvoiceNumerator.Should().Be(9);
+    }
 
-        // Both attempts reserved the same aa — in production the second submission
-        // would collide at AADE because the first one was already filed.
-        capturedAa.Should().Equal(42L, 42L);
-        persisted!.InvoiceNumerator.Should().Be(42);
+    [Fact]
+    public async Task NonDuplicateAadeError_DoesNotAdvanceTheCounter()
+    {
+        // Only 233 is proof that the number is consumed at AADE. Any other rejection is
+        // a problem with the receipt itself — advancing there would burn numbers for a
+        // request that keeps failing.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                SetAadeError(req.ReceiptResponse, code: "102");
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        var storageProviderMock = new Mock<IQueueStorageProvider>();
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            storageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
+
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        queueGR.InvoiceNumerator.Should().Be(41);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+        storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handwritten_DuplicateAa_NeverTouchesTheCounter()
+    {
+        // A 233 on a handwritten document means the caller duplicated their own paper
+        // numbering — that is a caller error, not counter drift. The advance applies
+        // only to the reservation path.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                SetAadeError(req.ReceiptResponse, code: "233");
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        var storageProviderMock = new Mock<IQueueStorageProvider>();
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            storageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
+
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
+
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        queueGR.InvoiceNumerator.Should().Be(41);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+        storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Never);
     }
 
     [Fact]
@@ -121,7 +306,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -156,7 +342,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -189,7 +376,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -232,7 +420,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
@@ -262,7 +451,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -302,7 +492,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
 
@@ -335,7 +526,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
 
@@ -364,7 +556,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "CB-A", 9999));
 
@@ -403,7 +596,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, series: null, aa: null));
 
@@ -472,7 +666,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var act = () => processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
@@ -508,7 +703,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         for (var i = 0; i < 5; i++)
         {
@@ -557,7 +753,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // succeeds, aa=1
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // fails, attempts aa=2
@@ -606,7 +803,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // filed, aa=1, commits
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // SCU NoOp, no commit
@@ -615,6 +813,44 @@ public class InvoiceCounterReservationTests
         // Reservations attempted: 1 (committed), 2 (not consumed by the NoOp), 2 (committed).
         capturedAa.Should().Equal(1L, 2L, 2L);
         queueGR.InvoiceNumerator.Should().Be(2);
+    }
+
+    /// <summary>
+    /// Exactly the failure shape MyDataSCU emits for AADE rejections: a FAILURE
+    /// signature whose Data is the serialized AADEEErrorResponse. Pins the
+    /// cross-service contract the duplicate-aa advance matches on — it duplicates
+    /// scu-gr's AADEEErrorResponse and the xsd-generated ErrorType property names; if
+    /// either side drifts, the advance silently stops triggering.
+    /// </summary>
+    private static void SetAadeError(ReceiptResponse response, string code)
+    {
+        response.SetReceiptResponseError($"{{\"AADEError\":\"ValidationError\",\"Errors\":[{{\"message\":\"validation error\",\"code\":\"{code}\"}}]}}");
+    }
+
+    /// <summary>
+    /// AADE-emulating SCU: a fresh aa files and returns a mark, an already-filed aa is
+    /// rejected as a duplicate (233).
+    /// </summary>
+    private static Mock<IGRSSCD> SetupAadeDedupSscdMock(List<long> capturedAa, long alreadyFiledUpTo = 0, long startMark = 100L)
+    {
+        var filed = new HashSet<long>(Enumerable.Range(1, (int) alreadyFiledUpTo).Select(x => (long) x));
+        var markCounter = startMark;
+        var mock = new Mock<IGRSSCD>();
+        mock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                CaptureReservedAa(req.ReceiptResponse, capturedAa);
+                if (!filed.Add(capturedAa[^1]))
+                {
+                    SetAadeError(req.ReceiptResponse, code: "233");
+                }
+                else
+                {
+                    MarkAsSuccess(req.ReceiptResponse, markCounter++);
+                }
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        return mock;
     }
 
     private static Mock<IGRSSCD> SetupAutoEchoSscdMock(List<long> capturedAa, long startMark = 100L)
