@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
 using Newtonsoft.Json;
@@ -69,6 +70,16 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
+
+            // Reject a malformed codice fiscale / partita IVA before anything is sent to the printer.
+            if (request.ReceiptRequest.CarriesCustomerTaxIds()
+                && !request.ReceiptRequest.TryValidateCustomerTaxIds(out var customerTaxIdError))
+            {
+                _logger.LogWarning("({receiptreference}) Rejected: {error}", request.ReceiptRequest.cbReceiptReference, customerTaxIdError);
+                request.ReceiptResponse.SetReceiptResponseErrored(CustomerTaxIdValidation.CustomerTaxIdErrorCaption, customerTaxIdError!);
+                return Helpers.CreateResponse(request.ReceiptResponse);
+            }
+
             if (request.ReceiptRequest.IsInitialOperationReceipt())
             {
                 return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateInitialOperationSignatures().ToList());

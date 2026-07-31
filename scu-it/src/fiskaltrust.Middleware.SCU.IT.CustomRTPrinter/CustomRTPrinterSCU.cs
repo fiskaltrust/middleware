@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests;
 using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses;
@@ -62,6 +63,17 @@ public sealed class CustomRTPrinterSCU : LegacySCU
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
+
+            // Reject a malformed codice fiscale / partita IVA before contacting the printer at all, so the
+            // PoS gets the validation error instead of a device or network error.
+            if (request.ReceiptRequest.CarriesCustomerTaxIds()
+                && !request.ReceiptRequest.TryValidateCustomerTaxIds(out var customerTaxIdError))
+            {
+                _logger.LogWarning("({receiptreference}) Rejected: {error}", request.ReceiptRequest.cbReceiptReference, customerTaxIdError);
+                request.ReceiptResponse.SetReceiptResponseErrored(CustomerTaxIdValidation.CustomerTaxIdErrorCaption, customerTaxIdError!);
+                return CreateResponse(request.ReceiptResponse);
+            }
+
             if (string.IsNullOrEmpty(_serialnr))
             {
                 var info = await _printerClient.SendCommand<InfoResp>(new GetInfo());

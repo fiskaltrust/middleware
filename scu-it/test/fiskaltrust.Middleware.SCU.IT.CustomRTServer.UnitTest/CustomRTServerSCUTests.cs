@@ -7,6 +7,7 @@ using FluentAssertions.Execution;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
@@ -77,14 +78,15 @@ public class CustomRTServerSCUTests : IDisposable
         return new CustomRTServerSCU(_scuId, NullLogger<CustomRTServerSCU>.Instance, config, client, queue);
     }
 
-    private ProcessRequest CreateRequest(long ftReceiptCase) => new ProcessRequest
+    private ProcessRequest CreateRequest(long ftReceiptCase, string cbCustomer = null) => new ProcessRequest
     {
         ReceiptRequest = new ReceiptRequest
         {
             ftReceiptCase = ftReceiptCase,
             cbReceiptMoment = DateTime.UtcNow,
             cbChargeItems = Array.Empty<ChargeItem>(),
-            cbPayItems = Array.Empty<PayItem>()
+            cbPayItems = Array.Empty<PayItem>(),
+            cbCustomer = cbCustomer
         },
         ReceiptResponse = new ReceiptResponse
         {
@@ -161,6 +163,43 @@ public class CustomRTServerSCUTests : IDisposable
 
         result.ReceiptResponse.ftSignatures.Should().Contain(s => s.Caption == "rt-server-dailyclosing-error");
         result.ReceiptResponse.ftState.Should().Be(0x4954_2001_EEEE_EEEE);
+    }
+
+    [Theory]
+    [InlineData("""{"CustomerVATId":"12345"}""")]
+    [InlineData("""{"CustomerId":"RSSMRA80A01H501Z"}""")]
+    public async Task ProcessReceiptAsync_WithAnInvalidCustomerTaxId_FailsBeforeContactingTheServer(string cbCustomer)
+    {
+        var sut = CreateSut();
+        var result = await sut.ProcessReceiptAsync(CreateRequest((long) ITReceiptCases.PointOfSaleReceipt0x0001, cbCustomer));
+
+        using var scope = new AssertionScope();
+        result.ReceiptResponse.HasFailed().Should().BeTrue();
+        result.ReceiptResponse.ftState.Should().Be(0x4954_2001_EEEE_EEEE);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle()
+            .Which.Caption.Should().Be(CustomerTaxIdValidation.CustomerTaxIdErrorCaption);
+        // Proves the identifier is rejected by an explicit pre-check rather than by an exception, which the
+        // outer catch would have relabelled as rt-server-generic-error.
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "rt-server-generic-error");
+    }
+
+    /// <summary>
+    /// A stale cbCustomer on a closing must never block the closing. Routing is proven the same way as
+    /// ProcessReceiptAsync_MonthlyAndYearlyClosing_RoutesToDailyClosingHandler: the daily closing handler has
+    /// its own catch emitting rt-server-dailyclosing-error, distinct from the validation caption.
+    /// </summary>
+    [Theory]
+    [InlineData(0x4954_2000_0000_2011L)]   // DailyClosing0x2011
+    [InlineData(0x4954_2000_0000_2012L)]   // MonthlyClosing0x2012
+    [InlineData(0x4954_2000_0000_2013L)]   // YearlyClosing0x2013
+    public async Task ProcessReceiptAsync_ClosingWithAnInvalidCustomerTaxId_StillReachesTheClosingHandler(long ftReceiptCase)
+    {
+        var sut = CreateSut(httpTimeoutMs: 100);
+        var result = await sut.ProcessReceiptAsync(CreateRequest(ftReceiptCase, """{"CustomerVATId":"12345"}"""));
+
+        using var scope = new AssertionScope();
+        result.ReceiptResponse.ftSignatures.Should().Contain(s => s.Caption == "rt-server-dailyclosing-error");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == CustomerTaxIdValidation.CustomerTaxIdErrorCaption);
     }
 
     [Fact]
@@ -306,14 +345,17 @@ public class CustomRTServerSCUTests : IDisposable
         fiscalDocument.document.vatcode.Should().Be("01606720215");
     }
 
-    // Shape validation of partita IVA / codice fiscale is out of scope here: whatever the PoS sends is
-    // forwarded to the RT server, apart from trimming, upper-casing and stripping the IT country prefix.
+    // The mapper deliberately does not validate: CustomRTServerSCU.ProcessReceiptAsync rejects malformed
+    // identifiers upstream (CarriesCustomerTaxIds + TryValidateCustomerTaxIds). Reaching the mapper means the
+    // identifiers are either valid or intentionally exempt, so whatever arrives is forwarded to the RT server
+    // apart from trimming, upper-casing and stripping the IT country prefix. These rows are the acceptance
+    // criteria for ItalyValidationHelpers.NormalizeVatId.
     [Theory]
     [InlineData("12345", "12345")]                   // too short
     [InlineData("016067202151", "016067202151")]     // too long
     [InlineData("IT12345", "12345")]                 // too short once the prefix is stripped
     [InlineData("0160672021a", "0160672021A")]       // right length, not all digits
-    public void GenerateFiscalDocument_DoesNotValidateCustomerVATIdShape(string customerVATId, string expected)
+    public void GenerateFiscalDocument_ForwardsCustomerVATIdWithoutRevalidating(string customerVATId, string expected)
     {
         var receiptRequest = CreateReceiptRequest($$"""{"CustomerVATId":"{{customerVATId}}"}""");
 
