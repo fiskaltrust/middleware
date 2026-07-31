@@ -35,7 +35,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -93,7 +94,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             storageProviderMock.Object,
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         // Filed at AADE as 42, but the commit write fails.
         var firstAttempt = () => processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
@@ -140,11 +142,13 @@ public class InvoiceCounterReservationTests
                 return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
             });
         var storageProviderMock = new Mock<IQueueStorageProvider>();
+        var loggerMock = new Mock<ILogger>();
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             storageProviderMock.Object,
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            loggerMock.Object);
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
@@ -153,6 +157,15 @@ public class InvoiceCounterReservationTests
         // Failed receipts keep the pre-reservation identification — the segment is the
         // durable marker of a FILED number and this receipt filed nothing.
         result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        // The advance must be observable in OpenTelemetry/AppInsights: a Warning-level
+        // log entry, in addition to the durable action journal below.
+        loggerMock.Verify(x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("233")),
+                It.IsAny<Exception?>(),
+                (Func<It.IsAnyType, Exception?, string>) It.IsAny<object>()),
+            Times.Once);
         queueGR.InvoiceNumerator.Should().Be(42);
         configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(queueGR), Times.Once);
         storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.Is<string>(m => m.Contains("233")), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Once);
@@ -180,7 +193,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var results = new List<ProcessCommandResponse>();
         for (var i = 0; i < 4; i++)
@@ -224,7 +238,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             storageProviderMock.Object,
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
@@ -261,7 +276,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             storageProviderMock.Object,
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
 
@@ -288,7 +304,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -323,7 +340,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -356,7 +374,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -399,7 +418,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
@@ -429,7 +449,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
 
@@ -469,7 +490,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
 
@@ -502,7 +524,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "HW", 9999));
 
@@ -531,7 +554,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var result = await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, "CB-A", 9999));
 
@@ -570,7 +594,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildHandwrittenRequest(queue, series: null, aa: null));
 
@@ -639,7 +664,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         var act = () => processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
@@ -675,7 +701,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         for (var i = 0; i < 5; i++)
         {
@@ -724,7 +751,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // succeeds, aa=1
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // fails, attempts aa=2
@@ -773,7 +801,8 @@ public class InvoiceCounterReservationTests
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
-            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
 
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // filed, aa=1, commits
         await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // SCU NoOp, no commit

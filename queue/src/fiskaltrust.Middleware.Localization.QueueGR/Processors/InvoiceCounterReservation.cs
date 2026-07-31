@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
@@ -27,6 +28,7 @@ internal static class InvoiceCounterReservation
         ProcessCommandRequest request,
         AsyncLazy<IConfigurationRepository> configurationRepository,
         IQueueStorageProvider queueStorageProvider,
+        ILogger logger,
         Func<Task<ProcessResponse>> sscdCall)
     {
         var configRepo = await configurationRepository;
@@ -81,10 +83,16 @@ internal static class InvoiceCounterReservation
             // must never move the queue's counter.
             queueGR.InvoiceNumerator = reservedAa;
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
+            // Two sinks on purpose: the action journal is the durable per-queue audit
+            // trail, the structured warning is what OpenTelemetry/AppInsights pick up
+            // for alerting across queues.
             await queueStorageProvider.CreateActionJournalAsync(
                 $"AADE rejected aa {reservedAa} in series '{reservedSeries}' as a duplicate (233) — the invoice counter was behind AADE. The counter advanced to {reservedAa}; the next submission reserves aa {reservedAa + 1}.",
                 $"{response.ReceiptResponse.ftState:X}",
                 response.ReceiptResponse.ftQueueItemID);
+            logger.LogWarning(
+                "AADE rejected aa {RejectedAa} in series '{InvoiceSeries}' as a duplicate (233) for queue {QueueId} (queue item {QueueItemId}) — the invoice counter was behind AADE. Advanced InvoiceNumerator to {InvoiceNumerator}; the next submission reserves aa {NextAa}.",
+                reservedAa, reservedSeries, request.queue.ftQueueId, response.ReceiptResponse.ftQueueItemID, queueGR.InvoiceNumerator, queueGR.InvoiceNumerator + 1);
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
 

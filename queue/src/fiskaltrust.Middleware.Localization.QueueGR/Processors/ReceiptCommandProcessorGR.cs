@@ -5,18 +5,21 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
 public class ReceiptCommandProcessorGR(
     IGRSSCD sscd,
     IQueueStorageProvider queueStorageProvider,
-    AsyncLazy<IConfigurationRepository> configurationRepository) : IReceiptCommandProcessor
+    AsyncLazy<IConfigurationRepository> configurationRepository,
+    ILogger logger) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
+    private readonly ILogger _logger = logger;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
@@ -49,6 +52,7 @@ public class ReceiptCommandProcessorGR(
             request,
             _configurationRepository,
             _queueStorageProvider,
+            _logger,
             async () =>
             {
                 var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);

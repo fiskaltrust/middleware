@@ -3,17 +3,20 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
 public class ProtocolCommandProcessorGR(
     IGRSSCD sscd,
     IQueueStorageProvider queueStorageProvider,
-    AsyncLazy<IConfigurationRepository> configurationRepository) : IProtocolCommandProcessor
+    AsyncLazy<IConfigurationRepository> configurationRepository,
+    ILogger logger) : IProtocolCommandProcessor
 {
     private readonly IGRSSCD _sscd = sscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
+    private readonly ILogger _logger = logger;
 
     public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
@@ -48,6 +51,7 @@ public class ProtocolCommandProcessorGR(
             request,
             _configurationRepository,
             _queueStorageProvider,
+            _logger,
             async () =>
             {
                 var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
