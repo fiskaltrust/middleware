@@ -75,7 +75,10 @@ internal static class InvoiceCounterReservation
             // re-reserving the same one forever. This heals both known directions one
             // number per submission: the commit write below failing after AADE filed
             // the invoice, and a queue-start seed below historical out-of-order values
-            // (see InvoiceCounterMigration).
+            // (see InvoiceCounterMigration). Handwritten documents never get here —
+            // they returned above, before the reservation. Their numbering is
+            // caller-owned, so a handwritten 233 is the caller's duplicate to fix and
+            // must never move the queue's counter.
             queueGR.InvoiceNumerator = reservedAa;
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
             await queueStorageProvider.CreateActionJournalAsync(
