@@ -24,14 +24,6 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow) => await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>("Select * from ftQueueItem where ftQueueRow = @MyQueueRow", new { MyQueueRow = queueRow }).ConfigureAwait(false);
 
-        public async IAsyncEnumerable<ftQueueItem> GetByQueueRowRangeAsync(long fromInclusive, long toInclusive)
-        {
-            await foreach (var entry in DbConnection.Query<ftQueueItem>("Select * from ftQueueItem where ftQueueRow >= @from AND ftQueueRow <= @to", new { from = fromInclusive, to = toInclusive }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
-            {
-                yield return entry;
-            }
-        }
-
         public async Task InsertOrUpdateAsync(ftQueueItem entity)
         {
             EntityUpdated(entity);

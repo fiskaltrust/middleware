@@ -19,12 +19,6 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
 
         Task<ftQueueItem> GetByQueueRowAsync(long queueRow);
 
-        /// <summary>
-        /// All queue items with fromInclusive &lt;= ftQueueRow &lt;= toInclusive, in no
-        /// guaranteed order — callers that need an order must sort the result.
-        /// </summary>
-        IAsyncEnumerable<ftQueueItem> GetByQueueRowRangeAsync(long fromInclusive, long toInclusive);
-
         Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem);
 
         IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem);

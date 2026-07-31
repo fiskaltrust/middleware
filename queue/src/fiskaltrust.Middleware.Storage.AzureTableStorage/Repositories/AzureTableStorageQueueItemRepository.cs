@@ -206,18 +206,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             return MapToStorageEntity(await result.FirstOrDefaultAsync());
         }
 
-        public IAsyncEnumerable<ftQueueItem> GetByQueueRowRangeAsync(long fromInclusive, long toInclusive)
-        {
-            // Property filter on ftQueueRow instead of a partition-key lookup: it finds
-            // rows regardless of their partition-key era (rows written before 49ce8fd5,
-            // June 2024, are keyed by the plain row number, newer ones by the descending
-            // hash) and reads the whole range in one paged query instead of one query
-            // per row. The result order follows the partition keys, which differ between
-            // the eras — no ordering guarantee, callers sort.
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.ftQueueRow >= fromInclusive && x.ftQueueRow <= toInclusive));
-            return result.Select(MapToStorageEntity);
-        }
-
         public async Task<int> CountAsync()
         {
             var results = _tableClient.QueryAsync<TableEntity>(select: new string[] { });
