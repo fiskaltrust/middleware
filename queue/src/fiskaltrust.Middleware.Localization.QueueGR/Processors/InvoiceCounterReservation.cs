@@ -43,36 +43,22 @@ internal static class InvoiceCounterReservation
 
         var response = await SubmitWithSegmentAsync(request, reservedSeries, reservedAa, sscdCall);
 
-        if (WasReservedCounterUsed(response.ReceiptResponse, reservedSeries, reservedAa))
+        // Commit gate: AADE's invoiceMark is the proof that an invoice was actually
+        // filed. The SCU may legitimately answer Success without submitting one —
+        // delivery-note cancellations and Pay0x3005 payment methods go to different
+        // AADE endpoints and never consume an aa — so Success alone must not advance
+        // the counter. When a mark IS present, the filed numbering is exactly the
+        // reserved one: the queue is the single writer of the country segment
+        // (handwritten numbering is taken inbound, series/aa overrides are rejected)
+        // and AADEFactory derives the document numbering from that segment.
+        var mark = TryExtractMark(response.ReceiptResponse);
+        if (response.ReceiptResponse.ftState.IsState(State.Success) && mark != null)
         {
             queueGR.InvoiceNumerator = reservedAa;
             queueGR.LastInvoiceMoment = request.ReceiptRequest.cbReceiptMoment;
             queueGR.LastInvoiceQueueItemId = response.ReceiptResponse.ftQueueItemID;
-            queueGR.LastInvoiceMark = TryExtractMark(response.ReceiptResponse);
+            queueGR.LastInvoiceMark = mark;
             await configRepo.InsertOrUpdateQueueGRAsync(queueGR);
-            return new ProcessCommandResponse(response.ReceiptResponse, []);
-        }
-
-        if (response.ReceiptResponse.ftState.IsState(State.Success))
-        {
-            // Should never happen: handwritten numbering is taken inbound before a
-            // reservation is made and series/aa overrides via mydataoverride are
-            // rejected, so a successful response always carries the reserved segment.
-            // If it doesn't, a document was filed at AADE with numbering the queue does
-            // not know about. The receipt must not fail (AADE already filed it — failing
-            // would lose the mark) and the counter must not advance (the reserved aa was
-            // not consumed); surface the anomaly via an action journal instead.
-            return new ProcessCommandResponse(response.ReceiptResponse,
-            [
-                new ftActionJournal
-                {
-                    ftActionJournalId = Guid.NewGuid(),
-                    ftQueueId = request.queue.ftQueueId,
-                    ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
-                    Moment = DateTime.UtcNow,
-                    Message = $"QueueGR invoice counter: successful response does not carry the reserved segment '{reservedSeries}-{reservedAa}' (ftReceiptIdentification: '{response.ReceiptResponse.ftReceiptIdentification}'). The counter was not advanced. This indicates a numbering bug and must be investigated.",
-                },
-            ]);
         }
 
         return new ProcessCommandResponse(response.ReceiptResponse, []);
@@ -108,8 +94,8 @@ internal static class InvoiceCounterReservation
     {
         // Pre-append the country segment to ftReceiptIdentification, following the same
         // convention every other country queue uses (ES/FR/AT/PT all append after "#").
-        // AADEFactory reads (series, aa) from this segment; MyDataSCU rewrites it after
-        // AADE confirms what was actually submitted.
+        // AADEFactory derives the document numbering from this segment; nothing rewrites
+        // it afterwards — the queue is its single writer.
         var originalReceiptIdentification = request.ReceiptResponse.ftReceiptIdentification;
         request.ReceiptResponse.ftReceiptIdentification += $"{series}-{aa}";
 
@@ -120,46 +106,37 @@ internal static class InvoiceCounterReservation
         }
         catch
         {
-            // The SCU call failed outright, so the segment was never confirmed. Failed
-            // receipts must persist exactly the identification they had before this
-            // feature existed ("ft{N:X}#") — restore it before the exception reaches
+            // The SCU call failed outright, so no invoice was filed. Failed receipts
+            // must persist exactly the identification they had before this feature
+            // existed ("ft{N:X}#") — restore it before the exception reaches
             // SignProcessor, which persists the response as failed.
             request.ReceiptResponse.ftReceiptIdentification = originalReceiptIdentification;
             throw;
         }
 
-        if (!response.ReceiptResponse.ftState.IsState(State.Success))
+        if (!response.ReceiptResponse.ftState.IsState(State.Success) || TryExtractMark(response.ReceiptResponse) == null)
         {
-            // MyDataSCU rewrites the country segment only on success, so an unsuccessful
-            // response still carries the unconfirmed segment. Failed receipts must look
-            // exactly like they did before this feature — restore the pre-segment
-            // identification.
+            // Keep the segment only when AADE actually filed an invoice (Success plus
+            // invoiceMark). Failed submissions and SCU flows that never file one
+            // (delivery-note cancellation, payment methods) must persist exactly the
+            // identification they had before: the segment is the durable marker that
+            // this (series, aa) was consumed at AADE, and the queue-start migration
+            // seeds from it.
             response.ReceiptResponse.ftReceiptIdentification = originalReceiptIdentification;
         }
         return response;
     }
 
-    private static bool WasReservedCounterUsed(ReceiptResponse response, string series, long aa)
-    {
-        // Commit only if AADE confirmed the submission *and* it used our reservation.
-        // MyDataSCU rewrites the country segment after "#" with the (series, aa) that
-        // actually went to AADE on a successful submission. Handwritten documents are
-        // taken inbound before a reservation is ever made and series/aa overrides via
-        // mydataoverride are rejected, so a successful response that fails this check
-        // indicates a numbering bug — the caller journals it and does not advance.
-        if (!response.ftState.IsState(State.Success))
-        {
-            return false;
-        }
-        return CountrySegment.TryParse(response.ftReceiptIdentification, out var actualSeries, out var actualAa)
-            && string.Equals(actualSeries, series, StringComparison.Ordinal)
-            && actualAa == aa;
-    }
-
     private static long? TryExtractMark(ReceiptResponse response)
     {
+        // AADE's invoiceMark as stamped by the SendInvoices success path, which types it
+        // as SignatureTypeGR.Mark. The SCU's non-invoice flows (delivery-note
+        // cancellation, payment methods) type all their response items as
+        // GenericMyDataInfo, so they can never satisfy this lookup — even if one of
+        // their items happens to be captioned "invoiceMark".
         var markSignature = response.ftSignatures?
-            .FirstOrDefault(s => string.Equals(s.Caption, "invoiceMark", StringComparison.Ordinal));
+            .FirstOrDefault(s => string.Equals(s.Caption, "invoiceMark", StringComparison.Ordinal)
+                && s.ftSignatureType.IsType(SignatureTypeGR.Mark));
         return markSignature != null && long.TryParse(markSignature.Data, out var mark)
             ? mark
             : (long?) null;

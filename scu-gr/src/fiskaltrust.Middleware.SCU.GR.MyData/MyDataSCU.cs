@@ -297,7 +297,6 @@ public class MyDataSCU : IGRSSCD
                         var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
-                        SetCountrySuffix(request.ReceiptResponse, doc.invoice[0].invoiceHeader.series, doc.invoice[0].invoiceHeader.aa);
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {
                             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.HashPayload));
@@ -358,27 +357,6 @@ public class MyDataSCU : IGRSSCD
     {
         _logger.LogError("myDATA error for receipt '{ReceiptReference}' (QueueItemId: {QueueItemId}): {Error}", request.ReceiptRequest.cbReceiptReference, request.ReceiptResponse.ftQueueItemID, errorMessage);
         request.ReceiptResponse.SetReceiptResponseError(errorMessage);
-    }
-
-    private static void SetCountrySuffix(ReceiptResponse response, string series, string aa)
-    {
-        // Enforces the invariant everything downstream relies on: a successful response
-        // carries "{series}-{aa}" after the "#", and the values are exactly what AADE
-        // filed. The queue pre-appends the same values for the auto and handwritten
-        // paths, and series/aa overrides via mydataoverride are rejected, so on the
-        // queue-driven paths this rewrite is an identity operation. It is load-bearing
-        // for:
-        //  - Order0x3004/Pay0x3005: they invoke the SCU without a pre-appended segment,
-        //    so the rewrite degrades to the historical append.
-        //  - History truthfulness: the queue-start counter migration seeds from these
-        //    segments, which is only sound because they always match what AADE filed.
-        //  - Safety net: if doc numbering and the queue's segment ever diverge (a bug),
-        //    the rewrite is what lets the queue detect the mismatch, journal it and
-        //    refuse to advance the counter.
-        var identification = response.ftReceiptIdentification ?? string.Empty;
-        var hashIdx = identification.IndexOf('#');
-        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
-        response.ftReceiptIdentification = prefix + $"{series}-{aa}";
     }
 
     public class AADEEErrorResponse

@@ -1,6 +1,7 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
+using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -29,7 +30,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 41,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 42, mark: 999000111L);
+        var grSSCDMock = SetupSscdMock(success: true, mark: 999000111L);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -60,7 +61,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 41,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: false, series: "CB-A", aa: 42, mark: null);
+        var grSSCDMock = SetupSscdMock(success: false, mark: null);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -112,13 +113,13 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task UnexpectedForeignSegmentOnSuccess_DoesNotAdvanceCounter_AndWritesActionJournal()
+    public async Task SuccessWithoutMark_IsAnScuNoOp_DoesNotAdvanceCounter()
     {
-        // Defensive: with handwritten numbering taken inbound and series/aa overrides
-        // via mydataoverride rejected, a successful response always carries the
-        // reserved segment. If it ever doesn't (a numbering bug), the counter must not
-        // advance and the anomaly must be surfaced via an action journal — but the
-        // receipt itself must not fail, since AADE already filed the document.
+        // The SCU can answer Success without filing an invoice: delivery-note
+        // cancellations and Pay0x3005 payment methods go to different AADE endpoints,
+        // and misconfigurations short-circuit before anything is sent. AADE's
+        // invoiceMark is the proof of filing — without it the reservation must not be
+        // committed and the identification must stay exactly as it was before.
         var queue = TestHelpers.CreateQueue();
         var queueGR = new ftQueueGR
         {
@@ -128,7 +129,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 41,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "FOREIGN", aa: 7777, mark: 999000111L);
+        var grSSCDMock = SetupSscdMock(success: true, mark: null);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -140,14 +141,15 @@ public class InvoiceCounterReservationTests
         var result = await processor.PointOfSaleReceipt0x0001Async(request);
 
         configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
-        result.receiptResponse.ftState.IsState(State.Success).Should().BeTrue();
-        result.actionJournals.Should().ContainSingle()
-            .Which.Message.Should().Contain("does not carry the reserved segment 'CB-A-42'");
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
     }
 
     [Fact]
-    public async Task SuccessWithoutMarkSignature_StillCommits_MarkIsNull()
+    public async Task SuccessWithMarkCaptionButForeignSignatureType_DoesNotAdvanceCounter()
     {
+        // The SCU's non-invoice flows type all their response items as
+        // GenericMyDataInfo. Even if one of them were captioned "invoiceMark", it must
+        // not count as a filed invoice — only a SignatureTypeGR.Mark signature does.
         var queue = TestHelpers.CreateQueue();
         var queueGR = new ftQueueGR
         {
@@ -157,21 +159,30 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 41,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 42, mark: null);
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                req.ReceiptResponse.ftState = req.ReceiptResponse.ftState.WithState(State.Success);
+                req.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = "invoiceMark",
+                    Data = "123456",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = (SignatureType) 0x4752_2000_0000_0019, // GenericMyDataInfo
+                });
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
             Mock.Of<IQueueStorageProvider>(),
             new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
 
-        var request = BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001);
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
 
-        await processor.PointOfSaleReceipt0x0001Async(request);
-
-        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q =>
-            q.InvoiceNumerator == 42 &&
-            q.LastInvoiceMark == null)),
-            Times.Once);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
     }
 
     [Fact]
@@ -191,7 +202,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 0,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: true, series: "CB-A", aa: 1, mark: 100L);
+        var grSSCDMock = SetupSscdMock(success: true, mark: 100L);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -222,7 +233,7 @@ public class InvoiceCounterReservationTests
             .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
             {
                 capturedIdentifications.Add(req.ReceiptResponse.ftReceiptIdentification!);
-                MarkAsSuccessKeepingSuffix(req.ReceiptResponse, mark: 777L);
+                MarkAsSuccess(req.ReceiptResponse, mark: 777L);
                 return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
             });
 
@@ -278,7 +289,7 @@ public class InvoiceCounterReservationTests
             InvoiceNumerator = 41,
         };
         var configRepoMock = SetupConfigRepoMock(queueGR);
-        var grSSCDMock = SetupSscdMock(success: false, series: "CB-A", aa: 42, mark: null);
+        var grSSCDMock = SetupSscdMock(success: false, mark: null);
 
         var processor = new ReceiptCommandProcessorGR(
             grSSCDMock.Object,
@@ -429,7 +440,7 @@ public class InvoiceCounterReservationTests
                 }
                 else
                 {
-                    MarkAsSuccessKeepingSuffix(req.ReceiptResponse, mark: 100L + callCount);
+                    MarkAsSuccess(req.ReceiptResponse, mark: 100L + callCount);
                 }
                 return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
             });
@@ -448,12 +459,11 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
-    public async Task OverrideBetweenAutoReceipts_DoesNotShiftAutoSequence()
+    public async Task ScuNoOpBetweenAutoReceipts_DoesNotShiftAutoSequence()
     {
-        // Defensive sequence-resilience: even if a successful response ever came back
-        // with a foreign (series, aa) — which no supported path produces anymore — the
-        // auto counter must not advance, and the next auto receipt picks up at the
-        // value following the *last auto-committed* one.
+        // A receipt the SCU answers with Success but no mark (an SCU-internal NoOp,
+        // e.g. a payment-method transmission) must not consume an aa. The next filed
+        // receipt picks up at the value following the *last committed* one.
         var queue = TestHelpers.CreateQueue();
         var queueGR = new ftQueueGR
         {
@@ -474,13 +484,12 @@ public class InvoiceCounterReservationTests
                 CaptureReservedAa(req.ReceiptResponse, capturedAa);
                 if (callCount == 2)
                 {
-                    // Override path: suffix gets rewritten to something else (simulates
-                    // handwritten or mydataoverride replacing series/aa on the doc).
-                    OverwriteSuffix(req.ReceiptResponse, "HANDWRITTEN", 9999, mark: 5_555_555L);
+                    // SCU-internal NoOp: Success, but no invoice was filed — no mark.
+                    req.ReceiptResponse.ftState = req.ReceiptResponse.ftState.WithState(State.Success);
                 }
                 else
                 {
-                    MarkAsSuccessKeepingSuffix(req.ReceiptResponse, mark: 100L + callCount);
+                    MarkAsSuccess(req.ReceiptResponse, mark: 100L + callCount);
                 }
                 return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
             });
@@ -490,11 +499,11 @@ public class InvoiceCounterReservationTests
             Mock.Of<IQueueStorageProvider>(),
             new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)));
 
-        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // auto, aa=1, commits
-        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // override, suffix mismatch, no commit
-        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // auto, aa=2 (NOT 3), commits
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // filed, aa=1, commits
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // SCU NoOp, no commit
+        await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));  // filed, aa=2 (NOT 3), commits
 
-        // Reservations attempted: 1 (committed), 2 (lost to override), 2 (committed).
+        // Reservations attempted: 1 (committed), 2 (not consumed by the NoOp), 2 (committed).
         capturedAa.Should().Equal(1L, 2L, 2L);
         queueGR.InvoiceNumerator.Should().Be(2);
     }
@@ -507,7 +516,7 @@ public class InvoiceCounterReservationTests
             .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
             {
                 CaptureReservedAa(req.ReceiptResponse, capturedAa);
-                MarkAsSuccessKeepingSuffix(req.ReceiptResponse, markCounter++);
+                MarkAsSuccess(req.ReceiptResponse, markCounter++);
                 return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
             });
         return mock;
@@ -529,41 +538,25 @@ public class InvoiceCounterReservationTests
         }
     }
 
-    private static void MarkAsSuccessKeepingSuffix(ReceiptResponse response, long mark)
+    private static void MarkAsSuccess(ReceiptResponse response, long? mark)
     {
-        // Auto path: MyDataSCU's SetCountrySuffix rewrites with the doc's values, which
-        // in the no-override case equal what the country processor pre-appended — so the
-        // suffix stays unchanged.
+        // The SCU never touches ftReceiptIdentification — the queue is its single
+        // writer. A filed invoice is recognizable purely by the AADE invoiceMark, which
+        // the SendInvoices success path types as SignatureTypeGR.Mark.
         response.ftState = response.ftState.WithState(State.Success);
-        response.AddSignatureItem(new SignatureItem
+        if (mark.HasValue)
         {
-            Caption = "invoiceMark",
-            Data = mark.ToString(),
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = (SignatureType) 0,
-        });
+            response.AddSignatureItem(new SignatureItem
+            {
+                Caption = "invoiceMark",
+                Data = mark.Value.ToString(),
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.Mark.As<SignatureType>(),
+            });
+        }
     }
 
-    private static void OverwriteSuffix(ReceiptResponse response, string overrideSeries, long overrideAa, long mark)
-    {
-        // Override path: MyDataSCU rewrites the suffix with the override values from the
-        // doc, producing a string that does not end with the country processor's
-        // pre-appended reservation.
-        response.ftState = response.ftState.WithState(State.Success);
-        var identification = response.ftReceiptIdentification ?? string.Empty;
-        var hashIdx = identification.IndexOf('#');
-        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
-        response.ftReceiptIdentification = prefix + $"{overrideSeries}-{overrideAa}";
-        response.AddSignatureItem(new SignatureItem
-        {
-            Caption = "invoiceMark",
-            Data = mark.ToString(),
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = (SignatureType) 0,
-        });
-    }
-
-    private static Mock<IGRSSCD> SetupSscdMock(bool success, string series, long aa, long? mark)
+    private static Mock<IGRSSCD> SetupSscdMock(bool success, long? mark)
     {
         var mock = new Mock<IGRSSCD>();
         mock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
@@ -572,23 +565,7 @@ public class InvoiceCounterReservationTests
                 var resp = req.ReceiptResponse;
                 if (success)
                 {
-                    resp.ftState = resp.ftState.WithState(State.Success);
-                    // MyDataSCU rewrites the country segment after "#" with the (series, aa)
-                    // actually submitted to AADE; we mirror that behaviour here.
-                    var identification = resp.ftReceiptIdentification ?? string.Empty;
-                    var hashIdx = identification.IndexOf('#');
-                    var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
-                    resp.ftReceiptIdentification = prefix + $"{series}-{aa}";
-                    if (mark.HasValue)
-                    {
-                        resp.AddSignatureItem(new SignatureItem
-                        {
-                            Caption = "invoiceMark",
-                            Data = mark.Value.ToString(),
-                            ftSignatureFormat = SignatureFormat.Text,
-                            ftSignatureType = (SignatureType) 0,
-                        });
-                    }
+                    MarkAsSuccess(resp, mark);
                 }
                 else
                 {
