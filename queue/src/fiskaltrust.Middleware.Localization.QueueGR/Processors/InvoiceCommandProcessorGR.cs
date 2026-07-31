@@ -1,6 +1,5 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.gr;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Storage;
@@ -11,21 +10,18 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 public class InvoiceCommandProcessorGR(
     IGRSSCD sscd,
     IQueueStorageProvider queueStorageProvider,
-    AsyncLazy<IConfigurationRepository> configurationRepository,
-    AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository) : IInvoiceCommandProcessor
+    AsyncLazy<IConfigurationRepository> configurationRepository) : IInvoiceCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
-    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
     public Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) =>
         InvoiceCounterReservation.InvokeWithCounterAsync(
             request,
             _configurationRepository,
-            _queueItemRepository,
             async () =>
             {
                 var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);

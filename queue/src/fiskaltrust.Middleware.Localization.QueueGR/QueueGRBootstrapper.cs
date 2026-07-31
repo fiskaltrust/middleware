@@ -31,8 +31,23 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var configurationRepository = storageProvider.CreateConfigurationRepository();
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
-        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, queueItemRepository), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, queueItemRepository), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider));
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorGR.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
+
+        // One-time invoice-counter migration, started eagerly at queue construction
+        // (AsyncLazy runs its factory immediately) and awaited before every receipt. If
+        // the counter cannot be initialized, receipt processing fails loudly instead of
+        // silently falling back to the legacy ftReceiptNumerator-derived numbering.
+        var invoiceCounterMigration = new AsyncLazy<bool>(async () =>
+        {
+            await InvoiceCounterMigration.EnsureMigratedAsync(await configurationRepository, await queueItemRepository, id);
+            return true;
+        });
+
+        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider));
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, async (request, response, queue, queueItem) =>
+        {
+            await invoiceCounterMigration;
+            return await signProcessorGR.ProcessAsync(request, response, queue, queueItem);
+        }, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorGR(storageProvider, GetFromConfig(configuration) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
