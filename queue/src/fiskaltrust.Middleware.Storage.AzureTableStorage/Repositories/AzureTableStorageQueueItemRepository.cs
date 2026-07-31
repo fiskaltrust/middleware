@@ -202,15 +202,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow)
         {
-            // The partition key is derived from ftQueueRow (see MapToAzureEntity), so a
-            // partition-scoped query is a cheap point read. Filtering on the ftQueueRow
-            // property instead would scan the whole table server-side per call.
-            // Rows written before 49ce8fd5 ("fix queuerow hasing", June 2024) were keyed
-            // by the plain row number, so both schemes are queried — either way the
-            // lookup stays index-backed instead of scanning the table.
-            var hashedPartitionKey = Mapper.GetHashString(queueRow);
-            var legacyPartitionKey = queueRow.ToString();
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {hashedPartitionKey} or PartitionKey eq {legacyPartitionKey}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.ftQueueRow == queueRow));
             return MapToStorageEntity(await result.FirstOrDefaultAsync());
         }
 

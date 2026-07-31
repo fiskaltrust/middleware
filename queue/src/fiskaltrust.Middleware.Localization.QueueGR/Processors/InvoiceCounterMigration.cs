@@ -75,9 +75,10 @@ public static class InvoiceCounterMigration
         // Error responses are skipped too: failed attempts must never count as
         // submitted.
         //
-        // The walk is one GetByQueueRowAsync per row — a partition-scoped point read on
-        // Azure Table Storage — and runs once per queue: the seed is persisted right
-        // after, and the queue-start gate keeps receipts waiting until it completed.
+        // The walk is one GetByQueueRowAsync per row (a filtered query on Azure Table
+        // Storage, which finds rows regardless of their partition-key era) and runs
+        // once per queue: the seed is persisted right after, and the queue-start gate
+        // keeps receipts waiting until it completed.
         var maxAa = 0L;
         for (var row = lastQueueRow; row >= 1; row--)
         {
