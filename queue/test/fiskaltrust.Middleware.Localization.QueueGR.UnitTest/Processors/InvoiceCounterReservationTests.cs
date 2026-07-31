@@ -574,6 +574,17 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
+    public void DuplicateInvoiceSignatureContract_IsPinnedAgainstScuGr()
+    {
+        // Mirrors the pin in scu-gr's AadeErrorContractTests: MyDataSCU retypes the
+        // FAILURE signature with this exact value when AADE rejects a SendInvoices
+        // submission as a duplicate (233), and the duplicate-aa advance matches on it.
+        // If either side drifts, the advance silently stops triggering and duplicate
+        // rejections go back to permanently failing without moving the counter.
+        ((long) SignatureTypeGR.DuplicateInvoiceError).Should().Be(0x4752_2000_0000_001C);
+    }
+
+    [Fact]
     public async Task Handwritten_IncompletePayload_FallsBackToReservation()
     {
         // Handwritten flag without a usable (Series, AA) payload: the queue cannot take
@@ -815,14 +826,20 @@ public class InvoiceCounterReservationTests
 
     /// <summary>
     /// Exactly the failure shape MyDataSCU emits for AADE rejections: a FAILURE
-    /// signature whose Data is the serialized AADEEErrorResponse. Pins the
-    /// cross-service contract the duplicate-aa advance matches on — it duplicates
-    /// scu-gr's AADEEErrorResponse and the xsd-generated ErrorType property names; if
-    /// either side drifts, the advance silently stops triggering.
+    /// signature whose Data is the serialized AADEEErrorResponse — and for validation
+    /// error 233 (duplicate invoice) the SCU additionally retypes that signature as
+    /// SignatureTypeGR.DuplicateInvoiceError. The typed signature is the contract the
+    /// duplicate-aa advance matches on; the payload stays untyped-generic for every
+    /// other code.
     /// </summary>
     private static void SetAadeError(ReceiptResponse response, string code)
     {
         response.SetReceiptResponseError($"{{\"AADEError\":\"ValidationError\",\"Errors\":[{{\"message\":\"validation error\",\"code\":\"{code}\"}}]}}");
+        if (string.Equals(code, "233", StringComparison.Ordinal))
+        {
+            var failure = response.ftSignatures.Single(s => s.Caption == "FAILURE");
+            failure.ftSignatureType = failure.ftSignatureType.WithType(SignatureTypeGR.DuplicateInvoiceError);
+        }
     }
 
     /// <summary>
