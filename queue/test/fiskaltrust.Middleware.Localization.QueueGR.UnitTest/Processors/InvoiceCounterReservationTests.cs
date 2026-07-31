@@ -214,9 +214,92 @@ public class InvoiceCounterReservationTests
     }
 
     [Fact]
+    public async Task DuplicateUid228FromProviderChannel_AdvancesTheCounter()
+    {
+        // The provider channel — which is how this SCU submits — reports the duplicate
+        // UID as validation error 228 instead of 233. This is the byte-for-byte payload
+        // observed in production; it must trigger the same "number consumed, advance".
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var scuCalls = 0;
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                scuCalls++;
+                req.ReceiptResponse.SetReceiptResponseError(
+                    "{\"AADEError\":\"ValidationError\",\"Errors\":[{\"message\":\"The UID: E983749569A44D1417B39328DED86B6E84AF6B59 is invalid . It has already been sent for another invoice (MARK:400001966030681 , AUTHENTICATION_CODE:6485235B15AB2E465F94C28BF5471F8A3795D688)\",\"code\":\"228\"}]}");
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        var storageProviderMock = new Mock<IQueueStorageProvider>();
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            storageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
+
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+
+        scuCalls.Should().Be(1); // no resubmission within the call — same as 233
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        result.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        queueGR.InvoiceNumerator.Should().Be(42);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.Is<ftQueueGR>(q => q.InvoiceNumerator == 42)), Times.Once);
+        storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.Is<string>(m => m.Contains("228")), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Error228ForOtherFields_DoesNotAdvanceTheCounter()
+    {
+        // 228 is "{Field} is invalid" with Field ∈ {UID, InvoiceType} — only the
+        // duplicate-UID variant ("already been sent") proves a consumed number. Any
+        // other 228 is a problem with the receipt itself and must not move the counter.
+        var queue = TestHelpers.CreateQueue();
+        var queueGR = new ftQueueGR
+        {
+            ftQueueGRId = queue.ftQueueId,
+            CashBoxIdentification = "CB-A",
+            InvoiceSeries = "CB-A",
+            InvoiceNumerator = 41,
+        };
+        var configRepoMock = SetupConfigRepoMock(queueGR);
+        var grSSCDMock = new Mock<IGRSSCD>();
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), It.IsAny<List<(ReceiptRequest, ReceiptResponse)>>()))
+            .ReturnsAsync((ProcessRequest req, List<(ReceiptRequest, ReceiptResponse)> _) =>
+            {
+                req.ReceiptResponse.SetReceiptResponseError(
+                    "{\"AADEError\":\"ValidationError\",\"Errors\":[{\"message\":\"The INVOICE TYPE: 11.5 is invalid\",\"code\":\"228\"}]}");
+                return new ProcessResponse { ReceiptResponse = req.ReceiptResponse };
+            });
+        var storageProviderMock = new Mock<IQueueStorageProvider>();
+
+        var processor = new ReceiptCommandProcessorGR(
+            grSSCDMock.Object,
+            storageProviderMock.Object,
+            new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(configRepoMock.Object)),
+            Mock.Of<ILogger>());
+
+        var result = await processor.PointOfSaleReceipt0x0001Async(BuildRequest(queue, ReceiptCase.PointOfSaleReceipt0x0001));
+
+        result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        queueGR.InvoiceNumerator.Should().Be(41);
+        configRepoMock.Verify(x => x.InsertOrUpdateQueueGRAsync(It.IsAny<ftQueueGR>()), Times.Never);
+        storageProviderMock.Verify(x => x.CreateActionJournalAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>()), Times.Never);
+    }
+
+    [Fact]
     public async Task NonDuplicateAadeError_DoesNotAdvanceTheCounter()
     {
-        // Only 233 is proof that the number is consumed at AADE. Any other rejection is
+        // Only a duplicate-UID rejection (233, or 228's already-sent variant) is proof
+        // that the number is consumed at AADE. Any other rejection is
         // a problem with the receipt itself — advancing there would burn numbers for a
         // request that keeps failing.
         var queue = TestHelpers.CreateQueue();
