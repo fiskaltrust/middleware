@@ -331,24 +331,15 @@ public class MyDataSCU : IGRSSCD
                     }
                     else
                     {
-                        var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error).ToList();
+                        var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
                         SetErrorAndLog(request,JsonSerializer.Serialize(new AADEEErrorResponse
                         {
                             AADEError = data.statusCode,
-                            Errors = errors
+                            Errors = errors.ToList()
                         }, options: new JsonSerializerOptions
                         {
                             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                         }));
-                        if (errors.Any(x => string.Equals(x.code, "233", StringComparison.Ordinal)))
-                        {
-                            // AADE 233: an invoice with this numbering is already
-                            // transmitted. Only this SendInvoices branch types the
-                            // failure — errors from the cancellation and payment-method
-                            // endpoints are never invoice-numbering duplicates and must
-                            // not trigger the counter advance in QueueGR.
-                            request.ReceiptResponse.MarkDuplicateInvoiceFailure();
-                        }
                     }
                 }
             }

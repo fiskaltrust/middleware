@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.gr;
@@ -14,6 +15,15 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
 internal static class InvoiceCounterReservation
 {
+    /// <summary>
+    /// AADE rejects a submission whose (issuer, series, aa) is already filed with
+    /// validation error 233. The queue is the single writer of its own series
+    /// (handwritten numbering into the own series and series/aa overrides are both
+    /// rejected), so a 233 on a reservation can only mean the counter is behind AADE —
+    /// the reserved number is consumed.
+    /// </summary>
+    private const string DuplicateAaAadeErrorCode = "233";
+
     public static async Task<ProcessCommandResponse> InvokeWithCounterAsync(
         ProcessCommandRequest request,
         AsyncLazy<IConfigurationRepository> configurationRepository,
@@ -177,17 +187,49 @@ internal static class InvoiceCounterReservation
 
     private static bool IsDuplicateAaError(ReceiptResponse response)
     {
-        // AADE rejects a submission whose numbering is already filed with validation
-        // error 233; MyDataSCU types the FAILURE signature as DuplicateInvoiceError for
-        // exactly that case, and only on its SendInvoices path — errors from the
-        // cancellation and payment-method endpoints never carry this type. The queue is
-        // the single writer of its own series (handwritten numbering into the own
-        // series and series/aa overrides are both rejected), so this signal can only
-        // mean the counter is behind AADE — the reserved number is consumed. Queue and
-        // SCU ship as a single unit, so the typed signature is the whole contract
-        // (value pinned against scu-gr in both test suites).
-        return response.ftState.IsState(State.Error)
-            && response.ftSignatures?.Any(s => s.ftSignatureType.IsType(SignatureTypeGR.DuplicateInvoiceError)) == true;
+        if (!response.ftState.IsState(State.Error))
+        {
+            return false;
+        }
+        // MyDataSCU surfaces AADE rejections as a FAILURE signature whose Data is the
+        // serialized AADEEErrorResponse: {"AADEError":"...","Errors":[{"message":"...",
+        // "code":"..."}]}. The property names duplicate scu-gr's AADEEErrorResponse and
+        // the xsd-generated ErrorType — if either side drifts, the advance silently
+        // stops triggering and a 233 fails the receipt without moving the counter,
+        // exactly as it did before the heal existed.
+        foreach (var signature in response.ftSignatures ?? [])
+        {
+            if (!string.Equals(signature.Caption, "FAILURE", StringComparison.Ordinal) || string.IsNullOrEmpty(signature.Data))
+            {
+                continue;
+            }
+            try
+            {
+                using var document = JsonDocument.Parse(signature.Data);
+                if (document.RootElement.ValueKind != JsonValueKind.Object
+                    || !document.RootElement.TryGetProperty("Errors", out var errors)
+                    || errors.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+                foreach (var error in errors.EnumerateArray())
+                {
+                    if (error.ValueKind == JsonValueKind.Object
+                        && error.TryGetProperty("code", out var code)
+                        && code.ValueKind == JsonValueKind.String
+                        && string.Equals(code.GetString(), DuplicateAaAadeErrorCode, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Not every FAILURE carries the AADE error JSON (mapping and transport
+                // errors are plain text) — those are never duplicate-aa rejections.
+            }
+        }
+        return false;
     }
 
     private static long? TryExtractMark(ReceiptResponse response)

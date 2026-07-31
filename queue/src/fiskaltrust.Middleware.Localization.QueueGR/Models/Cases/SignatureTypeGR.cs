@@ -8,7 +8,6 @@ public enum SignatureTypeGR : long
     InitialOperationReceipt = 0x4752_2000_0000_0003,
     OutOfOperationReceipt = 0x4752_2000_0000_0003,
     Mark = 0x4752_2000_0000_0014,
-    DuplicateInvoiceError = 0x4752_2000_0000_001C,
 }
 
 public static class SignatureTypeGRExt
