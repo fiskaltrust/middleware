@@ -1,4 +1,8 @@
 ﻿name: smoketests
+run-name: >
+  ${{ inputs.platform }} |
+  Launcher ${{ inputs.launcherVersion }} |
+  ${{ inputs.queuePackage }}
 
 on:
   workflow_dispatch:
@@ -193,7 +197,14 @@ jobs:
           }
 
           $output = "$launcher.$cashboxId.zip"
-          Invoke-RestMethod -Uri $url -Headers $headers -OutFile $output
+          $downloadResponse = Invoke-WebRequest -Uri $url -Headers $headers -OutFile $output -PassThru
+          $contentDisposition = [string]$downloadResponse.Headers['Content-Disposition']
+          $launcherPackageVersion = ""
+          $cdMatch = [regex]::Match($contentDisposition, "(\d+\.\d+\.\d+(?:\.\d+)?)")
+          if ($cdMatch.Success) { $launcherPackageVersion = $cdMatch.Groups[1].Value }
+
+          echo "launcherPackageVersion=$launcherPackageVersion" >> $env:GITHUB_ENV
+          echo "launcherContentDisposition=$contentDisposition" >> $env:GITHUB_ENV
 
       - name: Extract launcher package
         shell: pwsh
@@ -297,7 +308,13 @@ jobs:
           }
 
           #....Send requests....
-          if ($tcpReady) {
+          $failureReasons = @()
+          if ($process.HasExited) {
+            $detail = "Launcher process exited early with code $($process.ExitCode). Check test-output.log."
+            Write-Host "::warning::$detail"
+            $failureReasons += $detail
+          }
+          elseif ($tcpReady) {
            $queueUrl = "http://localhost:$port/${{ env.queueId }}"
            $helperUrl = "http://localhost:$port/${{ env.helperId }}"
            $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
@@ -317,19 +334,19 @@ jobs:
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
 
-            $ErrorActionPreference = "Stop"
             foreach ($req in $requests) {
                 Write-Host "`n--- Sending $($req.Name) request ---"
                 $body = $null
-                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {       
-                 $bodyTemplate = Get-Content $req.File -Raw 
+                if ($req.File -and (Test-Path $req.File) -and ((Get-Item $req.File).Length -gt 0)) {
+                 $bodyTemplate = Get-Content $req.File -Raw
                  $body = $bodyTemplate -replace "{{cashbox_id}}", "${{ env.cashboxId }}" -replace "{{current_moment}}", (Get-Date).ToString("o")
                 }
                 $contentType = "application/json"
+                $url = $req.Url
                 if($isLinux -or $isMacos){
-                    $req.Url = $req.Url.Replace("/json/v1/Echo", "/echo");
-                    $req.Url = $req.Url.Replace("/json/v1/Sign", "/sign");
-                    $req.Url = $req.Url.Replace("/json/v0/Journal", "/journal");
+                    $url = $url.Replace("/json/v1/Echo", "/echo");
+                    $url = $url.Replace("/json/v1/Sign", "/sign");
+                    $url = $url.Replace("/json/v0/Journal", "/journal");
                     if ($req.Name -like "*Export*" -and "${{ inputs.launcherVersion }}" -ne "v2.0") {$contentType = "text/plain"}
                 }
 
@@ -345,26 +362,142 @@ jobs:
                 try {
 
                   if ($null -ne $body) {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }
                   Write-Host "Response: $($response | ConvertTo-Json)"
 
-                } 
+                }
                 catch {
-                    Write-Error "$($req.Name) request failed: $_"
-                    Write-Host "Error details: $($_.Exception.Message)"
+                    $statusCode = $_.Exception.Response?.StatusCode.value__
+                    $reasonPhrase = $_.Exception.Response?.ReasonPhrase
+                    $respBody = ""
+                    try {
+                      if ($_.Exception.Response) {
+                        $respBody = $_.Exception.Response.Content.ReadAsStringAsync().Result
+                      }
+                    } catch {}
+
+                    $detail = "$($req.Name) failed. Url=$url Status=$statusCode $reasonPhrase Message=$($_.Exception.Message) Body=$respBody"
+                    Write-Host "::warning::$detail"
+                    $failureReasons += $detail
                 }
              }
             }
             else {
-              Write-Error "Launcher failed to start within the expected time."
+              Write-Host "::warning::Launcher failed to start within the expected time."
+              $failureReasons += "Launcher failed to start within the expected time."
             }
 
             #....Stop launcher....
             Write-Host "Stopping launcher process..."
-            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            if ($isWindows) {
+              taskkill /PID $process.Id /T /F
+            } else {
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+              sudo pkill -9 -f "${{ env.launcher }}"
+            }
+            $global:LASTEXITCODE = 0
+
+            if ($failureReasons.Count -gt 0) {
+              Write-Host "Smoke test failures:"
+              $failureReasons | ForEach-Object { Write-Host " - $_" }
+              throw "Smoke test failed: $($failureReasons.Count) issue(s) - see warnings above."
+            }
+
+      - name: Resolve package versions
+        if: always()
+        shell: pwsh
+        run: |
+          $rawLog = if (Test-Path "test-output.log") { Get-Content "test-output.log" -Raw } else { "" }
+          $log = $rawLog -replace "\x1b\[[0-9;]*[A-Za-z]", ""
+
+          $queuePkg = "${{ inputs.queuePackage }}"
+          $isV2 = "${{ inputs.launcherVersion }}" -eq "v2.0"
+
+          if ($isV2) {
+            $queueMatch    = [regex]::Match($log, "Downloading package $([regex]::Escape($queuePkg))-(.+)\.")
+            $scuMatch      = [regex]::Match($log, "Downloading package (fiskaltrust\.Middleware\.SCU\.[^-]+)-(.+)\.")
+            $helperMatch   = [regex]::Match($log, "Downloading package fiskaltrust\.Middleware\.Helper\.LocalPosSystemApi-(.+)\.")
+            $launcherMatch = [regex]::Match($log, "fiskaltrust\.Launcher:\s*(\S+)")
+            $helperVersion = if ($helperMatch.Success) { $helperMatch.Groups[1].Value } else { "unknown" }
+          } else {
+            $queueMatch    = [regex]::Match($log, "Downloading $([regex]::Escape($queuePkg))\s+(\S+)\s+updates")
+            $scuMatch      = [regex]::Match($log, "Downloading (fiskaltrust\.Middleware\.SCU\.[^\s]+)\s+(\S+)\s+updates")
+            $launcherMatch = [regex]::Match($log, "fiskaltrust\.Launcher-(\S+)")
+            $helperVersion = "n/a"
+          }
+
+          $queueVersion = if ($queueMatch.Success) { $queueMatch.Groups[1].Value } else { "unknown" }
+          $scuPackage   = if ($scuMatch.Success) { $scuMatch.Groups[1].Value } else { "unknown" }
+          $scuVersion   = if ($scuMatch.Success) { $scuMatch.Groups[2].Value } else { "unknown" }
+
+          $launcherVersion = if ($launcherMatch.Success) { $launcherMatch.Groups[1].Value } else { "${{ env.launcherPackageVersion }}" }
+          if (-not $launcherVersion) { $launcherVersion = "unknown" }
+
+          echo "resolvedQueueVersion=$queueVersion"       >> $env:GITHUB_ENV
+          echo "resolvedScuPackage=$scuPackage"           >> $env:GITHUB_ENV
+          echo "resolvedScuVersion=$scuVersion"           >> $env:GITHUB_ENV
+          echo "resolvedHelperVersion=$helperVersion"     >> $env:GITHUB_ENV
+          echo "resolvedLauncherVersion=$launcherVersion" >> $env:GITHUB_ENV
+
+      - name: Annotate resolved versions
+        if: always()
+        shell: pwsh
+        run: |
+          $queuePkg = "${{ inputs.queuePackage }}"
+          $queueVersion = "${{ env.resolvedQueueVersion }}"
+          $scuPackage = "${{ env.resolvedScuPackage }}"
+          $scuVersion = "${{ env.resolvedScuVersion }}"
+          $helperVersion = "${{ env.resolvedHelperVersion }}"
+          $launcherVersion = "${{ env.resolvedLauncherVersion }}"
+
+          $fields = @(
+            @{ Title = "Platform"; Value = "${{ inputs.platform }}" }
+            @{ Title = "Queue Package"; Value = $queuePkg }
+            @{ Title = "Queue Version"; Value = $queueVersion }
+            @{ Title = "SCU Package"; Value = $scuPackage }
+            @{ Title = "SCU Version"; Value = $scuVersion }
+          )
+          if ("${{ inputs.launcherVersion }}" -eq "v2.0") {
+            $fields += @{ Title = "LocalPosSystemApi Helper Version"; Value = $helperVersion }
+          }
+          $fields += @{ Title = "Launcher Version"; Value = $launcherVersion }
+
+          foreach ($field in $fields) {
+            Write-Host "::notice title=$($field.Title)::$($field.Value)"
+          }
+
+          $unresolved = @($queueVersion, $scuVersion, $launcherVersion) | Where-Object { $_ -eq "unknown" }
+          if ($unresolved.Count -gt 0) {
+            $detail = "Could not parse one or more versions from test-output.log ($($unresolved -join ', ')) - regex patterns in the 'Resolve package versions' step may need adjusting to match the actual log format."
+            if ($launcherVersion -eq "unknown") {
+              $detail += " Launcher download Content-Disposition header seen: '${{ env.launcherContentDisposition }}'"
+            }
+            Write-Host "::warning title=Smoke Test Version Resolution::$detail"
+          }
+
+      - name: Clean log artifact
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "test-output.log") {
+            $cleaned = $false
+            for ($i = 1; $i -le 5; $i++) {
+              try {
+                $log = Get-Content "test-output.log" -Raw
+                $log -replace "\x1b\[[0-9;]*[A-Za-z]", "" | Set-Content -Path "test-output.log" -NoNewline -ErrorAction Stop
+                $cleaned = $true
+                break
+              } catch {
+                Start-Sleep -Seconds 2
+              }
+            }
+            if (-not $cleaned) {
+              Write-Host "::warning title=Log Cleanup Skipped::test-output.log was locked by another process and could not be cleaned of ANSI escape codes - the uploaded artifact will contain them raw."
+            }
+          }
 
       - name: Upload test output
         if: always()
