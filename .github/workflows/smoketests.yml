@@ -454,6 +454,7 @@ jobs:
           $launcherVersion = "${{ env.resolvedLauncherVersion }}"
 
           $fields = @(
+            @{ Title = "Platform"; Value = "${{ inputs.platform }}" }
             @{ Title = "Queue Package"; Value = $queuePkg }
             @{ Title = "Queue Version"; Value = $queueVersion }
             @{ Title = "SCU Package"; Value = $scuPackage }
