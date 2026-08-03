@@ -366,6 +366,7 @@ jobs:
                   Write-Host "::endgroup::"                 
                 }
                 catch {
+                    Write-Host "::notice::$notice"
                     Write-Error "$($req.Name) request failed: $_"
                     Write-Host "Error details: $($_.Exception.Message)"
                 }
