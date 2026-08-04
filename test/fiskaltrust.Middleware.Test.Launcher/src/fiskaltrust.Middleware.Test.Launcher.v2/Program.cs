@@ -6,14 +6,19 @@ using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using FluentAssertions;
 
+var market = Environment.GetEnvironmentVariable("MW_MARKET") ?? "ES";
+var queueConfigurationFile = Environment.GetEnvironmentVariable("MW_QUEUE_CONFIGURATION") ?? (market == "PL" ? "queue-configuration-pl.json" : "queue-configuration.json");
+var scuConfigurationFile = Environment.GetEnvironmentVariable("MW_SCU_CONFIGURATION") ?? (market == "PL" ? "scu-configuration-pl-inmemory.json" : "scu-configuration-bizkaia.json");
+
 var builder = new CashBoxBuilder(
-    "ES" switch
+    market switch
     {
-        "ES" => new CashBoxBuilderES(),
+        "ES" => (ICashBoxBuilder)new CashBoxBuilderES(),
+        "PL" => new CashBoxBuilderPL(),
         _ => throw new NotImplementedException(),
     },
-    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "queue-configuration.json"))),
-    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "scu-configuration-bizkaia.json")))
+    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, queueConfigurationFile))),
+    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, scuConfigurationFile)))
 );
 
 var middleware = builder.Build();
@@ -33,6 +38,7 @@ var middleware = builder.Build();
         cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8),
         cbChargeItems = [],
         cbPayItems = [],
+        Currency = builder.Market == "PL" ? Currency.PLN : Currency.EUR,
         ftReceiptCase = ReceiptCase.InitialOperationReceipt0x4001.WithCountry(builder.Market)
     }).ConfigureAwait(false);
     response.Should().NotBeNull();

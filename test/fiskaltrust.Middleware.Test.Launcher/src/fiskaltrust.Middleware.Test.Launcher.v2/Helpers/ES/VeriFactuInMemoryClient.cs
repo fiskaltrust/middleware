@@ -1,4 +1,6 @@
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using GovernmentAPI = fiskaltrust.Middleware.SCU.ES.Common.Models.GovernmentAPI;
+using GovernmentAPISchemaVersion = fiskaltrust.Middleware.SCU.ES.Common.Models.GovernmentAPISchemaVersion;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Soap;
@@ -12,7 +14,7 @@ class VeriFactuInMemoryClient : IClient
         return Task.FromResult<(Result<RespuestaRegFactuSistemaFacturacion, Error>, GovernmentAPI)>((
             new RespuestaRegFactuSistemaFacturacion
             {
-                Cabecera = new Cabecera
+                Cabecera = new fiskaltrust.Middleware.SCU.ES.VeriFactu.Models.Cabecera
                 {
                     ObligadoEmision = new PersonaFisicaJuridicaES
                     {
