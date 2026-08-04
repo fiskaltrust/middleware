@@ -26,14 +26,24 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
 
+        // PL launches with enforcing validation: there are no legacy integrations to stay
+        // compatible with, and the queue currency rule (PLN, rfcs/0705-queue-single-currency)
+        // must reject rather than log. A configured ValidationLevel still takes precedence.
+        var validationConfig = ValidationConfiguration.FromConfiguration(configuration);
+        if (validationConfig.ValidationLevel is null)
+        {
+            validationConfig = new ValidationConfiguration { ValidationLevel = ValidationLevel.Error, ValidationsInSignatures = validationConfig.ValidationsInSignatures };
+        }
+
         var signProcessorPL = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
-            new ReceiptReferenceProvider(queueItemRepository),
+            new Validation.ReceiptValidatorPL(new ReceiptReferenceProvider(queueItemRepository)),
             new LifecycleCommandProcessorPL(plSSCD, queueStorageProvider),
             new ReceiptCommandProcessorPL(plSSCD),
             new DailyOperationsCommandProcessorPL(plSSCD),
             new InvoiceCommandProcessorPL(),
-            new ProtocolCommandProcessorPL());
+            new ProtocolCommandProcessorPL(),
+            validationConfig);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPL.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPL(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

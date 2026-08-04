@@ -87,7 +87,7 @@ public class PLScenarioTests
         return response!;
     }
 
-    private ReceiptRequest CreateRequest(ulong receiptCase, List<ChargeItem>? chargeItems = null, List<PayItem>? payItems = null, string? cbCustomer = null)
+    private ReceiptRequest CreateRequest(ulong receiptCase, List<ChargeItem>? chargeItems = null, List<PayItem>? payItems = null, string? cbCustomer = null, Currency currency = Currency.PLN)
     {
         var request = new ReceiptRequest
         {
@@ -97,6 +97,7 @@ public class PLScenarioTests
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbReceiptMoment = DateTime.UtcNow,
             ftReceiptCase = (ReceiptCase)receiptCase,
+            Currency = currency,
             cbChargeItems = chargeItems ?? new List<ChargeItem>(),
             cbPayItems = payItems ?? new List<PayItem>(),
         };
@@ -107,7 +108,7 @@ public class PLScenarioTests
         return request;
     }
 
-    private static List<ChargeItem> Item(decimal amount, decimal vatRate = 23m, ulong vatCase = 0x3) => new()
+    private static List<ChargeItem> Item(decimal amount, decimal vatRate = 23m, ulong vatCase = 0x3, Currency currency = Currency.PLN) => new()
     {
         new ChargeItem
         {
@@ -115,6 +116,7 @@ public class PLScenarioTests
             VATRate = vatRate,
             Quantity = 1,
             Description = "Item A",
+            Currency = currency,
             ftChargeItemCase = (ChargeItemCase)(0x504C_2000_0000_0000 | vatCase),
         }
     };
@@ -125,6 +127,7 @@ public class PLScenarioTests
         {
             Amount = amount,
             Description = "Cash",
+            Currency = Currency.PLN,
             ftPayItemCase = (PayItemCase)0x504C_2000_0000_0000,
         }
     };
@@ -153,10 +156,15 @@ public class PLScenarioTests
     [Fact]
     public async Task Return_ShouldPassThrough_AsOwnDocument()
     {
-        var response = await SignAsync(CreateRequest(0x504C_2000_0100_0001, Item(-10m), Cash(-10m)));
+        var sale = CreateRequest(0x504C_2000_0000_0001, Item(10m), Cash(10m));
+        await SignAsync(sale);
 
-        ((ulong)response.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
-        _sscd.ProcessReceiptCalls.Should().Be(1);
+        var returnRequest = CreateRequest(0x504C_2000_0100_0001, Item(-10m), Cash(-10m));
+        returnRequest.cbPreviousReceiptReference = sale.cbReceiptReference;
+        var response = await SignAsync(returnRequest);
+
+        ((ulong)response.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE, string.Join(" | ", response.ftSignatures.Select(x => $"{x.Caption}: {x.Data}")));
+        _sscd.ProcessReceiptCalls.Should().Be(2);
     }
 
     [Fact]
@@ -216,6 +224,25 @@ public class PLScenarioTests
         ((ulong)response.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
         _sscd.ProcessReceiptCalls.Should().Be(0);
         response.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypePL.StoredNotFiscalized));
+    }
+
+    [Fact]
+    public async Task Receipt_WithoutPlnCurrency_ShouldBeRejected()
+    {
+        // Currency defaults to EUR — the PL queue only totalizes PLN (rfcs/0705-queue-single-currency).
+        var response = await SignAsync(CreateRequest(0x504C_2000_0000_0001, Item(10m), Cash(10m), currency: Currency.EUR));
+
+        ((ulong)response.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+        _sscd.ProcessReceiptCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Receipt_WithForeignCurrencyItem_ShouldBeRejected()
+    {
+        var response = await SignAsync(CreateRequest(0x504C_2000_0000_0001, Item(10m, currency: Currency.EUR), Cash(10m)));
+
+        ((ulong)response.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+        _sscd.ProcessReceiptCalls.Should().Be(0);
     }
 
     [Fact]
