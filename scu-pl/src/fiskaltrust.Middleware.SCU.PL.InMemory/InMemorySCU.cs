@@ -75,7 +75,7 @@ public class InMemorySCU : IPLSSCD
 
         response.EnrichWithDeviceIdentification(_deviceInfo);
 
-        if (receiptCase.IsType(ReceiptCaseType.Receipt))
+        if (IsFiscalReceiptCase(receiptCase))
         {
             long fiscalDocumentNumber;
             lock (_syncRoot)
@@ -84,8 +84,10 @@ public class InMemorySCU : IPLSSCD
             }
             response.EnrichWithFiscalDocumentNumber(fiscalDocumentNumber);
         }
-        else if (receiptCase.IsType(ReceiptCaseType.DailyOperations) && IsZReportCase(receiptCase))
+        else if (receiptCase.IsCase(ReceiptCase.DailyClosing0x2011))
         {
+            // Only the daily closing advances the Z counter — monthly/yearly closings are
+            // periodic reports over already-closed days and do not create a new Z report.
             int zReportNumber;
             lock (_syncRoot)
             {
@@ -98,8 +100,14 @@ public class InMemorySCU : IPLSSCD
         return Task.FromResult(new ProcessResponse { ReceiptResponse = response });
     }
 
-    private static bool IsZReportCase(ReceiptCase receiptCase)
-        => receiptCase.IsCase(ReceiptCase.DailyClosing0x2011)
-            || receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012)
-            || receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013);
+    /// <summary>
+    /// Only the fiscal sale documents consume a fiscal document number on the register —
+    /// non-fiscal receipt cases (payment transfer, sale without fiscalization obligation,
+    /// delivery note, table check, pro forma) do not.
+    /// </summary>
+    private static bool IsFiscalReceiptCase(ReceiptCase receiptCase)
+        => receiptCase.IsType(ReceiptCaseType.Receipt)
+            && (receiptCase.IsCase(ReceiptCase.UnknownReceipt0x0000)
+                || receiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001)
+                || receiptCase.IsCase(ReceiptCase.ECommerce0x0004));
 }

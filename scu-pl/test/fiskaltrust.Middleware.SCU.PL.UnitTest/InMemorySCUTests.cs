@@ -101,6 +101,29 @@ public class InMemorySCUTests
     }
 
     [Fact]
+    public async Task ProcessReceiptAsync_ShouldNotNumberNonFiscalReceiptCases()
+    {
+        var scu = new InMemorySCU();
+
+        var result = await scu.ProcessReceiptAsync(CreateRequest(0x504C_2000_0000_0003));
+
+        result.ReceiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        var next = await scu.ProcessReceiptAsync(CreateRequest(CashSale));
+        next.ReceiptResponse.ftReceiptIdentification.Should().Be("ft1#1");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ShouldNotAdvanceZCounter_OnMonthlyClosing()
+    {
+        var scu = new InMemorySCU();
+
+        await scu.ProcessReceiptAsync(CreateRequest(0x504C_2000_0000_2012));
+        var info = PLDeviceInfo.FromPLSSCDInfo(await scu.GetInfoAsync());
+
+        info!.CurrentZReportNumber.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ProcessReceiptAsync_ShouldRejectInvoiceCases()
     {
         var scu = new InMemorySCU();
