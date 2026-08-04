@@ -174,11 +174,13 @@ namespace fiskaltrust.Middleware.Storage.Base
             await InitQueueFRAsync(config.QueuesFR, configurationRepository).ConfigureAwait(false);
             await InitQueueITAsync(config.QueuesIT, configurationRepository).ConfigureAwait(false);
             await InitQueueMEAsync(config.QueuesME, configurationRepository).ConfigureAwait(false);
+            await InitQueuePLAsync(config.QueuesPL, configurationRepository).ConfigureAwait(false);
             await InitSignaturCreationUnitATAsync(config.SignaturCreationUnitsAT, configurationRepository).ConfigureAwait(false);
             await InitSignaturCreationUnitFRAsync(config.SignaturCreationUnitsFR, configurationRepository).ConfigureAwait(false);
             await InitSignaturCreationUnitDEAsync(config.SignaturCreationUnitsDE, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
             await InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
             await InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository).ConfigureAwait(false);
+            await InitSignaturCreationUnitPLAsync(config.SignaturCreationUnitsPL, configurationRepository).ConfigureAwait(false);
         }
 
         private T ParseParameter<T>(Dictionary<string, object> config, string key) where T : new()
