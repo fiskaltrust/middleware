@@ -74,6 +74,8 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             _queueFRRepository = new InMemoryQueueFRRepository(queuesFR);
             _queueITRepository = new InMemoryQueueITRepository(queuesIT);
             _queueMERepository = new InMemoryQueueMERepository(queuesME);
+            _queuePLRepository = new InMemoryQueuePLRepository();
+            _signaturCreationUnitPLRepository = new InMemorySignaturCreationUnitPLRepository();
             _signaturCreationUnitATRepository = new InMemorySignaturCreationUnitATRepository(signatureCreateUnitsAT);
             _signaturCreationUnitDERepository = new InMemorySignaturCreationUnitDERepository(signatureCreateUnitsDE);
             _signaturCreationUnitFRRepository = new InMemorySignaturCreationUnitFRRepository(signatureCreateUnitsFR);

@@ -1,8 +1,11 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
@@ -40,9 +43,9 @@ public class ReceiptCommandProcessorPL(IPLSSCD sscd) : IReceiptCommandProcessor
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.ReceiverIsBusiness) && string.IsNullOrEmpty(request.ReceiptRequest.cbCustomer?.ToString()))
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.ReceiverIsBusiness) && string.IsNullOrWhiteSpace(GetCustomerVatId(request.ReceiptRequest)))
         {
-            request.ReceiptResponse.SetReceiptResponseError("A NIP receipt (paragon z NIP) requires the buyer's NIP in cbCustomer. Until 2026-12-31 such receipts up to 450 PLN act as simplified invoices.");
+            request.ReceiptResponse.SetReceiptResponseError("A NIP receipt (paragon z NIP) requires the buyer's NIP as CustomerVATId in cbCustomer. Until 2026-12-31 such receipts up to 450 PLN act as simplified invoices.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
@@ -56,9 +59,29 @@ public class ReceiptCommandProcessorPL(IPLSSCD sscd) : IReceiptCommandProcessor
 
     private static bool HasMixedSaleAndReturn(ReceiptRequest request)
     {
+        // Discounts/extras and voids are position modifiers, not return positions — only a
+        // genuinely negative sale line makes the document a return.
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
-        var hasPositive = chargeItems.Any(x => x.Amount > 0);
-        var hasNegative = chargeItems.Any(x => x.Amount < 0);
-        return hasPositive && hasNegative;
+        var hasSalePosition = chargeItems.Any(x => x.Amount > 0 && !x.IsDiscountOrExtra() && !x.IsVoid());
+        var hasReturnPosition = chargeItems.Any(x => x.Amount < 0 && !x.IsDiscountOrExtra() && !x.IsVoid());
+        return hasSalePosition && hasReturnPosition;
+    }
+
+    private static string? GetCustomerVatId(ReceiptRequest request)
+    {
+        var cbCustomer = request.cbCustomer?.ToString();
+        if (string.IsNullOrWhiteSpace(cbCustomer))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<MiddlewareCustomer>(cbCustomer, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })?.CustomerVATId;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }
