@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Description>The fiskaltrust Middleware implementation of the MyData SCU for Greece.</Description>
+        <Description>Shared abstractions for the fiskaltrust Middleware SCUs for Poland: PTU slot resolution, PL signature types and states, device info, amount helpers and the SCU exception hierarchy.</Description>
         <TargetFrameworks>net8.0</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
@@ -9,16 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.78-rc1-25294-86170" />
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.79-rc1-26216-90828" />
         <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
-        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-
-        <PackageReference Include="Azure.Core" Version="1.35.0" />
-
-        <PackageReference Include="NodaTime" Version="3.3.0" />
-        <PackageReference Include="System.Collections" Version="4.3.0" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
@@ -31,14 +23,6 @@
         <Content Include="..\..\LICENSES\**" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <InternalsVisibleTo Include="fiskaltrust.Middleware.SCU.GR.MyData.UnitTest" />
     </ItemGroup>
 
 </Project>

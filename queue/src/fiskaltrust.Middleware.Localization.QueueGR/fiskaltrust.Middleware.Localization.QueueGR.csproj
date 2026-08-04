@@ -19,6 +19,10 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage\fiskaltrust.Middleware.Storage.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.Localization.QueueGR.UnitTest" />
+    </ItemGroup>
+
 
     
 </Project>

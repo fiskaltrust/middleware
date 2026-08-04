@@ -29,6 +29,13 @@ public class MyDataSCU : IGRSSCD
     private readonly ILogger<MyDataSCU> _logger;
 
     public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration, ILogger<MyDataSCU>? logger = null)
+        : this(CreateHttpClient(username, subscriptionKey, baseAddress), receiptBaseAddress, sandbox, masterDataConfiguration, logger)
+    {
+    }
+
+    // Test seam: lets unit tests drive ProcessReceiptAsync against a stubbed HttpClient
+    // without touching the public surface.
+    internal MyDataSCU(HttpClient httpClient, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration, ILogger<MyDataSCU>? logger = null)
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
@@ -49,12 +56,18 @@ public class MyDataSCU : IGRSSCD
             };
         }
         _logger = logger ?? NullLogger<MyDataSCU>.Instance;
-        _httpClient = new HttpClient()
+        _httpClient = httpClient;
+    }
+
+    private static HttpClient CreateHttpClient(string username, string subscriptionKey, string baseAddress)
+    {
+        var httpClient = new HttpClient()
         {
             BaseAddress = new Uri(baseAddress)
         };
-        _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
-        _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
+        httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
+        httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
+        return httpClient;
     }
 
     public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
@@ -297,7 +310,7 @@ public class MyDataSCU : IGRSSCD
                         var enrichedPayload = AADEFactory.GenerateInvoicePayload(doc);
                         // Use the downloadingInvoiceUrl from the invoice for the QR code
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(doc.invoice[0].downloadingInvoiceUrl));
-                        request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                        SetCountrySuffix(request.ReceiptResponse, doc.invoice[0].invoiceHeader.series, doc.invoice[0].invoiceHeader.aa);
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {
                             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.HashPayload));
@@ -352,6 +365,20 @@ public class MyDataSCU : IGRSSCD
                         .Replace('+', '-')
                         .Replace('/', '_');
         return base64;
+    }
+
+    private static void SetCountrySuffix(ReceiptResponse response, string series, string aa)
+    {
+        // Write the filed (series, aa) back into the country segment after "#" so the
+        // response is self-describing for every consumer — including direct SCU callers
+        // that did not pre-append a segment. On queue-driven paths this is an identity
+        // operation: AADEFactory derives the document numbering from the very segment
+        // the queue stamped. The invoice counter does NOT depend on this write-back —
+        // commits are gated on the invoiceMark signature.
+        var identification = response.ftReceiptIdentification ?? string.Empty;
+        var hashIdx = identification.IndexOf('#');
+        var prefix = hashIdx >= 0 ? identification.Substring(0, hashIdx + 1) : identification + "#";
+        response.ftReceiptIdentification = prefix + $"{series}-{aa}";
     }
 
     private void SetErrorAndLog(ProcessRequest request, string errorMessage)

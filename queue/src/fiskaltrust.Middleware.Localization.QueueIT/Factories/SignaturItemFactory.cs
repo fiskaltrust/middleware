@@ -73,7 +73,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
             }
             if (!string.IsNullOrEmpty(customerIdentification))
             {
-                stringBuilder.AppendLine($"Codice Fiscale: {customerIdentification}");
+                stringBuilder.AppendLine($"Cod. Fisc./P.IVA: {customerIdentification}");
             }
             if (!string.IsNullOrEmpty(shaMetadata))
             {
