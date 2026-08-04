@@ -155,6 +155,37 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     }
 
     [Fact]
+    public async Task DiscountedSale_ShouldNotBeTreatedAsMixedReturn()
+    {
+        var sscd = new FakePLSSCD();
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, new List<ChargeItem>
+        {
+            new() { Amount = 10m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0003 },
+            new() { Amount = -2m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0004_0003 },
+        }));
+
+        sscd.ProcessReceiptCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task NipReceipt_ShouldFail_WithCustomerDataButNoVatId()
+    {
+        var sscd = new FakePLSSCD();
+        var sut = new ReceiptCommandProcessorPL(sscd);
+        var receiptCase = 0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.ReceiverIsBusiness;
+
+        var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(receiptCase, new List<ChargeItem>
+        {
+            new() { Amount = 10m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0003 },
+        }, cbCustomer: """{"CustomerName":"ACME"}"""));
+
+        sscd.ProcessReceiptCalls.Should().Be(0);
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+    }
+
+    [Fact]
     public async Task NipReceipt_ShouldFail_WithoutCustomerData()
     {
         var sscd = new FakePLSSCD();
