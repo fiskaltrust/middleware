@@ -72,7 +72,9 @@ public static class SignatureFactory
             new SignaturItem
             {
                 Caption = "<rt-serialnumber>",
-                Data = data.RTSerialNumber,
+                // Data is required by consumers deserializing the receipt response; a null here
+                // gets omitted from the serialized JSON and breaks their contract.
+                Data = data.RTSerialNumber ?? "",
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTSerialNumber
             },

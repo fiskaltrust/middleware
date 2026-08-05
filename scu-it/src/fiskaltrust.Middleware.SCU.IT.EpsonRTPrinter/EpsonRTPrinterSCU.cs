@@ -253,7 +253,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
@@ -574,9 +574,16 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
         else
         {
+            // The reprint directIO (3098) response carries no receiptInfo block, so the serial
+            // number can only come from the cached value queried via GetRTInfoAsync.
+            if (string.IsNullOrEmpty(_serialnr))
+            {
+                _ = await GetRTInfoAsync();
+            }
+
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalResponse.ZRepNumber,
                 RTDocNumber = fiscalResponse.ReceiptNumber,
                 RTDocMoment = fiscalResponse.ReceiptDateTime,
@@ -658,7 +665,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
@@ -732,7 +739,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
