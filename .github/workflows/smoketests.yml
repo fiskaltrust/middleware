@@ -319,7 +319,7 @@ jobs:
            $helperUrl = "http://localhost:$port/${{ env.helperId }}"
            $baseUrl = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { $helperUrl } else { $queueUrl}
            $signPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/sign" } else { "/json/v1/Sign" }
-           $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
+           $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v11/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
                 @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }               
@@ -371,6 +371,7 @@ jobs:
                   }    
                   $result = "✅ $($req.Name) request succeeded%0A"
                   if ($req.Url -match "$baseUrl$signPath") {
+                      Write-Error $result
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
                       if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
