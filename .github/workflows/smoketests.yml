@@ -371,10 +371,9 @@ jobs:
                   }    
                   $result = "✅ $($req.Name) request succeeded%0A"
                   if ($req.Url -match "$baseUrl$signPath") {
-                      Write-Error $result
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
-                      if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
+                      if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -eq 0 -or ($ftState -band 0x2) -eq 0) {
                         $result= "❌ $($req.Name) request failed — ftState indicates failure%0A"
                         $notice += $result
                         Write-Error $result
