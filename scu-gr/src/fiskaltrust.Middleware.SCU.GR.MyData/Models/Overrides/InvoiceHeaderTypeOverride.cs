@@ -63,6 +63,9 @@ public class InvoiceHeaderTypeOverride
     [JsonPropertyName("toWeigh")]
     public bool? ToWeigh { get; set; }
 
+    // series/aa are deliberately kept on the model although overriding them is not
+    // supported: ApplyInvoiceHeaderOverride rejects requests that set either, so
+    // integrators get an explicit error instead of a silently ignored field.
     [JsonPropertyName("series")]
     public string? Series { get; set; }
 
