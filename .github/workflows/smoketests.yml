@@ -373,9 +373,9 @@ jobs:
                   if ($req.Url -match "$baseUrl$signPath") {
                       $ftState = [uint64]$response.ftState
                       $lower32 = $ftState -band 0xFFFFFFFF
-                      if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -eq 0) {
+                      if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
                         $result= "❌ $($req.Name) request failed — ftState indicates failure%0A"                        
-                        $detail = "$($req.Name) failed. Url=$url Status=$statusCode Message=$result"
+                        $detail = "$($req.Name) request failed. Url=$url Status=$statusCode Message=ftState indicates failure"
                         $failureReasons += $detail
                       }
                   }                  
