@@ -13,10 +13,16 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL.UnitTest;
 
+internal class PLDeviceUnreachableException : Exception
+{
+    public PLDeviceUnreachableException(string message) : base(message) { }
+}
+
 internal class FakePLSSCD : IPLSSCD
 {
     public int ProcessReceiptCalls { get; private set; }
     public bool Fiscalized { get; set; } = true;
+    public Exception? ThrowOnProcessReceipt { get; set; }
 
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
@@ -28,6 +34,10 @@ internal class FakePLSSCD : IPLSSCD
     public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         ProcessReceiptCalls++;
+        if (ThrowOnProcessReceipt is not null)
+        {
+            throw ThrowOnProcessReceipt;
+        }
         return Task.FromResult(new ProcessResponse { ReceiptResponse = request.ReceiptResponse });
     }
 }
@@ -214,6 +224,53 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
         }, cbCustomer: /* language=json */ """{"CustomerVATId":"PL5260250274"}"""));
 
         sscd.ProcessReceiptCalls.Should().Be(1);
+    }
+}
+
+public class DeviceUnreachableTests : ProcessorTestsBase
+{
+    private static List<ChargeItem> SingleItem() => new()
+    {
+        new() { Amount = 10m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0003 },
+    };
+
+    [Theory]
+    [InlineData(typeof(HttpRequestException))]
+    [InlineData(typeof(TaskCanceledException))]
+    [InlineData(typeof(PLDeviceUnreachableException))]
+    public async Task Receipt_ShouldCarryDeviceUnreachableState_WhenScuIsUnreachable(Type exceptionType)
+    {
+        var sscd = new FakePLSSCD
+        {
+            ThrowOnProcessReceipt = (Exception)Activator.CreateInstance(exceptionType, "printer offline")!,
+        };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+    }
+
+    [Fact]
+    public async Task Receipt_ShouldLetOtherScuFailuresBubble()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new InvalidOperationException("device error 2005") };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var act = () => sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task DailyClosing_ShouldCarryDeviceUnreachableState_WhenScuIsUnreachable()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") };
+        var sut = new DailyOperationsCommandProcessorPL(sscd);
+
+        var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
     }
 }
 

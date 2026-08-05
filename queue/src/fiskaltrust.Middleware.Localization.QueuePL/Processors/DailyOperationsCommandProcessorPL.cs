@@ -36,11 +36,19 @@ public class DailyOperationsCommandProcessorPL(IPLSSCD sscd) : IDailyOperationsC
 
     private async Task<ProcessCommandResponse> SubmitAsync(ProcessCommandRequest request)
     {
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        try
         {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        return new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>());
+            var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            });
+            return new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>());
+        }
+        catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
+        {
+            request.ReceiptResponse.SetDeviceUnreachableError(ex);
+            return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
+        }
     }
 }
