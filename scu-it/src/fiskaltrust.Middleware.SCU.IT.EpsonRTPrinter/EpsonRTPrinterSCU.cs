@@ -519,6 +519,13 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             };
         }
 
+        // The reprint directIO (3098) response carries no receiptInfo block, so the serial number
+        // must be read before the reprint. A failure afterwards would error an already printed document.
+        if (string.IsNullOrEmpty(_serialnr))
+        {
+            _ = await GetRTInfoAsync();
+        }
+
         FiscalReceiptResponse fiscalResponse;
         PrinterReceiptResponse result = null;
         try
@@ -574,13 +581,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
         else
         {
-            // The reprint directIO (3098) response carries no receiptInfo block, so the serial
-            // number can only come from the cached value queried via GetRTInfoAsync.
-            if (string.IsNullOrEmpty(_serialnr))
-            {
-                _ = await GetRTInfoAsync();
-            }
-
             var posReceiptSignatur = new POSReceiptSignatureData
             {
                 RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",

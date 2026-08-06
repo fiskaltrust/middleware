@@ -72,8 +72,8 @@ public static class SignatureFactory
             new SignaturItem
             {
                 Caption = "<rt-serialnumber>",
-                // Data is required by consumers deserializing the receipt response; a null here
-                // gets omitted from the serialized JSON and breaks their contract.
+                // Last resort against a null from any SCU: consumers require Data, and JSON
+                // serialization omits the property when it is null (#743).
                 Data = data.RTSerialNumber ?? "",
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTSerialNumber
