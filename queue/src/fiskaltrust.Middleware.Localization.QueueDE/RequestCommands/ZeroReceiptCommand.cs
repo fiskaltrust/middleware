@@ -43,6 +43,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
+
+                if (_queueDEConfiguration.RegisterClient)
+                {
+                    await RegisterClient(queueDE, true).ConfigureAwait(false);
+                }
                 var processReceiptResponse = await ProcessReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE).ConfigureAwait(false);
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, processReceiptResponse.TransactionNumber);
 
