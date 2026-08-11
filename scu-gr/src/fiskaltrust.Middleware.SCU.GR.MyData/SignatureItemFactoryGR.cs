@@ -25,8 +25,15 @@ public static class SignatureItemFactoryGR
     {
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
-            Data = $"2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
-            Caption = "www.viva.com",
+            Caption = "Viva Bank",
+            Data = "www.viva.com",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeGR.ProviderSignature.As<SignatureType>()
+        });
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = "2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
+            Data = "",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.ProviderSignature.As<SignatureType>()
         });
