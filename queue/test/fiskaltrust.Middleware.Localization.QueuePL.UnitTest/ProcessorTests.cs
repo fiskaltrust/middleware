@@ -18,6 +18,13 @@ internal class PLDeviceUnreachableException : Exception
     public PLDeviceUnreachableException(string message) : base(message) { }
 }
 
+// SCU packages subclass their unreachable exception (e.g. the PosNet SCU's ambiguous-response
+// exception) — the name-based detection must walk the type hierarchy.
+internal class DerivedDeviceUnreachableException : PLDeviceUnreachableException
+{
+    public DerivedDeviceUnreachableException(string message) : base(message) { }
+}
+
 internal class FakePLSSCD : IPLSSCD
 {
     public int ProcessReceiptCalls { get; private set; }
@@ -238,6 +245,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     [InlineData(typeof(HttpRequestException))]
     [InlineData(typeof(TaskCanceledException))]
     [InlineData(typeof(PLDeviceUnreachableException))]
+    [InlineData(typeof(DerivedDeviceUnreachableException))]
     public async Task Receipt_ShouldCarryDeviceUnreachableState_WhenScuIsUnreachable(Type exceptionType)
     {
         var sscd = new FakePLSSCD

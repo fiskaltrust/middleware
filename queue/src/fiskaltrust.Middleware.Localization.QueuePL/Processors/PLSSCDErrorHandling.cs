@@ -15,8 +15,22 @@ public static class PLSSCDErrorHandling
 {
     public static bool IsDeviceUnreachable(Exception exception)
         => exception is HttpRequestException or TaskCanceledException or SocketException
-            || exception.GetType().Name == "PLDeviceUnreachableException"
+            || IsPLDeviceUnreachableException(exception)
             || (exception.InnerException is not null && IsDeviceUnreachable(exception.InnerException));
+
+    // Walks the type hierarchy so SCU-specific subclasses (e.g. the PosNet SCU's
+    // ambiguous-response exception) are recognized too.
+    private static bool IsPLDeviceUnreachableException(Exception exception)
+    {
+        for (var type = exception.GetType(); type is not null; type = type.BaseType)
+        {
+            if (type.Name == "PLDeviceUnreachableException")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public static void SetDeviceUnreachableError(this ReceiptResponse receiptResponse, Exception exception)
     {
