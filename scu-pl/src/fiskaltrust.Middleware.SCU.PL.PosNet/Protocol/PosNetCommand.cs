@@ -70,7 +70,12 @@ public static class PosNetCommands
         return new PosNetCommand("trend", parameters);
     }
 
+    /// <summary>Prints the buyer's NIP with the receipt footer (paragon z NIP); valid inside an open receipt.</summary>
+    public static PosNetCommand Trnipset(string buyerNip) => new("trnipset", [new("ni", buyerNip)]);
+
     public static PosNetCommand Scomm() => new("scomm");
+
+    public static PosNetCommand Scnt() => new("scnt");
 
     public static PosNetCommand Prncancel() => new("prncancel");
 }

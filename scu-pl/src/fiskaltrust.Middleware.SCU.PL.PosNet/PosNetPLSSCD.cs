@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.SCU.PL.Abstraction;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Client;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
@@ -57,7 +58,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         if (IsFiscalReceiptCase(receiptCase))
         {
-            await ExecuteSaleAsync(request.ReceiptRequest);
+            await ExecuteSaleAsync(request.ReceiptRequest, response);
         }
         else if (receiptCase.IsCase(ReceiptCase.ZeroReceipt0x2000))
         {
@@ -77,7 +78,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         return new ProcessResponse { ReceiptResponse = response };
     }
 
-    private async Task ExecuteSaleAsync(ReceiptRequest request)
+    private async Task ExecuteSaleAsync(ReceiptRequest request, ReceiptResponse response)
     {
         var commands = PosNetReceiptMapper.MapSale(request, _ptuSlotResolver);
         var executed = 0;
@@ -96,22 +97,49 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             // nothing more is sent — the device state must be verified by the operator first.
             if (executed > 0)
             {
-                await TryCancelAsync();
+                await CancelAsync();
             }
             throw;
         }
+
+        await TryReadFiscalDocumentNumberAsync(response);
     }
 
-    private async Task TryCancelAsync()
+    private async Task CancelAsync()
     {
         try
         {
             await _client.ExecuteAsync(PosNetCommands.Prncancel());
         }
+        catch (PLDeviceErrorException)
+        {
+            // A confirmed rejection of the cancel (e.g. no open transaction) leaves the device
+            // in a known state — the original error stays the reported failure. Ambiguous or
+            // unreachable outcomes of the cancel itself must propagate instead: whether the
+            // transaction is still open is then unknown and the operator has to verify.
+        }
+    }
+
+    /// <summary>
+    /// The fiscal document number is not part of the trend confirmation — it is read back from
+    /// the counter status (scnt, bt = last receipt number). The document is already printed at
+    /// this point, so a failing readback must not fail the receipt; the number is then simply
+    /// absent from the response.
+    /// </summary>
+    private async Task TryReadFiscalDocumentNumberAsync(ReceiptResponse response)
+    {
+        try
+        {
+            var counters = await _client.ExecuteAsync(PosNetCommands.Scnt());
+            if (counters.Parameters.TryGetValue("bt", out var lastReceiptNumber)
+                && long.TryParse(lastReceiptNumber, out var fiscalDocumentNumber))
+            {
+                response.EnrichWithFiscalDocumentNumber(fiscalDocumentNumber);
+            }
+        }
         catch (PLSSCDException)
         {
-            // Best effort: cancelling an already-closed transaction is rejected by the device;
-            // the original error stays the reported failure.
+            // scnt is read-only — swallowing an ambiguous or failed readback is safe.
         }
     }
 

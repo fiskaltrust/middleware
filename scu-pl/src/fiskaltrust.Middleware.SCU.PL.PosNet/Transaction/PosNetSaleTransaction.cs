@@ -37,6 +37,16 @@ public class PosNetSaleTransaction
         _stage = Stage.Initiated;
     }
 
+    /// <summary>The buyer's NIP may be set at any time inside the open receipt (printed with the footer).</summary>
+    public void AddBuyerNip(string buyerNip)
+    {
+        if (_stage is Stage.NotStarted or Stage.Ended)
+        {
+            throw new PLValidationException("The buyer's NIP (trnipset) is only valid inside an open receipt.");
+        }
+        _commands.Add(PosNetCommands.Trnipset(buyerNip));
+    }
+
     public void AddLine(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze)
     {
         if (_stage is not (Stage.Initiated or Stage.HasLines))

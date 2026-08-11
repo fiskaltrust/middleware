@@ -21,6 +21,7 @@ public sealed class PosNetPrinterEmulator : IDisposable
     private readonly ConcurrentDictionary<string, byte> _swallowOn = new();
     private Task? _serveLoop;
     private bool _transactionOpen;
+    private int _completedReceipts = 84;
 
     public PosNetPrinterEmulator()
     {
@@ -134,14 +135,15 @@ public sealed class PosNetPrinterEmulator : IDisposable
         return mnemonic switch
         {
             "scomm" => EncodeResponse($"scomm\tfs1\ttz1\tts{(_transactionOpen ? 16 : 0)}\thr1\t"),
+            "scnt" => EncodeResponse($"scnt\trd12\tbn{_completedReceipts}\tbt{_completedReceipts}\tfn3\t"),
             "trinit" => _transactionOpen
                 ? EncodeResponse($"trinit\t?382\t")
                 : Confirm(mnemonic, open: true),
-            "trline" or "trpayment" => _transactionOpen
+            "trline" or "trpayment" or "trnipset" => _transactionOpen
                 ? Confirm(mnemonic, open: true)
                 : EncodeResponse($"{mnemonic}\t?380\t"),
             "trend" => _transactionOpen
-                ? Confirm(mnemonic, open: false)
+                ? CompleteReceipt()
                 : EncodeResponse($"trend\t?380\t"),
             "prncancel" => _transactionOpen
                 ? Confirm(mnemonic, open: false)
@@ -154,6 +156,12 @@ public sealed class PosNetPrinterEmulator : IDisposable
     {
         _transactionOpen = open;
         return EncodeResponse($"{mnemonic}\t");
+    }
+
+    private byte[] CompleteReceipt()
+    {
+        _completedReceipts++;
+        return Confirm("trend", open: false);
     }
 
     private static byte[] EncodeResponse(string payload)

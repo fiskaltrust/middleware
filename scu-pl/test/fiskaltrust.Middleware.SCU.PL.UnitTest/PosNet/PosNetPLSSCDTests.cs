@@ -38,14 +38,74 @@ public class PosNetPLSSCDTests
     };
 
     [Fact]
-    public async Task ProcessReceiptAsync_Sale_SendsTheFullCommandSequence()
+    public async Task ProcessReceiptAsync_Sale_SendsTheFullCommandSequence_AndReadsTheFiscalNumber()
     {
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
 
-        await sut.ProcessReceiptAsync(CreateSaleRequest());
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("trinit", "trline", "trpayment", "trend");
+        transport.SentMnemonics.Should().Equal("trinit", "trline", "trpayment", "trend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        result.ReceiptResponse.ftReceiptIdentification.Should().EndWith("85");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_NipReceipt_SendsTrnipsetInsideTheTransaction()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0020_0001;
+        request.ReceiptRequest.cbCustomer = """{"CustomerVATId": "123-456-32-18"}""";
+
+        await sut.ProcessReceiptAsync(request);
+
+        transport.SentMnemonics.Should().Equal("trinit", "trnipset", "trline", "trpayment", "trend", "scnt");
+        transport.SentPayloads.Single(p => p.StartsWith("trnipset")).Should().Contain("ni1234563218");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_NipReceiptWithoutCustomerVatId_FailsBeforeAnyFrameIsSent()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0020_0001;
+
+        var act = () => sut.ProcessReceiptAsync(request);
+
+        await act.Should().ThrowAsync<PLValidationException>();
+        transport.SentMnemonics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_FailedFiscalNumberReadback_DoesNotFailTheReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailUnreachable("scnt");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        transport.SentMnemonics.Should().Equal("trinit", "trline", "trpayment", "trend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_AmbiguousCancelAfterDeviceError_PropagatesTheAmbiguity()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailWithDeviceError("trline", 382);
+        transport.FailAmbiguously("prncancel");
+        var sut = CreateSut(transport);
+
+        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        // Whether the cancel reached the device is unknown, so the receipt must surface the
+        // ambiguous/unreachable state rather than the (already handled) device error.
+        await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
+        transport.SentMnemonics.Should().Equal("trinit", "trline", "prncancel");
     }
 
     [Fact]
@@ -168,6 +228,8 @@ public class PosNetPLSSCDTests
 
         public List<string> SentMnemonics { get; } = [];
 
+        public List<string> SentPayloads { get; } = [];
+
         public static FakePosNetTransport Confirming() => new();
 
         public void FailWithDeviceError(string mnemonic, int errorCode)
@@ -184,6 +246,7 @@ public class PosNetPLSSCDTests
             var payload = Encoding.ASCII.GetString(frame, 1, frame.Length - 2);
             var mnemonic = payload.Split('\t')[0];
             SentMnemonics.Add(mnemonic);
+            SentPayloads.Add(payload);
 
             if (_failures.TryGetValue(mnemonic, out var failure))
             {
@@ -195,7 +258,12 @@ public class PosNetPLSSCDTests
                 throw exception;
             }
 
-            var responsePayload = mnemonic == "scomm" ? "scomm\tfs1\ttz1\tts0\thr1\t" : $"{mnemonic}\t";
+            var responsePayload = mnemonic switch
+            {
+                "scomm" => "scomm\tfs1\ttz1\tts0\thr1\t",
+                "scnt" => "scnt\trd12\tbn85\tbt85\tfn3\t",
+                _ => $"{mnemonic}\t",
+            };
             return Task.FromResult(PosNetProtocolTests.EncodeResponse(responsePayload));
         }
 

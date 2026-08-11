@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction;
@@ -23,6 +25,15 @@ public static class PosNetReceiptMapper
     {
         var transaction = new PosNetSaleTransaction();
         transaction.Begin();
+
+        // A paragon z NIP: the queue validates that the flag comes with a CustomerVATId; the SCU
+        // re-reads it here because the printed NIP is a legal element of the fiscal document.
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.ReceiverIsBusiness))
+        {
+            var buyerNip = GetCustomerVatId(request)
+                ?? throw new PLValidationException("A NIP receipt (paragon z NIP) requires the buyer's NIP as CustomerVATId in cbCustomer.");
+            transaction.AddBuyerNip(buyerNip);
+        }
 
         foreach (var chargeItem in request.cbChargeItems ?? [])
         {
@@ -83,6 +94,37 @@ public static class PosNetReceiptMapper
         PayItemCase.OtherBankTransfer => 8,
         _ => 6,
     };
+
+    /// <summary>
+    /// Reads CustomerVATId from cbCustomer (MiddlewareCustomer shape) without referencing the
+    /// queue assemblies. The trnipset ni parameter is numeric, so formatting characters
+    /// (e.g. "123-456-32-18") are stripped.
+    /// </summary>
+    private static string? GetCustomerVatId(ReceiptRequest request)
+    {
+        var cbCustomer = request.cbCustomer?.ToString();
+        if (string.IsNullOrWhiteSpace(cbCustomer))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(cbCustomer);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (property.Name.Equals("CustomerVATId", StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.String)
+                {
+                    var digits = new string(property.Value.GetString()!.Where(char.IsDigit).ToArray());
+                    return digits.Length == 0 ? null : digits;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
+        return null;
+    }
 
     private static string Truncate(string? value, int maxLength)
     {

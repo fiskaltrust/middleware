@@ -38,16 +38,16 @@ public class PosNetPLSSCDAcceptanceTests
     }
 
     [Fact]
-    public async Task CashSale_RunsTheFullTransactionAndClosesIt()
+    public async Task CashSale_RunsTheFullTransaction_AndReturnsTheFiscalDocumentNumber()
     {
         using var emulator = new PosNetPrinterEmulator().Start();
         var sut = GetSUT(emulator);
 
         var result = await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        result.ReceiptResponse.Should().NotBeNull();
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment", "trend");
+        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment", "trend", "scnt");
         emulator.TransactionOpen.Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await sut.ProcessReceiptAsync(PLReceiptExamples.CardSaleWithChange());
 
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment", "trpayment", "trend");
+        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment", "trpayment", "trend", "scnt");
         var trend = emulator.ReceivedCommands.Single(c => c.CommandId == "trend");
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "200"));
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("re", "300"));
@@ -66,16 +66,31 @@ public class PosNetPLSSCDAcceptanceTests
     }
 
     [Fact]
-    public async Task ConsecutiveSales_ReuseTheConnection()
+    public async Task NipReceipt_PrintsTheBuyersNip()
     {
         using var emulator = new PosNetPrinterEmulator().Start();
         var sut = GetSUT(emulator);
 
-        await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
-        await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        await sut.ProcessReceiptAsync(PLReceiptExamples.NipReceipt());
 
-        emulator.ReceivedMnemonics.Should().HaveCount(8);
+        emulator.ReceivedMnemonics.Should().Equal("trinit", "trnipset", "trline", "trpayment", "trend", "scnt");
+        var trnipset = emulator.ReceivedCommands.Single(c => c.CommandId == "trnipset");
+        trnipset.Parameters.Should().Contain(new KeyValuePair<string, string>("ni", "1234563218"));
+    }
+
+    [Fact]
+    public async Task ConsecutiveSales_ReuseTheConnection_AndNumberDocumentsSequentially()
+    {
+        using var emulator = new PosNetPrinterEmulator().Start();
+        var sut = GetSUT(emulator);
+
+        var first = await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var second = await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+
+        emulator.ReceivedMnemonics.Should().HaveCount(10);
         emulator.TransactionOpen.Should().BeFalse();
+        first.ReceiptResponse.ftSignatures.Single(s => s.Caption == "Numer dokumentu fiskalnego").Data.Should().Be("85");
+        second.ReceiptResponse.ftSignatures.Single(s => s.Caption == "Numer dokumentu fiskalnego").Data.Should().Be("86");
     }
 
     [Fact]

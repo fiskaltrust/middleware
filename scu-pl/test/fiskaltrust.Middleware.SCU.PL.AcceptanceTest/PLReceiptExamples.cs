@@ -42,6 +42,15 @@ public static class PLReceiptExamples
         ],
     });
 
+    /// <summary>A paragon z NIP: ReceiverIsBusiness flag with the buyer's NIP in cbCustomer.</summary>
+    public static ProcessRequest NipReceipt()
+    {
+        var request = CashSale();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0020_0001;
+        request.ReceiptRequest.cbCustomer = """{"CustomerVATId": "123-456-32-18"}""";
+        return request;
+    }
+
     public static ProcessRequest ZeroReceipt() => Wrap(new ReceiptRequest
     {
         ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000,
