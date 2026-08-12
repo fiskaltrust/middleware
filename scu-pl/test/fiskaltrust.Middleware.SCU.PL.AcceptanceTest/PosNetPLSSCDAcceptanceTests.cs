@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2.pl;
+﻿using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
@@ -26,7 +26,7 @@ public class PosNetPLSSCDAcceptanceTests
             Id = Guid.NewGuid(),
             Configuration = new Dictionary<string, object>
             {
-                ["DeviceUrl"] = emulator.DeviceUrl,
+                ["DeviceUrl"] = "tcp://6.tcp.eu.ngrok.io:19493",
                 // Short receive timeout keeps the ambiguous-outcome test fast.
                 ["ReceiveTimeoutMs"] = 750,
                 ["ConnectTimeoutMs"] = 2000,
