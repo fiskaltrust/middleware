@@ -2,6 +2,7 @@
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.DependencyInjection;
@@ -336,7 +337,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
-        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithInvalidCustomerIVA()
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithInvalidCustomerIVA_ShouldReturnError()
         {
             var itsscd = GetSUT();
             var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
@@ -346,23 +347,11 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             });
 
             using var scope = new AssertionScope();
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
-        }
-
-        [Fact]
-        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithInvalidCustomerIVA_ShouldReturnError()
-        {
-            var itsscd = GetSUT();
-            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card_WithInvalidCustomerIva(),
-                ReceiptResponse = _receiptResponse
-            });
             result.ReceiptResponse.HasFailed().Should().BeTrue();
+            result.ReceiptResponse.ftSignatures.Should().ContainSingle()
+                .Which.Caption.Should().Be(CustomerTaxIdValidation.CustomerTaxIdErrorCaption);
+            // No document was created, so none of the RT signatures may be present.
+            result.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
         }
 
         [Fact]

@@ -361,7 +361,7 @@ public class IntegrationTests
             ftReceiptCase = 0x4954_2000_0000_0005, // DeliveryNote0x0005
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptAmount = 5.00m,
-            cbCustomer = """{"CustomerId":"IT12345678901","CustomerName":"Mario Rossi","CustomerStreet":"Via Roma 1","CustomerZip":"00100","CustomerCity":"Roma"}""",
+            cbCustomer = """{"CustomerId":"RSSMRA80A01H501U","CustomerName":"Mario Rossi","CustomerStreet":"Via Roma 1","CustomerZip":"00100","CustomerCity":"Roma"}""",
             cbChargeItems = new[]
             {
                 new ChargeItem { Description = "Prodotto A", Amount = 3.00m, Quantity = 1, ftChargeItemCase = 0x4954_2000_0000_0011 },

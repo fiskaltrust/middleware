@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -82,6 +83,16 @@ public sealed class EpsonRTServerSCU : LegacySCU
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
+
+            // Reject a malformed codice fiscale / partita IVA before any RT Server call.
+            if (request.ReceiptRequest.CarriesCustomerTaxIds()
+                && !request.ReceiptRequest.TryValidateCustomerTaxIds(out var customerTaxIdError))
+            {
+                _logger.LogWarning("({receiptreference}) Rejected: {error}", request.ReceiptRequest.cbReceiptReference, customerTaxIdError);
+                request.ReceiptResponse.SetReceiptResponseErrored(CustomerTaxIdValidation.CustomerTaxIdErrorCaption, customerTaxIdError!);
+                request.ReceiptResponse.ftState = StateFailed;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
+            }
 
             if (request.ReceiptRequest.IsInitialOperationReceipt())
             {
@@ -301,6 +312,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
         }
         PersistState();
 
+        var customer = receiptRequest.GetCustomer();
         var signatureData = new POSReceiptSignatureData
         {
             RTSerialNumber = tillState.RTServerSerialNumber,
@@ -310,7 +322,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
             RTDocType = docType switch { 1 => "REFUND", 3 => "VOID", _ => "POSRECEIPT" },
             RTServerSHAMetadata = document.Ccdc,
             RTCodiceLotteria = document.LotteryCode,
-            RTCustomerID = "",
+            // Reports what was actually sent: printRecTaxID is suppressed when a lottery code is present,
+            // because the two are mutually exclusive (see EpsonRTServerMapping).
+            RTCustomerID = string.IsNullOrEmpty(document.LotteryCode)
+                ? ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId)
+                : "",
             RTReferenceZNumber = document.ReferenceZNumber,
             RTReferenceDocNumber = document.ReferenceDocNumber,
             RTReferenceDocMoment = document.ReferenceDocMoment

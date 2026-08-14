@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
 using Newtonsoft.Json;
@@ -69,6 +70,16 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
+
+            // Reject a malformed codice fiscale / partita IVA before anything is sent to the printer.
+            if (request.ReceiptRequest.CarriesCustomerTaxIds()
+                && !request.ReceiptRequest.TryValidateCustomerTaxIds(out var customerTaxIdError))
+            {
+                _logger.LogWarning("({receiptreference}) Rejected: {error}", request.ReceiptRequest.cbReceiptReference, customerTaxIdError);
+                request.ReceiptResponse.SetReceiptResponseErrored(CustomerTaxIdValidation.CustomerTaxIdErrorCaption, customerTaxIdError!);
+                return Helpers.CreateResponse(request.ReceiptResponse);
+            }
+
             if (request.ReceiptRequest.IsInitialOperationReceipt())
             {
                 return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateInitialOperationSignatures().ToList());
@@ -201,6 +212,18 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private static string GetLotteryCode(ReceiptRequest receiptRequest)
         => receiptRequest.GetLotteryData()?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria ?? "";
 
+    /// <summary>
+    /// Customer tax identifier reported in the RTCustomerID signature. Uses the same selection rule as
+    /// EpsonCommandFactory, so the signature always carries what was actually sent to the printer: on the
+    /// document types signed here (POSRECEIPT/REFUND/VOID) the request level validation has already run,
+    /// so a non empty value is a valid codice fiscale or partita IVA.
+    /// </summary>
+    private static string GetCustomerTaxId(ReceiptRequest receiptRequest)
+    {
+        var customer = receiptRequest.GetCustomer();
+        return ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+    }
+
     public async Task<ReceiptResponse> PerformProtocolReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         string? data = null;
@@ -259,7 +282,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = GetLotteryCode(receiptRequest),
-                RTCustomerID = "", // Todo dread customerid from data
+                RTCustomerID = GetCustomerTaxId(receiptRequest),
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
             _lastSuccessfulDoc = (fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
@@ -315,7 +338,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = GetLotteryCode(receiptRequest),
-                RTCustomerID = "", // Todo dread customerid from data
+                RTCustomerID = GetCustomerTaxId(receiptRequest),
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
             _lastSuccessfulDoc = (fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
@@ -671,7 +694,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "REFUND",
                 RTCodiceLotteria = "",
-                RTCustomerID = "", // Todo dread customerid from data
+                RTCustomerID = GetCustomerTaxId(request.ReceiptRequest),
                 RTReferenceZNumber = long.Parse(referenceZNumberString),
                 RTReferenceDocNumber = long.Parse(referenceDocNumberString),
                 RTReferenceDocMoment = referenceDateTime
@@ -745,7 +768,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
                 RTDocType = "VOID",
                 RTCodiceLotteria = "",
-                RTCustomerID = "", // Todo dread customerid from data
+                RTCustomerID = GetCustomerTaxId(request.ReceiptRequest),
                 RTReferenceZNumber = long.Parse(referenceZNumber),
                 RTReferenceDocNumber = long.Parse(referenceDocNumber),
                 RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
