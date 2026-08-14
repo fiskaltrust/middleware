@@ -253,7 +253,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
@@ -519,6 +519,13 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             };
         }
 
+        // The reprint directIO (3098) response carries no receiptInfo block, so the serial number
+        // must be read before the reprint. A failure afterwards would error an already printed document.
+        if (string.IsNullOrEmpty(_serialnr))
+        {
+            _ = await GetRTInfoAsync();
+        }
+
         FiscalReceiptResponse fiscalResponse;
         PrinterReceiptResponse result = null;
         try
@@ -576,7 +583,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         {
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalResponse.ZRepNumber,
                 RTDocNumber = fiscalResponse.ReceiptNumber,
                 RTDocMoment = fiscalResponse.ReceiptDateTime,
@@ -658,7 +665,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
@@ -732,7 +739,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             var posReceiptSignatur = new POSReceiptSignatureData
             {
-                RTSerialNumber = result?.Receipt?.SerialNumber,
+                RTSerialNumber = result?.Receipt?.SerialNumber ?? _serialnr ?? "",
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
