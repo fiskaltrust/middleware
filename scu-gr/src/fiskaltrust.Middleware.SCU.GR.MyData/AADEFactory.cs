@@ -184,7 +184,7 @@ public class AADEFactory
             .Select(x => CreateExpensesClassificationSummary(x))
             .ToList();
 
-        var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
+        var (resolvedSeries, resolvedAa) = ResolveSeriesAndAa(receiptResponse);
         var paymentMethods = GetPayments(receiptRequest);
         var issuer = CreateIssuer(receiptRequest);
         var inv = new AadeBookInvoiceType
@@ -192,8 +192,8 @@ public class AADEFactory
             issuer = issuer,
             invoiceHeader = new InvoiceHeaderType
             {
-                series = receiptResponse.ftCashBoxIdentification,
-                aa = identification.ToString(),
+                series = resolvedSeries,
+                aa = resolvedAa,
                 issueDate = AADEMappings.GetLocalTime(receiptRequest),
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
                 currency = CurrencyType.EUR,
@@ -272,9 +272,14 @@ public class AADEFactory
             }
 
 
-            if (data?.GR?.AA == null || data?.GR?.AA == 0)
+            // Must stay aligned with the queue's inbound gate
+            // (InvoiceCounterReservation.TryGetHandwrittenNumbering requires AA > 0): a
+            // payload the queue treats as incomplete must never be accepted here,
+            // otherwise the document would be filed under the caller's values while the
+            // queue committed its own reservation.
+            if (data?.GR?.AA is not > 0)
             {
-                throw new Exception("When using Handwritten receipts the AA must be provided in the ftReceiptCaseData payload.");
+                throw new Exception("When using Handwritten receipts the AA must be provided in the ftReceiptCaseData payload and must be greater than 0.");
             }
 
             if (string.IsNullOrEmpty(data?.GR?.MerchantVATID))
@@ -627,16 +632,16 @@ public class AADEFactory
             invoice.invoiceHeader.toWeighSpecified = true;
         }
 
-        // Apply series
-        if (!string.IsNullOrEmpty(headerOverride.Series))
+        // Overriding the document numbering is not supported: series/aa are assigned by
+        // the middleware's invoice counter (or taken inbound for handwritten documents),
+        // and an override silently renumbering the doc would desynchronize the counter
+        // from what AADE has on file. Reject loudly instead of silently ignoring the
+        // fields so integrators get immediate feedback.
+        if (!string.IsNullOrEmpty(headerOverride.Series) || !string.IsNullOrEmpty(headerOverride.Aa))
         {
-            invoice.invoiceHeader.series = headerOverride.Series;
-        }
-
-        // Apply aa (sequential number)
-        if (!string.IsNullOrEmpty(headerOverride.Aa))
-        {
-            invoice.invoiceHeader.aa = headerOverride.Aa;
+            throw new ArgumentException(
+                "Overriding invoiceHeader.series or invoiceHeader.aa via mydataoverride is not supported. " +
+                "The middleware assigns the invoice numbering; for caller-numbered paper documents use the HandWritten flag with Series/AA in ftReceiptCaseData.GR.");
         }
 
         // Apply issue date
@@ -1724,5 +1729,37 @@ public class AADEFactory
             xmlSerializer.Serialize(xmlWriter, doc);
             return stringWriter.ToString();
         }
+    }
+
+    private static (string series, string aa) ResolveSeriesAndAa(ReceiptResponse receiptResponse)
+    {
+        // Preferred path: the QueueGR processor pre-appends "{series}-{aa}" to
+        // ftReceiptIdentification before invoking the SCU — reserved values for
+        // automatic receipts, the caller's values for handwritten documents (taken
+        // inbound by the queue). This mirrors the convention every other country queue
+        // uses (ES/FR/AT/PT all append a country segment after the "#"). The doc
+        // numbering can never diverge from that segment: series/aa overrides via
+        // mydataoverride are rejected, the handwritten block below re-applies the same
+        // payload values this segment was built from, and MyDataSCU's success-path
+        // write-back is therefore an identity on queue-driven paths.
+        var hashIdx = receiptResponse.ftReceiptIdentification?.IndexOf('#') ?? -1;
+        if (hashIdx >= 0 && hashIdx < receiptResponse.ftReceiptIdentification!.Length - 1)
+        {
+            var countrySegment = receiptResponse.ftReceiptIdentification.Substring(hashIdx + 1);
+            var dashIdx = countrySegment.LastIndexOf('-');
+            if (dashIdx > 0 && dashIdx < countrySegment.Length - 1)
+            {
+                return (countrySegment.Substring(0, dashIdx), countrySegment.Substring(dashIdx + 1));
+            }
+        }
+
+        // Legacy fallback: derive aa from the generic ftReceiptIdentification ("ft{N}#"),
+        // series from ftCashBoxIdentification. Kept so existing tests (and callers that
+        // set ftReceiptIdentification directly without a country segment) continue to
+        // work without modification.
+        var identification = long.Parse(
+            receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0],
+            System.Globalization.NumberStyles.HexNumber);
+        return (receiptResponse.ftCashBoxIdentification, identification.ToString());
     }
 }

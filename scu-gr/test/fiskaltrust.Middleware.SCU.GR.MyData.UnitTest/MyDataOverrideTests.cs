@@ -73,6 +73,45 @@ public class MyDataOverrideTests
         };
     }
 
+    [Theory]
+    [InlineData("MY-SERIES", null)]
+    [InlineData(null, "9999")]
+    [InlineData("MY-SERIES", "9999")]
+    public void MapToInvoicesDoc_WithSeriesOrAaOverride_ShouldReturnError(string? series, string? aa)
+    {
+        // Overriding the document numbering is not supported: series/aa are assigned by
+        // the middleware's invoice counter, or taken inbound for handwritten documents.
+        // The fields must be rejected loudly, not silently ignored — otherwise the
+        // caller believes their numbering was applied while AADE received a different
+        // one.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            series,
+                            aa
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("invoiceHeader.series or invoiceHeader.aa");
+        doc.Should().BeNull();
+    }
+
     [Fact]
     public void MapToInvoicesDoc_WithoutOverride_ShouldNotHaveDispatchFields()
     {
@@ -1030,8 +1069,10 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_WithHeaderIdentificationOverrides_ShouldSetFields()
+    public void MapToInvoicesDoc_WithHeaderFieldOverrides_ShouldSetFields()
     {
+        // series/aa are deliberately absent here: overriding the document numbering is
+        // not supported (see MapToInvoicesDoc_WithSeriesOrAaOverride_ShouldReturnError).
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
         request.ftReceiptCaseData = new
@@ -1044,8 +1085,6 @@ public class MyDataOverrideTests
                     {
                         invoiceHeader = new
                         {
-                            series = "OVR-A",
-                            aa = "999",
                             issueDate = new DateTime(2026, 5, 8, 0, 0, 0, DateTimeKind.Utc),
                             currency = "USD",
                             correlatedInvoices = new long[] { 12345L, 67890L },
@@ -1063,8 +1102,6 @@ public class MyDataOverrideTests
 
         error.Should().BeNull();
         var header = doc!.invoice[0].invoiceHeader;
-        header.series.Should().Be("OVR-A");
-        header.aa.Should().Be("999");
         header.issueDate.Should().Be(new DateTime(2026, 5, 8));
         header.currencySpecified.Should().BeTrue();
         header.currency.Should().Be(CurrencyType.USD);
