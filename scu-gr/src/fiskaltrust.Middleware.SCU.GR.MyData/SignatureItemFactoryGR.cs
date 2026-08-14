@@ -25,7 +25,7 @@ public static class SignatureItemFactoryGR
     {
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
-            Caption = "Viva Bank",
+            Caption = "VIVABANK ΑΝΩΝΥΜΗ ΤΡΑΠΕΖΙΚΗ ΕΤΑΙΡΕΙΑ",
             Data = "www.viva.com",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeGR.ProviderSignature.As<SignatureType>()
