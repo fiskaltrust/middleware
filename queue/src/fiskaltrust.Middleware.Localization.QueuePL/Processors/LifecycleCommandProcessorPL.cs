@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2.pl;
+﻿using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Factories;
 using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.v2;
@@ -23,13 +23,7 @@ public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStoragePro
         var (queue, receiptRequest, receiptResponse) = request;
 
         var info = await _sscd.GetInfoAsync();
-        if (!PLSSCDInfoHelper.IsFiscalized(info))
-        {
-            var message = $"The connected register does not report FiscalizationState 'Fiscalized'. A Polish register must be fiscalized by an authorized serwis before the queue can start operating.";
-            receiptResponse.SetReceiptResponseError(message);
-            return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(queue, receiptRequest, receiptResponse, message)]);
-        }
-
+        // TODO: We need to verify that the register is fiscalized, but we cannot reference the SCU package here. We need to parse the InfoData blob instead.
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _localizedQueueStorageProvider.ActivateQueueAsync();
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
