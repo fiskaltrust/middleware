@@ -5,8 +5,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePL.Models;
 
 public enum SignatureTypePL : long
 {
-    InitialOperationReceipt = 0x504C_2000_0000_0003,
-    OutOfOperationReceipt = 0x504C_2000_0000_0003,
+    InitialOperationReceipt = 0x504C_2000_0000_1001,
+    OutOfOperationReceipt = 0x504C_2000_0000_1002,
     /// <summary>Invoice cases (0x1xxx) are persisted but not fiscalized until an SCU.PL.KSeF is configured — value shared with SCU.PL.Abstraction.</summary>
     StoredNotFiscalized = 0x504C_2000_0000_0106,
 }

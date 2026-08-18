@@ -33,10 +33,22 @@ internal class FakePLSSCD : IPLSSCD
 
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
-    public Task<PLSSCDInfo> GetInfoAsync() => Task.FromResult(new PLSSCDInfo
+    /// <summary>Returned verbatim when set — for the blob shapes a well-behaved SCU would never send.</summary>
+    public PLSSCDInfo? InfoOverride { get; set; }
+
+    public Exception? ThrowOnGetInfo { get; set; }
+
+    public Task<PLSSCDInfo> GetInfoAsync()
     {
-        InfoData = JsonSerializer.Serialize(new { FiscalizationState = Fiscalized ? 2 : 1, UniqueDeviceNumber = "ZAS0000000001" })
-    });
+        if (ThrowOnGetInfo is not null)
+        {
+            throw ThrowOnGetInfo;
+        }
+        return Task.FromResult(InfoOverride ?? new PLSSCDInfo
+        {
+            InfoData = JsonSerializer.Serialize(new { FiscalizationState = Fiscalized ? 2 : 1, UniqueDeviceNumber = "ZAS0000000001" })
+        });
+    }
 
     public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
@@ -123,6 +135,74 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
 
         storage.Activated.Should().BeFalse();
         ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+    }
+
+    /// <summary>
+    /// The queue reads FiscalizationState out of the InfoData blob as a JSON number. Anything it
+    /// cannot read that way — a string-encoded enum, a missing property, a malformed blob — must
+    /// leave the queue deactivated rather than activate it on a guess. The guard that the SCU keeps
+    /// producing the numeric form lives on the SCU side, in PLDeviceInfoTests.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"FiscalizationState":"Fiscalized"}""")]
+    [InlineData("""{"FiscalizationState":null}""")]
+    [InlineData("{}")]
+    [InlineData("not json at all")]
+    public async Task InitialOperation_ShouldFail_WhenTheDeviceInfoCannotBeRead(string infoData)
+    {
+        var sscd = new FakePLSSCD { InfoOverride = new PLSSCDInfo { InfoData = infoData } };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        storage.Activated.Should().BeFalse();
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+    }
+
+    [Fact]
+    public async Task InitialOperation_ShouldFail_WhenTheDeviceReportsNoInfoAtAll()
+    {
+        var sscd = new FakePLSSCD { InfoOverride = new PLSSCDInfo() };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        storage.Activated.Should().BeFalse();
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+    }
+
+    [Fact]
+    public async Task InitialOperation_ShouldCarryDeviceUnreachableState_WhenTheRegisterCannotBeRead()
+    {
+        var sscd = new FakePLSSCD { ThrowOnGetInfo = new PLDeviceUnreachableException("printer offline") };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        // Whether the register is fiscalized is unknown while it cannot be reached — the caller has
+        // to see that this is a connectivity failure it can retry, not a wrong device state.
+        storage.Activated.Should().BeFalse();
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        result.actionJournals.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task InitialAndOutOfOperationSignatures_AreDistinguishable()
+    {
+        var sut = new LifecycleCommandProcessorPL(new FakePLSSCD(), new FakeLocalizedQueueStorageProvider());
+
+        var started = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+        var stopped = await sut.OutOfOperationReceipt0x4002Async(CreateRequest(0x504C_2000_0000_4002));
+
+        // One signature type per lifecycle event: sharing a value makes the two indistinguishable
+        // for anyone reading the journal.
+        started.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypePL.InitialOperationReceipt));
+        started.receiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypePL.OutOfOperationReceipt));
+        stopped.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypePL.OutOfOperationReceipt));
+        stopped.receiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypePL.InitialOperationReceipt));
     }
 
     [Fact]
@@ -279,6 +359,31 @@ public class DeviceUnreachableTests : ProcessorTestsBase
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
         ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        // The action journal of a closing records that the report was printed and the counters
+        // advanced — after an unreachable register it would claim a Z report that never ran.
+        result.actionJournals.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task MonthlyClosing_ShouldNotWriteAnActionJournal_WhenScuIsUnreachable()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") };
+        var sut = new DailyOperationsCommandProcessorPL(sscd);
+
+        var result = await sut.MonthlyClosing0x2012Async(CreateRequest(0x504C_2000_0000_2012));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        result.actionJournals.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DailyClosing_ShouldWriteTheActionJournal_WhenTheReportWasPrinted()
+    {
+        var sut = new DailyOperationsCommandProcessorPL(new FakePLSSCD());
+
+        var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
+
+        result.actionJournals.Should().ContainSingle().Which.Message.Should().Contain("Daily-Closing");
     }
 }
 

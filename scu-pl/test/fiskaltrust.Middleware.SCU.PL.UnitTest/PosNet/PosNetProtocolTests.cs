@@ -79,6 +79,36 @@ public class PosNetProtocolTests
         act.Should().Throw<PosNetProtocolException>().WithMessage("*CRC16*");
     }
 
+    [Theory]
+    [InlineData("Sok\tvt0")]
+    [InlineData("Sok\x03")]
+    [InlineData("Sok\r\nJabłka")]
+    public void Encode_ValueWithAFramingCharacter_IsRejected(string goodsName)
+    {
+        // The protocol has no escaping, so such a value would not travel as content: a TAB opens a
+        // further field (another vt, i.e. a different PTU slot) and an ETX ends the frame early.
+        var act = () => PosNetFrame.Encode(PosNetCommands.Trline(goodsName, 1, 200, 1m, 200));
+
+        act.Should().Throw<PosNetProtocolException>().WithMessage("*control character*");
+    }
+
+    [Theory]
+    [InlineData("Sok\tvt0", "Sok vt0")]
+    [InlineData("Sok\x03", "Sok")]
+    [InlineData("Sok\r\nJabłka", "Sok  Jabłka")]
+    [InlineData("Jabłka", "Jabłka")]
+    public void ToField_ReplacesFramingCharacters_AndKeepsPolishText(string value, string expected)
+    {
+        PosNetText.ToField(value, 80).Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToField_CutsToTheFieldLength_WithoutTrailingPadding()
+    {
+        PosNetText.ToField("Sok pomarańczowy", 8).Should().Be("Sok poma");
+        PosNetText.ToField("Sok pomarańczowy", 4).Should().Be("Sok");
+    }
+
     [Fact]
     public void Decode_MissingFrameMarkers_Throws()
     {

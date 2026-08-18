@@ -31,6 +31,15 @@ public static class PosNetFrame
         var payload = new StringBuilder(command.Mnemonic).Append('\t');
         foreach (var parameter in command.Parameters)
         {
+            // The protocol has no escaping, so a control character inside a value is not content:
+            // a TAB would open an extra field (a different PTU slot, another amount) and an ETX
+            // would end the frame. Free text is sanitized by PosNetText before it gets here; this
+            // guard makes sure nothing reaches the device that would silently change the command.
+            if (PosNetText.ContainsFramingCharacter(parameter.Value))
+            {
+                throw new PosNetProtocolException(
+                    $"The value of '{command.Mnemonic}' parameter '{parameter.Key}' contains a control character, which the POSNET protocol cannot transport as content.");
+            }
             payload.Append(parameter.Key).Append(parameter.Value).Append('\t');
         }
 

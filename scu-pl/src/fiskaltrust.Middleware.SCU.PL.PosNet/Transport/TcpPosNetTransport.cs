@@ -10,7 +10,8 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
 
 /// <summary>
 /// TCP transport to a POSNET printer with a persistent connection (reconnected lazily after a
-/// failure) and explicit connect/send/receive timeouts. The transaction state lives in the
+/// failure, and whenever the kept socket is no longer usable — see <see cref="IsUsable"/>) and
+/// explicit connect/send/receive timeouts. The transaction state lives in the
 /// device, not in the connection, so reconnecting between commands is safe. Failures before the
 /// frame is fully written surface as <see cref="PLDeviceUnreachableException"/> (safe to resend);
 /// failures after it surface as <see cref="PosNetAmbiguousResponseException"/> (must not resend).
@@ -71,9 +72,9 @@ public sealed class TcpPosNetTransport : IPosNetTransport
 
     private async Task<NetworkStream> GetConnectedStreamAsync(CancellationToken cancellationToken)
     {
-        if (_client is { Connected: true })
+        if (IsUsable(_client))
         {
-            return _client.GetStream();
+            return _client!.GetStream();
         }
 
         DropConnection();
@@ -91,6 +92,30 @@ public sealed class TcpPosNetTransport : IPosNetTransport
         }
         _client = client;
         return client.GetStream();
+    }
+
+    /// <summary>
+    /// Whether the kept connection can still carry a command. <see cref="TcpClient.Connected"/>
+    /// only reflects the last I/O operation, so a printer that closed the connection while the till
+    /// was idle still looks connected — writing to it fails, and that failure would be reported as
+    /// an ambiguous outcome ("verify the device") although nothing was ever delivered. A socket the
+    /// peer has closed becomes readable with nothing to read, which is what this checks for.
+    /// </summary>
+    private static bool IsUsable(TcpClient? client)
+    {
+        if (client is not { Connected: true })
+        {
+            return false;
+        }
+
+        try
+        {
+            return !(client.Client.Poll(0, SelectMode.SelectRead) && client.Available == 0);
+        }
+        catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+        {
+            return false;
+        }
     }
 
     private static async Task<byte[]> ReadFrameAsync(NetworkStream stream, CancellationToken cancellationToken)

@@ -27,6 +27,12 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     private readonly PtuSlotResolver _ptuSlotResolver;
     private readonly PosNetConfiguration _configuration;
 
+    /// <summary>
+    /// The register identity, read once per SCU instance. The numer unikatowy is assigned to a
+    /// device for its lifetime, so re-reading it before every receipt would only add a round trip.
+    /// </summary>
+    private PLDeviceInfo? _identity;
+
     public PosNetPLSSCD(PosNetConfiguration configuration)
         : this(configuration, new PosNetClient(new TcpPosNetTransport(configuration))) { }
 
@@ -81,6 +87,12 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     private async Task ExecuteSaleAsync(ReceiptRequest request, ReceiptResponse response)
     {
         var commands = PosNetReceiptMapper.MapSale(request, _ptuSlotResolver);
+
+        // The numer unikatowy is a legal element of the fiscal document, so the response carries
+        // it like the InMemory SCU does. Reading it before trinit keeps the order safe: a register
+        // that cannot answer its status has not been asked to open a transaction either.
+        await EnrichWithDeviceIdentityAsync(response);
+
         var executed = 0;
         try
         {
@@ -103,6 +115,16 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
 
         await TryReadFiscalDocumentNumberAsync(response);
+    }
+
+    /// <summary>
+    /// Adds the register identity to the response, reading the status once and reusing it. An
+    /// unreachable or silent register propagates: no sale may be recorded without a register.
+    /// </summary>
+    private async Task EnrichWithDeviceIdentityAsync(ReceiptResponse response)
+    {
+        _identity ??= ToDeviceInfo(await _client.ExecuteAsync(PosNetCommands.Scomm()));
+        response.EnrichWithDeviceIdentification(_identity);
     }
 
     private async Task CancelAsync()
@@ -145,15 +167,35 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
     private PLDeviceInfo ToDeviceInfo(PosNetResponse status) => new()
     {
-        FiscalizationState = status.Parameters.TryGetValue("fs", out var fiscalMode) && fiscalMode == "1"
-            ? PLFiscalizationState.Fiscalized
-            : PLFiscalizationState.NonFiscal,
+        FiscalizationState = ToFiscalizationState(status),
         VatRateTable = _configuration.VatRateTable,
-        // The scomm status does not carry the register identity; reading the numer unikatowy
-        // (getrealid) is a follow-up to middleware#751.
+        // scomm reports the numer unikatowy (nu), the number printed on every fiscal document. The
+        // numer fabryczny is not part of this status — reading it is a follow-up to middleware#751.
         DeviceSerialNumber = null,
-        UniqueDeviceNumber = null,
+        UniqueDeviceNumber = status.Parameters.TryGetValue("nu", out var uniqueNumber) && uniqueNumber.Trim().Length > 0
+            ? uniqueNumber.Trim()
+            : null,
     };
+
+    /// <summary>
+    /// The scomm status flags are the letters T (tak) and N (nie) — a POSNET Online printer answers
+    /// e.g. <c>fsN tzN ts0 hrT nuZBF 2101002392 tdN</c>. 1/0 is accepted as well, and an
+    /// unrecognized or missing flag leaves the state <see cref="PLFiscalizationState.Unknown"/>:
+    /// reporting a fiscalized register as non-fiscal would keep a PL queue from ever activating.
+    /// </summary>
+    private static PLFiscalizationState ToFiscalizationState(PosNetResponse status)
+    {
+        if (!status.Parameters.TryGetValue("fs", out var fiscalMode))
+        {
+            return PLFiscalizationState.Unknown;
+        }
+        return fiscalMode.Trim().ToUpperInvariant() switch
+        {
+            "T" or "1" => PLFiscalizationState.Fiscalized,
+            "N" or "0" => PLFiscalizationState.NonFiscal,
+            _ => PLFiscalizationState.Unknown,
+        };
+    }
 
     private static bool IsFiscalReceiptCase(ReceiptCase receiptCase)
         => receiptCase.IsType(ReceiptCaseType.Receipt)

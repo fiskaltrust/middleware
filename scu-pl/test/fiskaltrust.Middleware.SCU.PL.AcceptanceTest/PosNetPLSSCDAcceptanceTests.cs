@@ -1,65 +1,63 @@
-﻿using fiskaltrust.ifPOS.v2.pl;
-using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
+using System.Globalization;
+using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
-using fiskaltrust.Middleware.SCU.PL.PosNet;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest;
 
 /// <summary>
 /// Acceptance tests in the shape of the Italian SCU acceptance suite — the SUT is built through
-/// the ScuBootstrapper like the launcher would — but market-scoped: instead of a hardware printer
-/// they run against an in-process POSNET emulator on real TCP, so the whole stack (transport,
-/// codec, transaction flow) is exercised in CI without a device.
+/// the ScuBootstrapper like the launcher would — but market-scoped: they run over real TCP against
+/// whatever <see cref="PosNetTestTarget"/> selects, so the whole stack (transport, framing, codec,
+/// transaction flow) is exercised against a recorded printer in CI and against the device itself
+/// by setting <c>SCU_PL_POSNET_DEVICE_URL</c>, without touching a test.
 /// </summary>
 public class PosNetPLSSCDAcceptanceTests
 {
-    private static IPLSSCD GetSUT(PosNetPrinterEmulator emulator)
+    private const string FiscalDocumentNumber = "Numer dokumentu fiskalnego";
+
+    /// <summary>
+    /// The document number a receipt was printed under. Asserted relatively throughout: on a real
+    /// printer the counter carries whatever history the device has.
+    /// </summary>
+    private static int DocumentNumberOf(ProcessResponse response)
     {
-        var bootstrapper = new ScuBootstrapper
-        {
-            Id = Guid.NewGuid(),
-            Configuration = new Dictionary<string, object>
-            {
-                ["DeviceUrl"] = "tcp://6.tcp.eu.ngrok.io:19493",
-                // Short receive timeout keeps the ambiguous-outcome test fast.
-                ["ReceiveTimeoutMs"] = 750,
-                ["ConnectTimeoutMs"] = 2000,
-            },
-        };
-        var services = new ServiceCollection();
-        bootstrapper.ConfigureServices(services);
-        return services.BuildServiceProvider().GetRequiredService<IPLSSCD>();
+        var signature = response.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == FiscalDocumentNumber).Subject;
+        return int.Parse(signature.Data, NumberStyles.None, CultureInfo.InvariantCulture);
     }
+
+    /// <summary>
+    /// Checks that no transaction was left open on the device — only the emulator models that
+    /// state, a real printer cannot be asked, so on a hardware run the command flow is the evidence.
+    /// </summary>
+    private static void NoTransactionShouldBeOpen(PosNetTestTarget target)
+        => target.Emulator?.TransactionOpen.Should().BeFalse();
 
     [Fact]
     public async Task CashSale_RunsTheFullTransaction_AndReturnsTheFiscalDocumentNumber()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Open();
 
-        var result = await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment", "trend", "scnt");
-        emulator.TransactionOpen.Should().BeFalse();
-        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        NoTransactionShouldBeOpen(target);
+        DocumentNumberOf(result).Should().BePositive();
     }
 
     [Fact]
     public async Task CardSaleWithChange_SettlesLikeTheSpecExample()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Open();
 
-        await sut.ProcessReceiptAsync(PLReceiptExamples.CardSaleWithChange());
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CardSaleWithChange());
 
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment", "trpayment", "trend", "scnt");
-        var trend = emulator.ReceivedCommands.Single(c => c.CommandId == "trend");
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trpayment", "trend", "scnt");
+        var trend = target.SentCommands.Single(c => c.CommandId == "trend");
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "200"));
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("re", "300"));
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("fp", "500"));
@@ -68,92 +66,103 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task NipReceipt_PrintsTheBuyersNip()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Open();
 
-        await sut.ProcessReceiptAsync(PLReceiptExamples.NipReceipt());
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.NipReceipt());
 
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trnipset", "trline", "trpayment", "trend", "scnt");
-        var trnipset = emulator.ReceivedCommands.Single(c => c.CommandId == "trnipset");
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trnipset", "trline", "trpayment", "trend", "scnt");
+        var trnipset = target.SentCommands.Single(c => c.CommandId == "trnipset");
         trnipset.Parameters.Should().Contain(new KeyValuePair<string, string>("ni", "1234563218"));
     }
 
     [Fact]
     public async Task ConsecutiveSales_ReuseTheConnection_AndNumberDocumentsSequentially()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Open();
 
-        var first = await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
-        var second = await sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var first = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var second = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        emulator.ReceivedMnemonics.Should().HaveCount(10);
-        emulator.TransactionOpen.Should().BeFalse();
-        first.ReceiptResponse.ftSignatures.Single(s => s.Caption == "Numer dokumentu fiskalnego").Data.Should().Be("85");
-        second.ReceiptResponse.ftSignatures.Single(s => s.Caption == "Numer dokumentu fiskalnego").Data.Should().Be("86");
+        // The register identity is read once, so only the first sale carries the leading scomm.
+        target.SentMnemonics.Should().HaveCount(11);
+        NoTransactionShouldBeOpen(target);
+        DocumentNumberOf(second).Should().Be(DocumentNumberOf(first) + 1);
     }
 
     [Fact]
     public async Task ZeroReceipt_ReadsTheDeviceStatus()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Open();
 
-        await sut.ProcessReceiptAsync(PLReceiptExamples.ZeroReceipt());
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.ZeroReceipt());
 
-        emulator.ReceivedMnemonics.Should().Equal("scomm");
+        target.SentMnemonics.Should().Equal("scomm");
     }
 
     [Fact]
+    public async Task GetInfo_ReadsTheRegisterStateWithASingleStatusCommand()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        var info = await target.Sut.GetInfoAsync();
+
+        target.SentMnemonics.Should().Equal("scomm");
+        var deviceInfo = PLDeviceInfo.FromPLSSCDInfo(info);
+        deviceInfo.Should().NotBeNull();
+        // Which state a real register reports depends on the device in front of you, but the status
+        // has to be understood: Unknown means the fs flag was missing or in a shape this SCU does
+        // not read — which would keep a fiscalized register from ever activating a PL queue.
+        deviceInfo!.FiscalizationState.Should().BeOneOf(
+            PLFiscalizationState.NonFiscal, PLFiscalizationState.Fiscalized, PLFiscalizationState.ReadOnly);
+        // Every POSNET register carries a numer unikatowy, and it is printed on every fiscal document.
+        deviceInfo.UniqueDeviceNumber.Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>The fiscalized state is scripted into the emulator; a test device is typically non-fiscal.</summary>
+    [EmulatorOnlyFact]
     public async Task GetInfo_ReportsTheFiscalizedRegister()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Scripted();
 
-        var info = await sut.GetInfoAsync();
+        var info = await target.Sut.GetInfoAsync();
 
         var deviceInfo = PLDeviceInfo.FromPLSSCDInfo(info);
         deviceInfo!.FiscalizationState.Should().Be(PLFiscalizationState.Fiscalized);
     }
 
-    [Fact]
+    [EmulatorOnlyFact]
     public async Task RejectedLine_CancelsTheOpenTransactionOnTheDevice()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        emulator.ErrorOn("trline", 2005);
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("trline", 2005));
 
-        var act = () => sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
         (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2005);
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "prncancel");
-        emulator.TransactionOpen.Should().BeFalse();
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "prncancel");
+        NoTransactionShouldBeOpen(target);
     }
 
-    [Fact]
+    [EmulatorOnlyFact]
     public async Task SilentPrinter_IsAmbiguous_NothingElseIsSent()
     {
-        using var emulator = new PosNetPrinterEmulator().Start();
-        emulator.SwallowOn("trpayment");
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.SwallowOn("trpayment"));
 
-        var act = () => sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
         await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
         // Exactly one trpayment and no cleanup afterwards: the device may have printed — the
         // operator must verify before anything is sent again (triple-print protection).
-        emulator.ReceivedMnemonics.Should().Equal("trinit", "trline", "trpayment");
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment");
     }
 
-    [Fact]
+    [EmulatorOnlyFact]
     public async Task UnreachablePrinter_FailsAsDeviceUnreachable()
     {
-        using var emulator = new PosNetPrinterEmulator().StartUnreachable();
-        var sut = GetSUT(emulator);
+        using var target = PosNetTestTarget.Scripted(unreachable: true);
 
-        var act = () => sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
         await act.Should().ThrowAsync<PLDeviceUnreachableException>();
-        emulator.ReceivedMnemonics.Should().BeEmpty();
+        target.SentMnemonics.Should().BeEmpty();
     }
 }

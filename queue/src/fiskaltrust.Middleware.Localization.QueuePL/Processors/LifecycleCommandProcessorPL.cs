@@ -1,4 +1,4 @@
-﻿using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Factories;
 using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.v2;
@@ -22,8 +22,29 @@ public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStoragePro
     {
         var (queue, receiptRequest, receiptResponse) = request;
 
-        var info = await _sscd.GetInfoAsync();
-        // TODO: We need to verify that the register is fiscalized, but we cannot reference the SCU package here. We need to parse the InfoData blob instead.
+        PLSSCDInfo info;
+        try
+        {
+            info = await _sscd.GetInfoAsync();
+        }
+        catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
+        {
+            // Whether the register is fiscalized is unknown while it cannot be reached — the queue
+            // stays inactive, and the caller sees the device-unreachable state rather than a
+            // generic error, so retrying once the register is back is the obvious next step.
+            receiptResponse.SetDeviceUnreachableError(ex);
+            return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
+                queue, receiptRequest, receiptResponse,
+                $"The initial-operation receipt could not verify the register's fiscalization state: the register was not reachable. Details: {ex.Message}")]);
+        }
+
+        if (!PLSSCDInfoHelper.IsFiscalized(info))
+        {
+            var message = $"The connected register does not report FiscalizationState 'Fiscalized'. A Polish register must be fiscalized by an authorized serwis before the queue can start operating.";
+            receiptResponse.SetReceiptResponseError(message);
+            return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(queue, receiptRequest, receiptResponse, message)]);
+        }
+
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _localizedQueueStorageProvider.ActivateQueueAsync();
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));

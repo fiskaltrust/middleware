@@ -42,14 +42,21 @@ public static class PosNetReceiptMapper
                 throw new PLValidationException("Voided or refunded positions are not supported by the PosNet SCU yet — returns are separate non-fiscal documents on the register.");
             }
 
+            // The queue lets discount and extra positions through because they do not make a
+            // document a return. The register expresses them as line- or subtotal-level
+            // rabat/narzut parameters rather than as positions of their own, which is a follow-up
+            // to middleware#751 — until then they are rejected here, before a transaction is
+            // opened, instead of failing as an unexplained negative sale line.
+            if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))
+            {
+                throw new PLValidationException($"The discount/extra position '{chargeItem.Description}' is not supported by the PosNet SCU yet — apply the discount to the position amounts and send net line totals.");
+            }
+
             var slot = ptuSlotResolver.Resolve(chargeItem.ftChargeItemCase);
             var totalGrosze = chargeItem.Amount.ToGrosze();
             var quantity = chargeItem.Quantity;
-            var unitPriceGrosze = quantity == 1m
-                ? totalGrosze
-                : (chargeItem.Amount / quantity).ToGrosze();
 
-            transaction.AddLine(Truncate(chargeItem.Description, MaxGoodsNameLength), ToVatSlotIndex(slot.PtuSlot), unitPriceGrosze, quantity, totalGrosze);
+            transaction.AddLine(PosNetText.ToField(chargeItem.Description, MaxGoodsNameLength), ToVatSlotIndex(slot.PtuSlot), ToUnitPriceGrosze(chargeItem.Description, totalGrosze, quantity), quantity, totalGrosze);
         }
 
         foreach (var payItem in request.cbPayItems ?? [])
@@ -63,10 +70,40 @@ public static class PosNetReceiptMapper
             // it is a positive deposit with the change flag (re1).
             var isChange = payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Change) || payItem.Amount < 0;
             var amountGrosze = Math.Abs(payItem.Amount.ToGrosze());
-            transaction.AddPayment(ToPaymentType(payItem.ftPayItemCase), amountGrosze, isChange, Truncate(payItem.Description, MaxPaymentNameLength));
+            transaction.AddPayment(ToPaymentType(payItem.ftPayItemCase), amountGrosze, isChange, PosNetText.ToField(payItem.Description, MaxPaymentNameLength));
         }
 
         return transaction.End();
+    }
+
+    /// <summary>
+    /// The trline unit price (<c>pr</c>) in grosze. A POSNET sale line carries price, quantity and
+    /// value, and the three have to agree — the register prints and totalizes all of them, so a
+    /// price rounded independently of the line total would put a contradiction on a fiscal
+    /// document (10.00 over quantity 3 as 3 × 333 gr = 9.99). Grosze are the smallest unit the
+    /// protocol has, so a line total that is not divisible by its quantity cannot be expressed as
+    /// one line and is rejected here, before any frame is sent.
+    /// </summary>
+    public static long ToUnitPriceGrosze(string? description, long totalGrosze, decimal quantity)
+    {
+        if (quantity == 1m)
+        {
+            return totalGrosze;
+        }
+        if (quantity <= 0m || totalGrosze <= 0)
+        {
+            // Not a sale line at all — the transaction reports that, with the reason.
+            return totalGrosze;
+        }
+
+        var unitPriceGrosze = totalGrosze / quantity;
+        if (unitPriceGrosze != decimal.Truncate(unitPriceGrosze))
+        {
+            throw new PLValidationException(
+                $"The sale line '{description}' cannot be printed by a Polish register: the amount {totalGrosze.GroszeToPln()} over quantity {quantity} is not a whole number of grosze per unit "
+                + "(price × quantity must equal the line value on a fiscal document). Split the position or send an amount that divides by the quantity.");
+        }
+        return (long) unitPriceGrosze;
     }
 
     /// <summary>The trline vt parameter is the zero-based PTU slot index: A=0 … G=6.</summary>
@@ -124,11 +161,5 @@ public static class PosNetReceiptMapper
         {
         }
         return null;
-    }
-
-    private static string Truncate(string? value, int maxLength)
-    {
-        var text = value ?? "";
-        return text.Length <= maxLength ? text : text[..maxLength];
     }
 }

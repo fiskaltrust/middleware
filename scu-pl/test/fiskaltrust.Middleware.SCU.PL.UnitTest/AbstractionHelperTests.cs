@@ -1,3 +1,4 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
@@ -50,6 +51,27 @@ public class PLDeviceInfoTests
     [Fact]
     public void FromPLSSCDInfo_ShouldReturnNull_WhenInfoDataIsNull()
         => PLDeviceInfo.FromPLSSCDInfo(new ifPOS.v2.pl.PLSSCDInfo()).Should().BeNull();
+
+    /// <summary>
+    /// QueuePL decides whether to activate the queue by reading FiscalizationState straight out of
+    /// the InfoData blob as a JSON number, deliberately without referencing this package. That makes
+    /// the numeric encoding a wire contract rather than an implementation detail: a string-enum
+    /// converter or a renumbered enum would leave the initial-operation receipt silently failing.
+    /// This test is the guard on this side of that contract.
+    /// </summary>
+    [Theory]
+    [InlineData(PLFiscalizationState.Fiscalized, 2)]
+    [InlineData(PLFiscalizationState.NonFiscal, 1)]
+    [InlineData(PLFiscalizationState.ReadOnly, 3)]
+    public void ToPLSSCDInfo_ShouldWriteTheFiscalizationStateAsItsNumber(PLFiscalizationState state, int expected)
+    {
+        var info = new PLDeviceInfo { FiscalizationState = state }.ToPLSSCDInfo();
+
+        using var document = JsonDocument.Parse(info.InfoData!);
+        var serialized = document.RootElement.GetProperty("FiscalizationState");
+        serialized.ValueKind.Should().Be(JsonValueKind.Number);
+        serialized.GetInt32().Should().Be(expected);
+    }
 }
 
 public class PLStateMapperTests
