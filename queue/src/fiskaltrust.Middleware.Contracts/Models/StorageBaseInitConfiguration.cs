@@ -17,6 +17,7 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public List<ftQueueGR> QueuesGR { get; set; }
         public List<ftQueueIT> QueuesIT { get; set; }
         public List<ftQueueME> QueuesME { get; set; }
+        public List<ftQueuePL> QueuesPL { get; set; }
         public List<ftSignaturCreationUnitAT> SignaturCreationUnitsAT { get; set; }
         public List<ftSignaturCreationUnitBE> SignaturCreationUnitsBE { get; set; }
         public List<ftSignaturCreationUnitDE> SignaturCreationUnitsDE { get; set; }
@@ -25,6 +26,7 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public List<ftSignaturCreationUnitGR> SignaturCreationUnitsGR { get; set; }
         public List<ftSignaturCreationUnitIT> SignaturCreationUnitsIT { get; set; }
         public List<ftSignaturCreationUnitME> SignaturCreationUnitsME { get; set; }
+        public List<ftSignaturCreationUnitPL> SignaturCreationUnitsPL { get; set; }
         public MasterDataConfiguration MasterData { get; set; }
     }
 }
