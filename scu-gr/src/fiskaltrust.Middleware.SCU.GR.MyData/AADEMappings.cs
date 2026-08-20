@@ -194,7 +194,33 @@ public static class AADEMappings
         {
             if(chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a))
             {
+                // OPEN: 11.3 permits NEITHER E3_561_004 (retail art. 39a) NOR the
+                // wholesale E3_561_002 — reverse charge needs the buyer's ΑΦΜ, which a simplified
+                // invoice omits. Left unchanged for now rather than introducing a throw that would
+                // break partners already combining 39a with an invoiceType override to 11.3.
                 return IncomeClassificationValueType.E3_561_004;
+            }
+
+            // A simplified invoice (11.3) is an invoice to a BUSINESS, so AADE books it as WHOLESALE.
+            // syndiasmoi_xaraktirismwn sheet "11.3" (identical in v1.0.10 and v2.0.1) lists
+            // E3_561_001 as the only permitted value for category1_1/1_2/1_3, where sheet "11.1"
+            // lists E3_561_003.
+            // Note: AADE's esend-myDATA guidance separately assigns a blanket category1_1 +
+            // E3_561_003 to types 11.1/11.3/11.4, but only "εφόσον για οποιονδήποτε λόγο" a ΦΗΜ
+            // cannot characterize the lines or the characterizations cannot be transmitted through
+            // esend. That is a fallback for un-characterized cash-register traffic, not a rule for a
+            // provider that sends its own characterizations — which is why our earlier 11.3 override
+            // transmissions were accepted with E3_561_003 rather than rejected.
+            if (IsSimplifiedInvoiceDocument(receiptRequest))
+            {
+                return chargeItem.ftChargeItemCase.TypeOfService() switch
+                {
+                    ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.CatalogService => IncomeClassificationValueType.E3_561_001,
+                    _ => IncomeClassificationValueType.E3_561_007,
+                };
             }
 
             return chargeItem.ftChargeItemCase.TypeOfService() switch
@@ -351,6 +377,12 @@ public static class AADEMappings
             else if (hasOwnConsumption)
             {
                 return InvoiceType.Item61;
+            }
+            //evaluated before the 11.2 since 11.3 is a simplified invoice for good and services and should not be treated 
+            //like an 11.2 which is just for services
+            else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSimplifiedInvoice))
+            {
+                return InvoiceType.Item113;
             }
             else if (receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes())
             {
@@ -868,5 +900,29 @@ public static class AADEMappings
                 "3-INTRA-COMMUNITY ACQUISITION, 4-THIRD COUNTRY ACQUISITION, 5-REVERSAL OF OBLIGATION.");
         }
         return purpose;
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the document being built is a simplified invoice (myDATA 11.3).
+    /// </summary>
+    /// <remarks>
+    /// This evaluates to <c>true</c> by either route: the GR-local <see cref="ReceiptCaseFlagsGR.IsSimplifiedInvoice"/> flag, 
+    /// or an explicit <c>ftReceiptCaseData.GR.mydataoverride.invoice.invoiceHeader.invoiceType = "11.3"</c>.
+    /// <para>
+    /// Both routes must be recognized here because the income classification is computed before
+    /// <c>AADEFactory.ApplyMyDataOverride</c> runs, so the resolved invoice type is not yet visible
+    /// on the invoice. Covering the override route also fixes the pre-existing defect where a
+    /// header-only override to 11.3 transmitted the retail classification.
+    /// </para>
+    /// </remarks>
+    public static bool IsSimplifiedInvoiceDocument(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSimplifiedInvoice))
+        {
+            return true;
+        }
+
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData)
+            && overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType == "11.3";
     }
 }
