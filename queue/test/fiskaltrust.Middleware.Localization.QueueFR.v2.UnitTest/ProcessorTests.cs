@@ -146,6 +146,46 @@ public class ProcessorTests
     }
 
     [Fact]
+    public async Task InitialOperation_WhenSigningFails_DoesNotActivateTheQueue()
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        sscd.ThrowOnProcess = () => new FRSigningUnavailableException();
+        var storage = new Mock<ILocalizedQueueStorageProvider>();
+        var sut = new LifecycleCommandProcessorFR(sscd, pipeline, storage.Object);
+
+        var response = await sut.InitialOperationReceipt0x4001Async(CommandRequest(ReceiptCase.InitialOperationReceipt0x4001));
+
+        response.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        storage.Verify(x => x.ActivateQueueAsync(), Times.Never,
+            "an activated queue would accept ordinary receipts without a signed opening entry, and reject the retry as a second initialization");
+    }
+
+    [Fact]
+    public async Task OutOfOperation_WhenSigningFails_LeavesTheQueueOpenSoTheClosingCanBeRetried()
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        sscd.ThrowOnProcess = () => new FRSigningUnavailableException();
+        var storage = new Mock<ILocalizedQueueStorageProvider>();
+        var sut = new LifecycleCommandProcessorFR(sscd, pipeline, storage.Object);
+
+        var response = await sut.OutOfOperationReceipt0x4002Async(CommandRequest(ReceiptCase.OutOfOperationReceipt0x4002));
+
+        response.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        storage.Verify(x => x.DeactivateQueueAsync(), Times.Never,
+            "a deactivated queue rejects every request, including the retry of this very receipt");
+    }
+
+    [Fact]
+    public void JournalProcessorFR_RefusesFrenchJournalTypesInsteadOfReturningAnEmptyFile()
+    {
+        var sut = new JournalProcessorFR();
+
+        var act = () => sut.ProcessAsync(new JournalRequest { ftJournalType = (JournalType) 0x4652_2000_0000_0001 });
+
+        act.Should().Throw<NotImplementedException>().WithMessage("*not implemented*");
+    }
+
+    [Fact]
     public async Task ReceiptValidatorFR_RejectsAnyCurrencyButEuro()
     {
         var repository = new Mock<IMiddlewareQueueItemRepository>();
@@ -179,5 +219,11 @@ public class ProcessorTests
         var result = await sut.ValidateAsync(request, new ftQueue());
 
         result.Errors.Should().NotContain(x => x.ErrorCode == "CurrencyMustMatchMarket");
+    }
+
+    /// <summary>Named like the SCU packages' exception - the queue recognizes it by type name.</summary>
+    private class FRSigningUnavailableException : Exception
+    {
+        public FRSigningUnavailableException() : base("signing unavailable") { }
     }
 }

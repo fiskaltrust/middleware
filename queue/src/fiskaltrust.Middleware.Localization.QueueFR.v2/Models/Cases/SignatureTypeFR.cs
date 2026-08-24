@@ -11,6 +11,10 @@ public enum SignatureTypeFR : long
 {
     Information = 0x4652_2000_0000_0000,
     ReceiptSignature = 0x4652_2000_0000_0001,
+    DayTotals = 0x4652_2000_0000_0003,
+    MonthTotals = 0x4652_2000_0000_0004,
+    YearTotals = 0x4652_2000_0000_0005,
+    PerpetualTotals = 0x4652_2000_0000_0007,
     ChainHash = 0x4652_2000_0000_0008,
     StoredNotSigned = 0x4652_2000_0000_000B,
     InitialOperationReceipt = 0x4652_2000_0000_0010,

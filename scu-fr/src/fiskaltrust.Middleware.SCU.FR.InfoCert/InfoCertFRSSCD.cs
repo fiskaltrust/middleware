@@ -79,6 +79,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             LastHash = lastHash ?? "",
             CertificateSerialNumber = _configuration.CertificateSerialNumber,
             AttestationNumber = _configuration.AttestationNumber,
+            PeriodTotals = request.PeriodTotals,
         };
 
         string jws;
