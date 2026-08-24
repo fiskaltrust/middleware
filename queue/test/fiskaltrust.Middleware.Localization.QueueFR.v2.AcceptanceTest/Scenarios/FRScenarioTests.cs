@@ -106,6 +106,24 @@ public class FRScenarioTests
     }
 
     [Fact]
+    public async Task DailyClosing_ReportsTheTurnoverAccumulatedSinceTheLastClosing()
+    {
+        await SignAsync(CashSale());
+        await SignAsync(CashSale());
+        var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
+
+        // Two 12.00 EUR sales - a closing attests the period, not its own (empty) item list.
+        SignatureOf(closing, SignatureTypeFR.DayTotals).Should().Be("24.00");
+        SignatureOf(closing, SignatureTypeFR.PerpetualTotals).Should().Be("24.00");
+
+        await SignAsync(CashSale());
+        var secondClosing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
+
+        SignatureOf(secondClosing, SignatureTypeFR.DayTotals).Should().Be("12.00", "the first closing reset the day");
+        SignatureOf(secondClosing, SignatureTypeFR.PerpetualTotals).Should().Be("36.00", "the perpetual total is never reset");
+    }
+
+    [Fact]
     public async Task NonEuroReceipt_IsRejected()
     {
         var request = CashSale();

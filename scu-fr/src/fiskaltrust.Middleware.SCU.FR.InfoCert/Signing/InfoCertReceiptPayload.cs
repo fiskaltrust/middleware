@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
+using fiskaltrust.ifPOS.v2.fr;
 
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
@@ -58,4 +59,12 @@ internal class InfoCertReceiptPayload
     [JsonPropertyName("certificateSerialNumber")] public string CertificateSerialNumber { get; set; } = "";
 
     [JsonPropertyName("attestationNumber")] public string AttestationNumber { get; set; } = "";
+
+    /// <summary>
+    /// Present on grand-total (closing) receipts only: the accumulated turnover the closing
+    /// attests. Omitted everywhere else so ordinary receipts keep their payload shape.
+    /// </summary>
+    [JsonPropertyName("periodTotals")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FRPeriodTotals? PeriodTotals { get; set; }
 }

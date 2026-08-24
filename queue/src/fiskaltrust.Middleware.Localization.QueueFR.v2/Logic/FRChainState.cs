@@ -1,6 +1,7 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -26,14 +27,16 @@ public class FRChainState
 }
 
 /// <summary>
-/// Keeps the position of every FR receipt chain. The state is reconstructed from the queue items
-/// on first use — the same approach QueuePT takes — so no v1 storage column has to be shared
-/// between the two French localizations.
+/// Keeps the fiscal state of the French queue: the position of every receipt chain and the
+/// accumulated totals of every period. The state is reconstructed from the queue items on first
+/// use - the same approach QueuePT takes - so no v1 storage column has to be shared between the
+/// two French localizations.
 /// </summary>
 public class FRChainStateProvider
 {
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
     private readonly Dictionary<FRReceiptChain, FRChainState> _chains = new();
+    private readonly FRPeriodTotalsAccumulator _totals = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
     private bool _loaded;
 
@@ -43,12 +46,12 @@ public class FRChainStateProvider
     }
 
     /// <summary>
-    /// Runs <paramref name="operation"/> against the chain the request belongs to, loading the
-    /// positions of all chains from storage on the first call. The chain is held for the whole
+    /// Runs <paramref name="operation"/> against the chain the request belongs to and the period
+    /// totals, loading both from storage on the first call. The state is held for the whole
     /// operation: an NF525 chain is strictly sequential, so numbering, signing and advancing the
     /// hash must not interleave with another receipt of the same chain.
     /// </summary>
-    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, Task<T>> operation)
+    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, Task<T>> operation)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -66,7 +69,7 @@ public class FRChainStateProvider
                 _chains[chain] = state;
             }
 
-            return await operation(state).ConfigureAwait(false);
+            return await operation(state, _totals).ConfigureAwait(false);
         }
         finally
         {
@@ -80,6 +83,10 @@ public class FRChainStateProvider
         {
             _chains[chain] = new FRChainState(chain);
         }
+
+        // Every period starts open and is closed as soon as its closing receipt is reached, so
+        // walking backwards accumulates exactly the receipts since each period's last closing.
+        var openPeriods = new HashSet<FRTotalsPeriod>(Enum.GetValues<FRTotalsPeriod>());
 
         var queueItems = (await (await _queueItemRepository).GetAsync().ConfigureAwait(false))
             .OrderByDescending(x => x.ftQueueRow)
@@ -110,20 +117,24 @@ public class FRChainStateProvider
             }
 
             var state = _chains[request.ResolveChain()];
-            if (state.Numerator != 0)
+            if (state.Numerator == 0)
             {
                 // Queue items are walked newest first, so the first hit per chain is its last entry.
-                continue;
+                var numerator = ReceiptIdentificationHelper.ReadNumerator(response.ftReceiptIdentification, state.Identifier);
+                if (numerator is not null)
+                {
+                    state.Numerator = numerator.Value;
+                    state.LastHash = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash))?.Data;
+                }
             }
 
-            var numerator = ReceiptIdentificationHelper.ReadNumerator(response.ftReceiptIdentification, state.Identifier);
-            if (numerator is null)
+            _totals.AddToOpenPeriods(request, openPeriods);
+
+            var closedPeriod = FRPeriodTotalsAccumulator.PeriodOf(request);
+            if (closedPeriod is not null)
             {
-                continue;
+                openPeriods.Remove(closedPeriod.Value);
             }
-
-            state.Numerator = numerator.Value;
-            state.LastHash = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash))?.Data;
         }
     }
 }

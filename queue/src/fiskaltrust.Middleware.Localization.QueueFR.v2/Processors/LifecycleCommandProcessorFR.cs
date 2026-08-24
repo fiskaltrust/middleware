@@ -12,6 +12,12 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// signed into the "G" chain: the chain has to start with the initial-operation receipt and end
 /// with the out-of-operation receipt for an audit to be able to follow it end to end.
 /// </summary>
+/// <remarks>
+/// Activation and deactivation are persisted only once the corresponding entry is signed. The
+/// signing pipeline reports an unreachable SCU as an error response rather than throwing, so
+/// acting on it unconditionally would leave the queue operational without a signed opening entry,
+/// or permanently closed without a signed final one - in both cases with no way to retry.
+/// </remarks>
 public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
 {
     private readonly IFRSSCD _sscd;
@@ -37,9 +43,16 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
         }
 
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
-        await _localizedQueueStorageProvider.ActivateQueueAsync().ConfigureAwait(false);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
-        return await _pipeline.SignAsync(request, [actionJournal]).ConfigureAwait(false);
+
+        var response = await _pipeline.SignAsync(request, [actionJournal]).ConfigureAwait(false);
+        if (!FRSigningPipeline.Succeeded(response))
+        {
+            return new ProcessCommandResponse(response.receiptResponse, []);
+        }
+
+        await _localizedQueueStorageProvider.ActivateQueueAsync().ConfigureAwait(false);
+        return response;
     }
 
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
@@ -49,9 +62,14 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
 
-        // Sign the closing entry before deactivating: a queue that is already disabled must not
-        // produce another chain entry.
         var response = await _pipeline.SignAsync(request, [actionJournal]).ConfigureAwait(false);
+        if (!FRSigningPipeline.Succeeded(response))
+        {
+            // Leaving the queue open is what makes the closing retryable; a deactivated queue
+            // rejects every request, including the retry of this receipt.
+            return new ProcessCommandResponse(response.receiptResponse, []);
+        }
+
         await _localizedQueueStorageProvider.DeactivateQueueAsync().ConfigureAwait(false);
         response.receiptResponse.MarkAsDisabled();
         return response;

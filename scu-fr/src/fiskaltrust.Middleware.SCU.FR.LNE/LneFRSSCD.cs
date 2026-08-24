@@ -52,7 +52,7 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration.Siret, _configuration.CertificateSerialNumber, lastHash);
+        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration.Siret, _configuration.CertificateSerialNumber, lastHash, request.PeriodTotals);
 
         string signature;
         string chainHash;
