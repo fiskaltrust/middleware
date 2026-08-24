@@ -114,6 +114,21 @@ public class InfoCertFRSSCDTests
         act.Should().Throw<FRCertificateException>().WithMessage("*secp256r1*");
     }
 
+    [Theory]
+    [InlineData("nistP384")]
+    [InlineData("nistP521")]
+    public void Constructor_WithAKeyOnAnotherCurve_IsRejected(string curveName)
+    {
+        using var otherCurveKey = ECDsa.Create(ECCurve.CreateFromFriendlyName(curveName));
+        var privateKey = Convert.ToBase64String(otherCurveKey.ExportPkcs8PrivateKey());
+
+        var act = () => new InfoCertFRSSCD(Configuration(privateKey));
+
+        // The JWS header declares ES256 unconditionally, so any other curve would emit a signature
+        // of the wrong size that no standards-compliant verifier accepts.
+        act.Should().Throw<FRCertificateException>().WithMessage("*P-256*");
+    }
+
     [Fact]
     public void FromConfiguration_WithoutSiret_IsRejected()
     {

@@ -11,7 +11,7 @@ public class FakeFRSSCD : IFRSSCD
 {
     private int _calls;
 
-    public List<(string? lastHash, string? receiptIdentification)> Calls { get; } = new();
+    public List<(string? lastHash, string? receiptIdentification, FRPeriodTotals? periodTotals)> Calls { get; } = new();
 
     public Func<Exception>? ThrowOnProcess { get; set; }
 
@@ -26,7 +26,7 @@ public class FakeFRSSCD : IFRSSCD
 
     public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
     {
-        Calls.Add((lastHash, request.ReceiptResponse.ftReceiptIdentification));
+        Calls.Add((lastHash, request.ReceiptResponse.ftReceiptIdentification, request.PeriodTotals));
 
         if (ThrowOnProcess is not null)
         {

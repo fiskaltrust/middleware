@@ -112,6 +112,45 @@ public class LneFRSSCDTests
         act.Should().Throw<FRCertificateException>().WithMessage("*secp256r1*");
     }
 
+    [Theory]
+    [InlineData("nistP384")]
+    [InlineData("nistP521")]
+    public void Constructor_WithAKeyOnAnotherCurve_IsRejected(string curveName)
+    {
+        using var otherCurveKey = ECDsa.Create(ECCurve.CreateFromFriendlyName(curveName));
+        var privateKey = Convert.ToBase64String(otherCurveKey.ExportPkcs8PrivateKey());
+
+        var act = () => new LneFRSSCD(Configuration(privateKey));
+
+        act.Should().Throw<FRCertificateException>().WithMessage("*P-256*");
+    }
+
+    [Fact]
+    public async Task PeriodTotals_AreCarriedInTheSignedDataSetOfAClosing()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var request = new ProcessRequest
+        {
+            ReceiptRequest = FRTestData.CashSaleRequest(),
+            ReceiptResponse = FRTestData.Response(),
+            PeriodTotals = new FRPeriodTotals
+            {
+                Period = FRTotalsPeriod.Day,
+                Current = new FRTotals { Totalizer = 25.50m, CINormal = 20.00m },
+                Perpetual = new FRTotals { Totalizer = 99.00m },
+            },
+        };
+
+        var (response, _) = await sut.ProcessReceiptAsync(request, null);
+
+        var dataSet = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
+        dataSet.Should().Contain("Day,25.50,20.00");
+        dataSet.Should().Contain("99.00", "the perpetual total is reported on every closing");
+    }
+
     [Fact]
     public void FromConfiguration_WithoutSiret_IsRejected()
     {

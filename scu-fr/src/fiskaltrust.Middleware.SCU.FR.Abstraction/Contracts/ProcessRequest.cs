@@ -11,6 +11,13 @@ public class ProcessRequest
     public ReceiptRequest ReceiptRequest { get; set; } = null!;
 
     public ReceiptResponse ReceiptResponse { get; set; } = null!;
+
+    /// <summary>
+    /// Set for grand-total (closing) receipts only. A closing request carries no charge or pay
+    /// items of its own - what it attests is the accumulated turnover of the period, which the
+    /// queue owns and the SCU signs.
+    /// </summary>
+    public FRPeriodTotals? PeriodTotals { get; set; }
 }
 
 /// <summary>The signed receipt returned by a French SCU.</summary>
