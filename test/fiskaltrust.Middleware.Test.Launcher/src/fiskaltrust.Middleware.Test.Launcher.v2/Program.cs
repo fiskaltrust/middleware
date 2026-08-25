@@ -45,13 +45,23 @@ var posSystemId = cashBoxConfigurationText is null
 var queueConfiguration = Environment.GetEnvironmentVariable("MW_QUEUE_CONFIGURATION") is { Length: > 0 } queueFile
     ? PackageConfigurationFile.Read(queueFile)
     : Single(cashBoxConfiguration?.ftQueues, nameof(ftCashBoxConfiguration.ftQueues))
-        ?? PackageConfigurationFile.Read(market == "PL" ? "queue-configuration-pl.json" : "queue-configuration.json");
+        ?? Fallback("queue-configuration.json", nameof(ftCashBoxConfiguration.ftQueues));
 
 var configuredScu = Single(cashBoxConfiguration?.ftSignaturCreationDevices, nameof(ftCashBoxConfiguration.ftSignaturCreationDevices));
 var scuOverrideFile = Environment.GetEnvironmentVariable("MW_SCU_CONFIGURATION");
 var scuConfiguration = scuOverrideFile is { Length: > 0 }
     ? PackageConfigurationFile.Read(scuOverrideFile)
-    : configuredScu ?? PackageConfigurationFile.Read(market == "PL" ? "scu-configuration-pl-inmemory.json" : "scu-configuration-bizkaia.json");
+    : configuredScu ?? Fallback("scu-configuration-bizkaia.json", nameof(ftCashBoxConfiguration.ftSignaturCreationDevices));
+
+// Poland has no per-package file to fall back to — it runs from configuration/PL/, and the ones it
+// used to carry are gone. Pointing it at another market's file names would send a PL run hunting for
+// something this launcher does not ship, so it is told which configuration is missing instead.
+PackageConfiguration Fallback(string fileName, string property)
+    => market == "PL"
+        ? throw new FileNotFoundException(
+            $"Poland runs from a cashbox configuration, and '{cashBoxConfigurationName}' was not found — that is what carries {property}.",
+            cashBoxConfigurationPath)
+        : PackageConfigurationFile.Read(fileName);
 
 // An override swaps the package, not the identity. The cashbox's init_ tables already name its SCU
 // id — init_ftQueuePL.ftSignaturCreationUnitPLId points at it — and they are honoured as they stand,
