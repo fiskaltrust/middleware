@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -30,17 +30,30 @@ public sealed class Cassette
     public List<CassetteExchange> Exchanges { get; set; } = [];
 
     /// <summary>
-    /// The cassette file of a test, next to the sources. Resolved from the compile-time location of
-    /// this file, so recording writes where the cassettes are committed rather than into bin/.
+    /// The cassette a test replays, from the output folder the csproj copies <c>Cassettes/</c> into.
+    /// Reading from the compile-time source path instead would make the whole suite depend on that
+    /// path still existing: on a build agent, in a container or from published test binaries it does
+    /// not, <see cref="Exists"/> would answer false, and every test would quietly fall back to the
+    /// emulator's hand-written model — asserting against improvised answers while the committed
+    /// recordings prove nothing.
     /// </summary>
-    public static string PathFor(string name)
+    public static string ReplayPathFor(string name)
+        => Path.Combine(AppContext.BaseDirectory, "Cassettes", $"{name}.json");
+
+    /// <summary>
+    /// Where recording writes: next to the sources, so a new cassette lands where it is committed
+    /// rather than in an output folder the next clean build discards. Resolved from the compile-time
+    /// location of this file, which is sound here — recording only ever happens on a developer
+    /// machine, against a printer.
+    /// </summary>
+    public static string RecordPathFor(string name)
         => Path.Combine(ProjectDirectory(), "Cassettes", $"{name}.json");
 
-    public static bool Exists(string name) => File.Exists(PathFor(name));
+    public static bool Exists(string name) => File.Exists(ReplayPathFor(name));
 
     public static Cassette Load(string name)
     {
-        var path = PathFor(name);
+        var path = ReplayPathFor(name);
         if (!File.Exists(path))
         {
             throw new FileNotFoundException(
@@ -51,9 +64,10 @@ public sealed class Cassette
             ?? throw new InvalidDataException($"The cassette '{path}' is empty.");
     }
 
+    /// <summary>Writes the recording to the source folder; it is replayed after the next build.</summary>
     public void Save(string name)
     {
-        var path = PathFor(name);
+        var path = RecordPathFor(name);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, JsonSerializer.Serialize(this, s_json));
     }

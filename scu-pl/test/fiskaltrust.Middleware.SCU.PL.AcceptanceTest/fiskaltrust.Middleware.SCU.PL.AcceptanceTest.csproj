@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0</TargetFrameworks>
@@ -22,6 +22,12 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Replayed from the output folder, so the recordings do not depend on the compile-time
+           source path still existing on whatever machine runs the suite. -->
+      <Content Include="Cassettes/**" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

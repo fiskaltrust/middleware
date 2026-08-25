@@ -26,6 +26,7 @@ public class PLScenarioTests
         _cashBoxId = Guid.NewGuid();
         _sscd = new MockPLSSCD();
 
+
         var configuration = new Dictionary<string, object>
         {
             { "cashboxid", _cashBoxId },

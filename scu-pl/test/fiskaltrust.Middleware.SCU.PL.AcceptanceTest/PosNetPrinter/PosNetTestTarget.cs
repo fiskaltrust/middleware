@@ -1,4 +1,5 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
 using fiskaltrust.Middleware.SCU.PL.PosNet;
@@ -138,11 +139,22 @@ public sealed class PosNetTestTarget : IDisposable
         Emulator?.Dispose();
 
         // A replay that left its recording proves nothing about the device, so it fails the test
-        // rather than passing on improvised answers.
-        if (replayFaults.Count > 0)
+        // rather than passing on improvised answers — but only when the test would otherwise pass.
+        // Disposal runs while an exception from the test body is still propagating, and throwing
+        // here would replace it: a drifted cassette would then hide the assertion failure it caused.
+        // The drift is not lost in that case, because a fault is answered with a device error the
+        // SCU raises inside the test.
+        if (replayFaults.Count > 0 && !ExceptionInFlight)
         {
             throw new InvalidOperationException(
                 $"The cassette '{_cassetteName}' no longer matches what the SCU sends: {string.Join(" ", replayFaults)}");
         }
     }
+
+    /// <summary>
+    /// Whether an exception is currently propagating, i.e. whether this disposal is unwinding a
+    /// failing test. There is no first-class way to ask; the runtime exposes it only through the
+    /// exception pointers, which are zero on a normal return.
+    /// </summary>
+    private static bool ExceptionInFlight => Marshal.GetExceptionPointers() != IntPtr.Zero;
 }

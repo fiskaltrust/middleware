@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2.pl;
+﻿using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Factories;
 using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.v2;
@@ -36,6 +36,19 @@ public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStoragePro
             return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
                 queue, receiptRequest, receiptResponse,
                 $"The initial-operation receipt could not verify the register's fiscalization state: the register was not reachable. Details: {ex.Message}")]);
+        }
+        catch (Exception ex)
+        {
+            // The register answered, but not with a state: it rejected the status command, or the
+            // answer was not decodable. Either way the fiscalization state is unknown, which is the
+            // same conclusion as above and must reach the caller the same way — as a receipt
+            // response with an action journal, not as a raw exception out of the processor. Caught
+            // broadly on purpose: every failure here means "not verified", and an unverified
+            // register must not activate a queue.
+            var unverified = $"The initial-operation receipt could not verify the register's fiscalization state: the register did not report one. Details: {ex.Message}";
+            receiptResponse.SetReceiptResponseError(unverified);
+            return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
+                queue, receiptRequest, receiptResponse, unverified)]);
         }
 
         if (!PLSSCDInfoHelper.IsFiscalized(info))

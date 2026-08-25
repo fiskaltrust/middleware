@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -94,6 +94,17 @@ public static class PosNetReceiptMapper
         {
             // Not a sale line at all — the transaction reports that, with the reason.
             return totalGrosze;
+        }
+
+        // The check below has to be made against the quantity the printer will see, not the one we
+        // were handed: trline carries it with PosNetCommands.QuantityDecimals places, so a quantity
+        // with more of them would satisfy price x quantity = value here and violate it on paper
+        // (1.2345 travels as 1.235, and 1.235 x 20.00 is 24.70 against a line value of 24.69).
+        if (decimal.Round(quantity, PosNetCommands.QuantityDecimals, MidpointRounding.AwayFromZero) != quantity)
+        {
+            throw new PLValidationException(
+                $"The sale line '{description}' cannot be printed by a Polish register: the quantity {quantity} has more than "
+                + $"{PosNetCommands.QuantityDecimals} decimal places, which the protocol cannot carry. Round the quantity, or split the position.");
         }
 
         var unitPriceGrosze = totalGrosze / quantity;

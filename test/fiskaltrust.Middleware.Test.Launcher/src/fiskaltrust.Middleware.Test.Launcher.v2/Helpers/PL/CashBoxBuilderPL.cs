@@ -19,9 +19,9 @@ class CashBoxBuilderPL : ICashBoxBuilder
 
     public void AddSCU(ref PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid scuId)
     {
-        queueConfiguration.Configuration.Add(
-                $"init_ftSignaturCreationUnitPL",
-                new List<ftSignaturCreationUnitPL> {
+        queueConfiguration.Configuration.AddUnlessConfigured(
+                "init_ftSignaturCreationUnitPL",
+                () => new List<ftSignaturCreationUnitPL> {
                     new ftSignaturCreationUnitPL
                     {
                         ftSignaturCreationUnitPLId = scuId,
@@ -33,9 +33,9 @@ class CashBoxBuilderPL : ICashBoxBuilder
 
     public void AddMarketQueue(ref PackageConfiguration queueConfiguration, Guid queueId, Guid scuId)
     {
-        queueConfiguration.Configuration.Add(
-                $"init_ftQueuePL",
-                new List<ftQueuePL> {
+        queueConfiguration.Configuration.AddUnlessConfigured(
+                "init_ftQueuePL",
+                () => new List<ftQueuePL> {
                     new ftQueuePL
                     {
                         ftQueuePLId = queueId,
@@ -59,6 +59,16 @@ class CashBoxBuilderPL : ICashBoxBuilder
             "fiskaltrust.Middleware.SCU.PL.PosNet" => CreatePosNetSCU(_scuConfiguration),
             _ => throw new NotImplementedException("SCU Type not implemented")
         };
+
+        // A non-fiscal test printer keeps the queue from ever activating, and an inactive queue
+        // never forwards a receipt to the SCU — so nothing gets printed. MW_PL_ASSUME_FISCALIZED=1
+        // reports the register as fiscalized to get past that one gate; the printouts are then
+        // non-fiscal documents (NIEFISKALNY).
+        if (Environment.GetEnvironmentVariable("MW_PL_ASSUME_FISCALIZED") == "1")
+        {
+            Console.WriteLine("MW_PL_ASSUME_FISCALIZED=1: the register is reported as fiscalized so the queue can activate. Printouts are non-fiscal documents.");
+            scu = new AssumeFiscalizedPLSSCD(scu);
+        }
 
         return new Localization.QueuePL.QueuePLBootstrapper(
             queueId,

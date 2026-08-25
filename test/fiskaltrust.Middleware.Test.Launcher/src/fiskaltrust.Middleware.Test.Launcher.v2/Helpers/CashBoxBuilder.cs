@@ -30,29 +30,51 @@ class CashBoxBuilder
     public Guid QueueId { get; private init; }
     public Guid ScuId { get; private init; }
 
+    /// <summary>
+    /// The init tables the cashbox configuration brought, and therefore the ones this builder left
+    /// alone. Reported by the host so a configured cashbox is distinguishable from a synthesized one
+    /// — the two look identical from the outside, and only one of them is what the file says.
+    /// </summary>
+    public IReadOnlyCollection<string> ConfiguredTables { get; private init; }
+
+    /// <summary>The init tables this builder had to invent because the configuration had none.</summary>
+    public IReadOnlyCollection<string> SynthesizedTables { get; private init; }
+
     private readonly ChargeItemFactory _chargeItemFactory;
     public ChargeItemBuilder ChargeItem { get => _chargeItemFactory.Builder; }
 
-    public CashBoxBuilder(ICashBoxBuilder cashBoxBuilder, PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration)
+    /// <param name="cashBoxId">From <c>ftCashBoxId</c>; the queue and SCU ids come from the packages.</param>
+    /// <param name="posSystemId">
+    /// From <c>ftPosSystemId</c>, the launcher's own addition to the cashbox configuration format —
+    /// a pos system belongs to the caller, not to the cashbox.
+    /// </param>
+    public CashBoxBuilder(ICashBoxBuilder cashBoxBuilder, PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid cashBoxId, Guid posSystemId)
     {
         _cashBoxBuilder = cashBoxBuilder;
 
-        CashBoxId = Guid.NewGuid();
-        PosSystemId = Guid.NewGuid();
-        QueueId = Guid.NewGuid();
-        ScuId = Guid.NewGuid();
+        CashBoxId = cashBoxId;
+        PosSystemId = posSystemId;
 
+        // An all-zero Id is a package file that pins nothing; a cashbox configuration names both.
+        QueueId = queueConfiguration.Id != Guid.Empty ? queueConfiguration.Id : Guid.NewGuid();
+        ScuId = scuConfiguration.Id != Guid.Empty ? scuConfiguration.Id : Guid.NewGuid();
         queueConfiguration.Id = QueueId;
-        queueConfiguration.Configuration.Add(
+        scuConfiguration.Id = ScuId;
+
+        // Whatever the configuration already carries is what the cashbox is; everything below only
+        // fills gaps. Taking the keys before the first fill is what makes the two distinguishable.
+        ConfiguredTables = queueConfiguration.Configuration.Keys.ToHashSet(StringComparer.Ordinal);
+
+        queueConfiguration.Configuration.AddUnlessConfigured(
             "init_ftCashBox",
-            new ftCashBox
+            () => new ftCashBox
             {
                 ftCashBoxId = CashBoxId
             }
         );
-        queueConfiguration.Configuration.Add(
+        queueConfiguration.Configuration.AddUnlessConfigured(
             "init_ftQueue",
-            new List<ftQueue> {
+            () => new List<ftQueue> {
                 new ftQueue
                 {
                     ftCashBoxId = CashBoxId,
@@ -65,6 +87,8 @@ class CashBoxBuilder
 
         _cashBoxBuilder.AddSCU(ref queueConfiguration, scuConfiguration, ScuId);
         _cashBoxBuilder.AddMarketQueue(ref queueConfiguration, QueueId, ScuId);
+
+        SynthesizedTables = queueConfiguration.Configuration.Keys.Except(ConfiguredTables, StringComparer.Ordinal).ToList();
 
         _queueConfiguration = queueConfiguration;
         _scuConfiguration = scuConfiguration;

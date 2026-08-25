@@ -1,7 +1,8 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
 namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
 
@@ -139,7 +140,20 @@ public sealed class PosNetPrinterEmulator : IDisposable
     /// <summary>Answers a command the way a printer would, or returns null to stay silent.</summary>
     private byte[]? Answer(byte[] frame)
     {
-        var mnemonic = Transcript.Add(frame).CommandId;
+        string mnemonic;
+        try
+        {
+            mnemonic = Transcript.Add(frame).CommandId;
+        }
+        catch (PosNetProtocolException ex)
+        {
+            // A frame the production codec cannot decode is a defect in what the SCU sent, and the
+            // test has to see it. Letting it escape would not achieve that: this runs in a
+            // fire-and-forget accept task, so the emulator would stop serving, the exception would
+            // go unobserved, and the test would fail on a receive timeout instead. Noting it and
+            // answering with a device error fails the test on the spot, with the reason.
+            return Fault($"the SCU sent a frame the protocol codec rejected: {ex.Message}");
+        }
 
         // Scripted failures win over anything recorded: they exist precisely for the outcomes a
         // real device cannot be asked to produce.

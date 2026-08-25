@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
@@ -23,6 +23,15 @@ public sealed class PosNetCommand
 
 public static class PosNetCommands
 {
+    /// <summary>
+    /// Decimal places the protocol carries for a trline quantity. The invariant a sale line has to
+    /// satisfy — price x quantity = line value — is checked against the quantity as it goes on the
+    /// wire, so the format and the number of places are declared once here and shared.
+    /// </summary>
+    public const int QuantityDecimals = 3;
+
+    private const string QuantityFormat = "0.000";
+
     public static PosNetCommand Trinit() => new("trinit", [new("bm", "0")]);
 
     public static PosNetCommand Trline(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze)
@@ -35,7 +44,7 @@ public static class PosNetCommands
         };
         if (quantity != 1m)
         {
-            parameters.Add(new("il", quantity.ToString("0.000", CultureInfo.InvariantCulture)));
+            parameters.Add(new("il", quantity.ToString(QuantityFormat, CultureInfo.InvariantCulture)));
             parameters.Add(new("wa", totalGrosze.ToString(CultureInfo.InvariantCulture)));
         }
         return new PosNetCommand("trline", parameters);

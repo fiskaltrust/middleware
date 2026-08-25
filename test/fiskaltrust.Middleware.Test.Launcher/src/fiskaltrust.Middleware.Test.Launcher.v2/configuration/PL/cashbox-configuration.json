@@ -1,0 +1,45 @@
+{
+  "ftCashBoxId": "b0f1d0de-0000-4000-8000-00000000c0de",
+  "ftPosSystemId": "9057e112-0000-4000-8000-000000000b05",
+  "TimeStamp": 0,
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "5c1f8a90-0000-4000-8000-00000000005c",
+      "Package": "fiskaltrust.Middleware.SCU.PL.InMemory",
+      "Version": "1.3.79",
+      "Configuration": {}
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "9e0e1a72-0000-4000-8000-000000000009",
+      "Package": "fiskaltrust.Middleware.Localization.QueuePL",
+      "Version": "1.3.79",
+      "Configuration": {
+        "init_ftCashBox": {
+          "ftCashBoxId": "b0f1d0de-0000-4000-8000-00000000c0de"
+        },
+        "init_ftQueue": [
+          {
+            "ftQueueId": "9e0e1a72-0000-4000-8000-000000000009",
+            "ftCashBoxId": "b0f1d0de-0000-4000-8000-00000000c0de",
+            "CountryCode": "PL",
+            "Timeout": 15000
+          }
+        ],
+        "init_ftQueuePL": [
+          {
+            "ftQueuePLId": "9e0e1a72-0000-4000-8000-000000000009",
+            "ftSignaturCreationUnitPLId": "5c1f8a90-0000-4000-8000-00000000005c",
+            "CashBoxIdentification": "choOngAAAECAAAAAAAAACQ"
+          }
+        ],
+        "init_ftSignaturCreationUnitPL": [
+          {
+            "ftSignaturCreationUnitPLId": "5c1f8a90-0000-4000-8000-00000000005c"
+          }
+        ]
+      }
+    }
+  ]
+}

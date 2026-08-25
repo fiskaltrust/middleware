@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Needed by MiddlewareHost, which serves the in-memory middleware over HTTP. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="FluentAssertions" Version="7.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
   </ItemGroup>
@@ -35,6 +37,11 @@
     <None Update="TestCertificates/**">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="configuration/**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <!-- Not committed, supplied per developer: a market without a cashbox configuration is run
+         from these, so they have to reach the output folder like they always did. -->
     <None Update="queue-configuration*.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
