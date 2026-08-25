@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
 using fiskaltrust.storage.serialization.V0;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -65,7 +66,12 @@ static class MiddlewareHost
             cashBox.Market,
             Queue = queueConfiguration.Package,
             Scu = scuConfiguration.Package,
-            ScuConfiguration = scuConfiguration.Configuration,
+            // Converted, not passed through: the values in here were deserialized by Newtonsoft, and
+            // System.Text.Json does not know a JObject or JArray — it enumerates them into nested
+            // empty arrays, so a configured VAT rate table reads as [[[[]],[[]]],…] and looks lost
+            // when it is not. This is the same conversion the builder applies before handing the
+            // configuration to the SCU, so the index shows what the SCU actually got.
+            ScuConfiguration = scuConfiguration.Configuration.ToSystemTextJsonValues(),
             Ids = new
             {
                 cashBox.CashBoxId,
