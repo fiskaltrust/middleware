@@ -289,11 +289,11 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_DiscountPosition_FailsBeforeAnyFrameIsSent()
+    public async Task ProcessReceiptAsync_DiscountPosition_RidesAlongOnTheSaleLine()
     {
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
-        var request = CreateSaleRequest();
+        var request = CreateSaleRequest(payment: 7.99m);
         request.ReceiptRequest.cbChargeItems.Add(new ChargeItem
         {
             Description = "Rabat",
@@ -302,12 +302,37 @@ public class PosNetPLSSCDTests
             ftChargeItemCase = (ChargeItemCase)0x504C_2000_0004_0011,
         });
 
-        var act = () => sut.ProcessReceiptAsync(request);
+        await sut.ProcessReceiptAsync(request);
 
-        // The queue passes discounts through (they do not make a document a return); the register
-        // expresses them as rabat parameters, so until that is implemented they are rejected here.
-        (await act.Should().ThrowAsync<PLValidationException>()).WithMessage("*discount*");
-        transport.SentMnemonics.Should().BeEmpty();
+        // The queue passes discounts through (they do not make a document a return), and a register
+        // has no position for one: it travels as the rabat of the line it follows. The line keeps
+        // its own value (wa) and the receipt is settled with the discounted total.
+        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        transport.SentPayloads.Single(p => p.StartsWith("trline")).Should().Contain("wa999").And.Contain("rd1").And.Contain("rw200");
+        transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_DiscountWithNoPositionInFrontOfIt_BecomesASubtotalDiscount()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest(payment: 7.99m);
+        request.ReceiptRequest.cbChargeItems.Insert(0, new ChargeItem
+        {
+            Description = "Rabat",
+            Amount = -2m,
+            Quantity = 1m,
+            ftChargeItemCase = (ChargeItemCase)0x504C_2000_0004_0011,
+        });
+
+        await sut.ProcessReceiptAsync(request);
+
+        // It cannot belong to a line, so it is a rabat od podsumy — sent after every line and
+        // before the payments, which is where the register applies it.
+        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "scnt");
+        transport.SentPayloads.Single(p => p.StartsWith("trdiscntsubtot")).Should().Contain("rd1").And.Contain("rw200");
+        transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
     }
 
     [Fact]

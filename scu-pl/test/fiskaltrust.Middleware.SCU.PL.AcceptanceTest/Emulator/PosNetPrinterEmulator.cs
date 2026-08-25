@@ -223,7 +223,7 @@ public sealed class PosNetPrinterEmulator : IDisposable
         "trinit" => _transactionOpen
             ? PosNetPayload.ToFrame($"trinit\t?382\t")
             : Confirm(mnemonic, open: true),
-        "trline" or "trpayment" or "trnipset" => _transactionOpen
+        "trline" or "trpayment" or "trnipset" or "trdiscntsubtot" => _transactionOpen
             ? Confirm(mnemonic, open: true)
             : PosNetPayload.ToFrame($"{mnemonic}\t?380\t"),
         "trend" => _transactionOpen

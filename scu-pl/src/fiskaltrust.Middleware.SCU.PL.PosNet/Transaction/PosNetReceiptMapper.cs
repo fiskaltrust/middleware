@@ -15,11 +15,16 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 /// Translates a fiscal sale ReceiptRequest into the POSNET command sequence. PTU slots come from
 /// the configured rate table via <see cref="PtuSlotResolver"/> (the case→rate mapping is
 /// statutory, the slot letters are owned by the device); amounts travel as integer grosze.
+/// Discount and extra positions are not positions on a Polish register: they become the rabat/narzut
+/// of the sale line they follow, or a rabat od podsumy when they follow none.
 /// </summary>
 public static class PosNetReceiptMapper
 {
     private const int MaxGoodsNameLength = 80;
     private const int MaxPaymentNameLength = 25;
+
+    /// <summary>The rn / na fields of a rabat/narzut carry up to 25 characters (POT-I-DEV-05 p.219).</summary>
+    private const int MaxModifierNameLength = 25;
 
     public static IReadOnlyList<PosNetCommand> MapSale(ReceiptRequest request, PtuSlotResolver ptuSlotResolver)
     {
@@ -35,6 +40,42 @@ public static class PosNetReceiptMapper
             transaction.AddBuyerNip(buyerNip);
         }
 
+        // A register has no position of its own for a discount: a rabat/narzut is either a parameter
+        // of the sale line it belongs to, or one on the subtotal. Which one a discount position is
+        // follows from where it stands. That a modifier belongs to the position in front of it is
+        // the convention the shared receipt model already groups by
+        // (v2 Helpers/ReceiptRequestExtensions.GetGroupedChargeItems). What that helper does with a
+        // modifier standing in front of every position differs — it makes it an entry of its own —
+        // because it has nowhere to put it; here it becomes the rabat od podsumy, the only reading a
+        // register has for a discount that belongs to no line. A POS that sends its discounts ahead
+        // of the positions they apply to therefore has them applied to the receipt, not to a line.
+        // The line is held back until the item after it is known.
+        ChargeItem? pendingLine = null;
+        string? pendingSlot = null;
+        PosNetModifier? pendingModifier = null;
+        var subtotalModifiers = new List<PosNetModifier>();
+
+        void SendPendingLine()
+        {
+            if (pendingLine is null)
+            {
+                return;
+            }
+
+            var totalGrosze = pendingLine.Amount.ToGrosze();
+            var quantity = pendingLine.Quantity;
+            transaction.AddLine(
+                PosNetText.ToField(pendingLine.Description, MaxGoodsNameLength),
+                ToVatSlotIndex(pendingSlot!),
+                ToUnitPriceGrosze(pendingLine.Description, totalGrosze, quantity),
+                quantity,
+                totalGrosze,
+                pendingModifier);
+            pendingLine = null;
+            pendingSlot = null;
+            pendingModifier = null;
+        }
+
         foreach (var chargeItem in request.cbChargeItems ?? [])
         {
             if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Void) || chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund))
@@ -42,21 +83,52 @@ public static class PosNetReceiptMapper
                 throw new PLValidationException("Voided or refunded positions are not supported by the PosNet SCU yet — returns are separate non-fiscal documents on the register.");
             }
 
-            // The queue lets discount and extra positions through because they do not make a
-            // document a return. The register expresses them as line- or subtotal-level
-            // rabat/narzut parameters rather than as positions of their own, which is a follow-up
-            // to middleware#751 — until then they are rejected here, before a transaction is
-            // opened, instead of failing as an unexplained negative sale line.
             if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))
             {
-                throw new PLValidationException($"The discount/extra position '{chargeItem.Description}' is not supported by the PosNet SCU yet — apply the discount to the position amounts and send net line totals.");
+                var modifier = ToModifier(chargeItem);
+                if (pendingLine is null)
+                {
+                    // No position in front of it: a rabat od podsumy. Its PTU rate is not read —
+                    // the register distributes a subtotal discount over the rates of the receipt
+                    // itself, and a rate sent alongside would not change that.
+                    subtotalModifiers.Add(modifier);
+                    continue;
+                }
+                if (pendingModifier is not null)
+                {
+                    throw new PLValidationException(
+                        $"The position '{pendingLine.Description}' carries more than one discount/extra ('{chargeItem.Description}'): a POSNET sale line has room for a single rabat/narzut. Send them as one discount position, or split the sale into a position per discount.");
+                }
+
+                // A line discount is granted at the rate of the line — the trline rabat has no rate
+                // of its own. A discount booked at a different VAT rate than the position it applies
+                // to would therefore print and totalize under the position's rate, changing the tax
+                // the POS booked, so it is refused instead. A discount that carries no rate at all
+                // is not that case: it is the POS leaving the rate to the position, which is what
+                // the register does anyway. The comparison is made on the VAT case rather than on
+                // the resolved PTU slot, so a modifier tagged with a rate that has no Polish slot
+                // is reported as the mismatch it is instead of as an unresolvable rate table.
+                var modifierVatCase = chargeItem.ftChargeItemCase.Vat();
+                var lineVatCase = pendingLine.ftChargeItemCase.Vat();
+                if (modifierVatCase != ChargeItemCase.UnknownService && modifierVatCase != lineVatCase)
+                {
+                    throw new PLValidationException(
+                        $"The discount/extra '{chargeItem.Description}' is booked on the VAT case {modifierVatCase}, but the position it applies to ('{pendingLine.Description}') sells on {lineVatCase}. A POSNET line discount is granted at the position's rate — send it with the same VAT rate as the position, or without one.");
+                }
+                pendingModifier = modifier;
+                continue;
             }
 
-            var slot = ptuSlotResolver.Resolve(chargeItem.ftChargeItemCase);
-            var totalGrosze = chargeItem.Amount.ToGrosze();
-            var quantity = chargeItem.Quantity;
+            SendPendingLine();
+            pendingLine = chargeItem;
+            pendingSlot = ptuSlotResolver.Resolve(chargeItem.ftChargeItemCase).PtuSlot;
+        }
 
-            transaction.AddLine(PosNetText.ToField(chargeItem.Description, MaxGoodsNameLength), ToVatSlotIndex(slot.PtuSlot), ToUnitPriceGrosze(chargeItem.Description, totalGrosze, quantity), quantity, totalGrosze);
+        SendPendingLine();
+
+        foreach (var subtotalModifier in subtotalModifiers)
+        {
+            transaction.AddSubtotalModifier(subtotalModifier);
         }
 
         foreach (var payItem in request.cbPayItems ?? [])
@@ -74,6 +146,23 @@ public static class PosNetReceiptMapper
         }
 
         return transaction.End();
+    }
+
+    /// <summary>
+    /// Reads a discount/extra position into a <see cref="PosNetModifier"/>. The direction comes from
+    /// the sign the receipt model gives a modifier position — negative is a rabat, positive a narzut
+    /// (the queue's ChargeItemExtensions.IsDiscount/IsExtra read it the same way). Void and refund
+    /// positions never reach here, so the sign alone decides.
+    /// </summary>
+    private static PosNetModifier ToModifier(ChargeItem chargeItem)
+    {
+        var amountGrosze = chargeItem.Amount.ToGrosze();
+        if (amountGrosze == 0)
+        {
+            throw new PLValidationException(
+                $"The discount/extra position '{chargeItem.Description}' carries no amount — a rabat/narzut of 0.00 gr is nothing the register can print.");
+        }
+        return new PosNetModifier(amountGrosze < 0, Math.Abs(amountGrosze), PosNetText.ToField(chargeItem.Description, MaxModifierNameLength));
     }
 
     /// <summary>

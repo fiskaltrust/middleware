@@ -99,6 +99,36 @@ public class PosNetSaleTransactionTests
     }
 
     [Fact]
+    public void AddLine_AfterASubtotalDiscount_IsRejected()
+    {
+        var transaction = new PosNetSaleTransaction();
+        transaction.Begin();
+        transaction.AddLine("Apples", 1, 200, 1m, 200);
+        transaction.AddSubtotalModifier(new PosNetModifier(isDiscount: true, amountGrosze: 50));
+
+        var act = () => transaction.AddLine("Pears", 1, 100, 1m, 100);
+
+        // The register granted the rabat on the subtotal as it stood; a line added afterwards would
+        // be discounted by nothing while this class counted it in full.
+        act.Should().Throw<PLValidationException>().WithMessage("*cannot follow a discount on the subtotal*");
+    }
+
+    [Fact]
+    public void End_WhenTheDiscountsTakeTheTotalToZero_IsRejected()
+    {
+        var transaction = new PosNetSaleTransaction();
+        transaction.Begin();
+        transaction.AddLine("Apples", 1, 200, 1m, 200, new PosNetModifier(isDiscount: true, amountGrosze: 200));
+        // Payments that settle a total of zero — the receipt is still not printable.
+        transaction.AddPayment(0, 200, isChange: false);
+        transaction.AddPayment(0, 200, isChange: true);
+
+        var act = () => transaction.End();
+
+        act.Should().Throw<PLValidationException>().WithMessage("*needs a positive total*");
+    }
+
+    [Fact]
     public void Begin_Twice_IsRejected()
     {
         var transaction = new PosNetSaleTransaction();

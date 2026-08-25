@@ -64,6 +64,52 @@ public class PosNetPLSSCDAcceptanceTests
     }
 
     [Fact]
+    public async Task DiscountSale_GrantsTheLineRabatOnTheLine_AndTheSubtotalRabatAfterIt()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.DiscountSale());
+
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "scnt");
+        var trline = target.SentCommands.Single(c => c.CommandId == "trline");
+        // The line value stays the value before the rabat — the register prints both and totalizes
+        // the difference.
+        trline.Parameters.Should().Contain(new KeyValuePair<string, string>("wa", "1000"));
+        trline.Parameters.Should().Contain(new KeyValuePair<string, string>("rd", "1"));
+        trline.Parameters.Should().Contain(new KeyValuePair<string, string>("rw", "200"));
+        var subtotal = target.SentCommands.Single(c => c.CommandId == "trdiscntsubtot");
+        subtotal.Parameters.Should().Contain(new KeyValuePair<string, string>("rd", "1"));
+        subtotal.Parameters.Should().Contain(new KeyValuePair<string, string>("rw", "100"));
+        // 10.00 minus 2.00 on the line minus 1.00 off the subtotal is what the receipt is settled with.
+        var trend = target.SentCommands.Single(c => c.CommandId == "trend");
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "700"));
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("fp", "700"));
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
+    public async Task MarkupSale_GrantsTheNarzutOnTheLine_AndOnTheSubtotal()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.MarkupSale());
+
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "scnt");
+        // Same fields as a rabat, with rd0: the register adds the value instead of subtracting it.
+        var trline = target.SentCommands.Single(c => c.CommandId == "trline");
+        trline.Parameters.Should().Contain(new KeyValuePair<string, string>("wa", "1000"));
+        trline.Parameters.Should().Contain(new KeyValuePair<string, string>("rd", "0"));
+        trline.Parameters.Should().Contain(new KeyValuePair<string, string>("rw", "200"));
+        var subtotal = target.SentCommands.Single(c => c.CommandId == "trdiscntsubtot");
+        subtotal.Parameters.Should().Contain(new KeyValuePair<string, string>("rd", "0"));
+        subtotal.Parameters.Should().Contain(new KeyValuePair<string, string>("rw", "100"));
+        var trend = target.SentCommands.Single(c => c.CommandId == "trend");
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "1300"));
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("fp", "1300"));
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
     public async Task NipReceipt_PrintsTheBuyersNip()
     {
         using var target = PosNetTestTarget.Open();

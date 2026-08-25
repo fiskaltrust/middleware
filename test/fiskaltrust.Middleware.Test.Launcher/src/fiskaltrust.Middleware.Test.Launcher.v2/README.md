@@ -57,8 +57,14 @@ curl -X POST localhost:1500/samples/SignRequestReceipt_CashSaleReceipt
 ```
 
 Which cases reach the paper is up to the SCU: the sale cases (`CashSaleReceipt`, `CardSaleReceipt`,
-`NipReceipt`) print, the zero receipt only reads the status, and reports and returns are not
-implemented in the PosNet SCU yet.
+`NipReceipt`, `DiscountReceipt`) print, the zero receipt only reads the status, and reports and
+returns are not implemented in the PosNet SCU yet.
+
+`DiscountReceipt` carries both discount levels a register knows: a rabat on the position (it travels
+as a parameter of the sale line) and a rabat od podsumy. Which one a discount position becomes
+follows from where it stands — it modifies the position in front of it, and a discount with no
+position in front of it is the one on the subtotal, which is why that one leads the sample's
+`cbChargeItems`.
 
 ### Spain
 
