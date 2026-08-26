@@ -110,6 +110,28 @@ public class PosNetPLSSCDAcceptanceTests
     }
 
     [Fact]
+    public async Task StornoSale_ReversesThePositionItNames_AndSettlesWithWhatIsLeft()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoSale());
+
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trline", "trline", "trpayment", "trend", "scnt");
+        var lines = target.SentCommands.Where(c => c.CommandId == "trline").ToList();
+        // The storno repeats the goods of the position it reverses — the coffee, not the beer that
+        // was sold between them — and states the value the device verifies against what it printed.
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("na", "Kawa"));
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("st", "1"));
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("wa", "1000"));
+        // A trend the device accepts is the evidence that the arithmetic matches its own: it verifies
+        // the fiscal value it was sent against the receipt it printed (2805 ERR_ENDTOT_VERIFY).
+        var trend = target.SentCommands.Single(c => c.CommandId == "trend");
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "800"));
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("fp", "800"));
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
     public async Task NipReceipt_PrintsTheBuyersNip()
     {
         using var target = PosNetTestTarget.Open();

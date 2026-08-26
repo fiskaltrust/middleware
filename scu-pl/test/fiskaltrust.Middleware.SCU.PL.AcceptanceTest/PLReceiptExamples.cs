@@ -89,6 +89,29 @@ public static class PLReceiptExamples
         ],
     });
 
+    /// <summary>
+    /// A storno of a position that is not the last one: 1 Kawa, 2 Piwo, 1.1 Storno. The voided
+    /// position names the line it reverses in Position, so the coffee goes back and the beer stays —
+    /// and the register verifies the fiscal value it is left with when the transaction ends.
+    /// </summary>
+    public static ProcessRequest StornoSale() => Wrap(new ReceiptRequest
+    {
+        ftReceiptCase = (ReceiptCase)0x504C_2000_0000_0001,
+        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptReference = Guid.NewGuid().ToString(),
+        Currency = Currency.PLN,
+        cbChargeItems =
+        [
+            new ChargeItem { Description = "Kawa", Amount = 10.00m, Quantity = 1m, Position = 1m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0011, Currency = Currency.PLN },
+            new ChargeItem { Description = "Piwo", Amount = 8.00m, Quantity = 1m, Position = 2m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0011, Currency = Currency.PLN },
+            new ChargeItem { Description = "Storno", Amount = -10.00m, Quantity = 1m, Position = 1.1m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0001_0011, Currency = Currency.PLN },
+        ],
+        cbPayItems =
+        [
+            new PayItem { Description = "Gotówka", Amount = 8.00m, ftPayItemCase = (PayItemCase)0x504C_2000_0000_0001, Currency = Currency.PLN },
+        ],
+    });
+
     /// <summary>A paragon z NIP: ReceiverIsBusiness flag with the buyer's NIP in cbCustomer.</summary>
     public static ProcessRequest NipReceipt()
     {

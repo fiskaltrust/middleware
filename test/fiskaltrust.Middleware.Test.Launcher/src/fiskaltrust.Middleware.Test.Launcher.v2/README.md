@@ -57,8 +57,8 @@ curl -X POST localhost:1500/samples/SignRequestReceipt_CashSaleReceipt
 ```
 
 Which cases reach the paper is up to the SCU: the sale cases (`CashSaleReceipt`, `CardSaleReceipt`,
-`NipReceipt`, `DiscountReceipt`) print, the zero receipt only reads the status, and reports and
-returns are not implemented in the PosNet SCU yet.
+`NipReceipt`, `DiscountReceipt`, `StornoReceipt`) print, the zero receipt only reads the status, and
+reports and returns are not implemented in the PosNet SCU yet.
 
 `DiscountReceipt` carries both discount levels a register knows: a rabat on the position (it travels
 as a parameter of the sale line) and a rabat od podsumy. Which line a discount belongs to is read
@@ -66,6 +66,11 @@ from `Position` where the POS sets one — `1.1` belongs to position `1`, so `1 
 discounts the coffee — and otherwise from the order, where it modifies the position in front of it. A
 discount that belongs to no line is the one on the subtotal, which is why the sample sends it without
 a position, ahead of its `cbChargeItems`.
+
+`StornoReceipt` reverses a position that is not the last one — `1 Kawa, 2 Piwo, 1.1 Storno` — so the
+coffee goes back and the beer stays. A voided position becomes a `trline` of its own with the reversal
+flag, repeating the goods the register printed; a refund position is still turned away, because a
+return is a document of its own on a Polish register.
 
 ### Spain
 

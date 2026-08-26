@@ -6,11 +6,11 @@ using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 
 /// <summary>
-/// Builds the command sequence of one fiscal sale (trinit → trline… → trdiscntsubtot? → trpayment…
-/// → trend) and
-/// enforces the ordering and settlement rules the printer would reject anyway — catching them
-/// before any frame is sent keeps a rejected receipt from leaving a half-open transaction on the
-/// device. The settlement rule mirrors the device: PAYMENT_METHODS − CHANGE = PAYABLE.
+/// Builds the command sequence of one fiscal sale — trinit → trline… (a sale line, or a storno of
+/// one with st1) → trdiscntsubtot? → trpayment… → trend — and enforces the ordering and settlement
+/// rules the printer would reject anyway; catching them before any frame is sent keeps a rejected
+/// receipt from leaving a half-open transaction on the device. The settlement rule mirrors the
+/// device: PAYMENT_METHODS − CHANGE = PAYABLE.
 /// </summary>
 public class PosNetSaleTransaction
 {
@@ -79,11 +79,38 @@ public class PosNetSaleTransaction
         if (modifier is { IsDiscount: true } && modifier.AmountGrosze > totalGrosze)
         {
             throw new PLValidationException(
-                $"The discount of {modifier.AmountGrosze.GroszeToPln()} on '{name}' exceeds the position's value of {totalGrosze.GroszeToPln()} — a Polish register cannot print a negative sale line.");
+                $"The discount of {modifier.AmountGrosze.GroszeToPlnText()} on '{name}' exceeds the position's value of {totalGrosze.GroszeToPlnText()} — a Polish register cannot print a negative sale line.");
         }
         _commands.Add(PosNetCommands.Trline(name, vatSlotIndex, unitPriceGrosze, quantity, totalGrosze, modifier));
         _totalGrosze += totalGrosze + ModifierEffect(modifier);
         _stage = Stage.HasLines;
+    }
+
+    /// <summary>
+    /// A storno of a position already sold in this receipt: a trline with the reversal flag that
+    /// repeats the goods and takes the stated quantity and value off them.
+    /// </summary>
+    public void AddReversalLine(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze)
+    {
+        if (_stage is Stage.HasSubtotalModifier)
+        {
+            throw new PLValidationException("A storno (trline st1) cannot follow a discount on the subtotal — the subtotal it was granted on would no longer be the receipt's.");
+        }
+        if (_stage is not Stage.HasLines)
+        {
+            throw new PLValidationException("A storno (trline st1) is only valid after the sale line it reverses and before any payment.");
+        }
+        if (totalGrosze <= 0 || unitPriceGrosze <= 0 || quantity <= 0)
+        {
+            throw new PLValidationException($"The storno of '{name}' must reverse a positive quantity and value — the reversal travels in the st flag, not in a sign.");
+        }
+        if (totalGrosze > _totalGrosze)
+        {
+            throw new PLValidationException(
+                $"The storno of '{name}' reverses {totalGrosze.GroszeToPlnText()}, which is more than the {_totalGrosze.GroszeToPlnText()} this receipt has sold so far.");
+        }
+        _commands.Add(PosNetCommands.Trline(name, vatSlotIndex, unitPriceGrosze, quantity, totalGrosze, isReversal: true));
+        _totalGrosze -= totalGrosze;
     }
 
     /// <summary>
@@ -106,7 +133,7 @@ public class PosNetSaleTransaction
         if (modifier.IsDiscount && modifier.AmountGrosze >= _totalGrosze)
         {
             throw new PLValidationException(
-                $"The subtotal discount of {modifier.AmountGrosze.GroszeToPln()} is not less than the subtotal of {_totalGrosze.GroszeToPln()} — a fiscal receipt cannot be printed with a total of zero or less.");
+                $"The subtotal discount of {modifier.AmountGrosze.GroszeToPlnText()} is not less than the subtotal of {_totalGrosze.GroszeToPlnText()} — a fiscal receipt cannot be printed with a total of zero or less.");
         }
         _commands.Add(PosNetCommands.Trdiscntsubtot(modifier));
         _totalGrosze += ModifierEffect(modifier);
@@ -154,7 +181,7 @@ public class PosNetSaleTransaction
         if (_totalGrosze <= 0)
         {
             throw new PLValidationException(
-                $"The receipt totals {_totalGrosze.GroszeToPln()} after its discounts — a fiscal document needs a positive total.");
+                $"The receipt totals {_totalGrosze.GroszeToPlnText()} after its discounts — a fiscal document needs a positive total.");
         }
         if (_paymentsGrosze - _changeGrosze != _totalGrosze)
         {

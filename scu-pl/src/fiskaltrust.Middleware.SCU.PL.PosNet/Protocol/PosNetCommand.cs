@@ -40,7 +40,13 @@ public static class PosNetCommands
     /// "wa Kwota total (cena x ilość)"); the register subtracts <c>rw</c> from it and totalizes the
     /// difference.
     /// </summary>
-    public static PosNetCommand Trline(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze, PosNetModifier? modifier = null)
+    /// <param name="isReversal">
+    /// Sends the line as a storno (<c>st1</c>, "Flaga stornowania"): it repeats a position the
+    /// register already printed and takes the stated quantity and value off it. The device verifies
+    /// both against what was sold (errors 2851 ERR_STORNO_QNT and 2852 ERR_STORNO_AMT), so a
+    /// reversal always states its value explicitly.
+    /// </param>
+    public static PosNetCommand Trline(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze, PosNetModifier? modifier = null, bool isReversal = false)
     {
         var parameters = new List<KeyValuePair<string, string>>
         {
@@ -48,6 +54,11 @@ public static class PosNetCommands
             new("vt", vatSlotIndex.ToString(CultureInfo.InvariantCulture)),
             new("pr", unitPriceGrosze.ToString(CultureInfo.InvariantCulture)),
         };
+        if (isReversal)
+        {
+            // Where the specification's own trline examples put it: after the price, before the value.
+            parameters.Add(new("st", "1"));
+        }
         if (quantity != 1m)
         {
             parameters.Add(new("il", quantity.ToString(QuantityFormat, CultureInfo.InvariantCulture)));
@@ -55,7 +66,7 @@ public static class PosNetCommands
         // The line value is what the device measures the discount against — "the discount may not
         // exceed the value of the goods" (POT-I-DEV-05 p.219) — so a line that carries one states
         // its value explicitly instead of leaving the device to derive it from price x quantity.
-        if (quantity != 1m || modifier is not null)
+        if (quantity != 1m || modifier is not null || isReversal)
         {
             parameters.Add(new("wa", totalGrosze.ToString(CultureInfo.InvariantCulture)));
         }
