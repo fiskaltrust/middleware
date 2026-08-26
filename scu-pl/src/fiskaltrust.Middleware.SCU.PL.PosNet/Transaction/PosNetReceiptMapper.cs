@@ -16,7 +16,9 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 /// the configured rate table via <see cref="PtuSlotResolver"/> (the case→rate mapping is
 /// statutory, the slot letters are owned by the device); amounts travel as integer grosze.
 /// Discount and extra positions are not positions on a Polish register: they become the rabat/narzut
-/// of the sale line they follow, or a rabat od podsumy when they follow none.
+/// of the sale line they belong to — by <c>Position</c> where the POS sets one, otherwise the line
+/// in front of them (see <see cref="AssignModifiers"/>) — or a rabat od podsumy when they belong to
+/// no line.
 /// </summary>
 public static class PosNetReceiptMapper
 {
@@ -41,40 +43,12 @@ public static class PosNetReceiptMapper
         }
 
         // A register has no position of its own for a discount: a rabat/narzut is either a parameter
-        // of the sale line it belongs to, or one on the subtotal. Which one a discount position is
-        // follows from where it stands. That a modifier belongs to the position in front of it is
-        // the convention the shared receipt model already groups by
-        // (v2 Helpers/ReceiptRequestExtensions.GetGroupedChargeItems). What that helper does with a
-        // modifier standing in front of every position differs — it makes it an entry of its own —
-        // because it has nowhere to put it; here it becomes the rabat od podsumy, the only reading a
-        // register has for a discount that belongs to no line. A POS that sends its discounts ahead
-        // of the positions they apply to therefore has them applied to the receipt, not to a line.
-        // The line is held back until the item after it is known.
-        ChargeItem? pendingLine = null;
-        string? pendingSlot = null;
-        PosNetModifier? pendingModifier = null;
-        var subtotalModifiers = new List<PosNetModifier>();
-
-        void SendPendingLine()
-        {
-            if (pendingLine is null)
-            {
-                return;
-            }
-
-            var totalGrosze = pendingLine.Amount.ToGrosze();
-            var quantity = pendingLine.Quantity;
-            transaction.AddLine(
-                PosNetText.ToField(pendingLine.Description, MaxGoodsNameLength),
-                ToVatSlotIndex(pendingSlot!),
-                ToUnitPriceGrosze(pendingLine.Description, totalGrosze, quantity),
-                quantity,
-                totalGrosze,
-                pendingModifier);
-            pendingLine = null;
-            pendingSlot = null;
-            pendingModifier = null;
-        }
+        // of the sale line it belongs to, or one on the subtotal. Which line a discount position
+        // belongs to is read the way the receipt model expresses it — see AssignModifiers — so the
+        // charge items are grouped before a single command is built rather than streamed as they
+        // arrive; a discount may name a position that was already sent.
+        var lines = new List<SaleLine>();
+        var modifiers = new List<PendingModifier>();
 
         foreach (var chargeItem in request.cbChargeItems ?? [])
         {
@@ -85,46 +59,29 @@ public static class PosNetReceiptMapper
 
             if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))
             {
-                var modifier = ToModifier(chargeItem);
-                if (pendingLine is null)
-                {
-                    // No position in front of it: a rabat od podsumy. Its PTU rate is not read —
-                    // the register distributes a subtotal discount over the rates of the receipt
-                    // itself, and a rate sent alongside would not change that.
-                    subtotalModifiers.Add(modifier);
-                    continue;
-                }
-                if (pendingModifier is not null)
-                {
-                    throw new PLValidationException(
-                        $"The position '{pendingLine.Description}' carries more than one discount/extra ('{chargeItem.Description}'): a POSNET sale line has room for a single rabat/narzut. Send them as one discount position, or split the sale into a position per discount.");
-                }
-
-                // A line discount is granted at the rate of the line — the trline rabat has no rate
-                // of its own. A discount booked at a different VAT rate than the position it applies
-                // to would therefore print and totalize under the position's rate, changing the tax
-                // the POS booked, so it is refused instead. A discount that carries no rate at all
-                // is not that case: it is the POS leaving the rate to the position, which is what
-                // the register does anyway. The comparison is made on the VAT case rather than on
-                // the resolved PTU slot, so a modifier tagged with a rate that has no Polish slot
-                // is reported as the mismatch it is instead of as an unresolvable rate table.
-                var modifierVatCase = chargeItem.ftChargeItemCase.Vat();
-                var lineVatCase = pendingLine.ftChargeItemCase.Vat();
-                if (modifierVatCase != ChargeItemCase.UnknownService && modifierVatCase != lineVatCase)
-                {
-                    throw new PLValidationException(
-                        $"The discount/extra '{chargeItem.Description}' is booked on the VAT case {modifierVatCase}, but the position it applies to ('{pendingLine.Description}') sells on {lineVatCase}. A POSNET line discount is granted at the position's rate — send it with the same VAT rate as the position, or without one.");
-                }
-                pendingModifier = modifier;
+                // Which line this belongs to can only be settled once every line is known, so the
+                // line standing in front of it is remembered here and resolved below.
+                modifiers.Add(new PendingModifier(chargeItem, lines.Count - 1));
                 continue;
             }
 
-            SendPendingLine();
-            pendingLine = chargeItem;
-            pendingSlot = ptuSlotResolver.Resolve(chargeItem.ftChargeItemCase).PtuSlot;
+            lines.Add(new SaleLine(chargeItem, ptuSlotResolver.Resolve(chargeItem.ftChargeItemCase).PtuSlot));
         }
 
-        SendPendingLine();
+        var subtotalModifiers = AssignModifiers(lines, modifiers);
+
+        foreach (var line in lines)
+        {
+            var totalGrosze = line.Item.Amount.ToGrosze();
+            var quantity = line.Item.Quantity;
+            transaction.AddLine(
+                PosNetText.ToField(line.Item.Description, MaxGoodsNameLength),
+                ToVatSlotIndex(line.PtuSlot),
+                ToUnitPriceGrosze(line.Item.Description, totalGrosze, quantity),
+                quantity,
+                totalGrosze,
+                line.Modifier);
+        }
 
         foreach (var subtotalModifier in subtotalModifiers)
         {
@@ -146,6 +103,97 @@ public static class PosNetReceiptMapper
         }
 
         return transaction.End();
+    }
+
+    /// <summary>A sale position with its resolved PTU slot and the rabat/narzut granted on it.</summary>
+    private sealed class SaleLine(ChargeItem item, string ptuSlot)
+    {
+        public ChargeItem Item { get; } = item;
+
+        public string PtuSlot { get; } = ptuSlot;
+
+        public PosNetModifier? Modifier { get; set; }
+    }
+
+    /// <summary>A discount/extra position with the index of the sale line that arrived before it (-1 for none).</summary>
+    private sealed record PendingModifier(ChargeItem Item, int PrecedingLineIndex);
+
+    /// <summary>
+    /// Assigns every discount/extra position to the sale line it belongs to, and returns those that
+    /// belong to no line — the rabaty od podsumy, in the order the POS sent them.
+    /// </summary>
+    /// <remarks>
+    /// The receipt model expresses the relation in two ways, and both are read here:
+    /// <list type="bullet">
+    /// <item><c>Position</c>: a modifier shares the integer part of the position it belongs to
+    /// (1.1 belongs to position 1), the convention the receipt model already groups by
+    /// (scu-gr Helpers/ReceiptRequestExtensions.GetGroupedChargeItemsByPosition). It is the only one
+    /// that can name a position that is not the previous one — <c>1 Kawa, 2 Piwo, 1.1 Rabat</c>
+    /// discounts the coffee — so it is read first wherever the POS sets it.</item>
+    /// <item>Order, for a modifier that carries no position (<c>Position</c> 0 is the model's
+    /// "unset"): it belongs to the position in front of it. A modifier with no position in front of
+    /// it belongs to no line, and a register has exactly one reading for that — the rabat od
+    /// podsumy.</item>
+    /// </list>
+    /// A position a modifier names but the receipt does not carry is a mistake, not a receipt-level
+    /// discount: the POS said which line it meant. It is refused rather than quietly widened to the
+    /// whole receipt.
+    /// </remarks>
+    private static List<PosNetModifier> AssignModifiers(List<SaleLine> lines, List<PendingModifier> modifiers)
+    {
+        var subtotalModifiers = new List<PosNetModifier>();
+        foreach (var (item, precedingLineIndex) in modifiers)
+        {
+            var modifier = ToModifier(item);
+            var targetIndex = item.Position != 0m
+                ? ResolveByPosition(item, lines)
+                : precedingLineIndex;
+            if (targetIndex < 0)
+            {
+                // Its PTU rate is not read: the register distributes a subtotal discount over the
+                // rates of the receipt itself, and a rate sent alongside would not change that.
+                subtotalModifiers.Add(modifier);
+                continue;
+            }
+
+            var line = lines[targetIndex];
+            if (line.Modifier is not null)
+            {
+                throw new PLValidationException(
+                    $"The position '{line.Item.Description}' carries more than one discount/extra ('{item.Description}'): a POSNET sale line has room for a single rabat/narzut. Send them as one discount position, or split the sale into a position per discount.");
+            }
+
+            // A line discount is granted at the rate of the line — the trline rabat has no rate of
+            // its own. A discount booked at a different VAT rate than the position it applies to
+            // would therefore print and totalize under the position's rate, changing the tax the POS
+            // booked, so it is refused instead. A discount that carries no rate at all is not that
+            // case: it is the POS leaving the rate to the position, which is what the register does
+            // anyway. The comparison is made on the VAT case rather than on the resolved PTU slot,
+            // so a modifier tagged with a rate that has no Polish slot is reported as the mismatch
+            // it is instead of as an unresolvable rate table.
+            var modifierVatCase = item.ftChargeItemCase.Vat();
+            var lineVatCase = line.Item.ftChargeItemCase.Vat();
+            if (modifierVatCase != ChargeItemCase.UnknownService && modifierVatCase != lineVatCase)
+            {
+                throw new PLValidationException(
+                    $"The discount/extra '{item.Description}' is booked on the VAT case {modifierVatCase}, but the position it applies to ('{line.Item.Description}') sells on {lineVatCase}. A POSNET line discount is granted at the position's rate — send it with the same VAT rate as the position, or without one.");
+            }
+            line.Modifier = modifier;
+        }
+        return subtotalModifiers;
+    }
+
+    /// <summary>The sale line a positioned modifier names, by the integer part they share.</summary>
+    private static int ResolveByPosition(ChargeItem modifier, List<SaleLine> lines)
+    {
+        var position = decimal.Truncate(modifier.Position);
+        var index = lines.FindIndex(line => line.Item.Position != 0m && decimal.Truncate(line.Item.Position) == position);
+        if (index < 0)
+        {
+            throw new PLValidationException(
+                $"The discount/extra '{modifier.Description}' is sent on Position {modifier.Position} and so applies to sale position {position}, which this receipt does not carry. Send it on the position it belongs to, or without a position to have it apply to the subtotal.");
+        }
+        return index;
     }
 
     /// <summary>

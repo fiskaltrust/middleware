@@ -159,6 +159,80 @@ public class PosNetDiscountMappingTests
         Render(commands)[1].Should().Be("trline naCandies vt0 pr10000 wa10000 rd1 rnRabat für treue Stammkund rw2300");
     }
 
+    /// <summary>
+    /// The case order alone cannot express: 1 Kawa, 2 Piwo, 1.1 Rabat — the last position belongs to
+    /// the first. Position is read wherever the POS sets it, so the rabat rides the coffee's line
+    /// even though another line stands between them.
+    /// </summary>
+    [Fact]
+    public void AModifiersPositionNamesItsLine_EvenWhenAnotherLineStandsBetweenThem()
+    {
+        var commands = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Modifier("Rabat na kawę", -2.00m, position: 1.1m),
+            ],
+            paidInCash: 16.00m);
+
+        Render(commands).Should().Equal(
+            "trinit bm0",
+            "trline naKawa vt0 pr1000 wa1000 rd1 rnRabat na kawę rw200",
+            "trline naPiwo vt0 pr800",
+            "trpayment ty0 wa1600 naGotówka re0",
+            "trend to1600 fp1600");
+    }
+
+    /// <summary>A positioned modifier may also name a line that has not been read yet.</summary>
+    [Fact]
+    public void AModifiersPositionNamesItsLine_EvenWhenTheLineComesAfterIt()
+    {
+        var commands = MapSale(
+            [
+                Modifier("Rabat na piwo", -1.00m, position: 2.1m),
+                Position("Kawa", 10.00m, position: 1m),
+                Position("Piwo", 8.00m, position: 2m),
+            ],
+            paidInCash: 17.00m);
+
+        Render(commands)[2].Should().Be("trline naPiwo vt0 pr800 wa800 rd1 rnRabat na piwo rw100");
+    }
+
+    /// <summary>
+    /// A position the receipt does not carry is a mistake, not a receipt-level discount — the POS
+    /// said which line it meant.
+    /// </summary>
+    [Fact]
+    public void AModifierNamingAPositionTheReceiptDoesNotCarry_IsRejected()
+    {
+        var act = () => MapSale(
+            [Position("Kawa", 10.00m, position: 1m), Modifier("Rabat", -2.00m, position: 3.1m)],
+            paidInCash: 8.00m);
+
+        act.Should().Throw<PLValidationException>().WithMessage("*sale position 3, which this receipt does not carry*");
+    }
+
+    /// <summary>Positioned and unpositioned modifiers on one receipt: each is read its own way.</summary>
+    [Fact]
+    public void AnUnpositionedModifier_StillBelongsToTheLineInFrontOfIt()
+    {
+        var commands = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Modifier("Rabat na piwo", -1.00m),
+                Modifier("Rabat na kawę", -2.00m, position: 1.1m),
+            ],
+            paidInCash: 15.00m);
+
+        Render(commands).Should().Equal(
+            "trinit bm0",
+            "trline naKawa vt0 pr1000 wa1000 rd1 rnRabat na kawę rw200",
+            "trline naPiwo vt0 pr800 wa800 rd1 rnRabat na piwo rw100",
+            "trpayment ty0 wa1500 naGotówka re0",
+            "trend to1500 fp1500");
+    }
+
     private static IReadOnlyList<PosNetCommand> MapSale(List<ChargeItem> chargeItems, decimal paidInCash)
         => PosNetReceiptMapper.MapSale(
             new ReceiptRequest
@@ -173,20 +247,22 @@ public class PosNetDiscountMappingTests
             },
             new PtuSlotResolver(PosNetConfiguration.DefaultVatRateTable()));
 
-    private static ChargeItem Position(string description, decimal amount, decimal quantity = 1m, long vatCase = NormalRate) => new()
+    private static ChargeItem Position(string description, decimal amount, decimal quantity = 1m, long vatCase = NormalRate, decimal position = 0m) => new()
     {
         Description = description,
         Amount = amount,
         Quantity = quantity,
+        Position = position,
         ftChargeItemCase = (ChargeItemCase)(0x504C_2000_0000_0010 | vatCase),
         Currency = Currency.PLN,
     };
 
-    private static ChargeItem Modifier(string description, decimal amount, long vatCase = NormalRate) => new()
+    private static ChargeItem Modifier(string description, decimal amount, long vatCase = NormalRate, decimal position = 0m) => new()
     {
         Description = description,
         Amount = amount,
         Quantity = 1m,
+        Position = position,
         ftChargeItemCase = (ChargeItemCase)(0x504C_2000_0000_0010 | ExtraOrDiscount | vatCase),
         Currency = Currency.PLN,
     };

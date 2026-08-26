@@ -61,10 +61,11 @@ Which cases reach the paper is up to the SCU: the sale cases (`CashSaleReceipt`,
 returns are not implemented in the PosNet SCU yet.
 
 `DiscountReceipt` carries both discount levels a register knows: a rabat on the position (it travels
-as a parameter of the sale line) and a rabat od podsumy. Which one a discount position becomes
-follows from where it stands — it modifies the position in front of it, and a discount with no
-position in front of it is the one on the subtotal, which is why that one leads the sample's
-`cbChargeItems`.
+as a parameter of the sale line) and a rabat od podsumy. Which line a discount belongs to is read
+from `Position` where the POS sets one — `1.1` belongs to position `1`, so `1 Kawa, 2 Piwo, 1.1 Rabat`
+discounts the coffee — and otherwise from the order, where it modifies the position in front of it. A
+discount that belongs to no line is the one on the subtotal, which is why the sample sends it without
+a position, ahead of its `cbChargeItems`.
 
 ### Spain
 
