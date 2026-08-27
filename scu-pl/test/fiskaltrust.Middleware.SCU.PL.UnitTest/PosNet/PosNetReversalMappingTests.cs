@@ -120,14 +120,65 @@ public class PosNetReversalMappingTests
         act.Should().Throw<PLValidationException>().WithMessage("*does not match the unit price*");
     }
 
+    /// <summary>
+    /// A position sold with a rabat is reversed by a storno carrying the same rabat — measured on the
+    /// device: with the rabat repeated it takes the discounted 8.00 off, without it the 10.00 before
+    /// the rabat, which would leave the receipt totalling less than the positions still on it.
+    /// </summary>
     [Fact]
-    public void AStornoOfAPositionThatCarriesARabat_IsRejected()
+    public void AStornoOfAPositionSoldWithARabat_RepeatsThatRabat()
+    {
+        var commands = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Modifier("Rabat", -2.00m, position: 1.1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Voided("Storno", -8.00m, position: 1.2m),
+            ],
+            paidInCash: 8.00m);
+
+        Render(commands).Should().Equal(
+            "trinit bm0",
+            "trline naKawa vt0 pr1000 wa1000 rd1 rnRabat rw200",
+            "trline naPiwo vt0 pr800",
+            "trline naKawa vt0 pr1000 st1 wa1000 rd1 rnRabat rw200",
+            "trpayment ty0 wa800 naGotówka re0",
+            "trend to800 fp800");
+    }
+
+    /// <summary>The whole position may be stated either before or after its rabat.</summary>
+    [Fact]
+    public void AStornoOfAPositionSoldWithARabat_MayStateTheValueBeforeTheRabat()
+    {
+        var commands = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Modifier("Rabat", -2.00m, position: 1.1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Voided("Storno", -10.00m, position: 1.2m),
+            ],
+            paidInCash: 8.00m);
+
+        Render(commands)[3].Should().Be("trline naKawa vt0 pr1000 st1 wa1000 rd1 rnRabat rw200");
+    }
+
+    /// <summary>
+    /// The rabat is one amount for the whole line, and how the register would split it over part of
+    /// one is not documented — so a discounted position is reversed as a whole or not at all.
+    /// </summary>
+    [Fact]
+    public void APartialStornoOfAPositionSoldWithARabat_IsRejected()
     {
         var act = () => MapSale(
-            [Position("Kawa", 10.00m), Modifier("Rabat", -2.00m), Voided("Storno", -8.00m)],
-            paidInCash: 0m);
+            [
+                Position("Woda", 30.00m, quantity: 3m, position: 1m),
+                Modifier("Rabat", -3.00m, position: 1.1m),
+                Voided("Storno", -9.00m, quantity: 1m, position: 1.2m),
+            ],
+            paidInCash: 18.00m);
 
-        act.Should().Throw<PLValidationException>().WithMessage("*carries a rabat/narzut and cannot be reversed*");
+        act.Should().Throw<PLValidationException>()
+            .WithMessage("*can only be reversed as a whole — state 30.00 before it or 27.00 after it*");
     }
 
     [Fact]
@@ -207,8 +258,8 @@ public class PosNetReversalMappingTests
     private static ChargeItem VoidedModifier(string description, decimal amount)
         => Item(description, amount, quantity: 1m, position: 0m, flags: VoidFlag | ExtraOrDiscountFlag);
 
-    private static ChargeItem Modifier(string description, decimal amount)
-        => Item(description, amount, quantity: 1m, position: 0m, flags: ExtraOrDiscountFlag);
+    private static ChargeItem Modifier(string description, decimal amount, decimal position = 0m)
+        => Item(description, amount, quantity: 1m, position: position, flags: ExtraOrDiscountFlag);
 
     private static ChargeItem Refunded(string description, decimal amount)
         => Item(description, amount, quantity: 1m, position: 0m, flags: RefundFlag);

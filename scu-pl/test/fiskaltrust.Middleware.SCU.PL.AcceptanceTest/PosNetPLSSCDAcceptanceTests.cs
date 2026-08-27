@@ -132,6 +132,28 @@ public class PosNetPLSSCDAcceptanceTests
     }
 
     [Fact]
+    public async Task StornoOfDiscountedSale_CarriesTheRabatOnTheReversal()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoOfDiscountedSale());
+
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trline", "trline", "trpayment", "trend", "scnt");
+        var lines = target.SentCommands.Where(c => c.CommandId == "trline").ToList();
+        // The reversal repeats the rabat the position was sold with. Without it the register takes
+        // the value before the rabat off the receipt: the same three commands with rw200 missing were
+        // answered by the device with a fiscal value of 6.00 instead of 8.00, and it refused the
+        // 8.00 that the positions still standing add up to (2805 ERR_ENDTOT_VERIFY).
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("st", "1"));
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("wa", "1000"));
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("rd", "1"));
+        lines[2].Parameters.Should().Contain(new KeyValuePair<string, string>("rw", "200"));
+        var trend = target.SentCommands.Single(c => c.CommandId == "trend");
+        trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "800"));
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
     public async Task NipReceipt_PrintsTheBuyersNip()
     {
         using var target = PosNetTestTarget.Open();

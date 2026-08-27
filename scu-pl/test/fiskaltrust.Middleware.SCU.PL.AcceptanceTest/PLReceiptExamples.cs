@@ -112,6 +112,30 @@ public static class PLReceiptExamples
         ],
     });
 
+    /// <summary>
+    /// A storno of a position that was sold with a rabat: Kawa 10.00 less 2.00, Piwo 8.00, then the
+    /// coffee goes back. The reversal has to carry the rabat as well, or the register takes the value
+    /// before it off the receipt — this example is what the device was measured against.
+    /// </summary>
+    public static ProcessRequest StornoOfDiscountedSale() => Wrap(new ReceiptRequest
+    {
+        ftReceiptCase = (ReceiptCase)0x504C_2000_0000_0001,
+        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptReference = Guid.NewGuid().ToString(),
+        Currency = Currency.PLN,
+        cbChargeItems =
+        [
+            new ChargeItem { Description = "Kawa", Amount = 10.00m, Quantity = 1m, Position = 1m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0011, Currency = Currency.PLN },
+            new ChargeItem { Description = "Rabat", Amount = -2.00m, Quantity = 1m, Position = 1.1m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0004_0011, Currency = Currency.PLN },
+            new ChargeItem { Description = "Piwo", Amount = 8.00m, Quantity = 1m, Position = 2m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0011, Currency = Currency.PLN },
+            new ChargeItem { Description = "Storno", Amount = -8.00m, Quantity = 1m, Position = 1.2m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0001_0011, Currency = Currency.PLN },
+        ],
+        cbPayItems =
+        [
+            new PayItem { Description = "Gotówka", Amount = 8.00m, ftPayItemCase = (PayItemCase)0x504C_2000_0000_0001, Currency = Currency.PLN },
+        ],
+    });
+
     /// <summary>A paragon z NIP: ReceiverIsBusiness flag with the buyer's NIP in cbCustomer.</summary>
     public static ProcessRequest NipReceipt()
     {

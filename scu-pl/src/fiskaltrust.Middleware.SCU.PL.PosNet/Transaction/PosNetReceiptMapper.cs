@@ -101,7 +101,13 @@ public static class PosNetReceiptMapper
                     break;
                 case ReversalLine reversal:
                     ResolveReversal(reversal, lines);
-                    transaction.AddReversalLine(reversal.Target!.Name, reversal.Target.PtuSlotIndex, reversal.Target.UnitPriceGrosze, reversal.Quantity, reversal.TotalGrosze);
+                    transaction.AddReversalLine(
+                        reversal.Target!.Name,
+                        reversal.Target.PtuSlotIndex,
+                        reversal.Target.UnitPriceGrosze,
+                        reversal.Quantity,
+                        reversal.TotalGrosze,
+                        reversal.Modifier);
                     break;
             }
         }
@@ -180,6 +186,9 @@ public static class PosNetReceiptMapper
         public decimal Quantity { get; set; }
 
         public long TotalGrosze { get; set; }
+
+        /// <summary>The rabat/narzut the reversed position was sold with, which the storno repeats.</summary>
+        public PosNetModifier? Modifier { get; set; }
     }
 
     /// <summary>A discount/extra position with the index of the sale line that arrived before it (-1 for none).</summary>
@@ -213,19 +222,42 @@ public static class PosNetReceiptMapper
         }
 
         var target = lines[targetIndex];
-        if (target.Modifier is not null)
-        {
-            // What the register makes of a storno against a line that was sold with a rabat is not
-            // something this SCU can state, and a fiscal document is the wrong place to find out.
-            throw new PLValidationException(
-                $"The sale position '{target.Item.Description}' carries a rabat/narzut and cannot be reversed by a storno — send the position with the value it ends up with.");
-        }
-
         var totalGrosze = Math.Abs(item.Amount.ToGrosze());
         if (totalGrosze == 0)
         {
             throw new PLValidationException($"The voided position '{item.Description}' carries no amount — there is nothing for the register to reverse.");
         }
+
+        if (target.Modifier is { } granted)
+        {
+            // A position sold with a rabat is reversed by a storno that carries the same rabat: the
+            // register then takes the discounted value off, while a storno without it takes off the
+            // line's value before the rabat and leaves the receipt totalling less than the positions
+            // still on it. Measured on a POSNET THERMAL XL2 ONLINE — with the rabat repeated, the
+            // register verified a fiscal value reduced by the discounted amount and refused the
+            // other candidate (2805 ERR_ENDTOT_VERIFY).
+            var netGrosze = target.TotalGrosze + (granted.IsDiscount ? -granted.AmountGrosze : granted.AmountGrosze);
+            if (totalGrosze != target.TotalGrosze && totalGrosze != netGrosze)
+            {
+                // Part of a discounted position cannot be reversed: the rabat is one amount for the
+                // whole line, and how the register would split it over part of one is not documented.
+                throw new PLValidationException(
+                    $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} of the sale position '{target.Item.Description}', which was sold with a rabat/narzut and can only be reversed as a whole — state {target.TotalGrosze.GroszeToPlnText()} before it or {netGrosze.GroszeToPlnText()} after it.");
+            }
+            if (target.ReversedGrosze > 0)
+            {
+                throw new PLValidationException(
+                    $"The sale position '{target.Item.Description}' has already been reversed; a position sold with a rabat/narzut is reversed once, as a whole.");
+            }
+
+            target.ReversedGrosze = target.TotalGrosze;
+            reversal.Target = target;
+            reversal.Quantity = target.Quantity;
+            reversal.TotalGrosze = target.TotalGrosze;
+            reversal.Modifier = granted;
+            return;
+        }
+
         if (target.ReversedGrosze + totalGrosze > target.TotalGrosze)
         {
             throw new PLValidationException(

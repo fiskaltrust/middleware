@@ -90,7 +90,12 @@ public class PosNetSaleTransaction
     /// A storno of a position already sold in this receipt: a trline with the reversal flag that
     /// repeats the goods and takes the stated quantity and value off them.
     /// </summary>
-    public void AddReversalLine(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze)
+    /// <param name="modifier">
+    /// The rabat/narzut the reversed position was sold with. It has to travel on the storno as well:
+    /// the register then takes the discounted value off the receipt, where a storno without it takes
+    /// off the line's value before the rabat.
+    /// </param>
+    public void AddReversalLine(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze, PosNetModifier? modifier = null)
     {
         if (_stage is Stage.HasSubtotalModifier)
         {
@@ -104,13 +109,16 @@ public class PosNetSaleTransaction
         {
             throw new PLValidationException($"The storno of '{name}' must reverse a positive quantity and value — the reversal travels in the st flag, not in a sign.");
         }
-        if (totalGrosze > _totalGrosze)
+        // What the receipt loses is what the reversed position contributed: its value after the
+        // rabat/narzut it was sold with, which is why the modifier travels on the storno too.
+        var reversedGrosze = totalGrosze + ModifierEffect(modifier);
+        if (reversedGrosze > _totalGrosze)
         {
             throw new PLValidationException(
-                $"The storno of '{name}' reverses {totalGrosze.GroszeToPlnText()}, which is more than the {_totalGrosze.GroszeToPlnText()} this receipt has sold so far.");
+                $"The storno of '{name}' reverses {reversedGrosze.GroszeToPlnText()}, which is more than the {_totalGrosze.GroszeToPlnText()} this receipt has sold so far.");
         }
-        _commands.Add(PosNetCommands.Trline(name, vatSlotIndex, unitPriceGrosze, quantity, totalGrosze, isReversal: true));
-        _totalGrosze -= totalGrosze;
+        _commands.Add(PosNetCommands.Trline(name, vatSlotIndex, unitPriceGrosze, quantity, totalGrosze, modifier, isReversal: true));
+        _totalGrosze -= reversedGrosze;
     }
 
     /// <summary>
