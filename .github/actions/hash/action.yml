@@ -1,0 +1,16 @@
+name: "Hash"
+inputs:
+  file:
+    required: true
+    description: "Path to the file to hash"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate SHA256 hash
+      shell: pwsh
+      run: |
+        $hash = Get-FileHash "${{ inputs.file }}" -Algorithm SHA256
+        $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+        $hashstring = [System.Convert]::ToBase64String($hashbytes)
+        $hashstring | Set-Content "${{ inputs.file }}.hash"

@@ -1,0 +1,53 @@
+name: "Zip and Upload"
+inputs:
+  path:
+    required: true
+  artifactName:
+    required: true
+  zipFileName:
+    required: true
+  includeHash:
+    required: false
+    default: "true"
+  
+runs:
+  using: "composite"
+  steps:
+    - name: Zip v2 package
+      id: zip
+      shell: pwsh
+      run: |
+        
+
+        $artifactName = "${{ inputs.artifactName }}"
+        $sourcePath = "${{ inputs.path }}"
+        $zipFileName = "${{ inputs.zipFileName }}"
+                  
+        $destinationPath = "./publish/$artifactName/" 
+        New-Item -ItemType Directory -Force -Path $destinationPath
+        $destinationFile = Join-Path $destinationPath "$zipFileName.zip"
+
+        if($IsWindows) {
+         Compress-Archive -Path (Join-Path $sourcePath *) -DestinationPath $destinationFile
+        } 
+        else 
+        {
+         bash -c "cd '$sourcePath' && zip -r $zipFileName.zip ."
+         bash -c "mv '$sourcePath/${zipFileName}.zip' '$destinationPath'"                
+        }
+
+        echo "destinationPath=$destinationPath" >> $env:GITHUB_OUTPUT
+        echo "destinationFile=$destinationFile" >> $env:GITHUB_OUTPUT
+        ls $destinationPath
+
+    - name: Hash v2 package
+      if: inputs.includeHash == 'true'
+      uses: ./.github/actions/hash
+      with:
+        file: ${{ steps.zip.outputs.destinationFile }}
+
+    - name: Upload v2 Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifactName }}
+        path: ${{ steps.zip.outputs.destinationPath }}
