@@ -640,16 +640,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
                         Department = 11,
                     };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
-                    }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
                 else if (i.IsSingleUseVoucher() && i.Amount < 0)
                 {
@@ -693,16 +684,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
                         Department = i.GetVatGroup(),
                     };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
-                    }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
             }
         }
