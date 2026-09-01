@@ -220,9 +220,13 @@ public class ZwarteDoosScuBe : IBESSCD
                     Quantity = x.Quantity,
                     QuantityType = QuantityType.PIECE,
                     NegQuantityReason = GetNegQuantityReason(receiptRequest, x),
-                    // Deliberately the ABSOLUTE unit price: a refund line keeps a positive unit
-                    // price and expresses the reversal through the negative quantity/price. A
-                    // negative unitPrice is refused with VAT_PRICE_CHECK_FAILED.
+                    // The FDM wants the price of ONE unit and expresses a reversal through the
+                    // negative quantity and line total, so a refund line must still carry a
+                    // POSITIVE unit price — a negative one is refused with VAT_PRICE_CHECK_FAILED.
+                    // The quotient gives that for the well-formed case (amount and quantity share
+                    // a sign) and is deliberately not Abs()'d: a POS that sends a negative amount
+                    // against a positive quantity is describing something we should not silently
+                    // reinterpret, and the FDM refusal names the field.
                     UnitPrice = x.Amount / x.Quantity,
                     Vats = [GetVatInputForChargeItem(x)]
                 },

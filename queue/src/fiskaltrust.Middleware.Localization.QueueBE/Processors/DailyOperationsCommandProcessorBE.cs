@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueBE.Factories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueBE.Processors;
@@ -33,8 +34,9 @@ public class DailyOperationsCommandProcessorBE(IBESSCD sscd) : IDailyOperationsC
 
     /// <summary>
     /// The daily closing is the Belgian Z report: the SCU turns it into a REPORT_TURNOVER_Z
-    /// event on the FDM and returns its signature. The action journal entry is only written
-    /// when the FDM actually signed — an errored response must never look like a closed day.
+    /// event on the FDM and returns its signature. The action journal entry is only written when
+    /// the FDM actually signed — neither an errored response nor an unsigned one may look like a
+    /// closed day.
     /// </summary>
     public async Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request)
     {
@@ -47,6 +49,16 @@ public class DailyOperationsCommandProcessorBE(IBESSCD sscd) : IDailyOperationsC
 
         if (response.ReceiptResponse.ftState.IsState(State.Error))
         {
+            return new ProcessCommandResponse(response.ReceiptResponse, []);
+        }
+
+        // Defence in depth, and the reason this is checked here rather than trusted from the SCU:
+        // the SCU is what talks to the FDM, but the QUEUE is what records the day as closed. A
+        // signed Z report always comes back carrying the FDM's signature, so a response with no
+        // signature at all closed nothing — however clean its state looks.
+        if (response.ReceiptResponse.ftSignatures.Count == 0)
+        {
+            response.ReceiptResponse.SetReceiptResponseError("The daily closing was not signed: the SCU returned no signature for the Z report.");
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
 

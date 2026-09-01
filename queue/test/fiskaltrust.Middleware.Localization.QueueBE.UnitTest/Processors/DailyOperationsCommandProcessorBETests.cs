@@ -85,6 +85,24 @@ namespace fiskaltrust.Middleware.Localization.QueueBE.UnitTest.Processors
             result.actionJournals.Should().BeEmpty();
         }
 
+        /// <summary>
+        /// The state alone is not proof: a Z report that came back with no signature closed
+        /// nothing, so the day must not be journalled as closed on the strength of a clean state.
+        /// </summary>
+        [Fact]
+        public async Task DailyClosing0x2011Async_CleanStateButNoSignature_FailsAndWritesNoActionJournal()
+        {
+            var request = CreateRequest(ReceiptCase.DailyClosing0x2011);
+            var sscd = CreateSscd();
+
+            var sut = new DailyOperationsCommandProcessorBE(sscd.Object);
+            var result = await sut.DailyClosing0x2011Async(request);
+
+            result.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+            result.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE");
+            result.actionJournals.Should().BeEmpty();
+        }
+
         [Fact]
         public async Task ZeroReceipt0x2000Async_IsHandedToTheSscd()
         {
