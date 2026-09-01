@@ -276,5 +276,61 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData
             result.Should().Be(expected, $"serviceType={serviceType}, vatCode={vatCode}, description='{description ?? "null"}'");
         }
         #endregion IsVatableSpecialTaxItemTests
+
+        #region PunctuationCodepointVariants
+
+        // Special tax descriptions are matched by string, so a description that differs only in the
+        // codepoint of its punctuation used to be rejected. The AADE table uses the curly apostrophe
+        // ("Περιπτ. δ’ - Τεχνικά Έργα - 3%"), while our table has the plain ASCII apostrophe. A
+        // partner copying the description from the AADE spec could not be matched.
+
+        [Theory]
+        // Control: the plain ASCII form our table stores. Matches today and must keep matching.
+        [InlineData("Περιπτ. δ' - Τεχνικά Έργα - 3%", 4)]
+        // The AADE form. Same as the control except the apostrophe is the curly one.
+        [InlineData("Περιπτ. δ’ - Τεχνικά Έργα - 3%", 4)]
+        // The other three withholding categories whose official description carries an apostrophe.
+        [InlineData("Περιπτ. β’- Τόκοι - 15%", 1)]
+        [InlineData("Περιπτ. γ’ - Δικαιώματα - 20%", 2)]
+        [InlineData("Περιπτ. δ’ - Αμοιβές Συμβουλών Διοίκησης - 20%", 3)]
+        public void GetWithholdingTaxMapping_ShouldResolve_RegardlessOfApostropheCodepoint(string description, int expectedCode)
+        {
+            var mapping = SpecialTaxMappings.GetWithholdingTaxMapping(description);
+
+            mapping.Should().NotBeNull($"'{description}' is withholding category {expectedCode}; the apostrophe codepoint must not decide whether the category is found");
+            mapping.Code.Should().Be(expectedCode, $"'{description}' must resolve to withholding category {expectedCode}");
+        }
+
+        // The same problem the other way round. A few entries in the other tax table are stored
+        // with the en dash, so a partner sending the plain hyphen was rejected. This is why the
+        // normalisation has to run on the table keys too, not just on the incoming description.
+
+        [Theory]
+        // Control: the en dash form our table stores. Matches today and must keep matching.
+        [InlineData("Ενοικιαζόμενα επιπλωμένα δωμάτια – διαμερίσματα 1,50€ (ανά Δωμ./Διαμ.)", 24)]
+        // The same description typed with a plain hyphen.
+        [InlineData("Ενοικιαζόμενα επιπλωμένα δωμάτια - διαμερίσματα 1,50€ (ανά Δωμ./Διαμ.)", 24)]
+        [InlineData("Αυτοεξυπηρετούμενα καταλύματα – τουριστικές επιπλωμένες επαύλεις (βίλες) 10,00€", 27)]
+        [InlineData("Αυτοεξυπηρετούμενα καταλύματα - τουριστικές επιπλωμένες επαύλεις (βίλες) 10,00€", 27)]
+        public void GetOtherTaxMapping_ShouldResolve_RegardlessOfDashCodepoint(string description, int expectedCode)
+        {
+            var mapping = SpecialTaxMappings.GetOtherTaxMapping(description);
+
+            mapping.Should().NotBeNull($"'{description}' is other tax category {expectedCode}; the dash codepoint must not decide whether the category is found");
+            mapping.Code.Should().Be(expectedCode, $"'{description}' must resolve to other tax category {expectedCode}");
+        }
+
+        // A description that is not in any table must still be rejected. Normalising punctuation
+        // must not widen the match so far that an unknown description resolves to some category
+        // through the substring fallback.
+        [Theory]
+        [InlineData("Unknown withholding tax")]
+        [InlineData("Περιπτ. ζ’ - Ανύπαρκτη Κατηγορία - 7%")]
+        public void GetWithholdingTaxMapping_ShouldStillReturnNull_ForDescriptionsNotInTheTable(string description)
+        {
+            SpecialTaxMappings.GetWithholdingTaxMapping(description).Should().BeNull($"'{description}' is not a real withholding category");
+        }
+
+        #endregion PunctuationCodepointVariants
     }
 }

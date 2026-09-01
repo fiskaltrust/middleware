@@ -1499,5 +1499,106 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
 
         }
         #endregion IsVatableSpecialTaxItemTests
+
+        #region WithholdingTaxDescriptionApostrophe
+
+        // End to end check for the two apostrophe forms of the same withholding description.
+        // They differ at one position: the apostrophe after δ is the plain ASCII one in the
+        // control and the curly one in the AADE form a partner copies from the spec. Both must map
+        // to withholding category 4 and give an identical document, because the description is only
+        // a lookup key here: a non-vatable special tax line becomes a document level tax total and
+        // is left out of the invoice rows, so its text is never sent to AADE.
+        [Theory]
+        [InlineData("Περιπτ. δ' - Τεχνικά Έργα - 3%")]   // plain ASCII apostrophe, the form our table stores
+        [InlineData("Περιπτ. δ’ - Τεχνικά Έργα - 3%")]   // curly apostrophe, the form AADE uses
+        public void MapToInvoicesDoc_ShouldMapTechnicalWorksWithholdingTax_ForEitherApostropheCodepoint(string withholdingDescription)
+        {
+            // Arrange
+            var factory = new AADEFactory(_masterDataConfiguration, "https://test.receipts.example.com");
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "T001",
+                cbReceiptReference = "gr-withholding-apostrophe-001",
+                cbReceiptMoment = DateTime.UtcNow,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_1002, // B2B invoice
+                cbCustomer = new MiddlewareCustomer
+                {
+                    CustomerVATId = "026883248",
+                    CustomerName = "Πελάτης A.E.",
+                    CustomerStreet = "Κηφισίας 12",
+                    CustomerZip = "12345",
+                    CustomerCity = "Αθηνών",
+                    CustomerCountry = "GR"
+                },
+                cbChargeItems =
+                [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0023, // other service @ 24%
+                        Description = "Τεχνικά έργα - εργολαβία κατασκευής",
+                        Amount = 1240m,
+                        VATRate = 24m,
+                        VATAmount = 240m,
+                        Position = 1
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_00F8, // special tax, not taxable
+                        Description = withholdingDescription,
+                        Amount = -30m, // 3% of the 1000.00 net
+                        VATRate = 0m,
+                        Position = 2
+                    }
+                ],
+                cbPayItems =
+                [
+                    new PayItem
+                    {
+                        ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
+                        Amount = 1210m // 1240.00 gross less the 30.00 withheld
+                    }
+                ]
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftReceiptIdentification = "ft123456789",
+                ftCashBoxIdentification = "CB001",
+                ftState = (State) 0x4752000000000000,
+                ftSignatures = []
+            };
+
+            // Act
+            var (invoiceDoc, error) = factory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+
+            // Assert
+            error.Should().BeNull($"'{withholdingDescription}' is withholding category 4; the apostrophe codepoint must not make the mapping fail");
+            invoiceDoc.Should().NotBeNull();
+
+            var invoice = invoiceDoc.invoice[0];
+
+            invoice.taxesTotals.Should().NotBeNullOrEmpty();
+            invoice.taxesTotals.Length.Should().Be(1);
+
+            var withholdingTax = invoice.taxesTotals[0];
+            withholdingTax.taxType.Should().Be(1, "withheld taxes are tax type 1");
+            withholdingTax.taxCategory.Should().Be(4, "Περιπτ. δ' - Τεχνικά Έργα - 3% is withholding category 4");
+            withholdingTax.taxAmount.Should().Be(30m);
+
+            invoice.invoiceSummary.totalWithheldAmount.Should().Be(30m);
+            invoice.invoiceSummary.totalNetValue.Should().Be(1000m);
+            invoice.invoiceSummary.totalVatAmount.Should().Be(240m);
+            invoice.invoiceSummary.totalGrossValue.Should().Be(1210m, "gross is the 1240.00 invoice total less the 30.00 withheld");
+
+            // The withholding line is a document level tax total only, so it must not appear as an
+            // invoice row and its description is never transmitted to AADE.
+            invoice.invoiceDetails.Length.Should().Be(1, "only the service line is an invoice row");
+            invoice.invoiceDetails[0].netValue.Should().Be(1000m);
+        }
+
+        #endregion WithholdingTaxDescriptionApostrophe
     }
 }

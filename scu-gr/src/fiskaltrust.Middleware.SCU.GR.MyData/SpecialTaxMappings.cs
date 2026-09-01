@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 
@@ -307,39 +308,102 @@ public static class SpecialTaxMappings
     };
 
     /// <summary>
-    /// Gets withholding tax mapping for a given charge item description.
+    /// Normalises a description so lookups ignore punctuation codepoint differences. The AADE
+    /// tables use the curly apostrophe and en dash, but POS systems often send the plain ASCII
+    /// apostrophe and hyphen, and a few table entries use the en dash themselves. Same category,
+    /// different bytes, so a plain match fails. Comparison only: the stored strings and anything
+    /// sent to AADE are left exactly as they are.
     /// </summary>
-    /// <param name="description">The description of the charge item</param>
-    /// <returns>Withholding tax mapping if found, null otherwise</returns>
-    public static WithholdingTaxMapping? GetWithholdingTaxMapping(string description)
+    /// <param name="description">The raw description.</param>
+    /// <returns>The description with apostrophe and dash variants folded to ASCII, non-breaking
+    /// spaces turned into normal spaces, whitespace collapsed and trimmed. Empty string for
+    /// null/whitespace input.</returns>
+    public static string NormalizeForLookup(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(description.Length);
+        foreach (var c in description)
+        {
+            switch (c)
+            {
+                // Apostrophe variants become the plain ASCII apostrophe.
+                // Escapes, not literal glyphs, since these are easy to confuse by eye.
+                case '\u2019': // right single quotation mark (the form AADE uses)
+                case '\u2018': // left single quotation mark
+                case '\u02BC': // modifier letter apostrophe
+                case '\u00B4': // acute accent
+                case '`': // grave accent
+                    sb.Append('\'');
+                    break;
+                // Dash variants become the plain ASCII hyphen
+                case '\u2013': // en dash (used by a few table entries)
+                case '\u2014': // em dash
+                case '\u2212': // minus sign
+                    sb.Append('-');
+                    break;
+                // Non-breaking space becomes a normal space
+                case '\u00A0':
+                    sb.Append(' ');
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+
+        // Collapse any run of whitespace to a single space and trim the ends.
+        return string.Join(' ', sb.ToString().Split((char[]?) null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    /// <summary>
+    /// Shared lookup for all four special tax tables. Compares the normalised description against
+    /// the normalised keys: exact match first, then the substring fallback, case-insensitive.
+    /// </summary>
+    private static T? LookupSpecialTax<T>(Dictionary<string, T> table, string description) where T : class
     {
         if (string.IsNullOrWhiteSpace(description))
         {
             return null;
         }
 
-        // Try exact match first
-        if (_withholdingTaxMappings.TryGetValue(description.Trim(), out var exactMapping))
+        var normalized = NormalizeForLookup(description);
+
+        // Try exact match first (on the normalised key)
+        foreach (var kvp in table)
         {
-            return exactMapping;
+            if (string.Equals(NormalizeForLookup(kvp.Key), normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                return kvp.Value;
+            }
         }
 
         // Try partial matching for more flexible description matching
-        foreach (var kvp in _withholdingTaxMappings)
+        foreach (var kvp in table)
         {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
+            var key = NormalizeForLookup(kvp.Key);
 
             // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
+            if (normalized.Contains(key, StringComparison.OrdinalIgnoreCase) ||
+                key.Contains(normalized, StringComparison.OrdinalIgnoreCase))
             {
-                return mapping;
+                return kvp.Value;
             }
         }
 
         return null;
     }
+
+    /// <summary>
+    /// Gets withholding tax mapping for a given charge item description.
+    /// </summary>
+    /// <param name="description">The description of the charge item</param>
+    /// <returns>Withholding tax mapping if found, null otherwise</returns>
+    public static WithholdingTaxMapping? GetWithholdingTaxMapping(string description)
+        => LookupSpecialTax(_withholdingTaxMappings, description);
 
     /// <summary>
     /// Gets fee mapping for a given charge item description.
@@ -347,34 +411,7 @@ public static class SpecialTaxMappings
     /// <param name="description">The description of the charge item</param>
     /// <returns>Fee mapping if found, null otherwise</returns>
     public static FeeMapping? GetFeeMapping(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return null;
-        }
-
-        // Try exact match first
-        if (_feeMappings.TryGetValue(description.Trim(), out var exactMapping))
-        {
-            return exactMapping;
-        }
-
-        // Try partial matching for more flexible description matching
-        foreach (var kvp in _feeMappings)
-        {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
-            // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => LookupSpecialTax(_feeMappings, description);
 
     /// <summary>
     /// Gets stamp duty mapping for a given charge item description.
@@ -382,34 +419,7 @@ public static class SpecialTaxMappings
     /// <param name="description">The description of the charge item</param>
     /// <returns>Stamp duty mapping if found, null otherwise</returns>
     public static StampDutyMapping? GetStampDutyMapping(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return null;
-        }
-
-        // Try exact match first
-        if (_stampDutyMappings.TryGetValue(description.Trim(), out var exactMapping))
-        {
-            return exactMapping;
-        }
-
-        // Try partial matching for more flexible description matching
-        foreach (var kvp in _stampDutyMappings)
-        {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
-            // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => LookupSpecialTax(_stampDutyMappings, description);
 
     /// <summary>
     /// Gets other tax mapping for a given charge item description.
@@ -417,34 +427,7 @@ public static class SpecialTaxMappings
     /// <param name="description">The description of the charge item</param>
     /// <returns>Other tax mapping if found, null otherwise</returns>
     public static OtherTaxMapping? GetOtherTaxMapping(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return null;
-        }
-
-        // Try exact match first
-        if (_otherTaxMappings.TryGetValue(description.Trim(), out var exactMapping))
-        {
-            return exactMapping;
-        }
-
-        // Try partial matching for more flexible description matching
-        foreach (var kvp in _otherTaxMappings)
-        {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
-            // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => LookupSpecialTax(_otherTaxMappings, description);
 
     public static bool IsSpecialTaxItem(ChargeItem chargeItem)
     {
