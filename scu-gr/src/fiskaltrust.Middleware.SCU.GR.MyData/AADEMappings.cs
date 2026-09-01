@@ -194,9 +194,17 @@ public static class AADEMappings
         {
             if(chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a))
             {
+                // OPEN: 11.3 allows neither the retail (E3_561_004) nor wholesale (E3_561_002)
+                // reverse-charge value, since art. 39a needs the buyer's ΑΦΜ that a simplified invoice
+                // omits. Left as-is rather than throwing, so partners already overriding 39a to 11.3 keep working.
                 return IncomeClassificationValueType.E3_561_004;
             }
 
+            // Retail base. A simplified invoice (11.3) needs the WHOLESALE code E3_561_001 instead,
+            // but that depends on the resolved document type / the IsSimplifiedInvoice flag, so it is
+            // applied after mapping in AADEFactory (NormalizeSimplifiedInvoiceClassification) — the
+            // same layer that already handles invoiceType overrides — rather than here in the
+            // case-driven base mapping.
             return chargeItem.ftChargeItemCase.TypeOfService() switch
             {
                 ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_003,
@@ -351,6 +359,12 @@ public static class AADEMappings
             else if (hasOwnConsumption)
             {
                 return InvoiceType.Item61;
+            }
+            //evaluated before the 11.2 since 11.3 is a simplified invoice for good and services and should not be treated 
+            //like an 11.2 which is just for services
+            else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSimplifiedInvoice))
+            {
+                return InvoiceType.Item113;
             }
             else if (receiptRequest.HasOnlyServiceItemsExcludingSpecialTaxes() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknownsExcludingSpecialTaxes())
             {

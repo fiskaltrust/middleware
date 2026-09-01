@@ -342,6 +342,14 @@ public class AADEFactory
             inv.invoiceSummary.incomeClassification = null;
         }
 
+        // A simplified invoice (11.3) is billed to a business, so its income is WHOLESALE — the base
+        // mapping produces the retail E3_561_003 (as for 11.1), which "11.3" does not permit for a
+        // provider sending its own characterizations. Correct it here, keyed off the resolved type
+        // (covers the invoiceType override) and off the IsSimplifiedInvoice flag (which also covers a
+        // refund that resolved to 11.4). Only E3_561_003 is remapped, so an explicit per-line
+        // incomeClassification override is left untouched.
+        NormalizeSimplifiedInvoiceClassification(inv, receiptRequest);
+
         // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
         // (after override, so the correct field is used for the resolved type).
         // Marks come from two sources:
@@ -408,6 +416,49 @@ public class AADEFactory
                 "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
         }
 
+    }
+
+    /// <summary>
+    /// Remaps the retail income classification (E3_561_003) to the wholesale one (E3_561_001) on the
+    /// lines and the summary when the document is a simplified invoice (myDATA 11.3). "Simplified" is
+    /// recognized by the resolved invoice type being 11.3 (covers the invoiceType override) or by the
+    /// GR-local IsSimplifiedInvoice flag being set (covers a refund of a simplified invoice, which
+    /// resolves to 11.4 but must still be booked wholesale). Runs after the override layer so it sees
+    /// the final type; only the retail code is touched, so an explicit per-line classification
+    /// override is preserved.
+    /// </summary>
+    internal static void NormalizeSimplifiedInvoiceClassification(AadeBookInvoiceType invoice, ReceiptRequest receiptRequest)
+    {
+        var isSimplifiedInvoice = invoice.invoiceHeader.invoiceType == InvoiceType.Item113
+            || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSimplifiedInvoice);
+        if (!isSimplifiedInvoice)
+        {
+            return;
+        }
+
+        static void Remap(IncomeClassificationType[]? classifications)
+        {
+            if (classifications == null)
+            {
+                return;
+            }
+            foreach (var ic in classifications)
+            {
+                if (ic.classificationTypeSpecified && ic.classificationType == IncomeClassificationValueType.E3_561_003)
+                {
+                    ic.classificationType = IncomeClassificationValueType.E3_561_001;
+                }
+            }
+        }
+
+        if (invoice.invoiceDetails != null)
+        {
+            foreach (var detail in invoice.invoiceDetails)
+            {
+                Remap(detail.incomeClassification);
+            }
+        }
+        Remap(invoice.invoiceSummary?.incomeClassification);
     }
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
