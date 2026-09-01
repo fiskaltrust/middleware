@@ -1509,8 +1509,9 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest.SCU.MyData
         // a lookup key here: a non-vatable special tax line becomes a document level tax total and
         // is left out of the invoice rows, so its text is never sent to AADE.
         [Theory]
-        [InlineData("Περιπτ. δ' - Τεχνικά Έργα - 3%")]   // plain ASCII apostrophe, the form our table stores
-        [InlineData("Περιπτ. δ’ - Τεχνικά Έργα - 3%")]   // curly apostrophe, the form AADE uses
+        [InlineData("Περιπτ. δ' - Τεχνικά Έργα - 3%")]   // U+0027, the form the mapping table stores
+        [InlineData("Περιπτ. δ’ - Τεχνικά Έργα - 3%")]   // U+2019, the form AADE publishes and Viva sent
+        [InlineData("Περιπτ. δ΄ - Τεχνικά Έργα - 3%")]   // U+0384 Greek tonos, what a Greek keyboard emits
         public void MapToInvoicesDoc_ShouldMapTechnicalWorksWithholdingTax_ForEitherApostropheCodepoint(string withholdingDescription)
         {
             // Arrange
