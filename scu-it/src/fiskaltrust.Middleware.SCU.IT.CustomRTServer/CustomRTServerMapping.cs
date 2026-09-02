@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
 using System.Globalization;
 
@@ -176,21 +177,14 @@ public static class CustomRTServerMapping
     /// Reads the customer identification from cbCustomer. By convention across the IT SCUs
     /// (cf. CustomRTPrinterSCU) Customer.CustomerId carries the codice fiscale and
     /// Customer.CustomerVATId the partita IVA, so each one maps to its own document field.
-    /// Both values are forwarded as-is: validating their shape is handled separately.
+    /// Both values are forwarded as-is apart from normalization: their shape is validated upstream in
+    /// CustomRTServerSCU.ProcessReceiptAsync.
     /// </summary>
     public static (string fiscalcode, string vatcode) GetCustomerDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
         var customer = receiptRequest.GetCustomer();
-        return (Normalize(customer?.CustomerId), NormalizeVatId(customer?.CustomerVATId));
+        return (ItalyValidationHelpers.NormalizeTaxCode(customer?.CustomerId), ItalyValidationHelpers.NormalizeVatId(customer?.CustomerVATId));
     }
-
-    private static string NormalizeVatId(string? vatId)
-    {
-        var vat = Normalize(vatId);
-        return vat.StartsWith("IT", StringComparison.Ordinal) ? vat.Substring(2) : vat;
-    }
-
-    private static string Normalize(string? value) => value?.Trim().ToUpperInvariant() ?? "";
 
     public static bool InverseAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();
 
