@@ -17,13 +17,16 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 /// https://github.com/fiskaltrust/market-gr/issues/276 — the provider's legal name has to be printed
 /// above the licence, so the footer reads:
 ///
-///     Viva Bank
+///     VIVABANK ΑΝΩΝΥΜΗ ΤΡΑΠΕΖΙΚΗ ΕΤΑΙΡΕΙΑ
 ///     www.viva.com
 ///     2024_12_126VIVA_001_ Viva Fiscal_V1_23122024
 ///
-/// Every renderer (receipt-api HTML/PDF, the ESC/POS printer, POS-side printing) prints a signature
-/// item as caption line followed by data line, so each footer line needs its own caption/data slot —
-/// a "\n" inside one string collapses to a space in the HTML renderer.
+/// The name is a separate caption-only signature item prepended to the pre-existing
+/// www.viva.com/licence item, which stays unchanged so consumers of that element see no
+/// breaking change. Every renderer (receipt-api HTML/PDF, the ESC/POS printer, POS-side
+/// printing) prints a signature item as caption line followed by data line, so each footer
+/// line needs its own caption/data slot — a "\n" inside one string collapses to a space in
+/// the HTML renderer.
 /// </summary>
 public class ProviderSignatureTests
 {
@@ -72,7 +75,7 @@ public class ProviderSignatureTests
 
     /// <summary>
     /// No line may be smuggled into a single string: the HTML renderer encodes caption and data into
-    /// one paragraph each, so an embedded newline would print "Viva Bank www.viva.com" on one line.
+    /// one paragraph each, so an embedded newline would collapse two footer lines into one.
     /// </summary>
     [Fact]
     public void AddVivaFiscalProviderSignature_ShouldNotPutSeveralLinesIntoOneCaptionOrData()
@@ -89,21 +92,21 @@ public class ProviderSignatureTests
     }
 
     /// <summary>
-    /// Three lines occupy four caption/data slots, so one is empty. The ESC/POS printer prints an
-    /// empty slot as a blank line, so the empty one must be last — never between two footer lines.
+    /// The www.viva.com/licence element existed before the legal name was added and consumers match
+    /// on it, so it must stay byte-for-byte the same — only the caption-only name item is new.
     /// </summary>
     [Fact]
-    public void AddVivaFiscalProviderSignature_ShouldKeepTheEmptySlotLast_SoNoBlankLineSplitsTheFooter()
+    public void AddVivaFiscalProviderSignature_ShouldKeepThePreExistingLicenceElementUnchanged()
     {
         var request = GreekSaleRequest();
 
         SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
 
-        var slots = request.ReceiptResponse.ftSignatures
-            .SelectMany(x => new[] { x.Caption, x.Data })
-            .ToList();
+        var licenceItem = request.ReceiptResponse.ftSignatures.Single(x => x.Caption == "www.viva.com");
+        licenceItem.Data.Should().Be("2024_12_126VIVA_001_ Viva Fiscal_V1_23122024");
 
-        slots.FindIndex(string.IsNullOrEmpty).Should().Be(slots.Count - 1);
+        var nameItem = request.ReceiptResponse.ftSignatures.Single(x => x.Caption == "VIVABANK ΑΝΩΝΥΜΗ ΤΡΑΠΕΖΙΚΗ ΕΤΑΙΡΕΙΑ");
+        nameItem.Data.Should().BeEmpty();
     }
 
     /// <summary>
