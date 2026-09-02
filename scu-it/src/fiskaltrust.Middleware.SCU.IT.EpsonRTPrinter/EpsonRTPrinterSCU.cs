@@ -439,11 +439,14 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         _logger.LogDebug("({receiptreference}) Last emitted doc: Z#{z} Doc#{doc} amount={amount}cents, baseline: Z#{bz} Doc#{bd}",
             receiptRequest.cbReceiptReference, docBeforeRetry?.ZNumber, docBeforeRetry?.DocNumber, docBeforeRetry?.TotalDocAmountCents, baseline?.ZNumber, baseline?.DocNumber);
 
-        if (baseline == null)
+        if (baseline == null || !IsComparable(docBeforeRetry))
         {
-            // Without a baseline the printer state is unknown: the document may or may not have been printed.
-            // Retrying would risk a second fiscal document for the same sale, so report the error instead.
-            _logger.LogError("({receiptreference}) No recovery baseline available — the printer state is unknown, refusing to reprint.", receiptRequest.cbReceiptReference);
+            // Either end of the comparison is missing, so the printer state is unknown: the document may or
+            // may not have been printed. Retrying would risk a second fiscal document for the same sale, so
+            // report the error instead. Note that a failed status read is *not* the same as "no progress" —
+            // conflating the two is what would turn a lost answer into a duplicate.
+            _logger.LogError("({receiptreference}) Printer state unknown ({missing}) — refusing to reprint.",
+                receiptRequest.cbReceiptReference, baseline == null ? "no baseline" : "last emitted document unreadable");
             receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
             return receiptResponse;
         }
@@ -507,6 +510,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                     _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.", receiptRequest.cbReceiptReference, lastDoc!.ZNumber, lastDoc.DocNumber);
                     return ApplyRecoveredDoc(receiptResponse, lastDoc, GetLotteryCode(receiptRequest));
                 }
+
+                if (!IsComparable(lastDoc))
+                {
+                    // The attempt we just made may have printed and we can no longer check. Another attempt
+                    // would be a coin flip on a fiscal document, so stop here.
+                    _logger.LogError("({receiptreference}) Printer state unknown after attempt {attempt}/{max} — refusing to send the receipt again.", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
+                    receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
+                    return receiptResponse;
+                }
             }
             catch (Exception queryEx)
             {
@@ -520,10 +532,17 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return receiptResponse;
     }
 
+    /// <summary>
+    /// Whether the printer actually told us where it stands. The baseline is only ever taken from a fiscal
+    /// document, so anything else cannot be compared against it — and "I could not read the counter" must
+    /// never be mistaken for "the counter did not move".
+    /// </summary>
+    private static bool IsComparable(LastEmittedDocStatus? doc) => doc != null && doc.IsFiscalDocument;
+
     private static bool IsDocAdvanced(LastEmittedDocStatus? doc, DocPosition baseline)
     {
-        return doc != null && doc.IsFiscalDocument &&
-            (doc.ZNumber > baseline.ZNumber ||
+        return IsComparable(doc) &&
+            (doc!.ZNumber > baseline.ZNumber ||
              (doc.ZNumber == baseline.ZNumber && doc.DocNumber > baseline.DocNumber));
     }
 
