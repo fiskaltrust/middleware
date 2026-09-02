@@ -18,18 +18,31 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
 
 public sealed class EpsonRTPrinterSCU : LegacySCU
 {
+    /// <summary>
+    /// Reported when the connection to the printer broke and we cannot tell whether the document was
+    /// printed. The caller must resolve it by looking at the printer, not by sending the receipt again.
+    /// </summary>
+    public const string UnknownDocumentStateError = "epson-printer-network-error-unknown-document-state";
+
     private readonly ILogger<EpsonRTPrinterSCU> _logger;
     private readonly IEpsonFpMateClient _httpClient;
     private readonly EpsonRTPrinterSCUConfiguration _configuration;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
     private string? _serialnr;
-    private (long ZNumber, long DocNumber)? _lastSuccessfulDoc;
+    private readonly LastDocSlot _lastDoc;
 
-    public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient)
+    /// <param name="lastDoc">
+    /// Baseline of the RT document counter, used by the network-error recovery. Optional: when nothing is
+    /// passed the SCU keeps a slot of its own, which is exactly the lifetime the baseline had when it was a
+    /// plain field — so on-prem hosts, which never pass it, behave as before. Hosts that rebuild the SCU per
+    /// request (CloudRTDevice) pass a slot that outlives the request, one per cashbox.
+    /// </param>
+    public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient, LastDocSlot? lastDoc = null)
     {
         _logger = logger;
         _httpClient = epsonCloudHttpClient;
         _configuration = configuration;
+        _lastDoc = lastDoc ?? new LastDocSlot();
     }
 
     public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
@@ -229,6 +242,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         string? data = null;
         try
         {
+            await EnsureLastDocBaselineAsync(receiptRequest.cbReceiptReference);
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
             var customerData = receiptRequest.GetCustomer();
             if (customerData != null)
@@ -285,7 +299,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTCustomerID = GetCustomerTaxId(receiptRequest),
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
-            _lastSuccessfulDoc = (fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
+            _lastDoc.Value = new DocPosition(fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
 
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
@@ -312,6 +326,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         string? data = null;
         try
         {
+            await EnsureLastDocBaselineAsync(receiptRequest.cbReceiptReference);
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
             data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, data);
@@ -341,7 +356,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTCustomerID = GetCustomerTaxId(receiptRequest),
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
-            _lastSuccessfulDoc = (fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
+            _lastDoc.Value = new DocPosition(fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
                 receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
@@ -362,30 +377,93 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
     }
 
+    /// <summary>
+    /// Reads the current document counter from the printer and stores it as the recovery baseline, unless a
+    /// baseline is already known.
+    /// <para>
+    /// This has to run <em>before</em> the receipt is sent: once the command has failed, the last emitted
+    /// document already includes the receipt the printer may have printed, so it no longer tells the two
+    /// cases apart. A failure here is not fatal — the baseline stays unknown and
+    /// <see cref="TryRecoverFromNetworkErrorAsync"/> then refuses to reprint.
+    /// </para>
+    /// </summary>
+    private async Task EnsureLastDocBaselineAsync(string receiptReference)
+    {
+        if (_lastDoc.Value != null)
+        {
+            return;
+        }
+
+        try
+        {
+            var current = await ReadLastEmittedDocStatusAsync(receiptReference);
+            // Only a fiscal document is a usable baseline: the progressive number of a non-fiscal document
+            // comes from a different counter, and comparing the two could report progress that never happened.
+            if (current != null && current.IsFiscalDocument)
+            {
+                _lastDoc.Value = new DocPosition(current.ZNumber, current.DocNumber);
+                _logger.LogDebug("({receiptreference}) Recovery baseline initialised from printer: Z#{z} Doc#{doc}.",
+                    receiptReference, current.ZNumber, current.DocNumber);
+            }
+            else
+            {
+                _logger.LogWarning("({receiptreference}) Could not establish a recovery baseline (last emitted document is {state}). A network error on this receipt will be reported as an error instead of retried.",
+                    receiptReference, current == null ? "unavailable" : "not fiscal");
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "({receiptreference}) Could not establish a recovery baseline. A network error on this receipt will be reported as an error instead of retried.", receiptReference);
+        }
+    }
+
+    /// <summary>
+    /// Drops the recovery baseline. Every operation that can move the printer counters without the resulting
+    /// Z#/Doc# being recorded here has to call this, otherwise the stale baseline would make the next failing
+    /// receipt look "advanced" and recover somebody else's document.
+    /// </summary>
+    private void InvalidateLastDocBaseline(string reason)
+    {
+        if (_lastDoc.Value != null)
+        {
+            _logger.LogDebug("Recovery baseline dropped ({reason}); it will be read from the printer again.", reason);
+        }
+        _lastDoc.Value = null;
+    }
+
     private async Task<ReceiptResponse> TryRecoverFromNetworkErrorAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string xmlData)
     {
         _logger.LogInformation("({receiptreference}) Querying last emitted document from printer...", receiptRequest.cbReceiptReference);
         var docBeforeRetry = await ReadLastEmittedDocStatusAsync(receiptRequest.cbReceiptReference);
-        var expectedAmountCents = (long) Math.Round((receiptRequest.cbReceiptAmount ?? 0) * 100);
-        _logger.LogDebug("({receiptreference}) Last emitted doc: Z#{z} Doc#{doc} amount={amount}cents, expected={expected}cents",
-            receiptRequest.cbReceiptReference, docBeforeRetry?.ZNumber, docBeforeRetry?.DocNumber, docBeforeRetry?.TotalDocAmountCents, expectedAmountCents);
+        var baseline = _lastDoc.Value;
+        _logger.LogDebug("({receiptreference}) Last emitted doc: Z#{z} Doc#{doc} amount={amount}cents, baseline: Z#{bz} Doc#{bd}",
+            receiptRequest.cbReceiptReference, docBeforeRetry?.ZNumber, docBeforeRetry?.DocNumber, docBeforeRetry?.TotalDocAmountCents, baseline?.ZNumber, baseline?.DocNumber);
 
-        var hasProgressed = _lastSuccessfulDoc.HasValue && IsDocAdvanced(docBeforeRetry, _lastSuccessfulDoc.Value);
-        var matchesByAmount = !_lastSuccessfulDoc.HasValue && docBeforeRetry != null
-            && docBeforeRetry.IsFiscalDocument && docBeforeRetry.TotalDocAmountCents == expectedAmountCents;
-
-        if (hasProgressed || matchesByAmount)
+        if (baseline == null)
         {
-            var reason = hasProgressed ? "progression detected" : "amount matches, no cache";
-            _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} ({reason}) — printer already printed, skipping retry.",
-                receiptRequest.cbReceiptReference, docBeforeRetry!.ZNumber, docBeforeRetry.DocNumber, reason);
+            // Without a baseline the printer state is unknown: the document may or may not have been printed.
+            // Retrying would risk a second fiscal document for the same sale, so report the error instead.
+            _logger.LogError("({receiptreference}) No recovery baseline available — the printer state is unknown, refusing to reprint.", receiptRequest.cbReceiptReference);
+            receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
+            return receiptResponse;
+        }
+
+        if (IsDocAdvanced(docBeforeRetry, baseline))
+        {
+            _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.",
+                receiptRequest.cbReceiptReference, docBeforeRetry!.ZNumber, docBeforeRetry.DocNumber);
             return ApplyRecoveredDoc(receiptResponse, docBeforeRetry, GetLotteryCode(receiptRequest));
         }
 
-        return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, docBeforeRetry);
+        return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, baseline);
     }
 
-    private async Task<ReceiptResponse> RetryReceiptWithRecoveryAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string xmlData, LastEmittedDocStatus? docBeforeRetry)
+    /// <param name="baseline">
+    /// Document counter as it was before the receipt was sent. It is required, not optional: reaching this
+    /// method means we know the printer had not printed yet, which is the only state in which sending the
+    /// receipt again cannot produce a duplicate fiscal document.
+    /// </param>
+    private async Task<ReceiptResponse> RetryReceiptWithRecoveryAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string xmlData, DocPosition baseline)
     {
         for (var attempt = 0; attempt < _configuration.MaxNetworkRetries; attempt++)
         {
@@ -400,7 +478,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 if (retryFiscalResponse.Success)
                 {
                     _logger.LogInformation("({receiptreference}) Retry succeeded: Z#{zNum} Doc#{docNum}.", receiptRequest.cbReceiptReference, retryFiscalResponse.ZRepNumber, retryFiscalResponse.ReceiptNumber);
-                    _lastSuccessfulDoc = (retryFiscalResponse.ZRepNumber, retryFiscalResponse.ReceiptNumber);
+                    _lastDoc.Value = new DocPosition(retryFiscalResponse.ZRepNumber, retryFiscalResponse.ReceiptNumber);
                     receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
                     {
                         RTSerialNumber = retryResult?.Receipt?.SerialNumber ?? "",
@@ -422,12 +500,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 _logger.LogWarning("({receiptreference}) Network error on retry attempt {attempt}/{max} — checking if printer has printed...", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
                 var lastDoc = await ReadLastEmittedDocStatusAsync(receiptRequest.cbReceiptReference);
-                _logger.LogDebug("({receiptreference}) Current: Z#{z} Doc#{doc}, cache: Z#{bz} Doc#{bd}", receiptRequest.cbReceiptReference, lastDoc?.ZNumber, lastDoc?.DocNumber, _lastSuccessfulDoc?.ZNumber, _lastSuccessfulDoc?.DocNumber);
+                _logger.LogDebug("({receiptreference}) Current: Z#{z} Doc#{doc}, baseline: Z#{bz} Doc#{bd}", receiptRequest.cbReceiptReference, lastDoc?.ZNumber, lastDoc?.DocNumber, baseline.ZNumber, baseline.DocNumber);
 
-                var baseline = _lastSuccessfulDoc ??
-                    (docBeforeRetry != null ? ((long ZNumber, long DocNumber)?)(docBeforeRetry.ZNumber, docBeforeRetry.DocNumber) : null);
-
-                if (baseline.HasValue && IsDocAdvanced(lastDoc, baseline.Value))
+                if (IsDocAdvanced(lastDoc, baseline))
                 {
                     _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.", receiptRequest.cbReceiptReference, lastDoc!.ZNumber, lastDoc.DocNumber);
                     return ApplyRecoveredDoc(receiptResponse, lastDoc, GetLotteryCode(receiptRequest));
@@ -445,7 +520,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return receiptResponse;
     }
 
-    private static bool IsDocAdvanced(LastEmittedDocStatus? doc, (long ZNumber, long DocNumber) baseline)
+    private static bool IsDocAdvanced(LastEmittedDocStatus? doc, DocPosition baseline)
     {
         return doc != null && doc.IsFiscalDocument &&
             (doc.ZNumber > baseline.ZNumber ||
@@ -464,7 +539,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             RTCodiceLotteria = lotteryCode,
             RTCustomerID = "",
         }).ToArray();
-        _lastSuccessfulDoc = (doc.ZNumber, doc.DocNumber);
+        _lastDoc.Value = new DocPosition(doc.ZNumber, doc.DocNumber);
         return receiptResponse;
     }
 
@@ -482,9 +557,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 result?.Success, result?.CommandResponse?.PrinterStatus, rawData);
             return LastEmittedDocStatus.Parse(rawData);
         }
-        catch (Exception e) when (e is TaskCanceledException || e is HttpRequestException)
+        // Any failure is answered with "unknown", never with an exception: this is a diagnostic read, and its
+        // callers treat a missing answer as "the printer state could not be established", which is safe.
+        catch (Exception e)
         {
-            _logger.LogWarning(e, "({receiptreference}) Could not query printer status — proceeding to retry loop.", receiptReference);
+            _logger.LogWarning(e, "({receiptreference}) Could not query the last emitted document from the printer.", receiptReference);
             return null;
         }
     }
@@ -493,6 +570,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     {
         try
         {
+            // This path prints without recording the resulting Z#/Doc#, so the baseline can no longer be trusted.
+            InvalidateLastDocBaseline("unspecified protocol receipt");
             var content = EpsonCommandFactory.PerformUnspecifiedProtocolReceipt(request.ReceiptRequest);
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
@@ -574,6 +653,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
 
             var date = DateTime.Parse(referenceDateTime);
+            // The reprint emits a documento gestionale of its own; the baseline taken before it no longer
+            // describes the printer.
+            InvalidateLastDocBaseline("reprint");
             var response = await PerformReprint(date.ToString("dd"), date.ToString("MM"), date.ToString("yy"), long.Parse(referenceDocNumber));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             result = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(responseContent);
@@ -663,6 +745,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
 
         var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumberString), long.Parse(referenceZNumberString), referenceDateTime, referenceSerialnumber);
+        // A refund emits a fiscal document too. Drop the baseline before sending and set it again from the
+        // response: leaving the old value in place would credit the refund's Doc# to the next failing receipt.
+        InvalidateLastDocBaseline("refund");
         try
         {
             var data = SoapSerializer.Serialize(content);
@@ -700,6 +785,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTReferenceDocMoment = referenceDateTime
             };
             request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            _lastDoc.Value = new DocPosition(fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
                 request.ReceiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
@@ -740,6 +826,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             _ = await GetRTInfoAsync();
         }
         var content = EpsonCommandFactory.CreateVoidRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr);
+        // Same as the refund: a void emits its own fiscal document and moves the counter.
+        InvalidateLastDocBaseline("void");
         try
         {
             var data = SoapSerializer.Serialize(content);
@@ -774,6 +862,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
             };
             request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            _lastDoc.Value = new DocPosition(fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.ReceiptNumber);
 
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
@@ -818,6 +907,14 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptResponse receiptResponse)
     {
+        // A Z report moves the printer to a new Z and restarts the document counter, so the baseline taken
+        // during the closed day would compare against a different numbering. The response does carry a
+        // zRepNumber, but whether it names the day just closed or the one just opened cannot be established
+        // from the protocol documentation available here — and reading it as the closed day would make the
+        // first receipt of the new day look "advanced" and recover a document that is not its own. Dropping
+        // the baseline costs one extra status read on the next receipt and is right either way.
+        InvalidateLastDocBaseline("daily closing");
+
         try
         {
             var fiscalReport = new FiscalReport
