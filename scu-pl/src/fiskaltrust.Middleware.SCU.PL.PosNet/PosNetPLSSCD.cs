@@ -1,9 +1,11 @@
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.SCU.PL.Abstraction;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
@@ -86,12 +88,21 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
     private async Task ExecuteSaleAsync(ReceiptRequest request, ReceiptResponse response)
     {
+        // Both validations run before any frame is sent: a rejected IDZ or an unmappable sale must
+        // not leave anything on the device.
+        var eReceiptCustomerId = PosNetReceiptMapper.GetEReceiptCustomerId(request);
         var commands = PosNetReceiptMapper.MapSale(request, _ptuSlotResolver);
 
         // The numer unikatowy is a legal element of the fiscal document, so the response carries
         // it like the InMemory SCU does. Reading it before trinit keeps the order safe: a register
         // that cannot answer its status has not been asked to open a transaction either.
         await EnrichWithDeviceIdentityAsync(response);
+
+        // The e-paragon binding goes out strictly before trinit: eparagonidznext binds the *next*
+        // document, and a failed binding fails the sale while nothing has been printed yet. A
+        // confirmed error needs no cleanup (no transaction is open); an ambiguous outcome
+        // propagates without retry like every other command.
+        var eDocumentId = eReceiptCustomerId is null ? (uint?)null : await BindEReceiptAsync(eReceiptCustomerId);
 
         var executed = 0;
         try
@@ -115,6 +126,69 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
 
         await TryReadFiscalDocumentNumberAsync(response);
+
+        if (eDocumentId is { } documentId)
+        {
+            response.EnrichWithEDocumentId(documentId);
+            await TryReadEDocumentDeliveryStateAsync(response, documentId);
+        }
+    }
+
+    /// <summary>
+    /// Binds the next document to the e-receipt customer identifier (IDZ) and returns the unique
+    /// eDokument id (<c>ha</c>) the register assigned. Runs before trinit, so any failure here
+    /// fails the sale with certainty that nothing was printed.
+    /// </summary>
+    private async Task<uint> BindEReceiptAsync(string eReceiptCustomerId)
+    {
+        PosNetResponse binding;
+        try
+        {
+            binding = await _client.ExecuteAsync(PosNetCommands.EparagonIdzNext(eReceiptCustomerId));
+        }
+        catch (PLDeviceErrorException exception) when (exception.ErrorCode == 2034)
+        {
+            // ERR_NO_FISC_MODE: eDokument commands only work on a fiscalized register (training
+            // mode does not unlock them). The sale fails here, before anything is printed.
+            throw new PLDeviceErrorException(exception.ErrorCode,
+                "The POSNET printer rejected the e-receipt binding (eparagonidznext) with error 2034 (ERR_NO_FISC_MODE): the device is not fiscalized, so eDokument emission is unavailable. Nothing was printed.");
+        }
+
+        if (!binding.Parameters.TryGetValue("ha", out var handle) || !uint.TryParse(handle, NumberStyles.None, CultureInfo.InvariantCulture, out var eDocumentId))
+        {
+            // A confirmation without the promised ha leaves the binding unusable — failing now is
+            // safe (nothing printed) while continuing would emit an eDokument nobody can track.
+            throw new PLSSCDException("The POSNET printer confirmed the e-receipt binding (eparagonidznext) but did not return the eDokument id (ha). Nothing was printed.");
+        }
+        return eDocumentId;
+    }
+
+    /// <summary>
+    /// Best-effort readback of the eDokument buffer record, mirroring the scnt pattern: the
+    /// document is already closed on the register, so a failing readback must not fail the
+    /// receipt. The record says whether the document went electronic (pr = N, no paper) and how
+    /// far the delivery to the hub has come (st).
+    /// </summary>
+    private async Task TryReadEDocumentDeliveryStateAsync(ReceiptResponse response, uint eDocumentId)
+    {
+        try
+        {
+            var record = await _client.ExecuteAsync(PosNetCommands.EparagonBufferGet(eDocumentId));
+            var form = record.Parameters.TryGetValue("pr", out var printed) ? printed.Trim().ToUpperInvariant() switch
+            {
+                "N" or "0" => "electronic",
+                "T" or "1" => "printed",
+                _ => "unknown",
+            } : "unknown";
+            var deliveryState = record.Parameters.TryGetValue("st", out var status) && status.Trim().Length > 0
+                ? $"{form} (st{status.Trim()})"
+                : form;
+            response.AddSignatureItem(SignatureTypePL.EDocumentDeliveryState, "Status eDokumentu", deliveryState);
+        }
+        catch (PLSSCDException)
+        {
+            // eparagonbufferget is read-only — swallowing an ambiguous or failed readback is safe.
+        }
     }
 
     /// <summary>

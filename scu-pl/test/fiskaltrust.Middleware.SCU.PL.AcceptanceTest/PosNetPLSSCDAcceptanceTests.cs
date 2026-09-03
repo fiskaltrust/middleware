@@ -155,6 +155,54 @@ public class PosNetPLSSCDAcceptanceTests
         target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment");
     }
 
+    /// <summary>
+    /// The e-paragon flow (middleware#764): the IDZ from cbCustomer is bound with eparagonidznext
+    /// strictly before trinit, and the response carries the eDokument id plus the best-effort
+    /// delivery state. Emulator-only: eDokument needs a fiscalized, e-paragon-configured device.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task EReceiptSale_BindsTheIdzBeforeTheTransaction_AndReturnsTheEDocumentId()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.NextEDocumentId = 7777);
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale("KID0123456789ABC"));
+
+        target.SentMnemonics.Should().Equal("scomm", "eparagonidznext", "trinit", "trline", "trpayment", "trend", "scnt", "eparagonbufferget");
+        var binding = target.SentCommands.Single(c => c.CommandId == "eparagonidznext");
+        binding.Parameters.Should().Contain(new KeyValuePair<string, string>("id", "KID0123456789ABC"));
+        var readback = target.SentCommands.Single(c => c.CommandId == "eparagonbufferget");
+        readback.Parameters.Should().Contain(new KeyValuePair<string, string>("hd", "7777"));
+        NoTransactionShouldBeOpen(target);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Identyfikator eDokumentu" && s.Data == "7777");
+        // The emulator's buffer record is prN st1 — an electronic document, no paper produced.
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Status eDokumentu" && s.Data == "electronic (st1)");
+    }
+
+    [EmulatorOnlyFact]
+    public async Task EReceiptSale_OnANonFiscalizedDevice_FailsBeforeAnythingIsPrinted()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("eparagonidznext", 2034));
+
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale());
+
+        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2034);
+        // The rejected binding is the last frame on the wire: no trinit, no line, no cancel —
+        // nothing was sent to the device for this receipt after the failed bind.
+        target.SentMnemonics.Should().Equal("scomm", "eparagonidznext");
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
+    public async Task SaleWithoutEReceiptCustomerId_NeverTouchesTheEParagonCommands()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Identyfikator eDokumentu" || s.Caption == "Status eDokumentu");
+    }
+
     [EmulatorOnlyFact]
     public async Task UnreachablePrinter_FailsAsDeviceUnreachable()
     {

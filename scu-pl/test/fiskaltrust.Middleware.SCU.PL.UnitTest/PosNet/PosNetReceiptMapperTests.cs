@@ -1,3 +1,5 @@
+using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
@@ -62,4 +64,65 @@ public class PosNetReceiptMapperTests
 
     private static string Render(PosNetCommand command, string parameter)
         => command.Parameters.Single(p => p.Key == parameter).Value;
+
+    // --- eReceiptCustomerId (IDZ) parsing from cbCustomer (middleware#764) ---
+
+    private static ReceiptRequest RequestWithCustomer(object? cbCustomer) => new() { cbCustomer = cbCustomer };
+
+    /// <summary>A well-formed cbCustomer whose identifier survives JSON escaping (tabs, non-ASCII).</summary>
+    private static ReceiptRequest RequestWithEReceiptCustomerId(string customerId)
+        => RequestWithCustomer(JsonSerializer.Serialize(new Dictionary<string, string> { ["eReceiptCustomerId"] = customerId }));
+
+    [Fact]
+    public void AnEReceiptCustomerId_IsReadFromCbCustomer_CaseInsensitively()
+    {
+        var request = RequestWithCustomer("""{"CustomerName": "Jan", "ERECEIPTCUSTOMERID": "KID0123456789ABC"}""");
+
+        PosNetReceiptMapper.GetEReceiptCustomerId(request).Should().Be("KID0123456789ABC");
+    }
+
+    [Theory]
+    [InlineData(null)]                                        // no customer at all
+    [InlineData("")]                                          // empty payload
+    [InlineData("""{"CustomerVATId": "1234563218"}""")]       // customer without the key
+    [InlineData("""{"eReceiptCustomerId": ""}""")]            // present but empty
+    [InlineData("""{"eReceiptCustomerId": "   "}""")]         // present but blank
+    [InlineData("""{"eReceiptCustomerId": 42}""")]            // not a string
+    [InlineData("""{"eReceiptCustomerId": "KID""")]           // malformed JSON
+    [InlineData("not json at all")]                           // malformed JSON
+    public void ACbCustomerWithoutAUsableEReceiptCustomerId_MeansNoBinding(string? cbCustomer)
+    {
+        PosNetReceiptMapper.GetEReceiptCustomerId(RequestWithCustomer(cbCustomer)).Should().BeNull();
+    }
+
+    [Fact]
+    public void AnEReceiptCustomerIdAtTheIdzLimit_IsAccepted()
+    {
+        var request = RequestWithEReceiptCustomerId(new string('A', 128));
+
+        PosNetReceiptMapper.GetEReceiptCustomerId(request).Should().HaveLength(128);
+    }
+
+    [Fact]
+    public void AnEReceiptCustomerIdOverTheIdzLimit_IsRejected()
+    {
+        var request = RequestWithEReceiptCustomerId(new string('A', 129));
+
+        var act = () => PosNetReceiptMapper.GetEReceiptCustomerId(request);
+
+        act.Should().Throw<PLValidationException>().WithMessage("*129*128*");
+    }
+
+    [Theory]
+    [InlineData("KIDżółć")]       // non-ASCII letters
+    [InlineData("KID\u00A0123")]   // non-breaking space
+    [InlineData("KID\t123")]      // a control character would open a protocol field
+    public void ANonAsciiEReceiptCustomerId_IsRejected(string customerId)
+    {
+        var request = RequestWithEReceiptCustomerId(customerId);
+
+        var act = () => PosNetReceiptMapper.GetEReceiptCustomerId(request);
+
+        act.Should().Throw<PLValidationException>().WithMessage("*non-ASCII*");
+    }
 }

@@ -36,6 +36,13 @@ public static class PLReceiptResponseExtensions
         }
     }
 
+    /// <summary>
+    /// The unique eDokument id (<c>ha</c>) the register assigned when the document was bound to an
+    /// e-receipt customer identifier — the handle for any later buffer/delivery lookup.
+    /// </summary>
+    public static void EnrichWithEDocumentId(this ReceiptResponse response, uint eDocumentId)
+        => response.AddSignatureItem(SignatureTypePL.EDocumentId, "Identyfikator eDokumentu", eDocumentId.ToString(CultureInfo.InvariantCulture));
+
     public static void EnrichWithFiscalDocumentNumber(this ReceiptResponse response, long fiscalDocumentNumber)
     {
         var number = fiscalDocumentNumber.ToString(CultureInfo.InvariantCulture);
