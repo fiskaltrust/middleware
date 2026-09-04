@@ -192,6 +192,51 @@ public class PosNetPLSSCDAcceptanceTests
         NoTransactionShouldBeOpen(target);
     }
 
+    /// <summary>
+    /// A confirmed binding without the promised ha is armed on the device but untrackable —
+    /// the SCU must clear it (eparagonidzcancel) before failing, or the next plain sale would
+    /// inherit this customer's IDZ and deliver their e-receipt to the wrong recipient.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task EReceiptSale_WhenTheBindingConfirmsWithoutTheHandle_CancelsTheBindingBeforeFailing()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.OmittingEDocumentIdOnBind());
+
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale());
+
+        await act.Should().ThrowAsync<PLSSCDException>();
+        // The armed binding is cleared and nothing is printed: no trinit ever goes out.
+        target.SentMnemonics.Should().Equal("scomm", "eparagonidznext", "eparagonidzcancel");
+        NoTransactionShouldBeOpen(target);
+    }
+
+    /// <summary>
+    /// The SCU is a singleton and the client lock only makes single commands atomic — the device
+    /// lock must serialize whole sequences, or a concurrent plain sale could slip its trinit
+    /// between another sale's eparagonidznext and trinit and consume that customer's binding
+    /// (middleware#766 review).
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task ConcurrentSales_NeverInterleaveOnTheWire_SoTheBindingStaysWithItsSale()
+    {
+        using var target = PosNetTestTarget.Open();
+
+        await Task.WhenAll(
+            target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale("KIDCONCURRENT01")),
+            target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale()));
+
+        var mnemonics = target.SentMnemonics.ToList();
+        var bind = mnemonics.IndexOf("eparagonidznext");
+        bind.Should().BeGreaterThanOrEqualTo(0);
+        // The bound sale's transaction opens immediately after its binding …
+        mnemonics[bind + 1].Should().Be("trinit");
+        // … and exactly one transaction runs between the binding and its trend: the plain sale's
+        // trinit never slips into the bound sequence.
+        var trendAfterBind = mnemonics.IndexOf("trend", bind);
+        mnemonics.Skip(bind).Take(trendAfterBind - bind).Count(m => m == "trinit").Should().Be(1);
+        NoTransactionShouldBeOpen(target);
+    }
+
     [Fact]
     public async Task SaleWithoutEReceiptCustomerId_NeverTouchesTheEParagonCommands()
     {

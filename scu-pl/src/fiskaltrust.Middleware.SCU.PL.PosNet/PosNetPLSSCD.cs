@@ -30,6 +30,14 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     private readonly PosNetConfiguration _configuration;
 
     /// <summary>
+    /// Serializes complete device sequences. The client's own lock only makes single commands
+    /// atomic — a sale is bind → trinit … trend (+ readbacks), and the SCU is a singleton, so
+    /// without this lock a concurrent plain sale could slip its trinit between another sale's
+    /// eparagonidznext and trinit and consume that customer's e-receipt binding.
+    /// </summary>
+    private readonly System.Threading.SemaphoreSlim _deviceLock = new(1, 1);
+
+    /// <summary>
     /// The register identity, read once per SCU instance. The numer unikatowy is assigned to a
     /// device for its lifetime, so re-reading it before every receipt would only add a round trip.
     /// </summary>
@@ -66,13 +74,29 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         if (IsFiscalReceiptCase(receiptCase))
         {
-            await ExecuteSaleAsync(request.ReceiptRequest, response);
+            await _deviceLock.WaitAsync();
+            try
+            {
+                await ExecuteSaleAsync(request.ReceiptRequest, response);
+            }
+            finally
+            {
+                _deviceLock.Release();
+            }
         }
         else if (receiptCase.IsCase(ReceiptCase.ZeroReceipt0x2000))
         {
             // The zero receipt is the operator's connectivity/state probe: one status read must
             // succeed. The printer state itself is returned via GetInfoAsync.
-            await _client.ExecuteAsync(PosNetCommands.Scomm());
+            await _deviceLock.WaitAsync();
+            try
+            {
+                await _client.ExecuteAsync(PosNetCommands.Scomm());
+            }
+            finally
+            {
+                _deviceLock.Release();
+            }
         }
         else if (receiptCase.IsCase(ReceiptCase.DailyClosing0x2011)
             || receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012)
@@ -156,11 +180,29 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         if (!binding.Parameters.TryGetValue("ha", out var handle) || !uint.TryParse(handle, NumberStyles.None, CultureInfo.InvariantCulture, out var eDocumentId))
         {
-            // A confirmation without the promised ha leaves the binding unusable — failing now is
-            // safe (nothing printed) while continuing would emit an eDokument nobody can track.
-            throw new PLSSCDException("The POSNET printer confirmed the e-receipt binding (eparagonidznext) but did not return the eDokument id (ha). Nothing was printed.");
+            // The register confirmed the binding, so it is armed for the *next* document even
+            // though the promised ha is missing — without cleanup, a later plain sale would
+            // inherit this customer's IDZ and deliver their e-receipt to the wrong recipient.
+            // Clear the binding first, then fail the sale (still nothing printed).
+            await CancelEReceiptBindingAsync();
+            throw new PLSSCDException("The POSNET printer confirmed the e-receipt binding (eparagonidznext) but did not return the eDokument id (ha). The binding was cancelled and nothing was printed.");
         }
         return eDocumentId;
+    }
+
+    private async Task CancelEReceiptBindingAsync()
+    {
+        try
+        {
+            await _client.ExecuteAsync(PosNetCommands.EparagonIdzCancel());
+        }
+        catch (PLDeviceErrorException)
+        {
+            // A confirmed rejection (e.g. nothing pending) leaves the device in a known state —
+            // the missing-ha error stays the reported failure. Ambiguous or unreachable outcomes
+            // propagate instead: whether a binding is still armed is then unknown and the
+            // operator has to verify before the next sale.
+        }
     }
 
     /// <summary>
@@ -277,5 +319,9 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 || receiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001)
                 || receiptCase.IsCase(ReceiptCase.ECommerce0x0004));
 
-    public void Dispose() => _client.Dispose();
+    public void Dispose()
+    {
+        _client.Dispose();
+        _deviceLock.Dispose();
+    }
 }

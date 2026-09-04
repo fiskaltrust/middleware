@@ -93,6 +93,9 @@ public static class PosNetCommands
     /// <summary>Reads one eDokument buffer record by its unique id (the <c>ha</c> from the binding).</summary>
     public static PosNetCommand EparagonBufferGet(uint eDocumentId) => new("eparagonbufferget", [new("hd", eDocumentId.ToString(CultureInfo.InvariantCulture))]);
 
+    /// <summary>Clears a pending eDokument binding armed by <c>eparagonidznext</c> (spec p. 253).</summary>
+    public static PosNetCommand EparagonIdzCancel() => new("eparagonidzcancel");
+
     public static PosNetCommand Scomm() => new("scomm");
 
     public static PosNetCommand Scnt() => new("scnt");
