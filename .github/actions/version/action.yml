@@ -1,0 +1,27 @@
+name: "Version"
+inputs:
+  path:
+    required: true
+  project:
+    required: true
+
+outputs:
+  version:
+    description: "The version of the package"
+    value: ${{ steps.get-version.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Nerdbank.GitVersioning
+      run: dotnet tool install -g nbgv
+      shell: pwsh
+
+    - name: Get Version
+      id: get-version
+      shell: pwsh
+      run: |
+        $projectDirectory = "${{ inputs.path }}/${{ inputs.project }}"
+        $version = nbgv get-version --variable NuGetPackageVersion --project $projectDirectory
+        Write-Host "Version: $version"
+        echo "version=$version" >> $env:GITHUB_OUTPUT
