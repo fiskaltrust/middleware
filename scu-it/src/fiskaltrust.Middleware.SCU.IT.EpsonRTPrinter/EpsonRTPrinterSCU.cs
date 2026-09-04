@@ -431,34 +431,96 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         _lastDoc.Value = null;
     }
 
+    private enum PrinterVerdict
+    {
+        /// <summary>The printer answered and its counter had moved: the document is on paper.</summary>
+        Printed,
+
+        /// <summary>The printer answered and its counter had not moved: nothing was emitted.</summary>
+        NotPrinted,
+
+        /// <summary>The printer never answered within the window. Nothing can be concluded.</summary>
+        Unknown
+    }
+
+    /// <summary>
+    /// Asks the printer what it did, repeatedly, until it answers or the window closes.
+    /// <para>
+    /// The single rule that makes this safe: a verdict is drawn only from an answer, never from silence. A
+    /// printer serves one command at a time, so it cannot reply to a status query while it is emitting a
+    /// document — an answer therefore means the operation is over and its counter is a settled fact. Silence,
+    /// on the other hand, is indistinguishable between "still printing" and "gone", which is why it ends in
+    /// <see cref="PrinterVerdict.Unknown"/> and never in a reprint.
+    /// </para>
+    /// <para>
+    /// This is also what decouples the answer from the wait: the caller no longer has to sit through the full
+    /// command timeout before learning what happened, so the recovery can conclude while whoever asked for the
+    /// receipt is still listening.
+    /// </para>
+    /// </summary>
+    private async Task<(PrinterVerdict Verdict, LastEmittedDocStatus? Doc)> AwaitPrinterVerdictAsync(string receiptReference, DocPosition baseline)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(_configuration.RecoveryVerdictTimeoutMs);
+        var attempt = 0;
+
+        while (true)
+        {
+            attempt++;
+            var doc = await ReadLastEmittedDocStatusAsync(receiptReference);
+            if (IsComparable(doc))
+            {
+                if (IsDocAdvanced(doc, baseline))
+                {
+                    _logger.LogInformation("({receiptreference}) Printer answered on attempt {attempt}: Z#{z} Doc#{doc} — it did emit the document.",
+                        receiptReference, attempt, doc!.ZNumber, doc.DocNumber);
+                    return (PrinterVerdict.Printed, doc);
+                }
+
+                _logger.LogInformation("({receiptreference}) Printer answered on attempt {attempt}: still at Z#{z} Doc#{doc} — nothing was emitted.",
+                    receiptReference, attempt, doc!.ZNumber, doc.DocNumber);
+                return (PrinterVerdict.NotPrinted, doc);
+            }
+
+            if (DateTime.UtcNow >= deadline)
+            {
+                _logger.LogError("({receiptreference}) Printer did not answer within {timeout}ms ({attempts} attempts) — state unknown.",
+                    receiptReference, _configuration.RecoveryVerdictTimeoutMs, attempt);
+                return (PrinterVerdict.Unknown, null);
+            }
+
+            _logger.LogWarning("({receiptreference}) Printer did not answer on attempt {attempt} — asking again.", receiptReference, attempt);
+            await Task.Delay(_configuration.RecoveryVerdictPollIntervalMs);
+        }
+    }
+
     private async Task<ReceiptResponse> TryRecoverFromNetworkErrorAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string xmlData)
     {
-        _logger.LogInformation("({receiptreference}) Querying last emitted document from printer...", receiptRequest.cbReceiptReference);
-        var docBeforeRetry = await ReadLastEmittedDocStatusAsync(receiptRequest.cbReceiptReference);
         var baseline = _lastDoc.Value;
-        _logger.LogDebug("({receiptreference}) Last emitted doc: Z#{z} Doc#{doc} amount={amount}cents, baseline: Z#{bz} Doc#{bd}",
-            receiptRequest.cbReceiptReference, docBeforeRetry?.ZNumber, docBeforeRetry?.DocNumber, docBeforeRetry?.TotalDocAmountCents, baseline?.ZNumber, baseline?.DocNumber);
-
-        if (baseline == null || !IsComparable(docBeforeRetry))
+        if (baseline == null)
         {
-            // Either end of the comparison is missing, so the printer state is unknown: the document may or
-            // may not have been printed. Retrying would risk a second fiscal document for the same sale, so
-            // report the error instead. Note that a failed status read is *not* the same as "no progress" —
-            // conflating the two is what would turn a lost answer into a duplicate.
-            _logger.LogError("({receiptreference}) Printer state unknown ({missing}) — refusing to reprint.",
-                receiptRequest.cbReceiptReference, baseline == null ? "no baseline" : "last emitted document unreadable");
+            // Nothing to compare the printer's counter against, so its state cannot be established and
+            // sending the receipt again would be a coin flip on a fiscal document.
+            _logger.LogError("({receiptreference}) No recovery baseline available — refusing to reprint.", receiptRequest.cbReceiptReference);
             receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
             return receiptResponse;
         }
 
-        if (IsDocAdvanced(docBeforeRetry, baseline))
-        {
-            _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.",
-                receiptRequest.cbReceiptReference, docBeforeRetry!.ZNumber, docBeforeRetry.DocNumber);
-            return ApplyRecoveredDoc(receiptResponse, docBeforeRetry, GetLotteryCode(receiptRequest));
-        }
+        _logger.LogInformation("({receiptreference}) Asking the printer what it did (baseline Z#{z} Doc#{doc})...",
+            receiptRequest.cbReceiptReference, baseline.ZNumber, baseline.DocNumber);
+        var (verdict, doc) = await AwaitPrinterVerdictAsync(receiptRequest.cbReceiptReference, baseline);
 
-        return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, baseline);
+        switch (verdict)
+        {
+            case PrinterVerdict.Printed:
+                return ApplyRecoveredDoc(receiptResponse, doc!, receiptRequest);
+
+            case PrinterVerdict.NotPrinted:
+                return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, baseline);
+
+            default:
+                receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
+                return receiptResponse;
+        }
     }
 
     /// <param name="baseline">
@@ -490,7 +552,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                         RTDocMoment = retryFiscalResponse.ReceiptDateTime,
                         RTDocType = "POSRECEIPT",
                         RTCodiceLotteria = GetLotteryCode(receiptRequest),
-                        RTCustomerID = "",
+                        RTCustomerID = GetCustomerTaxId(receiptRequest),
                     }).ToArray();
                     return receiptResponse;
                 }
@@ -501,20 +563,18 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             catch (Exception e) when (e is TaskCanceledException || e is HttpRequestException)
             {
-                _logger.LogWarning("({receiptreference}) Network error on retry attempt {attempt}/{max} — checking if printer has printed...", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
-                var lastDoc = await ReadLastEmittedDocStatusAsync(receiptRequest.cbReceiptReference);
-                _logger.LogDebug("({receiptreference}) Current: Z#{z} Doc#{doc}, baseline: Z#{bz} Doc#{bd}", receiptRequest.cbReceiptReference, lastDoc?.ZNumber, lastDoc?.DocNumber, baseline.ZNumber, baseline.DocNumber);
+                _logger.LogWarning("({receiptreference}) Network error on retry attempt {attempt}/{max} — asking the printer what it did...", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
+                var (verdict, lastDoc) = await AwaitPrinterVerdictAsync(receiptRequest.cbReceiptReference, baseline);
 
-                if (IsDocAdvanced(lastDoc, baseline))
+                if (verdict == PrinterVerdict.Printed)
                 {
-                    _logger.LogInformation("({receiptreference}) Document found: Z#{zNum} Doc#{docNum} — printer already printed, skipping retry.", receiptRequest.cbReceiptReference, lastDoc!.ZNumber, lastDoc.DocNumber);
-                    return ApplyRecoveredDoc(receiptResponse, lastDoc, GetLotteryCode(receiptRequest));
+                    return ApplyRecoveredDoc(receiptResponse, lastDoc!, receiptRequest);
                 }
 
-                if (!IsComparable(lastDoc))
+                if (verdict == PrinterVerdict.Unknown)
                 {
-                    // The attempt we just made may have printed and we can no longer check. Another attempt
-                    // would be a coin flip on a fiscal document, so stop here.
+                    // The attempt we just made may have printed and the printer will not tell us. Another
+                    // attempt would be a coin flip on a fiscal document, so stop here.
                     _logger.LogError("({receiptreference}) Printer state unknown after attempt {attempt}/{max} — refusing to send the receipt again.", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
                     receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
                     return receiptResponse;
@@ -546,7 +606,12 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
              (doc.ZNumber == baseline.ZNumber && doc.DocNumber > baseline.DocNumber));
     }
 
-    private ReceiptResponse ApplyRecoveredDoc(ReceiptResponse receiptResponse, LastEmittedDocStatus doc, string lotteryCode)
+    /// <summary>
+    /// Signs the receipt with the document the printer reports, rather than with one we printed ourselves.
+    /// The lottery code and the customer tax identifier come from the request, exactly as on the happy path:
+    /// they describe what was sent to the printer, and the document on paper carries them.
+    /// </summary>
+    private ReceiptResponse ApplyRecoveredDoc(ReceiptResponse receiptResponse, LastEmittedDocStatus doc, ReceiptRequest receiptRequest)
     {
         receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
         {
@@ -555,8 +620,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             RTDocNumber = doc.DocNumber,
             RTDocMoment = doc.DocumentDateTime,
             RTDocType = "POSRECEIPT",
-            RTCodiceLotteria = lotteryCode,
-            RTCustomerID = "",
+            RTCodiceLotteria = GetLotteryCode(receiptRequest),
+            RTCustomerID = GetCustomerTaxId(receiptRequest),
         }).ToArray();
         _lastDoc.Value = new DocPosition(doc.ZNumber, doc.DocNumber);
         return receiptResponse;
