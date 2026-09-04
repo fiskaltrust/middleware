@@ -51,6 +51,14 @@ public static class PLReceiptExamples
         return request;
     }
 
+    /// <summary>An e-paragon sale: the e-receipt customer identifier (IDZ) travels in cbCustomer.</summary>
+    public static ProcessRequest EReceiptSale(string eReceiptCustomerId = "KID0123456789ABC")
+    {
+        var request = CashSale();
+        request.ReceiptRequest.cbCustomer = $$"""{"eReceiptCustomerId": "{{eReceiptCustomerId}}"}""";
+        return request;
+    }
+
     public static ProcessRequest ZeroReceipt() => Wrap(new ReceiptRequest
     {
         ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000,

@@ -11,6 +11,11 @@ public enum SignatureTypePL : long
     ZReportNumber = 0x504C_2000_0000_0104,
     EReceiptReference = 0x504C_2000_0000_0105,
     StoredNotFiscalized = 0x504C_2000_0000_0106,
+    // 0107/0108: e-paragon (eDokument) enrichment from the register (middleware#764) — the unique
+    // eDokument id (ha) the document was bound to, and the best-effort delivery state read back
+    // from the eDokument buffer (eparagonbufferget: pr = printed flag, st = delivery status).
+    EDocumentId = 0x504C_2000_0000_0107,
+    EDocumentDeliveryState = 0x504C_2000_0000_0108,
 }
 
 public static class SignatureTypePLExt

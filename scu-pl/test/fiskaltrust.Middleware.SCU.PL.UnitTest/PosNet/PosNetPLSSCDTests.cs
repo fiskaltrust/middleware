@@ -207,6 +207,120 @@ public class PosNetPLSSCDTests
         transport.SentMnemonics.Should().BeEmpty();
     }
 
+    private static ProcessRequest CreateEReceiptSaleRequest(string eReceiptCustomerId = "KID0123456789ABC")
+    {
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.cbCustomer = $$"""{"eReceiptCustomerId": "{{eReceiptCustomerId}}"}""";
+        return request;
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_EReceiptSale_BindsTheIdzStrictlyBeforeTrinit()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        transport.SentMnemonics.Should().Equal("scomm", "eparagonidznext", "trinit", "trline", "trpayment", "trend", "scnt", "eparagonbufferget");
+        transport.SentPayloads.Single(p => p.StartsWith("eparagonidznext")).Should().Contain("idKID0123456789ABC");
+        transport.SentPayloads.Single(p => p.StartsWith("eparagonbufferget")).Should().Contain("hd3054");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_EReceiptSale_EnrichesTheResponseWithTheEDocumentIdAndDeliveryState()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Identyfikator eDokumentu" && s.Data == "3054");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Status eDokumentu" && s.Data == "electronic (st1)");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_EReceiptBindingRejectedWith2034_FailsBeforeAnythingIsSentForTheReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailWithDeviceError("eparagonidznext", 2034);
+        var sut = CreateSut(transport);
+
+        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        // ERR_NO_FISC_MODE gets the explaining message, and the rejected binding is the last frame
+        // on the wire: no trinit was sent, so there is no transaction to cancel and no paper.
+        var thrown = await act.Should().ThrowAsync<PLDeviceErrorException>();
+        thrown.Which.ErrorCode.Should().Be(2034);
+        thrown.Which.Message.Should().Contain("not fiscalized").And.Contain("eDokument");
+        transport.SentMnemonics.Should().Equal("scomm", "eparagonidznext");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_EReceiptBindingRejected_SurfacesTheDeviceErrorWithoutCancel()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailWithDeviceError("eparagonidznext", 2004);
+        var sut = CreateSut(transport);
+
+        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2004);
+        transport.SentMnemonics.Should().Equal("scomm", "eparagonidznext");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_AmbiguousEReceiptBinding_IsNeverRetriedAndSendsNothingFurther()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailAmbiguously("eparagonidznext");
+        var sut = CreateSut(transport);
+
+        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
+        transport.SentMnemonics.Should().Equal("scomm", "eparagonidznext");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_FailedEDocumentStatusReadback_DoesNotFailTheReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailWithDeviceError("eparagonbufferget", 2035);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        // The document is closed on the register when the buffer is read — like the scnt readback,
+        // a failure leaves the delivery state absent but keeps the eDokument id and the receipt.
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Identyfikator eDokumentu" && s.Data == "3054");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Status eDokumentu");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_OverlongEReceiptCustomerId_FailsBeforeAnyFrameIsSent()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest(new string('A', 129)));
+
+        await act.Should().ThrowAsync<PLValidationException>();
+        transport.SentMnemonics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_SaleWithoutEReceiptCustomerId_NeverTouchesTheEParagonCommands()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Identyfikator eDokumentu" || s.Caption == "Status eDokumentu");
+    }
+
     [Fact]
     public async Task GetInfoAsync_MapsTheFiscalModeFromScomm()
     {
@@ -376,6 +490,10 @@ public class PosNetPLSSCDTests
                 // The T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them.
                 "scomm" => _scommResponse,
                 "scnt" => "scnt\trd12\tbn85\tbt85\tfn3\t",
+                // The e-paragon binding confirms with the unique eDokument id; the buffer record
+                // reports an electronic document (prN = no paper) that reached the hub (st1).
+                "eparagonidznext" => "eparagonidznext\tha3054\t",
+                "eparagonbufferget" => "eparagonbufferget\thd3054\tprN\tst1\t",
                 _ => $"{mnemonic}\t",
             };
             return Task.FromResult(PosNetProtocolTests.EncodeResponse(responsePayload));

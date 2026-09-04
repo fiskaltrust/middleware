@@ -82,6 +82,20 @@ public static class PosNetCommands
     /// <summary>Prints the buyer's NIP with the receipt footer (paragon z NIP); valid inside an open receipt.</summary>
     public static PosNetCommand Trnipset(string buyerNip) => new("trnipset", [new("ni", buyerNip)]);
 
+    /// <summary>
+    /// Binds the <em>next</em> fiscal document to an e-receipt customer identifier (IDZ) — the
+    /// printer then emits it as an eDokument (paperless when delivery is confirmed) instead of a
+    /// plain paper receipt. Valid only on a fiscalized device (?2034 otherwise); the confirmation
+    /// carries <c>ha</c>, the unique eDokument id.
+    /// </summary>
+    public static PosNetCommand EparagonIdzNext(string customerId) => new("eparagonidznext", [new("id", customerId)]);
+
+    /// <summary>Reads one eDokument buffer record by its unique id (the <c>ha</c> from the binding).</summary>
+    public static PosNetCommand EparagonBufferGet(uint eDocumentId) => new("eparagonbufferget", [new("hd", eDocumentId.ToString(CultureInfo.InvariantCulture))]);
+
+    /// <summary>Clears a pending eDokument binding armed by <c>eparagonidznext</c> (spec p. 253).</summary>
+    public static PosNetCommand EparagonIdzCancel() => new("eparagonidzcancel");
+
     public static PosNetCommand Scomm() => new("scomm");
 
     public static PosNetCommand Scnt() => new("scnt");

@@ -27,6 +27,13 @@ public sealed class PosNetPrinterEmulator : IDisposable
     private Task? _serveLoop;
     private bool _transactionOpen;
     private int _completedReceipts = 84;
+    private string? _eDocumentBufferRecord;
+
+    /// <summary>
+    /// The unique eDokument id (<c>ha</c>) the model assigns to the next eparagonidznext binding —
+    /// configurable so a test can assert the value all the way through to the ReceiptResponse.
+    /// </summary>
+    public uint NextEDocumentId { get; set; } = 3054;
 
     public PosNetPrinterEmulator() { }
 
@@ -68,6 +75,29 @@ public sealed class PosNetPrinterEmulator : IDisposable
         _swallowOn[mnemonic] = 1;
         return this;
     }
+
+    /// <summary>
+    /// Scripts the eDokument buffer record eparagonbufferget answers with (the parameters after the
+    /// mnemonic, e.g. <c>"hd3054\tprN\tst1\t"</c>) — real delivery states can only be scripted, the
+    /// model has no hub to deliver to.
+    /// </summary>
+    public PosNetPrinterEmulator WithEDocumentBufferRecord(string parameters)
+    {
+        _eDocumentBufferRecord = parameters;
+        return this;
+    }
+
+    /// <summary>
+    /// Confirms eparagonidznext WITHOUT the promised <c>ha</c> — the degenerate answer behind
+    /// middleware#766's cleanup path: the binding is armed on the device but untrackable.
+    /// </summary>
+    public PosNetPrinterEmulator OmittingEDocumentIdOnBind()
+    {
+        _omitEDocumentIdOnBind = true;
+        return this;
+    }
+
+    private bool _omitEDocumentIdOnBind;
 
     public PosNetPrinterEmulator Start()
     {
@@ -232,6 +262,14 @@ public sealed class PosNetPrinterEmulator : IDisposable
         "prncancel" => _transactionOpen
             ? Confirm(mnemonic, open: false)
             : PosNetPayload.ToFrame($"prncancel\t?381\t"),
+        // The e-paragon binding answers with the unique eDokument id (ha); the buffer readback
+        // answers a scripted record, defaulting to a delivered electronic document (prN = no
+        // paper). The model is fiscalized (fsT above), so the binding succeeds unless a test
+        // scripts ?2034 explicitly.
+        "eparagonidznext" => _omitEDocumentIdOnBind
+            ? PosNetPayload.ToFrame("eparagonidznext\t")
+            : PosNetPayload.ToFrame($"eparagonidznext\tha{NextEDocumentId}\t"),
+        "eparagonbufferget" => PosNetPayload.ToFrame($"eparagonbufferget\t{_eDocumentBufferRecord ?? $"hd{NextEDocumentId}\tprN\tst1\t"}"),
         _ => PosNetPayload.ToFrame($"{mnemonic}\t"),
     };
 
