@@ -28,6 +28,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public bool CloseOpenTSETransactionsOnDailyClosing { get; set; } = false;
 
+        public bool RegisterClient { get; set; } = false;
+
         public static QueueDEConfiguration FromMiddlewareConfiguration(ILogger<QueueDEConfiguration> logger, MiddlewareConfiguration middlewareConfiguration)
         {
             var configuration = JsonConvert.DeserializeObject<QueueDEConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
