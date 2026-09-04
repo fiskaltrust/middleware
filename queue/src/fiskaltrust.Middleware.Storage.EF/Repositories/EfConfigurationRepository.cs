@@ -81,6 +81,10 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public Task<IEnumerable<ftQueueGR>> GetQueueGRListAsync() => throw new NotImplementedException();
         public Task InsertOrUpdateQueueGRAsync(ftQueueGR queueGR) => throw new NotImplementedException();
 
+        public Task<ftQueuePL> GetQueuePLAsync(Guid id) => throw new NotImplementedException();
+        public Task<IEnumerable<ftQueuePL>> GetQueuePLListAsync() => throw new NotImplementedException();
+        public Task InsertOrUpdateQueuePLAsync(ftQueuePL queuePL) => throw new NotImplementedException();
+
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitAT>> GetSignaturCreationUnitATListAsync() => await _signaturCreationUnitATRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitATAsync(ftSignaturCreationUnitAT scu) => await _signaturCreationUnitATRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
@@ -113,6 +117,10 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public Task<ftSignaturCreationUnitGR> GetSignaturCreationUnitGRAsync(Guid id) => throw new NotImplementedException();
         public Task<IEnumerable<ftSignaturCreationUnitGR>> GetSignaturCreationUnitGRListAsync() => throw new NotImplementedException();
         public Task InsertOrUpdateSignaturCreationUnitGRAsync(ftSignaturCreationUnitGR scu) => throw new NotImplementedException();
+
+        public Task<ftSignaturCreationUnitPL> GetSignaturCreationUnitPLAsync(Guid id) => throw new NotImplementedException();
+        public Task<IEnumerable<ftSignaturCreationUnitPL>> GetSignaturCreationUnitPLListAsync() => throw new NotImplementedException();
+        public Task InsertOrUpdateSignaturCreationUnitPLAsync(ftSignaturCreationUnitPL scu) => throw new NotImplementedException();
 
         public Task InsertOrUpdateQueueEUAsync(ftQueueEU queue) => throw new NotImplementedException();
         public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync() => throw new NotImplementedException();

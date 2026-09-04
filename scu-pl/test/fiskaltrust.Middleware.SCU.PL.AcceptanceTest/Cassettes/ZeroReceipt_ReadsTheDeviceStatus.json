@@ -1,0 +1,10 @@
+{
+  "RecordedAgainst": "tcp://192.168.178.58:6666",
+  "RecordedAtUtc": "2026-08-18T09:26:37.4944307Z",
+  "Exchanges": [
+    {
+      "Command": "scomm\t",
+      "Response": "scomm\tfsN\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    }
+  ]
+}

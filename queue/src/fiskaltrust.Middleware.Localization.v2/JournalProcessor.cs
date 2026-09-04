@@ -162,6 +162,7 @@ public class JournalProcessor
             QueueGRList = await configurationRepository.GetQueueGRListAsync().ConfigureAwait(false),
             QueueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
             QueueMEList = await configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
+            QueuePLList = await configurationRepository.GetQueuePLListAsync().ConfigureAwait(false),
             QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
             SignaturCreationUnitATList = await configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
             SignaturCreationUnitBEList = await configurationRepository.GetSignaturCreationUnitBEListAsync().ConfigureAwait(false),
@@ -171,6 +172,7 @@ public class JournalProcessor
             SignaturCreationUnitGRList = await configurationRepository.GetSignaturCreationUnitGRListAsync().ConfigureAwait(false),
             SignaturCreationUnitITList = await configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
             SignaturCreationUnitMEList = await configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
+            SignaturCreationUnitPLList = await configurationRepository.GetSignaturCreationUnitPLListAsync().ConfigureAwait(false),
             SignaturCreationUnitPTList = GetConfigurationFromDictionary<ftSignaturCreationUnitPT>("init_ftSignaturCreationUnitPT"),
         };
     }
