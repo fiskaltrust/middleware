@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 
@@ -238,9 +239,14 @@ public static class SpecialTaxMappings
         // Code 8: Ξενοδοχεία 4 αστέρων 3,00 € (fixed amount)
         // Code 8: Hotels 4 stars 3.00 € (fixed amount)
         ["Ξενοδοχεία 4 αστέρων 3,00 €"] = new(8, "Ξενοδοχεία 4 αστέρων 3,00 €", null, true),
-        // Code 9: Ξενοδοχεία 5 αστέρων 4,00 € (fixed amount)
-        // Code 9: Hotels 5 stars 4.00 € (fixed amount)
-        ["Ξενοδοχεία 4 αστέρων 4,00 €"] = new(9, "Ξενοδοχεία 4 αστέρων 4, 00 €", null, true),
+        // Code 9: Ξενοδοχεία 4 αστέρων 4,00 € (fixed amount)
+        // Official text per myDATA API Documentation v2.0.2, Appendix 8.5 (codes table p. 96-97).
+        // AADE publishes code 9 as "4 αστέρων" even though it logically covers 5-star hotels
+        // (code 8 is already 4 stars at 3,00 €), so the official string is kept as the key.
+        ["Ξενοδοχεία 4 αστέρων 4,00 €"] = new(9, "Ξενοδοχεία 4 αστέρων 4,00 €", null, true),
+        // Alias for code 9: the logically correct "5 αστέρων" wording, which AADE uses in its
+        // announcements for this fee, so both spellings resolve.
+        ["Ξενοδοχεία 5 αστέρων 4,00 €"] = new(9, "Ξενοδοχεία 4 αστέρων 4,00 €", null, true),
         // Code 10: Ενοικιαζόμενα – επιπλωμένα δωμάτια – διαμερίσματα 0,50 € (fixed amount)
         // Code 10: Rental furnished rooms - apartments 0.50 € (fixed amount)
         ["Ενοικιαζόμενα - επιπλωμένα δωμάτια - διαμερίσματα 0,50 €"] = new(10, "Ενοικιαζόμενα - επιπλωμένα δωμάτια - διαμερίσματα 0,50 €", null, true),
@@ -307,39 +313,121 @@ public static class SpecialTaxMappings
     };
 
     /// <summary>
-    /// Gets withholding tax mapping for a given charge item description.
+    /// Normalises a description so lookups ignore punctuation codepoint differences. The AADE
+    /// tables use the curly apostrophe and en dash, but POS systems often send the plain ASCII
+    /// apostrophe and hyphen, and a few table entries use the en dash themselves. Same category,
+    /// different bytes, so a plain match fails. Comparison only: the stored strings and anything
+    /// sent to AADE are left exactly as they are.
     /// </summary>
-    /// <param name="description">The description of the charge item</param>
-    /// <returns>Withholding tax mapping if found, null otherwise</returns>
-    public static WithholdingTaxMapping? GetWithholdingTaxMapping(string description)
+    /// <param name="description">The raw description.</param>
+    /// <returns>The description with apostrophe and dash variants folded to ASCII, non-breaking
+    /// spaces turned into normal spaces, whitespace collapsed and trimmed. Empty string for
+    /// null/whitespace input.</returns>
+    public static string NormalizeForLookup(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(description.Length);
+        foreach (var c in description)
+        {
+            switch (c)
+            {
+                // Apostrophe variants -> ASCII apostrophe
+                case '\u2019': // ’ right single quotation mark (the form AADE publishes)
+                case '\u2018': // ‘ left single quotation mark
+                case '\u201B': // ‛ single high-reversed-9 quotation mark
+                case '\u02BC': // ʼ modifier letter apostrophe
+                case '\u02B9': // ʹ modifier letter prime
+                case '\u0374': // ʹ Greek numeral sign (dexia keraia, the proper mark for δʹ)
+                case '\u0384': // ΄ Greek tonos (what a Greek keyboard emits for a lone accent)
+                case '\u00B4': // ´ acute accent
+                case '\u2032': // ′ prime
+                case '`':      // grave accent
+                    sb.Append('\'');
+                    break;
+                // Dash variants -> ASCII hyphen-minus
+                case '\u2010': // ‐ hyphen
+                case '\u2011': // ‑ non-breaking hyphen
+                case '\u2012': // ‒ figure dash
+                case '\u2013': // – en dash (used by other-tax codes 24/27/30)
+                case '\u2014': // — em dash
+                case '\u2015': // ― horizontal bar
+                case '\u2212': // − minus sign
+                    sb.Append('-');
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+
+        // Collapse any run of whitespace to a single space and trim the ends.
+        return string.Join(' ', sb.ToString().Split((char[]?) null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    /// <summary>
+    /// Builds the lookup companion of a mapping table: same values, keys normalised with
+    /// <see cref="NormalizeForLookup"/> so lookups do not have to re-normalise the table.
+    /// </summary>
+    private static Dictionary<string, T> BuildNormalizedLookup<T>(Dictionary<string, T> table)
+    {
+        var normalized = new Dictionary<string, T>(table.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in table)
+        {
+            normalized[NormalizeForLookup(kvp.Key)] = kvp.Value;
+        }
+        return normalized;
+    }
+
+    private static readonly Dictionary<string, WithholdingTaxMapping> _normalizedWithholdingTaxMappings = BuildNormalizedLookup(_withholdingTaxMappings);
+    private static readonly Dictionary<string, FeeMapping> _normalizedFeeMappings = BuildNormalizedLookup(_feeMappings);
+    private static readonly Dictionary<string, StampDutyMapping> _normalizedStampDutyMappings = BuildNormalizedLookup(_stampDutyMappings);
+    private static readonly Dictionary<string, OtherTaxMapping> _normalizedOtherTaxMappings = BuildNormalizedLookup(_otherTaxMappings);
+
+    /// <summary>
+    /// Shared lookup used by all four special tax tables. Matches the normalised description
+    /// against the normalised table keys: an exact match first, then the original substring
+    /// fallback, both apostrophe/dash/whitespace-insensitive and case-insensitive.
+    /// </summary>
+    private static T? LookupSpecialTax<T>(Dictionary<string, T> normalizedTable, string description) where T : class
     {
         if (string.IsNullOrWhiteSpace(description))
         {
             return null;
         }
 
+        var normalized = NormalizeForLookup(description);
+
         // Try exact match first
-        if (_withholdingTaxMappings.TryGetValue(description.Trim(), out var exactMapping))
+        if (normalizedTable.TryGetValue(normalized, out var exactMapping))
         {
             return exactMapping;
         }
 
         // Try partial matching for more flexible description matching
-        foreach (var kvp in _withholdingTaxMappings)
+        foreach (var kvp in normalizedTable)
         {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
             // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
+            if (normalized.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) ||
+                kvp.Key.Contains(normalized, StringComparison.OrdinalIgnoreCase))
             {
-                return mapping;
+                return kvp.Value;
             }
         }
 
         return null;
     }
+
+    /// <summary>
+    /// Gets withholding tax mapping for a given charge item description.
+    /// </summary>
+    /// <param name="description">The description of the charge item</param>
+    /// <returns>Withholding tax mapping if found, null otherwise</returns>
+    public static WithholdingTaxMapping? GetWithholdingTaxMapping(string description)
+        => LookupSpecialTax(_normalizedWithholdingTaxMappings, description);
 
     /// <summary>
     /// Gets fee mapping for a given charge item description.
@@ -347,34 +435,7 @@ public static class SpecialTaxMappings
     /// <param name="description">The description of the charge item</param>
     /// <returns>Fee mapping if found, null otherwise</returns>
     public static FeeMapping? GetFeeMapping(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return null;
-        }
-
-        // Try exact match first
-        if (_feeMappings.TryGetValue(description.Trim(), out var exactMapping))
-        {
-            return exactMapping;
-        }
-
-        // Try partial matching for more flexible description matching
-        foreach (var kvp in _feeMappings)
-        {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
-            // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => LookupSpecialTax(_normalizedFeeMappings, description);
 
     /// <summary>
     /// Gets stamp duty mapping for a given charge item description.
@@ -382,34 +443,7 @@ public static class SpecialTaxMappings
     /// <param name="description">The description of the charge item</param>
     /// <returns>Stamp duty mapping if found, null otherwise</returns>
     public static StampDutyMapping? GetStampDutyMapping(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return null;
-        }
-
-        // Try exact match first
-        if (_stampDutyMappings.TryGetValue(description.Trim(), out var exactMapping))
-        {
-            return exactMapping;
-        }
-
-        // Try partial matching for more flexible description matching
-        foreach (var kvp in _stampDutyMappings)
-        {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
-            // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => LookupSpecialTax(_normalizedStampDutyMappings, description);
 
     /// <summary>
     /// Gets other tax mapping for a given charge item description.
@@ -417,34 +451,7 @@ public static class SpecialTaxMappings
     /// <param name="description">The description of the charge item</param>
     /// <returns>Other tax mapping if found, null otherwise</returns>
     public static OtherTaxMapping? GetOtherTaxMapping(string description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return null;
-        }
-
-        // Try exact match first
-        if (_otherTaxMappings.TryGetValue(description.Trim(), out var exactMapping))
-        {
-            return exactMapping;
-        }
-
-        // Try partial matching for more flexible description matching
-        foreach (var kvp in _otherTaxMappings)
-        {
-            var key = kvp.Key;
-            var mapping = kvp.Value;
-
-            // Check if the description contains the key or key contains the description
-            if (description.Contains(key, StringComparison.OrdinalIgnoreCase) ||
-                key.Contains(description, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => LookupSpecialTax(_normalizedOtherTaxMappings, description);
 
     public static bool IsSpecialTaxItem(ChargeItem chargeItem)
     {
