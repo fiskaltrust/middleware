@@ -633,7 +633,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         {
             var command = new PrinterCommand() { DirectIO = DirectIO.GetLastEmittedDocStatusCommand() };
             var content = SoapSerializer.Serialize(command);
-            var response = await _httpClient.SendCommandAsync(content);
+            // Deliberately impatient: an unanswered query has to cost a fraction of the recovery window, or
+            // the loop that is supposed to ask several times only ever gets to ask once.
+            var response = await _httpClient.SendCommandAsync(content, TimeSpan.FromMilliseconds(_configuration.RecoveryStatusQueryTimeoutMs));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
             var rawData = result?.CommandResponse?.ResponseData;

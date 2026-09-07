@@ -50,6 +50,16 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         /// </summary>
         public int RecoveryVerdictPollIntervalMs { get; set; } = 3000;
 
+        /// <summary>
+        /// How long a single status query inside the recovery waits for the printer.
+        /// <para>
+        /// It has to be a small fraction of <see cref="RecoveryVerdictTimeoutMs"/>: the query is asked
+        /// repeatedly, and one that waited as long as a print command would burn the whole window on the
+        /// first attempt — which is exactly the attempt most likely to find the printer busy and silent.
+        /// </para>
+        /// </summary>
+        public int RecoveryStatusQueryTimeoutMs { get; set; } = 8000;
+
         public string? Password { get; set; }
 
         public string? AdditionalTrailerLines { get; set;}
