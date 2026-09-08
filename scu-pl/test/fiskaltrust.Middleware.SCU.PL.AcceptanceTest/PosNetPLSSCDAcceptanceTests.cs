@@ -228,7 +228,8 @@ public class PosNetPLSSCDAcceptanceTests
         var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
         (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2005);
-        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "prncancel");
+        // A scripted register has no pinned table, so the SCU reads it first.
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "trinit", "trline", "prncancel");
         NoTransactionShouldBeOpen(target);
     }
 
@@ -242,7 +243,7 @@ public class PosNetPLSSCDAcceptanceTests
         await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
         // Exactly one trpayment and no cleanup afterwards: the device may have printed — the
         // operator must verify before anything is sent again (triple-print protection).
-        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "trinit", "trline", "trpayment");
     }
 
     [EmulatorOnlyFact]
@@ -254,5 +255,57 @@ public class PosNetPLSSCDAcceptanceTests
 
         await act.Should().ThrowAsync<PLDeviceUnreachableException>();
         target.SentMnemonics.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Without a configured table the SCU reads the register's own before the first sale. Scripted,
+    /// because the committed cassettes were recorded with the table pinned and hold no sfsk.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task Sale_WithoutAConfiguredRateTable_ReadsThePtuTableOffTheRegisterFirst()
+    {
+        using var target = PosNetTestTarget.Scripted();
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var info = PLDeviceInfo.FromPLSSCDInfo(await target.Sut.GetInfoAsync());
+
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "trinit", "trline", "trpayment", "trend", "scnt", "scomm");
+        // Candies at 8% land in slot B of the table the register reports — the same table GetInfo hands to the queue.
+        target.SentCommands.Single(c => c.CommandId == "trline").Parameters.Should().Contain(new KeyValuePair<string, string>("vt", "1"));
+        info!.VatRateTable.Select(e => e.PtuSlot).Should().Equal("A", "B", "C", "D", "G");
+        DocumentNumberOf(result).Should().BePositive();
+    }
+
+    [Fact]
+    public async Task Return_PrintsTheGoodsReturn_AndReportsNoFiscalDocumentNumber()
+    {
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.Return());
+
+        target.SentMnemonics.Should().Equal("scomm", "stocash");
+        target.SentCommands.Single(c => c.CommandId == "stocash").Parameters.Should().Contain(new KeyValuePair<string, string>("kw", "999"));
+        FiscalDocumentNumber.Of(result.ReceiptResponse).Should().BeNull("a goods return is a non-fiscal printout");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Zwrot towaru (wydruk niefiskalny)").Which.Data.Should().Be("9.99");
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
+    public async Task DailyClosing_AfterASale_PrintsTheDailyReport_AndReportsItsNumber()
+    {
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
+        await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+        var before = await target.Probe.SnapshotAsync();
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.DailyClosing());
+        var after = await target.Probe.SnapshotAsync();
+
+        target.SentMnemonics.Should().EndWith(["dailyrep", "scnt"]);
+        target.SentCommands.Single(c => c.CommandId == "dailyrep").Parameters.Should().ContainKey("da");
+        var reportNumber = result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Subject.Data;
+        // The report the register just printed is the one it announced as next, and the day starts over.
+        reportNumber.Should().Be($"{before.NextDailyReportNumber}");
+        after.NextDailyReportNumber.Should().Be(before.NextDailyReportNumber + 1);
+        after.ReceiptTotalizersGrosze.Should().AllSatisfy(v => v.Should().Be(0));
     }
 }

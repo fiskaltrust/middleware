@@ -155,6 +155,33 @@ public static class PLReceiptExamples
         cbPayItems = [],
     });
 
+    /// <summary>A return (Refund flag on the receipt): the candies come back, the cash goes out — one goods return printout.</summary>
+    public static ProcessRequest Return() => Wrap(new ReceiptRequest
+    {
+        ftReceiptCase = (ReceiptCase)(0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.Refund),
+        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptReference = Guid.NewGuid().ToString(),
+        Currency = Currency.PLN,
+        cbChargeItems =
+        [
+            new ChargeItem { Description = "Candies", Amount = -9.99m, Quantity = -1m, VATRate = 8m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0011, Currency = Currency.PLN },
+        ],
+        cbPayItems =
+        [
+            new PayItem { Description = "Gotówka", Amount = -9.99m, ftPayItemCase = (PayItemCase)0x504C_2000_0000_0001, Currency = Currency.PLN },
+        ],
+    });
+
+    public static ProcessRequest DailyClosing() => Wrap(new ReceiptRequest
+    {
+        ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011,
+        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptReference = Guid.NewGuid().ToString(),
+        Currency = Currency.PLN,
+        cbChargeItems = [],
+        cbPayItems = [],
+    });
+
     private static ProcessRequest Wrap(ReceiptRequest request) => new()
     {
         ReceiptRequest = request,

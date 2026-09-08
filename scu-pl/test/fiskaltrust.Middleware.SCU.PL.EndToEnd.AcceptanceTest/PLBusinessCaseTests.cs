@@ -206,35 +206,59 @@ public class PLBusinessCaseTests
     }
 
     /// <summary>
-    /// Returns are a document of their own on a Polish register and not implemented in the PosNet
-    /// SCU yet (PosNetReceiptMapper). Until they are, this pins the current behaviour: the queue
-    /// stores the receipt unsigned and nothing reaches the register.
+    /// A return is a document of its own on a Polish register: a non-fiscal goods return printout of
+    /// the amount handed back, no fiscal document number, no change to the receipt totalizers.
     /// </summary>
     [Fact]
-    public async Task ReturnReceipt_IsStoredUnsigned_UntilTheScuSupportsReturns()
+    public async Task ReturnReceipt_PrintsTheGoodsReturn_AndLeavesTheTotalizersAlone()
     {
         using var harness = new PLEndToEndHarness();
         await harness.SignAsync(TestProject.BusinessCase("SignRequestReceipt_CashSaleReceipt"));
-        var commandsAfterSale = harness.SentMnemonics.Count();
+        var before = await harness.Probe.SnapshotAsync();
 
         var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestReceipt_ReturnReceipt"));
+        var after = await harness.Probe.SnapshotAsync();
 
-        ShouldBeStoredUnsigned(response);
-        harness.SentMnemonics.Should().HaveCount(commandsAfterSale, "a refused return sends nothing to the register");
-        (await harness.QueueItemsAsync()).Should().HaveCount(2, "the queue keeps the refused request too");
+        ((ulong)response.ftState & ErrorStateMask).Should().NotBe(ErrorState,
+            string.Join(" | ", response.ftSignatures.Select(s => $"{s.Caption}: {s.Data}")));
+        response.ftSignatures.Should().Contain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.NonFiscalPrintout);
+        response.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.FiscalDocumentNumber);
+        harness.SentMnemonics.Should().EndWith(["stocash"]);
+        harness.SentCommands.Single(c => c.CommandId == "stocash").Parameters.Should().Contain(Field("kw", "369"));
+        after.NonFiscalPrintouts.Should().Be(before.NonFiscalPrintouts + 1);
+        after.ReceiptTotalizersGrosze.Should().Equal(before.ReceiptTotalizersGrosze);
+        after.LastReceiptNumber.Should().Be(before.LastReceiptNumber, "a return consumes no receipt number");
+        (await harness.QueueItemsAsync()).Should().HaveCount(2);
     }
 
-    /// <summary>
-    /// Daily and periodic reports are not implemented in the PosNet SCU yet (PosNetPLSSCD). Until
-    /// they are, this pins the current behaviour: the closing is stored unsigned and no report is
-    /// requested from the register.
-    /// </summary>
+    /// <summary>The daily closing prints the register's daily (Z) report and reports its number; the day's totalizers start over.</summary>
     [Fact]
-    public async Task DailyClosing_IsStoredUnsigned_UntilTheScuSupportsReports()
+    public async Task DailyClosing_PrintsTheDailyReport_AndStartsTheDayOver()
+    {
+        using var harness = new PLEndToEndHarness();
+        await harness.SignAsync(TestProject.BusinessCase("SignRequestReceipt_CashSaleReceipt"));
+        var before = await harness.Probe.SnapshotAsync();
+
+        var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestDailyOperations_DailyClosing"));
+        var after = await harness.Probe.SnapshotAsync();
+
+        ((ulong)response.ftState & ErrorStateMask).Should().NotBe(ErrorState,
+            string.Join(" | ", response.ftSignatures.Select(s => $"{s.Caption}: {s.Data}")));
+        response.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber)
+            .Which.Data.Should().Be(before.NextDailyReportNumber.ToString());
+        harness.SentMnemonics.Should().EndWith(["dailyrep", "scnt"]);
+        after.NextDailyReportNumber.Should().Be(before.NextDailyReportNumber + 1);
+        after.ReceiptCount.Should().Be(0);
+        (await harness.QueueItemsAsync()).Should().HaveCount(2);
+    }
+
+    /// <summary>Periodic reports are not implemented in the PosNet SCU yet; the closing is stored unsigned and nothing reaches the register.</summary>
+    [Fact]
+    public async Task MonthlyClosing_IsStoredUnsigned_UntilTheScuSupportsPeriodicReports()
     {
         using var harness = new PLEndToEndHarness();
 
-        var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestDailyOperations_DailyClosing"));
+        var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestDailyOperations_MonthlyClosing"));
 
         ShouldBeStoredUnsigned(response);
         harness.SentMnemonics.Should().BeEmpty();

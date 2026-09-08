@@ -56,8 +56,14 @@ public sealed class PosNetDeviceModel
     /// <summary>The daily report counter (<c>rd</c>); the next report is <c>rd + 1</c>.</summary>
     public int DailyReportCounter { get; set; }
 
-    /// <summary>Correctly completed receipts (<c>bn</c>, <c>pn</c>). Seeded so a fresh model looks like a used device.</summary>
+    /// <summary>Correctly completed receipts (<c>bn</c>). Seeded so a fresh model looks like a used device.</summary>
     public int CompletedReceipts { get; private set; } = 84;
+
+    /// <summary>Receipts since the last daily report (<c>pn</c>) — the daily report resets it, <see cref="CompletedReceipts"/> runs on.</summary>
+    public int ReceiptsSinceDailyReport { get; private set; } = 84;
+
+    /// <summary>Non-fiscal printouts (<c>nf</c>), e.g. goods returns.</summary>
+    public int NonFiscalPrintouts { get; private set; }
 
     /// <summary>Canceled receipts (<c>bc</c>, <c>cn</c>).</summary>
     public int CanceledReceipts { get; private set; }
@@ -106,6 +112,8 @@ public sealed class PosNetDeviceModel
             "trpayment" => InTransaction(command.CommandId, transaction => Trpayment(transaction, parameters)),
             "trend" => InTransaction(command.CommandId, transaction => Trend(transaction, parameters)),
             "prncancel" => Prncancel(),
+            "dailyrep" => Dailyrep(parameters),
+            "stocash" => Stocash(parameters),
             _ => Ok(command.CommandId),
         };
     }
@@ -284,9 +292,50 @@ public sealed class PosNetDeviceModel
             _receiptTotalizers[i] += transaction.PerRate[i];
         }
         CompletedReceipts++;
+        ReceiptsSinceDailyReport++;
         _lastReceipt = new CompletedReceipt(transaction.PerRate.ToArray(), payments, change);
         _transaction = null;
         return Ok("trend");
+    }
+
+    /// <summary>
+    /// The daily report closes the day: the receipt totalizers and the day's receipt counter start
+    /// over, the report counter advances. In fiscal mode two consecutive zero reports are refused
+    /// (POT-I-DEV-05 p.146), and the date has to be one the register can read.
+    /// </summary>
+    private string Dailyrep(IReadOnlyDictionary<string, string> p)
+    {
+        if (_transaction is not null)
+        {
+            return Error("dailyrep", PosNetErrors.TransactionMode);
+        }
+        if (p.TryGetValue("da", out var date) && !DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+        {
+            return Error("dailyrep", PosNetErrors.DateFormat);
+        }
+        if (Fiscalized && _receiptTotalizers.All(v => v == 0) && ReceiptsSinceDailyReport == 0)
+        {
+            return Error("dailyrep", PosNetErrors.DailyReportZero);
+        }
+        DailyReportCounter++;
+        Array.Clear(_receiptTotalizers);
+        ReceiptsSinceDailyReport = 0;
+        return Ok("dailyrep");
+    }
+
+    /// <summary>The goods return: one non-fiscal printout of the amount handed back, outside a transaction.</summary>
+    private string Stocash(IReadOnlyDictionary<string, string> p)
+    {
+        if (_transaction is not null)
+        {
+            return Error("stocash", PosNetErrors.TransactionMode);
+        }
+        if (!TryLong(p, "kw", out var amount) || amount <= 0)
+        {
+            return Error("stocash", PosNetErrors.Parameter);
+        }
+        NonFiscalPrintouts++;
+        return Ok("stocash");
     }
 
     private string Prncancel()
@@ -315,7 +364,7 @@ public sealed class PosNetDeviceModel
     {
         var salesMoment = _lastReceipt is null ? NoSalesMoment : DateTime.Now.ToString("yyyy-MM-dd;HH:mm", CultureInfo.InvariantCulture);
         return $"stot\tno{DailyReportCounter + 1}\t{AmountFields('f', new long[SlotCount])}fn{Invoices}\t{AmountFields('p', _receiptTotalizers)}"
-            + $"pn{CompletedReceipts}\tct{CanceledTotalGrosze}\tcn{CanceledReceipts}\tcc0\t{RateTableFields()}ds{salesMoment}\tde{salesMoment}\tft0\tfl0\tnf0\t";
+            + $"pn{ReceiptsSinceDailyReport}\tct{CanceledTotalGrosze}\tcn{CanceledReceipts}\tcc0\t{RateTableFields()}ds{salesMoment}\tde{salesMoment}\tft0\tfl0\tnf{NonFiscalPrintouts}\t";
     }
 
     /// <summary>One field per slot, e.g. <c>pa1260 pb0 …</c> — amounts travel as integer grosze, as recorded off the device.</summary>
@@ -365,8 +414,14 @@ public static class PosNetErrors
     /// <summary>2000 ERR_TR_FLD_VAT — incorrect rate number or inactive rate.</summary>
     public const int VatField = 2000;
 
+    /// <summary>382 ERR_RD_ZERO — a daily report over zero totalizers, right after the previous one.</summary>
+    public const int DailyReportZero = 382;
+
     /// <summary>2005 ERR_NO_TRNS_MODE — a transaction command outside a transaction.</summary>
     public const int NoTransactionMode = 2005;
+
+    /// <summary>2024 ERR_RTC_BAD_FORMAT — a date the register cannot read.</summary>
+    public const int DateFormat = 2024;
 
     /// <summary>2006 ERR_TR_FLD_PRICE.</summary>
     public const int PriceField = 2006;

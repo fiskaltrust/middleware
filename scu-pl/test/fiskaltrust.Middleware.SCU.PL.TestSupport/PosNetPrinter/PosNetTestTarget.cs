@@ -80,7 +80,7 @@ public sealed class PosNetTestTarget : IDisposable
         ArgumentNullException.ThrowIfNull(cassettes);
         if (HardwareDeviceUrl is { } url)
         {
-            return new PosNetTestTarget(null, url, HardwareConnectTimeoutMs, HardwareReceiveTimeoutMs, cassettes, cassetteName);
+            return new PosNetTestTarget(null, url, HardwareConnectTimeoutMs, HardwareReceiveTimeoutMs, cassettes, cassetteName, pinRateTable: true);
         }
 
         // Without a recording the emulator improvises from its device model — that keeps the suite
@@ -88,7 +88,7 @@ public sealed class PosNetTestTarget : IDisposable
         var emulator = cassettes.Exists(cassetteName)
             ? PosNetPrinterEmulator.Replaying(cassettes.Load(cassetteName))
             : new PosNetPrinterEmulator();
-        return new PosNetTestTarget(emulator.Start(), emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes, cassetteName);
+        return new PosNetTestTarget(emulator.Start(), emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes, cassetteName, pinRateTable: true);
     }
 
     /// <summary>
@@ -107,24 +107,35 @@ public sealed class PosNetTestTarget : IDisposable
         {
             emulator.Start();
         }
-        return new PosNetTestTarget(emulator, emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes: null, cassetteName: "");
+        // No pinned rate table: a scripted register reports its own, and the SCU has to read it.
+        return new PosNetTestTarget(emulator, emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes: null, cassetteName: "", pinRateTable: false);
     }
 
-    private PosNetTestTarget(PosNetPrinterEmulator? emulator, string deviceUrl, int connectTimeoutMs, int receiveTimeoutMs, CassetteStore? cassettes, string cassetteName)
+    /// <param name="pinRateTable">
+    /// Configures the customary PTU table instead of letting the SCU read it off the register. The
+    /// committed cassettes were recorded with the table configured, so they hold no <c>sfsk</c>
+    /// exchange; pinning keeps them replayable. Recordings made without the pin will carry it.
+    /// </param>
+    private PosNetTestTarget(PosNetPrinterEmulator? emulator, string deviceUrl, int connectTimeoutMs, int receiveTimeoutMs, CassetteStore? cassettes, string cassetteName, bool pinRateTable)
     {
         Emulator = emulator;
         _cassettes = cassettes;
         _cassetteName = cassetteName;
 
+        var configuration = new Dictionary<string, object>
+        {
+            ["DeviceUrl"] = deviceUrl,
+            ["ConnectTimeoutMs"] = connectTimeoutMs,
+            ["ReceiveTimeoutMs"] = receiveTimeoutMs,
+        };
+        if (pinRateTable)
+        {
+            configuration["VatRateTable"] = PosNetConfiguration.DefaultVatRateTable();
+        }
         var bootstrapper = new ScuBootstrapper
         {
             Id = Guid.NewGuid(),
-            Configuration = new Dictionary<string, object>
-            {
-                ["DeviceUrl"] = deviceUrl,
-                ["ConnectTimeoutMs"] = connectTimeoutMs,
-                ["ReceiveTimeoutMs"] = receiveTimeoutMs,
-            },
+            Configuration = configuration,
         };
         var services = new ServiceCollection();
         bootstrapper.ConfigureServices(services);

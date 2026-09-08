@@ -11,6 +11,8 @@ public enum SignatureTypePL : long
     ZReportNumber = 0x504C_2000_0000_0104,
     EReceiptReference = 0x504C_2000_0000_0105,
     StoredNotFiscalized = 0x504C_2000_0000_0106,
+    /// <summary>A non-fiscal printout the register produced for the receipt — a goods return (zwrot towaru), which has no fiscal document number.</summary>
+    NonFiscalPrintout = 0x504C_2000_0000_0107,
 }
 
 public static class SignatureTypePLExt

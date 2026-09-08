@@ -61,7 +61,9 @@ Which cases exist, and how a rabat or storno is read, is documented where the ca
 `BusinessCases/` folder of `scu-pl/test/fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest/` and
 its README (see also `PosNetReceiptMapper`). `GET /samples` lists what this host serves. Which of them
 reach the paper is up to the SCU: sale receipts print, the zero receipt only reads the status, and
-reports and returns are not implemented in the PosNet SCU yet.
+`ReturnReceipt` prints a non-fiscal goods return of the amount handed back (`stocash`), `DailyClosing`
+prints the daily (Z) report. Periodic reports (`MonthlyClosing`) are not implemented in the PosNet
+SCU yet.
 
 ### Spain
 

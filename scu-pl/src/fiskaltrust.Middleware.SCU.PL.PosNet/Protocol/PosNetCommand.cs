@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
@@ -134,6 +135,25 @@ public static class PosNetCommands
     public static PosNetCommand Scomm() => new("scomm");
 
     public static PosNetCommand Scnt() => new("scnt");
+
+    /// <summary>The fiscal memory status — among it the PTU rate table as programmed on the register (<c>va..vg</c>).</summary>
+    public static PosNetCommand Sfsk() => new("sfsk");
+
+    /// <summary>
+    /// The goods return (zwrot towaru): a non-fiscal printout of the amount handed back
+    /// (POT-I-DEV-05 p.254, <c>kw</c> in grosze). A return is not a fiscal document on a Polish
+    /// register — the returned positions are kept in the taxpayer's returns register, the printout
+    /// documents the payout.
+    /// </summary>
+    public static PosNetCommand Stocash(long amountGrosze)
+        => new("stocash", [new("kw", amountGrosze.ToString(CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The daily (Z) report. The date is validated against the register's clock and confirms which
+    /// day is being closed; without it the operator would have to confirm the date on the keyboard.
+    /// </summary>
+    public static PosNetCommand Dailyrep(DateOnly date)
+        => new("dailyrep", [new("da", date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))]);
 
     public static PosNetCommand Prncancel() => new("prncancel");
 }

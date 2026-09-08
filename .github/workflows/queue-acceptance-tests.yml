@@ -79,6 +79,7 @@ jobs:
         project:
           - fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest
           - fiskaltrust.Middleware.Queue.AcceptanceTest
+          - fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest
     steps:
       - uses: actions/checkout@v4
         with:

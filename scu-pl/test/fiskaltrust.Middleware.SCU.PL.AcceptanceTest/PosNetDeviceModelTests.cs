@@ -221,4 +221,60 @@ public class PosNetDeviceModelTests
 
         Send(model, PosNetCommands.Scomm()).Should().Be("scomm\tfsN\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t");
     }
+
+    [Fact]
+    public void DailyReport_ClosesTheDay_AndAdvancesTheReportCounter()
+    {
+        var model = new PosNetDeviceModel();
+        Sell(model,
+            PosNetCommands.Trinit(),
+            PosNetCommands.Trline("Candies", SlotB, 999, 1m, 999),
+            PosNetCommands.Trpayment(0, 999, isChange: false),
+            PosNetCommands.Trend(999, 999, 0));
+
+        Send(model, PosNetCommands.Dailyrep(new DateOnly(2026, 9, 8))).Should().Be("dailyrep\t");
+
+        model.DailyReportCounter.Should().Be(1);
+        model.ReceiptTotalizersGrosze.Should().AllSatisfy(v => v.Should().Be(0));
+        model.ReceiptsSinceDailyReport.Should().Be(0);
+        model.CompletedReceipts.Should().Be(85, "the receipt numbering runs on across the day");
+        Send(model, new PosNetCommand("stot")).Should().Contain("\tno2\t").And.Contain("\tpn0\t");
+        Send(model, PosNetCommands.Scnt()).Should().Contain("\trd1\t");
+    }
+
+    [Fact]
+    public void DailyReport_OverZeroTotalizers_IsRefusedInFiscalMode()
+    {
+        var model = new PosNetDeviceModel();
+        Sell(model,
+            PosNetCommands.Trinit(),
+            PosNetCommands.Trline("Candies", SlotB, 999, 1m, 999),
+            PosNetCommands.Trpayment(0, 999, isChange: false),
+            PosNetCommands.Trend(999, 999, 0),
+            PosNetCommands.Dailyrep(new DateOnly(2026, 9, 8)));
+
+        Send(model, PosNetCommands.Dailyrep(new DateOnly(2026, 9, 8))).Should().Be($"dailyrep\t?{PosNetErrors.DailyReportZero}\t");
+    }
+
+    [Fact]
+    public void GoodsReturn_IsANonFiscalPrintout_ThatLeavesTheTotalizersAlone()
+    {
+        var model = new PosNetDeviceModel();
+
+        Send(model, PosNetCommands.Stocash(369)).Should().Be("stocash\t");
+
+        model.NonFiscalPrintouts.Should().Be(1);
+        model.ReceiptTotalizersGrosze.Should().AllSatisfy(v => v.Should().Be(0));
+        model.CompletedReceipts.Should().Be(84, "a return is not a receipt");
+        Send(model, new PosNetCommand("stot")).Should().Contain("\tnf1\t");
+    }
+
+    [Fact]
+    public void GoodsReturn_InsideATransaction_IsRefused()
+    {
+        var model = new PosNetDeviceModel();
+        Sell(model, PosNetCommands.Trinit());
+
+        Send(model, PosNetCommands.Stocash(369)).Should().Be($"stocash\t?{PosNetErrors.TransactionMode}\t");
+    }
 }

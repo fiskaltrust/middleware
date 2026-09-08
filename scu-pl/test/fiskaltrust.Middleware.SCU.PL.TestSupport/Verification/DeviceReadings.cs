@@ -16,6 +16,7 @@ namespace fiskaltrust.Middleware.SCU.PL.TestSupport.Verification;
 /// <param name="CanceledTotalGrosze"><c>ct</c> — the value of the canceled receipts.</param>
 /// <param name="LastReceiptNumber"><c>bt</c> — the number of the last receipt, which the SCU reports as the fiscal document number.</param>
 /// <param name="CompletedReceipts"><c>bn</c> — correctly completed receipts.</param>
+/// <param name="NonFiscalPrintouts"><c>nf</c> — non-fiscal printouts, among them goods returns.</param>
 public sealed record FiscalSnapshot(
     int NextDailyReportNumber,
     IReadOnlyList<long> ReceiptTotalizersGrosze,
@@ -23,7 +24,8 @@ public sealed record FiscalSnapshot(
     int CanceledCount,
     long CanceledTotalGrosze,
     int LastReceiptNumber,
-    int CompletedReceipts)
+    int CompletedReceipts,
+    int NonFiscalPrintouts)
 {
     public static FiscalSnapshot From(PosNetResponse totalizers, PosNetResponse counters)
     {
@@ -36,7 +38,8 @@ public sealed record FiscalSnapshot(
             CanceledCount: DeviceFields.Int(totalizers, "cn"),
             CanceledTotalGrosze: DeviceFields.Grosze(totalizers, "ct"),
             LastReceiptNumber: DeviceFields.Int(counters, "bt"),
-            CompletedReceipts: DeviceFields.Int(counters, "bn"));
+            CompletedReceipts: DeviceFields.Int(counters, "bn"),
+            NonFiscalPrintouts: DeviceFields.Int(totalizers, "nf"));
     }
 }
 

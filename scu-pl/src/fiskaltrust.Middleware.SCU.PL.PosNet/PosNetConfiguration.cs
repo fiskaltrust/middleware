@@ -45,12 +45,14 @@ public class PosNetConfiguration
     public string SerialHandshake { get; set; } = "None";
 
     /// <summary>
-    /// The PTU rate table as programmed on the printer, used to resolve the trline vt slot index.
-    /// Reading it live from the device (vatget) is not part of the first milestone, so the table
-    /// is configuration with the customary Polish layout as default.
+    /// The PTU rate table to resolve the trline vt slot index against. Left empty (the default), the
+    /// SCU reads the table the register reports in its fiscal memory status (<c>sfsk</c>) — the
+    /// register owns it, and a slot configured here that the device does not have would be refused
+    /// with 2000 at the first sale. Configure it only to pin a table, e.g. for a recording.
     /// </summary>
-    public List<PLVatRateTableEntry> VatRateTable { get; set; } = DefaultVatRateTable();
+    public List<PLVatRateTableEntry> VatRateTable { get; set; } = [];
 
+    /// <summary>The customary Polish layout — A 23 %, B 8 %, C 5 %, D 0 %, G exempt — for tests and examples that need a table without a device.</summary>
     public static List<PLVatRateTableEntry> DefaultVatRateTable() =>
     [
         new() { PtuSlot = "A", VatRatePercent = 23m },
