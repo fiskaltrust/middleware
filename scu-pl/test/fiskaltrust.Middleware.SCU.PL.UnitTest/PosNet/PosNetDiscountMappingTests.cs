@@ -1,12 +1,7 @@
-using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.PL.Abstraction;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
-using fiskaltrust.Middleware.SCU.PL.PosNet;
-using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
-using fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 using FluentAssertions;
 using Xunit;
+using static fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet.MappingFixture;
 
 namespace fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet;
 
@@ -17,11 +12,6 @@ namespace fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet;
 /// </summary>
 public class PosNetDiscountMappingTests
 {
-    private const long NormalRate = 0x0003;      // 23%, PTU slot A of the default table
-    private const long ReducedRate = 0x0001;     // 8%, PTU slot B
-    private const long NoRate = 0x0000;          // UnknownService — the POS sent no VAT case at all
-    private const long ExtraOrDiscount = 0x0004_0000;
-
     [Fact]
     public void ADiscountFollowingAPosition_BecomesTheRabatOfThatLine()
     {
@@ -199,8 +189,8 @@ public class PosNetDiscountMappingTests
     }
 
     /// <summary>
-    /// A position the receipt does not carry is a mistake, not a receipt-level discount — the POS
-    /// said which line it meant.
+    /// A fractional position the receipt does not carry is a mistake, not a receipt-level discount —
+    /// the POS said which line it meant.
     /// </summary>
     [Fact]
     public void AModifierNamingAPositionTheReceiptDoesNotCarry_IsRejected()
@@ -209,7 +199,35 @@ public class PosNetDiscountMappingTests
             [Position("Kawa", 10.00m, position: 1m), Modifier("Rabat", -2.00m, position: 3.1m)],
             paidInCash: 8.00m);
 
-        act.Should().Throw<PLValidationException>().WithMessage("*sale position 3, which this receipt does not carry*");
+        act.Should().Throw<PLValidationException>()
+            .WithMessage("The discount/extra 'Rabat'*sale position 3, which this receipt does not carry*apply to the subtotal*");
+    }
+
+    /// <summary>
+    /// A POS that numbers every charge item in sequence gives the rabat a whole-number position of its
+    /// own — 1 Kawa, 2 Piwo, 3 Rabat. That is no reference to a line, so the receipt reads by order:
+    /// the rabat belongs to the beer in front of it, and one with nothing in front of it to the subtotal.
+    /// </summary>
+    [Fact]
+    public void AModifierOnAWholeNumberPositionOfItsOwn_IsReadByOrder()
+    {
+        var onTheLine = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Modifier("Rabat", -2.00m, position: 3m),
+            ],
+            paidInCash: 16.00m);
+        var onTheSubtotal = MapSale(
+            [
+                Modifier("Rabat", -2.00m, position: 1m),
+                Position("Kawa", 10.00m, position: 2m),
+                Position("Piwo", 8.00m, position: 3m),
+            ],
+            paidInCash: 16.00m);
+
+        Render(onTheLine)[2].Should().Be("trline naPiwo vt0 pr800 wa800 rd1 rnRabat rw200");
+        Render(onTheSubtotal)[3].Should().Be("trdiscntsubtot naRabat rd1 rw200");
     }
 
     /// <summary>Positioned and unpositioned modifiers on one receipt: each is read its own way.</summary>
@@ -232,41 +250,4 @@ public class PosNetDiscountMappingTests
             "trpayment ty0 wa1500 naGotówka re0",
             "trend to1500 fp1500");
     }
-
-    private static IReadOnlyList<PosNetCommand> MapSale(List<ChargeItem> chargeItems, decimal paidInCash)
-        => PosNetReceiptMapper.MapSale(
-            new ReceiptRequest
-            {
-                ftReceiptCase = (ReceiptCase)0x504C_2000_0000_0001,
-                Currency = Currency.PLN,
-                cbChargeItems = chargeItems,
-                cbPayItems =
-                [
-                    new PayItem { Description = "Gotówka", Amount = paidInCash, ftPayItemCase = (PayItemCase)0x504C_2000_0000_0001, Currency = Currency.PLN },
-                ],
-            },
-            new PtuSlotResolver(PosNetConfiguration.DefaultVatRateTable()));
-
-    private static ChargeItem Position(string description, decimal amount, decimal quantity = 1m, long vatCase = NormalRate, decimal position = 0m) => new()
-    {
-        Description = description,
-        Amount = amount,
-        Quantity = quantity,
-        Position = position,
-        ftChargeItemCase = (ChargeItemCase)(0x504C_2000_0000_0010 | vatCase),
-        Currency = Currency.PLN,
-    };
-
-    private static ChargeItem Modifier(string description, decimal amount, long vatCase = NormalRate, decimal position = 0m) => new()
-    {
-        Description = description,
-        Amount = amount,
-        Quantity = 1m,
-        Position = position,
-        ftChargeItemCase = (ChargeItemCase)(0x504C_2000_0000_0010 | ExtraOrDiscount | vatCase),
-        Currency = Currency.PLN,
-    };
-
-    private static List<string> Render(IReadOnlyList<PosNetCommand> commands)
-        => commands.Select(c => string.Join(' ', new[] { c.Mnemonic }.Concat(c.Parameters.Select(p => $"{p.Key}{p.Value}")))).ToList();
 }

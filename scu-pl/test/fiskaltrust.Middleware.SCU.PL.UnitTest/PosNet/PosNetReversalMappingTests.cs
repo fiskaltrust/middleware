@@ -1,12 +1,7 @@
-using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.PL.Abstraction;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
-using fiskaltrust.Middleware.SCU.PL.PosNet;
-using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
-using fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 using FluentAssertions;
 using Xunit;
+using static fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet.MappingFixture;
 
 namespace fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet;
 
@@ -18,11 +13,6 @@ namespace fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet;
 /// </summary>
 public class PosNetReversalMappingTests
 {
-    private const long NormalRate = 0x0003;       // 23%, PTU slot A of the default table
-    private const long VoidFlag = 0x0001_0000;
-    private const long RefundFlag = 0x0002_0000;
-    private const long ExtraOrDiscountFlag = 0x0004_0000;
-
     /// <summary>1 Kawa, 2 Piwo, 1.1 Storno: the storno reverses the coffee, not the beer.</summary>
     [Fact]
     public void AStornosPositionNamesTheLineItReverses()
@@ -54,6 +44,36 @@ public class PosNetReversalMappingTests
             paidInCash: 10.00m);
 
         Render(commands)[3].Should().Be("trline naPiwo vt0 pr800 st1 wa800");
+    }
+
+    /// <summary>
+    /// A POS that numbers every charge item in sequence gives the storno a whole-number position of
+    /// its own. That is no reference to a line, so the receipt reads by order like one without positions.
+    /// </summary>
+    [Fact]
+    public void AStornoOnAWholeNumberPositionOfItsOwn_ReversesTheLineInFrontOfIt()
+    {
+        var commands = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Voided("Storno", -8.00m, position: 3m),
+            ],
+            paidInCash: 10.00m);
+
+        Render(commands)[3].Should().Be("trline naPiwo vt0 pr800 st1 wa800");
+    }
+
+    /// <summary>A fractional position names a line, and one the receipt does not carry is a mistake.</summary>
+    [Fact]
+    public void AStornoNamingAPositionTheReceiptDoesNotCarry_IsRejected()
+    {
+        var act = () => MapSale(
+            [Position("Kawa", 10.00m, position: 1m), Voided("Storno", -10.00m, position: 3.1m)],
+            paidInCash: 10.00m);
+
+        act.Should().Throw<PLValidationException>()
+            .WithMessage("The voided position 'Storno'*reverses sale position 3, which this receipt does not carry*reverse the position in front of it*");
     }
 
     /// <summary>A quantity of its own makes it a partial storno: one of three waters goes back.</summary>
@@ -121,6 +141,50 @@ public class PosNetReversalMappingTests
     }
 
     /// <summary>
+    /// The quantity travels with three decimal places. One with more would satisfy price x quantity
+    /// here and fail on the register, with the transaction already open — whether the POS stated it
+    /// or it follows from an amount that is no multiple of the unit price to three places.
+    /// </summary>
+    [Fact]
+    public void AStornoWhoseQuantityHasMoreDecimalsThanTheWireCarries_IsRejected()
+    {
+        var stated = () => MapSale(
+            [Position("Woda", 40.00m, quantity: 2m), Voided("Storno", -24.69m, quantity: 1.2345m)],
+            paidInCash: 15.31m);
+        var derived = () => MapSale(
+            [Position("Woda", 16.00m), Voided("Storno", -1.00m)],
+            paidInCash: 15.00m);
+
+        stated.Should().Throw<PLValidationException>().WithMessage("The storno of 'Storno'*more than 3 decimal places*");
+        derived.Should().Throw<PLValidationException>().WithMessage("The storno of 'Storno'*quantity 0.0625*more than 3 decimal places*");
+    }
+
+    /// <summary>
+    /// A storno travels at the PTU slot of the position it reverses. Booked at another rate it would
+    /// silently move turnover between rates — refused, the way a rabat at another rate is.
+    /// </summary>
+    [Fact]
+    public void AStornoBookedOnAnotherVatRateThanItsPosition_IsRejected()
+    {
+        var act = () => MapSale(
+            [Position("Kawa", 10.00m), Position("Piwo", 8.00m), Voided("Storno", -8.00m, vatCase: ReducedRate)],
+            paidInCash: 10.00m);
+
+        act.Should().Throw<PLValidationException>().WithMessage("The voided position 'Storno'*DiscountedVatRate1*reverses ('Piwo')*NormalVatRate*");
+    }
+
+    /// <summary>A storno without a VAT case leaves the rate to the position, as a rabat without one does.</summary>
+    [Fact]
+    public void AStornoWithoutAVatCase_TakesTheRateOfItsPosition()
+    {
+        var commands = MapSale(
+            [Position("Kawa", 10.00m), Position("Piwo", 8.00m), Voided("Storno", -8.00m, vatCase: NoRate)],
+            paidInCash: 10.00m);
+
+        Render(commands)[3].Should().Be("trline naPiwo vt0 pr800 st1 wa800");
+    }
+
+    /// <summary>
     /// A position sold with a rabat is reversed by a storno carrying the same rabat — measured on the
     /// device: with the rabat repeated it takes the discounted 8.00 off, without it the 10.00 before
     /// the rabat, which would leave the receipt totalling less than the positions still on it.
@@ -181,6 +245,20 @@ public class PosNetReversalMappingTests
             .WithMessage("*can only be reversed as a whole — state 30.00 before it or 27.00 after it*");
     }
 
+    /// <summary>
+    /// A rabat sent right after a storno has nothing to belong to: the storno carries no rabat of its
+    /// own, and the position in front of the storno has just been reversed.
+    /// </summary>
+    [Fact]
+    public void ARabatFollowingAStorno_IsRejected()
+    {
+        var act = () => MapSale(
+            [Position("Kawa", 10.00m), Position("Piwo", 8.00m), Voided("Storno", -8.00m), Modifier("Rabat", -2.00m)],
+            paidInCash: 8.00m);
+
+        act.Should().Throw<PLValidationException>().WithMessage("The discount/extra 'Rabat' follows a storno*");
+    }
+
     [Fact]
     public void AStornoOfAPositionSoldAfterIt_IsRejected()
     {
@@ -235,45 +313,4 @@ public class PosNetReversalMappingTests
 
         act.Should().Throw<PLValidationException>().WithMessage("*needs a positive total*");
     }
-
-    private static IReadOnlyList<PosNetCommand> MapSale(List<ChargeItem> chargeItems, decimal paidInCash)
-        => PosNetReceiptMapper.MapSale(
-            new ReceiptRequest
-            {
-                ftReceiptCase = (ReceiptCase)0x504C_2000_0000_0001,
-                Currency = Currency.PLN,
-                cbChargeItems = chargeItems,
-                cbPayItems = paidInCash == 0m
-                    ? []
-                    : [new PayItem { Description = "Gotówka", Amount = paidInCash, ftPayItemCase = (PayItemCase)0x504C_2000_0000_0001, Currency = Currency.PLN }],
-            },
-            new PtuSlotResolver(PosNetConfiguration.DefaultVatRateTable()));
-
-    private static ChargeItem Position(string description, decimal amount, decimal quantity = 1m, decimal position = 0m)
-        => Item(description, amount, quantity, position, flags: 0);
-
-    private static ChargeItem Voided(string description, decimal amount, decimal quantity = 0m, decimal position = 0m)
-        => Item(description, amount, quantity, position, flags: VoidFlag);
-
-    private static ChargeItem VoidedModifier(string description, decimal amount)
-        => Item(description, amount, quantity: 1m, position: 0m, flags: VoidFlag | ExtraOrDiscountFlag);
-
-    private static ChargeItem Modifier(string description, decimal amount, decimal position = 0m)
-        => Item(description, amount, quantity: 1m, position: position, flags: ExtraOrDiscountFlag);
-
-    private static ChargeItem Refunded(string description, decimal amount)
-        => Item(description, amount, quantity: 1m, position: 0m, flags: RefundFlag);
-
-    private static ChargeItem Item(string description, decimal amount, decimal quantity, decimal position, long flags) => new()
-    {
-        Description = description,
-        Amount = amount,
-        Quantity = quantity,
-        Position = position,
-        ftChargeItemCase = (ChargeItemCase)(0x504C_2000_0000_0010 | flags | NormalRate),
-        Currency = Currency.PLN,
-    };
-
-    private static List<string> Render(IReadOnlyList<PosNetCommand> commands)
-        => commands.Select(c => string.Join(' ', new[] { c.Mnemonic }.Concat(c.Parameters.Select(p => $"{p.Key}{p.Value}")))).ToList();
 }

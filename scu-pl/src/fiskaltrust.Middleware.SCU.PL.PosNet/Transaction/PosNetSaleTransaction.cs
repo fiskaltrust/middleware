@@ -82,7 +82,7 @@ public class PosNetSaleTransaction
                 $"The discount of {modifier.AmountGrosze.GroszeToPlnText()} on '{name}' exceeds the position's value of {totalGrosze.GroszeToPlnText()} — a Polish register cannot print a negative sale line.");
         }
         _commands.Add(PosNetCommands.Trline(name, vatSlotIndex, unitPriceGrosze, quantity, totalGrosze, modifier));
-        _totalGrosze += totalGrosze + ModifierEffect(modifier);
+        _totalGrosze += totalGrosze + (modifier?.SignedAmountGrosze ?? 0);
         _stage = Stage.HasLines;
     }
 
@@ -99,6 +99,7 @@ public class PosNetSaleTransaction
     {
         if (_stage is Stage.HasSubtotalModifier)
         {
+            // Same reason as for a sale line: the subtotal the rabat was granted on would no longer be the receipt's.
             throw new PLValidationException("A storno (trline st1) cannot follow a discount on the subtotal — the subtotal it was granted on would no longer be the receipt's.");
         }
         if (_stage is not Stage.HasLines)
@@ -111,7 +112,7 @@ public class PosNetSaleTransaction
         }
         // What the receipt loses is what the reversed position contributed: its value after the
         // rabat/narzut it was sold with, which is why the modifier travels on the storno too.
-        var reversedGrosze = totalGrosze + ModifierEffect(modifier);
+        var reversedGrosze = totalGrosze + (modifier?.SignedAmountGrosze ?? 0);
         if (reversedGrosze > _totalGrosze)
         {
             throw new PLValidationException(
@@ -144,17 +145,9 @@ public class PosNetSaleTransaction
                 $"The subtotal discount of {modifier.AmountGrosze.GroszeToPlnText()} is not less than the subtotal of {_totalGrosze.GroszeToPlnText()} — a fiscal receipt cannot be printed with a total of zero or less.");
         }
         _commands.Add(PosNetCommands.Trdiscntsubtot(modifier));
-        _totalGrosze += ModifierEffect(modifier);
+        _totalGrosze += modifier.SignedAmountGrosze;
         _stage = Stage.HasSubtotalModifier;
     }
-
-    /// <summary>What the modifier does to the value the receipt is settled with.</summary>
-    private static long ModifierEffect(PosNetModifier? modifier) => modifier switch
-    {
-        null => 0,
-        { IsDiscount: true } => -modifier.AmountGrosze,
-        _ => modifier.AmountGrosze,
-    };
 
     public void AddPayment(int paymentType, long amountGrosze, bool isChange, string? name = null)
     {

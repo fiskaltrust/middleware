@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
@@ -73,15 +74,17 @@ public static class PosNetReceiptMapper
 
             if (isModifier)
             {
-                // Which line this belongs to can only be settled once every line is known, so the
-                // line standing in front of it is remembered here and resolved below.
-                modifiers.Add(new PendingModifier(chargeItem, lines.Count - 1));
+                // Which line this belongs to can only be settled once every line is known, so what
+                // stands in front of it is remembered here and resolved below: the last sale line,
+                // and whether a storno came between the two.
+                var followsAStorno = entries.Count > 0 && entries[^1] is PendingReversal;
+                modifiers.Add(new PendingModifier(chargeItem, lines.Count - 1, followsAStorno));
                 continue;
             }
 
             if (isVoid)
             {
-                entries.Add(new ReversalLine(chargeItem, lines.Count - 1));
+                entries.Add(new PendingReversal(chargeItem, lines.Count - 1));
                 continue;
             }
 
@@ -90,6 +93,8 @@ public static class PosNetReceiptMapper
             entries.Add(line);
         }
 
+        // Every rabat finds its line before the first storno is resolved: a storno of a discounted
+        // position repeats that rabat, so the line has to carry it first.
         var subtotalModifiers = AssignModifiers(lines, modifiers);
 
         foreach (var entry in entries)
@@ -99,15 +104,15 @@ public static class PosNetReceiptMapper
                 case SaleLine line:
                     transaction.AddLine(line.Name, line.PtuSlotIndex, line.UnitPriceGrosze, line.Quantity, line.TotalGrosze, line.Modifier);
                     break;
-                case ReversalLine reversal:
-                    ResolveReversal(reversal, lines);
+                case PendingReversal pending:
+                    var reversal = ResolveReversal(pending, lines);
                     transaction.AddReversalLine(
-                        reversal.Target!.Name,
+                        reversal.Target.Name,
                         reversal.Target.PtuSlotIndex,
                         reversal.Target.UnitPriceGrosze,
                         reversal.Quantity,
                         reversal.TotalGrosze,
-                        reversal.Modifier);
+                        reversal.Target.Modifier);
                     break;
             }
         }
@@ -169,115 +174,31 @@ public static class PosNetReceiptMapper
 
         /// <summary>How much of this position has already been reversed, in grosze.</summary>
         public long ReversedGrosze { get; set; }
+
+        /// <summary>The value the position contributes to the receipt: its line value after the rabat/narzut it carries.</summary>
+        public long NetGrosze => TotalGrosze + (Modifier?.SignedAmountGrosze ?? 0);
     }
 
-    /// <summary>
-    /// A voided position: a trline of its own that repeats the goods with the st flag set. What it
-    /// reverses is resolved in <see cref="ResolveReversal"/>.
-    /// </summary>
-    private sealed class ReversalLine(ChargeItem item, int precedingLineIndex) : ReceiptEntry
+    /// <summary>A voided position as the POS sent it, with the index of the sale line in front of it (-1 for none).</summary>
+    private sealed class PendingReversal(ChargeItem item, int precedingLineIndex) : ReceiptEntry
     {
         public ChargeItem Item { get; } = item;
 
         public int PrecedingLineIndex { get; } = precedingLineIndex;
-
-        public SaleLine? Target { get; set; }
-
-        public decimal Quantity { get; set; }
-
-        public long TotalGrosze { get; set; }
-
-        /// <summary>The rabat/narzut the reversed position was sold with, which the storno repeats.</summary>
-        public PosNetModifier? Modifier { get; set; }
     }
-
-    /// <summary>A discount/extra position with the index of the sale line that arrived before it (-1 for none).</summary>
-    private sealed record PendingModifier(ChargeItem Item, int PrecedingLineIndex);
 
     /// <summary>
-    /// Works out which position a storno reverses, and how much of it. The goods name, PTU slot and
-    /// unit price travel from the position that was sold — the register matches a reversal against
-    /// what it printed and answers 2851/2852 when the quantity or the value does not fit — while how
-    /// much is reversed comes from the storno position itself, so a partial storno is possible.
+    /// A storno with everything settled: the position it reverses and how much of it. The trline
+    /// repeats the target's goods, PTU slot and unit price — and its rabat/narzut, which is what makes
+    /// the register take the discounted value off.
     /// </summary>
-    /// <remarks>
-    /// The amount is read as a magnitude: the direction is in the Void flag, not in the sign, which
-    /// is how the other SCUs read a voided position as well (scu-it CustomRTServerMapping.GetGrossAmount,
-    /// EpsonRTServerMapping.LineNetSign). A POS that sends the storno with either sign is understood.
-    /// </remarks>
-    private static void ResolveReversal(ReversalLine reversal, List<SaleLine> lines)
-    {
-        var item = reversal.Item;
-        var targetIndex = item.Position != 0m ? ResolveByPosition(item, lines) : reversal.PrecedingLineIndex;
-        if (targetIndex < 0)
-        {
-            throw new PLValidationException(
-                $"The voided position '{item.Description}' has no sale position to reverse. A storno repeats a position the register already printed — send it after the position it reverses, or name that position in Position.");
-        }
-        if (targetIndex > reversal.PrecedingLineIndex)
-        {
-            // The lines are sent in the order they arrive, so this one is not on the paper yet.
-            throw new PLValidationException(
-                $"The voided position '{item.Description}' reverses the sale position '{lines[targetIndex].Item.Description}', which this receipt sells after it. A position can only be reversed once it has been sold.");
-        }
+    private sealed record ResolvedReversal(SaleLine Target, decimal Quantity, long TotalGrosze);
 
-        var target = lines[targetIndex];
-        var totalGrosze = Math.Abs(item.Amount.ToGrosze());
-        if (totalGrosze == 0)
-        {
-            throw new PLValidationException($"The voided position '{item.Description}' carries no amount — there is nothing for the register to reverse.");
-        }
-
-        if (target.Modifier is { } granted)
-        {
-            // A position sold with a rabat is reversed by a storno that carries the same rabat: the
-            // register then takes the discounted value off, while a storno without it takes off the
-            // line's value before the rabat and leaves the receipt totalling less than the positions
-            // still on it. Measured on a POSNET THERMAL XL2 ONLINE — with the rabat repeated, the
-            // register verified a fiscal value reduced by the discounted amount and refused the
-            // other candidate (2805 ERR_ENDTOT_VERIFY).
-            var netGrosze = target.TotalGrosze + (granted.IsDiscount ? -granted.AmountGrosze : granted.AmountGrosze);
-            if (totalGrosze != target.TotalGrosze && totalGrosze != netGrosze)
-            {
-                // Part of a discounted position cannot be reversed: the rabat is one amount for the
-                // whole line, and how the register would split it over part of one is not documented.
-                throw new PLValidationException(
-                    $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} of the sale position '{target.Item.Description}', which was sold with a rabat/narzut and can only be reversed as a whole — state {target.TotalGrosze.GroszeToPlnText()} before it or {netGrosze.GroszeToPlnText()} after it.");
-            }
-            if (target.ReversedGrosze > 0)
-            {
-                throw new PLValidationException(
-                    $"The sale position '{target.Item.Description}' has already been reversed; a position sold with a rabat/narzut is reversed once, as a whole.");
-            }
-
-            target.ReversedGrosze = target.TotalGrosze;
-            reversal.Target = target;
-            reversal.Quantity = target.Quantity;
-            reversal.TotalGrosze = target.TotalGrosze;
-            reversal.Modifier = granted;
-            return;
-        }
-
-        if (target.ReversedGrosze + totalGrosze > target.TotalGrosze)
-        {
-            throw new PLValidationException(
-                $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} of the sale position '{target.Item.Description}', which is more than the {(target.TotalGrosze - target.ReversedGrosze).GroszeToPlnText()} still standing on it.");
-        }
-
-        // A quantity of its own makes it a partial storno; without one, the quantity follows from the
-        // amount, and price x quantity has to hold on a reversal line as it does on a sale line.
-        var quantity = item.Quantity != 0m ? Math.Abs(item.Quantity) : totalGrosze / (decimal)target.UnitPriceGrosze;
-        if (target.UnitPriceGrosze * quantity != totalGrosze)
-        {
-            throw new PLValidationException(
-                $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} over quantity {quantity}, which does not match the unit price of {target.UnitPriceGrosze.GroszeToPlnText()} the sale position was printed with — the register verifies both (errors 2851/2852).");
-        }
-
-        target.ReversedGrosze += totalGrosze;
-        reversal.Target = target;
-        reversal.Quantity = quantity;
-        reversal.TotalGrosze = totalGrosze;
-    }
+    /// <summary>
+    /// A discount/extra position with the index of the sale line that arrived before it (-1 for
+    /// none), and whether a storno stands between the two.
+    /// </summary>
+    private sealed record PendingModifier(ChargeItem Item, int PrecedingLineIndex, bool FollowsAStorno);
 
     /// <summary>
     /// Assigns every discount/extra position to the sale line it belongs to, and returns those that
@@ -296,19 +217,44 @@ public static class PosNetReceiptMapper
     /// it belongs to no line, and a register has exactly one reading for that — the rabat od
     /// podsumy.</item>
     /// </list>
-    /// A position a modifier names but the receipt does not carry is a mistake, not a receipt-level
-    /// discount: the POS said which line it meant. It is refused rather than quietly widened to the
-    /// whole receipt.
+    /// A whole-number position that no sale line shares is not a reference to a line at all: a POS
+    /// that numbers every charge item in sequence gives the modifier the next number, and such a
+    /// receipt reads by order like one without positions. A fractional position the receipt does not
+    /// carry is a mistake, not a receipt-level discount: the POS said which line it meant. It is
+    /// refused rather than quietly widened to the whole receipt.
     /// </remarks>
     private static List<PosNetModifier> AssignModifiers(List<SaleLine> lines, List<PendingModifier> modifiers)
     {
         var subtotalModifiers = new List<PosNetModifier>();
-        foreach (var (item, precedingLineIndex) in modifiers)
+        foreach (var (item, precedingLineIndex, followsAStorno) in modifiers)
         {
             var modifier = ToModifier(item);
-            var targetIndex = item.Position != 0m
-                ? ResolveByPosition(item, lines)
-                : precedingLineIndex;
+
+            var targetIndex = precedingLineIndex;
+            var readByOrder = true;
+            if (item.Position != 0m)
+            {
+                var namedIndex = FindLineByPosition(item.Position, lines);
+                if (namedIndex >= 0)
+                {
+                    targetIndex = namedIndex;
+                    readByOrder = false;
+                }
+                else if (item.Position != decimal.Truncate(item.Position))
+                {
+                    throw new PLValidationException(
+                        $"The discount/extra '{item.Description}' is sent on Position {item.Position} and so applies to sale position {decimal.Truncate(item.Position)}, which this receipt does not carry. Send it on the position it belongs to, or without a position to have it apply to the subtotal.");
+                }
+            }
+
+            if (readByOrder && followsAStorno)
+            {
+                // The entry in front of it is a storno, which carries no rabat/narzut of its own, and
+                // the sale line before that has just been reversed in part or in full. Attaching the
+                // modifier there would discount a position the customer is not paying for.
+                throw new PLValidationException(
+                    $"The discount/extra '{item.Description}' follows a storno, and a storno carries no rabat/narzut of its own. Send it before the storno, after the position it belongs to — or name that position in Position.");
+            }
             if (targetIndex < 0)
             {
                 // Its PTU rate is not read: the register distributes a subtotal discount over the
@@ -344,17 +290,119 @@ public static class PosNetReceiptMapper
         return subtotalModifiers;
     }
 
-    /// <summary>The sale line a positioned modifier names, by the integer part they share.</summary>
-    private static int ResolveByPosition(ChargeItem modifier, List<SaleLine> lines)
+    /// <summary>
+    /// Works out which position a storno reverses, and how much of it. The goods name, PTU slot and
+    /// unit price travel from the position that was sold — the register matches a reversal against
+    /// what it printed and answers 2851/2852 when the quantity or the value does not fit — while how
+    /// much is reversed comes from the storno position itself, so a partial storno is possible.
+    /// Which position that is, is read the way a discount's is (see <see cref="AssignModifiers"/>):
+    /// by <c>Position</c> where the POS set one that a sale line shares, otherwise the line in front.
+    /// </summary>
+    /// <remarks>
+    /// The amount is read as a magnitude: the direction is in the Void flag, not in the sign, which
+    /// is how the other SCUs read a voided position as well (scu-it CustomRTServerMapping.GetGrossAmount,
+    /// EpsonRTServerMapping.LineNetSign). A POS that sends the storno with either sign is understood.
+    /// </remarks>
+    private static ResolvedReversal ResolveReversal(PendingReversal reversal, List<SaleLine> lines)
     {
-        var position = decimal.Truncate(modifier.Position);
-        var index = lines.FindIndex(line => line.Item.Position != 0m && decimal.Truncate(line.Item.Position) == position);
-        if (index < 0)
+        var item = reversal.Item;
+
+        var targetIndex = reversal.PrecedingLineIndex;
+        if (item.Position != 0m)
+        {
+            var namedIndex = FindLineByPosition(item.Position, lines);
+            if (namedIndex >= 0)
+            {
+                targetIndex = namedIndex;
+            }
+            else if (item.Position != decimal.Truncate(item.Position))
+            {
+                throw new PLValidationException(
+                    $"The voided position '{item.Description}' is sent on Position {item.Position} and so reverses sale position {decimal.Truncate(item.Position)}, which this receipt does not carry. Send it on the position it reverses, or without a position to reverse the position in front of it.");
+            }
+        }
+        if (targetIndex < 0)
         {
             throw new PLValidationException(
-                $"The discount/extra '{modifier.Description}' is sent on Position {modifier.Position} and so applies to sale position {position}, which this receipt does not carry. Send it on the position it belongs to, or without a position to have it apply to the subtotal.");
+                $"The voided position '{item.Description}' has no sale position to reverse. A storno repeats a position the register already printed — send it after the position it reverses, or name that position in Position.");
         }
-        return index;
+        if (targetIndex > reversal.PrecedingLineIndex)
+        {
+            // The lines are sent in the order they arrive, so this one is not on the paper yet.
+            throw new PLValidationException(
+                $"The voided position '{item.Description}' reverses the sale position '{lines[targetIndex].Item.Description}', which this receipt sells after it. A position can only be reversed once it has been sold.");
+        }
+
+        var target = lines[targetIndex];
+
+        // The reversal travels at the target's PTU slot, so a storno the POS booked at another rate
+        // would silently move turnover between rates — refused, the way a rabat at another rate is.
+        // A storno without a rate leaves it to the position, as a rabat without one does.
+        var stornoVatCase = item.ftChargeItemCase.Vat();
+        var targetVatCase = target.Item.ftChargeItemCase.Vat();
+        if (stornoVatCase != ChargeItemCase.UnknownService && stornoVatCase != targetVatCase)
+        {
+            throw new PLValidationException(
+                $"The voided position '{item.Description}' is booked on the VAT case {stornoVatCase}, but the position it reverses ('{target.Item.Description}') sells on {targetVatCase}. A POSNET storno is printed and totalized at the rate of the position it reverses — send it with the same VAT rate as the position, or without one.");
+        }
+
+        var totalGrosze = Math.Abs(item.Amount.ToGrosze());
+        if (totalGrosze == 0)
+        {
+            throw new PLValidationException($"The voided position '{item.Description}' carries no amount — there is nothing for the register to reverse.");
+        }
+
+        if (target.Modifier is not null)
+        {
+            // A position sold with a rabat is reversed by a storno that carries the same rabat: the
+            // register then takes the discounted value off, while a storno without it takes off the
+            // line's value before the rabat and leaves the receipt totalling less than the positions
+            // still on it. Measured on a POSNET THERMAL XL2 ONLINE — with the rabat repeated, the
+            // register verified a fiscal value reduced by the discounted amount and refused the
+            // other candidate (2805 ERR_ENDTOT_VERIFY).
+            if (totalGrosze != target.TotalGrosze && totalGrosze != target.NetGrosze)
+            {
+                // Part of a discounted position cannot be reversed: the rabat is one amount for the
+                // whole line, and how the register would split it over part of one is not documented.
+                throw new PLValidationException(
+                    $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} of the sale position '{target.Item.Description}', which was sold with a rabat/narzut and can only be reversed as a whole — state {target.TotalGrosze.GroszeToPlnText()} before it or {target.NetGrosze.GroszeToPlnText()} after it.");
+            }
+            if (target.ReversedGrosze > 0)
+            {
+                throw new PLValidationException(
+                    $"The sale position '{target.Item.Description}' has already been reversed; a position sold with a rabat/narzut is reversed once, as a whole.");
+            }
+
+            target.ReversedGrosze = target.TotalGrosze;
+            return new ResolvedReversal(target, target.Quantity, target.TotalGrosze);
+        }
+
+        if (target.ReversedGrosze + totalGrosze > target.TotalGrosze)
+        {
+            throw new PLValidationException(
+                $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} of the sale position '{target.Item.Description}', which is more than the {(target.TotalGrosze - target.ReversedGrosze).GroszeToPlnText()} still standing on it.");
+        }
+
+        // A quantity of its own makes it a partial storno; without one, the quantity follows from the
+        // amount, and price x quantity has to hold on a reversal line as it does on a sale line —
+        // for the quantity the register will see, not the one worked out here (see RequireWireQuantity).
+        var quantity = item.Quantity != 0m ? Math.Abs(item.Quantity) : totalGrosze / (decimal)target.UnitPriceGrosze;
+        RequireWireQuantity($"The storno of '{item.Description}'", quantity);
+        if (target.UnitPriceGrosze * quantity != totalGrosze)
+        {
+            throw new PLValidationException(
+                $"The storno of '{item.Description}' reverses {totalGrosze.GroszeToPlnText()} over quantity {quantity.ToString(CultureInfo.InvariantCulture)}, which does not match the unit price of {target.UnitPriceGrosze.GroszeToPlnText()} the sale position was printed with — the register verifies both (errors 2851/2852).");
+        }
+
+        target.ReversedGrosze += totalGrosze;
+        return new ResolvedReversal(target, quantity, totalGrosze);
+    }
+
+    /// <summary>The sale line whose position shares the integer part of <paramref name="position"/>, or -1 when none does.</summary>
+    private static int FindLineByPosition(decimal position, List<SaleLine> lines)
+    {
+        var wholePart = decimal.Truncate(position);
+        return lines.FindIndex(line => line.Item.Position != 0m && decimal.Truncate(line.Item.Position) == wholePart);
     }
 
     /// <summary>
@@ -394,25 +442,34 @@ public static class PosNetReceiptMapper
             return totalGrosze;
         }
 
-        // The check below has to be made against the quantity the printer will see, not the one we
-        // were handed: trline carries it with PosNetCommands.QuantityDecimals places, so a quantity
-        // with more of them would satisfy price x quantity = value here and violate it on paper
-        // (1.2345 travels as 1.235, and 1.235 x 20.00 is 24.70 against a line value of 24.69).
-        if (decimal.Round(quantity, PosNetCommands.QuantityDecimals, MidpointRounding.AwayFromZero) != quantity)
-        {
-            throw new PLValidationException(
-                $"The sale line '{description}' cannot be printed by a Polish register: the quantity {quantity} has more than "
-                + $"{PosNetCommands.QuantityDecimals} decimal places, which the protocol cannot carry. Round the quantity, or split the position.");
-        }
+        RequireWireQuantity($"The sale line '{description}'", quantity);
 
         var unitPriceGrosze = totalGrosze / quantity;
         if (unitPriceGrosze != decimal.Truncate(unitPriceGrosze))
         {
             throw new PLValidationException(
-                $"The sale line '{description}' cannot be printed by a Polish register: the amount {totalGrosze.GroszeToPlnText()} over quantity {quantity} is not a whole number of grosze per unit "
+                $"The sale line '{description}' cannot be printed by a Polish register: the amount {totalGrosze.GroszeToPlnText()} over quantity {quantity.ToString(CultureInfo.InvariantCulture)} is not a whole number of grosze per unit "
                 + "(price × quantity must equal the line value on a fiscal document). Split the position or send an amount that divides by the quantity.");
         }
         return (long) unitPriceGrosze;
+    }
+
+    /// <summary>
+    /// Every check of price x quantity = value has to be made against the quantity the printer will
+    /// see, not the one worked out here: trline carries it with <see cref="PosNetCommands.QuantityDecimals"/>
+    /// places, so a quantity with more of them would satisfy the invariant here and violate it on
+    /// paper (1.2345 travels as 1.235, and 1.235 x 20.00 is 24.70 against a line value of 24.69) —
+    /// with the transaction already open on the device.
+    /// </summary>
+    /// <param name="subject">Who the quantity belongs to, as the start of the message ("The sale line 'Woda'").</param>
+    private static void RequireWireQuantity(string subject, decimal quantity)
+    {
+        if (decimal.Round(quantity, PosNetCommands.QuantityDecimals, MidpointRounding.AwayFromZero) != quantity)
+        {
+            throw new PLValidationException(
+                $"{subject} cannot be printed by a Polish register: the quantity {quantity.ToString(CultureInfo.InvariantCulture)} has more than "
+                + $"{PosNetCommands.QuantityDecimals} decimal places, which the protocol cannot carry. Round the quantity, or split the position.");
+        }
     }
 
     /// <summary>The trline vt parameter is the zero-based PTU slot index: A=0 … G=6.</summary>

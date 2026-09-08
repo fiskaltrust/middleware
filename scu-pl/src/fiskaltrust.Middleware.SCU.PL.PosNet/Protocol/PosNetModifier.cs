@@ -34,6 +34,9 @@ public sealed class PosNetModifier
     /// <summary>The amount in grosze, always positive — the <c>rw</c> parameter.</summary>
     public long AmountGrosze { get; }
 
+    /// <summary>What the modifier does to the value it is granted on: minus the amount for a rabat, plus it for a narzut.</summary>
+    public long SignedAmountGrosze => IsDiscount ? -AmountGrosze : AmountGrosze;
+
     /// <summary>The name printed next to the discount line, if any — <c>rn</c> / <c>na</c>.</summary>
     public string? Name { get; }
 }
