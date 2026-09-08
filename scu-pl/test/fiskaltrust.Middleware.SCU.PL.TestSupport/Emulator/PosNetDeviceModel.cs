@@ -56,13 +56,21 @@ public sealed class PosNetDeviceModel
     /// <summary>The daily report counter (<c>rd</c>); the next report is <c>rd + 1</c>.</summary>
     public int DailyReportCounter { get; set; }
 
-    /// <summary>Correctly completed receipts (<c>bn</c>). Seeded so a fresh model looks like a used device.</summary>
+    /// <summary>
+    /// Correctly completed receipts since the last daily report (<c>bn</c>, <c>pn</c>). The office
+    /// printer numbers its receipts per day — measured: the daily report set <c>bn</c> and <c>bt</c>
+    /// back to 0. Seeded so a fresh model looks like a day in progress.
+    /// </summary>
     public int CompletedReceipts { get; private set; } = 84;
 
-    /// <summary>Receipts since the last daily report (<c>pn</c>) — the daily report resets it, <see cref="CompletedReceipts"/> runs on.</summary>
-    public int ReceiptsSinceDailyReport { get; private set; } = 84;
+    /// <summary>
+    /// Documents printed since fiscalization — receipts, canceled receipts, non-fiscal printouts,
+    /// reports. The header number <c>hn</c> is the next one and runs across daily reports
+    /// (measured: <c>bt18 nf1</c> → <c>hn20</c>, then <c>hn21</c> after the report).
+    /// </summary>
+    public int Printouts { get; private set; } = 84;
 
-    /// <summary>Non-fiscal printouts (<c>nf</c>), e.g. goods returns.</summary>
+    /// <summary>Non-fiscal printouts since the last daily report (<c>nf</c>), e.g. goods returns.</summary>
     public int NonFiscalPrintouts { get; private set; }
 
     /// <summary>Canceled receipts (<c>bc</c>, <c>cn</c>).</summary>
@@ -100,7 +108,7 @@ public sealed class PosNetDeviceModel
         return command.CommandId switch
         {
             "scomm" => $"scomm\tfs{Flag(Fiscalized)}\ttzN\tts{(TransactionOpen ? ReceiptDocumentType : 0)}\thrT\tnu{UniqueNumber}\ttdN\t",
-            "scnt" => $"scnt\trd{DailyReportCounter}\thn{LastReceiptNumber + 1}\tbn{CompletedReceipts}\tfn{Invoices}\tnu{UniqueNumber}\tbc{CanceledReceipts}\tbt{LastReceiptNumber}\tfc0\t",
+            "scnt" => $"scnt\trd{DailyReportCounter}\thn{Printouts + 1}\tbn{CompletedReceipts}\tfn{Invoices}\tnu{UniqueNumber}\tbc{CanceledReceipts}\tbt{LastReceiptNumber}\tfc0\t",
             "stot" => Stot(),
             "strns" => Strns(),
             "sfsk" => $"sfsk\tfs{Flag(Fiscalized)}\tcl0\trd{DailyReportCounter}\tvt1\t{RateTableFields()}rw{NoSalesMoment}\tnu{UniqueNumber}\t",
@@ -292,7 +300,7 @@ public sealed class PosNetDeviceModel
             _receiptTotalizers[i] += transaction.PerRate[i];
         }
         CompletedReceipts++;
-        ReceiptsSinceDailyReport++;
+        Printouts++;
         _lastReceipt = new CompletedReceipt(transaction.PerRate.ToArray(), payments, change);
         _transaction = null;
         return Ok("trend");
@@ -313,13 +321,19 @@ public sealed class PosNetDeviceModel
         {
             return Error("dailyrep", PosNetErrors.DateFormat);
         }
-        if (Fiscalized && _receiptTotalizers.All(v => v == 0) && ReceiptsSinceDailyReport == 0)
+        if (Fiscalized && _receiptTotalizers.All(v => v == 0) && CompletedReceipts == 0)
         {
             return Error("dailyrep", PosNetErrors.DailyReportZero);
         }
+        // Measured after the report: scnt bn0 bc0 bt0, stot pn0 cn0 ct0 nf0 — only hn and rd run on.
         DailyReportCounter++;
         Array.Clear(_receiptTotalizers);
-        ReceiptsSinceDailyReport = 0;
+        CompletedReceipts = 0;
+        CanceledReceipts = 0;
+        CanceledTotalGrosze = 0;
+        NonFiscalPrintouts = 0;
+        _lastReceipt = null;
+        Printouts++;
         return Ok("dailyrep");
     }
 
@@ -335,6 +349,7 @@ public sealed class PosNetDeviceModel
             return Error("stocash", PosNetErrors.Parameter);
         }
         NonFiscalPrintouts++;
+        Printouts++;
         return Ok("stocash");
     }
 
@@ -346,6 +361,7 @@ public sealed class PosNetDeviceModel
         }
         CanceledReceipts++;
         CanceledTotalGrosze += transaction.PerRate.Sum();
+        Printouts++;
         _transaction = null;
         return Ok("prncancel");
     }
@@ -364,7 +380,7 @@ public sealed class PosNetDeviceModel
     {
         var salesMoment = _lastReceipt is null ? NoSalesMoment : DateTime.Now.ToString("yyyy-MM-dd;HH:mm", CultureInfo.InvariantCulture);
         return $"stot\tno{DailyReportCounter + 1}\t{AmountFields('f', new long[SlotCount])}fn{Invoices}\t{AmountFields('p', _receiptTotalizers)}"
-            + $"pn{ReceiptsSinceDailyReport}\tct{CanceledTotalGrosze}\tcn{CanceledReceipts}\tcc0\t{RateTableFields()}ds{salesMoment}\tde{salesMoment}\tft0\tfl0\tnf{NonFiscalPrintouts}\t";
+            + $"pn{CompletedReceipts}\tct{CanceledTotalGrosze}\tcn{CanceledReceipts}\tcc0\t{RateTableFields()}ds{salesMoment}\tde{salesMoment}\tft0\tfl0\tnf{NonFiscalPrintouts}\t";
     }
 
     /// <summary>One field per slot, e.g. <c>pa1260 pb0 …</c> — amounts travel as integer grosze, as recorded off the device.</summary>

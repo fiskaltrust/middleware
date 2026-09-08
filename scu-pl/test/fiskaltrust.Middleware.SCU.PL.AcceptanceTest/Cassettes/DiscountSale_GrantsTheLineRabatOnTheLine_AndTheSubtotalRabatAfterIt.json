@@ -1,10 +1,10 @@
 {
-  "RecordedAgainst": "tcp://192.168.178.58:6666",
-  "RecordedAtUtc": "2026-08-25T20:14:50.8350052Z",
+  "RecordedAgainst": "serial://COM9",
+  "RecordedAtUtc": "2026-09-08T15:54:54.4713296Z",
   "Exchanges": [
     {
       "Command": "scomm\t",
-      "Response": "scomm\tfsN\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+      "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
     },
     {
       "Command": "trinit\tbm0\t",
@@ -28,7 +28,7 @@
     },
     {
       "Command": "scnt\t",
-      "Response": "scnt\trd0\thn62\tbn53\tfn0\tnuZBF 2101002392\tbc0\tbt53\tfc0\t"
+      "Response": "scnt\trd0\thn13\tbn12\tfn0\tnuZBF 2101002392\tbc0\tbt12\tfc0\t"
     }
   ]
 }

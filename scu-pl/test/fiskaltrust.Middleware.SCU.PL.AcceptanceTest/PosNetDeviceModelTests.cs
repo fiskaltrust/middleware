@@ -236,10 +236,11 @@ public class PosNetDeviceModelTests
 
         model.DailyReportCounter.Should().Be(1);
         model.ReceiptTotalizersGrosze.Should().AllSatisfy(v => v.Should().Be(0));
-        model.ReceiptsSinceDailyReport.Should().Be(0);
-        model.CompletedReceipts.Should().Be(85, "the receipt numbering runs on across the day");
-        Send(model, new PosNetCommand("stot")).Should().Contain("\tno2\t").And.Contain("\tpn0\t");
-        Send(model, PosNetCommands.Scnt()).Should().Contain("\trd1\t");
+        // Measured on the printer: the daily report set bn and bt back to 0 while hn ran on (20 → 21).
+        model.CompletedReceipts.Should().Be(0);
+        model.LastReceiptNumber.Should().Be(0);
+        Send(model, new PosNetCommand("stot")).Should().Contain("\tno2\t").And.Contain("\tpn0\t").And.Contain("\tnf0\t");
+        Send(model, PosNetCommands.Scnt()).Should().Contain("\trd1\t").And.Contain("\tbn0\t").And.Contain("\tbt0\t").And.Contain("\thn87\t");
     }
 
     [Fact]
