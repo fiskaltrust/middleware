@@ -2757,4 +2757,63 @@ public class MyDataOverrideTests
         doc.Should().NotBeNull();
         doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
     }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutOverride_ShouldNotHaveV202DeliveryNoteFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.nonObligatedRecipientSpecified.Should().BeFalse();
+        doc.invoice[0].invoiceHeader.withoutDigitalTransportTrackingSpecified.Should().BeFalse();
+        doc.invoice[0].invoiceHeader.receivingNotePurposeSpecified.Should().BeFalse();
+        doc.invoice[0].invoiceHeader.otherReceivingNotePurposeTitle.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithV202DeliveryNoteOverrides_ShouldSetAllFourFields()
+    {
+        // myDATA v2.0.2 invoiceHeader additions (issue #280): nonObligatedRecipient,
+        // withoutDigitalTransportTracking, receivingNotePurpose, otherReceivingNotePurposeTitle.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            nonObligatedRecipient = true,
+                            withoutDigitalTransportTracking = true,
+                            receivingNotePurpose = 2,
+                            otherReceivingNotePurposeTitle = "Λοιπή αιτία παραλαβής"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.nonObligatedRecipientSpecified.Should().BeTrue();
+        header.nonObligatedRecipient.Should().BeTrue();
+        header.withoutDigitalTransportTrackingSpecified.Should().BeTrue();
+        header.withoutDigitalTransportTracking.Should().BeTrue();
+        header.receivingNotePurposeSpecified.Should().BeTrue();
+        header.receivingNotePurpose.Should().Be(2);
+        header.otherReceivingNotePurposeTitle.Should().Be("Λοιπή αιτία παραλαβής");
+    }
 }
