@@ -38,7 +38,7 @@ public class AADEFactory
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
-            throw new ArgumentException("Receipt base address is required for myDATA v2.0.1", nameof(receiptBaseAddress));
+            throw new ArgumentException("Receipt base address is required for myDATA v2.0.2", nameof(receiptBaseAddress));
         }
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
@@ -630,6 +630,33 @@ public class AADEFactory
         {
             invoice.invoiceHeader.toWeigh = headerOverride.ToWeigh.Value;
             invoice.invoiceHeader.toWeighSpecified = true;
+        }
+
+        // Apply nonObligatedRecipient (delivery-note flag added in myDATA v2.0.2)
+        if (headerOverride.NonObligatedRecipient.HasValue)
+        {
+            invoice.invoiceHeader.nonObligatedRecipient = headerOverride.NonObligatedRecipient.Value;
+            invoice.invoiceHeader.nonObligatedRecipientSpecified = true;
+        }
+
+        // Apply withoutDigitalTransportTracking (delivery-note flag added in myDATA v2.0.2)
+        if (headerOverride.WithoutDigitalTransportTracking.HasValue)
+        {
+            invoice.invoiceHeader.withoutDigitalTransportTracking = headerOverride.WithoutDigitalTransportTracking.Value;
+            invoice.invoiceHeader.withoutDigitalTransportTrackingSpecified = true;
+        }
+
+        // Apply receivingNotePurpose (receiving-note reason, added in myDATA v2.0.2)
+        if (headerOverride.ReceivingNotePurpose.HasValue)
+        {
+            invoice.invoiceHeader.receivingNotePurpose = headerOverride.ReceivingNotePurpose.Value;
+            invoice.invoiceHeader.receivingNotePurposeSpecified = true;
+        }
+
+        // Apply otherReceivingNotePurposeTitle (added in myDATA v2.0.2)
+        if (!string.IsNullOrEmpty(headerOverride.OtherReceivingNotePurposeTitle))
+        {
+            invoice.invoiceHeader.otherReceivingNotePurposeTitle = headerOverride.OtherReceivingNotePurposeTitle;
         }
 
         // Overriding the document numbering is not supported: series/aa are assigned by
