@@ -64,6 +64,20 @@ public static class ReceiptCaseHelper
     public static bool IsSingleUseVoucher(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00F0) == 0x40 && !IsMultiUseVoucher(chargeItem);
 
     public static bool IsMultiUseVoucher(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00FF) == 0x48;
+
+    /// <summary>
+    /// Multi-use voucher line that redeems (pays with) the voucher: negative on a sale, positive on a refund/void,
+    /// which mirror the sale. A positive line on a sale is the sale of the voucher itself.
+    /// </summary>
+    public static bool IsMultiUseVoucherRedeem(this ChargeItem chargeItem, ReceiptRequest receiptRequest)
+    {
+        if (!chargeItem.IsMultiUseVoucher() || chargeItem.Amount == 0)
+        {
+            return false;
+        }
+        var inverted = receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();
+        return inverted ? chargeItem.Amount > 0 : chargeItem.Amount < 0;
+    }
     
     public static bool IsSubtotalDiscount(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0FFF_0000_0000) == 0x0000_0100_0000_0000;
 

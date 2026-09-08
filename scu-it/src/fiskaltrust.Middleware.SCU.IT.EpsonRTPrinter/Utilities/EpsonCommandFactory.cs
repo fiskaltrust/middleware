@@ -465,34 +465,37 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         public static List<PrintRecRefund> GetRecRefunds(ReceiptRequest receiptRequest)
         {
-            return receiptRequest.cbChargeItems?.Select(p => new PrintRecRefund
+            // A redeemed multi-use voucher is a "sconto a pagare" payment, not a line item (see GetTotalAndMessages).
+            return receiptRequest.cbChargeItems?.Where(p => !p.IsMultiUseVoucherRedeem(receiptRequest)).Select(p => new PrintRecRefund
             {
                 Description = p.Description,
                 Quantity = Math.Abs(p.Quantity),
                 UnitPrice = p.Quantity == 0 || p.Amount == 0 ? 0 : Math.Abs(p.Amount) / Math.Abs(p.Quantity),
                 Amount = Math.Abs(p.Amount),
-                Department = p.GetVatGroup()
+                Department = p.IsMultiUseVoucher() ? 11 : p.GetVatGroup()
             }).ToList();
         }
 
         public static List<PrintRecVoid> GetRecvoids(ReceiptRequest receiptRequest)
         {
-            return receiptRequest.cbChargeItems?.Select(p => new PrintRecVoid
+            return receiptRequest.cbChargeItems?.Where(p => !p.IsMultiUseVoucherRedeem(receiptRequest)).Select(p => new PrintRecVoid
             {
                 Description = p.Description,
                 Quantity = Math.Abs(p.Quantity),
                 UnitPrice = p.Quantity == 0 || p.Amount == 0 ? 0 : Math.Abs(p.Amount) / Math.Abs(p.Quantity),
                 Amount = Math.Abs(p.Amount),
-                Department = p.GetVatGroup()
+                Department = p.IsMultiUseVoucher() ? 11 : p.GetVatGroup()
             }).ToList();
         }
 
         public static List<ItemAndMessage> GetItemAndMessages(ReceiptRequest receiptRequest)
         {
             var itemAndMessages = new List<ItemAndMessage>();
+            // A redeemed multi-use voucher is a "sconto a pagare" payment, not a line item (see GetTotalAndMessages).
+            var chargeItems = receiptRequest.cbChargeItems.Where(x => !x.IsMultiUseVoucherRedeem(receiptRequest)).ToList();
             if (receiptRequest.IsGroupingRequest())
             {
-                var chargeItemGroups = receiptRequest.cbChargeItems.GroupBy(x => x.Position / 100);
+                var chargeItemGroups = chargeItems.GroupBy(x => x.Position / 100);
                 foreach (var chargeItemGroup in chargeItemGroups)
                 {
                     var mainItem = chargeItemGroup.FirstOrDefault(x => x.Position % 100 == 0);
@@ -606,7 +609,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             else
             {
                 // Todo handle payment adjustments / discounts
-                foreach (var i in receiptRequest.cbChargeItems)
+                foreach (var i in chargeItems)
                 {
                     if (i.IsSubtotalDiscount() || i.IsSubtotalSurcharge())
                         continue;
@@ -721,6 +724,24 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         public static List<TotalAndMessage> GetTotalAndMessages(ReceiptRequest request)
         {
             var totalAndMessages = new List<TotalAndMessage>();
+
+            // A multi-use voucher redeemed as a charge item is paid like pay item 0x06: "sconto a pagare" for
+            // buoni multiuso (payment type 6, index 1; Epson protocol 7.00 §9.13). It goes before the other
+            // payments because a type 6 payment above the amount still due is rejected with error 21.
+            foreach (var voucher in request.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem(request)))
+            {
+                totalAndMessages.Add(new()
+                {
+                    PrintRecTotal = new PrintRecTotal
+                    {
+                        Description = voucher.Description,
+                        PaymentType = 6,
+                        Index = 1,
+                        Payment = Math.Abs(voucher.Amount)
+                    }
+                });
+            }
+
             foreach (var pay in request.cbPayItems)
             {
                 var paymentType = GetEpsonPaymentType(pay);
