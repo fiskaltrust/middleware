@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
-using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
 
@@ -120,23 +119,18 @@ public sealed class TcpPosNetTransport : IPosNetTransport
 
     private static async Task<byte[]> ReadFrameAsync(NetworkStream stream, CancellationToken cancellationToken)
     {
-        // Frames end with ETX (0x03); payload characters start at 0x20, so scanning for the
-        // terminator cannot hit content bytes.
-        using var buffer = new MemoryStream();
+        var buffer = new ResponseFrameBuffer();
         var chunk = new byte[256];
-        while (true)
+        while (!buffer.IsComplete)
         {
             var read = await stream.ReadAsync(chunk, cancellationToken);
             if (read == 0)
             {
                 throw new IOException("The connection was closed before a complete frame was received.");
             }
-            buffer.Write(chunk, 0, read);
-            if (Array.IndexOf(chunk, PosNetFrame.Etx, 0, read) >= 0)
-            {
-                return buffer.ToArray();
-            }
+            buffer.Append(chunk.AsSpan(0, read));
         }
+        return buffer.ToArray();
     }
 
     private void DropConnection()

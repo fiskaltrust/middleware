@@ -16,11 +16,12 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(PosNetConfiguration.FromConfiguration(Configuration));
-        // Singletons on purpose: the SCU owns the persistent TCP connection to the printer and
+        // Singletons on purpose: the SCU owns the persistent connection to the printer and
         // serializes commands on it — one instance per configured device. The transport is a
         // registration of its own so the wire can be swapped or decorated (a recording transport
-        // in the acceptance tests, a serial one later) without touching the SCU.
-        services.AddSingleton<IPosNetTransport, TcpPosNetTransport>();
+        // in the acceptance tests) without touching the SCU; which wire — TCP to the network
+        // interface, serial to the USB/COM interface — follows from the DeviceUrl.
+        services.AddSingleton(provider => PosNetTransportFactory.Create(provider.GetRequiredService<PosNetConfiguration>()));
         services.AddSingleton<PosNetClient>();
         services.AddSingleton<IPLSSCD, PosNetPLSSCD>();
     }
