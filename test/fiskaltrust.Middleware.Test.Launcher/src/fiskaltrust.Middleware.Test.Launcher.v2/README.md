@@ -44,8 +44,9 @@ activates; a non-fiscal test printer does not, and the host will say so in its i
 
 An inactive queue never forwards a receipt to the SCU, so a non-fiscal printer stays silent — not
 because it could not print, but because nothing reaches it. `MW_PL_ASSUME_FISCALIZED=1` reports the
-register as fiscalized (`AssumeFiscalizedPLSSCD`, launcher-only) so the queue activates and every
-sale receipt is really printed, as a non-fiscal document (`NIEFISKALNY`):
+register as fiscalized (`AssumeFiscalizedPLSSCD` from `fiskaltrust.Middleware.SCU.PL.TestSupport`,
+test infrastructure only) so the queue activates and every sale receipt is really printed, as a
+non-fiscal document (`NIEFISKALNY`):
 
 ```sh
 # scripted run: init, zero receipt, two cash sales — two printouts
@@ -56,21 +57,11 @@ MW_MARKET=PL MW_CASHBOX_CONFIGURATION=configuration/PL/cashbox-configuration-pos
 curl -X POST localhost:1500/samples/SignRequestReceipt_CashSaleReceipt
 ```
 
-Which cases reach the paper is up to the SCU: the sale cases (`CashSaleReceipt`, `CardSaleReceipt`,
-`NipReceipt`, `DiscountReceipt`, `StornoReceipt`) print, the zero receipt only reads the status, and
+Which cases exist, and how a rabat or storno is read, is documented where the cases live: the
+`BusinessCases/` folder of `scu-pl/test/fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest/` and
+its README (see also `PosNetReceiptMapper`). `GET /samples` lists what this host serves. Which of them
+reach the paper is up to the SCU: sale receipts print, the zero receipt only reads the status, and
 reports and returns are not implemented in the PosNet SCU yet.
-
-`DiscountReceipt` carries both discount levels a register knows: a rabat on the position (it travels
-as a parameter of the sale line) and a rabat od podsumy. Which line a discount belongs to is read
-from `Position` where the POS sets one — `1.1` belongs to position `1`, so `1 Kawa, 2 Piwo, 1.1 Rabat`
-discounts the coffee — and otherwise from the order, where it modifies the position in front of it. A
-discount that belongs to no line is the one on the subtotal, which is why the sample sends it without
-a position, ahead of its `cbChargeItems`.
-
-`StornoReceipt` reverses a position that is not the last one — `1 Kawa, 2 Piwo, 1.1 Storno` — so the
-coffee goes back and the beer stays. A voided position becomes a `trline` of its own with the reversal
-flag, repeating the goods the register printed; a refund position is still turned away, because a
-return is a document of its own on a Polish register.
 
 ### Spain
 
@@ -124,7 +115,10 @@ A failed startup activation says so on the console too, not only in the index. T
 readable per request: `curl localhost:1500/journal/ActionJournal`.
 
 The samples live in `json-requests/<MARKET>/<business case>/` and are read per request, so editing
-one and posting it again does not need a restart. Their `cbReceiptReference` values are left as
+one and posting it again does not need a restart. The Polish ones are not kept here: they are the
+business cases of `scu-pl/test/fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest/BusinessCases/`,
+where each is asserted against the register, and the csproj links that folder in as
+`json-requests/PL` — so a case added or changed there is served here after the next build. Their `cbReceiptReference` values are left as
 written — the return receipt points at the cash sale, which only works with stable references. Post
 your own body to `/sign` when you need a fresh reference.
 

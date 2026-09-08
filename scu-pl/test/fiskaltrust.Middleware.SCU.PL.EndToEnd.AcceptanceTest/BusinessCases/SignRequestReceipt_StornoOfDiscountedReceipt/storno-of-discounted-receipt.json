@@ -1,0 +1,57 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "pl-storno-of-discounted-receipt",
+  "cbReceiptMoment": "2026-08-04T10:00:00Z",
+  "cbChargeItems": [
+    {
+      "Position": 1,
+      "Quantity": 1,
+      "Description": "Kawa",
+      "Amount": 10.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636333571,
+      "Currency": "PLN"
+    },
+    {
+      "Position": 1.1,
+      "Quantity": 1,
+      "Description": "Rabat",
+      "Amount": -2.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636595715,
+      "Currency": "PLN"
+    },
+    {
+      "Position": 2,
+      "Quantity": 1,
+      "Description": "Piwo",
+      "Amount": 8.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636333571,
+      "Currency": "PLN"
+    },
+    {
+      "Position": 1.2,
+      "Quantity": 1,
+      "Description": "Storno",
+      "Amount": -8.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636399107,
+      "Currency": "PLN"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Gotówka",
+      "Amount": 8.00,
+      "ftPayItemCase": 5786034805636333569,
+      "Currency": "PLN"
+    }
+  ],
+  "cbReceiptAmount": 8.00,
+  "ftReceiptCase": 5786034805636333569,
+  "Currency": "PLN"
+}

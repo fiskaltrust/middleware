@@ -1,5 +1,4 @@
 json-requests/*
-!json-requests/PL
 
 # Cashbox configurations: the PL ones point at the office test printer and carry no
 # credentials, so they survive a fresh clone. Other markets carry certificates.

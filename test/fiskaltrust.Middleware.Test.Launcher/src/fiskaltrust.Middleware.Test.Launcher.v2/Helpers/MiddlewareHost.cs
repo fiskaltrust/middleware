@@ -173,10 +173,11 @@ static class MiddlewareHost
         var samples = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (!Directory.Exists(root))
         {
-            // Only PL's samples are committed (see .gitignore), so this folder is legitimately
-            // absent for another market. Enumerating anyway would throw out of the route handler as
-            // an unhandled 500 — and, because ReadSampleAsync composes its 400 message from this
-            // list, would turn an unknown sample name into a 500 as well.
+            // Only PL ships samples — the csproj links the end-to-end suite's BusinessCases folder
+            // in as json-requests/PL — so this folder is legitimately absent for another market.
+            // Enumerating anyway would throw out of the route handler as an unhandled 500 — and,
+            // because ReadSampleAsync composes its 400 message from this list, would turn an unknown
+            // sample name into a 500 as well.
             return samples;
         }
 
