@@ -472,7 +472,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 Quantity = Math.Abs(p.Quantity),
                 UnitPrice = p.Quantity == 0 || p.Amount == 0 ? 0 : Math.Abs(p.Amount) / Math.Abs(p.Quantity),
                 Amount = Math.Abs(p.Amount),
-                Department = p.IsMultiUseVoucher() ? 11 : p.GetVatGroup()
+                Department = p.GetVatGroup()
             }).ToList();
         }
 
@@ -484,7 +484,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 Quantity = Math.Abs(p.Quantity),
                 UnitPrice = p.Quantity == 0 || p.Amount == 0 ? 0 : Math.Abs(p.Amount) / Math.Abs(p.Quantity),
                 Amount = Math.Abs(p.Amount),
-                Department = p.IsMultiUseVoucher() ? 11 : p.GetVatGroup()
+                Department = p.GetVatGroup()
             }).ToList();
         }
 
@@ -641,7 +641,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         Description = i.Description,
                         Quantity = i.Quantity,
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
-                        Department = 11,
+                        Department = _departmentNS,
                     };
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
@@ -655,17 +655,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         Department = i.GetVatGroup(),
                     };
                     itemAndMessages.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment });
-                }
-                else if (i.IsMultiUseVoucher())
-                {
-                    var printRecItem = new PrintRecItem
-                    {
-                        Description = i.Description,
-                        Quantity = i.Quantity,
-                        UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
-                        Department = 11,
-                    };
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
                 else if (i.Amount < 0)
                 {
@@ -725,9 +714,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         {
             var totalAndMessages = new List<TotalAndMessage>();
 
-            // A multi-use voucher redeemed as a charge item is paid like pay item 0x06: "sconto a pagare" for
-            // buoni multiuso (payment type 6, index 1; Epson protocol 7.00 §9.13). It goes before the other
-            // payments because a type 6 payment above the amount still due is rejected with error 21.
+            // A multi-use voucher redeemed as a charge item is paid like pay item 0x06. It goes before the other
+            // payments because a "sconto a pagare" above the amount still due is rejected with error 21.
             foreach (var voucher in request.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem(request)))
             {
                 totalAndMessages.Add(new()
@@ -735,8 +723,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     PrintRecTotal = new PrintRecTotal
                     {
                         Description = voucher.Description,
-                        PaymentType = 6,
-                        Index = 1,
+                        PaymentType = _multiUseVoucherPayment.PaymentType,
+                        Index = _multiUseVoucherPayment.Index,
                         Payment = Math.Abs(voucher.Amount)
                     }
                 });
@@ -781,6 +769,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             public int Index;
         }
 
+        /// <summary>"Sconto a pagare" for buoni multiuso (Epson protocol 7.00 §9.13): pay item 0x06 and a redeemed multi-use voucher charge item.</summary>
+        private static readonly EpsonPaymentType _multiUseVoucherPayment = new() { PaymentType = 6, Index = 1 };
+
         public static EpsonPaymentType GetEpsonPaymentType(PayItem payItem)
         {
             return (payItem.ftPayItemCase & 0xFF) switch
@@ -791,7 +782,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 0x03 => new EpsonPaymentType() { PaymentType = 1, Index = 0 },
                 0x04 => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
                 0x05 => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
-                0x06 => new EpsonPaymentType() { PaymentType = 6, Index = 1 },
+                0x06 => _multiUseVoucherPayment,
                 0x07 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x08 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x09 => new EpsonPaymentType() { PaymentType = 5, Index = 3 },
@@ -816,18 +807,32 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static int _vatRateSuperReduced2;
         private static int _vatRateParking;
 
+        // Departments pre-programmed with the non-VAT natures (see GetVatInfo for the printed captions).
+        private static readonly int _departmentEE = 10;
+        private static readonly int _departmentNS = 11;
+        private static readonly int _departmentNI = 12;
+        private static readonly int _departmentES = 13;
+        private static readonly int _departmentRM = 14;
+        private static readonly int _departmentAL = 15;
+
         public static int GetVatGroup(this ChargeItem chargeItem)
         {
+            if (chargeItem.IsMultiUseVoucher())
+            {
+                // A buono multiuso is outside the VAT scope (natura N2 "non soggetta"), whatever the nature bits say.
+                return _departmentNS;
+            }
+
             if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
             {
                 return (chargeItem.ftChargeItemCase & 0xF000) switch
                 {
-                    0x8000 => 10,
-                    0x2000 => 11,
-                    0x1000 => 12,
-                    0x3000 => 13,
-                    0x4000 => 14,
-                    0x5000 => 15,
+                    0x8000 => _departmentEE,
+                    0x2000 => _departmentNS,
+                    0x1000 => _departmentNI,
+                    0x3000 => _departmentES,
+                    0x4000 => _departmentRM,
+                    0x5000 => _departmentAL,
                     _ => _vatRateUnknown // ?
                 };
             }
