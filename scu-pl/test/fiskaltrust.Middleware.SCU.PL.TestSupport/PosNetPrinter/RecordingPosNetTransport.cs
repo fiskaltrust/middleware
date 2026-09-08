@@ -1,6 +1,6 @@
 using fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
 
-namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+namespace fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 
 /// <summary>
 /// Wraps the real transport on a hardware run: it keeps the transcript a test asserts on — a

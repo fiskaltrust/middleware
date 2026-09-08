@@ -1,6 +1,7 @@
+using fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 using Xunit;
 
-namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest;
 
 /// <summary>
 /// A test whose expectation is a property of the emulated device — a scripted failure (rejected

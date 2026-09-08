@@ -1,6 +1,6 @@
-using System.Globalization;
 using fiskaltrust.ifPOS.v2.pl;
-using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.Verification;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
@@ -11,23 +11,23 @@ namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest;
 
 /// <summary>
 /// Acceptance tests in the shape of the Italian SCU acceptance suite — the SUT is built through
-/// the ScuBootstrapper like the launcher would — but market-scoped: they run over real TCP against
-/// whatever <see cref="PosNetTestTarget"/> selects, so the whole stack (transport, framing, codec,
+/// the ScuBootstrapper like the launcher would — but market-scoped: they run over the real
+/// transport (TCP, or serial for the USB/COM interface) against whatever
+/// <see cref="PosNetTestTarget"/> selects, so the whole stack (transport, framing, codec,
 /// transaction flow) is exercised against a recorded printer in CI and against the device itself
 /// by setting <c>SCU_PL_POSNET_DEVICE_URL</c>, without touching a test.
 /// </summary>
 public class PosNetPLSSCDAcceptanceTests
 {
-    private const string FiscalDocumentNumber = "Numer dokumentu fiskalnego";
-
     /// <summary>
     /// The document number a receipt was printed under. Asserted relatively throughout: on a real
     /// printer the counter carries whatever history the device has.
     /// </summary>
-    private static int DocumentNumberOf(ProcessResponse response)
+    private static long DocumentNumberOf(ProcessResponse response)
     {
-        var signature = response.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == FiscalDocumentNumber).Subject;
-        return int.Parse(signature.Data, NumberStyles.None, CultureInfo.InvariantCulture);
+        var number = FiscalDocumentNumber.Of(response.ReceiptResponse);
+        number.Should().NotBeNull("a printed receipt carries its fiscal document number");
+        return number!.Value;
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task CashSale_RunsTheFullTransaction_AndReturnsTheFiscalDocumentNumber()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
@@ -52,7 +52,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task CardSaleWithChange_SettlesLikeTheSpecExample()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CardSaleWithChange());
 
@@ -66,7 +66,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task DiscountSale_GrantsTheLineRabatOnTheLine_AndTheSubtotalRabatAfterIt()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.DiscountSale());
 
@@ -90,7 +90,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task MarkupSale_GrantsTheNarzutOnTheLine_AndOnTheSubtotal()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.MarkupSale());
 
@@ -112,7 +112,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task StornoSale_ReversesThePositionItNames_AndSettlesWithWhatIsLeft()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoSale());
 
@@ -134,7 +134,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task StornoOfDiscountedSale_CarriesTheRabatOnTheReversal()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoOfDiscountedSale());
 
@@ -156,7 +156,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task NipReceipt_PrintsTheBuyersNip()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.NipReceipt());
 
@@ -168,7 +168,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task ConsecutiveSales_ReuseTheConnection_AndNumberDocumentsSequentially()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         var first = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
         var second = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
@@ -182,7 +182,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task ZeroReceipt_ReadsTheDeviceStatus()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.ZeroReceipt());
 
@@ -192,7 +192,7 @@ public class PosNetPLSSCDAcceptanceTests
     [Fact]
     public async Task GetInfo_ReadsTheRegisterStateWithASingleStatusCommand()
     {
-        using var target = PosNetTestTarget.Open();
+        using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         var info = await target.Sut.GetInfoAsync();
 

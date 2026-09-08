@@ -1,18 +1,17 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 
-namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
+namespace fiskaltrust.Middleware.SCU.PL.TestSupport.Emulator;
 
 /// <summary>
 /// An in-process POSNET Online printer speaking the real protocol over real TCP, so the acceptance
 /// tests exercise the full SCU stack — transport, framing, codec, command flow — without hardware.
 /// It answers either from a <see cref="Cassette"/> recorded off a real device, or, where no
-/// recording can exist, from a small hand-written model of the device: it tracks the transaction
-/// state like a printer does (no line without an open transaction, trend/prncancel close it) and
-/// can be scripted to fail.
+/// recording can exist, from the <see cref="PosNetDeviceModel"/>: a register that keeps the
+/// transaction state, does the receipt arithmetic and can be scripted to fail.
 /// </summary>
 public sealed class PosNetPrinterEmulator : IDisposable
 {
@@ -25,8 +24,6 @@ public sealed class PosNetPrinterEmulator : IDisposable
     private readonly bool _replaysACassette;
     private int _replayPosition;
     private Task? _serveLoop;
-    private bool _transactionOpen;
-    private int _completedReceipts = 84;
 
     public PosNetPrinterEmulator() { }
 
@@ -40,9 +37,20 @@ public sealed class PosNetPrinterEmulator : IDisposable
     }
 
     /// <summary>Replays a conversation recorded off a real printer.</summary>
-    public static PosNetPrinterEmulator Replaying(Cassette cassette) => new(cassette);
+    public static PosNetPrinterEmulator Replaying(Cassette cassette)
+    {
+        ArgumentNullException.ThrowIfNull(cassette);
+        return new PosNetPrinterEmulator(cassette);
+    }
 
     public CommandTranscript Transcript { get; } = new();
+
+    /// <summary>
+    /// The register this emulator models where no cassette answers. Configure it before
+    /// <see cref="Start"/> — a non-fiscal device, a different rate table — to put the SCU in front of
+    /// that register.
+    /// </summary>
+    public PosNetDeviceModel Model { get; } = new();
 
     /// <summary>
     /// Where the conversation left the recording: a command the cassette did not record, or one it
@@ -53,7 +61,8 @@ public sealed class PosNetPrinterEmulator : IDisposable
 
     public string DeviceUrl => $"tcp://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}";
 
-    public bool TransactionOpen => _transactionOpen;
+    /// <summary>Whether the modelled register has a transaction open. Meaningful for the model, not for a replay.</summary>
+    public bool TransactionOpen => Model.TransactionOpen;
 
     /// <summary>Rejects the given command with a device error code (a confirmed error, ?nnnn).</summary>
     public PosNetPrinterEmulator ErrorOn(string mnemonic, int errorCode)
@@ -140,10 +149,10 @@ public sealed class PosNetPrinterEmulator : IDisposable
     /// <summary>Answers a command the way a printer would, or returns null to stay silent.</summary>
     private byte[]? Answer(byte[] frame)
     {
-        string mnemonic;
+        PosNetResponse command;
         try
         {
-            mnemonic = Transcript.Add(frame).CommandId;
+            command = Transcript.Add(frame);
         }
         catch (PosNetProtocolException ex)
         {
@@ -157,14 +166,14 @@ public sealed class PosNetPrinterEmulator : IDisposable
 
         // Scripted failures win over anything recorded: they exist precisely for the outcomes a
         // real device cannot be asked to produce.
-        if (_swallowOn.ContainsKey(mnemonic))
+        if (_swallowOn.ContainsKey(command.CommandId))
         {
             return null;
         }
 
-        if (_errorOn.TryGetValue(mnemonic, out var scriptedError))
+        if (_errorOn.TryGetValue(command.CommandId, out var scriptedError))
         {
-            return PosNetPayload.ToFrame($"{mnemonic}\t?{scriptedError}\t");
+            return PosNetPayload.ToFrame($"{command.CommandId}\t?{scriptedError}\t");
         }
 
         if (_replay.TryDequeue(out var recorded))
@@ -175,11 +184,11 @@ public sealed class PosNetPrinterEmulator : IDisposable
         if (_replaysACassette)
         {
             // Improvising past the end of a recording would answer for a device that was never
-            // asked — the remaining flow would be asserted against the hand-written model instead.
+            // asked — the remaining flow would be asserted against the model instead.
             return Fault($"the cassette holds {_replayPosition} exchange(s) and the SCU sent a further command '{PosNetPayload.Of(frame)}'. Re-record the cassette against a printer.");
         }
 
-        return Improvise(mnemonic);
+        return PosNetPayload.ToFrame(Model.Answer(command));
     }
 
     /// <summary>
@@ -200,51 +209,13 @@ public sealed class PosNetPrinterEmulator : IDisposable
 
     /// <summary>
     /// Notes a replay fault and answers with a device error, so the test fails on the spot instead
-    /// of waiting out a receive timeout. <see cref="PosNetPrinter.PosNetTestTarget"/> surfaces the
-    /// note itself — the error code alone would not say what went wrong.
+    /// of waiting out a receive timeout. <see cref="PosNetTestTarget"/> surfaces the note itself —
+    /// the error code alone would not say what went wrong.
     /// </summary>
     private byte[] Fault(string description)
     {
         _replayFaults.Enqueue(description);
         return PosNetPayload.ToFrame("ERR\t?9999\t");
-    }
-
-    /// <summary>
-    /// The hand-written device model, used when no cassette covers the command. It is a model, not
-    /// a printer — it can only ever confirm what the protocol demands, never what a specific device
-    /// really answers.
-    /// </summary>
-    private byte[] Improvise(string mnemonic) => mnemonic switch
-    {
-        // T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them (see
-        // the recorded cassettes) — but fiscalized, which a test device is not.
-        "scomm" => PosNetPayload.ToFrame($"scomm\tfsT\ttzN\tts{(_transactionOpen ? 16 : 0)}\thrT\tnuZBF 2101002392\ttdN\t"),
-        "scnt" => PosNetPayload.ToFrame($"scnt\trd12\tbn{_completedReceipts}\tbt{_completedReceipts}\tfn3\t"),
-        "trinit" => _transactionOpen
-            ? PosNetPayload.ToFrame($"trinit\t?382\t")
-            : Confirm(mnemonic, open: true),
-        "trline" or "trpayment" or "trnipset" or "trdiscntsubtot" => _transactionOpen
-            ? Confirm(mnemonic, open: true)
-            : PosNetPayload.ToFrame($"{mnemonic}\t?380\t"),
-        "trend" => _transactionOpen
-            ? CompleteReceipt()
-            : PosNetPayload.ToFrame($"trend\t?380\t"),
-        "prncancel" => _transactionOpen
-            ? Confirm(mnemonic, open: false)
-            : PosNetPayload.ToFrame($"prncancel\t?381\t"),
-        _ => PosNetPayload.ToFrame($"{mnemonic}\t"),
-    };
-
-    private byte[] Confirm(string mnemonic, bool open)
-    {
-        _transactionOpen = open;
-        return PosNetPayload.ToFrame($"{mnemonic}\t");
-    }
-
-    private byte[] CompleteReceipt()
-    {
-        _completedReceipts++;
-        return Confirm("trend", open: false);
     }
 
     public void Dispose()

@@ -2,6 +2,7 @@ using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.PL.InMemory;
+using fiskaltrust.Middleware.SCU.PL.TestSupport;
 using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers.PL;
 using fiskaltrust.storage.serialization.V0;

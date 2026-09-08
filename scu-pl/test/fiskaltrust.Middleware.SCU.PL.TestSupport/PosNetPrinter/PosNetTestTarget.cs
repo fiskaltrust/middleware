@@ -1,23 +1,26 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using fiskaltrust.ifPOS.v2.pl;
-using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
 using fiskaltrust.Middleware.SCU.PL.PosNet;
+using fiskaltrust.Middleware.SCU.PL.PosNet.Client;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.Emulator;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.Verification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+namespace fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 
 /// <summary>
-/// The device an acceptance test runs against, built through the <see cref="ScuBootstrapper"/> like
-/// the launcher would. Three modes, selected by environment:
+/// The device a test runs against, built through the <see cref="ScuBootstrapper"/> like the
+/// launcher would. Three modes, selected by environment:
 /// <list type="bullet">
-/// <item>nothing set — the emulator replays the test's cassette, or falls back to its hand-written
-/// device model where no cassette has been recorded yet. This is what CI runs.</item>
-/// <item><c>SCU_PL_POSNET_DEVICE_URL</c> — the real printer, with the transport decorated so the
-/// same protocol assertions still work.</item>
+/// <item>nothing set — the emulator replays the test's cassette, or falls back to its device model
+/// where no cassette has been recorded yet. This is what CI runs.</item>
+/// <item><c>SCU_PL_POSNET_DEVICE_URL</c> — the real printer, over TCP (<c>tcp://host:port</c>) or
+/// its USB/COM interface (<c>serial://COM9</c>), with the transport decorated so the same protocol
+/// assertions still work.</item>
 /// <item>plus <c>SCU_PL_POSNET_RECORD=1</c> — the real printer, and what it answers is written to
 /// the test's cassette. Review the diff before committing: a cassette is also written when the test
 /// failed.</item>
@@ -37,6 +40,7 @@ public sealed class PosNetTestTarget : IDisposable
 
     private readonly ServiceProvider _services;
     private readonly RecordingPosNetTransport? _recorder;
+    private readonly CassetteStore? _cassettes;
     private readonly string _cassetteName;
 
     /// <summary>The configured printer address, or <c>null</c> when the suite runs against the emulator.</summary>
@@ -51,32 +55,45 @@ public sealed class PosNetTestTarget : IDisposable
     /// <summary>The SCU under test, resolved from the bootstrapper's service collection.</summary>
     public IPLSSCD Sut { get; }
 
+    /// <summary>The configuration the SCU was built with — the rate table in particular.</summary>
+    public PosNetConfiguration Configuration { get; }
+
+    /// <summary>
+    /// Reads the device back over the very connection the SCU uses, so the read-backs are recorded
+    /// into the cassette and replayed in order with everything else.
+    /// </summary>
+    public PosNetDeviceProbe Probe { get; }
+
     /// <summary>The emulator serving this test, or <c>null</c> on a hardware run.</summary>
     public PosNetPrinterEmulator? Emulator { get; }
 
+    /// <summary>The commands the SCU sent, without the probe's read-backs.</summary>
     public IEnumerable<PosNetResponse> SentCommands { get; }
 
     public IEnumerable<string> SentMnemonics { get; }
 
-    /// <summary>Opens the target for the calling test; the test's name selects its cassette.</summary>
-    public static PosNetTestTarget Open([CallerMemberName] string cassetteName = "")
+    /// <summary>
+    /// Opens the target for the calling test; the test's name selects its cassette in the given store.
+    /// </summary>
+    public static PosNetTestTarget Open(CassetteStore cassettes, [CallerMemberName] string cassetteName = "")
     {
+        ArgumentNullException.ThrowIfNull(cassettes);
         if (HardwareDeviceUrl is { } url)
         {
-            return new PosNetTestTarget(null, url, HardwareConnectTimeoutMs, HardwareReceiveTimeoutMs, cassetteName);
+            return new PosNetTestTarget(null, url, HardwareConnectTimeoutMs, HardwareReceiveTimeoutMs, cassettes, cassetteName);
         }
 
-        // Without a recording the emulator improvises from its own device model — that keeps the
-        // suite runnable before the first cassette exists, and honest about which is which.
-        var emulator = Cassette.Exists(cassetteName)
-            ? PosNetPrinterEmulator.Replaying(Cassette.Load(cassetteName))
+        // Without a recording the emulator improvises from its device model — that keeps the suite
+        // runnable before the first cassette exists, and honest about which is which.
+        var emulator = cassettes.Exists(cassetteName)
+            ? PosNetPrinterEmulator.Replaying(cassettes.Load(cassetteName))
             : new PosNetPrinterEmulator();
-        return new PosNetTestTarget(emulator.Start(), emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassetteName);
+        return new PosNetTestTarget(emulator.Start(), emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes, cassetteName);
     }
 
     /// <summary>
     /// An emulator scripted to behave in a way no real device can be asked to — a rejected command,
-    /// silence, a refused port. Never talks to hardware.
+    /// silence, a refused port, a particular device state. Never talks to hardware.
     /// </summary>
     public static PosNetTestTarget Scripted(Action<PosNetPrinterEmulator>? configure = null, bool unreachable = false)
     {
@@ -90,12 +107,13 @@ public sealed class PosNetTestTarget : IDisposable
         {
             emulator.Start();
         }
-        return new PosNetTestTarget(emulator, emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassetteName: "");
+        return new PosNetTestTarget(emulator, emulator.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes: null, cassetteName: "");
     }
 
-    private PosNetTestTarget(PosNetPrinterEmulator? emulator, string deviceUrl, int connectTimeoutMs, int receiveTimeoutMs, string cassetteName)
+    private PosNetTestTarget(PosNetPrinterEmulator? emulator, string deviceUrl, int connectTimeoutMs, int receiveTimeoutMs, CassetteStore? cassettes, string cassetteName)
     {
         Emulator = emulator;
+        _cassettes = cassettes;
         _cassetteName = cassetteName;
 
         var bootstrapper = new ScuBootstrapper
@@ -116,23 +134,26 @@ public sealed class PosNetTestTarget : IDisposable
             // A real printer offers no introspection: decorating the transport is what gives the
             // hardware run the same transcript the emulator hands out for free.
             services.Replace(ServiceDescriptor.Singleton<IPosNetTransport>(provider =>
-                new RecordingPosNetTransport(new TcpPosNetTransport(provider.GetRequiredService<PosNetConfiguration>()), deviceUrl)));
+                new RecordingPosNetTransport(PosNetTransportFactory.Create(provider.GetRequiredService<PosNetConfiguration>()), deviceUrl)));
         }
 
         _services = services.BuildServiceProvider();
         Sut = _services.GetRequiredService<IPLSSCD>();
+        Configuration = _services.GetRequiredService<PosNetConfiguration>();
         _recorder = emulator is null ? (RecordingPosNetTransport)_services.GetRequiredService<IPosNetTransport>() : null;
 
         var transcript = _recorder?.Transcript ?? emulator!.Transcript;
         SentCommands = transcript.Commands;
         SentMnemonics = transcript.Mnemonics;
+        // The same PosNetClient singleton the SCU holds: one connection, one command at a time.
+        Probe = new PosNetDeviceProbe(_services.GetRequiredService<PosNetClient>(), transcript);
     }
 
     public void Dispose()
     {
-        if (Recording && _recorder is not null && _cassetteName.Length > 0)
+        if (Recording && _recorder is not null && _cassettes is not null && _cassetteName.Length > 0)
         {
-            _recorder.Cassette.Save(_cassetteName);
+            _cassettes.Save(_recorder.Cassette, _cassetteName);
         }
         _services.Dispose();
         var replayFaults = Emulator?.ReplayFaults.ToList() ?? [];

@@ -1,7 +1,7 @@
 using System.Text;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
-namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+namespace fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 
 /// <summary>
 /// Converts between a POSNET frame and its payload — the part between STX and the '#'-prefixed

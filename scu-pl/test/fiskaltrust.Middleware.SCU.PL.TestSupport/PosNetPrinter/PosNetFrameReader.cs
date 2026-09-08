@@ -1,6 +1,6 @@
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
-namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+namespace fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 
 /// <summary>
 /// Reassembles POSNET frames from a TCP stream: TCP delivers bytes, not messages, so a read can

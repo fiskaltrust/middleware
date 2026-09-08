@@ -1,8 +1,9 @@
 using System.Text.Json.Nodes;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 
-namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers.PL;
+namespace fiskaltrust.Middleware.SCU.PL.TestSupport;
 
 /// <summary>
 /// Reports the connected register as fiscalized while passing every other call through untouched.
@@ -14,14 +15,12 @@ namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers.PL;
 /// a NIEFISKALNY document. This decorator lifts exactly that one gate, so the whole
 /// queue → SCU → printer path can be exercised on a non-fiscal device.
 ///
-/// It belongs to the test launcher on purpose: neither the queue nor the PosNet SCU may ever claim a
-/// fiscalization state the device does not report.
+/// It is test infrastructure on purpose — the test launcher's <c>MW_PL_ASSUME_FISCALIZED</c> and the
+/// end-to-end suite's harness are its only callers: neither the queue nor the PosNet SCU may ever
+/// claim a fiscalization state the device does not report.
 /// </summary>
 public class AssumeFiscalizedPLSSCD : IPLSSCD
 {
-    /// <summary>PLFiscalizationState.Fiscalized in SCU.PL.Abstraction, as the InfoData blob carries it.</summary>
-    private const int Fiscalized = 2;
-
     private readonly IPLSSCD _plsscd;
 
     public AssumeFiscalizedPLSSCD(IPLSSCD plsscd)
@@ -36,14 +35,14 @@ public class AssumeFiscalizedPLSSCD : IPLSSCD
     /// <summary>
     /// Overwrites FiscalizationState in the device's own info blob instead of building a new one, so
     /// everything else the register reports — numer unikatowy, PTU table — stays as it came from the
-    /// device.
+    /// device. The state is written the way the blob carries it: as the enum's number.
     /// </summary>
     public async Task<PLSSCDInfo> GetInfoAsync()
     {
         var info = await _plsscd.GetInfoAsync();
         if (info.InfoData is not null && JsonNode.Parse(info.InfoData) is JsonObject infoData)
         {
-            infoData["FiscalizationState"] = Fiscalized;
+            infoData["FiscalizationState"] = (int)PLFiscalizationState.Fiscalized;
             info.InfoData = infoData.ToJsonString();
         }
         return info;
