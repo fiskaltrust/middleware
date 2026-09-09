@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.be;
@@ -15,6 +16,19 @@ namespace fiskaltrust.Middleware.SCU.BE.AcceptanceTests;
 
 public abstract class IBESSCDAcceptanceTests
 {
+    /// <summary>
+    /// The FDM refuses a repeated ticket number with KEY_FIELD_COMBINATION_ALREADY_USED:
+    /// <c>posFiscalTicketNo</c> is specified as "an uninterrupted sequence from 1 to 999999999"
+    /// (<see cref="ZwarteDoos.Models.Shared.BaseInputData.PosFiscalTicketNo"/>) and the SCU derives
+    /// it from <c>ftQueueRow</c>. A hard-coded row number therefore made every test that signs the
+    /// same event type a second time fail against the shared sandbox box, so each response gets its
+    /// own row. Seeded from the millisecond of the day so re-runs and parallel jobs get their own
+    /// range too.
+    /// </summary>
+    private static long _queueRow = (long) DateTime.UtcNow.TimeOfDay.TotalMilliseconds;
+
+    protected static long NextQueueRow() => Interlocked.Increment(ref _queueRow);
+
     protected readonly ITestOutputHelper _output;
     protected readonly ILogger _logger;
 
@@ -76,7 +90,7 @@ public abstract class IBESSCDAcceptanceTests
             ftCashBoxID = request.ftCashBoxID,
             ftQueueID = request.ftQueueID ?? Guid.NewGuid(),
             ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
+            ftQueueRow = NextQueueRow(),
             cbTerminalID = request.cbTerminalID,
             cbReceiptReference = request.cbReceiptReference,
             ftCashBoxIdentification = "CPOS0031234567",
@@ -213,6 +227,33 @@ public abstract class IBESSCDAcceptanceTests
         result.Should().NotBeNull();
         result.ReceiptResponse.Should().NotBeNull();
         ((ulong) result.ReceiptResponse.ftState & 0xEEEE_EEEE).Should().Be(0);
+    }
+
+    /// <summary>
+    /// A total refund: the receipt carries the refund flag and the line is negative. The FDM needs a
+    /// negQuantityReason for the negative quantity, so this is the case that used to come back
+    /// accepted-but-unsigned.
+    /// </summary>
+    [Fact]
+    public virtual async Task ProcessReceiptAsync_RefundReceipt_ShouldSucceed()
+    {
+        var scu = GetSystemUnderTest();
+        var request = CreateBasicReceiptRequest((ReceiptCase) 0x4245_2000_0100_0001);
+        request.cbChargeItems[0].Quantity = -1.0m;
+        request.cbChargeItems[0].Amount = -10.00m;
+        request.cbChargeItems[0].ftChargeItemCase = (ChargeItemCase) 0x4245_2000_0002_0001;
+        request.cbPayItems[0].Amount = -10.00m;
+        request.cbPayItems[0].ftPayItemCase = (PayItemCase) 0x4245_2000_0002_0001;
+        var response = CreateBasicReceiptResponse(request);
+        var processRequest = new ProcessRequest { ReceiptRequest = request, ReceiptResponse = response };
+
+        var result = await scu.ProcessReceiptAsync(processRequest);
+
+        result.Should().NotBeNull();
+        result.ReceiptResponse.Should().NotBeNull();
+        ((ulong) result.ReceiptResponse.ftState & 0xEEEE_EEEE).Should().Be(0,
+            because: "Expected 0 but got 0x" + result.ReceiptResponse.ftState.ToString("x") + " - " + string.Join("; ", result.ReceiptResponse.ftSignatures.Select(x => $"{x.Caption}: {x.Data}")));
+        result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "DigitalSignature");
     }
 
     [Fact]

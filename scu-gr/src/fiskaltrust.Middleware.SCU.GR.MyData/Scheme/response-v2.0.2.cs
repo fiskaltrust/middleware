@@ -1291,7 +1291,7 @@ public partial class AadeBookInvoiceType {
     // unbounded 'Packages') is flattened by xsd.exe into a jagged PackagingDetailType[][],
     // which the XmlSerializer cannot construct ("Cannot convert PackagingDetailType[] to
     // PackagingDetailType") — this breaks serialization of the ENTIRE InvoicesDoc. It belongs
-    // to the v2.0.1 e-transport surface, which is out of scope for this SCU and never populated
+    // to the v2.0.2 e-transport surface, which is out of scope for this SCU and never populated
     // here, so it is excluded from (de)serialization. Faithful support (a proper
     // PackingsDeclaration wrapper type) should be added when the delivery-note API is implemented.
     [System.Xml.Serialization.XmlIgnoreAttribute()]
@@ -2354,6 +2354,20 @@ public partial class InvoiceHeaderType {
     
     private bool toWeighFieldSpecified;
     
+    private int receivingNotePurposeField;
+    
+    private bool receivingNotePurposeFieldSpecified;
+    
+    private string otherReceivingNotePurposeTitleField;
+    
+    private bool nonObligatedRecipientField;
+    
+    private bool nonObligatedRecipientFieldSpecified;
+    
+    private bool withoutDigitalTransportTrackingField;
+    
+    private bool withoutDigitalTransportTrackingFieldSpecified;
+    
     /// <remarks/>
     public string series {
         get {
@@ -2803,6 +2817,79 @@ public partial class InvoiceHeaderType {
         }
         set {
             this.toWeighFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public int receivingNotePurpose {
+        get {
+            return this.receivingNotePurposeField;
+        }
+        set {
+            this.receivingNotePurposeField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool receivingNotePurposeSpecified {
+        get {
+            return this.receivingNotePurposeFieldSpecified;
+        }
+        set {
+            this.receivingNotePurposeFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string otherReceivingNotePurposeTitle {
+        get {
+            return this.otherReceivingNotePurposeTitleField;
+        }
+        set {
+            this.otherReceivingNotePurposeTitleField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public bool nonObligatedRecipient {
+        get {
+            return this.nonObligatedRecipientField;
+        }
+        set {
+            this.nonObligatedRecipientField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool nonObligatedRecipientSpecified {
+        get {
+            return this.nonObligatedRecipientFieldSpecified;
+        }
+        set {
+            this.nonObligatedRecipientFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public bool withoutDigitalTransportTracking {
+        get {
+            return this.withoutDigitalTransportTrackingField;
+        }
+        set {
+            this.withoutDigitalTransportTrackingField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool withoutDigitalTransportTrackingSpecified {
+        get {
+            return this.withoutDigitalTransportTrackingFieldSpecified;
+        }
+        set {
+            this.withoutDigitalTransportTrackingFieldSpecified = value;
         }
     }
 }
@@ -5186,6 +5273,8 @@ public partial class TransportDetailType {
     
     private LocationType locationField;
     
+    private PackagingDetailType[] packingsDeclarationField;
+    
     /// <remarks/>
     public string vehicleNumber {
         get {
@@ -5254,6 +5343,17 @@ public partial class TransportDetailType {
         }
         set {
             this.locationField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute("packingsDeclaration")]
+    public PackagingDetailType[] packingsDeclaration {
+        get {
+            return this.packingsDeclarationField;
+        }
+        set {
+            this.packingsDeclarationField = value;
         }
     }
 }
@@ -5451,6 +5551,7 @@ public partial class ResponseType {
     [System.Xml.Serialization.XmlElementAttribute("cancellationMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("classificationMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("deliveryOutcomeMark", typeof(long))]
+    [System.Xml.Serialization.XmlElementAttribute("deliveryReturnMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("errors", typeof(ResponseTypeErrors))]
     [System.Xml.Serialization.XmlElementAttribute("invoiceMark", typeof(long))]
     [System.Xml.Serialization.XmlElementAttribute("invoiceUid", typeof(string))]
@@ -5629,6 +5730,9 @@ public enum ItemsChoiceType {
     
     /// <remarks/>
     deliveryOutcomeMark,
+    
+    /// <remarks/>
+    deliveryReturnMark,
     
     /// <remarks/>
     errors,

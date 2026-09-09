@@ -5,9 +5,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models
 {
     public class StartTransactionRequestDto
     {
-        [JsonProperty("externalTransactionId")]
-        public Guid ExternalTransactionId { get; set; }
-
         [JsonProperty("clientId")]
         public string ClientId { get; set; }
 

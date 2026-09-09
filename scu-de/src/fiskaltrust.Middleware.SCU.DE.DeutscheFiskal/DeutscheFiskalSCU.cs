@@ -713,7 +713,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             return new StartTransactionRequestDto
             {
                 ClientId = clientId,
-                ExternalTransactionId = Guid.NewGuid(),
                 ProcessType = processType,
                 ProcessData = string.IsNullOrEmpty(processDataBase64) ? EMPTY_PROCESSDATA : processDataBase64
             };

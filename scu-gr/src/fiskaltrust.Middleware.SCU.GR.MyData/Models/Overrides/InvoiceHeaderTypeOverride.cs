@@ -63,6 +63,18 @@ public class InvoiceHeaderTypeOverride
     [JsonPropertyName("toWeigh")]
     public bool? ToWeigh { get; set; }
 
+    [JsonPropertyName("nonObligatedRecipient")]
+    public bool? NonObligatedRecipient { get; set; }
+
+    [JsonPropertyName("withoutDigitalTransportTracking")]
+    public bool? WithoutDigitalTransportTracking { get; set; }
+
+    [JsonPropertyName("receivingNotePurpose")]
+    public int? ReceivingNotePurpose { get; set; }
+
+    [JsonPropertyName("otherReceivingNotePurposeTitle")]
+    public string? OtherReceivingNotePurposeTitle { get; set; }
+
     // series/aa are deliberately kept on the model although overriding them is not
     // supported: ApplyInvoiceHeaderOverride rejects requests that set either, so
     // integrators get an explicit error instead of a silently ignored field.

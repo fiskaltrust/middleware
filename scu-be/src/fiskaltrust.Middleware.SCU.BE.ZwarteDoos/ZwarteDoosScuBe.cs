@@ -122,8 +122,7 @@ public class ZwarteDoosScuBe : IBESSCD
             };
             if (apiResponse.Errors != null && apiResponse.Errors.Count > 0)
             {
-                var errorMessages = string.Join("; ", apiResponse.Errors.Select(e => e.Message));
-                receiptResponse.SetReceiptResponseErrored(errorMessages);
+                receiptResponse.SetReceiptResponseErrored(FormatApiErrors(apiResponse.Errors));
                 return receiptResponse;
             }
             else
@@ -163,6 +162,29 @@ public class ZwarteDoosScuBe : IBESSCD
         }
     }
 
+    /// <summary>
+    /// The FDM's human-readable message is deliberately vague ("De aanvraag gedaan aan de zwarte
+    /// doos ... is ongeldig"); the actionable part is the <c>code</c> and the <c>SUBCODE</c> in the
+    /// error's extensions (e.g. EXPECTED_NEGQUANTITYREASON, KEY_FIELD_COMBINATION_ALREADY_USED).
+    /// Both are kept so the FAILURE signature names the rule the request broke.
+    /// </summary>
+    private static string FormatApiErrors(List<MessageItem> errors) => string.Join("; ", errors.Select(error =>
+    {
+        var details = new List<string>();
+        if (error.Extensions is { } extensions)
+        {
+            if (!string.IsNullOrEmpty(extensions.Code))
+            {
+                details.Add(extensions.Code);
+            }
+            foreach (var item in extensions.Data ?? new List<DataItem>())
+            {
+                details.Add($"{item.Name}={item.Value}");
+            }
+        }
+        return details.Count > 0 ? $"{error.Message} [{string.Join(", ", details)}]" : error.Message;
+    }));
+
     private static List<PaymentLineInput> GetFinancials(ReceiptRequest receiptRequest)
     {
         var payments = receiptRequest.cbPayItems.Select(x => new PaymentLineInput
@@ -181,7 +203,7 @@ public class ZwarteDoosScuBe : IBESSCD
         return payments.ToList();
     }
 
-    private TransactionInput GetTransactionInput(ReceiptRequest receiptRequest)
+    internal TransactionInput GetTransactionInput(ReceiptRequest receiptRequest)
     {
         return new TransactionInput
         {
@@ -197,7 +219,14 @@ public class ZwarteDoosScuBe : IBESSCD
                     DepartmentName = "Default",
                     Quantity = x.Quantity,
                     QuantityType = QuantityType.PIECE,
-                    NegQuantityReason = null,
+                    NegQuantityReason = GetNegQuantityReason(receiptRequest, x),
+                    // The FDM wants the price of ONE unit and expresses a reversal through the
+                    // negative quantity and line total, so a refund line must still carry a
+                    // POSITIVE unit price — a negative one is refused with VAT_PRICE_CHECK_FAILED.
+                    // The quotient gives that for the well-formed case (amount and quantity share
+                    // a sign) and is deliberately not Abs()'d: a POS that sends a negative amount
+                    // against a positive quantity is describing something we should not silently
+                    // reinterpret, and the FDM refusal names the field.
                     UnitPrice = x.Amount / x.Quantity,
                     Vats = [GetVatInputForChargeItem(x)]
                 },
@@ -207,6 +236,34 @@ public class ZwarteDoosScuBe : IBESSCD
             }).ToList(),
             TransactionTotal = receiptRequest.cbChargeItems.Sum(x => x.Amount),
         };
+    }
+
+    /// <summary>
+    /// The FDM refuses a negative quantity that does not say WHY it is negative
+    /// (INVALID_REQUEST / EXPECTED_NEGQUANTITYREASON) — <see cref="ProductInput.NegQuantityReason"/>:
+    /// "When the quantity is a negative amount the reason has to be specified."
+    /// <para>
+    /// Only the reason the fiskaltrust receipt model states outright is mapped: a charge item — or
+    /// the whole receipt — flagged as a refund is a Belgian <c>REFUND</c>. The other Belgian reasons
+    /// (<c>CORRECTION</c>, <c>WASTE</c>, <c>DAMAGE</c>) have no ft counterpart today, so an
+    /// unflagged negative line is sent WITHOUT a reason and the FDM rejects it. That is on purpose:
+    /// booking it under a guessed reason would misstate the negative-quantity totals of the Z
+    /// report. Mapping the remaining reasons needs a product/fiscal decision.
+    /// </para>
+    /// </summary>
+    private static string? GetNegQuantityReason(ReceiptRequest receiptRequest, ChargeItem chargeItem)
+    {
+        if (chargeItem.Quantity >= 0)
+        {
+            return null;
+        }
+
+        if (chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        {
+            return NegQuantityReason.REFUND.ToString();
+        }
+
+        return null;
     }
 
     public VatInput GetVatInputForChargeItem(ChargeItem chargeItem)
@@ -333,6 +390,51 @@ public class ZwarteDoosScuBe : IBESSCD
                     }
                 }
             };
+            if (apiResponse.Errors != null && apiResponse.Errors.Count > 0)
+            {
+                receiptResponse.SetReceiptResponseErrored(FormatApiErrors(apiResponse.Errors));
+                return receiptResponse;
+            }
+
+            // A Z report the FDM did not sign is a failed daily closing, never a silent success.
+            var signResult = apiResponse.Data?.SignResult;
+            if (signResult == null)
+            {
+                receiptResponse.SetReceiptResponseErrored("The ZwarteDoos FDM returned no signResult for the daily closing (REPORT_TURNOVER_Z).");
+                return receiptResponse;
+            }
+
+            var signatures = new List<SignatureItem>
+            {
+                new SignatureItem
+                {
+                    Caption = "DigitalSignature",
+                    Data = signResult.DigitalSignature,
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureType.Unknown
+                }
+            };
+            if (!string.IsNullOrEmpty(signResult.ShortSignature))
+            {
+                signatures.Add(new SignatureItem
+                {
+                    Caption = "ShortSignature",
+                    Data = signResult.ShortSignature!,
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureType.Unknown
+                });
+            }
+            if (!string.IsNullOrEmpty(signResult.VerificationUrl))
+            {
+                signatures.Add(new SignatureItem
+                {
+                    Caption = "VerificationUrl",
+                    Data = signResult.VerificationUrl!,
+                    ftSignatureFormat = SignatureFormat.QRCode,
+                    ftSignatureType = SignatureType.Unknown
+                });
+            }
+            receiptResponse.ftSignatures.AddRange(signatures);
             return receiptResponse;
         }
         catch (Exception e)

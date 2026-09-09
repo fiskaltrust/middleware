@@ -3,6 +3,7 @@ using System.Linq;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
@@ -327,26 +328,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             fiscalReceipt.AdjustmentAndMessages = new List<AdjustmentAndMessage>();
             fiscalReceipt.PrintRecSubtotalAdjustment = GetSubtotalAdjustments(receiptRequest);
             fiscalReceipt.RecTotalAndMessages = GetTotalAndMessages(receiptRequest);
-            var customerData = receiptRequest.GetCustomer();
-            if (customerData != null)
-            {
-                if (!string.IsNullOrEmpty(customerData.CustomerVATId))
-                {
-                    var vat = customerData.CustomerVATId!;
-                    if (vat.ToUpper().StartsWith("IT"))
-                    {
-                        vat = vat.Substring(2);
-                    }
-                    if (vat.Length == 11)
-                    {
-                        fiscalReceipt.DirectIOCommands.Add(new DirectIO
-                        {
-                            Command = "1060",
-                            Data = "01" + vat,
-                        });
-                    }
-                }
-            }
+            AddCustomerTaxIdDirectIO(fiscalReceipt, receiptRequest);
 
             var lotteryData = receiptRequest.GetLotteryData();
             if (!string.IsNullOrEmpty(lotteryData?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria))
@@ -359,6 +341,48 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }
+
+        private const int PartitaIvaLength = 11;
+        private const int CodiceFiscaleLength = 16;
+
+        /// <summary>
+        /// Emits the customer tax identifier for the "scontrino parlante". The codice fiscale takes
+        /// precedence over the partita IVA, as in the Custom SCUs. The two identifiers use different
+        /// commands, which share the same data layout: an 11 digit partita IVA goes to directIO 1060, a
+        /// 16 character alphanumeric codice fiscale to directIO 1061.
+        /// Shape and checksum are validated upstream in EpsonRTPrinterSCU.ProcessReceiptAsync, so the checks
+        /// here are only defence in depth for the receipts the validation gate deliberately skips: a
+        /// malformed value must still be dropped rather than sent to the printer, which would answer with a
+        /// checksum error instead of printing.
+        /// </summary>
+        private static void AddCustomerTaxIdDirectIO(FiscalReceipt fiscalReceipt, ReceiptRequest receiptRequest)
+        {
+            var customer = receiptRequest.GetCustomer();
+            var taxId = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+
+            string command;
+            if ((taxId.Length == PartitaIvaLength) && taxId.All(char.IsDigit))
+            {
+                command = "1060";
+            }
+            else if ((taxId.Length == CodiceFiscaleLength) && taxId.All(IsUpperCaseAlphanumeric))
+            {
+                command = "1061";
+            }
+            else
+            {
+                return;
+            }
+
+            fiscalReceipt.DirectIOCommands.Add(new DirectIO
+            {
+                Command = command,
+                Data = "01" + taxId,
+            });
+        }
+
+        /// <summary>The tax identifiers are already upper cased by the shared normalization.</summary>
+        private static bool IsUpperCaseAlphanumeric(char c) => ((c >= '0') && (c <= '9')) || ((c >= 'A') && (c <= 'Z'));
 
         private static void AddTrailerLines(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, FiscalReceipt fiscalReceipt)
         {
@@ -413,26 +437,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 AdjustmentAndMessages = new List<AdjustmentAndMessage>(),
                 RecTotalAndMessages = GetTotalAndMessages(receiptRequest)
             };
-            var customerData = receiptRequest.GetCustomer();
-            if (customerData != null)
-            {
-                if (!string.IsNullOrEmpty(customerData.CustomerVATId))
-                {
-                    var vat = customerData.CustomerVATId!;
-                    if (vat.ToUpper().StartsWith("IT"))
-                    {
-                        vat = vat.Substring(2);
-                    }
-                    if (vat.Length == 11)
-                    {
-                        fiscalReceipt.DirectIOCommands.Add(new DirectIO
-                        {
-                            Command = "1060",
-                            Data = "01" + vat,
-                        });
-                    }
-                }
-            }
+            AddCustomerTaxIdDirectIO(fiscalReceipt, receiptRequest);
             AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }
@@ -453,26 +458,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 AdjustmentAndMessages = new List<AdjustmentAndMessage>(),
                 RecTotalAndMessages = GetTotalAndMessages(receiptRequest)
             };
-            var customerData = receiptRequest.GetCustomer();
-            if (customerData != null)
-            {
-                if (!string.IsNullOrEmpty(customerData.CustomerVATId))
-                {
-                    var vat = customerData.CustomerVATId!;
-                    if (vat.ToUpper().StartsWith("IT"))
-                    {
-                        vat = vat.Substring(2);
-                    }
-                    if (vat.Length == 11)
-                    {
-                        fiscalReceipt.DirectIOCommands.Add(new DirectIO
-                        {
-                            Command = "1060",
-                            Data = "01" + vat,
-                        });
-                    }
-                }
-            }
+            AddCustomerTaxIdDirectIO(fiscalReceipt, receiptRequest);
             AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }
@@ -654,16 +640,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
                         Department = 11,
                     };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
-                    }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
                 else if (i.IsSingleUseVoucher() && i.Amount < 0)
                 {
@@ -707,16 +684,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
                         Department = i.GetVatGroup(),
                     };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
-                    }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
             }
         }

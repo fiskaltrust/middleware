@@ -6,6 +6,7 @@ using System.Security;
 using System.Text;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
@@ -154,7 +155,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             }
             else
             {
-                var customerTaxId = receiptRequest.GetCustomer()?.CustomerVATId;
+                // printRecTaxID offers a single slot, so the codice fiscale takes precedence over the
+                // partita IVA, as in the Custom SCUs. Normalized so the IT country prefix is not
+                // forwarded to the server as part of the tax id.
+                var customer = receiptRequest.GetCustomer();
+                var customerTaxId = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
                 if (!string.IsNullOrEmpty(customerTaxId))
                 {
                     sb.Append($"<printRecTaxID taxID=\"{Escape(customerTaxId)}\" />");

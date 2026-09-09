@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 using FluentAssertions;
@@ -421,6 +423,122 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             finally
             {
                 queue.Dispose();
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData("{\"CustomerVATId\":\"12345\"}")]
+        [InlineData("{\"CustomerVATId\":\"DE123456789\"}")]
+        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501Z\"}")]
+        public async Task ProcessReceiptAsync_WithAnInvalidCustomerTaxId_FailsWithoutSendingAnyDocument(string cbCustomer)
+        {
+            var client = CreateClientMock();
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = cbCustomer;
+
+                var result = await scu.ProcessReceiptAsync(request);
+
+                using var scope = new AssertionScope();
+                result.ReceiptResponse.HasFailed().Should().BeTrue();
+                result.ReceiptResponse.ftSignatures.Should().ContainSingle()
+                    .Which.Caption.Should().Be(CustomerTaxIdValidation.CustomerTaxIdErrorCaption);
+                client.Verify(x => x.CreateReceiptAsync(It.IsAny<string>()), Times.Never);
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"IT01606720215\"}")]
+        [InlineData("{\"CustomerName\":\"Mario Rossi\"}")]
+        [InlineData("")]
+        public async Task ProcessReceiptAsync_WithAValidOrAbsentCustomerTaxId_SendsTheDocument(string cbCustomer)
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>())).ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = cbCustomer;
+
+                var result = await scu.ProcessReceiptAsync(request);
+
+                using var scope = new AssertionScope();
+                result.ReceiptResponse.HasFailed().Should().BeFalse();
+                client.Verify(x => x.CreateReceiptAsync(It.IsAny<string>()), Times.Once);
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        /// <summary>The IT country prefix must not be forwarded to the server as part of the tax id.</summary>
+        [Fact]
+        public async Task ProcessReceiptAsync_WithACountryPrefixedCustomerVATId_SendsTheTaxIdWithoutThePrefix()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = "{\"CustomerVATId\":\"IT01606720215\"}";
+
+                await scu.ProcessReceiptAsync(request);
+
+                sentDocuments.Should().ContainSingle()
+                    .Which.Should().Contain("<printRecTaxID taxID=\"01606720215\" />");
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        /// <summary>
+        /// printRecTaxID has a single slot, so CustomerId (codice fiscale) takes precedence over
+        /// CustomerVATId, matching the Custom SCUs. An empty CustomerId must fall through to the partita IVA.
+        /// </summary>
+        [Theory]
+        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\"}", "RSSMRA80A01H501U")]
+        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"01606720215\"}", "RSSMRA80A01H501U")]
+        [InlineData("{\"CustomerId\":\"\",\"CustomerVATId\":\"01606720215\"}", "01606720215")]
+        [InlineData("{\"CustomerId\":\"IT01606720215\"}", "01606720215")]
+        public async Task ProcessReceiptAsync_WithACustomerId_SendsItAsTheTaxId(string cbCustomer, string expectedTaxId)
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = cbCustomer;
+
+                var response = await scu.ProcessReceiptAsync(request);
+
+                sentDocuments.Should().ContainSingle()
+                    .Which.Should().Contain($"<printRecTaxID taxID=\"{expectedTaxId}\" />");
+                // The signature must report exactly what was sent to the server.
+                response.ReceiptResponse.ftSignatures
+                    .Should().ContainSingle(x => (x.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTCustomerID)
+                    .Which.Data.Should().Be(expectedTaxId);
+            }
+            finally
+            {
                 if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
             }
         }

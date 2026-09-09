@@ -322,9 +322,9 @@ jobs:
            $echoPath = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "/v2/echo" } else { "/json/v1/Echo" }
            $baseFile = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { ".github/scripts/requests-v2" } else { ".github/scripts/requests" }
            $requests = @(
-                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }
-                @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
+                @{ Name = "Echo";                      Url = "$baseUrl$echoPath"; File = "$baseFile/Echo.json" }               
                 @{ Name = "Initial-operation-receipt"; Url = "$baseUrl$signPath"; File = "$baseFile/Initial-operation-receipt.json" }
+                 @{ Name = "ZeroReceipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Zero-receipt.json" }
                 @{ Name = "Pos-receipt";               Url = "$baseUrl$signPath"; File = "$baseFile/Pos-receipt.json" }
                 @{ Name = "Daily-closing-receipt";     Url = "$baseUrl$signPath"; File = "$baseFile/Daily-closing-receipt.json" }
                 @{ Name = "DSFinVK-Export";            Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=4919338167972134914&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/DSFinVK-Export.json" } else { "" } }
@@ -334,6 +334,9 @@ jobs:
                 @{ Name = "QueueItem-Export";          Url = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseUrl/v2/journal" } else { "$queueUrl/json/v0/Journal?type=3&from=0&to=00" }; File = if ("${{ inputs.launcherVersion }}" -eq "v2.0") { "$baseFile/QueueItem-Export.json" } else { "" } }
             )
 
+            $ErrorActionPreference = "Stop"
+            $ftstateError = $false
+            $notice = "%0A"
             foreach ($req in $requests) {
                 Write-Host "`n--- Sending $($req.Name) request ---"
                 $body = $null
@@ -358,16 +361,28 @@ jobs:
                         "x-operation-id"         = [guid]::NewGuid().ToString()
                     }
                 }
-
+                
                 try {
 
                   if ($null -ne $body) {
                         $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
-                  }
-                  Write-Host "Response: $($response | ConvertTo-Json)"
-
+                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
+                  }    
+                  $result = "✅ $($req.Name) request succeeded%0A"
+                  if ($req.Url -match "$baseUrl$signPath") {
+                      $ftState = [uint64]$response.ftState
+                      $lower32 = $ftState -band 0xFFFFFFFF
+                      if ($lower32 -eq 0xFFFFFFFF -or $lower32 -eq 0xEEEEEEEE -or ($ftState -band 0x1) -ne 0 -or ($ftState -band 0x2) -ne 0) {
+                        $result= "❌ $($req.Name) request failed — ftState indicates failure%0A"                        
+                        $detail = "$($req.Name) request failed. Url=$url Status=$statusCode Message=ftState indicates failure"
+                        $failureReasons += $detail
+                      }
+                  }                  
+                  $notice += $result
+                  Write-Host "::group::$result"
+                  Write-Host ($response | ConvertTo-Json)
+                  Write-Host "::endgroup::"                 
                 }
                 catch {
                     $statusCode = $_.Exception.Response?.StatusCode.value__
@@ -384,6 +399,7 @@ jobs:
                     $failureReasons += $detail
                 }
              }
+             "::notice::$notice"
             }
             else {
               Write-Host "::warning::Launcher failed to start within the expected time."
