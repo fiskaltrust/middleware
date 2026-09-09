@@ -735,8 +735,23 @@ public class AADEFactory
         {
             party.address = new AddressType
             {
-                number = partyOverride.Address.Number ?? "0"
+                street = partyOverride.Address.Street,
+                number = partyOverride.Address.Number ?? "0",
+                postalCode = partyOverride.Address.PostalCode,
+                city = partyOverride.Address.City
             };
+        }
+        if(!string.IsNullOrEmpty(partyOverride.VatNumber))
+        {
+            party.vatNumber = partyOverride.VatNumber;
+        }
+        if(!string.IsNullOrEmpty(partyOverride.Country) && Enum.TryParse<CountryType>(partyOverride.Country, true, out var country))
+        {
+            party.country = country;
+        }
+        if (!string.IsNullOrEmpty(partyOverride.Name))
+        {
+            party.name = partyOverride.Name;
         }
     }
 
