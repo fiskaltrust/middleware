@@ -109,6 +109,73 @@ The calls are synchronous and happen inside the queue's sequential processing (o
 
 # Reference-level explanation
 
+## End-to-end sequence
+
+The diagram shows one receipt passing through the queue with both services configured. Steps 1–6 and 15–18 are today's behavior; steps 7–14 are new. Wire-level details (route, headers, retries) are specified in "HTTP wire protocol" below.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant POS
+    participant Q as Queue (SignProcessor)
+    participant CP as Country processor
+    participant SCU
+    participant EI as eInvoicing service
+    participant ER as eReporting service
+    participant DB as Queue storage
+
+    POS->>Q: Sign(ReceiptRequest)
+    Q->>DB: create ftQueueItem
+    Q->>CP: ProcessAsync(ReceiptRequest, ReceiptResponse)
+    CP->>SCU: ProcessReceiptAsync(ProcessRequest)
+    SCU-->>CP: ProcessResponse (signatures, ftState)
+    CP-->>Q: ReceiptResponse + action journals
+
+    Note over Q: fiscalizationSucceeded = !ftState.IsState(Error)
+
+    alt fiscalization failed
+        Note over Q,ER: post-fiscalization processing skipped
+    else fiscalization succeeded
+        opt einvoicing configured
+            Q->>EI: POST ProcessRequest {ReceiptRequest, ReceiptResponse}
+            alt 200 OK
+                EI-->>Q: ProcessResponse (ReceiptResponse + eInvoice signatures)
+            else timeout / non-2xx / malformed body (after retries)
+                EI--xQ: failure
+                Q->>DB: ftActionJournal (technical details)
+                Note over Q: append "einvoicing-failed" signature<br/>blocking = true ⇒ MarkAsFailed()
+            end
+        end
+        opt ereporting configured
+            Q->>ER: POST ProcessRequest {ReceiptRequest, current ReceiptResponse}
+            alt 200 OK
+                ER-->>Q: ProcessResponse (ReceiptResponse + eReport signatures)
+            else timeout / non-2xx / malformed body (after retries)
+                ER--xQ: failure
+                Q->>DB: ftActionJournal (technical details)
+                Note over Q: append "ereporting-failed" signature<br/>blocking = true ⇒ MarkAsFailed()
+            end
+        end
+    end
+
+    opt sandbox
+        Note over Q: append sandbox signature
+    end
+    Q->>DB: FinishQueueItem(ftQueueItem, ReceiptResponse)
+
+    alt fiscalizationSucceeded
+        Q->>DB: InsertReceiptJournal
+    else fiscalization failed
+        Q->>DB: ftActionJournal (error)
+    end
+    Q-->>POS: ReceiptResponse
+```
+
+Two points the diagram makes explicit:
+
+- The eReporting service is called even if the eInvoicing call failed (step 11 does not depend on the outcome of steps 7–10), and the receipt journal decision (step 16) is based on `fiscalizationSucceeded`, not on the final `ftState` — a blocking post-fiscalization failure still produces a journaled, fiscalized receipt.
+- A service-signaled failure (200 OK with an error `ftState` in the returned response) follows the success branch on the wire; it only affects the response handed back and the `ftState` the POS sees, not the journal decision.
+
 ## Interfaces
 
 Following the SCU pattern (`fiskaltrust.ifPOS.v2.gr.IGRSSCD`, `fiskaltrust.ifPOS.v2.es.IESSSCD`), we add two market-agnostic interfaces to the `fiskaltrust.interface` package (namespace `fiskaltrust.ifPOS.v2`):
