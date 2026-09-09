@@ -23,9 +23,9 @@ internal static class MappingFixture
     /// <summary>UnknownService — the POS sent no VAT case at all.</summary>
     public const long NoRate = 0x0000;
 
-    private const long VoidFlag = 0x0001_0000;
-    private const long RefundFlag = 0x0002_0000;
-    private const long ExtraOrDiscountFlag = 0x0004_0000;
+    private const long VoidFlag = (long)ChargeItemCaseFlags.Void;
+    private const long RefundFlag = (long)ChargeItemCaseFlags.Refund;
+    private const long ExtraOrDiscountFlag = (long)ChargeItemCaseFlags.ExtraOrDiscount;
 
     /// <summary>Maps a cash sale; <paramref name="paidInCash"/> 0 sends no payment at all.</summary>
     public static IReadOnlyList<PosNetCommand> MapSale(List<ChargeItem> chargeItems, decimal paidInCash)
@@ -47,7 +47,12 @@ internal static class MappingFixture
     public static ChargeItem Modifier(string description, decimal amount, decimal position = 0m, long vatCase = NormalRate)
         => Item(description, amount, quantity: 1m, position, vatCase, flags: ExtraOrDiscountFlag);
 
-    public static ChargeItem Voided(string description, decimal amount, decimal quantity = 0m, decimal position = 0m, long vatCase = NormalRate)
+    /// <remarks>
+    /// The quantity defaults to 1 like <see cref="ChargeItem.Quantity"/> itself does, so a storno
+    /// built here carries what a POS that sets no quantity actually sends — a fixture default of 0
+    /// would exercise a value the receipt model never produces.
+    /// </remarks>
+    public static ChargeItem Voided(string description, decimal amount, decimal quantity = 1m, decimal position = 0m, long vatCase = NormalRate)
         => Item(description, amount, quantity, position, vatCase, flags: VoidFlag);
 
     public static ChargeItem VoidedModifier(string description, decimal amount)

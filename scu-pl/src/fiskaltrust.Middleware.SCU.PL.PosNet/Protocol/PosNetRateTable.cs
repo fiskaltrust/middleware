@@ -15,7 +15,9 @@ public static class PosNetRateTable
 {
     public const decimal ExemptMarker = 100m;
     public const decimal InactiveMarker = 101m;
-    private const int SlotCount = 7;
+
+    /// <summary>The slots a POSNET register reports, A–G.</summary>
+    public const int SlotCount = 7;
 
     /// <summary>The active slots of the table the register reports.</summary>
     /// <exception cref="PLValidationException">The status carries no active rate — a register that sells has at least one.</exception>

@@ -130,14 +130,18 @@ public class PosNetReversalMappingTests
         act.Should().Throw<PLValidationException>().WithMessage("*more than the 10.00 still standing on it*");
     }
 
+    /// <summary>
+    /// A quantity the POS states other than the model's default of 1 is checked against the amount:
+    /// 2 x 10.00 is not the 7.00 this storno reverses, and the register verifies both.
+    /// </summary>
     [Fact]
     public void AStornoThatDoesNotFitThePositionsUnitPrice_IsRejected()
     {
         var act = () => MapSale(
-            [Position("Woda", 30.00m, quantity: 3m), Voided("Storno", -7.00m, quantity: 1m)],
+            [Position("Woda", 30.00m, quantity: 3m), Voided("Storno", -7.00m, quantity: 2m)],
             paidInCash: 23.00m);
 
-        act.Should().Throw<PLValidationException>().WithMessage("*does not match the unit price*");
+        act.Should().Throw<PLValidationException>().WithMessage("*states quantity 2 but reverses 7.00*");
     }
 
     /// <summary>
@@ -256,7 +260,7 @@ public class PosNetReversalMappingTests
             [Position("Kawa", 10.00m), Position("Piwo", 8.00m), Voided("Storno", -8.00m), Modifier("Rabat", -2.00m)],
             paidInCash: 8.00m);
 
-        act.Should().Throw<PLValidationException>().WithMessage("The discount/extra 'Rabat' follows a storno*");
+        act.Should().Throw<PLValidationException>().WithMessage("The discount/extra 'Rabat' follows the storno of the position it would apply to*");
     }
 
     [Fact]
@@ -312,5 +316,91 @@ public class PosNetReversalMappingTests
             paidInCash: 10.00m);
 
         act.Should().Throw<PLValidationException>().WithMessage("*needs a positive total*");
+    }
+
+    /// <summary>
+    /// The receipt model defaults a quantity to 1, so a POS that states none sends 1 — reading that
+    /// as a partial storno of one item would refuse every reversal of a multi-quantity position.
+    /// The quantity comes from the amount and the unit price the register printed instead.
+    /// </summary>
+    [Fact]
+    public void AStornoOfAMultiQuantityPosition_WithNoQuantityOfItsOwn_ReversesWhatTheAmountSays()
+    {
+        var commands = MapSale(
+            [Position("Woda", 30.00m, quantity: 3m), Voided("Storno", -20.00m)],
+            paidInCash: 10.00m);
+
+        Render(commands).Should().Equal(
+            "trinit bm0",
+            "trline naWoda vt0 pr1000 il3.000 wa3000",
+            "trline naWoda vt0 pr1000 st1 il2.000 wa2000",
+            "trpayment ty0 wa1000 naGotówka re0",
+            "trend to1000 fp1000");
+    }
+
+    /// <summary>A quantity the POS does state is still checked against the amount it reverses.</summary>
+    [Fact]
+    public void AStornoWhoseStatedQuantityDoesNotFitItsAmount_IsRejected()
+    {
+        var act = () => MapSale(
+            [Position("Woda", 30.00m, quantity: 3m), Voided("Storno", -20.00m, quantity: 3m)],
+            paidInCash: 10.00m);
+
+        act.Should().Throw<PLValidationException>().WithMessage("*states quantity 3 but reverses 20.00*");
+    }
+
+    /// <summary>
+    /// An amount that does not divide by the unit price is no quantity of that position: 10.00 off a
+    /// single 30.00 item would be a third of it, which no trline quantity can express exactly.
+    /// </summary>
+    [Fact]
+    public void AStornoOfAnAmountThatDoesNotDivideByTheUnitPrice_IsRejected()
+    {
+        var act = () => MapSale(
+            [Position("Kawa", 30.00m), Voided("Storno", -10.00m)],
+            paidInCash: 20.00m);
+
+        act.Should().Throw<PLValidationException>().WithMessage("*does not divide by the unit price*");
+    }
+
+    /// <summary>
+    /// 1 Kawa, 2 Piwo, 1.1 Storno (the coffee), then a discount with no position: the beer in front
+    /// of it is untouched by that storno and takes the discount like any other position.
+    /// </summary>
+    [Fact]
+    public void ADiscountAfterAStornoOfAnotherPosition_AppliesToTheLineInFrontOfIt()
+    {
+        var commands = MapSale(
+            [
+                Position("Kawa", 10.00m, position: 1m),
+                Position("Piwo", 8.00m, position: 2m),
+                Voided("Storno", -10.00m, position: 1.1m),
+                Modifier("Rabat", -1.00m),
+            ],
+            paidInCash: 7.00m);
+
+        Render(commands).Should().Equal(
+            "trinit bm0",
+            "trline naKawa vt0 pr1000",
+            "trline naPiwo vt0 pr800 wa800 rd1 rnRabat rw100",
+            "trline naKawa vt0 pr1000 st1 wa1000",
+            "trpayment ty0 wa700 naGotówka re0",
+            "trend to700 fp700");
+    }
+
+    /// <summary>A discount that would land on the very position the storno in front of it reversed is still refused.</summary>
+    [Fact]
+    public void ADiscountAfterTheStornoOfThePositionItWouldApplyTo_IsRejected()
+    {
+        var act = () => MapSale(
+            [
+                Position("Kawa", 10.00m),
+                Position("Piwo", 8.00m),
+                Voided("Storno", -8.00m),
+                Modifier("Rabat", -1.00m),
+            ],
+            paidInCash: 9.00m);
+
+        act.Should().Throw<PLValidationException>().WithMessage("*follows the storno of the position it would apply to*");
     }
 }
