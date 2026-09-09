@@ -2,7 +2,7 @@
 - Start Date: 2026-07-13
 - RFC PR: [fiskaltrust/middleware#712](https://github.com/fiskaltrust/middleware/pull/712)
 <!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
-- Markets: `ES`, `GR`, `PT` (all markets on the v2 shared localization; `IT` and further markets once they are onboarded to the v2 integration)
+- Markets: `ES`, `GR`, `PT` (all markets on the v2 shared localization; `IT` and further markets once they are onboarded to the v2 integration). `DE`, `AT` and `FR` are covered by a backport to the legacy stack — see "Backporting to the legacy stack".
 
 # Summary
 
@@ -379,6 +379,70 @@ When neither section is configured, `PostFiscalizationProcessor` is a no-op and 
 ## Maintainability
 
 The feature adds one seam in one shared class plus one new self-contained processor; market localizations don't change beyond constructor wiring. Because the contract is the same `ProcessRequest`/`ProcessResponse` shape developers already know from SCUs, reading a market's pipeline stays uniform: *validate → command processor (SCU) → post-fiscalization (eInvoicing, eReporting) → persist*.
+
+## Backporting to the legacy stack (DE, AT, FR)
+
+`ES`, `GR` and `PT` get this mechanism for free, because it is implemented in the shared v2 `SignProcessor`. `DE`, `AT` and `FR` do not: they run the legacy stack (`queue/src/fiskaltrust.Middleware.Queue`), where each market implements `IMarketSpecificSignProcessor` and the shared pipeline lives in `fiskaltrust.Middleware.Queue.SignProcessor`. eInvoicing and eReporting mandates apply to these markets as well, and their v2 migration is not scheduled, so the mechanism must be portable to the legacy stack rather than waiting for it.
+
+### One insertion point, five markets
+
+The legacy pipeline has the same shape as the v2 one, so the seam is the same. In `SignProcessor.InternalSign` the post-fiscalization step goes after the country-specific processor returned and its action journals were collected (today line 209) and before the sandbox signature is appended (today line 211) — the response is serialized into `ftQueueItem.response` immediately afterwards (lines 216–224), so everything the services produce is persisted and returned exactly as in v2.
+
+Because `AT`, `DE`, `FR`, `IT` and `ME` all route through this one class, a single seam covers every legacy market. The legacy `SignProcessor` is registered once (`Bootstrapper/QueueBootstrapper.cs:63`) and — like v2 — is wrapped in `LocalQueueSynchronizationDecorator`, so the sequential-processing and latency notes above apply unchanged.
+
+The receipt journal reasoning also carries over unchanged: the legacy processor persists the queue item first and only then decides on the journal (`IsError()` at line 226, `CreateReceiptJournalAsync` at line 245), so capturing `fiscalizationSucceeded` before post-fiscalization processing works exactly as described for v2.
+
+### What does not carry over
+
+The legacy stack speaks `fiskaltrust.ifPOS.v1`, and four details of the contract above are v2-specific:
+
+| Concern | v2 | Legacy (v1) |
+| --- | --- | --- |
+| Request/response types | `fiskaltrust.ifPOS.v2.ReceiptRequest`/`ReceiptResponse` | `fiskaltrust.ifPOS.v1.ReceiptRequest`/`ReceiptResponse` |
+| Signatures | `List<SignatureItem>`, `AddSignatureItem()` | `SignaturItem[]` (note spelling, `ifPOS.v0` namespace), array concat |
+| Signature types | `SignatureType` + `SignatureTypeCategory.Failure` | per-market `long` enum, no market-agnostic category |
+| State data | `MiddlewareStateData` object | `ftStateData` is a JSON `string` |
+
+The recommendation is to **map at the boundary**: the legacy processor converts the v1 pair to the v2 `ProcessRequest` before the call and merges the returned v2 `ReceiptResponse` back onto the v1 response. Services then implement exactly one contract, and the wire protocol stays identical across both stacks. The alternative — a second, v1-shaped `ProcessRequest`/`ProcessResponse` — is rejected: it would force every eInvoicing and eReporting provider to implement and version two contracts for what is the same business operation.
+
+The mapping is lossy in one direction and the contract has to say so. `ftStateData` merging is the only real casualty: on legacy the middleware parses the existing JSON string, merges the returned object into it, and re-serializes. Where the two state-data shapes cannot be reconciled the legacy port keeps the existing string and writes an action journal entry rather than dropping data.
+
+Relevance selection also differs. The `B2C`/`B2B`/`B2G` invoice receipt cases named above are v2 `ftReceiptCase` values and have no v1 equivalent, so on legacy queues the set of receipt cases an eInvoicing service acts on is defined per market, the same way it already is for eReporting.
+
+The failure signature follows the legacy convention instead of the v2 one, mirroring the existing uncaught-exception signature in `SignProcessor` (lines 196–203):
+
+```cs
+new SignaturItem
+{
+    ftSignatureFormat = 0x1, // Text
+    ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+    Caption = "einvoicing-failed", // or "ereporting-failed"
+    Data = "<human-readable reason>"
+}
+```
+
+`Caption` stays byte-identical across both stacks, so anything matching on it — support tooling, PosCreator code — works against legacy and v2 queues alike.
+
+### `blocking` is not supported on legacy queues
+
+This is the one part of the design that cannot be backported, and the reason is not effort but a broken recovery path.
+
+The RFC's recovery story for a blocking failure is the `ReceiptRequested` flag: re-request the original `cbReceiptReference` and receive the persisted, failed response without reprocessing. On the legacy stack that path does not return the failed response. `InternalSign` deserializes the persisted response and, when it is an error, **returns `null`** (lines 112–115) instead of the response. A POS that hit a blocking failure would therefore have no way to retrieve the fiscalized-but-failed receipt.
+
+Compounding this, for non-v2 requests the legacy processor **rethrows the original exception** on an error state rather than returning an error response (lines 231–234). A blocking failure would surface to the POS as a transport-level fault, not as a `ReceiptResponse` carrying `ftState` and the failure signature — a materially different contract from the one described above.
+
+The legacy port therefore **rejects `blocking: true` at bootstrap** with a configuration error, the same way an invalid `endpoint` is rejected. Legacy queues support non-blocking post-fiscalization only. Fixing the v1 `ReceiptRequested` path is a separate change with its own compatibility risk and is explicitly out of scope here; if a legacy market ever genuinely requires a blocking eInvoice or report, that fix becomes a prerequisite.
+
+### Configuration and wiring
+
+Configuration is unchanged. The legacy `MiddlewareConfiguration` carries the same `Dictionary<string, object> Configuration`, so `PostFiscalizationConfiguration.FromMiddlewareConfiguration` parses legacy queue configuration verbatim — the same JSON documented above works on a DE, AT or FR queue.
+
+Wiring is simpler than in v2, because the legacy stack uses `IServiceCollection`: the processor is registered once in `QueueBootstrapper` and taken as one additional constructor parameter on the legacy `SignProcessor`. No market bootstrapper changes.
+
+### Sequencing
+
+The legacy port lands **after** the v2 implementation, as its own PR. It depends on the v2 contract having settled — every wire-level decision above is shared, and porting a contract that is still moving would mean implementing the mapping layer twice. Splitting it out also keeps the v1 mapping layer, which is the bulk of the work and carries all of the compatibility risk, out of the change that introduces the mechanism.
+
 
 # Drawbacks
 
