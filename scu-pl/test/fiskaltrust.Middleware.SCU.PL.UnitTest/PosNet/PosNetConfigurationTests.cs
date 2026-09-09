@@ -71,14 +71,14 @@ public class PosNetConfigurationTests
         });
 
         configuration.ReceiveTimeoutMs.Should().Be(30_000);
-        PosNetSerialSettings.From(configuration).Should().Be(
+        SerialSettingsOf(configuration).Should().Be(
             new PosNetSerialSettings("COM9", 9600, Parity.Even, StopBits.Two, Handshake.XOnXOff));
     }
 
     [Fact]
     public void SerialSettings_DefaultToThePrintersOwnDefaults_WithoutAHandshake()
     {
-        var settings = PosNetSerialSettings.From(new PosNetConfiguration { DeviceUrl = "COM9" });
+        var settings = SerialSettingsOf(new PosNetConfiguration { DeviceUrl = "COM9" });
 
         settings.Should().Be(new PosNetSerialSettings("COM9", 115_200, Parity.None, StopBits.One, Handshake.None));
         PosNetSerialSettings.DataBits.Should().Be(8);
@@ -93,7 +93,7 @@ public class PosNetConfigurationTests
     [InlineData("none", Handshake.None)]
     public void SerialSettings_AcceptThePrinterMenusSpellingOfTheHandshake(string handshake, Handshake expected)
     {
-        var settings = PosNetSerialSettings.From(new PosNetConfiguration { DeviceUrl = "COM9", SerialHandshake = handshake });
+        var settings = SerialSettingsOf(new PosNetConfiguration { DeviceUrl = "COM9", SerialHandshake = handshake });
 
         settings.Handshake.Should().Be(expected);
     }
@@ -125,4 +125,70 @@ public class PosNetConfigurationTests
 
         act.Should().NotThrow();
     }
+
+    /// <summary>
+    /// A cleared parameter is the device default, as it is for the handshake — refusing it would keep
+    /// the SCU from starting over a setting the operator never set.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void SerialSettings_ReadABlankParity_AsTheDeviceDefault(string parity)
+    {
+        var settings = SerialSettingsOf(new PosNetConfiguration { DeviceUrl = "COM9", SerialParity = parity });
+
+        settings.Parity.Should().Be(Parity.None);
+    }
+
+    /// <summary>
+    /// A numeric handshake would pass Enum.TryParse as an undefined value and only be refused by the
+    /// SerialPort constructor at the first receipt — reported as an unreachable printer.
+    /// </summary>
+    [Theory]
+    [InlineData("7")]
+    [InlineData("-1")]
+    [InlineData("RequestToSendXOnXOff")]
+    public void SerialSettings_RejectAHandshakeThePrinterDoesNotOffer_WhenConfigured(string handshake)
+    {
+        var act = () => SerialSettingsOf(new PosNetConfiguration { DeviceUrl = "COM9", SerialHandshake = handshake });
+
+        act.Should().Throw<PLValidationException>().WithMessage("*SerialHandshake*");
+    }
+
+    /// <summary>
+    /// 0 and the .NET "infinite" -1 do not mean the same thing to a socket, a SerialPort and a
+    /// deadline computed from them; a command whose answer is never waited for would be reported as
+    /// ambiguous on a device that answered.
+    /// </summary>
+    [Theory]
+    [InlineData("ConnectTimeoutMs")]
+    [InlineData("SendTimeoutMs")]
+    [InlineData("ReceiveTimeoutMs")]
+    public void FromConfiguration_RejectsATimeoutTheScuCannotWaitFor(string setting)
+    {
+        var act = () => PosNetConfiguration.FromConfiguration(new Dictionary<string, object>
+        {
+            ["DeviceUrl"] = "tcp://192.168.1.50:6666",
+            [setting] = -1,
+        });
+
+        act.Should().Throw<PLValidationException>().WithMessage($"*{setting}*");
+    }
+
+    /// <summary>A parameter of the wrong shape is a configuration mistake, and is reported as one.</summary>
+    [Fact]
+    public void FromConfiguration_WithAParameterOfTheWrongShape_FailsAsAValidationError()
+    {
+        var act = () => PosNetConfiguration.FromConfiguration(new Dictionary<string, object>
+        {
+            ["DeviceUrl"] = "tcp://192.168.1.50:6666",
+            ["VatRateTable"] = "[{\"PtuSlot\":\"A\",\"VatRatePercent\":23}]",
+        });
+
+        act.Should().Throw<PLValidationException>().WithMessage("*PosNet SCU configuration could not be read*");
+    }
+
+    /// <summary>The serial settings of a serial address, the way the transport factory reads them.</summary>
+    private static PosNetSerialSettings SerialSettingsOf(PosNetConfiguration configuration)
+        => PosNetSerialSettings.From((PosNetDeviceAddress.Serial)configuration.ParseDeviceAddress(), configuration);
 }

@@ -72,7 +72,18 @@ public class PosNetConfiguration
             PropertyNameCaseInsensitive = true,
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
         };
-        var result = JsonSerializer.Deserialize<PosNetConfiguration>(serialized, options) ?? new PosNetConfiguration();
+        PosNetConfiguration result;
+        try
+        {
+            result = JsonSerializer.Deserialize<PosNetConfiguration>(serialized, options) ?? new PosNetConfiguration();
+        }
+        catch (JsonException ex)
+        {
+            // A parameter of the wrong shape (a blank number, a table sent as a JSON string) is a
+            // configuration mistake, so it is reported as one — naming the SCU and the serializer's
+            // own account of the offending value instead of surfacing a raw JsonException.
+            throw new PLValidationException($"The PosNet SCU configuration could not be read: {ex.Message}", ex);
+        }
         result.Validate();
         return result;
     }
@@ -83,13 +94,27 @@ public class PosNetConfiguration
     /// </summary>
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(DeviceUrl))
+        // A blank address is refused by the parser itself, with the same message.
+        RequirePositiveTimeout(ConnectTimeoutMs, nameof(ConnectTimeoutMs));
+        RequirePositiveTimeout(SendTimeoutMs, nameof(SendTimeoutMs));
+        RequirePositiveTimeout(ReceiveTimeoutMs, nameof(ReceiveTimeoutMs));
+        if (ParseDeviceAddress() is PosNetDeviceAddress.Serial serial)
         {
-            throw new PLValidationException("The PosNet SCU requires a DeviceUrl (e.g. tcp://192.168.1.50:6666 or serial://COM9) in its configuration.");
+            PosNetSerialSettings.From(serial, this);
         }
-        if (ParseDeviceAddress() is PosNetDeviceAddress.Serial)
+    }
+
+    /// <summary>
+    /// Both transports need a real budget: 0 and the .NET "infinite" -1 do not mean the same thing
+    /// to a socket, a <see cref="System.IO.Ports.SerialPort"/> and a deadline computed from them, and
+    /// a command whose answer is never waited for would be reported as an ambiguous outcome on a
+    /// device that answered.
+    /// </summary>
+    private static void RequirePositiveTimeout(int value, string setting)
+    {
+        if (value <= 0)
         {
-            PosNetSerialSettings.From(this);
+            throw new PLValidationException($"The PosNet {setting} '{value}' is not a timeout the SCU can wait for — give it a positive number of milliseconds.");
         }
     }
 

@@ -28,10 +28,10 @@ public sealed class SerialPosNetTransport : IPosNetTransport
     private readonly PosNetSerialSettings _settings;
     private SerialPort? _port;
 
-    public SerialPosNetTransport(PosNetConfiguration configuration)
+    public SerialPosNetTransport(PosNetDeviceAddress.Serial address, PosNetConfiguration configuration)
     {
         _configuration = configuration;
-        _settings = PosNetSerialSettings.From(configuration);
+        _settings = PosNetSerialSettings.From(address, configuration);
     }
 
     public string PortName => _settings.PortName;
@@ -57,7 +57,11 @@ public sealed class SerialPosNetTransport : IPosNetTransport
 
         try
         {
-            port.WriteTimeout = _configuration.SendTimeoutMs;
+            // Anything already on the line belongs to an earlier command — the late answer to one
+            // that timed out, or a duplicate after a USB hiccup. It is dropped here rather than only
+            // when the port is reopened, because a frame that arrives after that reopen would
+            // otherwise be read as the answer to this command and shift every answer that follows.
+            port.DiscardInBuffer();
             port.Write(frame, 0, frame.Length);
         }
         catch (Exception ex) when (IsSerialFailure(ex))
@@ -81,9 +85,9 @@ public sealed class SerialPosNetTransport : IPosNetTransport
 
     private SerialPort GetOpenPort()
     {
-        if (_port is { IsOpen: true })
+        if (IsUsable(_port))
         {
-            return _port;
+            return _port!;
         }
 
         DropConnection();
@@ -92,7 +96,8 @@ public sealed class SerialPosNetTransport : IPosNetTransport
             Handshake = _settings.Handshake,
             // A CDC device may hold its answers back until the host signals that it is listening.
             DtrEnable = true,
-            ReadTimeout = _configuration.ReceiveTimeoutMs,
+            // The write budget never changes; the read budget is set per chunk in ReadFrame, which
+            // owns the deadline for the whole frame.
             WriteTimeout = _configuration.SendTimeoutMs,
         };
         if (_settings.Handshake is not (Handshake.RequestToSend or Handshake.RequestToSendXOnXOff))
@@ -114,6 +119,32 @@ public sealed class SerialPosNetTransport : IPosNetTransport
         }
         _port = port;
         return port;
+    }
+
+    /// <summary>
+    /// Whether the kept port can still carry a command, the counterpart of
+    /// <c>TcpPosNetTransport.IsUsable</c>. <see cref="SerialPort.IsOpen"/> only says that the
+    /// managed handle was opened: a USB printer that was power-cycled while the till was idle
+    /// re-enumerates and leaves the old handle dead but open-looking. Writing to it fails, and that
+    /// failure would be reported as an ambiguous outcome ("verify the device") although nothing was
+    /// ever delivered. Touching the driver — reading the buffered byte count — is what surfaces it.
+    /// </summary>
+    private static bool IsUsable(SerialPort? port)
+    {
+        if (port is not { IsOpen: true })
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = port.BytesToRead;
+            return true;
+        }
+        catch (Exception ex) when (IsSerialFailure(ex) || ex is ObjectDisposedException)
+        {
+            return false;
+        }
     }
 
     private byte[] ReadFrame(SerialPort port, CancellationToken cancellationToken)

@@ -18,7 +18,7 @@ public class SerialPosNetTransportTests
     [Fact]
     public async Task SendReceive_WhenThePortCannotBeOpened_IsDeviceUnreachable_NotAmbiguous()
     {
-        using var transport = new SerialPosNetTransport(new PosNetConfiguration { DeviceUrl = AbsentPort, SendTimeoutMs = 1_000, ReceiveTimeoutMs = 1_000 });
+        using var transport = PosNetTransportFactory.Create(new PosNetConfiguration { DeviceUrl = AbsentPort, SendTimeoutMs = 1_000, ReceiveTimeoutMs = 1_000 });
 
         var act = () => transport.SendReceiveAsync(PosNetFrame.Encode(PosNetCommands.Scomm()));
 
@@ -32,7 +32,7 @@ public class SerialPosNetTransportTests
     [Fact]
     public async Task SendReceive_AfterAFailedOpen_TriesAgainOnTheNextCommand()
     {
-        using var transport = new SerialPosNetTransport(new PosNetConfiguration { DeviceUrl = AbsentPort, SendTimeoutMs = 1_000, ReceiveTimeoutMs = 1_000 });
+        using var transport = PosNetTransportFactory.Create(new PosNetConfiguration { DeviceUrl = AbsentPort, SendTimeoutMs = 1_000, ReceiveTimeoutMs = 1_000 });
         var frame = PosNetFrame.Encode(PosNetCommands.Scomm());
 
         await transport.Invoking(t => t.SendReceiveAsync(frame)).Should().ThrowAsync<PLDeviceUnreachableException>();

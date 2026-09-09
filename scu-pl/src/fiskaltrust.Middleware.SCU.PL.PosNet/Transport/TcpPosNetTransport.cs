@@ -22,10 +22,10 @@ public sealed class TcpPosNetTransport : IPosNetTransport
     private readonly PosNetConfiguration _configuration;
     private TcpClient? _client;
 
-    public TcpPosNetTransport(PosNetConfiguration configuration)
+    public TcpPosNetTransport(PosNetDeviceAddress.Tcp address, PosNetConfiguration configuration)
     {
         _configuration = configuration;
-        (_host, _port) = configuration.ParseDeviceEndpoint();
+        (_host, _port) = (address.Host, address.Port);
     }
 
     public async Task<byte[]> SendReceiveAsync(byte[] frame, CancellationToken cancellationToken = default)

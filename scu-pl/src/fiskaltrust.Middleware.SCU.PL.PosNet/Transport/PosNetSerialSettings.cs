@@ -1,5 +1,6 @@
 using System;
 using System.IO.Ports;
+using System.Linq;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
@@ -15,12 +16,12 @@ public sealed record PosNetSerialSettings(string PortName, int BaudRate, Parity 
     /// <summary>Fixed by the device; not configurable on the printer's COM menu.</summary>
     public const int DataBits = 8;
 
-    public static PosNetSerialSettings From(PosNetConfiguration configuration)
+    /// <summary>
+    /// Reads the settings for an address the caller has already recognized as serial, so the URL is
+    /// parsed once — by whoever selects the transport — rather than again here.
+    /// </summary>
+    public static PosNetSerialSettings From(PosNetDeviceAddress.Serial serial, PosNetConfiguration configuration)
     {
-        if (configuration.ParseDeviceAddress() is not PosNetDeviceAddress.Serial serial)
-        {
-            throw new PLValidationException($"The PosNet DeviceUrl '{configuration.DeviceUrl}' is not a serial port.");
-        }
         if (configuration.SerialBaudRate <= 0)
         {
             throw new PLValidationException($"The PosNet SerialBaudRate '{configuration.SerialBaudRate}' is not a valid line speed; the printer's default is 115200.");
@@ -36,7 +37,15 @@ public sealed record PosNetSerialSettings(string PortName, int BaudRate, Parity 
 
     private static Parity ParseParity(string? value)
     {
-        if (Enum.TryParse<Parity>((value ?? "").Trim(), ignoreCase: true, out var parity) && parity is Parity.None or Parity.Even or Parity.Odd)
+        var normalized = (value ?? "").Trim();
+        // A parameter left blank is the device default, as it is for the handshake — the Portal
+        // sends a cleared field as an empty string, and refusing it would keep the SCU from starting
+        // over a setting the operator did not set.
+        if (normalized.Length == 0)
+        {
+            return Parity.None;
+        }
+        if (Enum.TryParse<Parity>(normalized, ignoreCase: true, out var parity) && parity is Parity.None or Parity.Even or Parity.Odd)
         {
             return parity;
         }
@@ -60,7 +69,13 @@ public sealed record PosNetSerialSettings(string PortName, int BaudRate, Parity 
         {
             return Handshake.None;
         }
-        if (Enum.TryParse<Handshake>(normalized, ignoreCase: true, out var handshake))
+        // Only the names the printer offers are accepted. Enum.TryParse would also take a number —
+        // an undefined one passes validation here only to be refused by the SerialPort constructor
+        // at the first receipt (reported as an unreachable printer), and a defined one would turn a
+        // "1" the operator meant as a yes into XON/XOFF.
+        if (!normalized.All(char.IsAsciiDigit)
+            && Enum.TryParse<Handshake>(normalized, ignoreCase: true, out var handshake)
+            && handshake is Handshake.None or Handshake.XOnXOff or Handshake.RequestToSend)
         {
             return handshake;
         }
