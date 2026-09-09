@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.PL.TestSupport;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using FluentAssertions;
@@ -153,9 +154,7 @@ var requests = Directory.EnumerateDirectories(
                 => async (b) =>
                 {
                     var request = JsonSerializer.Deserialize<ReceiptRequest>(
-                        (await File.ReadAllTextAsync(d))
-                            .Replace("{{ ftCashBoxID }}", builder.CashBoxId.ToString())
-                            .Replace("{{ ftPosSystemID }}", builder.PosSystemId.ToString()))!;
+                        BusinessCaseSample.Resolve(await File.ReadAllTextAsync(d), builder.CashBoxId, builder.PosSystemId))!;
                     b(request);
                     return request;
                 }

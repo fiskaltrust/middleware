@@ -24,12 +24,14 @@ namespace fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest;
 /// of what is exercised.
 /// </summary>
 /// <remarks>
-/// The SCU is wrapped in <see cref="AssumeFiscalizedPLSSCD"/>: the recorded cassettes and a test
-/// printer report <c>fsN</c>, the device model <c>fsT</c>, and a PL queue only forwards receipts once
-/// it has activated against a fiscalized register. Wrapping makes both paths deterministic — it is the
-/// same gate-lifter the launcher's <c>MW_PL_ASSUME_FISCALIZED</c> uses, and it changes nothing about
-/// what reaches the wire. The queue's market rows are the ones the launcher's CashBoxBuilderPL
-/// starts its PL queue with: a queue row pointing at an SCU row that exists.
+/// The register's fiscalization state is read for real: a PL queue only forwards receipts once it has
+/// activated against a fiscalized register, and every committed cassette — like the office printer
+/// they were recorded on — reports <c>fsT</c>, so the queue's own gate is what the suite exercises.
+/// Lifting it with <see cref="AssumeFiscalizedPLSSCD"/> would make a regression in reading that state
+/// invisible end to end. A run against a printer that is not fiscalized yet can still lift the gate
+/// by setting <see cref="AssumeFiscalizedVariable"/>, the same switch the launcher offers.
+/// The queue's market rows are the ones the launcher's CashBoxBuilderPL starts its PL queue with: a
+/// queue row pointing at an SCU row that exists.
 /// </remarks>
 public sealed class PLEndToEndHarness : IDisposable
 {
@@ -92,9 +94,18 @@ public sealed class PLEndToEndHarness : IDisposable
 
         _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         _storage = new InMemoryStorageProvider(_loggerFactory, QueueId, configuration);
-        var bootstrapper = new QueuePLBootstrapper(QueueId, _loggerFactory, configuration, new AssumeFiscalizedPLSSCD(Target.Sut), _storage);
+        var sut = AssumeFiscalized ? new AssumeFiscalizedPLSSCD(Target.Sut) : Target.Sut;
+        var bootstrapper = new QueuePLBootstrapper(QueueId, _loggerFactory, configuration, sut, _storage);
         _sign = bootstrapper.RegisterForSign();
     }
+
+    /// <summary>Lifts the queue's fiscalization gate, for a run against a register that is not fiscalized yet.</summary>
+    public const string AssumeFiscalizedVariable = "MW_PL_ASSUME_FISCALIZED";
+
+    private static bool AssumeFiscalized =>
+        Environment.GetEnvironmentVariable(AssumeFiscalizedVariable) is { Length: > 0 } value
+            && !value.Equals("0", StringComparison.Ordinal)
+            && !value.Equals("false", StringComparison.OrdinalIgnoreCase);
 
     public Guid CashBoxId { get; }
 
@@ -118,18 +129,11 @@ public sealed class PLEndToEndHarness : IDisposable
     public PtuSlotResolver PtuSlots { get; }
 
     /// <summary>
-    /// The committed business case with this harness's cashbox and pos system filled in. These two
-    /// placeholders are the ones the launcher resolves as well (Helpers/MiddlewareHost.cs), so a case
-    /// that passes here is served unchanged there; cbReceiptReference stays as written, because the
-    /// cases reference each other.
+    /// The committed business case with this harness's cashbox and pos system filled in — resolved by
+    /// <see cref="BusinessCaseSample"/>, which the launcher uses as well, so a case that passes here
+    /// is served unchanged there.
     /// </summary>
-    public string Prepare(string rawJson)
-    {
-        ArgumentNullException.ThrowIfNull(rawJson);
-        return rawJson
-            .Replace("{{ ftCashBoxID }}", CashBoxId.ToString())
-            .Replace("{{ ftPosSystemID }}", PosSystemId.ToString());
-    }
+    public string Prepare(string rawJson) => BusinessCaseSample.Resolve(rawJson, CashBoxId, PosSystemId);
 
     /// <summary>Signs the request the way a POS would: JSON in, JSON out.</summary>
     public async Task<ReceiptResponse> SignAsync(string rawJson) => await SignPreparedAsync(Prepare(rawJson));

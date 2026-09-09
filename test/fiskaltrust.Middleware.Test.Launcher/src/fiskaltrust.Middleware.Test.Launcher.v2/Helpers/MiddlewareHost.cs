@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.PL.TestSupport;
 using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
 using fiskaltrust.storage.serialization.V0;
 using Microsoft.AspNetCore.Builder;
@@ -208,9 +209,7 @@ static class MiddlewareHost
         // cbReceiptReference is left as it stands in the file on purpose: the samples reference each
         // other — the return receipt points at the cash sale — which only works with stable
         // references. Post to /sign with your own reference when you need a fresh one.
-        return (await File.ReadAllTextAsync(files[0]))
-            .Replace("{{ ftCashBoxID }}", cashBox.CashBoxId.ToString())
-            .Replace("{{ ftPosSystemID }}", cashBox.PosSystemId.ToString());
+        return BusinessCaseSample.Resolve(await File.ReadAllTextAsync(files[0]), cashBox.CashBoxId, cashBox.PosSystemId);
     }
 
     private static async Task<T> ReadAsync<T>(HttpContext context)

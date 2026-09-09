@@ -88,8 +88,10 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
+          # QueuePL and its acceptance test target net8.0; the others here are net461;net6.0.
           dotnet-version: |
             6.0.x
+            8.0.x
 
       - name: ${{ matrix.project }} Acceptance Tests
         uses: ./.github/actions/test
