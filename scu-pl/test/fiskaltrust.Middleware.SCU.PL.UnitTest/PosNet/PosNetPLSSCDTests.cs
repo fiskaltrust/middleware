@@ -203,15 +203,35 @@ public class PosNetPLSSCDTests
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 9, 8, 10, 0, 0, DateTimeKind.Utc);
         request.ReceiptRequest.cbChargeItems = [];
         request.ReceiptRequest.cbPayItems = [];
 
         var result = await sut.ProcessReceiptAsync(request);
 
         transport.SentMnemonics.Should().Equal("scomm", "dailyrep", "scnt");
-        // The register validates the date against its clock: the SCU's local day is the one being closed.
-        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith($"dailyrep\tda{DateTime.Now:yyyy-MM-dd}\t");
+        // The register validates the date against its own clock, so the day closed is the receipt
+        // moment in Warsaw time — 12:00 CEST on the 8th here — not the host's local day.
+        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-08\t");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Which.Data.Should().Be("12");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_DailyClosing_ClosesTheRegistersDay_NotTheHostsUtcDay()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        // 00:30 Warsaw time on the 9th — a middleware host reading its own UTC clock would close
+        // the 8th, a day the register has already left.
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 9, 8, 22, 30, 0, DateTimeKind.Utc);
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+
+        await sut.ProcessReceiptAsync(request);
+
+        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-09\t");
     }
 
     [Fact]

@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest;
 public class PosNetPrinterEmulatorTests
 {
     private static PosNetClient ClientFor(PosNetPrinterEmulator emulator)
-        => new(new TcpPosNetTransport(new PosNetConfiguration
+        => new(PosNetTransportFactory.Create(new PosNetConfiguration
         {
             DeviceUrl = emulator.DeviceUrl,
             ConnectTimeoutMs = 2_000,

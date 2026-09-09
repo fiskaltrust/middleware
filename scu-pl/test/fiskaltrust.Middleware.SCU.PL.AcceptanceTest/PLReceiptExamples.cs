@@ -172,15 +172,24 @@ public static class PLReceiptExamples
         ],
     });
 
+    /// <remarks>
+    /// The closing is the one example whose moment must stay fixed: the SCU derives the day it
+    /// closes from <see cref="ReceiptRequest.cbReceiptMoment"/> in the register's zone, so the
+    /// <c>dailyrep da…</c> the cassettes recorded is only reproduced by the day they were recorded
+    /// on. <see cref="RecordedClosingMoment"/> is that day, 12:00 Warsaw time.
+    /// </remarks>
     public static ProcessRequest DailyClosing() => Wrap(new ReceiptRequest
     {
         ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011,
-        cbReceiptMoment = DateTime.UtcNow,
+        cbReceiptMoment = RecordedClosingMoment,
         cbReceiptReference = Guid.NewGuid().ToString(),
         Currency = Currency.PLN,
         cbChargeItems = [],
         cbPayItems = [],
     });
+
+    /// <summary>The moment the daily-report cassettes were recorded at: 2026-09-08, 12:00 Warsaw time.</summary>
+    public static readonly DateTime RecordedClosingMoment = new(2026, 9, 8, 10, 0, 0, DateTimeKind.Utc);
 
     private static ProcessRequest Wrap(ReceiptRequest request) => new()
     {

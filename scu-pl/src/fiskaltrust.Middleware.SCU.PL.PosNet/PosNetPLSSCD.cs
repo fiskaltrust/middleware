@@ -26,6 +26,12 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet;
 /// </summary>
 public class PosNetPLSSCD : IPLSSCD, IDisposable
 {
+    /// <summary>
+    /// The zone a Polish fiscal register keeps its clock and its fiscal day in. A register is
+    /// installed in Poland by law, so this is a property of the market, not of the deployment.
+    /// </summary>
+    private const string RegisterTimeZoneId = "Europe/Warsaw";
+
     private readonly PosNetClient _client;
     private readonly PosNetConfiguration _configuration;
 
@@ -68,14 +74,14 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         if (receiptCase.IsType(ReceiptCaseType.Invoice))
         {
-            throw new PLValidationException("Invoice cases (0x1xxx) must not reach a Polish SCU — QueuePL persists them without fiscalization.");
+            throw new PLValidationException(PLReceiptCases.InvoiceCaseRefusal);
         }
 
-        if (IsFiscalReceiptCase(receiptCase) && receiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        if (receiptCase.IsFiscalReceipt() && receiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             await ExecuteReturnAsync(request.ReceiptRequest, response);
         }
-        else if (IsFiscalReceiptCase(receiptCase))
+        else if (receiptCase.IsFiscalReceipt())
         {
             await ExecuteSaleAsync(request.ReceiptRequest, response);
         }
@@ -87,7 +93,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
         else if (receiptCase.IsCase(ReceiptCase.DailyClosing0x2011))
         {
-            await ExecuteDailyClosingAsync(response);
+            await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
         }
         else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012) || receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
         {
@@ -150,23 +156,37 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// <summary>
     /// The daily (Z) report closes the register's day; its number is read back from the counters
     /// afterwards like the fiscal document number of a sale. The register validates the date
-    /// against its own clock, so the SCU's local date is sent — the day being closed is the
-    /// register's, not the POS's timestamp in UTC.
+    /// against its own clock, so the day being closed is derived from the receipt moment in the
+    /// register's zone (<see cref="RegisterTimeZoneId"/>) — never from the host's local date: a
+    /// middleware host in UTC would otherwise close the wrong day for every closing between
+    /// midnight and the zone's offset.
     /// </summary>
-    private async Task ExecuteDailyClosingAsync(ReceiptResponse response)
+    private async Task ExecuteDailyClosingAsync(ReceiptRequest request, ReceiptResponse response)
     {
         await EnrichWithDeviceIdentityAsync(response);
-        await _client.ExecuteAsync(PosNetCommands.Dailyrep(DateOnly.FromDateTime(DateTime.Now)));
-        await TryReadCounterAsync("rd", number => response.AddSignatureItem(SignatureTypePL.ZReportNumber, "Numer raportu dobowego", number.ToString(CultureInfo.InvariantCulture)));
+        await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
+        await TryReadCounterAsync("rd", number => response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture)));
     }
+
+    /// <summary>
+    /// A Polish register runs on Polish local time, and every receipt moment is UTC by contract,
+    /// so the calendar day the register knows is the moment converted to Warsaw time.
+    /// </summary>
+    private static DateOnly ToRegisterDate(DateTime receiptMoment)
+        => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
+            new DateTimeOffset(DateTime.SpecifyKind(receiptMoment, DateTimeKind.Utc), TimeSpan.Zero),
+            RegisterTimeZoneId).DateTime);
 
     /// <summary>
     /// Adds the register identity to the response, reading the status once and reusing it. An
     /// unreachable or silent register propagates: no sale may be recorded without a register.
+    /// Only the numer unikatowy and the serial number reach the response, and scomm carries both,
+    /// so the PTU table is deliberately left out of this read: a goods return and a daily closing
+    /// resolve no PTU slot and must not fail on a table they never use.
     /// </summary>
     private async Task EnrichWithDeviceIdentityAsync(ReceiptResponse response)
     {
-        _identity ??= ToDeviceInfo(await _client.ExecuteAsync(PosNetCommands.Scomm()), await GetRateTableAsync());
+        _identity ??= ToDeviceInfo(await _client.ExecuteAsync(PosNetCommands.Scomm()), rateTable: []);
         response.EnrichWithDeviceIdentification(_identity);
     }
 
@@ -263,12 +283,6 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             _ => PLFiscalizationState.Unknown,
         };
     }
-
-    private static bool IsFiscalReceiptCase(ReceiptCase receiptCase)
-        => receiptCase.IsType(ReceiptCaseType.Receipt)
-            && (receiptCase.IsCase(ReceiptCase.UnknownReceipt0x0000)
-                || receiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001)
-                || receiptCase.IsCase(ReceiptCase.ECommerce0x0004));
 
     public void Dispose() => _client.Dispose();
 }

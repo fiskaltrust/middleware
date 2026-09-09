@@ -1,4 +1,6 @@
 using System.Globalization;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
+using fiskaltrust.Middleware.SCU.PL.PosNet;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
 namespace fiskaltrust.Middleware.SCU.PL.TestSupport.Emulator;
@@ -22,16 +24,17 @@ namespace fiskaltrust.Middleware.SCU.PL.TestSupport.Emulator;
 /// </remarks>
 public sealed class PosNetDeviceModel
 {
-    public const int SlotCount = 7;
+    /// <summary>The slots a POSNET register reports, as the protocol side defines them.</summary>
+    public const int SlotCount = PosNetRateTable.SlotCount;
 
     /// <summary>The receipt document type <c>strns</c> reports in <c>ts</c>.</summary>
     public const int ReceiptDocumentType = 16;
 
     /// <summary>How an inactive PTU slot is reported in the rate fields.</summary>
-    public const decimal InactiveRate = 101m;
+    public const decimal InactiveRate = PosNetRateTable.InactiveMarker;
 
     /// <summary>How the tax-exempt (zw.) PTU slot is reported in the rate fields.</summary>
-    public const decimal ExemptRate = 100m;
+    public const decimal ExemptRate = PosNetRateTable.ExemptMarker;
 
     private const string NoSalesMoment = "2000-01-01;00:00";
 
@@ -47,11 +50,23 @@ public sealed class PosNetDeviceModel
 
     /// <summary>
     /// The PTU table as the register reports it: a percentage, <see cref="ExemptRate"/> or
-    /// <see cref="InactiveRate"/> per slot A–G. Programmed like the SCU's default rate table
-    /// (PosNetConfiguration.DefaultVatRateTable: A 23%, B 8%, C 5%, D 0%, G exempt), so the slots the
-    /// SCU sends by default are the slots this register has — keep the two in step.
+    /// <see cref="InactiveRate"/> per slot A–G. Derived from the SCU's default table rather than
+    /// spelled out again, so the slots this register has cannot drift from the slots the SCU sends
+    /// when no table is configured.
     /// </summary>
-    public decimal[] RateTable { get; } = [23m, 8m, 5m, 0m, InactiveRate, InactiveRate, ExemptRate];
+    public decimal[] RateTable { get; } = ToRateFields(PosNetConfiguration.DefaultVatRateTable());
+
+    /// <summary>The rate fields a register whose PTU table holds <paramref name="entries"/> reports.</summary>
+    private static decimal[] ToRateFields(List<PLVatRateTableEntry> entries)
+    {
+        var fields = new decimal[SlotCount];
+        Array.Fill(fields, InactiveRate);
+        foreach (var entry in entries)
+        {
+            fields[entry.PtuSlot![0] - 'A'] = entry.IsExempt ? ExemptRate : entry.VatRatePercent!.Value;
+        }
+        return fields;
+    }
 
     /// <summary>The daily report counter (<c>rd</c>); the next report is <c>rd + 1</c>.</summary>
     public int DailyReportCounter { get; set; }
