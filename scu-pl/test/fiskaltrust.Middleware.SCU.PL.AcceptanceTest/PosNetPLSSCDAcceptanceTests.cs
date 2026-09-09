@@ -44,7 +44,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
         NoTransactionShouldBeOpen(target);
         DocumentNumberOf(result).Should().BePositive();
     }
