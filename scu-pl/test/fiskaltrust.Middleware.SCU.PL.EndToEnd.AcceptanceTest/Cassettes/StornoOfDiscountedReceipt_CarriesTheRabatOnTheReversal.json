@@ -1,0 +1,58 @@
+{
+  "RecordedAgainst": "serial://COM9",
+  "RecordedAtUtc": "2026-09-08T15:55:31.7581944Z",
+  "Exchanges": [
+    {
+      "Command": "stot\t",
+      "Response": "stot\tno3\tfa0\tfb0\tfc0\tfd0\tfe0\tff0\tfg0\tfn0\tpa25807\tpb1800\tpc0\tpd0\tpe0\tpf0\tpg0\tpn7\tct0\tcn0\tcc2\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\tds2026-09-08;17:55\tis2026-09-08T17:55:21\u002B02:00\tde2026-09-08;17:55\tie2026-09-08T17:55:30\u002B02:00\tft0\tfl0\tnf1\tbc0\tle0\toe0\ttf0\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn37\tbn7\tfn0\tnuZBF 2101002392\tbc0\tbt7\tfc0\t"
+    },
+    {
+      "Command": "scomm\t",
+      "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    },
+    {
+      "Command": "trinit\tbm0\t",
+      "Response": "trinit\t"
+    },
+    {
+      "Command": "trline\tnaKawa\tvt0\tpr1000\twa1000\trd1\trnRabat\trw200\t",
+      "Response": "trline\t"
+    },
+    {
+      "Command": "trline\tnaPiwo\tvt0\tpr800\t",
+      "Response": "trline\t"
+    },
+    {
+      "Command": "trline\tnaKawa\tvt0\tpr1000\tst1\twa1000\trd1\trnRabat\trw200\t",
+      "Response": "trline\t"
+    },
+    {
+      "Command": "trpayment\tty0\twa800\tnaGot\u00F3wka\tre0\t",
+      "Response": "trpayment\t"
+    },
+    {
+      "Command": "trend\tto800\tfp800\t",
+      "Response": "trend\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn38\tbn8\tfn0\tnuZBF 2101002392\tbc0\tbt8\tfc0\t"
+    },
+    {
+      "Command": "strns\t",
+      "Response": "strns\tto0\tts16\tva800\tvb0\tvc0\tvd0\tve0\tvf0\tvg0\tpp0\tpm0\tre0\tfp800\tfeN\t"
+    },
+    {
+      "Command": "stot\t",
+      "Response": "stot\tno3\tfa0\tfb0\tfc0\tfd0\tfe0\tff0\tfg0\tfn0\tpa26607\tpb1800\tpc0\tpd0\tpe0\tpf0\tpg0\tpn8\tct0\tcn0\tcc2\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\tds2026-09-08;17:55\tis2026-09-08T17:55:21\u002B02:00\tde2026-09-08;17:55\tie2026-09-08T17:55:32\u002B02:00\tft0\tfl0\tnf1\tbc0\tle0\toe0\ttf0\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn38\tbn8\tfn0\tnuZBF 2101002392\tbc0\tbt8\tfc0\t"
+    }
+  ]
+}

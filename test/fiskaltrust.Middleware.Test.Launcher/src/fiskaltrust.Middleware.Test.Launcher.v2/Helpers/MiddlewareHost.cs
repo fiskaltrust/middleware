@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.PL.TestSupport;
 using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
 using fiskaltrust.storage.serialization.V0;
 using Microsoft.AspNetCore.Builder;
@@ -173,10 +174,11 @@ static class MiddlewareHost
         var samples = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (!Directory.Exists(root))
         {
-            // Only PL's samples are committed (see .gitignore), so this folder is legitimately
-            // absent for another market. Enumerating anyway would throw out of the route handler as
-            // an unhandled 500 — and, because ReadSampleAsync composes its 400 message from this
-            // list, would turn an unknown sample name into a 500 as well.
+            // Only PL ships samples — the csproj links the end-to-end suite's BusinessCases folder
+            // in as json-requests/PL — so this folder is legitimately absent for another market.
+            // Enumerating anyway would throw out of the route handler as an unhandled 500 — and,
+            // because ReadSampleAsync composes its 400 message from this list, would turn an unknown
+            // sample name into a 500 as well.
             return samples;
         }
 
@@ -207,9 +209,7 @@ static class MiddlewareHost
         // cbReceiptReference is left as it stands in the file on purpose: the samples reference each
         // other — the return receipt points at the cash sale — which only works with stable
         // references. Post to /sign with your own reference when you need a fresh one.
-        return (await File.ReadAllTextAsync(files[0]))
-            .Replace("{{ ftCashBoxID }}", cashBox.CashBoxId.ToString())
-            .Replace("{{ ftPosSystemID }}", cashBox.PosSystemId.ToString());
+        return BusinessCaseSample.Resolve(await File.ReadAllTextAsync(files[0]), cashBox.CashBoxId, cashBox.PosSystemId);
     }
 
     private static async Task<T> ReadAsync<T>(HttpContext context)

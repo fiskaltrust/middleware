@@ -22,6 +22,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.PL.TestSupport\fiskaltrust.Middleware.SCU.PL.TestSupport.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -15,7 +15,10 @@ namespace fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet;
 
 public class PosNetPLSSCDTests
 {
-    private static readonly PosNetConfiguration s_configuration = new() { DeviceUrl = "tcp://localhost:6666" };
+    /// <summary>The table is pinned here; reading it off the register is covered by its own tests below.</summary>
+    private static readonly PosNetConfiguration s_configuration = new() { DeviceUrl = "tcp://localhost:6666", VatRateTable = PosNetConfiguration.DefaultVatRateTable() };
+
+    private static readonly PosNetConfiguration s_configurationWithoutRateTable = new() { DeviceUrl = "tcp://localhost:6666" };
 
     private static PosNetPLSSCD CreateSut(FakePosNetTransport transport)
         => new(s_configuration, new PosNetClient(transport));
@@ -194,12 +197,50 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_DailyClosing_IsNotSupportedYet()
+    public async Task ProcessReceiptAsync_DailyClosing_PrintsTheDailyReport_AndReportsItsNumber()
     {
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 9, 8, 10, 0, 0, DateTimeKind.Utc);
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        transport.SentMnemonics.Should().Equal("scomm", "dailyrep", "scnt");
+        // The register validates the date against its own clock, so the day closed is the receipt
+        // moment in Warsaw time — 12:00 CEST on the 8th here — not the host's local day.
+        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-08\t");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Which.Data.Should().Be("12");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_DailyClosing_ClosesTheRegistersDay_NotTheHostsUtcDay()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        // 00:30 Warsaw time on the 9th — a middleware host reading its own UTC clock would close
+        // the 8th, a day the register has already left.
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 9, 8, 22, 30, 0, DateTimeKind.Utc);
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+
+        await sut.ProcessReceiptAsync(request);
+
+        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-09\t");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_MonthlyClosing_IsNotSupportedYet()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2012;
 
         var act = () => sut.ProcessReceiptAsync(request);
 
@@ -322,6 +363,82 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
+    public async Task ProcessReceiptAsync_Return_PrintsTheGoodsReturn_WithoutAFiscalDocumentNumber()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest(amount: -3.69m, payment: -3.69m);
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)(0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.Refund);
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        transport.SentMnemonics.Should().Equal("scomm", "stocash");
+        transport.SentPayloads.Single(p => p.StartsWith("stocash")).Should().StartWith("stocash\tkw369\t");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Zwrot towaru (wydruk niefiskalny)").Which.Data.Should().Be("3.69");
+        result.ReceiptResponse.ftCashBoxIdentification.Should().Be("ZBF 2101002392");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ReturnWithASalePosition_FailsBeforeAnyFrameIsSent()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest(amount: 3.69m, payment: -3.69m);
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)(0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.Refund);
+
+        var act = () => sut.ProcessReceiptAsync(request);
+
+        await act.Should().ThrowAsync<PLValidationException>();
+        transport.SentMnemonics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetInfoAsync_WithoutAConfiguredRateTable_ReadsThePtuTableOffTheRegister()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = new PosNetPLSSCD(s_configurationWithoutRateTable, new PosNetClient(transport));
+
+        var info = await sut.GetInfoAsync();
+
+        transport.SentMnemonics.Should().Equal("scomm", "sfsk");
+        var table = PLDeviceInfo.FromPLSSCDInfo(info)!.VatRateTable;
+        // The fake register answers like the office printer: A 23, B 8, C 5, D 0, E–G not in use.
+        table.Select(e => (e.PtuSlot, e.VatRatePercent, e.IsExempt)).Should().Equal(
+            ("A", 23m, false), ("B", 8m, false), ("C", 5m, false), ("D", 0m, false));
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_WithoutAConfiguredRateTable_ReadsTheTableOnce_BeforeTheFirstSale()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = new PosNetPLSSCD(s_configurationWithoutRateTable, new PosNetClient(transport));
+
+        await sut.ProcessReceiptAsync(CreateSaleRequest());
+        await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        // Mapping needs the slots, so the table is read before anything else; identity and table are then reused.
+        transport.SentMnemonics.Should().Equal(
+            "sfsk", "scomm", "trinit", "trline", "trpayment", "trend", "scnt",
+            "trinit", "trline", "trpayment", "trend", "scnt");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_WithARateTheRegisterDoesNotHave_FailsBeforeTheTransactionIsOpened()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = new PosNetPLSSCD(s_configurationWithoutRateTable, new PosNetClient(transport));
+        var request = CreateSaleRequest();
+        // NotTaxable resolves to the exempt slot, which the register does not report.
+        request.ReceiptRequest.cbChargeItems[0].ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0018;
+
+        var act = () => sut.ProcessReceiptAsync(request);
+
+        await act.Should().ThrowAsync<PLValidationException>();
+        transport.SentMnemonics.Should().Equal("sfsk");
+    }
+
+    [Fact]
     public async Task GetInfoAsync_MapsTheFiscalModeFromScomm()
     {
         var transport = FakePosNetTransport.Confirming();
@@ -403,11 +520,11 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_DiscountPosition_FailsBeforeAnyFrameIsSent()
+    public async Task ProcessReceiptAsync_DiscountPosition_RidesAlongOnTheSaleLine()
     {
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
-        var request = CreateSaleRequest();
+        var request = CreateSaleRequest(payment: 7.99m);
         request.ReceiptRequest.cbChargeItems.Add(new ChargeItem
         {
             Description = "Rabat",
@@ -416,12 +533,37 @@ public class PosNetPLSSCDTests
             ftChargeItemCase = (ChargeItemCase)0x504C_2000_0004_0011,
         });
 
-        var act = () => sut.ProcessReceiptAsync(request);
+        await sut.ProcessReceiptAsync(request);
 
-        // The queue passes discounts through (they do not make a document a return); the register
-        // expresses them as rabat parameters, so until that is implemented they are rejected here.
-        (await act.Should().ThrowAsync<PLValidationException>()).WithMessage("*discount*");
-        transport.SentMnemonics.Should().BeEmpty();
+        // The queue passes discounts through (they do not make a document a return), and a register
+        // has no position for one: it travels as the rabat of the line it follows. The line keeps
+        // its own value (wa) and the receipt is settled with the discounted total.
+        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        transport.SentPayloads.Single(p => p.StartsWith("trline")).Should().Contain("wa999").And.Contain("rd1").And.Contain("rw200");
+        transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_DiscountWithNoPositionInFrontOfIt_BecomesASubtotalDiscount()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest(payment: 7.99m);
+        request.ReceiptRequest.cbChargeItems.Insert(0, new ChargeItem
+        {
+            Description = "Rabat",
+            Amount = -2m,
+            Quantity = 1m,
+            ftChargeItemCase = (ChargeItemCase)0x504C_2000_0004_0011,
+        });
+
+        await sut.ProcessReceiptAsync(request);
+
+        // It cannot belong to a line, so it is a rabat od podsumy — sent after every line and
+        // before the payments, which is where the register applies it.
+        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "scnt");
+        transport.SentPayloads.Single(p => p.StartsWith("trdiscntsubtot")).Should().Contain("rd1").And.Contain("rw200");
+        transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
     }
 
     [Fact]
@@ -490,6 +632,8 @@ public class PosNetPLSSCDTests
                 // The T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them.
                 "scomm" => _scommResponse,
                 "scnt" => "scnt\trd12\tbn85\tbt85\tfn3\t",
+                // The rate table as the office printer reports it after fiscalization: E–G not in use.
+                "sfsk" => "sfsk\tfsT\tcl0\trd12\tvt1\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\trw2026-09-03;16:54\tnuZBF 2101002392\t",
                 // The e-paragon binding confirms with the unique eDokument id; the buffer record
                 // reports an electronic document (prN = no paper) that reached the hub (st1).
                 "eparagonidznext" => "eparagonidznext\tha3054\t",

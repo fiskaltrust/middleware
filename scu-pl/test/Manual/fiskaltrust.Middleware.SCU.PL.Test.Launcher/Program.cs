@@ -34,6 +34,9 @@ public static class Program
     /// <summary>The SCU configuration, exactly as it would arrive from the cashbox configuration.</summary>
     private static readonly Dictionary<string, object> Configuration = new()
     {
+        // The printer's network interface. Over its USB (or COM) interface instead:
+        // ["DeviceUrl"] = "serial://COM9" — the serial settings default to the device's own
+        // (115200 8N1, no handshake); see PosNetConfiguration.
         ["DeviceUrl"] = "tcp://192.168.178.58:6666",
         ["ConnectTimeoutMs"] = 5_000,
         // A real printer answers a trend only once the paper has actually moved.

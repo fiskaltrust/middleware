@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
@@ -70,12 +72,12 @@ public class InMemorySCU : IPLSSCD
 
         if (receiptCase.IsType(ReceiptCaseType.Invoice))
         {
-            throw new PLValidationException("Invoice cases (0x1xxx) must not reach a Polish SCU — QueuePL persists them without fiscalization.");
+            throw new PLValidationException(PLReceiptCases.InvoiceCaseRefusal);
         }
 
         response.EnrichWithDeviceIdentification(_deviceInfo);
 
-        if (IsFiscalReceiptCase(receiptCase))
+        if (receiptCase.IsFiscalReceipt())
         {
             long fiscalDocumentNumber;
             lock (_syncRoot)
@@ -94,20 +96,9 @@ public class InMemorySCU : IPLSSCD
                 zReportNumber = (_deviceInfo.CurrentZReportNumber ?? 0) + 1;
                 _deviceInfo.CurrentZReportNumber = zReportNumber;
             }
-            response.AddSignatureItem(Abstraction.Cases.SignatureTypePL.ZReportNumber, "Numer raportu dobowego", zReportNumber.ToString());
+            response.AddSignatureItem(Abstraction.Cases.SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, zReportNumber.ToString(CultureInfo.InvariantCulture));
         }
 
         return Task.FromResult(new ProcessResponse { ReceiptResponse = response });
     }
-
-    /// <summary>
-    /// Only the fiscal sale documents consume a fiscal document number on the register —
-    /// non-fiscal receipt cases (payment transfer, sale without fiscalization obligation,
-    /// delivery note, table check, pro forma) do not.
-    /// </summary>
-    private static bool IsFiscalReceiptCase(ReceiptCase receiptCase)
-        => receiptCase.IsType(ReceiptCaseType.Receipt)
-            && (receiptCase.IsCase(ReceiptCase.UnknownReceipt0x0000)
-                || receiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001)
-                || receiptCase.IsCase(ReceiptCase.ECommerce0x0004));
 }

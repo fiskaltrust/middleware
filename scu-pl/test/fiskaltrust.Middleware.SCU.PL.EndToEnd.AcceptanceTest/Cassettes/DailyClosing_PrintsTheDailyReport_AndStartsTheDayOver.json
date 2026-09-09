@@ -1,0 +1,54 @@
+{
+  "RecordedAgainst": "serial://COM9",
+  "RecordedAtUtc": "2026-09-08T15:55:18.4001371Z",
+  "Exchanges": [
+    {
+      "Command": "scomm\t",
+      "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    },
+    {
+      "Command": "trinit\tbm0\t",
+      "Response": "trinit\t"
+    },
+    {
+      "Command": "trline\tnaWoda mineralna 0,5l\tvt0\tpr369\t",
+      "Response": "trline\t"
+    },
+    {
+      "Command": "trpayment\tty0\twa369\tnaGot\u00F3wka\tre0\t",
+      "Response": "trpayment\t"
+    },
+    {
+      "Command": "trend\tto369\tfp369\t",
+      "Response": "trend\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd1\thn28\tbn7\tfn0\tnuZBF 2101002392\tbc0\tbt7\tfc0\t"
+    },
+    {
+      "Command": "stot\t",
+      "Response": "stot\tno2\tfa0\tfb0\tfc0\tfd0\tfe0\tff0\tfg0\tfn0\tpa9138\tpb3399\tpc0\tpd0\tpe0\tpf0\tpg0\tpn7\tct0\tcn0\tcc5\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\tds2026-09-08;17:55\tis2026-09-08T17:55:07\u002B02:00\tde2026-09-08;17:55\tie2026-09-08T17:55:18\u002B02:00\tft0\tfl0\tnf0\tbc0\tle0\toe0\ttf0\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd1\thn28\tbn7\tfn0\tnuZBF 2101002392\tbc0\tbt7\tfc0\t"
+    },
+    {
+      "Command": "dailyrep\tda2026-09-08\t",
+      "Response": "dailyrep\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn29\tbn0\tfn0\tnuZBF 2101002392\tbc0\tbt0\tfc0\t"
+    },
+    {
+      "Command": "stot\t",
+      "Response": "stot\tno3\tfa0\tfb0\tfc0\tfd0\tfe0\tff0\tfg0\tfn0\tpa0\tpb0\tpc0\tpd0\tpe0\tpf0\tpg0\tpn0\tct0\tcn0\tcc0\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\tds2000-01-01;01:00\tis2000-01-01T01:00:00\u002B01:00\tde2000-01-01;01:00\tie2000-01-01T01:00:00\u002B01:00\tft0\tfl0\tnf0\tbc0\tle0\toe0\ttf0\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn29\tbn0\tfn0\tnuZBF 2101002392\tbc0\tbt0\tfc0\t"
+    }
+  ]
+}

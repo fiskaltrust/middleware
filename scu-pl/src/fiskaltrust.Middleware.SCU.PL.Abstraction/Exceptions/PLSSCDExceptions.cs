@@ -35,4 +35,5 @@ public class PLDeviceErrorException : PLSSCDException
 public class PLValidationException : PLSSCDException
 {
     public PLValidationException(string message) : base(message) { }
+    public PLValidationException(string message, Exception innerException) : base(message, innerException) { }
 }

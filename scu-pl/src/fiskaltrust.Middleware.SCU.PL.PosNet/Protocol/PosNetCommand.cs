@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
@@ -34,7 +35,19 @@ public static class PosNetCommands
 
     public static PosNetCommand Trinit() => new("trinit", [new("bm", "0")]);
 
-    public static PosNetCommand Trline(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze)
+    /// <summary>
+    /// A sale line, carrying the rabat/narzut granted on that line if one was passed. The line value
+    /// (<c>wa</c>) is price x quantity — the value <em>before</em> the discount (POT-I-DEV-37 p.301:
+    /// "wa Kwota total (cena x ilość)"); the register subtracts <c>rw</c> from it and totalizes the
+    /// difference.
+    /// </summary>
+    /// <param name="isReversal">
+    /// Sends the line as a storno (<c>st1</c>, "Flaga stornowania"): it repeats a position the
+    /// register already printed and takes the stated quantity and value off it. The device verifies
+    /// both against what was sold (errors 2851 ERR_STORNO_QNT and 2852 ERR_STORNO_AMT), so a
+    /// reversal always states its value explicitly.
+    /// </param>
+    public static PosNetCommand Trline(string name, int vatSlotIndex, long unitPriceGrosze, decimal quantity, long totalGrosze, PosNetModifier? modifier = null, bool isReversal = false)
     {
         var parameters = new List<KeyValuePair<string, string>>
         {
@@ -42,12 +55,49 @@ public static class PosNetCommands
             new("vt", vatSlotIndex.ToString(CultureInfo.InvariantCulture)),
             new("pr", unitPriceGrosze.ToString(CultureInfo.InvariantCulture)),
         };
+        if (isReversal)
+        {
+            // Where the specification's own trline examples put it: after the price, before the value.
+            parameters.Add(new("st", "1"));
+        }
         if (quantity != 1m)
         {
             parameters.Add(new("il", quantity.ToString(QuantityFormat, CultureInfo.InvariantCulture)));
+        }
+        // The line value is what the device measures the discount against — "the discount may not
+        // exceed the value of the goods" (POT-I-DEV-05 p.219) — so a line that carries one states
+        // its value explicitly instead of leaving the device to derive it from price x quantity.
+        if (quantity != 1m || modifier is not null || isReversal)
+        {
             parameters.Add(new("wa", totalGrosze.ToString(CultureInfo.InvariantCulture)));
         }
+        if (modifier is not null)
+        {
+            parameters.Add(new("rd", modifier.IsDiscount ? "1" : "0"));
+            if (!string.IsNullOrWhiteSpace(modifier.Name))
+            {
+                parameters.Add(new("rn", modifier.Name!));
+            }
+            parameters.Add(new("rw", modifier.AmountGrosze.ToString(CultureInfo.InvariantCulture)));
+        }
         return new PosNetCommand("trline", parameters);
+    }
+
+    /// <summary>
+    /// A rabat/narzut od podsumy: the register applies it to the subtotal of the open receipt and
+    /// distributes it over the PTU rates itself (POT-I-DEV-05 p.226), which is why the command
+    /// carries no rate. It cannot be reversed — only an opposing markup offsets it.
+    /// </summary>
+    public static PosNetCommand Trdiscntsubtot(PosNetModifier modifier)
+    {
+        var parameters = new List<KeyValuePair<string, string>>();
+        if (!string.IsNullOrWhiteSpace(modifier.Name))
+        {
+            parameters.Add(new("na", modifier.Name!));
+        }
+        parameters.Add(new("rd", modifier.IsDiscount ? "1" : "0"));
+        parameters.Add(new("rw", modifier.AmountGrosze.ToString(CultureInfo.InvariantCulture)));
+        return new PosNetCommand("trdiscntsubtot", parameters);
     }
 
     public static PosNetCommand Trpayment(int paymentType, long amountGrosze, bool isChange, string? name = null)
@@ -99,6 +149,25 @@ public static class PosNetCommands
     public static PosNetCommand Scomm() => new("scomm");
 
     public static PosNetCommand Scnt() => new("scnt");
+
+    /// <summary>The fiscal memory status — among it the PTU rate table as programmed on the register (<c>va..vg</c>).</summary>
+    public static PosNetCommand Sfsk() => new("sfsk");
+
+    /// <summary>
+    /// The goods return (zwrot towaru): a non-fiscal printout of the amount handed back
+    /// (POT-I-DEV-05 p.254, <c>kw</c> in grosze). A return is not a fiscal document on a Polish
+    /// register — the returned positions are kept in the taxpayer's returns register, the printout
+    /// documents the payout.
+    /// </summary>
+    public static PosNetCommand Stocash(long amountGrosze)
+        => new("stocash", [new("kw", amountGrosze.ToString(CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The daily (Z) report. The date is validated against the register's clock and confirms which
+    /// day is being closed; without it the operator would have to confirm the date on the keyboard.
+    /// </summary>
+    public static PosNetCommand Dailyrep(DateOnly date)
+        => new("dailyrep", [new("da", date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))]);
 
     public static PosNetCommand Prncancel() => new("prncancel");
 }

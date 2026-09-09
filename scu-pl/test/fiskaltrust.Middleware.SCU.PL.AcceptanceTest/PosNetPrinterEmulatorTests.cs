@@ -1,6 +1,6 @@
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
-using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.Emulator;
-using fiskaltrust.Middleware.SCU.PL.AcceptanceTest.PosNetPrinter;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.Emulator;
+using fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 using fiskaltrust.Middleware.SCU.PL.PosNet;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Client;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.SCU.PL.AcceptanceTest;
 public class PosNetPrinterEmulatorTests
 {
     private static PosNetClient ClientFor(PosNetPrinterEmulator emulator)
-        => new(new TcpPosNetTransport(new PosNetConfiguration
+        => new(PosNetTransportFactory.Create(new PosNetConfiguration
         {
             DeviceUrl = emulator.DeviceUrl,
             ConnectTimeoutMs = 2_000,

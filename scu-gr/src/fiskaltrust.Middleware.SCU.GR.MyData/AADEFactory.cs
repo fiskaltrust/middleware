@@ -38,7 +38,7 @@ public class AADEFactory
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
-            throw new ArgumentException("Receipt base address is required for myDATA v2.0.1", nameof(receiptBaseAddress));
+            throw new ArgumentException("Receipt base address is required for myDATA v2.0.2", nameof(receiptBaseAddress));
         }
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
@@ -632,6 +632,33 @@ public class AADEFactory
             invoice.invoiceHeader.toWeighSpecified = true;
         }
 
+        // Apply nonObligatedRecipient (delivery-note flag added in myDATA v2.0.2)
+        if (headerOverride.NonObligatedRecipient.HasValue)
+        {
+            invoice.invoiceHeader.nonObligatedRecipient = headerOverride.NonObligatedRecipient.Value;
+            invoice.invoiceHeader.nonObligatedRecipientSpecified = true;
+        }
+
+        // Apply withoutDigitalTransportTracking (delivery-note flag added in myDATA v2.0.2)
+        if (headerOverride.WithoutDigitalTransportTracking.HasValue)
+        {
+            invoice.invoiceHeader.withoutDigitalTransportTracking = headerOverride.WithoutDigitalTransportTracking.Value;
+            invoice.invoiceHeader.withoutDigitalTransportTrackingSpecified = true;
+        }
+
+        // Apply receivingNotePurpose (receiving-note reason, added in myDATA v2.0.2)
+        if (headerOverride.ReceivingNotePurpose.HasValue)
+        {
+            invoice.invoiceHeader.receivingNotePurpose = headerOverride.ReceivingNotePurpose.Value;
+            invoice.invoiceHeader.receivingNotePurposeSpecified = true;
+        }
+
+        // Apply otherReceivingNotePurposeTitle (added in myDATA v2.0.2)
+        if (!string.IsNullOrEmpty(headerOverride.OtherReceivingNotePurposeTitle))
+        {
+            invoice.invoiceHeader.otherReceivingNotePurposeTitle = headerOverride.OtherReceivingNotePurposeTitle;
+        }
+
         // Overriding the document numbering is not supported: series/aa are assigned by
         // the middleware's invoice counter (or taken inbound for handwritten documents),
         // and an override silently renumbering the doc would desynchronize the counter
@@ -708,8 +735,23 @@ public class AADEFactory
         {
             party.address = new AddressType
             {
-                number = partyOverride.Address.Number ?? "0"
+                street = partyOverride.Address.Street,
+                number = partyOverride.Address.Number ?? "0",
+                postalCode = partyOverride.Address.PostalCode,
+                city = partyOverride.Address.City
             };
+        }
+        if(!string.IsNullOrEmpty(partyOverride.VatNumber))
+        {
+            party.vatNumber = partyOverride.VatNumber;
+        }
+        if(!string.IsNullOrEmpty(partyOverride.Country) && Enum.TryParse<CountryType>(partyOverride.Country, true, out var country))
+        {
+            party.country = country;
+        }
+        if (!string.IsNullOrEmpty(partyOverride.Name))
+        {
+            party.name = partyOverride.Name;
         }
     }
 
