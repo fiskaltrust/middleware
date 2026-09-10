@@ -15,6 +15,8 @@ public class FakeFRSSCD : IFRSSCD
 
     public Func<Exception>? ThrowOnProcess { get; set; }
 
+    public ProcessRequest? LastRequest { get; private set; }
+
     public bool HasSignatureCreationData { get; set; } = true;
 
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
@@ -27,6 +29,7 @@ public class FakeFRSSCD : IFRSSCD
     public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
     {
         Calls.Add((lastHash, request.ReceiptResponse.ftReceiptIdentification, request.PeriodTotals));
+        LastRequest = request;
 
         if (ThrowOnProcess is not null)
         {
