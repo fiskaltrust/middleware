@@ -192,7 +192,7 @@ public class SaftExporter
 
         return new AuditFile
         {
-            Header = GetHeader(accountMasterData),
+            Header = GetHeader(accountMasterData, _sandbox),
             MasterFiles = new MasterFiles
             {
                 Customer = [.. actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
@@ -413,7 +413,7 @@ public class SaftExporter
 
     }
 
-    public static Header GetHeader(AccountMasterData accountMasterData)
+    public static Header GetHeader(AccountMasterData accountMasterData, bool sandbox)
     {
         return new Header
         {
@@ -439,7 +439,7 @@ public class SaftExporter
             DateCreated = DateTime.UtcNow,
             TaxEntity = "GLOBAL",
             ProductCompanyTaxID = PTMappings.CertificationPosSystem.ProductCompanyTaxID,
-            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(_sandbox),
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(sandbox),
             ProductID = PTMappings.CertificationPosSystem.ProductID,
             ProductVersion = PTMappings.CertificationPosSystem.ProductVersion,
         };
