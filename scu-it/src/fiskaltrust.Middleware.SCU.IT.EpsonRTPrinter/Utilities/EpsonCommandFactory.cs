@@ -824,18 +824,19 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static int _vatRateParking;
 
         // Departments pre-programmed with the non-VAT natures (see GetVatInfo for the printed captions).
-        private static readonly int _departmentEE = 10;
-        private static readonly int _departmentNS = 11;
-        private static readonly int _departmentNI = 12;
-        private static readonly int _departmentES = 13;
-        private static readonly int _departmentRM = 14;
-        private static readonly int _departmentAL = 15;
+        private const int _departmentEE = 10;
+        private const int _departmentNS = 11;
+        private const int _departmentNI = 12;
+        private const int _departmentES = 13;
+        private const int _departmentRM = 14;
+        private const int _departmentAL = 15;
 
         public static int GetVatGroup(this ChargeItem chargeItem)
         {
             if (chargeItem.IsMultiUseVoucher())
             {
-                // A buono multiuso is outside the VAT scope (natura N2 "non soggetta"), whatever the nature bits say.
+                // The nature bits are deliberately ignored: a buono multiuso is outside the VAT scope
+                // (natura N2 "non soggetta") whatever the POS puts there.
                 return _departmentNS;
             }
 
