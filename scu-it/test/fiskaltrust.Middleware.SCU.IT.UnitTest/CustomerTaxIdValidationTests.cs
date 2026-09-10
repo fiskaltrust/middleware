@@ -44,8 +44,8 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [InlineData("")]
         [InlineData("not json at all")]
         [InlineData("{\"CustomerName\":\"Mario Rossi\"}")]
-        [InlineData("{\"CustomerId\":\"\",\"CustomerVATId\":\"\"}")]
-        [InlineData("{\"CustomerId\":\"   \"}")]
+        [InlineData("{\"CustomerTaxId\":\"\",\"CustomerVATId\":\"\"}")]
+        [InlineData("{\"CustomerTaxId\":\"   \"}")]
         public void CarriesCustomerTaxIds_WithoutAnIdentifier_ReturnsFalse(string cbCustomer)
         {
             var receiptRequest = CreateReceiptRequest(cbCustomer);
@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         }
 
         [Theory]
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\"}")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\"}")]
         [InlineData("{\"CustomerVATId\":\"01606720215\"}")]
         [InlineData(InvalidCustomer)]
         public void CarriesCustomerTaxIds_ForASaleReceiptWithAnIdentifier_ReturnsTrue(string cbCustomer)
@@ -69,10 +69,9 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [InlineData("")]
         [InlineData("not json at all")]
         [InlineData("{\"CustomerName\":\"Mario Rossi\"}")]
-        [InlineData("{\"CustomerId\":\"\",\"CustomerVATId\":\"\"}")]
-        [InlineData("{\"CustomerId\":\"   \",\"CustomerVATId\":\"   \"}")]
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"01606720215\"}")]
-        [InlineData("{\"CustomerId\":\"01606720215\"}")]
+        [InlineData("{\"CustomerTaxId\":\"\",\"CustomerVATId\":\"\"}")]
+        [InlineData("{\"CustomerTaxId\":\"   \",\"CustomerVATId\":\"   \"}")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"01606720215\"}")]
         [InlineData("{\"CustomerVATId\":\"IT01606720215\"}")]
         public void TryValidateCustomerTaxIds_WithAbsentOrValidIdentifiers_ReturnsTrue(string cbCustomer)
         {
@@ -88,13 +87,44 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [Fact]
         public void TryValidateCustomerTaxIds_WithAnInvalidCodiceFiscale_ReturnsFalseAndNamesTheField()
         {
-            var receiptRequest = CreateReceiptRequest("{\"CustomerId\":\"RSSMRA80A01H501Z\"}");
+            var receiptRequest = CreateReceiptRequest("{\"CustomerTaxId\":\"RSSMRA80A01H501Z\"}");
 
             var isValid = receiptRequest.TryValidateCustomerTaxIds(out var errorMessage);
 
             using var scope = new AssertionScope();
             isValid.Should().BeFalse();
-            errorMessage.Should().Contain("RSSMRA80A01H501Z").And.Contain("cbCustomer.CustomerId");
+            errorMessage.Should().Contain("RSSMRA80A01H501Z").And.Contain("cbCustomer.CustomerTaxId");
+        }
+
+        /// <summary>
+        /// Each field takes one kind of identifier only: a partita IVA on CustomerTaxId is rejected, even
+        /// though a legal entity legitimately uses it as its codice fiscale - it belongs on CustomerVATId.
+        /// </summary>
+        [Theory]
+        [InlineData("01606720215")]
+        [InlineData("IT01606720215")]
+        public void TryValidateCustomerTaxIds_WithAPartitaIvaAsCodiceFiscale_ReturnsFalse(string customerTaxId)
+        {
+            var receiptRequest = CreateReceiptRequest("{\"CustomerTaxId\":\"" + customerTaxId + "\"}");
+
+            var isValid = receiptRequest.TryValidateCustomerTaxIds(out var errorMessage);
+
+            using var scope = new AssertionScope();
+            isValid.Should().BeFalse();
+            errorMessage.Should().Contain(customerTaxId).And.Contain("cbCustomer.CustomerTaxId");
+        }
+
+        /// <summary>A codice fiscale on CustomerVATId is rejected the same way, in the other direction.</summary>
+        [Fact]
+        public void TryValidateCustomerTaxIds_WithACodiceFiscaleAsPartitaIva_ReturnsFalse()
+        {
+            var receiptRequest = CreateReceiptRequest("{\"CustomerVATId\":\"RSSMRA80A01H501U\"}");
+
+            var isValid = receiptRequest.TryValidateCustomerTaxIds(out var errorMessage);
+
+            using var scope = new AssertionScope();
+            isValid.Should().BeFalse();
+            errorMessage.Should().Contain("RSSMRA80A01H501U").And.Contain("cbCustomer.CustomerVATId");
         }
 
         [Fact]
@@ -112,13 +142,13 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [Fact]
         public void TryValidateCustomerTaxIds_WithBothIdentifiersInvalid_ReportsTheCodiceFiscaleFirst()
         {
-            var receiptRequest = CreateReceiptRequest("{\"CustomerId\":\"RSSMRA80A01H501Z\",\"CustomerVATId\":\"12345\"}");
+            var receiptRequest = CreateReceiptRequest("{\"CustomerTaxId\":\"RSSMRA80A01H501Z\",\"CustomerVATId\":\"12345\"}");
 
             var isValid = receiptRequest.TryValidateCustomerTaxIds(out var errorMessage);
 
             using var scope = new AssertionScope();
             isValid.Should().BeFalse();
-            errorMessage.Should().Contain("cbCustomer.CustomerId").And.NotContain("cbCustomer.CustomerVATId");
+            errorMessage.Should().Contain("codice fiscale 'RSSMRA80A01H501Z'").And.NotContain("12345");
         }
     }
 }
