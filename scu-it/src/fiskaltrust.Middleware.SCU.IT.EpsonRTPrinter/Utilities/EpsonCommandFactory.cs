@@ -465,7 +465,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         public static List<PrintRecRefund> GetRecRefunds(ReceiptRequest receiptRequest)
         {
-            return receiptRequest.cbChargeItems?.Select(p => new PrintRecRefund
+            // A redeemed multi-use voucher is a "sconto a pagare" payment, not a line item (see GetTotalAndMessages).
+            return receiptRequest.cbChargeItems?.Where(p => !p.IsMultiUseVoucherRedeem(receiptRequest)).Select(p => new PrintRecRefund
             {
                 Description = p.Description,
                 Quantity = Math.Abs(p.Quantity),
@@ -477,7 +478,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         public static List<PrintRecVoid> GetRecvoids(ReceiptRequest receiptRequest)
         {
-            return receiptRequest.cbChargeItems?.Select(p => new PrintRecVoid
+            return receiptRequest.cbChargeItems?.Where(p => !p.IsMultiUseVoucherRedeem(receiptRequest)).Select(p => new PrintRecVoid
             {
                 Description = p.Description,
                 Quantity = Math.Abs(p.Quantity),
@@ -490,12 +491,24 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         public static List<ItemAndMessage> GetItemAndMessages(ReceiptRequest receiptRequest)
         {
             var itemAndMessages = new List<ItemAndMessage>();
+            // A redeemed multi-use voucher is a "sconto a pagare" payment, not a line item (see GetTotalAndMessages).
+            var chargeItems = receiptRequest.cbChargeItems.Where(x => !x.IsMultiUseVoucherRedeem(receiptRequest)).ToList();
             if (receiptRequest.IsGroupingRequest())
             {
-                var chargeItemGroups = receiptRequest.cbChargeItems.GroupBy(x => x.Position / 100);
+                var chargeItemGroups = chargeItems.GroupBy(x => x.Position / 100);
                 foreach (var chargeItemGroup in chargeItemGroups)
                 {
                     var mainItem = chargeItemGroup.FirstOrDefault(x => x.Position % 100 == 0);
+                    if (mainItem is null)
+                    {
+                        // No head item in this group: the head was a redeemed voucher (filtered above) or the POS sent none.
+                        // Print the members as plain items so nothing that was sold is dropped.
+                        foreach (var chargeItem in chargeItemGroup)
+                        {
+                            GenerateItems(itemAndMessages, chargeItem);
+                        }
+                        continue;
+                    }
                     if (mainItem.Quantity == 0 || mainItem.Amount == 0)
                     {
                         itemAndMessages.Add(new()
@@ -606,7 +619,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             else
             {
                 // Todo handle payment adjustments / discounts
-                foreach (var i in receiptRequest.cbChargeItems)
+                foreach (var i in chargeItems)
                 {
                     if (i.IsSubtotalDiscount() || i.IsSubtotalSurcharge())
                         continue;
@@ -638,7 +651,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         Description = i.Description,
                         Quantity = i.Quantity,
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
-                        Department = 11,
+                        Department = _departmentNS,
                     };
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
@@ -652,17 +665,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         Department = i.GetVatGroup(),
                     };
                     itemAndMessages.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment });
-                }
-                else if (i.IsMultiUseVoucher())
-                {
-                    var printRecItem = new PrintRecItem
-                    {
-                        Description = i.Description,
-                        Quantity = i.Quantity,
-                        UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
-                        Department = 11,
-                    };
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
                 else if (i.Amount < 0)
                 {
@@ -721,7 +723,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         public static List<TotalAndMessage> GetTotalAndMessages(ReceiptRequest request)
         {
             var totalAndMessages = new List<TotalAndMessage>();
-            foreach (var pay in request.cbPayItems)
+            var redeemLines = request.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem(request)).ToList();
+            var payItems = request.cbPayItems ?? Array.Empty<PayItem>();
+
+            // A multi-use voucher redeemed as a charge item is paid like pay item 0x06. It goes before the other
+            // payments because a "sconto a pagare" above the amount still due is rejected with error 21.
+            foreach (var voucher in redeemLines)
+            {
+                totalAndMessages.Add(new()
+                {
+                    PrintRecTotal = new PrintRecTotal
+                    {
+                        Description = voucher.Description,
+                        PaymentType = _multiUseVoucherPayment.PaymentType,
+                        Index = _multiUseVoucherPayment.Index,
+                        Payment = Math.Abs(voucher.Amount)
+                    }
+                });
+            }
+
+            foreach (var pay in payItems)
             {
                 var paymentType = GetEpsonPaymentType(pay);
                 var printRecTotal = new PrintRecTotal
@@ -739,7 +760,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 });
             }
 
-            if (totalAndMessages.Count == 0)
+            // No pay items: the rest is paid in cash (payment 0 = the whole amount still due on the Epson), unless
+            // the redeemed vouchers already cover the receipt, in which case the payment phase is complete.
+            var redeemed = redeemLines.Sum(x => Math.Abs(x.Amount));
+            var receiptTotal = Math.Abs(request.cbChargeItems.Where(x => !x.IsMultiUseVoucherRedeem(request)).Sum(x => x.Amount));
+            if (payItems.Length == 0 && (redeemed == 0 || redeemed < receiptTotal))
             {
                 totalAndMessages.Add(new()
                 {
@@ -760,6 +785,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             public int Index;
         }
 
+        /// <summary>"Sconto a pagare" for buoni multiuso (Epson protocol 7.00 §9.13): pay item 0x06 and a redeemed multi-use voucher charge item.</summary>
+        private static readonly EpsonPaymentType _multiUseVoucherPayment = new() { PaymentType = 6, Index = 1 };
+
         public static EpsonPaymentType GetEpsonPaymentType(PayItem payItem)
         {
             return (payItem.ftPayItemCase & 0xFF) switch
@@ -770,7 +798,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 0x03 => new EpsonPaymentType() { PaymentType = 1, Index = 0 },
                 0x04 => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
                 0x05 => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
-                0x06 => new EpsonPaymentType() { PaymentType = 6, Index = 1 },
+                0x06 => _multiUseVoucherPayment,
                 0x07 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x08 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x09 => new EpsonPaymentType() { PaymentType = 5, Index = 3 },
@@ -795,18 +823,33 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static int _vatRateSuperReduced2;
         private static int _vatRateParking;
 
+        // Departments pre-programmed with the non-VAT natures (see GetVatInfo for the printed captions).
+        private const int _departmentEE = 10;
+        private const int _departmentNS = 11;
+        private const int _departmentNI = 12;
+        private const int _departmentES = 13;
+        private const int _departmentRM = 14;
+        private const int _departmentAL = 15;
+
         public static int GetVatGroup(this ChargeItem chargeItem)
         {
+            if (chargeItem.IsMultiUseVoucher())
+            {
+                // The nature bits are deliberately ignored: a buono multiuso is outside the VAT scope
+                // (natura N2 "non soggetta") whatever the POS puts there.
+                return _departmentNS;
+            }
+
             if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
             {
                 return (chargeItem.ftChargeItemCase & 0xF000) switch
                 {
-                    0x8000 => 10,
-                    0x2000 => 11,
-                    0x1000 => 12,
-                    0x3000 => 13,
-                    0x4000 => 14,
-                    0x5000 => 15,
+                    0x8000 => _departmentEE,
+                    0x2000 => _departmentNS,
+                    0x1000 => _departmentNI,
+                    0x3000 => _departmentES,
+                    0x4000 => _departmentRM,
+                    0x5000 => _departmentAL,
                     _ => _vatRateUnknown // ?
                 };
             }
