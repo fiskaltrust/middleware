@@ -23,6 +23,7 @@ public class SaftExporter
 {
 
     private readonly DocumentStatusProvider? _documentStatusProvider;
+    private readonly bool _sandbox;
 
     public static bool IsValidPortugueseTaxId(string taxId)
     {
@@ -41,9 +42,10 @@ public class SaftExporter
         }
     }
 
-    public SaftExporter(DocumentStatusProvider? documentStatusProvider = null)
+    public SaftExporter(DocumentStatusProvider? documentStatusProvider = null, bool sandbox = false)
     {
         _documentStatusProvider = documentStatusProvider;
+        _sandbox = sandbox;
     }
 
     private DocumentStatusProvider DocumentStatusProvider => _documentStatusProvider ?? throw new InvalidOperationException("DocumentStatusProvider is required for this operation.");
@@ -437,7 +439,7 @@ public class SaftExporter
             DateCreated = DateTime.UtcNow,
             TaxEntity = "GLOBAL",
             ProductCompanyTaxID = PTMappings.CertificationPosSystem.ProductCompanyTaxID,
-            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(_sandbox),
             ProductID = PTMappings.CertificationPosSystem.ProductID,
             ProductVersion = PTMappings.CertificationPosSystem.ProductVersion,
         };

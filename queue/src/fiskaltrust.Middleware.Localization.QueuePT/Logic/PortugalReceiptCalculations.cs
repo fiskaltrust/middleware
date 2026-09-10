@@ -24,7 +24,7 @@ public static class PortugalReceiptCalculations
 {
     public static string GetPrintHash(string hash) => new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
 
-    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse, bool sandbox)
     {
         var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
@@ -69,12 +69,12 @@ public static class PortugalReceiptCalculations
             TotalTaxes = request.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
-            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(sandbox),
             OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
-    public static string CreateVatFreeQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateVatFreeQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse, bool sandbox)
     {
         var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
@@ -120,12 +120,12 @@ public static class PortugalReceiptCalculations
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
-            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(sandbox),
             OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
-    public static string CreateQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateQRCode(string qrCodeHash, string issuerTIN, NumberSeries numberSeries, ReceiptRequest request, ReceiptResponse receiptResponse, bool sandbox)
     {
         var atcud = numberSeries.ATCUD + "-" + numberSeries.Numerator;
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
@@ -168,7 +168,7 @@ public static class PortugalReceiptCalculations
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
-            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(sandbox),
             OtherInformation = "qiid=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
