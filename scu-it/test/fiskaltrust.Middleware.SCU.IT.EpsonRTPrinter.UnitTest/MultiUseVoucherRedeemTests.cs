@@ -43,6 +43,16 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             ftChargeItemCase = 0x4954_2000_0000_0048 | flags
         };
 
+        private static ChargeItem Coperto(int position) => new()
+        {
+            Position = position,
+            Quantity = 1,
+            Description = "Coperto",
+            Amount = 2m,
+            VATRate = 22m,
+            ftChargeItemCase = 0x4954_2000_0000_0003
+        };
+
         private static PayItem Cash(decimal amount, long flags = 0) => new()
         {
             Quantity = 1,
@@ -181,6 +191,69 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             line.Amount.Should().Be(100m);
             content.RecTotalAndMessages.Should().ContainSingle();
             ShouldBeCashPayment(content.RecTotalAndMessages[0], 100m);
+        }
+
+        /// <summary>The redeem filter runs before the grouping, so a group can lose its head: its members must still be printed.</summary>
+        [Fact]
+        public void Sale_GroupingRequest_VoucherAsGroupHead_PrintsTheChildrenAsItems()
+        {
+            var request = CreateReceipt(SaleReceipt | GroupingFlag, new[] { Food(100m), Voucher(-20m), Coperto(201) }, Cash(82m));
+
+            var content = Sale(request);
+
+            content.ItemAndMessages.Where(x => x.PrintRecItem != null).Select(x => x.PrintRecItem!.Description).Should().Equal("Food", "Coperto");
+            content.ItemAndMessages.Should().OnlyContain(x => x.PrintRecVoidItem == null && x.PrintRecItemAdjustment == null);
+            content.RecTotalAndMessages.Should().HaveCount(2);
+            ShouldBeVoucherPayment(content.RecTotalAndMessages[0], 20m);
+            ShouldBeCashPayment(content.RecTotalAndMessages[1], 82m);
+        }
+
+        /// <summary>Without pay items the rest is paid in cash: payment 0 means "the whole amount still due" on the Epson.</summary>
+        [Fact]
+        public void Sale_NoPayItems_VoucherBelowTheTotal_PaysTheRestInCash()
+        {
+            var request = CreateReceipt(SaleReceipt, new[] { Food(100m), Voucher(-20m) });
+
+            var content = Sale(request);
+
+            content.RecTotalAndMessages.Should().HaveCount(2);
+            ShouldBeVoucherPayment(content.RecTotalAndMessages[0], 20m);
+            ShouldBeCashPayment(content.RecTotalAndMessages[1], 0m);
+        }
+
+        [Fact]
+        public void Sale_NoPayItems_NoVoucher_StillPaysInCash()
+        {
+            var request = CreateReceipt(SaleReceipt, new[] { Food(100m) });
+
+            var content = Sale(request);
+
+            content.RecTotalAndMessages.Should().ContainSingle();
+            ShouldBeCashPayment(content.RecTotalAndMessages[0], 0m);
+        }
+
+        /// <summary>Without pay items the rest is paid in cash: payment 0 means "the whole amount still due" on the Epson.</summary>
+        [Fact]
+        public void Sale_NoPayItems_VoucherBelowTheTotal_PaysTheRestInCash()
+        {
+            var request = CreateReceipt(SaleReceipt, new[] { Food(100m), Voucher(-20m) });
+
+            var content = Sale(request);
+
+            content.RecTotalAndMessages.Should().HaveCount(2);
+            ShouldBeVoucherPayment(content.RecTotalAndMessages[0], 20m);
+            ShouldBeCashPayment(content.RecTotalAndMessages[1], 0m);
+        }
+
+        [Fact]
+        public void Sale_NoPayItems_NoVoucher_StillPaysInCash()
+        {
+            var request = CreateReceipt(SaleReceipt, new[] { Food(100m) });
+
+            var content = Sale(request);
+
+            content.RecTotalAndMessages.Should().ContainSingle();
+            ShouldBeCashPayment(content.RecTotalAndMessages[0], 0m);
         }
     }
 }

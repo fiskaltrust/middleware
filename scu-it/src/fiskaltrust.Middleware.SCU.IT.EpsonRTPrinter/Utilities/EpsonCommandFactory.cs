@@ -499,6 +499,16 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 foreach (var chargeItemGroup in chargeItemGroups)
                 {
                     var mainItem = chargeItemGroup.FirstOrDefault(x => x.Position % 100 == 0);
+                    if (mainItem is null)
+                    {
+                        // No head item in this group: the head was a redeemed voucher (filtered above) or the POS sent none.
+                        // Print the members as plain items so nothing that was sold is dropped.
+                        foreach (var chargeItem in chargeItemGroup)
+                        {
+                            GenerateItems(itemAndMessages, chargeItem);
+                        }
+                        continue;
+                    }
                     if (mainItem.Quantity == 0 || mainItem.Amount == 0)
                     {
                         itemAndMessages.Add(new()
