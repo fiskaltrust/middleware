@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected readonly IPersistentTransactionRepository<OpenTransaction> _openTransactionRepo;
         private readonly IJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
-        private readonly QueueDEConfiguration _queueDEConfiguration;
+        protected readonly QueueDEConfiguration _queueDEConfiguration;
         private readonly ITarFileCleanupService _tarFileCleanupService;
         protected readonly IMasterDataService _masterDataService;
 
@@ -377,6 +377,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessInitialOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool clientIdRegistrationOnly)
         {
             _logger.LogTrace("RequestCommand.ProcessInitialOperationReceiptAsync [enter].");
+            await RegisterClient(queueDE, clientIdRegistrationOnly).ConfigureAwait(false);
+
+            var processReceiptResponse = await ProcessReceiptAsync(transactionIdentifier, processType, payload, queueItem, queueDE).ConfigureAwait(false);
+            _logger.LogTrace("RequestCommand.ProcessInitialOperationReceiptAsync [exit].");
+            return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
+        }
+
+        protected async Task RegisterClient(ftQueueDE queueDE, bool clientIdRegistrationOnly)
+        {
             if (!clientIdRegistrationOnly)
             {
                 await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Initialized }).ConfigureAwait(false);
@@ -400,10 +409,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogError(ex, $"TSE client registration failed. ClientId: {queueDE.CashBoxIdentification}");
                 throw;
             }
-
-            var processReceiptResponse = await ProcessReceiptAsync(transactionIdentifier, processType, payload, queueItem, queueDE).ConfigureAwait(false);
-            _logger.LogTrace("RequestCommand.ProcessInitialOperationReceiptAsync [exit].");
-            return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
         }
 
         protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(string processType, string payload, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, ReceiptRequest request)
