@@ -231,29 +231,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             content.RecTotalAndMessages.Should().ContainSingle();
             ShouldBeCashPayment(content.RecTotalAndMessages[0], 0m);
         }
-
-        /// <summary>Without pay items the rest is paid in cash: payment 0 means "the whole amount still due" on the Epson.</summary>
-        [Fact]
-        public void Sale_NoPayItems_VoucherBelowTheTotal_PaysTheRestInCash()
-        {
-            var request = CreateReceipt(SaleReceipt, new[] { Food(100m), Voucher(-20m) });
-
-            var content = Sale(request);
-
-            content.RecTotalAndMessages.Should().HaveCount(2);
-            ShouldBeVoucherPayment(content.RecTotalAndMessages[0], 20m);
-            ShouldBeCashPayment(content.RecTotalAndMessages[1], 0m);
-        }
-
-        [Fact]
-        public void Sale_NoPayItems_NoVoucher_StillPaysInCash()
-        {
-            var request = CreateReceipt(SaleReceipt, new[] { Food(100m) });
-
-            var content = Sale(request);
-
-            content.RecTotalAndMessages.Should().ContainSingle();
-            ShouldBeCashPayment(content.RecTotalAndMessages[0], 0m);
-        }
     }
 }

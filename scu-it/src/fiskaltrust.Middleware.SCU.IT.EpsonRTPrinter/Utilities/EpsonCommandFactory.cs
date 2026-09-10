@@ -723,10 +723,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         public static List<TotalAndMessage> GetTotalAndMessages(ReceiptRequest request)
         {
             var totalAndMessages = new List<TotalAndMessage>();
+            var redeemLines = request.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem(request)).ToList();
+            var payItems = request.cbPayItems ?? Array.Empty<PayItem>();
 
             // A multi-use voucher redeemed as a charge item is paid like pay item 0x06. It goes before the other
             // payments because a "sconto a pagare" above the amount still due is rejected with error 21.
-            foreach (var voucher in request.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem(request)))
+            foreach (var voucher in redeemLines)
             {
                 totalAndMessages.Add(new()
                 {
@@ -740,7 +742,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 });
             }
 
-            foreach (var pay in request.cbPayItems)
+            foreach (var pay in payItems)
             {
                 var paymentType = GetEpsonPaymentType(pay);
                 var printRecTotal = new PrintRecTotal
@@ -758,7 +760,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 });
             }
 
-            if (totalAndMessages.Count == 0)
+            // No pay items: the rest is paid in cash (payment 0 = the whole amount still due on the Epson), unless
+            // the redeemed vouchers already cover the receipt, in which case the payment phase is complete.
+            var redeemed = redeemLines.Sum(x => Math.Abs(x.Amount));
+            var receiptTotal = Math.Abs(request.cbChargeItems.Where(x => !x.IsMultiUseVoucherRedeem(request)).Sum(x => x.Amount));
+            if (payItems.Length == 0 && (redeemed == 0 || redeemed < receiptTotal))
             {
                 totalAndMessages.Add(new()
                 {
