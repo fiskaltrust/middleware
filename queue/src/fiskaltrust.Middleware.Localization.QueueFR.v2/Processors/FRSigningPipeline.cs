@@ -35,6 +35,7 @@ public class FRSigningPipeline
 
             chain.Numerator++;
             ReceiptIdentificationHelper.AppendChainIdentification(receiptResponse, chain);
+            FRTypeOfServiceCalculator.Apply(request.ReceiptRequest, receiptResponse);
 
             try
             {
