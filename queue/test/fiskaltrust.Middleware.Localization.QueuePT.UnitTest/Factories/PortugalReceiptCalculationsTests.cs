@@ -440,7 +440,7 @@ public class PortugalReceiptCalculationsTests
         qrCode.Should().Contain("G:NC 20241210001*"); // UniqueIdentificationOfTheDocument - everything after #
         qrCode.Should().Contain("H:0-1*"); // ATCUD
         qrCode.Should().Contain("Q:TESTHASH123*"); // Hash
-        qrCode.Should().Contain("R:9999*"); // SoftwareCertificateNumber
+        qrCode.Should().Contain("R:3535*"); // SoftwareCertificateNumber
         qrCode.Should().Contain($"S:qiid={response.ftQueueItemID}"); // OtherInformation
     }
 

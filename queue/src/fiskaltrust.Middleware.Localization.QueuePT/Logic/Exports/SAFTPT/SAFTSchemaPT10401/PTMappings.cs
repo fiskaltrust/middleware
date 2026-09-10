@@ -157,7 +157,7 @@ public static class PTMappings
     public static class CertificationPosSystem
     {
         public const string ProductCompanyTaxID = "980833310";
-        public const string SoftwareCertificateNumber = "9999";
+        public const string SoftwareCertificateNumber = "3535";
         public const string ProductID = "fiskaltrust.CloudCashBox/FISKALTRUST CONSULTING GMBH - Sucursal em Portugal";
         public const string ProductVersion = "2.0";
     }
