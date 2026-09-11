@@ -42,6 +42,18 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         /// has to become responsive again in. Raising it makes the recovery more patient; lowering it makes
         /// an unresponsive printer fail faster, always as "state unknown", never as a reprint.
         /// </para>
+        /// <para>
+        /// It bounds when the last query may <em>start</em>, not when it ends, so the recovery can overrun it
+        /// by up to one <see cref="RecoveryStatusQueryTimeoutMs"/>. Budget for the sum when comparing against
+        /// the caller's own deadline.
+        /// </para>
+        /// <para>
+        /// This is the budget of a single pass. A <c>NotPrinted</c> verdict resends the receipt, and a further
+        /// network error starts another pass, so the worst case is roughly
+        /// <see cref="MaxNetworkRetries"/> times the whole wait-plus-window. Only the first pass is guaranteed
+        /// to land while the caller is still listening; lower <see cref="MaxNetworkRetries"/> where that
+        /// matters more than the extra attempts.
+        /// </para>
         /// </summary>
         public int RecoveryVerdictTimeoutMs { get; set; } = 40000;
 

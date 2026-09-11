@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
 using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Globalization;
 using fiskaltrust.ifPOS.v1;
 using Microsoft.Extensions.Logging;
@@ -457,10 +458,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     /// command timeout before learning what happened, so the recovery can conclude while whoever asked for the
     /// receipt is still listening.
     /// </para>
+    /// <para>
+    /// <b>What an <see cref="IEpsonFpMateClient"/> has to guarantee for this to hold.</b> "The printer answered,
+    /// so it is not mid-document" is the assumption the resend rests on, and it is only self-evident on a direct
+    /// connection. Any client that queues commands instead of handing them straight to the device must ensure an
+    /// abandoned print command can never be delivered <em>after</em> a later status query was answered: that
+    /// ordering would let a <see cref="PrinterVerdict.NotPrinted"/> verdict be followed by the very document it
+    /// declared absent, and the resend would then duplicate it. Holding at most one command in flight per device
+    /// and discarding it when its wait elapses is sufficient, and is what the relay client does.
+    /// </para>
     /// </summary>
     private async Task<(PrinterVerdict Verdict, LastEmittedDocStatus? Doc)> AwaitPrinterVerdictAsync(string receiptReference, DocPosition baseline)
     {
-        var deadline = DateTime.UtcNow.AddMilliseconds(_configuration.RecoveryVerdictTimeoutMs);
+        // Stopwatch rather than the wall clock: a clock jump must not shorten or extend the window.
+        var elapsed = Stopwatch.StartNew();
         var attempt = 0;
 
         while (true)
@@ -481,7 +492,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return (PrinterVerdict.NotPrinted, doc);
             }
 
-            if (DateTime.UtcNow >= deadline)
+            if (elapsed.ElapsedMilliseconds >= _configuration.RecoveryVerdictTimeoutMs)
             {
                 _logger.LogError("({receiptreference}) Printer did not answer within {timeout}ms ({attempts} attempts) — state unknown.",
                     receiptReference, _configuration.RecoveryVerdictTimeoutMs, attempt);
