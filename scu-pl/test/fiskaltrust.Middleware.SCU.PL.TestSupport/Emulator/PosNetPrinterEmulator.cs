@@ -78,6 +78,34 @@ public sealed class PosNetPrinterEmulator : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Scripts the eDokument buffer record eparagonbufferget answers with (the parameters after the
+    /// mnemonic, e.g. <c>"hd3054\tprN\tst1\t"</c>) — real delivery states can only be scripted, the
+    /// model has no hub to deliver to.
+    /// </summary>
+    public PosNetPrinterEmulator WithEDocumentBufferRecord(string parameters)
+    {
+        Model.EDocumentBufferRecord = parameters;
+        return this;
+    }
+
+    /// <summary>
+    /// Confirms eparagonidznext WITHOUT the promised <c>ha</c> — the degenerate answer behind
+    /// middleware#766's cleanup path: the binding is armed on the device but untrackable.
+    /// </summary>
+    public PosNetPrinterEmulator OmittingEDocumentIdOnBind()
+    {
+        Model.OmitEDocumentIdOnBind = true;
+        return this;
+    }
+
+    /// <summary>The unique eDokument id (<c>ha</c>) the model assigns to the next binding — see <see cref="PosNetDeviceModel.NextEDocumentId"/>.</summary>
+    public uint NextEDocumentId
+    {
+        get => Model.NextEDocumentId;
+        set => Model.NextEDocumentId = value;
+    }
+
     public PosNetPrinterEmulator Start()
     {
         _listener.Start();

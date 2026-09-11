@@ -246,6 +246,172 @@ public class PosNetPLSSCDAcceptanceTests
         target.SentMnemonics.Should().Equal("sfsk", "scomm", "trinit", "trline", "trpayment");
     }
 
+    /// <summary>
+    /// The e-paragon flow (middleware#764): the IDZ from cbCustomer is bound with eparagonidznext
+    /// strictly before trinit, and the response carries the eDokument id plus the best-effort
+    /// delivery state. Emulator-only: eDokument needs a fiscalized, e-paragon-configured device.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task EReceiptSale_BindsTheIdzBeforeTheTransaction_AndReturnsTheEDocumentId()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.NextEDocumentId = 7777);
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale("KID0123456789ABC"));
+
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "eparagonidznext", "trinit", "trline", "trpayment", "trend", "scnt", "eparagonbufferget");
+        var binding = target.SentCommands.Single(c => c.CommandId == "eparagonidznext");
+        binding.Parameters.Should().Contain(new KeyValuePair<string, string>("id", "KID0123456789ABC"));
+        var readback = target.SentCommands.Single(c => c.CommandId == "eparagonbufferget");
+        readback.Parameters.Should().Contain(new KeyValuePair<string, string>("hd", "7777"));
+        NoTransactionShouldBeOpen(target);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Identyfikator eDokumentu" && s.Data == "7777");
+        // The emulator's buffer record is prN st1 — an electronic document, no paper produced.
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Status eDokumentu" && s.Data == "electronic (st1)");
+    }
+
+    [EmulatorOnlyFact]
+    public async Task EReceiptSale_OnANonFiscalizedDevice_FailsBeforeAnythingIsPrinted()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("eparagonidznext", 2034));
+
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale());
+
+        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2034);
+        // The rejected binding is the last frame on the wire: no trinit, no line, no cancel —
+        // nothing was sent to the device for this receipt after the failed bind.
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "eparagonidznext");
+        NoTransactionShouldBeOpen(target);
+    }
+
+    /// <summary>
+    /// A confirmed binding without the promised ha is armed on the device but untrackable —
+    /// the SCU must clear it (eparagonidzcancel) before failing, or the next plain sale would
+    /// inherit this customer's IDZ and deliver their e-receipt to the wrong recipient.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task EReceiptSale_WhenTheBindingConfirmsWithoutTheHandle_CancelsTheBindingBeforeFailing()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.OmittingEDocumentIdOnBind());
+
+        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale());
+
+        await act.Should().ThrowAsync<PLSSCDException>();
+        // The armed binding is cleared and nothing is printed: no trinit ever goes out.
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "eparagonidznext", "eparagonidzcancel");
+        NoTransactionShouldBeOpen(target);
+    }
+
+    /// <summary>
+    /// The SCU is a singleton and the client lock only makes single commands atomic — the device
+    /// lock must serialize whole sequences, or a concurrent plain sale could slip its trinit
+    /// between another sale's eparagonidznext and trinit and consume that customer's binding
+    /// (middleware#766 review).
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task ConcurrentSales_NeverInterleaveOnTheWire_SoTheBindingStaysWithItsSale()
+    {
+        using var target = PosNetTestTarget.Scripted();
+
+        await Task.WhenAll(
+            target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale("KIDCONCURRENT01")),
+            target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale()));
+
+        var mnemonics = target.SentMnemonics.ToList();
+        var bind = mnemonics.IndexOf("eparagonidznext");
+        bind.Should().BeGreaterThanOrEqualTo(0);
+        // The bound sale's transaction opens immediately after its binding …
+        mnemonics[bind + 1].Should().Be("trinit");
+        // … and exactly one transaction runs between the binding and its trend: the plain sale's
+        // trinit never slips into the bound sequence.
+        var trendAfterBind = mnemonics.IndexOf("trend", bind);
+        mnemonics.Skip(bind).Take(trendAfterBind - bind).Count(m => m == "trinit").Should().Be(1);
+        NoTransactionShouldBeOpen(target);
+    }
+
+    /// <summary>
+    /// Printout customization (ftReceiptCaseData.PL.printout): the footer codes are configured
+    /// before the receipt (qrcode, ftrcfg), the receipt closes with trend fe0 and the additional
+    /// lines follow, finished by trftrend.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_ConfiguresTheFooterCodesBeforeTheReceipt_AndPrintsTheLinesAfterIt()
+    {
+        using var target = PosNetTestTarget.Scripted();
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.PrintoutSale());
+
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrln", "trftrend", "scnt");
+        target.SentCommands.Single(c => c.CommandId == "trend").Parameters.Should().Contain(new KeyValuePair<string, string>("fe", "0"));
+        target.SentCommands.Single(c => c.CommandId == "ftrcfg").Parameters.Should()
+            .Contain(new KeyValuePair<string, string>("bc", "1234567890")).And
+            .Contain(new KeyValuePair<string, string>("bb", "1"));
+        var model = target.Emulator!.Model;
+        model.LastReceiptBarcode.Should().Be("1234567890");
+        model.LastReceipt2dCode.Should().NotBeNull();
+        model.LastReceipt2dPosition.Should().Be(1);
+        model.LastFooterLines.Should().Equal("Dziękujemy za zakupy!", "www.example.test");
+        model.FooterOpen.Should().BeFalse();
+        NoTransactionShouldBeOpen(target);
+        DocumentNumberOf(result).Should().BePositive();
+    }
+
+    /// <summary>The e-receipt binding follows the footer configuration: a rejected configuration must not leave a binding armed.</summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_WithAnEReceipt_BindsAfterTheFooterConfiguration()
+    {
+        using var target = PosNetTestTarget.Scripted();
+        var request = PLReceiptExamples.PrintoutSale("KIDPRINTOUT01");
+
+        await target.Sut.ProcessReceiptAsync(request);
+
+        var mnemonics = target.SentMnemonics.ToList();
+        mnemonics.IndexOf("ftrcfg").Should().BeLessThan(mnemonics.IndexOf("eparagonidznext"));
+        mnemonics.IndexOf("eparagonidznext").Should().BeLessThan(mnemonics.IndexOf("trinit"));
+    }
+
+    /// <summary>
+    /// A rejected additional line arrives after trend — the receipt is already fiscal, so the SCU
+    /// closes the footer and reports the rejection in the response instead of failing the receipt.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_WhenAnAdditionalLineIsRejected_KeepsTheReceipt_AndReportsIt()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("trftrln", 2063));
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.PrintoutSale());
+
+        // First line rejected → footer closed with trftrend, no prncancel, the readback still happens.
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Dodatkowe linie nie wydrukowane" && s.Data.StartsWith("?2063"));
+        DocumentNumberOf(result).Should().BePositive();
+        NoTransactionShouldBeOpen(target);
+    }
+
+    /// <summary>A rejected footer configuration fails the sale before anything is printed or bound.</summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_WhenTheFooterConfigurationIsRejected_FailsBeforeAnythingIsPrinted()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("ftrcfg", 2063));
+        var request = PLReceiptExamples.PrintoutSale("KIDPRINTOUT02");
+
+        var act = () => target.Sut.ProcessReceiptAsync(request);
+
+        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2063);
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "qrcode", "ftrcfg");
+        NoTransactionShouldBeOpen(target);
+    }
+
+    [Fact]
+    public async Task SaleWithoutEReceiptCustomerId_NeverTouchesTheEParagonCommands()
+    {
+        using var target = PosNetTestTarget.Scripted();
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
+
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Identyfikator eDokumentu" || s.Caption == "Status eDokumentu");
+    }
+
     [EmulatorOnlyFact]
     public async Task UnreachablePrinter_FailsAsDeviceUnreachable()
     {
