@@ -145,11 +145,11 @@ public static class PLReceiptExamples
         return request;
     }
 
-    /// <summary>An e-paragon sale: the e-receipt customer identifier (IDZ) travels in cbCustomer.</summary>
+    /// <summary>An e-paragon sale: the e-receipt customer identifier (IDZ) travels in ftReceiptCaseData.PL.eReceipt.customerId.</summary>
     public static ProcessRequest EReceiptSale(string eReceiptCustomerId = "KID0123456789ABC")
     {
         var request = CashSale();
-        request.ReceiptRequest.cbCustomer = $$"""{"eReceiptCustomerId": "{{eReceiptCustomerId}}"}""";
+        request.ReceiptRequest.ftReceiptCaseData = new { PL = new { eReceipt = new { customerId = eReceiptCustomerId } } };
         return request;
     }
 
@@ -157,13 +157,14 @@ public static class PLReceiptExamples
     /// A sale with the printout customization of ftReceiptCaseData.PL.printout: a footer barcode,
     /// a QR code above it and two additional lines after the receipt.
     /// </summary>
-    public static ProcessRequest PrintoutSale()
+    public static ProcessRequest PrintoutSale(string? eReceiptCustomerId = null)
     {
         var request = CashSale();
         request.ReceiptRequest.ftReceiptCaseData = new
         {
             PL = new
             {
+                eReceipt = eReceiptCustomerId is null ? null : new { customerId = eReceiptCustomerId },
                 printout = new
                 {
                     barcode = "1234567890",

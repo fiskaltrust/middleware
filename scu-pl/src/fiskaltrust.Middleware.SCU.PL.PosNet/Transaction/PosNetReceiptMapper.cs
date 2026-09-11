@@ -546,15 +546,27 @@ public static class PosNetReceiptMapper
     }
 
     /// <summary>
-    /// Reads the e-receipt customer identifier (IDZ) from cbCustomer — the well-known key
-    /// <c>eReceiptCustomerId</c> in the generic customer payload (middleware#764). A present
-    /// identifier is validated here, before any frame is sent: the printer limits the IDZ to
+    /// Reads the e-receipt customer identifier (IDZ) from the Polish sub-payload of
+    /// ftReceiptCaseData — <c>{ "PL": { "eReceipt": { "customerId": "…" } } }</c> (middleware#764).
+    /// It is a delivery address for the e-paragon (the KID from the e-Paragony app or a hub token),
+    /// deliberately separate from the customer identity in cbCustomer: binding it makes the receipt
+    /// paperless, so it has to be an explicit request. A present identifier is validated here,
+    /// before any frame is sent: the printer limits the IDZ to
     /// <see cref="MaxEReceiptCustomerIdLength"/> characters, and the protocol field carries ASCII
-    /// only. Absent, empty or unreadable cbCustomer means no binding — a plain paper receipt.
+    /// only. Absent or empty means no binding — a plain paper receipt.
     /// </summary>
     public static string? GetEReceiptCustomerId(ReceiptRequest request)
     {
-        var customerId = GetCustomerField(request, "eReceiptCustomerId");
+        if (PLReceiptCaseDataReader.ReadPLSection(request) is not { } pl
+            || !PLReceiptCaseDataReader.TryGetPropertyIgnoreCase(pl, "eReceipt", out var eReceipt)
+            || eReceipt.ValueKind != JsonValueKind.Object
+            || !PLReceiptCaseDataReader.TryGetPropertyIgnoreCase(eReceipt, "customerId", out var value)
+            || value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var customerId = value.GetString();
         if (string.IsNullOrWhiteSpace(customerId))
         {
             return null;
@@ -562,12 +574,12 @@ public static class PosNetReceiptMapper
         if (customerId.Length > MaxEReceiptCustomerIdLength)
         {
             throw new PLValidationException(
-                $"The e-receipt customer identifier (eReceiptCustomerId) is {customerId.Length} characters long — the printer's IDZ limit is {MaxEReceiptCustomerIdLength}.");
+                $"The e-receipt customer identifier (ftReceiptCaseData.PL.eReceipt.customerId) is {customerId.Length} characters long — the printer's IDZ limit is {MaxEReceiptCustomerIdLength}.");
         }
         if (customerId.Any(c => c is < ' ' or > '~'))
         {
             throw new PLValidationException(
-                "The e-receipt customer identifier (eReceiptCustomerId) contains non-ASCII or control characters, which the IDZ protocol field cannot carry.");
+                "The e-receipt customer identifier (ftReceiptCaseData.PL.eReceipt.customerId) contains non-ASCII or control characters, which the IDZ protocol field cannot carry.");
         }
         return customerId;
     }

@@ -251,7 +251,7 @@ public class PosNetPLSSCDTests
     private static ProcessRequest CreateEReceiptSaleRequest(string eReceiptCustomerId = "KID0123456789ABC")
     {
         var request = CreateSaleRequest();
-        request.ReceiptRequest.cbCustomer = $$"""{"eReceiptCustomerId": "{{eReceiptCustomerId}}"}""";
+        request.ReceiptRequest.ftReceiptCaseData = new { PL = new { eReceipt = new { customerId = eReceiptCustomerId } } };
         return request;
     }
 

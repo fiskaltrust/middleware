@@ -360,8 +360,7 @@ public class PosNetPLSSCDAcceptanceTests
     public async Task PrintoutSale_WithAnEReceipt_BindsAfterTheFooterConfiguration()
     {
         using var target = PosNetTestTarget.Scripted();
-        var request = PLReceiptExamples.PrintoutSale();
-        request.ReceiptRequest.cbCustomer = """{"eReceiptCustomerId": "KIDPRINTOUT01"}""";
+        var request = PLReceiptExamples.PrintoutSale("KIDPRINTOUT01");
 
         await target.Sut.ProcessReceiptAsync(request);
 
@@ -393,8 +392,7 @@ public class PosNetPLSSCDAcceptanceTests
     public async Task PrintoutSale_WhenTheFooterConfigurationIsRejected_FailsBeforeAnythingIsPrinted()
     {
         using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("ftrcfg", 2063));
-        var request = PLReceiptExamples.PrintoutSale();
-        request.ReceiptRequest.cbCustomer = """{"eReceiptCustomerId": "KIDPRINTOUT02"}""";
+        var request = PLReceiptExamples.PrintoutSale("KIDPRINTOUT02");
 
         var act = () => target.Sut.ProcessReceiptAsync(request);
 

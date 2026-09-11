@@ -11,7 +11,8 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 
 /// <summary>
 /// What a POS asks to be printed on the fiscal receipt beyond the fiscal content — carried in
-/// <c>ftReceiptCaseData</c> as <c>{ "PL": { "printout": { … } } }</c>:
+/// <c>ftReceiptCaseData</c> as <c>{ "PL": { "printout": { … } } }</c> (next to <c>PL.eReceipt</c>, see
+/// <see cref="PLReceiptCaseDataReader"/>):
 /// <code>
 /// { "PL": { "printout": {
 ///     "barcode": "1234567890",                                   // 1D code in the receipt footer
@@ -66,50 +67,29 @@ public static class PosNetPrintoutReader
     /// </summary>
     public static PosNetPrintout? Read(ReceiptRequest request)
     {
-        var json = ToJson(request.ftReceiptCaseData);
-        if (json is null)
+        if (PLReceiptCaseDataReader.ReadPLSection(request) is not { } pl
+            || !PLReceiptCaseDataReader.TryGetPropertyIgnoreCase(pl, "printout", out var printout))
         {
             return null;
         }
 
-        JsonDocument document;
+        if (printout.ValueKind != JsonValueKind.Object)
+        {
+            throw new PLValidationException("ftReceiptCaseData.PL.printout must be an object with barcode, qrCode and/or lines.");
+        }
+
+        PrintoutPayload payload;
         try
         {
-            document = JsonDocument.Parse(json);
+            payload = printout.Deserialize<PrintoutPayload>(SerializerOptions)
+                ?? throw new PLValidationException("ftReceiptCaseData.PL.printout could not be read.");
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
-            return null;
+            throw new PLValidationException($"ftReceiptCaseData.PL.printout is not a valid printout request: {exception.Message}");
         }
 
-        using (document)
-        {
-            if (document.RootElement.ValueKind != JsonValueKind.Object
-                || !TryGetPropertyIgnoreCase(document.RootElement, "PL", out var pl)
-                || pl.ValueKind != JsonValueKind.Object
-                || !TryGetPropertyIgnoreCase(pl, "printout", out var printout))
-            {
-                return null;
-            }
-
-            if (printout.ValueKind != JsonValueKind.Object)
-            {
-                throw new PLValidationException("ftReceiptCaseData.PL.printout must be an object with barcode, qrCode and/or lines.");
-            }
-
-            PrintoutPayload payload;
-            try
-            {
-                payload = printout.Deserialize<PrintoutPayload>(SerializerOptions)
-                    ?? throw new PLValidationException("ftReceiptCaseData.PL.printout could not be read.");
-            }
-            catch (JsonException exception)
-            {
-                throw new PLValidationException($"ftReceiptCaseData.PL.printout is not a valid printout request: {exception.Message}");
-            }
-
-            return Validate(payload);
-        }
+        return Validate(payload);
     }
 
     private static PosNetPrintout Validate(PrintoutPayload payload)
@@ -190,36 +170,6 @@ public static class PosNetPrintoutReader
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
     };
-
-    /// <summary>ftReceiptCaseData is an open object on the wire; a JSON string is accepted as well.</summary>
-    private static string? ToJson(object? receiptCaseData)
-    {
-        switch (receiptCaseData)
-        {
-            case null:
-                return null;
-            case string text:
-                return string.IsNullOrWhiteSpace(text) ? null : text;
-            case JsonElement element:
-                return element.ValueKind == JsonValueKind.Null ? null : element.GetRawText();
-            default:
-                return JsonSerializer.Serialize(receiptCaseData);
-        }
-    }
-
-    private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
-    {
-        foreach (var property in element.EnumerateObject())
-        {
-            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
-            {
-                value = property.Value;
-                return true;
-            }
-        }
-        value = default;
-        return false;
-    }
 
     private sealed class PrintoutPayload
     {
