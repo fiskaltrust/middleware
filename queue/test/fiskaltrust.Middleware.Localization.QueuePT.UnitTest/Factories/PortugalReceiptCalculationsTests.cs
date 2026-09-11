@@ -5,6 +5,7 @@ using System.Reflection;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
@@ -431,7 +432,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#NC 20241210001");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -440,8 +441,40 @@ public class PortugalReceiptCalculationsTests
         qrCode.Should().Contain("G:NC 20241210001*"); // UniqueIdentificationOfTheDocument - everything after #
         qrCode.Should().Contain("H:0-1*"); // ATCUD
         qrCode.Should().Contain("Q:TESTHASH123*"); // Hash
-        qrCode.Should().Contain("R:9999*"); // SoftwareCertificateNumber
+        qrCode.Should().Contain("R:3535*"); // SoftwareCertificateNumber
         qrCode.Should().Contain($"S:qiid={response.ftQueueItemID}"); // OtherInformation
+    }
+
+    [Fact]
+    public void CreateQRCode_InSandbox_ShouldUsePlaceholderCertificateNumber()
+    {
+        // Arrange
+        var qrCodeHash = "TESTHASH123";
+        var issuerTIN = "123456789";
+        var numberSeries = CreateTestNumberSeries("0");
+        var request = CreateTestReceiptRequest();
+        var response = CreateTestReceiptResponse("ft5B1#FS 20241210001");
+
+        // Act
+        var productionQrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
+        var sandboxQrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: true);
+
+        // Assert
+        productionQrCode.Should().Contain("R:3535*");
+        sandboxQrCode.Should().Contain("R:9999*");
+    }
+
+    [Theory]
+    [InlineData(false, "3535")]
+    [InlineData(true, "9999")]
+    public void AddCertificateSignature_ShouldUseCertificateNumberOfEnvironment(bool sandbox, string expectedCertificateNumber)
+    {
+        // Act
+        var signature = SignatureItemFactoryPT.AddCertificateSignature("AxAx", sandbox);
+
+        // Assert
+        signature.Data.Should().Be($"AxAx - Processado por programa certificado  n.º {expectedCertificateNumber}/AT");
+        signature.ftSignatureType.Should().Be(SignatureTypePT.CertificationNo.As<SignatureType>());
     }
 
     [Fact]
@@ -455,7 +488,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft7A2#FT 20241210002/1");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -478,7 +511,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft3X4#PF 20241210003");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -501,7 +534,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft8Y9#RG 20241210004");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -524,7 +557,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft2B3#FS 20241210005/99");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -547,7 +580,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#queue#system#NC 202412100000001/999");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -566,7 +599,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FS20241210006");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -585,7 +618,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FT 20241210007");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -613,7 +646,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FT 20241210008");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -633,7 +666,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse("ft5B1#FS 20241210009");
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();
@@ -662,7 +695,7 @@ public class PortugalReceiptCalculationsTests
         var response = CreateTestReceiptResponse(ftReceiptIdentification);
 
         // Act
-        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response);
+        var qrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: false);
 
         // Assert
         qrCode.Should().NotBeNullOrEmpty();

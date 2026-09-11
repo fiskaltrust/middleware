@@ -23,6 +23,7 @@ public class SaftExporter
 {
 
     private readonly DocumentStatusProvider? _documentStatusProvider;
+    private readonly bool _sandbox;
 
     public static bool IsValidPortugueseTaxId(string taxId)
     {
@@ -41,9 +42,10 @@ public class SaftExporter
         }
     }
 
-    public SaftExporter(DocumentStatusProvider? documentStatusProvider = null)
+    public SaftExporter(DocumentStatusProvider? documentStatusProvider = null, bool sandbox = false)
     {
         _documentStatusProvider = documentStatusProvider;
+        _sandbox = sandbox;
     }
 
     private DocumentStatusProvider DocumentStatusProvider => _documentStatusProvider ?? throw new InvalidOperationException("DocumentStatusProvider is required for this operation.");
@@ -190,7 +192,7 @@ public class SaftExporter
 
         return new AuditFile
         {
-            Header = GetHeader(accountMasterData),
+            Header = GetHeader(accountMasterData, _sandbox),
             MasterFiles = new MasterFiles
             {
                 Customer = [.. actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
@@ -411,7 +413,7 @@ public class SaftExporter
 
     }
 
-    public static Header GetHeader(AccountMasterData accountMasterData)
+    public static Header GetHeader(AccountMasterData accountMasterData, bool sandbox)
     {
         return new Header
         {
@@ -437,7 +439,7 @@ public class SaftExporter
             DateCreated = DateTime.UtcNow,
             TaxEntity = "GLOBAL",
             ProductCompanyTaxID = PTMappings.CertificationPosSystem.ProductCompanyTaxID,
-            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.SoftwareCertificateNumber,
+            SoftwareCertificateNumber = PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(sandbox),
             ProductID = PTMappings.CertificationPosSystem.ProductID,
             ProductVersion = PTMappings.CertificationPosSystem.ProductVersion,
         };
