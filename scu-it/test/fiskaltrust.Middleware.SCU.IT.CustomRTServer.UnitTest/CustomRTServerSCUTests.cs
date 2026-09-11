@@ -167,7 +167,7 @@ public class CustomRTServerSCUTests : IDisposable
 
     [Theory]
     [InlineData("""{"CustomerVATId":"12345"}""")]
-    [InlineData("""{"CustomerId":"RSSMRA80A01H501Z"}""")]
+    [InlineData("""{"CustomerTaxId":"RSSMRA80A01H501Z"}""")]
     public async Task ProcessReceiptAsync_WithAnInvalidCustomerTaxId_FailsBeforeContactingTheServer(string cbCustomer)
     {
         var sut = CreateSut();
@@ -309,9 +309,9 @@ public class CustomRTServerSCUTests : IDisposable
     }
 
     [Fact]
-    public void GenerateFiscalDocument_WithCustomerId_MapsCodiceFiscaleToFiscalCode()
+    public void GenerateFiscalDocument_WithCustomerTaxId_MapsCodiceFiscaleToFiscalCode()
     {
-        var receiptRequest = CreateReceiptRequest("""{"CustomerId":"RSSMRA80A01H501U"}""");
+        var receiptRequest = CreateReceiptRequest("""{"CustomerTaxId":"RSSMRA80A01H501U"}""");
 
         (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, CreateQueueIdentification());
 
@@ -321,9 +321,9 @@ public class CustomRTServerSCUTests : IDisposable
     }
 
     [Fact]
-    public void GenerateFiscalDocument_WithBothCustomerIdAndVATId_MapsBothFields()
+    public void GenerateFiscalDocument_WithBothCustomerTaxIdAndVATId_MapsBothFields()
     {
-        var receiptRequest = CreateReceiptRequest("""{"CustomerId":"RSSMRA80A01H501U","CustomerVATId":"01606720215"}""");
+        var receiptRequest = CreateReceiptRequest("""{"CustomerTaxId":"RSSMRA80A01H501U","CustomerVATId":"01606720215"}""");
 
         (_, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, CreateQueueIdentification());
 
@@ -368,9 +368,9 @@ public class CustomRTServerSCUTests : IDisposable
     [InlineData("RSSMRA80A01H501", "RSSMRA80A01H501")]        // too short
     [InlineData("RSSMRA80A01H501UU", "RSSMRA80A01H501UU")]    // too long
     [InlineData("  rssmra80a01h501u  ", "RSSMRA80A01H501U")]  // trimmed and upper-cased, not validated
-    public void GenerateFiscalDocument_ForwardsCustomerIdWithoutRevalidating(string customerId, string expected)
+    public void GenerateFiscalDocument_ForwardsCustomerTaxIdWithoutRevalidating(string customerId, string expected)
     {
-        var receiptRequest = CreateReceiptRequest($$"""{"CustomerId":"{{customerId}}"}""");
+        var receiptRequest = CreateReceiptRequest($$"""{"CustomerTaxId":"{{customerId}}"}""");
 
         (_, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, CreateQueueIdentification());
 
@@ -411,7 +411,7 @@ public class CustomRTServerSCUTests : IDisposable
     [Fact]
     public void CreateResoDocument_WithCustomer_MapsCustomerFields()
     {
-        var receiptRequest = CreateReceiptRequest("""{"CustomerId":"RSSMRA80A01H501U","CustomerVATId":"01606720215"}""");
+        var receiptRequest = CreateReceiptRequest("""{"CustomerTaxId":"RSSMRA80A01H501U","CustomerVATId":"01606720215"}""");
 
         (_, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, CreateQueueIdentification(), CreateReceiptResponse());
 
@@ -423,7 +423,7 @@ public class CustomRTServerSCUTests : IDisposable
     [Fact]
     public void CreateAnnuloDocument_WithCustomer_MapsCustomerFields()
     {
-        var receiptRequest = CreateReceiptRequest("""{"CustomerId":"RSSMRA80A01H501U","CustomerVATId":"01606720215"}""");
+        var receiptRequest = CreateReceiptRequest("""{"CustomerTaxId":"RSSMRA80A01H501U","CustomerVATId":"01606720215"}""");
 
         (_, var fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(receiptRequest, CreateQueueIdentification(), CreateReceiptResponse());
 

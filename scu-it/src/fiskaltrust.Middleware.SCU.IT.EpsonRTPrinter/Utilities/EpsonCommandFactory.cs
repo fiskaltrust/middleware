@@ -347,9 +347,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         /// <summary>
         /// Emits the customer tax identifier for the "scontrino parlante". The codice fiscale takes
-        /// precedence over the partita IVA, as in the Custom SCUs. The two identifiers use different
-        /// commands, which share the same data layout: an 11 digit partita IVA goes to directIO 1060, a
-        /// 16 character alphanumeric codice fiscale to directIO 1061.
+        /// precedence over the partita IVA, as in the Custom SCUs. Each identifier is bound to its own
+        /// command, and the two commands share the same data layout: the 11 digit partita IVA of
+        /// CustomerVATId goes to directIO 1060, the 16 character codice fiscale of CustomerTaxId to 1061.
         /// Shape and checksum are validated upstream in EpsonRTPrinterSCU.ProcessReceiptAsync, so the checks
         /// here are only defence in depth for the receipts the validation gate deliberately skips: a
         /// malformed value must still be dropped rather than sent to the printer, which would answer with a
@@ -358,16 +358,20 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static void AddCustomerTaxIdDirectIO(FiscalReceipt fiscalReceipt, ReceiptRequest receiptRequest)
         {
             var customer = receiptRequest.GetCustomer();
-            var taxId = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+            var codiceFiscale = ItalyValidationHelpers.Normalize(customer?.CustomerTaxId);
+            var partitaIva = ItalyValidationHelpers.NormalizeVatId(customer?.CustomerVATId);
 
             string command;
-            if ((taxId.Length == PartitaIvaLength) && taxId.All(char.IsDigit))
-            {
-                command = "1060";
-            }
-            else if ((taxId.Length == CodiceFiscaleLength) && taxId.All(IsUpperCaseAlphanumeric))
+            string taxId;
+            if ((codiceFiscale.Length == CodiceFiscaleLength) && codiceFiscale.All(IsUpperCaseAlphanumeric))
             {
                 command = "1061";
+                taxId = codiceFiscale;
+            }
+            else if ((partitaIva.Length == PartitaIvaLength) && partitaIva.All(char.IsDigit))
+            {
+                command = "1060";
+                taxId = partitaIva;
             }
             else
             {

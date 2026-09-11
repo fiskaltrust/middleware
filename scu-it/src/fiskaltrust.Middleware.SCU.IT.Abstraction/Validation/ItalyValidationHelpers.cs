@@ -4,7 +4,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 
 /// <summary>
 /// Validation and normalization of the Italian tax identifiers carried by <see cref="Customer"/>: the
-/// codice fiscale (<see cref="Customer.CustomerId"/>) and the partita IVA (<see cref="Customer.CustomerVATId"/>).
+/// codice fiscale (<see cref="Customer.CustomerTaxId"/>) and the partita IVA (<see cref="Customer.CustomerVATId"/>).
 /// Algorithms: DM 23/12/1976 (codice fiscale and its check character) and DPR 605/1973 art. 4
 /// (partita IVA check digit).
 /// </summary>
@@ -42,31 +42,15 @@ public static class ItalyValidationHelpers
     }
 
     /// <summary>
-    /// <see cref="Normalize(string?)"/> plus removal of the 'IT' country prefix, but only when what
-    /// remains is an 11 digit partita IVA. A codice fiscale is never stripped, because a surname can
-    /// legitimately start with 'IT' (e.g. ITALIANO) and blind stripping would corrupt the code.
-    /// </summary>
-    public static string NormalizeTaxCode(string? value)
-    {
-        var normalized = Normalize(value);
-        if (!normalized.StartsWith(CountryPrefix, StringComparison.Ordinal))
-        {
-            return normalized;
-        }
-
-        var withoutPrefix = normalized.Substring(CountryPrefix.Length);
-        return ((withoutPrefix.Length == PartitaIvaLength) && IsAllDigits(withoutPrefix)) ? withoutPrefix : normalized;
-    }
-
-    /// <summary>
     /// Picks the tax identifier to hand to a device that offers a single slot for it (the Custom printer
     /// fixed line, the Epson directIO and printRecTaxID): the codice fiscale takes precedence over the
-    /// partita IVA. Both values are normalized, so a whitespace only or empty codice fiscale correctly
-    /// falls through to the partita IVA. Returns an empty string when the customer carries neither.
+    /// partita IVA. Each value is normalized for its own kind - the IT country prefix is stripped from the
+    /// partita IVA only - so a whitespace only or empty codice fiscale correctly falls through to the
+    /// partita IVA. Returns an empty string when the customer carries neither.
     /// </summary>
-    public static string SelectCustomerTaxId(string? customerId, string? customerVatId)
+    public static string SelectCustomerTaxId(string? customerTaxId, string? customerVatId)
     {
-        var taxCode = NormalizeTaxCode(customerId);
+        var taxCode = Normalize(customerTaxId);
         return (taxCode.Length > 0) ? taxCode : NormalizeVatId(customerVatId);
     }
 
@@ -118,11 +102,11 @@ public static class ItalyValidationHelpers
     }
 
     /// <summary>
-    /// Validates an Italian codice fiscale: 16 characters matching
+    /// Validates an Italian codice fiscale: exactly 16 characters matching
     /// ^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$ with a
     /// plausible day of birth and a valid check character (CIN).
-    /// Legal entities use their 11 digit partita IVA as codice fiscale, so such values are accepted as
-    /// well and validated with <see cref="IsValidPartitaIva(string?)"/>.
+    /// A partita IVA is deliberately NOT accepted here, not even from a legal entity using it as its
+    /// codice fiscale: it belongs in <see cref="Customer.CustomerVATId"/>.
     /// </summary>
     public static bool IsValidCodiceFiscale(string? codiceFiscale)
     {
@@ -134,7 +118,7 @@ public static class ItalyValidationHelpers
         var value = Normalize(codiceFiscale);
         if (value.Length != CodiceFiscaleLength)
         {
-            return IsValidPartitaIva(value);
+            return false;
         }
 
         return HasValidCodiceFiscaleShape(value) && (value[CodiceFiscaleLength - 1] == CalculateCin(value));

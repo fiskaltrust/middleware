@@ -234,7 +234,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private static string GetCustomerTaxId(ReceiptRequest receiptRequest)
     {
         var customer = receiptRequest.GetCustomer();
-        return ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+        return ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId);
     }
 
     public async Task<ReceiptResponse> PerformProtocolReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
