@@ -1,0 +1,45 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "pl-discount-receipt",
+  "cbReceiptMoment": "2026-08-04T10:00:00Z",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Description": "Rabat od podsumy (staly klient)",
+      "Amount": -1.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636595715,
+      "Currency": "PLN"
+    },
+    {
+      "Quantity": 1,
+      "Description": "Candies",
+      "Amount": 100.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636333571,
+      "Currency": "PLN"
+    },
+    {
+      "Quantity": 1,
+      "Description": "Rabat na Candies",
+      "Amount": -23.00,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636595715,
+      "Currency": "PLN"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Gotówka",
+      "Amount": 76.00,
+      "ftPayItemCase": 5786034805636333569,
+      "Currency": "PLN"
+    }
+  ],
+  "cbReceiptAmount": 76.00,
+  "ftReceiptCase": 5786034805636333569,
+  "Currency": "PLN"
+}

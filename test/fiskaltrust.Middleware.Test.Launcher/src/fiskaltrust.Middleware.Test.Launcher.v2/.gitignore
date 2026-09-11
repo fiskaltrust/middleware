@@ -1,3 +1,6 @@
-json-requests
-queue-configuration*.json
-scu-configuration*.json
+json-requests/*
+
+# Cashbox configurations: the PL ones point at the office test printer and carry no
+# credentials, so they survive a fresh clone. Other markets carry certificates.
+configuration/*
+!configuration/PL

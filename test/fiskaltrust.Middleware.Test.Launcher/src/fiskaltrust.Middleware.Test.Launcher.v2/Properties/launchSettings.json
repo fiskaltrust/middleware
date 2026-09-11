@@ -1,0 +1,40 @@
+{
+  "profiles": {
+    "PL (InMemory SCU, HTTP host)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "PL",
+        "MW_HOST_URL": "http://localhost:1500"
+      }
+    },
+    "PL (PosNet printer, HTTP host)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "PL",
+        "MW_HOST_URL": "http://localhost:1500",
+        "MW_PL_ASSUME_FISCALIZED": "1",
+        "MW_CASHBOX_CONFIGURATION": "configuration/PL/cashbox-configuration-posnet.json"
+      }
+    },
+    "PL (PosNet printer, scripted run)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "PL",
+        "MW_PL_ASSUME_FISCALIZED": "1",
+        "MW_CASHBOX_CONFIGURATION": "configuration/PL/cashbox-configuration-posnet.json"
+      }
+    },
+    "PL (InMemory SCU, scripted run)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "PL"
+      }
+    },
+    "ES (scripted run)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "ES"
+      }
+    }
+  }
+}

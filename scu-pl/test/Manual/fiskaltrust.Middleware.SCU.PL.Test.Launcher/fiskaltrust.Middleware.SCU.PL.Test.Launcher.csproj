@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <LangVersion>Latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+        <!-- The ifPOS contract types carry Newtonsoft attributes, which System.Text.Json touches
+             while building its type info. Without a direct reference the assembly never reaches
+             the output folder and every endpoint fails with a FileNotFoundException. -->
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.InMemory\fiskaltrust.Middleware.SCU.PL.InMemory.csproj" />
+    </ItemGroup>
+
+</Project>

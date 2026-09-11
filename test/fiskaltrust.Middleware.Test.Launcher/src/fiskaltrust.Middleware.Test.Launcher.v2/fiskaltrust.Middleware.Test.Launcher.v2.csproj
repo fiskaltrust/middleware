@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Needed by MiddlewareHost, which serves the in-memory middleware over HTTP. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="FluentAssertions" Version="7.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
   </ItemGroup>
@@ -19,6 +21,10 @@
     <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.v2/fiskaltrust.Middleware.Localization.v2.csproj" />
 
     <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.QueueES/fiskaltrust.Middleware.Localization.QueueES.csproj" />
+    <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.QueuePL/fiskaltrust.Middleware.Localization.QueuePL.csproj" />
+    <ProjectReference Include="../../../../scu-pl/src/fiskaltrust.Middleware.SCU.PL.InMemory/fiskaltrust.Middleware.SCU.PL.InMemory.csproj" />
+    <ProjectReference Include="../../../../scu-pl/src/fiskaltrust.Middleware.SCU.PL.PosNet/fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+    <ProjectReference Include="../../../../scu-pl/test/fiskaltrust.Middleware.SCU.PL.TestSupport/fiskaltrust.Middleware.SCU.PL.TestSupport.csproj" />
     <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.VeriFactu/fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj" />
     <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBaiAraba/fiskaltrust.Middleware.SCU.ES.TicketBaiAraba.csproj" />
     <ProjectReference Include="../../../../scu-es/src/fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia/fiskaltrust.Middleware.SCU.ES.TicketBaiBizkaia.csproj" />
@@ -29,9 +35,19 @@
     <None Update="json-requests/**">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <!-- The Polish business cases are owned by the end-to-end acceptance suite, which asserts them
+         against the register; the launcher serves the very same files as its PL samples. -->
+    <None Include="../../../../scu-pl/test/fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest/BusinessCases/**" LinkBase="json-requests/PL">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="TestCertificates/**">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="configuration/**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <!-- Not committed, supplied per developer: a market without a cashbox configuration is run
+         from these, so they have to reach the output folder like they always did. -->
     <None Update="queue-configuration*.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -1,0 +1,29 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "pl-cash-sale",
+  "cbReceiptMoment": "2026-08-04T10:00:00Z",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Description": "Woda mineralna 0,5l",
+      "Amount": 3.69,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636333571,
+      "Currency": "PLN"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Gotówka",
+      "Amount": 3.69,
+      "ftPayItemCase": 5786034805636333569,
+      "Currency": "PLN"
+    }
+  ],
+  "cbReceiptAmount": 3.69,
+  "ftReceiptCase": 5786034805636333569,
+  "Currency": "PLN"
+}

@@ -1,0 +1,128 @@
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
+using fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
+
+namespace fiskaltrust.Middleware.SCU.PL.PosNet;
+
+public class PosNetConfiguration
+{
+    /// <summary>
+    /// The printer address — see <see cref="PosNetDeviceAddress"/> for the accepted forms:
+    /// <c>tcp://192.168.1.50:6666</c> (or plain <c>host:port</c>) for the network interface,
+    /// <c>serial://COM9</c> / <c>usb://COM9</c> / <c>/dev/ttyACM0</c> for the USB or COM interface.
+    /// </summary>
+    public string DeviceUrl { get; set; } = "";
+
+    public int ConnectTimeoutMs { get; set; } = 5_000;
+
+    public int SendTimeoutMs { get; set; } = 5_000;
+
+    public int ReceiveTimeoutMs { get; set; } = 15_000;
+
+    /// <summary>
+    /// Line speed of a serial <see cref="DeviceUrl"/>. The printer's own default for its COM port is
+    /// 115200; over USB (a CDC virtual COM port) the value is handed to the driver but does not
+    /// limit the link. Data bits are fixed at 8 by the device.
+    /// </summary>
+    public int SerialBaudRate { get; set; } = 115_200;
+
+    /// <summary><c>None</c> (device default), <c>Even</c> or <c>Odd</c>.</summary>
+    public string SerialParity { get; set; } = "None";
+
+    /// <summary>1 (device default) or 2.</summary>
+    public int SerialStopBits { get; set; } = 1;
+
+    /// <summary>
+    /// Flow control on the host side: <c>None</c>, <c>XOnXOff</c> (also <c>XON/XOFF</c>) or
+    /// <c>RequestToSend</c> (also <c>RTS/CTS</c>). <c>None</c> is the default because it is what a
+    /// USB virtual COM port needs — a hardware handshake on a link that never asserts CTS blocks
+    /// every write until it times out. A physical RS-232 cable must match what the printer's COM
+    /// menu is set to (its factory default is XON/XOFF).
+    /// </summary>
+    public string SerialHandshake { get; set; } = "None";
+
+    /// <summary>
+    /// The PTU rate table to resolve the trline vt slot index against. Left empty (the default), the
+    /// SCU reads the table the register reports in its fiscal memory status (<c>sfsk</c>) — the
+    /// register owns it, and a slot configured here that the device does not have would be refused
+    /// with 2000 at the first sale. Configure it only to pin a table, e.g. for a recording.
+    /// </summary>
+    public List<PLVatRateTableEntry> VatRateTable { get; set; } = [];
+
+    /// <summary>The customary Polish layout — A 23 %, B 8 %, C 5 %, D 0 %, G exempt — for tests and examples that need a table without a device.</summary>
+    public static List<PLVatRateTableEntry> DefaultVatRateTable() =>
+    [
+        new() { PtuSlot = "A", VatRatePercent = 23m },
+        new() { PtuSlot = "B", VatRatePercent = 8m },
+        new() { PtuSlot = "C", VatRatePercent = 5m },
+        new() { PtuSlot = "D", VatRatePercent = 0m },
+        new() { PtuSlot = "G", IsExempt = true },
+    ];
+
+    public static PosNetConfiguration FromConfiguration(Dictionary<string, object> configuration)
+    {
+        var serialized = JsonSerializer.Serialize(configuration);
+        // Cashbox configuration parameters arrive from the Portal as strings, so numbers are read
+        // from strings as well.
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        };
+        PosNetConfiguration result;
+        try
+        {
+            result = JsonSerializer.Deserialize<PosNetConfiguration>(serialized, options) ?? new PosNetConfiguration();
+        }
+        catch (JsonException ex)
+        {
+            // A parameter of the wrong shape (a blank number, a table sent as a JSON string) is a
+            // configuration mistake, so it is reported as one — naming the SCU and the serializer's
+            // own account of the offending value instead of surfacing a raw JsonException.
+            throw new PLValidationException($"The PosNet SCU configuration could not be read: {ex.Message}", ex);
+        }
+        result.Validate();
+        return result;
+    }
+
+    /// <summary>
+    /// Fails fast on a configuration no transport could be built from, so a mistyped address or
+    /// serial setting surfaces when the SCU is configured rather than at the first receipt.
+    /// </summary>
+    public void Validate()
+    {
+        // A blank address is refused by the parser itself, with the same message.
+        RequirePositiveTimeout(ConnectTimeoutMs, nameof(ConnectTimeoutMs));
+        RequirePositiveTimeout(SendTimeoutMs, nameof(SendTimeoutMs));
+        RequirePositiveTimeout(ReceiveTimeoutMs, nameof(ReceiveTimeoutMs));
+        if (ParseDeviceAddress() is PosNetDeviceAddress.Serial serial)
+        {
+            PosNetSerialSettings.From(serial, this);
+        }
+    }
+
+    /// <summary>
+    /// Both transports need a real budget: 0 and the .NET "infinite" -1 do not mean the same thing
+    /// to a socket, a <see cref="System.IO.Ports.SerialPort"/> and a deadline computed from them, and
+    /// a command whose answer is never waited for would be reported as an ambiguous outcome on a
+    /// device that answered.
+    /// </summary>
+    private static void RequirePositiveTimeout(int value, string setting)
+    {
+        if (value <= 0)
+        {
+            throw new PLValidationException($"The PosNet {setting} '{value}' is not a timeout the SCU can wait for — give it a positive number of milliseconds.");
+        }
+    }
+
+    public PosNetDeviceAddress ParseDeviceAddress() => PosNetDeviceAddress.Parse(DeviceUrl);
+
+    /// <summary>The TCP endpoint of a network <see cref="DeviceUrl"/>; a serial address has none.</summary>
+    public (string Host, int Port) ParseDeviceEndpoint() =>
+        ParseDeviceAddress() is PosNetDeviceAddress.Tcp tcp
+            ? (tcp.Host, tcp.Port)
+            : throw new PLValidationException($"The PosNet DeviceUrl '{DeviceUrl}' is a serial port, not a tcp://host:port address.");
+}

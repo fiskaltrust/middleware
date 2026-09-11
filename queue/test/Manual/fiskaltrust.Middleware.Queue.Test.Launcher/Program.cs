@@ -84,6 +84,17 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
+            // QueuePL is a v2 localization (net8.0, IV2QueueBootstrapper, IPLSSCD from ifPOS.v2.pl)
+            // and cannot be hosted by this net461 v1 launcher, so say that here rather than letting
+            // it fail later on a missing bootstrapper. Only PL: the other v1 localizations that
+            // register no SCU client factory ran before this branch existed and still do.
+            else if (_localization == "PL")
+            {
+                throw new NotSupportedException(
+                    "QueuePL cannot be hosted by this v1 launcher. Use "
+                    + "test/fiskaltrust.Middleware.Test.Launcher/src/fiskaltrust.Middleware.Test.Launcher.v2 "
+                    + "with MW_MARKET=PL instead.");
+            }
 
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite" || config.Package == "fiskaltrust.service.sqlite")
             {

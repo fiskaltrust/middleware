@@ -14,6 +14,7 @@ namespace fiskaltrust.storage.V0
         Task InsertOrUpdateSignaturCreationUnitGRAsync(ftSignaturCreationUnitGR scu);
         Task InsertOrUpdateSignaturCreationUnitITAsync(ftSignaturCreationUnitIT scu);
         Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu);
+        Task InsertOrUpdateSignaturCreationUnitPLAsync(ftSignaturCreationUnitPL scu);
         Task InsertOrUpdateQueueATAsync(ftQueueAT queue);
         Task InsertOrUpdateQueueBEAsync(ftQueueBE queue);
         Task InsertOrUpdateQueueDEAsync(ftQueueDE queue);
@@ -23,5 +24,6 @@ namespace fiskaltrust.storage.V0
         Task InsertOrUpdateQueueGRAsync(ftQueueGR queue);
         Task InsertOrUpdateQueueITAsync(ftQueueIT queue);
         Task InsertOrUpdateQueueMEAsync(ftQueueME queue);
+        Task InsertOrUpdateQueuePLAsync(ftQueuePL queue);
     }
 }
