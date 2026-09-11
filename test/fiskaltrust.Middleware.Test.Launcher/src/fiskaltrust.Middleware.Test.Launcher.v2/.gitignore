@@ -1,3 +1,6 @@
-json-requests
+json-requests/*
+!json-requests/FR
 queue-configuration*.json
+!queue-configuration-fr.json
 scu-configuration*.json
+!scu-configuration-fr-inmemory.json

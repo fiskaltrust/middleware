@@ -44,6 +44,8 @@ market-fr:
   - changed-files:
       - any-glob-to-any-file:
           - "queue/src/fiskaltrust.Middleware.Localization.QueueFR/**/*"
+          - "queue/src/fiskaltrust.Middleware.Localization.QueueFR.v2/**/*"
+          - "scu-fr/**/*"
 
 market-gr:
   - changed-files:
