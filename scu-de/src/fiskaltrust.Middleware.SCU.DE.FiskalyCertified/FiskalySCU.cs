@@ -134,6 +134,17 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             return transactionState;
         }
 
+        private FiskalyTseState ParseFiskalyTseState(string state)
+        {
+            if (Enum.TryParse<FiskalyTseState>(state, true, out var parsed))
+            {
+                return parsed;
+            }
+
+            _logger.LogError("Received unknown TSE state '{State}' from fiskaly that cannot be mapped; defaulting to {DefaultState}.", state, FiskalyTseState.UNINITIALIZED);
+            return FiskalyTseState.UNINITIALIZED;
+        }
+
         public async Task<TseInfo> GetTseInfoAsync()
         {
             try
@@ -178,7 +189,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     MaxLogMemorySize = long.MaxValue,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.Number).ToList(),
-                    CurrentState = ((FiskalyTseState) Enum.Parse(typeof(FiskalyTseState), tssResult.State, true)).ToTseStateEnum()
+                    CurrentState = ParseFiskalyTseState(tssResult.State).ToTseStateEnum()
                 };
             }
             catch (Exception ex)
@@ -204,7 +215,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
 
                 var response = await _fiskalyApiProvider.PatchTseStateAsync(_configuration.TssId, tseStateDto);
 
-                return ((FiskalyTseState) Enum.Parse(typeof(FiskalyTseState), response.State, true)).ToTseState();
+                return ParseFiskalyTseState(response.State).ToTseState();
             }
             catch (Exception ex)
             {
