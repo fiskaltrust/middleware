@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -63,8 +64,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             var generic = SoapSerializer.Serialize(new PrinterResponse { Success = true });
 
             var client = new Mock<IEpsonFpMateClient>();
-            client.Setup(c => c.SendCommandAsync(It.IsAny<string>()))
-                  .ReturnsAsync((string payload) =>
+            client.Setup(c => c.SendCommandAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>()))
+                  .ReturnsAsync((string payload, TimeSpan? _) =>
                   {
                       sentPayloads.Add(payload);
                       var body = generic;
