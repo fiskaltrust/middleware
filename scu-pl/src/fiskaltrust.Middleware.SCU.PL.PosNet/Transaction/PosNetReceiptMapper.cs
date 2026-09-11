@@ -136,7 +136,10 @@ public static class PosNetReceiptMapper
             transaction.AddPayment(ToPaymentType(payItem.ftPayItemCase), amountGrosze, isChange, PosNetText.ToField(payItem.Description, MaxPaymentNameLength));
         }
 
-        return transaction.End();
+        // Additional lines the POS asked for (ftReceiptCaseData.PL.printout.lines) close the
+        // receipt with trend fe0 and follow it; the footer codes of the same request are a printout
+        // configuration the SCU sends before trinit (see PosNetPLSSCD).
+        return transaction.End(PosNetPrintoutReader.Read(request)?.Lines ?? []);
     }
 
     /// <summary>A command this receipt will send for a charge item, in the order the POS sent it.</summary>

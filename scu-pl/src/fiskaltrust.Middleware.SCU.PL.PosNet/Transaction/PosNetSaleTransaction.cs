@@ -171,7 +171,13 @@ public class PosNetSaleTransaction
         _stage = Stage.HasPayments;
     }
 
-    public IReadOnlyList<PosNetCommand> End()
+    public IReadOnlyList<PosNetCommand> End() => End([]);
+
+    /// <summary>
+    /// Ends the transaction; with additional lines the receipt is closed with trend fe0, the lines
+    /// follow as trftrln and trftrend finishes the printout (POT-I-DEV-37 pp. 274–278).
+    /// </summary>
+    public IReadOnlyList<PosNetCommand> End(IReadOnlyList<PosNetFooterLine> footerLines)
     {
         if (_stage != Stage.HasPayments)
         {
@@ -188,7 +194,15 @@ public class PosNetSaleTransaction
         {
             throw new PLValidationException($"The payments do not settle the receipt: payments ({_paymentsGrosze} gr) minus change ({_changeGrosze} gr) must equal the total ({_totalGrosze} gr).");
         }
-        _commands.Add(PosNetCommands.Trend(_totalGrosze, _paymentsGrosze, _changeGrosze));
+        _commands.Add(PosNetCommands.Trend(_totalGrosze, _paymentsGrosze, _changeGrosze, endFooter: footerLines.Count == 0));
+        foreach (var line in footerLines)
+        {
+            _commands.Add(PosNetCommands.Trftrln(line.Text, line.DoubleWidth, line.DoubleHeight));
+        }
+        if (footerLines.Count > 0)
+        {
+            _commands.Add(PosNetCommands.Trftrend());
+        }
         _stage = Stage.Ended;
         return _commands;
     }

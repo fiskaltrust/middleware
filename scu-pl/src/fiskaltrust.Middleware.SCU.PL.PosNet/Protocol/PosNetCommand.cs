@@ -115,7 +115,12 @@ public static class PosNetCommands
         return new PosNetCommand("trpayment", parameters);
     }
 
-    public static PosNetCommand Trend(long totalGrosze, long paymentsGrosze, long changeGrosze)
+    /// <param name="endFooter">
+    /// False keeps the footer open for additional lines (<c>fe0</c>): the receipt is then finished
+    /// with <see cref="Trftrend"/> after the <see cref="Trftrln"/> lines. True (the default) lets the
+    /// register end the footer itself.
+    /// </param>
+    public static PosNetCommand Trend(long totalGrosze, long paymentsGrosze, long changeGrosze, bool endFooter = true)
     {
         var parameters = new List<KeyValuePair<string, string>>
         {
@@ -126,7 +131,62 @@ public static class PosNetCommands
             parameters.Add(new("re", changeGrosze.ToString(CultureInfo.InvariantCulture)));
         }
         parameters.Add(new("fp", paymentsGrosze.ToString(CultureInfo.InvariantCulture)));
+        if (!endFooter)
+        {
+            parameters.Add(new("fe", "0"));
+        }
         return new PosNetCommand("trend", parameters);
+    }
+
+    /// <summary>
+    /// An additional line after the receipt (POT-I-DEV-37 p. 274): id 25 is the plain line without a
+    /// keyword; sw/sh double the character width/height. Only valid after a trend with fe0.
+    /// </summary>
+    public static PosNetCommand Trftrln(string text, bool doubleWidth = false, bool doubleHeight = false)
+    {
+        var parameters = new List<KeyValuePair<string, string>> { new("id", "25"), new("na", text) };
+        if (doubleWidth)
+        {
+            parameters.Add(new("sw", "1"));
+        }
+        if (doubleHeight)
+        {
+            parameters.Add(new("sh", "1"));
+        }
+        return new PosNetCommand("trftrln", parameters);
+    }
+
+    /// <summary>Ends the footer of a receipt that was closed with trend fe0.</summary>
+    public static PosNetCommand Trftrend() => new("trftrend");
+
+    /// <summary>
+    /// Prepares a QR code for the next printout (POT-I-DEV-37 p. 273). The content travels in hex
+    /// mode so any character can be encoded; the register prints it where the footer configuration
+    /// (<see cref="Ftrcfg"/>) places it, then invalidates it.
+    /// </summary>
+    public static PosNetCommand Qrcode(string data, int pixelSize, int errorCorrection)
+        => new("qrcode",
+        [
+            new("px", pixelSize.ToString(CultureInfo.InvariantCulture)),
+            new("el", errorCorrection.ToString(CultureInfo.InvariantCulture)),
+            new("hx", "1"),
+            new("tx", Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(data))),
+        ]);
+
+    /// <summary>
+    /// The printout footer configuration for the next receipt (POT-I-DEV-37 p. 51): the 1D code
+    /// (<c>bc</c>, up to 30 characters) and where the prepared 2D code is printed (<c>bb</c>: 0 not
+    /// at all, 1 above, 2 under the 1D code). Without ca1/lb1 the settings hold until the next printout.
+    /// </summary>
+    public static PosNetCommand Ftrcfg(string? barcode, int code2dPosition)
+    {
+        var parameters = new List<KeyValuePair<string, string>>();
+        if (barcode is not null)
+        {
+            parameters.Add(new("bc", barcode));
+        }
+        parameters.Add(new("bb", code2dPosition.ToString(CultureInfo.InvariantCulture)));
+        return new PosNetCommand("ftrcfg", parameters);
     }
 
     /// <summary>Prints the buyer's NIP with the receipt footer (paragon z NIP); valid inside an open receipt.</summary>

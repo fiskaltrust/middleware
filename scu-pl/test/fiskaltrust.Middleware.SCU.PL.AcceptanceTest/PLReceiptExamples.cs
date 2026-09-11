@@ -153,6 +153,32 @@ public static class PLReceiptExamples
         return request;
     }
 
+    /// <summary>
+    /// A sale with the printout customization of ftReceiptCaseData.PL.printout: a footer barcode,
+    /// a QR code above it and two additional lines after the receipt.
+    /// </summary>
+    public static ProcessRequest PrintoutSale()
+    {
+        var request = CashSale();
+        request.ReceiptRequest.ftReceiptCaseData = new
+        {
+            PL = new
+            {
+                printout = new
+                {
+                    barcode = "1234567890",
+                    qrCode = new { data = "https://example.test/r/1", position = "above" },
+                    lines = new object[]
+                    {
+                        new { text = "Dziękujemy za zakupy!", doubleWidth = true },
+                        new { text = "www.example.test" },
+                    },
+                },
+            },
+        };
+        return request;
+    }
+
     public static ProcessRequest ZeroReceipt() => Wrap(new ReceiptRequest
     {
         ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000,

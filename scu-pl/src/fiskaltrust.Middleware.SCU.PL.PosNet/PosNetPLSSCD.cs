@@ -135,6 +135,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // not leave anything on the device. The PTU slots come from the register's table, so that
         // is the one read the mapping needs before it can refuse a receipt.
         var eReceiptCustomerId = PosNetReceiptMapper.GetEReceiptCustomerId(request);
+        var printout = PosNetPrintoutReader.Read(request);
         var commands = PosNetReceiptMapper.MapSale(request, await GetPtuSlotResolverAsync());
 
         // The numer unikatowy is a legal element of the fiscal document, so the response carries
@@ -146,8 +147,19 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // document, and a failed binding fails the sale while nothing has been printed yet. A
         // confirmed error needs no cleanup (no transaction is open); an ambiguous outcome
         // propagates without retry like every other command.
+        // Footer codes (ftReceiptCaseData.PL.printout barcode/qrCode) are a printout configuration
+        // for the receipt that follows. They go out before the e-receipt binding: a rejected
+        // configuration then fails the sale with nothing armed and nothing printed.
+        if (printout is { HasFooterCodes: true })
+        {
+            await ConfigureFooterCodesAsync(printout);
+        }
+
         var eDocumentId = eReceiptCustomerId is null ? (uint?)null : await BindEReceiptAsync(eReceiptCustomerId);
 
+        // Everything up to and including trend is the fiscal transaction; what follows (trftrln …
+        // trftrend) is the additional-lines phase of an already closed receipt.
+        var trendIndex = IndexOf(commands, "trend");
         var executed = 0;
         try
         {
@@ -156,6 +168,15 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 await _client.ExecuteAsync(command);
                 executed++;
             }
+        }
+        catch (PLDeviceErrorException exception) when (executed > trendIndex)
+        {
+            // The receipt is already fiscal — a rejected additional line must not fail it (the
+            // queue would otherwise record a failure for a document the register has issued). The
+            // footer is closed and the rejection travels in the response instead.
+            await TryEndFooterAsync();
+            response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Dodatkowe linie nie wydrukowane",
+                $"?{exception.ErrorCode}: {exception.Message}");
         }
         catch (PLDeviceErrorException)
         {
@@ -176,6 +197,49 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             response.EnrichWithEDocumentId(documentId);
             await TryReadEDocumentDeliveryStateAsync(response, documentId);
         }
+    }
+
+    /// <summary>
+    /// Sends the footer codes for the next receipt: the prepared 2D code (qrcode) and the footer
+    /// configuration (ftrcfg bc/bb). Both are valid until the next printout, i.e. for the receipt
+    /// this sale prints. Runs before the e-receipt binding and before trinit, so a rejection fails
+    /// the sale with nothing on the device.
+    /// </summary>
+    private async Task ConfigureFooterCodesAsync(PosNetPrintout printout)
+    {
+        if (printout.QrCode is { } qrCode)
+        {
+            await _client.ExecuteAsync(PosNetCommands.Qrcode(qrCode.Data, qrCode.PixelSize, qrCode.ErrorCorrection));
+        }
+        await _client.ExecuteAsync(PosNetCommands.Ftrcfg(printout.Barcode, printout.QrCode is { } code ? (int)code.Position : 0));
+    }
+
+    /// <summary>
+    /// Closes the additional-lines phase after a rejected line so the printout is finished. A
+    /// confirmed rejection of the close itself is swallowed (the original error is reported);
+    /// ambiguous or unreachable outcomes propagate — the printout state is then unknown.
+    /// </summary>
+    private async Task TryEndFooterAsync()
+    {
+        try
+        {
+            await _client.ExecuteAsync(PosNetCommands.Trftrend());
+        }
+        catch (PLDeviceErrorException)
+        {
+        }
+    }
+
+    private static int IndexOf(IReadOnlyList<PosNetCommand> commands, string mnemonic)
+    {
+        for (var i = 0; i < commands.Count; i++)
+        {
+            if (commands[i].Mnemonic == mnemonic)
+            {
+                return i;
+            }
+        }
+        return commands.Count;
     }
 
     /// <summary>

@@ -18,6 +18,12 @@ public enum SignatureTypePL : long
     // from the eDokument buffer (eparagonbufferget: pr = printed flag, st = delivery status).
     EDocumentId = 0x504C_2000_0000_0108,
     EDocumentDeliveryState = 0x504C_2000_0000_0109,
+    /// <summary>
+    /// The additional lines requested via ftReceiptCaseData.PL.printout were not (fully) printed: the
+    /// register rejected a trftrln after the receipt was already closed, so the fiscal document stands
+    /// and this item carries the device's error instead of failing the receipt.
+    /// </summary>
+    AdditionalPrintoutNotPrinted = 0x504C_2000_0000_010A,
 }
 
 public static class SignatureTypePLExt

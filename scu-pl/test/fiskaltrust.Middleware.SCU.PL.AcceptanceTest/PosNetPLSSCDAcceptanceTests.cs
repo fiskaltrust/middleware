@@ -328,6 +328,81 @@ public class PosNetPLSSCDAcceptanceTests
         NoTransactionShouldBeOpen(target);
     }
 
+    /// <summary>
+    /// Printout customization (ftReceiptCaseData.PL.printout): the footer codes are configured
+    /// before the receipt (qrcode, ftrcfg), the receipt closes with trend fe0 and the additional
+    /// lines follow, finished by trftrend.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_ConfiguresTheFooterCodesBeforeTheReceipt_AndPrintsTheLinesAfterIt()
+    {
+        using var target = PosNetTestTarget.Scripted();
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.PrintoutSale());
+
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrln", "trftrend", "scnt");
+        target.SentCommands.Single(c => c.CommandId == "trend").Parameters.Should().Contain(new KeyValuePair<string, string>("fe", "0"));
+        target.SentCommands.Single(c => c.CommandId == "ftrcfg").Parameters.Should()
+            .Contain(new KeyValuePair<string, string>("bc", "1234567890")).And
+            .Contain(new KeyValuePair<string, string>("bb", "1"));
+        var model = target.Emulator!.Model;
+        model.LastReceiptBarcode.Should().Be("1234567890");
+        model.LastReceipt2dCode.Should().NotBeNull();
+        model.LastReceipt2dPosition.Should().Be(1);
+        model.LastFooterLines.Should().Equal("Dziękujemy za zakupy!", "www.example.test");
+        model.FooterOpen.Should().BeFalse();
+        NoTransactionShouldBeOpen(target);
+        DocumentNumberOf(result).Should().BePositive();
+    }
+
+    /// <summary>The e-receipt binding follows the footer configuration: a rejected configuration must not leave a binding armed.</summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_WithAnEReceipt_BindsAfterTheFooterConfiguration()
+    {
+        using var target = PosNetTestTarget.Scripted();
+        var request = PLReceiptExamples.PrintoutSale();
+        request.ReceiptRequest.cbCustomer = """{"eReceiptCustomerId": "KIDPRINTOUT01"}""";
+
+        await target.Sut.ProcessReceiptAsync(request);
+
+        var mnemonics = target.SentMnemonics.ToList();
+        mnemonics.IndexOf("ftrcfg").Should().BeLessThan(mnemonics.IndexOf("eparagonidznext"));
+        mnemonics.IndexOf("eparagonidznext").Should().BeLessThan(mnemonics.IndexOf("trinit"));
+    }
+
+    /// <summary>
+    /// A rejected additional line arrives after trend — the receipt is already fiscal, so the SCU
+    /// closes the footer and reports the rejection in the response instead of failing the receipt.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_WhenAnAdditionalLineIsRejected_KeepsTheReceipt_AndReportsIt()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("trftrln", 2063));
+
+        var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.PrintoutSale());
+
+        // First line rejected → footer closed with trftrend, no prncancel, the readback still happens.
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrend", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Dodatkowe linie nie wydrukowane" && s.Data.StartsWith("?2063"));
+        DocumentNumberOf(result).Should().BePositive();
+        NoTransactionShouldBeOpen(target);
+    }
+
+    /// <summary>A rejected footer configuration fails the sale before anything is printed or bound.</summary>
+    [EmulatorOnlyFact]
+    public async Task PrintoutSale_WhenTheFooterConfigurationIsRejected_FailsBeforeAnythingIsPrinted()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("ftrcfg", 2063));
+        var request = PLReceiptExamples.PrintoutSale();
+        request.ReceiptRequest.cbCustomer = """{"eReceiptCustomerId": "KIDPRINTOUT02"}""";
+
+        var act = () => target.Sut.ProcessReceiptAsync(request);
+
+        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2063);
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "qrcode", "ftrcfg");
+        NoTransactionShouldBeOpen(target);
+    }
+
     [Fact]
     public async Task SaleWithoutEReceiptCustomerId_NeverTouchesTheEParagonCommands()
     {

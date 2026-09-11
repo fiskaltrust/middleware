@@ -124,6 +124,28 @@ public sealed class PosNetDeviceModel
     /// <summary>Confirms eparagonidznext WITHOUT the promised <c>ha</c> (an armed but untrackable binding).</summary>
     public bool OmitEDocumentIdOnBind { get; set; }
 
+    // --- printout customization: footer codes (qrcode + ftrcfg) and additional lines (trend fe0 → trftrln → trftrend)
+    private bool _footerOpen;
+    private readonly List<string> _footerLines = [];
+    private string? _prepared2dCode;
+    private string? _pendingBarcode;
+    private int _pending2dPosition;
+
+    /// <summary>The receipt's footer is open for additional lines (trend fe0 was sent, trftrend not yet).</summary>
+    public bool FooterOpen => _footerOpen;
+
+    /// <summary>The additional lines (trftrln na) printed after the last receipt.</summary>
+    public IReadOnlyList<string> LastFooterLines => _footerLines;
+
+    /// <summary>The 1D code (ftrcfg bc) printed in the footer of the last receipt, if any.</summary>
+    public string? LastReceiptBarcode { get; private set; }
+
+    /// <summary>The prepared 2D code (qrcode tx, hex) printed with the last receipt, if the footer configuration placed it (bb ≠ 0).</summary>
+    public string? LastReceipt2dCode { get; private set; }
+
+    /// <summary>Where the 2D code was printed on the last receipt (ftrcfg bb: 0 none, 1 above, 2 under the 1D code).</summary>
+    public int LastReceipt2dPosition { get; private set; }
+
     /// <summary>The model of a register that has not been fiscalized (<c>fsN</c>).</summary>
     public PosNetDeviceModel NonFiscal()
     {
@@ -159,6 +181,12 @@ public sealed class PosNetDeviceModel
                 ? Error("eparagonidznext", PosNetErrors.NoFiscalMode)
                 : OmitEDocumentIdOnBind ? Ok("eparagonidznext") : $"eparagonidznext\tha{NextEDocumentId}\t",
             "eparagonbufferget" => $"eparagonbufferget\t{EDocumentBufferRecord ?? $"hd{NextEDocumentId}\tprN\tst1\t"}",
+            // Printout customization: a 2D code is prepared, the footer configuration places it (and a
+            // 1D code) on the next receipt; additional lines only exist while a receipt's footer is open.
+            "qrcode" or "azteccode" or "dmcode" or "pdf417code" => Prepare2dCode(command.CommandId, parameters),
+            "ftrcfg" => Ftrcfg(parameters),
+            "trftrln" => Trftrln(parameters),
+            "trftrend" => Trftrend(),
             _ => Ok(command.CommandId),
         };
     }
@@ -176,8 +204,9 @@ public sealed class PosNetDeviceModel
 
     private string Trinit()
     {
-        if (_transaction is not null)
+        if (_transaction is not null || _footerOpen)
         {
+            // A receipt whose footer is still open (trend fe0 without trftrend) is not finished either.
             return Error("trinit", PosNetErrors.TransactionMode);
         }
         _transaction = new OpenTransaction();
@@ -340,6 +369,16 @@ public sealed class PosNetDeviceModel
         Printouts++;
         _lastReceipt = new CompletedReceipt(transaction.PerRate.ToArray(), payments, change);
         _transaction = null;
+
+        // The footer configuration and the prepared 2D code hold for this one printout.
+        LastReceiptBarcode = _pendingBarcode;
+        LastReceipt2dPosition = _pending2dPosition;
+        LastReceipt2dCode = _pending2dPosition != 0 ? _prepared2dCode : null;
+        _pendingBarcode = null;
+        _pending2dPosition = 0;
+        _prepared2dCode = null;
+        _footerLines.Clear();
+        _footerOpen = p.TryGetValue("fe", out var fe) && fe == "0";
         return Ok("trend");
     }
 
@@ -388,6 +427,77 @@ public sealed class PosNetDeviceModel
         NonFiscalPrintouts++;
         Printouts++;
         return Ok("stocash");
+    }
+
+    private string Prepare2dCode(string mnemonic, IReadOnlyDictionary<string, string> p)
+    {
+        if (!p.TryGetValue("tx", out var tx) || tx.Length == 0)
+        {
+            return Error(mnemonic, PosNetErrors.Parameter);
+        }
+        var hex = p.TryGetValue("hx", out var hx) && hx == "1";
+        if (hex ? tx.Length > 4000 || tx.Length % 2 != 0 : tx.Length > 2000)
+        {
+            return Error(mnemonic, PosNetErrors.Parameter);
+        }
+        _prepared2dCode = tx;
+        return Ok(mnemonic);
+    }
+
+    private string Ftrcfg(IReadOnlyDictionary<string, string> p)
+    {
+        if (p.TryGetValue("bc", out var bc))
+        {
+            if (bc.Length > 30)
+            {
+                return Error("ftrcfg", PosNetErrors.Parameter);
+            }
+            _pendingBarcode = bc;
+        }
+        if (p.TryGetValue("bb", out var bbText))
+        {
+            if (!int.TryParse(bbText, out var bb) || bb is < 0 or > 2)
+            {
+                return Error("ftrcfg", PosNetErrors.Parameter);
+            }
+            if (bb != 0 && _prepared2dCode is null)
+            {
+                // "2d code for printing should be prepared in advance" (POT-I-DEV-37 p. 52).
+                return Error("ftrcfg", PosNetErrors.Parameter);
+            }
+            _pending2dPosition = bb;
+        }
+        return Ok("ftrcfg");
+    }
+
+    private string Trftrln(IReadOnlyDictionary<string, string> p)
+    {
+        if (!_footerOpen)
+        {
+            return Error("trftrln", PosNetErrors.BadTransactionState);
+        }
+        if (_footerLines.Count >= 60)
+        {
+            return Error("trftrln", PosNetErrors.Parameter);
+        }
+        var text = p.TryGetValue("na", out var na) ? na : "";
+        if (text.Length > 40)
+        {
+            return Error("trftrln", PosNetErrors.Parameter);
+        }
+        _footerLines.Add(text);
+        Printouts++;
+        return Ok("trftrln");
+    }
+
+    private string Trftrend()
+    {
+        if (!_footerOpen)
+        {
+            return Error("trftrend", PosNetErrors.BadTransactionState);
+        }
+        _footerOpen = false;
+        return Ok("trftrend");
     }
 
     private string Prncancel()
