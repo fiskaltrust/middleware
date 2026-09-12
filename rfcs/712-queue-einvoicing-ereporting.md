@@ -470,21 +470,23 @@ new SignaturItem
 
 `Caption` stays byte-identical across both stacks, so anything matching on it — support tooling, PosCreator code — works against legacy and v2 queues alike.
 
-### Preflight ports cleanly, finalize failure does not
+### Preflight ports cleanly, finalize failure needs a v1 fix
 
 The preflight phase backports without friction, and this is the strongest argument for the two-phase design. A preflight rejection happens before the queue item exists, which on the legacy stack is simply an early return from `InternalSign` — structurally identical to the pre-fiscalization exits that are already there.
 
-The **finalize failure** path is the problem, and it is the one part of the design that cannot be backported as specified. Two legacy behaviors break the documented recovery:
+The **finalize failure** path does not port as-is. Two legacy behaviors break the documented recovery:
 
 - The `ReceiptRequested` path deserializes the persisted response and, when it is an error, **returns `null`** (lines 112–115) instead of the response. A POS that hit a finalize failure has no way to retrieve the fiscalized-but-failed receipt.
 - For non-v2 requests the legacy processor **rethrows the original exception** on an error state rather than returning an error response (lines 231–234), so the failure reaches the POS as a transport fault, not as a `ReceiptResponse` carrying `ftState` and the failure signature.
 
-Two options, to be settled before the legacy port is implemented:
+The decision is to **fix the legacy processor** rather than weaken the guarantee on legacy queues. Two narrow changes in `fiskaltrust.Middleware.Queue.SignProcessor`:
 
-1. **Fix the v1 `ReceiptRequested` path** so it returns persisted error responses. This is the honest fix and makes legacy behave like v2, but it changes long-standing v1 behavior and carries its own compatibility risk.
-2. **Degrade finalize failures to non-fatal on legacy queues**: log, journal, append the failure signature, and return the receipt as successful. This keeps v1 behavior untouched, at the cost of a weaker guarantee than v2 gives.
+1. **`ReceiptRequested` returns persisted error responses.** The `IsError()` check that returns `null` (lines 112–115) is removed. A replay returns whatever was persisted for that `cbReceiptReference`, error state included. This is what a POS recovering from a finalize failure needs, and it makes the replay path behave as it does in v2.
+2. **Finalize failures return the error response instead of throwing.** The rethrow at lines 231–234 only makes sense when the country processor threw; a finalize failure has no exception to rethrow (as written, the code would `throw null`). The journal decision already distinguishes the two cases via the fiscalization outcome, so the same flag gates the rethrow: fiscalization failed ⇒ unchanged v1 behavior (throw); fiscalization succeeded, finalize failed ⇒ return the persisted error response, as v2 does.
 
-Option 1 is preferable on correctness grounds; option 2 is preferable on risk grounds. This is called out in "Unresolved questions".
+The first change alters observable v1 behavior in one case: a replay of a receipt whose persisted response is an error. Today the POS gets `null`; afterwards it gets that response. On a queue *without* services configured, an error response still means the receipt was not fiscalized, so a POS's existing reaction to a failed replay, sending the receipt again, remains correct; the response now just carries the reason. On a queue *with* services configured, the POS must already implement the recovery flow described above, exactly as in v2. The compatibility risk is therefore small and is accepted in exchange for legacy and v2 behaving identically.
+
+Degrading finalize failures to non-fatal on legacy queues was considered and rejected: it would mean a legally required invoice or report can silently not happen on three markets while the same failure is fatal on the other three.
 
 ### Configuration and wiring
 
@@ -494,13 +496,13 @@ Wiring is simpler than in v2, because the legacy stack uses `IServiceCollection`
 
 ### Sequencing
 
-The legacy port lands **after** the v2 implementation, as its own PR. It depends on the v2 contract having settled — every wire-level decision above is shared, and porting a contract that is still moving would mean implementing the mapping layer twice. Splitting it out also keeps the v1 mapping layer, which is the bulk of the work and carries all of the compatibility risk, out of the change that introduces the mechanism.
+The legacy port lands **after** the v2 implementation, as its own PR, and carries the two `SignProcessor` changes above with it. It depends on the v2 contract having settled — every wire-level decision above is shared, and porting a contract that is still moving would mean implementing the mapping layer twice. Splitting it out also keeps the v1 mapping layer, which is the bulk of the work and carries all of the compatibility risk, out of the change that introduces the mechanism.
 
 # Drawbacks
 
 - **Latency**: up to four additional synchronous HTTP calls in the sequential per-queue pipeline. A misconfigured or slow service degrades every receipt on that queue, bounded by the per-attempt timeout times the attempt count.
 - **A new way for receipts to fail**: a queue configured with an unreachable eInvoicing service rejects every receipt at preflight. This is deliberate, since refusing before fiscalization is the safe direction, but it means a compliance add-on outage becomes a POS outage. Operators need to understand that enabling a service makes it load-bearing.
-- **Finalize failures remain a sharp edge**: the preflight makes them rare, not impossible, and recovery still depends on PosCreators implementing the `ReceiptRequested` flow. On the legacy stack it does not currently work at all.
+- **Finalize failures remain a sharp edge**: the preflight makes them rare, not impossible, and recovery still depends on PosCreators implementing the `ReceiptRequested` flow. On the legacy stack that flow needs the two `SignProcessor` fixes described in the backport section first.
 - **Two calls instead of one**: services must implement and keep consistent a validation path that predicts what the finalize path will accept. A service whose preflight is more permissive than its finalize reintroduces exactly the failure mode the design is meant to avoid.
 - **Our own HTTP client**: one more piece of transport code to maintain and test, rather than reusing shared infrastructure.
 - **Interface package coupling**: requires a new `fiskaltrust.interface` release before the middleware change can be merged.
@@ -537,7 +539,6 @@ Other alternatives considered:
 
 To resolve during the RFC process:
 
-- **Legacy finalize failures**: option 1 (fix the v1 `ReceiptRequested` path) or option 2 (degrade to non-fatal on legacy) from the backport section.
 - **Structured validation errors**: eInvoicing has many specific failure cases that will need dedicated handling, both on the wire (`Errors` as more than a list of strings) and in the response to the POS (dedicated `ftSignatureType` values instead of the generic `Failure` category). This is a known TODO. It is not needed to ship the mechanism and is left for a follow-up so the contract here stays minimal.
 
 Out of scope for this RFC (future, independent work):
