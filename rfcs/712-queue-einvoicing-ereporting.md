@@ -60,7 +60,7 @@ Which receipts are affected depends on the concern:
 - **eInvoicing** only applies to the invoice receipt cases (`B2C`, `B2B`, `B2G`).
 - **eReporting** is market-dependent: depending on the regulation it may act on daily operations (daily, monthly, or yearly closing), on specific document types, or on other receipt cases entirely.
 
-In both cases the *service* decides, and it says so in its preflight response. The queue does not maintain a receipt-case allowlist.
+The queue drives the flow. Each service reports in its preflight response whether it acts on the receipt at all, and the queue skips the finalize call for a service that does not. Services must answer this consistently, across markets and providers, so the queue can rely on it; the queue does not maintain a receipt-case allowlist of its own.
 
 Example: a queue in Greece configured with an eInvoicing service. The response to a `PointOfSaleReceipt` contains the myDATA signatures created by the SCU (invoice MARK, authentication code, QR URL) *plus* signatures added by the eInvoicing service, e.g.:
 
@@ -104,7 +104,7 @@ The services are configured in the queue's configuration (the `Configuration` di
 2. If a preflight call **rejects** the receipt, or **fails** (unreachable, timeout, non-2xx after retries), processing stops. The receipt is **not fiscalized**, the queue returns an error response naming the reason, and an action journal entry is written. No fiscal record and no receipt journal entry exist.
 3. **Fiscalization.** If every preflight passed, the receipt is processed as today: queue bookkeeping, country-specific command processor, SCU call. If fiscalization itself fails, behavior is unchanged and the finalize calls are skipped.
 4. **Finalize.** For each service that said it acts on this receipt, the queue calls it with the *current* `ReceiptRequest`/`ReceiptResponse` pair, in the same order. The eReporting service therefore sees what the eInvoicing service added.
-5. On success the returned signatures are merged into the response. On failure the receipt is **marked as failed**, with a failure signature naming the service and an action journal entry carrying the technical detail.
+5. On success the returned signatures are merged into the response. On failure the receipt is **marked as failed** (`ftState` = `0xEEEE_EEEE`, the same error state the middleware uses for every other failure), with a failure signature naming the service and an action journal entry carrying the technical detail.
 
 > ***Note:*** step 5 is the one place where a failure occurs *after* the SCU created a fiscal record. The preflight exists to make that case rare rather than routine: everything a service can decide from the request alone is decided in step 1, so a finalize failure is a genuine transport or service fault, not a validation outcome. It is not eliminated — see "Error and failure handling".
 
@@ -231,6 +231,7 @@ public interface IEReportingService
 - The `ProcessRequest`/`ProcessResponse` shape is deliberately identical to the market SCU contracts, but defined once in the market-agnostic `fiskaltrust.ifPOS.v2` namespace (the existing per-market types remain untouched).
 - Two distinct interfaces rather than one shared interface keep the two concerns separately addressable in wiring, and leave room for the contracts to diverge later without a breaking change.
 - `Applies` is what removes the receipt-case allowlist from the queue. A service that does not handle a given `ftReceiptCase` answers `Applies = false` and is not called again for that receipt.
+- `Errors` is deliberately a flat list of strings for now. eInvoicing has many specific validation failures that will need structured handling; that is a known follow-up (see "Unresolved questions"), and the shape here is the minimum that lets the queue reject with a reason.
 - This requires a new `fiskaltrust.interface` version (current reference: `1.3.78-rc1`).
 
 ### Contract for implementations
@@ -241,10 +242,11 @@ On **process**, an implementation receives the full `ReceiptResponse` **includin
 
 - **may** append `SignatureItem`s to `ftSignatures`,
 - **may** add data to `ftStateData` — and **must merge** into the existing structure (`MiddlewareStateData`), never replace it,
-- **must not** remove or alter existing signatures, and **must not** change `ftState` or the identifying fields (`ftQueueItemID`, `ftQueueID`, `ftCashBoxID`, `cbReceiptReference`, `ftReceiptIdentification`, `ftReceiptMoment`),
+- **may** set an error `ftState` on the returned response to signal that the finalize step failed. This is handled exactly like a non-2xx response (see "Error and failure handling"); the two channels exist for convenience, not because they mean different things,
+- **must not** remove or alter existing signatures, and **must not** change the identifying fields (`ftQueueItemID`, `ftQueueID`, `ftCashBoxID`, `cbReceiptReference`, `ftReceiptIdentification`, `ftReceiptMoment`),
 - **must** be idempotent per `ftQueueItemID`: due to retries the same `ProcessRequest` can arrive more than once, and must not create a duplicate invoice or report.
 
-Note the deliberate difference from an SCU: a service can no longer signal failure by returning an error `ftState`. Rejection belongs in the preflight, where it is safe. After fiscalization the only failure channel is a non-2xx response.
+Anything a service can decide from the request alone belongs in the preflight, where a rejection is safe. A failure signalled at finalize, by whichever channel, is a failure after fiscalization.
 
 The middleware treats the returned response as authoritative but logs a warning and writes an action journal entry if a returned response dropped previously present signatures, so a misbehaving service is diagnosable after the fact.
 
@@ -254,10 +256,10 @@ The middleware ships **its own HTTP client** for this, in `fiskaltrust.Middlewar
 
 - `POST {endpoint}/validate` with a `ValidateRequest` body, and `POST {endpoint}/process` with a `ProcessRequest` body.
 - Bodies are serialized with `System.Text.Json` using the same options as the sign endpoint (`UnsafeRelaxedJsonEscaping`), `Content-Type: application/json`.
-- Every request carries `x-cashbox-id` and `x-cashbox-accesstoken`, matching the header names the SCU HTTP clients already use. The values come from the queue's configuration (`CashBoxId`, and the `accesstoken` entry the Launcher places in the configuration dictionary). The receiving service authenticates the caller against them.
+- Every request carries `x-cashbox-id` and `x-cashbox-accesstoken`, matching the header names the SCU HTTP clients already use. The hosting environment injects `cashboxid` and `accesstoken` into every queue's configuration dictionary, so both values are taken from there and can be assumed present. The receiving service authenticates the caller against them.
 - Response `200 OK` with a well-formed body means success. Any other status code, a malformed body, or a timeout is a failure. There are no partial successes.
 - **Timeout**: `timeout-ms` bounds each individual attempt and is enforced by passing a `CancellationToken` to `HttpClient.SendAsync`, so the in-flight request is actually cancelled rather than merely abandoned.
-- **Retries**: up to `max-retries` *additional* attempts, on timeout and 5xx only. A 4xx is never retried, since the request will not get better. Combined with the idempotency requirement this is safe.
+- **Retries**: up to `max-retries` *additional* attempts, on timeout and 5xx only. A 4xx, or a `200` whose body carries an error `ftState`, is never retried: both are deliberate answers and the request will not get better. Combined with the idempotency requirement this is safe.
 - Only `http` and `https` endpoints are accepted. A `grpc://` endpoint fails queue startup, since this mechanism is HTTP-only by design.
 
 Worked example of a finalize call:
@@ -364,7 +366,7 @@ This guarantees the services see everything the Queue and SCU produced, and that
 1. **Preflight rejection**: a service returned `Errors`. The receipt is not fiscalized. Action journal entry, error response, no receipt journal.
 2. **Preflight transport or protocol failure**: unreachable, timeout, 5xx after retries, 4xx, or a malformed body. Treated exactly like a rejection. The queue cannot know whether the receipt is invoiceable, and refusing before fiscalization is the safe direction.
 3. **Fiscalization failed**: finalize is skipped entirely. Unchanged behavior.
-4. **Finalize failure**: any non-2xx, malformed body, or timeout after retries. The receipt **is** fiscalized. `MarkAsFailed()` is called, a failure signature is appended, and an action journal entry records the technical detail.
+4. **Finalize failure**: any non-2xx, malformed body, or timeout after retries, or a `200` whose returned `ReceiptResponse` carries an error `ftState`. The receipt **is** fiscalized. `MarkAsFailed()` sets `ftState` to `0xEEEE_EEEE`, a failure signature is appended, and an action journal entry records the technical detail.
 5. **Middleware-side bug**: an unexpected exception inside `PostFiscalizationProcessor` is caught and handled as the corresponding class above, so a bug in a compliance add-on never takes down receipt processing in an uncontrolled way.
 
 The failure signature is constructed the same way as the existing uncaught-exception signature in `SignProcessor`:
@@ -379,7 +381,7 @@ new SignatureItem
 }
 ```
 
-Captions are stable and machine-matchable, and distinguish a rejection (phase 1, nothing fiscalized) from a failure (phase 3, receipt fiscalized). `Data` carries the human-readable reason only; full technical details live in the action journal entry, which references the `ftQueueItemId`.
+Captions are stable and machine-matchable, and distinguish a rejection (phase 1, nothing fiscalized) from a failure (phase 3, receipt fiscalized). Within phase 1, `Data` is what tells a validation rejection from an outage: for a rejection it carries the service's `Errors`, for a transport failure it names the cause (timeout, status code, unreachable). Full technical details live in the action journal entry, which references the `ftQueueItemId`.
 
 A failure of one service in the finalize phase does not prevent the call to the next one: an unreachable eInvoicing service must not suppress legally required eReporting. All outcomes, including success, are persisted with the response in `ftQueueItem.response`, so the queue item is the audit trail for what was and wasn't invoiced or reported.
 
@@ -536,9 +538,7 @@ Other alternatives considered:
 To resolve during the RFC process:
 
 - **Legacy finalize failures**: option 1 (fix the v1 `ReceiptRequested` path) or option 2 (degrade to non-fatal on legacy) from the backport section.
-- **Access token plumbing**: confirm against the Launcher that the `accesstoken` entry is present in the queue's configuration dictionary in all hosting scenarios (cloud cashbox, local Launcher, cashbox-less setups). It is present in the test launchers today, but no production queue code reads it. If it turns out not to be universally available, the configuration sections need an explicit credential field.
-- Whether dedicated `ftSignatureType` values should be reserved for these failure signatures instead of the generic `Failure` category.
-- Whether a preflight *failure* (service unreachable) should be distinguishable from a preflight *rejection* (service said no) in the response the POS sees, or whether one error signature is enough.
+- **Structured validation errors**: eInvoicing has many specific failure cases that will need dedicated handling, both on the wire (`Errors` as more than a list of strings) and in the response to the POS (dedicated `ftSignatureType` values instead of the generic `Failure` category). This is a known TODO. It is not needed to ship the mechanism and is left for a follow-up so the contract here stays minimal.
 
 Out of scope for this RFC (future, independent work):
 
