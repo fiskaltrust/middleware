@@ -157,13 +157,15 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var clientDto = await clientsTask;
                 var tssResult = await tssResultTask;
 
+                // A deleted TSE must still report its state (Terminated) so it can be persisted and pushed to
+                // the portal; the state is handed back here and the actual error is thrown later, on the next
+                // operation that tries to use the TSE (e.g. StartTransactionAsync).
                 if (tssResult.State.Equals("DELETED") && tssResult.Env.Equals("TEST"))
                 {
-                    throw new FiskalyException("The specified TSE is in 'DELETED' state. Fiskaly automatically deletes all v2 test TSEs each Sunday, which can lead to this behavior; " +
-                        "please produce a new TSE for test purposes. Production TSEs are not affected by these regular cleanups.");
+                    _logger.LogWarning("The specified TSE is in 'DELETED' state. Fiskaly automatically deletes all v2 test TSEs each Sunday, which can lead to this behavior; " +
+                        "please produce a new TSE for test purposes. Production TSEs are not affected by these regular cleanups. The SCU state is reported as 'Terminated'.");
                 }
 
-                // Only start this API call after we've confirmed the TSE is valid
                 var startedTransactions = await startedTransactionsTask;
                 var serial = tssResult.SerialNumber;
 
