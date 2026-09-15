@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
@@ -12,15 +12,11 @@ using Xunit;
 namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 
 /// <summary>
-/// Issue #290 — Climate Crisis Resilience Fee (Τέλος Ανθεκτικότητας Κλιματικής Κρίσης)
+/// Climate Crisis Resilience Fee (Τέλος Ανθεκτικότητας Κλιματικής Κρίσης)
 /// as a myDATA invoiceType 8.2 record. 8.2 is reachable only via mydataoverride (there is no
 /// native ftReceiptCase -> 8.2). For 8.2 the special tax must be reported at LINE level
 /// (invoiceRow.otherTaxesAmount + otherTaxesPercentCategory), NOT as a document-level taxesTotals
-/// element — otherwise AADE rejects with XMLSyntaxError 101.
-///
-/// These tests currently FAIL: the invoice body is built from the ftReceiptCase-derived invoice
-/// type (B2B), so the 8.2 line-level routing is bypassed — the special tax line is dropped from
-/// invoiceDetails and the fee is emitted as taxesTotals.
+/// element otherwise AADE rejects with XMLSyntaxError 101.
 /// </summary>
 public class ClimateResilienceFee82Tests
 {
@@ -101,7 +97,7 @@ public class ClimateResilienceFee82Tests
     [Theory]
     // 5-star hotel, 10,00 EUR per room/night -> otherTaxes code 23
     [InlineData("Ξενοδοχεία 5 αστέρων 10,00€ (ανά Δωμ./Διαμ.)", 10.0, 23)]
-    // 4-star hotel, 7,00 EUR per room/night -> otherTaxes code 22 (proves it is not tier-specific)
+    // 4-star hotel, 7,00 EUR per room/night -> otherTaxes code 22
     [InlineData("Ξενοδοχεία 4 αστέρων 7,00€ (ανά Δωμ./Διαμ.)", 7.0, 22)]
     public void MapToInvoicesDoc_ClimateFee82_ReportsFeeAtLineLevel(string description, decimal amount, int expectedOtherTaxCode)
     {
