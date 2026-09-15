@@ -157,6 +157,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var clientDto = await clientsTask;
                 var tssResult = await tssResultTask;
 
+                var currentState = ParseFiskalyTseState(tssResult.State);
+                _logger.LogWarning("TSE {TssId} reports fiskaly state '{FiskalyState}', mapped to SCU state '{ScuState}'.", _configuration.TssId, tssResult.State, currentState.ToTseStateEnum());
+
                 // A deleted TSE must still report its state (Terminated) so it can be persisted and pushed to
                 // the portal; the state is handed back here and the actual error is thrown later, on the next
                 // operation that tries to use the TSE (e.g. StartTransactionAsync).
@@ -191,7 +194,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     MaxLogMemorySize = long.MaxValue,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.Number).ToList(),
-                    CurrentState = ParseFiskalyTseState(tssResult.State).ToTseStateEnum()
+                    CurrentState = currentState.ToTseStateEnum()
                 };
             }
             catch (Exception ex)
