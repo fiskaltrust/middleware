@@ -529,6 +529,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await RetryReceiptWithRecoveryAsync(receiptRequest, receiptResponse, xmlData, baseline);
 
             default:
+                // The printer never answered, so its counter is unconfirmed and the baseline may already be
+                // behind it. Keeping the baseline would let the next receipt read "advanced" and adopt the
+                // document this one may have printed.
+                InvalidateLastDocBaseline("unknown document state");
                 receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
                 return receiptResponse;
         }
@@ -587,6 +591,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                     // The attempt we just made may have printed and the printer will not tell us. Another
                     // attempt would be a coin flip on a fiscal document, so stop here.
                     _logger.LogError("({receiptreference}) Printer state unknown after attempt {attempt}/{max} — refusing to send the receipt again.", receiptRequest.cbReceiptReference, attempt + 1, _configuration.MaxNetworkRetries);
+                    InvalidateLastDocBaseline("unknown document state after retry");
                     receiptResponse.SetReceiptResponseErrored(UnknownDocumentStateError);
                     return receiptResponse;
                 }
@@ -599,6 +604,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
 
         _logger.LogError("({receiptreference}) All recovery attempts failed — unable to determine printer state.", receiptRequest.cbReceiptReference);
+        // Reached by an unexpected error inside the loop, where nothing is known about the counter, so drop
+        // the baseline rather than carry a possibly stale one.
+        InvalidateLastDocBaseline("recovery exhausted");
         receiptResponse.SetReceiptResponseErrored("epson-printer-network-error");
         return receiptResponse;
     }
