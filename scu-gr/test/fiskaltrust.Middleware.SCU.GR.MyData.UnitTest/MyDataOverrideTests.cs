@@ -1183,7 +1183,9 @@ public class MyDataOverrideTests
     [InlineData("6.2", InvoiceType.Item62)]
     [InlineData("7.1", InvoiceType.Item71)]
     [InlineData("8.1", InvoiceType.Item81)]
-    [InlineData("8.2", InvoiceType.Item82)]
+    // 8.2 is intentionally omitted here: it routes to the special-tax-only line builder and so
+    // cannot be produced from this basic (normal goods) request. Its header+body behavior is
+    // covered by ClimateResilienceFee82Tests.
     [InlineData("8.4", InvoiceType.Item84)]
     [InlineData("8.5", InvoiceType.Item85)]
     [InlineData("8.6", InvoiceType.Item86)]
