@@ -36,4 +36,4 @@ jobs:
           claDocumentFile: "https://github.com/fiskaltrust/.github/blob/main/CLA.md"
           claSignatureRepoPath: "cla-signatures"
           prNumber: "${{ github.event.pull_request.number || github.event.issue.number }}"
-          allowList: "ReleaseBot"
+          allowList: "ReleaseBot,forsthug"
