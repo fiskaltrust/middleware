@@ -125,6 +125,25 @@ public class AADEFactory
             && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
     }
 
+    /// <summary>
+    /// Resolves the invoice type the produced document will actually carry: the mydataoverride
+    /// invoiceType when one is supplied, otherwise the type derived from the ftReceiptCase. Some
+    /// types (e.g. 8.2) have no native ftReceiptCase and are only reachable via the override.
+    /// </summary>
+    private static InvoiceType GetEffectiveInvoiceType(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData))
+        {
+            var overrideType = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
+            if (!string.IsNullOrEmpty(overrideType)
+                && AADEMappings.InvoiceTypeOverrideMap.TryGetValue(overrideType, out var mapped))
+            {
+                return mapped;
+            }
+        }
+        return AADEMappings.GetInvoiceType(receiptRequest);
+    }
+
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         try
@@ -1020,7 +1039,7 @@ public class AADEFactory
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
     {
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (GetEffectiveInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For item 82 we define the taxes at line level only
             return new List<TaxTotalsType>();
@@ -1212,7 +1231,7 @@ public class AADEFactory
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (GetEffectiveInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For Invoice Types of type 82 we use a different loading mechanism for the invocies to ensure that taxlevels are included
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
