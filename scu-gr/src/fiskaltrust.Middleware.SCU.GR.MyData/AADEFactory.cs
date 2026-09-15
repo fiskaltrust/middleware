@@ -128,7 +128,7 @@ public class AADEFactory
     /// <summary>
     /// Resolves the invoice type the produced document will actually carry: the mydataoverride
     /// invoiceType when one is supplied, otherwise the type derived from the ftReceiptCase. Some
-    /// types (e.g. 8.2) have no native ftReceiptCase and are only reachable via the override.
+    /// types (e.g. 8.2) have no native ftReceiptCase and are only reachable via the override
     /// </summary>
     private static InvoiceType GetEffectiveInvoiceType(ReceiptRequest receiptRequest)
     {
