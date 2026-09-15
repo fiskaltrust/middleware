@@ -1,6 +1,7 @@
 using System.IO.Pipelines;
 using System.Net.Mime;
 using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.QueuePL.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
@@ -15,13 +16,33 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD)
-        : this(id, loggerFactory, configuration, plSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
+    public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IClientFactory<IPLSSCD> clientFactory)
+        : this(id, loggerFactory, configuration, clientFactory, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
-    public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD, IStorageProvider storageProvider)
+    public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IClientFactory<IPLSSCD> clientFactory, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueuePLAsync(id)).CashBoxIdentification);
+
+        // The SCU is resolved from the configuration repository — not from the init config — so the
+        // repository rows (ftQueuePL → ftSignaturCreationUnitPL) are the single source of truth for
+        // which register the queue talks to, the same way QueueES resolves its SCU.
+        var plSSCD = new AsyncLazy<IPLSSCD>(async () =>
+        {
+            var configurationRepository = await storageProvider.CreateConfigurationRepository();
+            var queue = await configurationRepository.GetQueuePLAsync(id);
+            if (queue.ftSignaturCreationUnitPLId is not { } signaturCreationUnitPLId)
+            {
+                throw new InvalidOperationException($"The queue {id} has no ftSignaturCreationUnitPLId configured. A PL queue needs a signature creation unit to communicate with the fiscal register.");
+            }
+            var scu = await configurationRepository.GetSignaturCreationUnitPLAsync(signaturCreationUnitPLId)
+                ?? throw new InvalidOperationException($"The signature creation unit {signaturCreationUnitPLId} configured for queue {id} was not found in the configuration repository.");
+            return clientFactory.CreateClient(new ClientConfiguration
+            {
+                Timeout = TimeSpan.FromSeconds(15),
+                Url = scu.Url
+            });
+        });
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();

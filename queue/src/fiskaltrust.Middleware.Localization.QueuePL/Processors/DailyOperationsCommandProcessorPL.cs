@@ -1,6 +1,7 @@
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Factories;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
@@ -10,9 +11,9 @@ namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 /// daily closing triggers the legally required daily (Z) report, monthly/yearly closings trigger
 /// the periodic report. All of them go through the SCU — the register owns the report counters.
 /// </summary>
-public class DailyOperationsCommandProcessorPL(IPLSSCD sscd) : IDailyOperationsCommandProcessor
+public class DailyOperationsCommandProcessorPL(AsyncLazy<IPLSSCD> sscd) : IDailyOperationsCommandProcessor
 {
-    private readonly IPLSSCD _sscd = sscd;
+    private readonly AsyncLazy<IPLSSCD> _sscd = sscd;
 
     public async Task<ProcessCommandResponse> ZeroReceipt0x2000Async(ProcessCommandRequest request) => (await SubmitAsync(request)).Response;
 
@@ -47,7 +48,7 @@ public class DailyOperationsCommandProcessorPL(IPLSSCD sscd) : IDailyOperationsC
     {
         try
         {
-            var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            var response = await (await _sscd).ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
                 ReceiptResponse = request.ReceiptResponse,
