@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Localization.QueuePL.Factories;
 using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
@@ -13,9 +14,9 @@ namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 /// register is a certified-technician (serwis) act, so the initial-operation receipt only verifies
 /// via GetInfo that the connected register reports itself as fiscalized.
 /// </summary>
-public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStorageProvider localizedQueueStorageProvider) : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorPL(AsyncLazy<IPLSSCD> sscd, ILocalizedQueueStorageProvider localizedQueueStorageProvider) : ILifecycleCommandProcessor
 {
-    private readonly IPLSSCD _sscd = sscd;
+    private readonly AsyncLazy<IPLSSCD> _sscd = sscd;
     private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider = localizedQueueStorageProvider;
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
@@ -25,7 +26,7 @@ public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStoragePro
         PLSSCDInfo info;
         try
         {
-            info = await _sscd.GetInfoAsync();
+            info = await (await _sscd).GetInfoAsync();
         }
         catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
         {
