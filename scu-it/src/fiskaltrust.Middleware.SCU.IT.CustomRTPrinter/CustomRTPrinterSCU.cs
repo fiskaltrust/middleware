@@ -260,7 +260,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             }
 
             // Customer fiscal code / VAT (scontrino parlante) — goes AFTER items/subtotal and BEFORE printRecTotal.
-            var customerCfOrVat = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+            var customerCfOrVat = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId);
             if (!string.IsNullOrEmpty(customerCfOrVat))
                 records.Add(new FixedLines { Pitch = "B", Description = customerCfOrVat });
 
@@ -635,7 +635,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
                 records.Add(new PrintRecSubtotal());
             }
 
-            var deliveryCfOrVat = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+            var deliveryCfOrVat = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId);
             if (!string.IsNullOrEmpty(deliveryCfOrVat))
                 records.Add(new FixedLines { Pitch = "B", Description = deliveryCfOrVat });
 

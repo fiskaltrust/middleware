@@ -50,13 +50,13 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) || request.ReceiptRequest.IsPartialRefundReceipt())
         {
             var receiptReferences = response.ReceiptResponse.GetRequiredPreviousReceiptReference();
-            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
+            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse, _sandbox);
             AddSignatures(series, response, hash, printHash, _sandbox, qrCode);
             response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
         }
         else
         {
-            var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse);
+            var qrCode = PortugalReceiptCalculations.CreateQRCode(printHash, _queuePT.IssuerTIN, series, request.ReceiptRequest, response.ReceiptResponse, _sandbox);
             AddSignatures(series, response, hash, printHash, _sandbox, qrCode);
             if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
@@ -83,7 +83,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, bool sandbox, string qrCode)
     {
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
-        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash, sandbox));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(response, sandbox, qrCode));
         response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());

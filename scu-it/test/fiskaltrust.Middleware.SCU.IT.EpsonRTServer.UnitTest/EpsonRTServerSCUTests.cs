@@ -430,7 +430,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         [Theory]
         [InlineData("{\"CustomerVATId\":\"12345\"}")]
         [InlineData("{\"CustomerVATId\":\"DE123456789\"}")]
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501Z\"}")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501Z\"}")]
         public async Task ProcessReceiptAsync_WithAnInvalidCustomerTaxId_FailsWithoutSendingAnyDocument(string cbCustomer)
         {
             var client = CreateClientMock();
@@ -455,7 +455,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Theory]
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"IT01606720215\"}")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"IT01606720215\"}")]
         [InlineData("{\"CustomerName\":\"Mario Rossi\"}")]
         [InlineData("")]
         public async Task ProcessReceiptAsync_WithAValidOrAbsentCustomerTaxId_SendsTheDocument(string cbCustomer)
@@ -507,15 +507,16 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         /// <summary>
-        /// printRecTaxID has a single slot, so CustomerId (codice fiscale) takes precedence over
-        /// CustomerVATId, matching the Custom SCUs. An empty CustomerId must fall through to the partita IVA.
+        /// printRecTaxID has a single slot, so CustomerTaxId (codice fiscale) takes precedence over
+        /// CustomerVATId, matching the Custom SCUs. An empty CustomerTaxId must fall through to the partita
+        /// IVA, whose IT country prefix is stripped before it is sent.
         /// </summary>
         [Theory]
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\"}", "RSSMRA80A01H501U")]
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"01606720215\"}", "RSSMRA80A01H501U")]
-        [InlineData("{\"CustomerId\":\"\",\"CustomerVATId\":\"01606720215\"}", "01606720215")]
-        [InlineData("{\"CustomerId\":\"IT01606720215\"}", "01606720215")]
-        public async Task ProcessReceiptAsync_WithACustomerId_SendsItAsTheTaxId(string cbCustomer, string expectedTaxId)
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\"}", "RSSMRA80A01H501U")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"01606720215\"}", "RSSMRA80A01H501U")]
+        [InlineData("{\"CustomerTaxId\":\"\",\"CustomerVATId\":\"01606720215\"}", "01606720215")]
+        [InlineData("{\"CustomerVATId\":\"IT01606720215\"}", "01606720215")]
+        public async Task ProcessReceiptAsync_WithACustomerTaxId_SendsItAsTheTaxId(string cbCustomer, string expectedTaxId)
         {
             var sentDocuments = new List<string>();
             var client = CreateClientMock();
