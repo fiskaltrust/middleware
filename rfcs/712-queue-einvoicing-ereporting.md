@@ -170,6 +170,7 @@ sequenceDiagram
         ER-->>Q: {ReceiptResponse + eReport signatures}
     end
 
+    Note over Q: write PostFiscalization outcome into ftStateData
     opt sandbox
         Note over Q: append sandbox signature
     end
@@ -260,7 +261,7 @@ The middleware ships **its own HTTP client** for this, in `fiskaltrust.Middlewar
 - Response `200 OK` with a well-formed body means success. Any other status code, a malformed body, or a timeout is a failure. There are no partial successes.
 - **Timeout**: `timeout-ms` bounds each individual attempt and is enforced by passing a `CancellationToken` to `HttpClient.SendAsync`, so the in-flight request is actually cancelled rather than merely abandoned.
 - **Retries**: up to `max-retries` *additional* attempts, on timeout and 5xx only. A 4xx, or a `200` whose body carries an error `ftState`, is never retried: both are deliberate answers and the request will not get better. Combined with the idempotency requirement this is safe.
-- Only `http` and `https` endpoints are accepted. A `grpc://` endpoint fails queue startup, since this mechanism is HTTP-only by design.
+- Endpoints must be `https`. Every request carries the cashbox access token, so a plain `http` endpoint would hand the credential to any network observer. The only exception is a loopback address (`localhost`, `127.0.0.0/8`, `::1`), accepted over `http` for local development and testing. Anything else, including `grpc://`, fails queue startup.
 
 Worked example of a finalize call:
 
@@ -327,7 +328,7 @@ public class PostFiscalizationServiceConfiguration
 }
 ```
 
-Validation at bootstrap: a present section with a missing or non-HTTP `endpoint` fails queue startup with a clear error message — a half-configured compliance feature must not silently no-op.
+Validation at bootstrap: a present section with a missing `endpoint`, or one that is not `https` (loopback excepted), fails queue startup with a clear error message — a half-configured compliance feature must not silently no-op, and a misconfigured one must not leak the access token.
 
 ## Insertion point in the pipeline
 
@@ -383,7 +384,32 @@ new SignatureItem
 
 Captions are stable and machine-matchable, and distinguish a rejection (phase 1, nothing fiscalized) from a failure (phase 3, receipt fiscalized). Within phase 1, `Data` is what tells a validation rejection from an outage: for a rejection it carries the service's `Errors`, for a transport failure it names the cause (timeout, status code, unreachable). Full technical details live in the action journal entry, which references the `ftQueueItemId`.
 
-A failure of one service in the finalize phase does not prevent the call to the next one: an unreachable eInvoicing service must not suppress legally required eReporting. All outcomes, including success, are persisted with the response in `ftQueueItem.response`, so the queue item is the audit trail for what was and wasn't invoiced or reported.
+A failure of one service in the finalize phase does not prevent the call to the next one: an unreachable eInvoicing service must not suppress legally required eReporting.
+
+### Persisted outcome
+
+Signatures alone do not make the queue item an audit trail: a service may legitimately succeed without adding any, and neither `Applies` nor the telemetry tags are persisted. So after the finalize phase the middleware writes an explicit outcome into `ftStateData`, in a section it owns:
+
+```json
+{
+  "PostFiscalization": {
+    "FiscalizationSucceeded": true,
+    "EInvoicing": "ok",
+    "EReporting": "not-applicable"
+  }
+}
+```
+
+Each service outcome is one of `ok`, `not-applicable` (preflight answered `Applies = false`), `failed`, or `disabled` (section not configured). The section is written by the middleware *after* the last service returned, so a service cannot overwrite it. It is persisted with the response in `ftQueueItem.response` and returned to the POS, and is added as a typed property on `MiddlewareStateData` next to `ftPreviousReceiptReference`. With it, the queue item records what was and wasn't invoiced or reported regardless of whether a service chose to add signatures.
+
+### Effect on receipt references
+
+Marking a fiscalized receipt with `0xEEEE_EEEE` breaks an invariant the v2 localization currently relies on: *error state means the receipt was never fiscalized*. Two lookups filter persisted responses on exactly that predicate and would make a finalize-failed receipt invisible to later voids, refunds and previous-receipt references, even though it exists fiscally:
+
+- `QueueStorageProvider.GetReferencedReceiptsAsync` (`queue/src/fiskaltrust.Middleware.Localization.v2/Storage/QueueStorageProvider.cs`, today line 216),
+- `ReceiptReferenceProvider.LoadOriginalReceiptWithResponseAsync` (`queue/src/fiskaltrust.Middleware.Localization.v2/Helpers/ReceiptReferenceProvider.cs`, today line 35).
+
+Both are changed to use one new predicate, `ReceiptResponse.IsFiscalized()`: true when `ftState` is not an error state, *or* when the persisted `PostFiscalization.FiscalizationSucceeded` is `true`. That is the same fiscalization-outcome rule the receipt journal decision uses, applied at read time. Any future code that needs to know whether a persisted receipt exists fiscally must use this predicate rather than testing `ftState` directly. The ES and PT market-specific reference providers do not filter on error state and need no change, and the legacy stack has no such lookups outside `SignProcessor` (see the backport section).
 
 ### Effect on the receipt journal
 
@@ -397,6 +423,8 @@ Today `SignProcessor` skips `InsertReceiptJournal` when `ftState` is an error st
 
 - **Preflight rejection**: the receipt was never fiscalized. The POS corrects whatever the reason names and sends the receipt again as a normal new transaction. This is the common case and needs no special handling.
 - **Finalize failure**: the POS receives an error response, but the underlying receipt **is** fiscalized and journaled. The POS **must not** re-send it as a new transaction, since that would create a second fiscal record for the same sale. The correct recovery is the existing `ReceiptRequested` flag, which returns the persisted (failed) response for the original `cbReceiptReference` without reprocessing. PosCreators integrating this mechanism must implement that recovery flow.
+
+  `ReceiptRequested` is retrieval, not retry: it never re-runs the finalize call. A receipt whose finalize failed therefore stays fiscalized-but-not-invoiced until something outside this RFC completes it. This is a deliberate gap, recorded under "Drawbacks" and "Unresolved questions". The natural fix is a queue-item-keyed retry of the `/process` call driven by the scheduled mechanism planned for asynchronous reporting, and the service-side idempotency requirement is what will make that retry safe.
 - **Ambiguous outcomes**: a timeout can occur *after* the service already acted. The middleware treats it as a failure; the service-side idempotency requirement (per `ftQueueItemID`) guarantees that a retry, automatic or manual, does not create a duplicate invoice or report.
 
 ## Interaction with existing behavior
@@ -452,7 +480,9 @@ The legacy stack speaks `fiskaltrust.ifPOS.v1`, and four details of the contract
 
 The recommendation is to **map at the boundary**: the legacy processor converts the v1 pair to the v2 `ValidateRequest`/`ProcessRequest` before the call and merges the returned v2 `ReceiptResponse` back onto the v1 response. Services then implement exactly one contract, and the wire protocol stays identical across both stacks. The alternative, a second v1-shaped contract, is rejected: it would force every provider to implement and version two contracts for the same business operation.
 
-The mapping is lossy in one direction and the contract has to say so. `ftStateData` merging is the only real casualty: on legacy the middleware parses the existing JSON string, merges the returned object into it, and re-serializes. Where the two shapes cannot be reconciled the legacy port keeps the existing string and writes an action journal entry rather than dropping data.
+The mapping is lossy in one direction and the contract has to say so. `ftStateData` merging is the only real casualty: on legacy the middleware parses the existing JSON string, merges the returned object into it, and re-serializes. Where the two shapes cannot be reconciled the legacy port keeps the existing string and writes an action journal entry rather than dropping data. The middleware's own `PostFiscalization` section is written into that string the same way, so the persisted outcome exists on both stacks.
+
+The `IsFiscalized()` change to the reference lookups is v2-only: outside `SignProcessor`, nothing on the legacy stack filters persisted responses on the error state.
 
 Relevance selection needs no mapping at all, which is a direct benefit of the preflight design. The `B2C`/`B2B`/`B2G` invoice receipt cases are v2 `ftReceiptCase` values with no v1 equivalent, but the queue never inspects them: the service answers `Applies` from whatever it understands about the request.
 
@@ -503,6 +533,8 @@ The legacy port lands **after** the v2 implementation, as its own PR, and carrie
 - **Latency**: up to four additional synchronous HTTP calls in the sequential per-queue pipeline. A misconfigured or slow service degrades every receipt on that queue, bounded by the per-attempt timeout times the attempt count.
 - **A new way for receipts to fail**: a queue configured with an unreachable eInvoicing service rejects every receipt at preflight. This is deliberate, since refusing before fiscalization is the safe direction, but it means a compliance add-on outage becomes a POS outage. Operators need to understand that enabling a service makes it load-bearing.
 - **Finalize failures remain a sharp edge**: the preflight makes them rare, not impossible, and recovery still depends on PosCreators implementing the `ReceiptRequested` flow. On the legacy stack that flow needs the two `SignProcessor` fixes described in the backport section first.
+- **No retry of a failed finalize**: once the error response is returned, nothing in this RFC completes the invoice or report for that receipt. The receipt is fiscalized and journaled, the POS cannot resend it, and `ReceiptRequested` only retrieves the failed response. A transient outage at exactly that moment leaves the receipt un-invoiced until a retry mechanism outside this RFC picks it up.
+- **A new read-side predicate**: `IsFiscalized()` replaces the direct `ftState` test in two lookups, and every future lookup has to remember to use it. The invariant "error state means not fiscalized" no longer holds once this mechanism is enabled.
 - **Two calls instead of one**: services must implement and keep consistent a validation path that predicts what the finalize path will accept. A service whose preflight is more permissive than its finalize reintroduces exactly the failure mode the design is meant to avoid.
 - **Our own HTTP client**: one more piece of transport code to maintain and test, rather than reusing shared infrastructure.
 - **Interface package coupling**: requires a new `fiskaltrust.interface` release before the middleware change can be merged.
@@ -544,6 +576,7 @@ To resolve during the RFC process:
 Out of scope for this RFC (future, independent work):
 
 - **Asynchronous reporting via a schedule**: batch/periodic obligations (e.g. SAF-T-style exports, monthly submissions) run at configured times over already-processed data, not per receipt. This needs a scheduling mechanism and will be designed in a separate effort.
+- **Finalize retry for fiscalized-but-failed receipts**: a queue-item-keyed retry of the `/process` call for receipts whose persisted `PostFiscalization` outcome is `failed`, most naturally driven by the scheduled mechanism above. The service-side idempotency requirement in this RFC exists so that such a retry is safe when it arrives.
 - Portal/configuration-UI support for editing the new configuration sections.
 
 # Future possibilities
