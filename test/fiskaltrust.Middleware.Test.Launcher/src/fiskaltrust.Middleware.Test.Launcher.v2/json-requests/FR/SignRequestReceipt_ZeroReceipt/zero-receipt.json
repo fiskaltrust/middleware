@@ -1,0 +1,11 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "fr-zero-receipt",
+  "cbReceiptMoment": "2026-08-04T10:00:00Z",
+  "cbChargeItems": [],
+  "cbPayItems": [],
+  "ftReceiptCase": 5067147715117326336,
+  "Currency": "EUR"
+}

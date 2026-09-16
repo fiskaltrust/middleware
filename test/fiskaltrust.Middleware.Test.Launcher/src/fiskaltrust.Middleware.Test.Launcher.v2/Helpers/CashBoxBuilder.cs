@@ -79,6 +79,14 @@ class CashBoxBuilder
                 [ChargeItemCase.SuperReducedVatRate1] = 0.04m,
                 [ChargeItemCase.SuperReducedVatRate2] = 0.04m,
             },
+            "FR" => new Dictionary<ChargeItemCase, decimal>
+            {
+                [ChargeItemCase.NormalVatRate] = 0.20m,
+                [ChargeItemCase.DiscountedVatRate1] = 0.10m,
+                [ChargeItemCase.DiscountedVatRate2] = 0.055m,
+                [ChargeItemCase.SuperReducedVatRate1] = 0.021m,
+                [ChargeItemCase.ZeroVatRate] = 0.00m,
+            },
             _ => throw new NotImplementedException()
         });
     }

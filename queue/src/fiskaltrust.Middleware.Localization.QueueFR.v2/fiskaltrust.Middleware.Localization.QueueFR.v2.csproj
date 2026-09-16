@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0</TargetFrameworks>
+        <LangVersion>Latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Update="fiskaltrust.interface" Version="1.3.79-rc1-26216-90828" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage\fiskaltrust.Middleware.Storage.csproj" />
+    </ItemGroup>
+
+    <!--
+        Temporary: fiskaltrust.interface does not ship an ifPOS.v2.fr yet, so IFRSSCD lives in the
+        SCU abstraction project. This is the only reference from the queue tree into an scu-* tree
+        and goes away with the file it points at - see IFRSSCD for the migration note.
+    -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\scu-fr\src\fiskaltrust.Middleware.SCU.FR.Abstraction\fiskaltrust.Middleware.SCU.FR.Abstraction.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest" />
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest" />
+    </ItemGroup>
+
+</Project>

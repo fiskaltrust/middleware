@@ -6,14 +6,19 @@ using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using FluentAssertions;
 
+var market = Environment.GetEnvironmentVariable("MW_MARKET") ?? "ES";
+var queueConfigurationFile = Environment.GetEnvironmentVariable("MW_QUEUE_CONFIGURATION") ?? (market == "FR" ? "queue-configuration-fr.json" : "queue-configuration.json");
+var scuConfigurationFile = Environment.GetEnvironmentVariable("MW_SCU_CONFIGURATION") ?? (market == "FR" ? "scu-configuration-fr-inmemory.json" : "scu-configuration-bizkaia.json");
+
 var builder = new CashBoxBuilder(
-    "ES" switch
+    market switch
     {
-        "ES" => new CashBoxBuilderES(),
+        "ES" => (ICashBoxBuilder) new CashBoxBuilderES(),
+        "FR" => new CashBoxBuilderFR(),
         _ => throw new NotImplementedException(),
     },
-    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "queue-configuration.json"))),
-    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "scu-configuration-bizkaia.json")))
+    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, queueConfigurationFile))),
+    Newtonsoft.Json.JsonConvert.DeserializeObject<PackageConfiguration>(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, scuConfigurationFile)))
 );
 
 var middleware = builder.Build();
@@ -33,6 +38,7 @@ var middleware = builder.Build();
         cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8),
         cbChargeItems = [],
         cbPayItems = [],
+        Currency = Currency.EUR,
         ftReceiptCase = ReceiptCase.InitialOperationReceipt0x4001.WithCountry(builder.Market)
     }).ConfigureAwait(false);
     response.Should().NotBeNull();
@@ -75,6 +81,19 @@ var requests = Directory.EnumerateDirectories(
     var response = await middleware.Sign(await requests["SignRequestReceipt_CashSaleReceipt"].First()(r => r.cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8)));
     response.Should().NotBeNull();
     response.ftState.Should().Match(x => !x!.Value.IsState(State.Error)).And.Match(x => !x!.Value.IsState(State.Fail));
+}
+
+if (builder.Market == "FR")
+{
+    // The French chains are numbered and hashed independently, so the FR run also exercises a
+    // card sale, an invoice and the daily closing - each of them lands in a different chain.
+    foreach (var scenario in new[] { "SignRequestReceipt_CardSaleReceipt", "SignRequestInvoice_B2BInvoice", "SignRequestDailyOperations_DailyClosing" })
+    {
+        var response = await middleware.Sign(await requests[scenario].First()(r => r.cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8)));
+        response.Should().NotBeNull();
+        response!.ftState.Should().Match(x => !x!.Value.IsState(State.Error)).And.Match(x => !x!.Value.IsState(State.Fail));
+        Console.WriteLine($"{scenario}: {response.ftReceiptIdentification}");
+    }
 }
 
 // {
