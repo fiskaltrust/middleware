@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- JSON ReceiptRequest → QueuePL → PosNet SCU → printer (emulator, or the device via
+         SCU_PL_POSNET_DEVICE_URL), with the register read back afterwards. Named *.AcceptanceTest so
+         the SCU.PL workflow picks it up with the other acceptance suites. -->
+    <PropertyGroup>
+        <TargetFrameworks>net8.0</TargetFrameworks>
+        <LangVersion>Latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FluentAssertions" Version="6.12.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+        <PackageReference Include="xunit" Version="2.6.2" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <!-- The queue and the SCU pin different pre-releases of the interface; the higher one wins here explicitly. -->
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.79-rc1-26216-90828" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\queue\src\fiskaltrust.Middleware.Localization.QueuePL\fiskaltrust.Middleware.Localization.QueuePL.csproj" />
+        <ProjectReference Include="..\..\..\queue\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+        <ProjectReference Include="..\..\..\queue\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
+        <!-- The queue projects reference the storage entities privately, so they are referenced here as well. -->
+        <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.SCU.PL.TestSupport\fiskaltrust.Middleware.SCU.PL.TestSupport.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Both are read from the output folder, so neither depends on the source path existing
+             where the suite runs. The business cases are also what the test launcher serves as samples. -->
+        <Content Include="BusinessCases/**" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="Cassettes/**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+</Project>
