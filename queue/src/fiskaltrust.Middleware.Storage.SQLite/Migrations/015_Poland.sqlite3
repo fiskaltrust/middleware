@@ -1,0 +1,21 @@
+﻿CREATE TABLE IF NOT EXISTS ftQueuePL
+(
+    ftQueueITId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitITId   NVARCHAR(36)              NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitPL
+(
+    ftSignaturCreationUnitITId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,    
+    InfoJson                     NVARCHAR(2147483647)      NULL,    
+    TimeStamp                    BIGINT                    NOT NULL
+);
