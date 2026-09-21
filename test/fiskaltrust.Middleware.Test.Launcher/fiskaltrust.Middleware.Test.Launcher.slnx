@@ -11,6 +11,11 @@
   <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia\fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia.csproj" />
   <Project Path="..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa\fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa.csproj" />
 
+  <Project Path="..\..\queue\src\fiskaltrust.Middleware.Localization.QueuePL\fiskaltrust.Middleware.Localization.QueuePL.csproj" />
+  <Project Path="..\..\scu-pl\src\fiskaltrust.Middleware.SCU.PL.Abstraction\fiskaltrust.Middleware.SCU.PL.Abstraction.csproj" />
+  <Project Path="..\..\scu-pl\src\fiskaltrust.Middleware.SCU.PL.InMemory\fiskaltrust.Middleware.SCU.PL.InMemory.csproj" />
+  <Project Path="..\..\scu-pl\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+
   <Project Path="..\..\queue\src\fiskaltrust.Middleware.Queue.InMemory\fiskaltrust.Middleware.Queue.InMemory.csproj" />
 
   <Project Path="..\..\scu-it\src\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj" />

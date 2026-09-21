@@ -97,6 +97,12 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 
         public Task InsertOrUpdateQueueGRAsync(ftQueueGR queue) => throw new NotImplementedException();
 
+        public Task<ftQueuePL> GetQueuePLAsync(Guid queuePLId) => throw new NotImplementedException();
+
+        public Task<IEnumerable<ftQueuePL>> GetQueuePLListAsync() => throw new NotImplementedException();
+
+        public Task InsertOrUpdateQueuePLAsync(ftQueuePL queue) => throw new NotImplementedException();
+
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id).ConfigureAwait(false);
 
         public async Task<IEnumerable<ftSignaturCreationUnitAT>> GetSignaturCreationUnitATListAsync() => await _signaturCreationUnitATRepository.GetAsync().ConfigureAwait(false);
@@ -142,6 +148,12 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
         public Task<IEnumerable<ftSignaturCreationUnitGR>> GetSignaturCreationUnitGRListAsync() => throw new NotImplementedException();
 
         public Task InsertOrUpdateSignaturCreationUnitGRAsync(ftSignaturCreationUnitGR scu) => throw new NotImplementedException();
+
+        public Task<ftSignaturCreationUnitPL> GetSignaturCreationUnitPLAsync(Guid signaturCreationUnitPLId) => throw new NotImplementedException();
+
+        public Task<IEnumerable<ftSignaturCreationUnitPL>> GetSignaturCreationUnitPLListAsync() => throw new NotImplementedException();
+
+        public Task InsertOrUpdateSignaturCreationUnitPLAsync(ftSignaturCreationUnitPL scu) => throw new NotImplementedException();
 
         public Task InsertOrUpdateQueueEUAsync(ftQueueEU queue) => throw new NotImplementedException();
         public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync() => throw new NotImplementedException();

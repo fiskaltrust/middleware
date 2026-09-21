@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.SCU.ES.TicketBAIAraba;
 using fiskaltrust.Middleware.SCU.ES.TicketBAIBizkaia;
 using fiskaltrust.Middleware.SCU.ES.TicketBAIGipuzkoa;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.Test.Launcher.v2.Extensions;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers.ES;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
@@ -24,9 +25,9 @@ class CashBoxBuilderES : ICashBoxBuilder
 
     public void AddSCU(ref PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid scuId)
     {
-        queueConfiguration.Configuration.Add(
-                $"init_ftSignaturCreationUnitES",
-                new List<ftSignaturCreationUnitES> {
+        queueConfiguration.Configuration.AddUnlessConfigured(
+                "init_ftSignaturCreationUnitES",
+                () => new List<ftSignaturCreationUnitES> {
                     new ftSignaturCreationUnitES
                     {
                         ftSignaturCreationUnitESId = scuId,
@@ -37,9 +38,9 @@ class CashBoxBuilderES : ICashBoxBuilder
     }
     public void AddMarketQueue(ref PackageConfiguration queueConfiguration, Guid queueId, Guid scuId)
     {
-        queueConfiguration.Configuration.Add(
-                $"init_ftQueueES",
-                new List<ftQueueES> {
+        queueConfiguration.Configuration.AddUnlessConfigured(
+                "init_ftQueueES",
+                () => new List<ftQueueES> {
                     new ftQueueES
                     {
                         ftQueueESId = queueId,
