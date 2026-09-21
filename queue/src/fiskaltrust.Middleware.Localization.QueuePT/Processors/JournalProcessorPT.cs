@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 

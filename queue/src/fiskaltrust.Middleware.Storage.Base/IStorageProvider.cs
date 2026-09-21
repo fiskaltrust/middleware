@@ -1,9 +1,10 @@
-﻿using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
+﻿using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
-namespace fiskaltrust.Middleware.Localization.v2.Interface;
+namespace fiskaltrust.Middleware.Storage.Base.Interface;
 
 public interface IStorageProvider
 {

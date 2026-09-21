@@ -14,6 +14,8 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Storage.Base.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 

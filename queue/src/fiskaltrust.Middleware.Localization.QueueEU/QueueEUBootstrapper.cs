@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using System.Net.Mime;
 using System.IO.Pipelines;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueEU;
 

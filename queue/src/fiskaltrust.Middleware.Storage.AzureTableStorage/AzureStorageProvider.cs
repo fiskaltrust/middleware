@@ -1,24 +1,27 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Base;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.v2;
+namespace fiskaltrust.Middleware.Storage.AzureTableStorage;
 
 public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
 {
@@ -29,13 +32,13 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly TableServiceClient _tableServiceClient;
     private readonly BlobServiceClient _blobServiceClient;
 
-    private readonly TaskCompletionSource _initializedCompletionSource;
+    private readonly TaskCompletionSource<bool> _initializedCompletionSource;
     public Task Initialized => _initializedCompletionSource.Task;
 
     public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
         _configuration = configuration;
-        _initializedCompletionSource = new TaskCompletionSource();
+        _initializedCompletionSource = new TaskCompletionSource<bool>();
         _tableStorageConfiguration = AzureTableStorageConfiguration.FromConfigurationDictionary(configuration);
         _queueConfiguration = new QueueConfiguration { QueueId = id };
         _logger = loggerFactory.CreateLogger<IMiddlewareBootstrapper>();
@@ -54,8 +57,8 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
                 throw new Exception($"The value for the queue parameter storageaccountname '{_tableStorageConfiguration.StorageAccountName}' is not valid.", e);
             }
 #if DEBUG
-            _tableServiceClient = new TableServiceClient(tableUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
-            _blobServiceClient = new BlobServiceClient(blobUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
+            _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
+            _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
 #else
             _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
             _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
@@ -152,7 +155,7 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
             }
             var dbCashBox = cashBoxes.FirstOrDefault(x => x.ftCashBoxId == baseStorageConfig.CashBox.ftCashBoxId);
             await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, configurationRepository, _logger).ConfigureAwait(false);
-            _initializedCompletionSource.SetResult();
+            _initializedCompletionSource.SetResult(true);
         }
         catch (Exception e)
         {

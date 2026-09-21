@@ -17,6 +17,8 @@ using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Storage.Base.Interface;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT;
 

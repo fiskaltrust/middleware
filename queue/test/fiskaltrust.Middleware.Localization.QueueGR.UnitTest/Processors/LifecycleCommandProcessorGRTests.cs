@@ -13,6 +13,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
