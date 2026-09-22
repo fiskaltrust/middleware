@@ -2,10 +2,10 @@
 using System.Net.Http.Headers;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
+using fiskaltrust.Middleware.PostFiscalization.Contracts;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>
 /// The middleware's own HTTP client for eInvoicing and eReporting services (RFC 712, "HTTP wire protocol").
@@ -102,7 +102,8 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
             try
             {
                 using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, timeout.Token).ConfigureAwait(false);
-                var content = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
+                // ResponseContentRead buffered the body inside SendAsync, so this is bounded by the same timeout.
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -147,8 +148,19 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
     {
         try
         {
-            return JsonSerializer.Deserialize<TResponse>(content, _deserializerOptions)
+            var parsed = JsonSerializer.Deserialize<TResponse>(content, _deserializerOptions)
                 ?? throw new PostFiscalizationServiceException($"malformed response body (HTTP {(int) statusCode}): the body was empty", Excerpt(content));
+            if (parsed is ValidateResponse { Applies: null })
+            {
+                throw new PostFiscalizationServiceException($"malformed response body (HTTP {(int) statusCode}): 'Applies' is missing", Excerpt(content));
+            }
+
+            if (parsed is ProcessResponse { ReceiptResponse: null })
+            {
+                throw new PostFiscalizationServiceException($"malformed response body (HTTP {(int) statusCode}): 'ReceiptResponse' is missing", Excerpt(content));
+            }
+
+            return parsed;
         }
         catch (JsonException ex)
         {
@@ -163,6 +175,6 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
             return null;
         }
 
-        return content.Length <= _detailExcerptLength ? content : content[.._detailExcerptLength] + "…";
+        return content.Length <= _detailExcerptLength ? content : content.Substring(0, _detailExcerptLength) + "…";
     }
 }

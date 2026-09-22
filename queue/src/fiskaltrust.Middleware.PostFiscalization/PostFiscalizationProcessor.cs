@@ -1,23 +1,21 @@
 ﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
+using fiskaltrust.Middleware.PostFiscalization.Contracts;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>
-/// Runs the optional eInvoicing and eReporting services around fiscalization (RFC 712). The <see cref="SignProcessor"/>
-/// calls <see cref="ValidateAsync"/> before the queue item is created and <see cref="FinalizeAsync"/> after the
+/// Runs the optional eInvoicing and eReporting services around fiscalization (RFC 712). The sign processor of each
+/// stack calls <see cref="ValidateAsync"/> before the queue item is created and <see cref="FinalizeAsync"/> after the
 /// country-specific processing succeeded; this class holds the two optional clients, carries the preflight result
-/// between the seams and encapsulates ordering (eInvoicing, then eReporting) and error handling.
+/// between the seams and encapsulates ordering (eInvoicing, then eReporting) and error handling. It speaks the v2
+/// contract only; the legacy stack maps its v1 pair at the boundary.
 /// <para>
 /// Nothing in here throws into the sign pipeline: a preflight problem becomes a <see cref="PostFiscalizationRejection"/>,
 /// a finalize problem marks the fiscalized receipt as failed, and a middleware-side bug is handled the same way.
@@ -46,47 +44,83 @@ public class PostFiscalizationProcessor
     private readonly ILogger<PostFiscalizationProcessor> _logger;
     private readonly IEInvoicingService? _eInvoicingService;
     private readonly IEReportingService? _eReportingService;
+    private readonly Func<ReceiptRequest, SignatureType> _failureSignatureType;
 
     /// <summary>
     /// Builds the processor from the queue configuration. Validates the configuration and resolves the cashbox
     /// identity eagerly, so a misconfigured queue fails at startup with a clear message instead of failing every receipt.
     /// </summary>
+    /// <param name="configuration">The parsed <c>einvoicing</c> / <c>ereporting</c> sections.</param>
+    /// <param name="cashBoxId">The queue's cashbox id, sent as <c>x-cashbox-id</c> (a <c>cashboxid</c> entry in the queue configuration takes precedence).</param>
+    /// <param name="queueConfiguration">The queue's configuration dictionary; the hosting environment injects <c>cashboxid</c> and <c>accesstoken</c> into it.</param>
+    /// <param name="failureSignatureType">How the <c>ftSignatureType</c> of failure signatures is derived from the request. Defaults to the v2 rule; the legacy stack passes its own convention.</param>
     /// <exception cref="PostFiscalizationConfigurationException">A configured section is invalid or the access token is missing.</exception>
-    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, PostFiscalizationConfiguration configuration, MiddlewareConfiguration middlewareConfiguration)
+    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, PostFiscalizationConfiguration configuration, Guid cashBoxId, Dictionary<string, object>? queueConfiguration, Func<ReceiptRequest, SignatureType>? failureSignatureType = null)
     {
         _logger = logger;
-        configuration.Validate();
+        _failureSignatureType = failureSignatureType ?? DefaultFailureSignatureType;
+        ValidateAtStartup(configuration, queueConfiguration);
         if (!configuration.IsEnabled)
         {
             return;
         }
 
-        var (cashBoxId, accessToken) = ResolveCashBoxIdentity(middlewareConfiguration);
+        var (headerCashBoxId, accessToken) = ResolveCashBoxIdentity(cashBoxId, queueConfiguration);
         if (configuration.EInvoicing is not null)
         {
-            _eInvoicingService = new PostFiscalizationServiceClient(PostFiscalizationService.EInvoicing, configuration.EInvoicing, cashBoxId, accessToken, logger);
-            _logger.LogInformation("eInvoicing service enabled for queue {QueueId}: {Endpoint} (timeout {Timeout} ms per attempt, {Retries} retries)", middlewareConfiguration.QueueId, configuration.EInvoicing.Endpoint, configuration.EInvoicing.Timeout.TotalMilliseconds, configuration.EInvoicing.EffectiveMaxRetries);
+            _eInvoicingService = new PostFiscalizationServiceClient(PostFiscalizationService.EInvoicing, configuration.EInvoicing, headerCashBoxId, accessToken, logger);
+            _logger.LogInformation("eInvoicing service enabled for cashbox {CashBoxId}: {Endpoint} (timeout {Timeout} ms per attempt, {Retries} retries)", headerCashBoxId, configuration.EInvoicing.Endpoint, configuration.EInvoicing.Timeout.TotalMilliseconds, configuration.EInvoicing.EffectiveMaxRetries);
         }
 
         if (configuration.EReporting is not null)
         {
-            _eReportingService = new PostFiscalizationServiceClient(PostFiscalizationService.EReporting, configuration.EReporting, cashBoxId, accessToken, logger);
-            _logger.LogInformation("eReporting service enabled for queue {QueueId}: {Endpoint} (timeout {Timeout} ms per attempt, {Retries} retries)", middlewareConfiguration.QueueId, configuration.EReporting.Endpoint, configuration.EReporting.Timeout.TotalMilliseconds, configuration.EReporting.EffectiveMaxRetries);
+            _eReportingService = new PostFiscalizationServiceClient(PostFiscalizationService.EReporting, configuration.EReporting, headerCashBoxId, accessToken, logger);
+            _logger.LogInformation("eReporting service enabled for cashbox {CashBoxId}: {Endpoint} (timeout {Timeout} ms per attempt, {Retries} retries)", headerCashBoxId, configuration.EReporting.Endpoint, configuration.EReporting.Timeout.TotalMilliseconds, configuration.EReporting.EffectiveMaxRetries);
         }
     }
 
     /// <summary>Builds the processor from service instances. Pass <c>null</c> for a service that is not configured.</summary>
-    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, IEInvoicingService? eInvoicingService, IEReportingService? eReportingService)
+    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, IEInvoicingService? eInvoicingService, IEReportingService? eReportingService, Func<ReceiptRequest, SignatureType>? failureSignatureType = null)
     {
         _logger = logger;
         _eInvoicingService = eInvoicingService;
         _eReportingService = eReportingService;
+        _failureSignatureType = failureSignatureType ?? DefaultFailureSignatureType;
     }
 
     /// <summary>A processor with neither service configured, which leaves receipt processing exactly as it is.</summary>
     public static PostFiscalizationProcessor Disabled(ILogger<PostFiscalizationProcessor> logger) => new(logger, eInvoicingService: null, eReportingService: null);
 
+    /// <summary>The v2 rule for the <c>ftSignatureType</c> of a failure signature, mirroring the uncaught-exception signature of the v2 sign processor.</summary>
+    public static SignatureType DefaultFailureSignatureType(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure);
+
+    /// <summary>
+    /// Everything that must hold before a queue may start: a present section is usable, and when a service is
+    /// configured the access token the services authenticate against is available.
+    /// </summary>
+    /// <exception cref="PostFiscalizationConfigurationException">A configured section is invalid or the access token is missing.</exception>
+    public static void ValidateAtStartup(PostFiscalizationConfiguration configuration, Dictionary<string, object>? queueConfiguration)
+    {
+        configuration.Validate();
+        if (configuration.IsEnabled && GetConfigurationValue(queueConfiguration, AccessTokenConfigurationKey) is null)
+        {
+            throw new PostFiscalizationConfigurationException($"An eInvoicing or eReporting service is configured, but the queue configuration contains no '{AccessTokenConfigurationKey}'. The hosting environment injects the cashbox access token into every queue's configuration; without it the services cannot authenticate the queue.");
+        }
+    }
+
     public bool IsEnabled => _eInvoicingService is not null || _eReportingService is not null;
+
+    public bool IsConfigured(PostFiscalizationService service) => service switch
+    {
+        PostFiscalizationService.EInvoicing => _eInvoicingService is not null,
+        PostFiscalizationService.EReporting => _eReportingService is not null,
+        _ => false,
+    };
+
+    /// <summary>The first configured service in processing order, or <c>null</c> when disabled.</summary>
+    public PostFiscalizationService? FirstConfiguredService => _eInvoicingService is not null
+        ? PostFiscalizationService.EInvoicing
+        : _eReportingService is not null ? PostFiscalizationService.EReporting : null;
 
     /// <summary>
     /// Phase 1: asks every configured service, in order, whether the receipt is valid and whether it acts on it.
@@ -110,12 +144,7 @@ public class PostFiscalizationProcessor
         }
 
         SetActivityTags(eInvoicing, eReporting);
-        return new PostFiscalizationPreflight
-        {
-            EInvoicing = eInvoicing,
-            EReporting = eReporting,
-            Rejection = rejection,
-        };
+        return new PostFiscalizationPreflight(eInvoicing, eReporting, rejection);
     }
 
     /// <summary>
@@ -155,7 +184,7 @@ public class PostFiscalizationProcessor
             current.MarkAsFailed();
             foreach (var signature in failureSignatures)
             {
-                current.AddSignatureItem(signature);
+                current.ftSignatures.Add(signature);
             }
         }
 
@@ -164,11 +193,11 @@ public class PostFiscalizationProcessor
         return current;
     }
 
-    /// <summary>The failure signature shape shared by rejections and finalize failures, mirroring the uncaught-exception signature of the <see cref="SignProcessor"/>.</summary>
-    public static SignatureItem CreateFailureSignature(ReceiptRequest receiptRequest, string caption, string data) => new()
+    /// <summary>The failure signature shape shared by rejections and finalize failures.</summary>
+    public SignatureItem CreateFailureSignature(ReceiptRequest receiptRequest, string caption, string data) => new()
     {
         ftSignatureFormat = SignatureFormat.Text,
-        ftSignatureType = receiptRequest.ftReceiptCase.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
+        ftSignatureType = _failureSignatureType(receiptRequest),
         Caption = caption,
         Data = data,
     };
@@ -193,7 +222,12 @@ public class PostFiscalizationProcessor
                 return (PostFiscalizationServiceOutcome.Rejected, new PostFiscalizationRejection(service, PostFiscalizationServiceOutcome.Rejected, reason, JsonSerializer.Serialize(new { errors }, _journalSerializerOptions)));
             }
 
-            return (response.Applies ? PostFiscalizationServiceOutcome.Applies : PostFiscalizationServiceOutcome.NotApplicable, null);
+            if (response.Applies is null)
+            {
+                throw new PostFiscalizationServiceException("the validation result does not say whether the service applies");
+            }
+
+            return (response.Applies.Value ? PostFiscalizationServiceOutcome.Applies : PostFiscalizationServiceOutcome.NotApplicable, null);
         }
         catch (Exception ex)
         {
@@ -308,20 +342,6 @@ public class PostFiscalizationProcessor
         actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-contract-violation", message, new { service = service.Key(), changedFields = changed }));
     }
 
-    private void ReportDroppedSignatures(PostFiscalizationService service, ReceiptResponse before, ReceiptResponse after, ftQueueItem queueItem, List<ftActionJournal> actionJournals)
-    {
-        var dropped = before.ftSignatures.Where(signature => !after.ftSignatures.Any(candidate => SameSignature(candidate, signature))).ToList();
-        if (dropped.Count == 0)
-        {
-            return;
-        }
-
-        var captions = string.Join(", ", dropped.Select(signature => signature.Caption ?? $"0x{signature.ftSignatureType:X}"));
-        var message = $"The {service.DisplayName()} service dropped {dropped.Count} previously present signature(s) ({captions}) from queue item {queueItem.ftQueueItemId}. The returned response is used as is.";
-        _logger.LogWarning(message);
-        actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-dropped-signatures", message, new { service = service.Key(), droppedSignatures = dropped }));
-    }
-
     /// <summary>
     /// A service must merge into the existing <c>ftStateData</c>, never replace it. When the returned response dropped
     /// the state data or replaced it with something that is not a JSON object, the state data from before the call is
@@ -359,6 +379,20 @@ public class PostFiscalizationProcessor
         System.Collections.IEnumerable => false,
         _ => true,
     };
+
+    private void ReportDroppedSignatures(PostFiscalizationService service, ReceiptResponse before, ReceiptResponse after, ftQueueItem queueItem, List<ftActionJournal> actionJournals)
+    {
+        var dropped = before.ftSignatures.Where(signature => !after.ftSignatures.Any(candidate => SameSignature(candidate, signature))).ToList();
+        if (dropped.Count == 0)
+        {
+            return;
+        }
+
+        var captions = string.Join(", ", dropped.Select(signature => signature.Caption ?? $"0x{signature.ftSignatureType:X}"));
+        var message = $"The {service.DisplayName()} service dropped {dropped.Count} previously present signature(s) ({captions}) from queue item {queueItem.ftQueueItemId}. The returned response is used as is.";
+        _logger.LogWarning(message);
+        actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-dropped-signatures", message, new { service = service.Key(), droppedSignatures = dropped }));
+    }
 
     /// <summary>
     /// Writes the outcome into a section the middleware owns, after the last service returned so that no service can
@@ -465,28 +499,33 @@ public class PostFiscalizationProcessor
         DataJson = data is null ? null : JsonSerializer.Serialize(data, _journalSerializerOptions),
     };
 
-    private static (Guid cashBoxId, string accessToken) ResolveCashBoxIdentity(MiddlewareConfiguration middlewareConfiguration)
+    private static (Guid cashBoxId, string accessToken) ResolveCashBoxIdentity(Guid cashBoxId, Dictionary<string, object>? queueConfiguration)
     {
         // The hosting environment injects 'cashboxid' and 'accesstoken' into every queue's configuration dictionary.
-        var configuration = middlewareConfiguration.Configuration ?? [];
-        var cashBoxId = middlewareConfiguration.CashBoxId;
-        if (TryGetConfigurationValue(configuration, CashBoxIdConfigurationKey, out var configuredCashBoxId) && Guid.TryParse(configuredCashBoxId, out var parsedCashBoxId))
+        if (GetConfigurationValue(queueConfiguration, CashBoxIdConfigurationKey) is { } configuredCashBoxId && Guid.TryParse(configuredCashBoxId, out var parsedCashBoxId))
         {
             cashBoxId = parsedCashBoxId;
         }
 
-        if (!TryGetConfigurationValue(configuration, AccessTokenConfigurationKey, out var accessToken))
-        {
-            throw new PostFiscalizationConfigurationException($"An eInvoicing or eReporting service is configured, but the queue configuration contains no '{AccessTokenConfigurationKey}'. The hosting environment injects the cashbox access token into every queue's configuration; without it the services cannot authenticate the queue.");
-        }
-
+        var accessToken = GetConfigurationValue(queueConfiguration, AccessTokenConfigurationKey)
+            ?? throw new PostFiscalizationConfigurationException($"An eInvoicing or eReporting service is configured, but the queue configuration contains no '{AccessTokenConfigurationKey}'.");
         return (cashBoxId, accessToken);
     }
 
-    private static bool TryGetConfigurationValue(Dictionary<string, object> configuration, string key, [NotNullWhen(true)] out string? value)
+    private static string? GetConfigurationValue(Dictionary<string, object>? configuration, string key)
     {
+        if (configuration is null)
+        {
+            return null;
+        }
+
         var entry = configuration.FirstOrDefault(kv => string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase));
-        value = entry.Key is null ? null : entry.Value?.ToString();
-        return !string.IsNullOrWhiteSpace(value);
+        var value = entry.Key is null ? null : entry.Value?.ToString();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
+}
+
+internal static class PostFiscalizationReceiptResponseExtensions
+{
+    internal static void MarkAsFailed(this ReceiptResponse receiptResponse) => receiptResponse.ftState = receiptResponse.ftState.WithState(State.Error);
 }

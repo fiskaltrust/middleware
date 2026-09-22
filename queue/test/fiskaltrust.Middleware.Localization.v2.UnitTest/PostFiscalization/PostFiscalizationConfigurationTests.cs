@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+using fiskaltrust.Middleware.PostFiscalization;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
@@ -17,10 +17,16 @@ public class PostFiscalizationConfigurationTests
         Configuration = configuration,
     };
 
+    private static PostFiscalizationConfiguration FromMiddleware(MiddlewareConfiguration middlewareConfiguration)
+        => PostFiscalizationConfiguration.FromConfiguration(middlewareConfiguration.Configuration);
+
+    private static PostFiscalizationProcessor Processor(MiddlewareConfiguration middlewareConfiguration)
+        => new(NullLogger<PostFiscalizationProcessor>.Instance, FromMiddleware(middlewareConfiguration), middlewareConfiguration.CashBoxId, middlewareConfiguration.Configuration);
+
     [Fact]
     public void FromMiddlewareConfiguration_WithoutSections_IsDisabled()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object>
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
         {
             ["scu-timeout-ms"] = 5000,
             ["cashboxid"] = Guid.NewGuid().ToString(),
@@ -35,7 +41,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_WithNullDictionary_IsDisabled()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(new MiddlewareConfiguration { Configuration = null });
+        var configuration = FromMiddleware(new MiddlewareConfiguration { Configuration = null });
 
         configuration.IsEnabled.Should().BeFalse();
     }
@@ -43,7 +49,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_ParsesNewtonsoftSections()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object>
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
         {
             ["einvoicing"] = JObject.Parse("""{ "endpoint": "https://einvoicing.example.com/v2", "timeout-ms": 20000, "max-retries": 3 }"""),
             ["ereporting"] = JObject.Parse("""{ "endpoint": "https://ereporting.example.com/v2" }"""),
@@ -65,7 +71,7 @@ public class PostFiscalizationConfigurationTests
     {
         var element = JsonSerializer.Deserialize<JsonElement>("""{ "endpoint": "https://einvoicing.example.com/v2", "timeout-ms": 1000 }""");
 
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object> { ["einvoicing"] = element }));
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object> { ["einvoicing"] = element }));
 
         configuration.EInvoicing!.Endpoint.Should().Be("https://einvoicing.example.com/v2");
         configuration.EInvoicing.TimeoutMs.Should().Be(1000);
@@ -75,7 +81,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_ParsesJsonStringSections()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object>
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
         {
             ["ereporting"] = """{ "endpoint": "https://ereporting.example.com/v2", "max-retries": 0 }""",
         }));
@@ -88,7 +94,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_ParsesNestedDictionarySections()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object>
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
         {
             ["einvoicing"] = new Dictionary<string, object> { ["endpoint"] = "https://einvoicing.example.com/v2", ["timeout-ms"] = 2500 },
         }));
@@ -100,7 +106,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_MatchesSectionKeysCaseInsensitively()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object>
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
         {
             ["EInvoicing"] = JObject.Parse("""{ "Endpoint": "https://einvoicing.example.com/v2" }"""),
         }));
@@ -111,7 +117,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_TreatsNullSectionAsDisabled()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object>
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
         {
             ["einvoicing"] = JValue.CreateNull(),
         }));
@@ -122,7 +128,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void FromMiddlewareConfiguration_ThrowsForUnparsableSection()
     {
-        var act = () => PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object> { ["einvoicing"] = "this is not json" }));
+        var act = () => FromMiddleware(Middleware(new Dictionary<string, object> { ["einvoicing"] = "this is not json" }));
 
         act.Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'einvoicing'*could not be parsed*");
     }
@@ -150,7 +156,7 @@ public class PostFiscalizationConfigurationTests
     [Fact]
     public void Validate_RejectsEmptySection()
     {
-        var configuration = PostFiscalizationConfiguration.FromMiddlewareConfiguration(Middleware(new Dictionary<string, object> { ["ereporting"] = new JObject() }));
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object> { ["ereporting"] = new JObject() }));
 
         configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'ereporting'*no 'endpoint'*");
     }
@@ -224,7 +230,7 @@ public class PostFiscalizationConfigurationTests
             ["accesstoken"] = "token",
         });
 
-        var act = () => new PostFiscalizationProcessor(NullLogger<PostFiscalizationProcessor>.Instance, PostFiscalizationConfiguration.FromMiddlewareConfiguration(middleware), middleware);
+        var act = () => Processor(middleware);
 
         act.Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*must use https*");
     }
@@ -237,7 +243,7 @@ public class PostFiscalizationConfigurationTests
             ["einvoicing"] = JObject.Parse("""{ "endpoint": "https://einvoicing.example.com/v2" }"""),
         });
 
-        var act = () => new PostFiscalizationProcessor(NullLogger<PostFiscalizationProcessor>.Instance, PostFiscalizationConfiguration.FromMiddlewareConfiguration(middleware), middleware);
+        var act = () => Processor(middleware);
 
         act.Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'accesstoken'*");
     }
@@ -253,7 +259,7 @@ public class PostFiscalizationConfigurationTests
             ["accesstoken"] = "token",
         });
 
-        var processor = new PostFiscalizationProcessor(NullLogger<PostFiscalizationProcessor>.Instance, PostFiscalizationConfiguration.FromMiddlewareConfiguration(middleware), middleware);
+        var processor = Processor(middleware);
 
         processor.IsEnabled.Should().BeTrue();
     }
@@ -263,7 +269,7 @@ public class PostFiscalizationConfigurationTests
     {
         var middleware = Middleware(new Dictionary<string, object>());
 
-        var processor = new PostFiscalizationProcessor(NullLogger<PostFiscalizationProcessor>.Instance, PostFiscalizationConfiguration.FromMiddlewareConfiguration(middleware), middleware);
+        var processor = Processor(middleware);
 
         processor.IsEnabled.Should().BeFalse();
     }

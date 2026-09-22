@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
-using fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -33,7 +33,7 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorBE = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()), new LifecycleCommandProcessorBE(queueStorageProvider), new ReceiptCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorBE(beSSCD), new InvoiceCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorBE(beSSCD));
-        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromMiddlewareConfiguration(middlewareConfiguration), middlewareConfiguration);
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorBE.ProcessAsync, cashBoxIdentification, middlewareConfiguration, postFiscalizationProcessor);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorBE(storageProvider, GetFromConfig(configuration, storageProvider) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

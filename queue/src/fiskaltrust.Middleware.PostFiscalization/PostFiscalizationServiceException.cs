@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+﻿namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>
 /// A call to an eInvoicing or eReporting service did not produce a usable answer: unreachable, timed out, non-2xx

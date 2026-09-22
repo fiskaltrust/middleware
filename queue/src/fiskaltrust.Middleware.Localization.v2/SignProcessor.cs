@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+using fiskaltrust.Middleware.PostFiscalization;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -218,7 +218,7 @@ public class SignProcessor : ISignProcessor
             ftState = State.Success.WithCountry(queue.CountryCode?.ToUpper()).WithVersion(0x2).WithState(State.Error),
             ftReceiptIdentification = "",
         };
-        receiptResponse.AddSignatureItem(PostFiscalizationProcessor.CreateFailureSignature(receiptRequest, rejection.Caption, rejection.Reason));
+        receiptResponse.AddSignatureItem(_postFiscalizationProcessor.CreateFailureSignature(receiptRequest, rejection.Caption, rejection.Reason));
         if (_isSandbox)
         {
             receiptResponse.AddSignatureItem(SignatureFactory.CreateSandboxSignature(_queueId));

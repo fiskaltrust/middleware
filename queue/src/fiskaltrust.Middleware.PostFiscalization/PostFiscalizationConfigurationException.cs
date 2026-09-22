@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+﻿namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>Thrown at queue startup when an eInvoicing or eReporting section is present but unusable.</summary>
 public class PostFiscalizationConfigurationException : Exception

@@ -13,7 +13,7 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
-using fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
@@ -77,7 +77,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         invoiceProcessor.SetShadowValidation(fvValidator, shadowLogger);
 
         var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), fvValidator, new LifecycleCommandProcessorES(queueStorageProvider, storageProvider.CreateConfigurationRepository()), receiptProcessor, new DailyOperationsCommandProcessorES(essscd, queueStorageProvider), invoiceProcessor, new ProtocolCommandProcessorES(), ValidationConfiguration.FromConfiguration(configuration));
-        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromMiddlewareConfiguration(middlewareConfiguration), middlewareConfiguration);
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration, postFiscalizationProcessor);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.CreateMiddlewareJournalESRepository()), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

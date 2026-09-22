@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Queue.Extensions;
 using FluentAssertions;
@@ -70,7 +71,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             receiptJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftReceiptJournal>())).Returns(Task.CompletedTask);
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(queue)).Returns(Task.CompletedTask);
 
-            var sut = new SignProcessor(loggergMock.Object, configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, cryptoHelperMock.Object, marketSpecificSignProcessorMock.Object, configuration);
+            var sut = new SignProcessor(loggergMock.Object, configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, cryptoHelperMock.Object, marketSpecificSignProcessorMock.Object, configuration, PostFiscalizationProcessor.Disabled(Mock.Of<ILogger<PostFiscalizationProcessor>>()));
 
             await sut.CreateReceiptJournalAsync(queue, queueItem, request);
             receiptJournalRepositoryMock.Verify(x => x.InsertAsync(It.Is<ftReceiptJournal>(rj =>
@@ -157,7 +158,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId && qi.response == null))).Returns(Task.CompletedTask).Verifiable();
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId && qi.response != null && matchResponse(qi, JsonConvert.DeserializeObject<ReceiptResponse>(qi.response))))).Returns(Task.CompletedTask).Verifiable();
 
-            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration);
+            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration, PostFiscalizationProcessor.Disabled(Mock.Of<ILogger<PostFiscalizationProcessor>>()));
 
             var process = async () => await sut.ProcessAsync(request);
 
@@ -165,8 +166,12 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             queueItemRepository.Verify();
         }
         [Fact]
-        public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnNull()
+        public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnThePersistedErrorResponse()
         {
+            // RFC 712 (legacy backport): a replay returns whatever was persisted, error state included. A POS recovering
+            // from a failed eInvoicing/eReporting finalize call needs the fiscalized-but-failed response; on a queue
+            // without such services an error response still means the receipt was not fiscalized, so resending it
+            // stays correct. Previously the replay returned null here.
             var (request, configuration, queueItemRepository) = SetupTestEnvironment(
             ftReceiptCase: 0x0000800000000000L, // V1 tagging
             ftState: 0xEEEE_EEEE);
@@ -174,7 +179,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var sut = CreateSignProcessor(queueItemRepository, configuration);
 
             var response = await sut.ProcessAsync(request);
-            response.Should().BeNull();           
+            response.Should().NotBeNull();
+            response.ftState.Should().Be(0xEEEE_EEEE);
         }
      
         [Fact]
@@ -241,7 +247,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.IsAny<ftQueueItem>())).Returns(Task.CompletedTask);
 
-            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration);
+            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration, PostFiscalizationProcessor.Disabled(Mock.Of<ILogger<PostFiscalizationProcessor>>()));
 
             ReceiptResponse response = null;
             Func<Task> act = async () => response = await sut.ProcessAsync(request);
@@ -302,7 +308,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 Mock.Of<IMiddlewareActionJournalRepository>(),
                 Mock.Of<ICryptoHelper>(),
                 Mock.Of<IMarketSpecificSignProcessor>(),
-                config);
+                config,
+                PostFiscalizationProcessor.Disabled(Mock.Of<ILogger<PostFiscalizationProcessor>>()));
         }
 
     }
