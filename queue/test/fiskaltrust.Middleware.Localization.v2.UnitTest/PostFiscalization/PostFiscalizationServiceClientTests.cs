@@ -45,12 +45,13 @@ public class PostFiscalizationServiceClientTests
         => new(service, new PostFiscalizationServiceConfiguration { Endpoint = endpoint, TimeoutMs = timeoutMs, MaxRetries = maxRetries }, isSandbox: false, _cashBoxId, _accessToken, NullLogger.Instance, handler);
 
     [Theory]
-    [InlineData(true, "https://government-sandbox.fiskaltrust.it/v2/validate")]
-    [InlineData(false, "https://government.fiskaltrust.it/v2/validate")]
-    public async Task KnownService_IsCalledAtItsFixedEndpointForTheQueueEnvironment(bool isSandbox, string expectedUri)
+    [InlineData(PostFiscalizationService.EInvoicing, true, "https://government-sandbox.fiskaltrust.it/v2/einvoicing/validate")]
+    [InlineData(PostFiscalizationService.EInvoicing, false, "https://government.fiskaltrust.it/v2/einvoicing/validate")]
+    [InlineData(PostFiscalizationService.EReporting, true, "https://government-sandbox.fiskaltrust.it/v2/ereporting/validate")]
+    public async Task KnownService_IsCalledAtItsFixedEndpointForTheConcernAndQueueEnvironment(PostFiscalizationService service, bool isSandbox, string expectedUri)
     {
         var handler = StubHandler.Returning(() => Json(HttpStatusCode.OK, """{ "Applies": true }"""));
-        using var client = new PostFiscalizationServiceClient(PostFiscalizationService.EInvoicing, new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentIt }, isSandbox, _cashBoxId, _accessToken, NullLogger.Instance, handler);
+        using var client = new PostFiscalizationServiceClient(service, new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentIt }, isSandbox, _cashBoxId, _accessToken, NullLogger.Instance, handler);
 
         await client.ValidateReceiptAsync(new ValidateRequest { ReceiptRequest = Request() });
 

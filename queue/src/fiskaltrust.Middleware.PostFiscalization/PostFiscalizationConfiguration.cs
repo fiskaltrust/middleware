@@ -131,8 +131,8 @@ public class PostFiscalizationServiceConfiguration
 
     /// <summary>
     /// The endpoint the queue calls: the configured <c>endpoint</c> override if present, otherwise the known service's
-    /// sandbox or production endpoint. An override must be https, because every call carries the cashbox access token;
-    /// plain http is accepted for loopback addresses only.
+    /// sandbox or production base with the section name appended as the concern (<c>.../v2/einvoicing</c>). An override
+    /// must be https, because every call carries the cashbox access token; plain http is accepted for loopback addresses only.
     /// </summary>
     /// <exception cref="PostFiscalizationConfigurationException">Neither a known service nor a usable endpoint is configured.</exception>
     public Uri ResolveEndpoint(string sectionName, bool isSandbox)
@@ -145,7 +145,7 @@ public class PostFiscalizationServiceConfiguration
         var known = KnownPostFiscalizationServices.Find(Service);
         if (known is not null)
         {
-            return known.Endpoint(isSandbox);
+            return known.Endpoint(sectionName, isSandbox);
         }
 
         var knownIds = string.Join(", ", KnownPostFiscalizationServices.Ids.Select(id => $"'{id}'"));
