@@ -173,6 +173,21 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
                 .Should().Contain("\"PostFiscalization\":{\"FiscalizationSucceeded\":true");
         }
 
+        [Theory]
+        [InlineData(0x4445_0000_0000_000CUL, true)]  // DE B2B-invoice
+        [InlineData(0x4445_0000_0000_000DUL, true)]  // DE B2C-invoice
+        [InlineData(0x4445_0000_0002_000CUL, true)]  // DE B2B-invoice with a flag set
+        [InlineData(0x4445_0000_0000_0001UL, false)] // DE Pos-receipt
+        [InlineData(0x4445_0000_0000_000EUL, false)] // DE Info-invoice: not in the allow list
+        [InlineData(0x4954_0000_0000_1001UL, true)]  // IT B2C invoice via the type nibble
+        [InlineData(0x4954_0000_0000_0001UL, false)] // IT Pos-receipt
+        [InlineData(0x4154_0000_0000_000CUL, false)] // AT: no allow list yet
+        [InlineData(0x4652_0000_0000_0003UL, false)] // FR Invoice: no allow list yet
+        public void LegacyInvoiceReceiptCases_CombineTheTypeNibbleWithThePerMarketAllowList(ulong receiptCase, bool expected)
+        {
+            LegacyInvoiceReceiptCases.IsInvoiceDocument(new V2.ReceiptRequest { ftReceiptCase = (ReceiptCase) receiptCase }).Should().Be(expected);
+        }
+
         [Fact]
         public void LegacyConventions_MatchTheUncaughtExceptionSignatureAndState()
         {
