@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 
-namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
+namespace fiskaltrust.Middleware.PostFiscalization.Contracts;
 
 /// <summary>
 /// Answer of an eInvoicing or eReporting service to the finalize call. The returned <see cref="ReceiptResponse"/>
@@ -8,5 +8,5 @@ namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
 /// </summary>
 public class ProcessResponse
 {
-    public required ReceiptResponse ReceiptResponse { get; set; }
+    public ReceiptResponse ReceiptResponse { get; set; } = null!;
 }

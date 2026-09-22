@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+﻿namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>The two post-fiscalization concerns a queue can be configured with, in processing order.</summary>
 public enum PostFiscalizationService

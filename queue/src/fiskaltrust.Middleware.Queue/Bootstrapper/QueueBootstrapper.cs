@@ -10,7 +10,9 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.Middleware.Queue.Helpers;
+using fiskaltrust.Middleware.Queue.PostFiscalization;
 using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
@@ -57,6 +59,12 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 CreateConfigurationActionJournalAsync(middlewareConfiguration, sp.GetRequiredService<IMiddlewareQueueItemRepository>(), sp.GetRequiredService<IMiddlewareActionJournalRepository>()).Wait();
                 return middlewareConfiguration;
             });
+
+            // RFC 712: optional eInvoicing/eReporting services around fiscalization. The configuration is validated here so
+            // that a misconfigured queue fails at startup instead of failing every receipt; the same JSON as on the v2 stack.
+            var postFiscalizationConfiguration = PostFiscalizationConfiguration.FromConfiguration(_configuration);
+            PostFiscalizationProcessor.ValidateAtStartup(postFiscalizationConfiguration, _configuration);
+            services.AddSingleton(sp => new PostFiscalizationProcessor(sp.GetRequiredService<ILogger<PostFiscalizationProcessor>>(), postFiscalizationConfiguration, middlewareConfiguration.CashBoxId, _configuration, PostFiscalizationMapper.LegacyFailureSignatureType));
 
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();

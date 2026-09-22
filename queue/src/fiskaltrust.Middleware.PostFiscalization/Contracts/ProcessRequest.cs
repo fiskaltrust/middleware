@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 
-namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
+namespace fiskaltrust.Middleware.PostFiscalization.Contracts;
 
 /// <summary>
 /// Body of the finalize call (<c>POST {endpoint}/process</c>) to an eInvoicing or eReporting service. The
@@ -9,6 +9,6 @@ namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
 /// </summary>
 public class ProcessRequest
 {
-    public required ReceiptRequest ReceiptRequest { get; set; }
-    public required ReceiptResponse ReceiptResponse { get; set; }
+    public ReceiptRequest ReceiptRequest { get; set; } = null!;
+    public ReceiptResponse ReceiptResponse { get; set; } = null!;
 }

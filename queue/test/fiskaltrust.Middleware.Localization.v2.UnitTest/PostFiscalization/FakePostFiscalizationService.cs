@@ -1,4 +1,4 @@
-﻿using fiskaltrust.Middleware.Localization.v2.PostFiscalization.Contracts;
+﻿using fiskaltrust.Middleware.PostFiscalization.Contracts;
 
 namespace fiskaltrust.Middleware.Localization.v2.UnitTest.PostFiscalization;
 

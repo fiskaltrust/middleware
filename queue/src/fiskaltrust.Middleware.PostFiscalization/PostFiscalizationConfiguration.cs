@@ -1,8 +1,7 @@
-﻿using fiskaltrust.Middleware.Localization.v2.Configuration;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace fiskaltrust.Middleware.Localization.v2.PostFiscalization;
+namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>
 /// Queue-level configuration of the optional eInvoicing and eReporting services (RFC 712). Both sections live in
@@ -27,9 +26,7 @@ public class PostFiscalizationConfiguration
     [JsonIgnore]
     public bool IsEnabled => EInvoicing is not null || EReporting is not null;
 
-    public static PostFiscalizationConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration)
-        => FromConfiguration(middlewareConfiguration.Configuration);
-
+    /// <summary>Parses the queue's configuration dictionary (the <c>Configuration</c> of its package configuration).</summary>
     public static PostFiscalizationConfiguration FromConfiguration(Dictionary<string, object>? configuration)
     {
         if (configuration is null)

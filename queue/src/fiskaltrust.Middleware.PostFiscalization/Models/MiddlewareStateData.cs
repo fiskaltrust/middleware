@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.v2.Models;
@@ -61,9 +60,9 @@ public class Receipt
 {
     [JsonPropertyName("ReceiptRequest")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public required ReceiptRequest Request { get; set; }
+    public ReceiptRequest Request { get; set; } = null!;
 
     [JsonPropertyName("ReceiptResponse")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public required ReceiptResponse Response { get; set; }
+    public ReceiptResponse Response { get; set; } = null!;
 }
