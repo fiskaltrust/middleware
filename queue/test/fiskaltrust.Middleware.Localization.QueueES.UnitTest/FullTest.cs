@@ -1,10 +1,12 @@
 ﻿using System.Text.Json;
 using Azure.Core;
+using Castle.Core.Logging;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -54,7 +56,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
             var clientFactory = new ESSSCDClientFactory(cashBoxId, accessToken);
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), clientFactory, queue.Configuration);
+            var loggerFactory = new LoggerFactory();
+            var storageProvider = new AzureStorageProvider(loggerFactory, queue.Id, queue.Configuration);
+            var bootstrapper = new QueueESBootstrapper(queue.Id, loggerFactory, clientFactory, queue.Configuration, storageProvider);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -129,7 +133,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
             var clientFactory = new ESSSCDClientFactory(cashBoxId, accessToken);
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), clientFactory, queue.Configuration);
+            var loggerFactory = new LoggerFactory();
+            var storageProvider = new AzureStorageProvider(loggerFactory, queue.Id, queue.Configuration);
+            var bootstrapper = new QueueESBootstrapper(queue.Id, loggerFactory, clientFactory, queue.Configuration, storageProvider);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -195,7 +201,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
             var clientFactory = new ESSSCDClientFactory(cashBoxId, accessToken);
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), clientFactory, queue.Configuration);
+            var loggerFactory = new LoggerFactory();
+            var storageProvider = new AzureStorageProvider(loggerFactory, queue.Id, queue.Configuration);
+            var bootstrapper = new QueueESBootstrapper(queue.Id, loggerFactory, clientFactory, queue.Configuration, storageProvider);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
