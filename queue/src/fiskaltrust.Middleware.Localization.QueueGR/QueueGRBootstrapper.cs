@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.PostFiscalization;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -42,11 +43,12 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
             await InvoiceCounterMigration.EnsureMigratedAsync(await configurationRepository, await queueItemRepository, id, migrationLogger));
 
         var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<ReceiptCommandProcessorGR>()), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<InvoiceCommandProcessorGR>()), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<ProtocolCommandProcessorGR>()));
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromMiddlewareConfiguration(middlewareConfiguration), middlewareConfiguration);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, async (request, response, queue, queueItem) =>
         {
             await invoiceCounterMigration.EnsureMigratedAsync();
             return await signProcessorGR.ProcessAsync(request, response, queue, queueItem);
-        }, cashBoxIdentification, middlewareConfiguration);
+        }, cashBoxIdentification, middlewareConfiguration, postFiscalizationProcessor);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorGR(storageProvider, GetFromConfig(configuration) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {

@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Models;
 
@@ -53,5 +54,28 @@ public static class ReceiptResponseHelper
     public static void MarkAsFailed(this ReceiptResponse receiptResponse)
     {
         receiptResponse.ftState = receiptResponse.ftState.WithState(State.Error);
+    }
+
+    /// <summary>
+    /// Whether a persisted receipt exists fiscally. True when <c>ftState</c> is not an error state, or when the persisted
+    /// <c>PostFiscalization.FiscalizationSucceeded</c> is true: a receipt whose eInvoicing/eReporting finalize call failed
+    /// (RFC 712) carries the error state although the SCU created a fiscal record. Every lookup that needs to know
+    /// whether a persisted receipt is fiscalized must use this predicate instead of testing <c>ftState</c> directly.
+    /// </summary>
+    public static bool IsFiscalized(this ReceiptResponse receiptResponse)
+    {
+        if (!receiptResponse.ftState.IsState(State.Error))
+        {
+            return true;
+        }
+
+        try
+        {
+            return MiddlewareStateData.FromReceiptResponse(receiptResponse)?.PostFiscalization?.FiscalizationSucceeded == true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 }
