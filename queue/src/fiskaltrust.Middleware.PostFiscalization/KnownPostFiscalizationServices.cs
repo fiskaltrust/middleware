@@ -41,10 +41,15 @@ public static class KnownPostFiscalizationServices
     /// <summary>fiskaltrust's Italian government services (FatturaPA via the SdI), API version v2 (the payload is the v2 contract).</summary>
     public const string GovernmentIt = "government-it";
 
+    /// <summary>fiskaltrust's market-agnostic government services on the .eu domain (e.g. PEPPOL-based eInvoicing), API version v2.</summary>
+    public const string GovernmentEu = "government-eu";
+
     private static readonly Dictionary<string, KnownService> _services = new(StringComparer.OrdinalIgnoreCase)
     {
-        // The production host follows the sandbox naming ("-sandbox" suffix dropped); confirm it before the first production rollout.
+        // Naming scheme: government-{market} on the market's fiskaltrust domain, "-sandbox" in the host for sandbox queues.
+        // The production hosts follow the sandbox naming with the suffix dropped; confirm them before the first production rollout.
         [GovernmentIt] = new KnownService(GovernmentIt, "fiskaltrust government services Italy (FatturaPA)", new Uri("https://government-sandbox.fiskaltrust.it/v2"), new Uri("https://government.fiskaltrust.it/v2")),
+        [GovernmentEu] = new KnownService(GovernmentEu, "fiskaltrust government services EU", new Uri("https://government-sandbox.fiskaltrust.eu/v2"), new Uri("https://government.fiskaltrust.eu/v2")),
     };
 
     /// <summary>The configurable service ids, for error messages.</summary>
