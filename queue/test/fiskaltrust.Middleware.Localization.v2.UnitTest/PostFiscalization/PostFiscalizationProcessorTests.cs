@@ -290,9 +290,11 @@ public class PostFiscalizationProcessorTests
         failure.Data.Should().Be("eInvoicing process call failed after fiscalization: HTTP 502 Bad Gateway after 2 attempts");
         failure.ftSignatureFormat.Should().Be(SignatureFormat.Text);
         failure.ftSignatureType.Should().Be(request.ftReceiptCase.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure));
-        finalized.ftSignatures.Select(signature => signature.Caption).Should().Equal("invoiceMark", "einvoicing-failed", "ereport-id");
+        finalized.ftSignatures.Select(signature => signature.Caption).Should().Equal("invoiceMark", "ereport-id", "einvoicing-failed");
 
-        eReporting.ProcessCalls.Single().ReceiptResponse.ftState.IsState(State.Error).Should().BeTrue("eReporting sees the current response, including the eInvoicing failure");
+        var handedToEReporting = eReporting.ProcessCalls.Single().ReceiptResponse;
+        handedToEReporting.ftState.IsState(State.Error).Should().BeFalse("eReporting gets the response as fiscalization produced it; the eInvoicing failure is marked only after all services returned");
+        handedToEReporting.ftSignatures.Select(signature => signature.Caption).Should().Equal("invoiceMark");
 
         var journal = journals.Should().ContainSingle().Subject;
         journal.Type.Should().Be("einvoicing-failed");
@@ -305,6 +307,38 @@ public class PostFiscalizationProcessorTests
         outcome.FiscalizationSucceeded.Should().BeTrue();
         outcome.EInvoicing.Should().Be(PostFiscalizationStateData.Failed);
         outcome.EReporting.Should().Be(PostFiscalizationStateData.Ok);
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_BothServicesCanFail_TheSecondOneViaTheErrorStateChannel()
+    {
+        var eInvoicing = FakePostFiscalizationService.FailingProcess(new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused"));
+        var eReporting = new FakePostFiscalizationService
+        {
+            OnProcess = request =>
+            {
+                var returned = RoundTrip(request.ReceiptResponse);
+                returned.MarkAsFailed();
+                returned.ftSignatures.Add(Signature("ereporting-error", "authority rejected the report"));
+                return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
+            },
+        };
+        var processor = Processor(eInvoicing, eReporting);
+        var queueItem = QueueItem();
+        var journals = new List<ftActionJournal>();
+
+        var preflight = await processor.ValidateAsync(Request());
+        var finalized = await processor.FinalizeAsync(Request(), Fiscalized(queueItem), queueItem, preflight, journals);
+
+        finalized.ftState.IsState(State.Error).Should().BeTrue();
+        finalized.ftSignatures.Select(signature => signature.Caption).Should().Equal("invoiceMark", "einvoicing-failed", "ereporting-failed");
+        finalized.ftSignatures.Single(signature => signature.Caption == "ereporting-failed").Data.Should().Contain("reported an error state");
+        journals.Select(journal => journal.Type).Should().Equal("einvoicing-failed", "ereporting-failed");
+        journals.Single(journal => journal.Type == "ereporting-failed").DataJson.Should().Contain("authority rejected the report");
+        var outcome = Outcome(finalized);
+        outcome.FiscalizationSucceeded.Should().BeTrue();
+        outcome.EInvoicing.Should().Be(PostFiscalizationStateData.Failed);
+        outcome.EReporting.Should().Be(PostFiscalizationStateData.Failed);
     }
 
     [Fact]
@@ -521,9 +555,10 @@ public class PostFiscalizationProcessorTests
     }
 
     [Fact]
-    public async Task FinalizeAsync_KeepsUninterpretableStateData_AndJournalsIt()
+    public async Task FinalizeAsync_WrapsUninterpretableStateData_SoTheFiscalizationMarkerSurvivesAFailure()
     {
-        var processor = Processor(FakePostFiscalizationService.Applying(), null);
+        var eInvoicing = FakePostFiscalizationService.FailingProcess(new PostFiscalizationServiceException("HTTP 500 Internal Server Error after 2 attempts"));
+        var processor = Processor(eInvoicing, null);
         var queueItem = QueueItem();
         var response = Fiscalized(queueItem, JsonSerializer.Deserialize<JsonElement>("\"just a string\""));
         var journals = new List<ftActionJournal>();
@@ -531,9 +566,72 @@ public class PostFiscalizationProcessorTests
         var preflight = await processor.ValidateAsync(Request());
         var finalized = await processor.FinalizeAsync(Request(), response, queueItem, preflight, journals);
 
-        finalized.ftStateData.Should().BeOfType<JsonElement>();
+        finalized.ftState.IsState(State.Error).Should().BeTrue();
+        var stateData = finalized.ftStateData.Should().BeOfType<MiddlewareStateData>().Subject;
+        stateData.PostFiscalization!.FiscalizationSucceeded.Should().BeTrue();
+        stateData.PostFiscalization.EInvoicing.Should().Be(PostFiscalizationStateData.Failed);
+        stateData.ExtraData[PostFiscalizationProcessor.OriginalStateDataKey].GetString().Should().Be("just a string");
+        journals.Select(journal => journal.Type).Should().Equal("einvoicing-failed", "postfiscalization-statedata");
+
+        var persisted = RoundTrip(finalized);
+        persisted.IsFiscalized().Should().BeTrue("a finalize-failed receipt must stay referenceable even when its state data could not be merged");
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_RestoresStateDataAServiceReplacedWithANonObject()
+    {
+        var previous = new Receipt { Request = Request(), Response = new ReceiptResponse { ftReceiptIdentification = "ft0#" } };
+        var eInvoicing = new FakePostFiscalizationService
+        {
+            OnProcess = request =>
+            {
+                var returned = RoundTrip(request.ReceiptResponse);
+                returned.ftStateData = JsonSerializer.Deserialize<JsonElement>("[1, 2, 3]");
+                returned.ftSignatures.Add(Signature("einvoice-id", "urn:1"));
+                return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
+            },
+        };
+        var processor = Processor(eInvoicing, null);
+        var queueItem = QueueItem();
+        var originalStateData = new MiddlewareStateData { PreviousReceiptReference = [previous] };
+        var journals = new List<ftActionJournal>();
+
+        var preflight = await processor.ValidateAsync(Request());
+        var finalized = await processor.FinalizeAsync(Request(), Fiscalized(queueItem, originalStateData), queueItem, preflight, journals);
+
         finalized.ftState.IsState(State.Error).Should().BeFalse();
-        journals.Should().ContainSingle().Which.Type.Should().Be("postfiscalization-statedata");
+        finalized.ftSignatures.Should().Contain(signature => signature.Caption == "einvoice-id");
+        finalized.ftStateData.Should().BeSameAs(originalStateData);
+        originalStateData.PreviousReceiptReference.Should().ContainSingle();
+        originalStateData.PostFiscalization!.EInvoicing.Should().Be(PostFiscalizationStateData.Ok);
+        var journal = journals.Should().ContainSingle().Subject;
+        journal.Type.Should().Be("einvoicing-contract-violation");
+        journal.Message.Should().Contain("not a JSON object");
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_RestoresStateDataAServiceDropped()
+    {
+        var eReporting = new FakePostFiscalizationService
+        {
+            OnProcess = request =>
+            {
+                var returned = RoundTrip(request.ReceiptResponse);
+                returned.ftStateData = null;
+                return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
+            },
+        };
+        var processor = Processor(null, eReporting);
+        var queueItem = QueueItem();
+        var journals = new List<ftActionJournal>();
+
+        var preflight = await processor.ValidateAsync(Request());
+        var finalized = await processor.FinalizeAsync(Request(), Fiscalized(queueItem, new MarketStateData { Market = "PT" }), queueItem, preflight, journals);
+
+        var stateData = finalized.ftStateData.Should().BeOfType<MarketStateData>().Subject;
+        stateData.Market.Should().Be("PT");
+        stateData.PostFiscalization!.EReporting.Should().Be(PostFiscalizationStateData.Ok);
+        journals.Should().ContainSingle().Which.Type.Should().Be("ereporting-contract-violation");
     }
 
     [Fact]

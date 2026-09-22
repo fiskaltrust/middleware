@@ -31,6 +31,9 @@ public class PostFiscalizationProcessor
     public const string EInvoicingActivityTag = "queue.PostFiscalization.einvoicing";
     public const string EReportingActivityTag = "queue.PostFiscalization.ereporting";
 
+    /// <summary>Key under which existing <c>ftStateData</c> that cannot be merged into is preserved next to the <c>PostFiscalization</c> section.</summary>
+    public const string OriginalStateDataKey = "ftStateDataOriginal";
+
     private const int _actionJournalPriorityError = 0x10;
     private const int _actionJournalPriorityWarning = 0x20;
     private static readonly TimeSpan _receiptMomentTolerance = TimeSpan.FromSeconds(1);
@@ -144,9 +147,16 @@ public class PostFiscalizationProcessor
             (current, eReporting) = await FinalizeServiceAsync(PostFiscalizationService.EReporting, _eReportingService.ProcessReceiptAsync, receiptRequest, current, queueItem, actionJournals, failureSignatures).ConfigureAwait(false);
         }
 
+        // The failure marks are applied once every service has returned. Each service is therefore handed the response
+        // as fiscalization and the successful services before it produced it: an error state on a returned response is
+        // unambiguously that service's own signal, and no later service can undo an earlier failure.
         if (failureSignatures.Count > 0)
         {
-            EnsureFailurePersists(current, failureSignatures);
+            current.MarkAsFailed();
+            foreach (var signature in failureSignatures)
+            {
+                current.AddSignatureItem(signature);
+            }
         }
 
         WriteOutcome(current, eInvoicing, eReporting, queueItem, actionJournals);
@@ -203,31 +213,30 @@ public class PostFiscalizationProcessor
             var returned = processResponse?.ReceiptResponse ?? throw new PostFiscalizationServiceException("the service returned no receipt response");
             returned.ftSignatures ??= [];
 
-            if (returned.ftState.IsState(State.Error) && !receiptResponse.ftState.IsState(State.Error))
+            if (returned.ftState.IsState(State.Error))
             {
-                // The service flipped the response to an error state: same meaning as a non-2xx, the two channels exist
-                // for convenience. The service's own signatures are kept for diagnosis in the action journal; the response
-                // used from here on is the pre-call one. (A response that already carried the error state because an
-                // earlier service failed is legitimately returned as is, and is not a failure of this service.)
+                // Same meaning as a non-2xx: the two channels exist for convenience. The request never carries an error
+                // state (fiscalization succeeded and earlier failures are marked only after all services returned), so
+                // this is unambiguously the service's own signal. Its signatures are kept for diagnosis in the action
+                // journal; the response used from here on is the pre-call one.
                 throw new PostFiscalizationServiceException($"the service reported an error state (ftState 0x{returned.ftState:X})", DescribeAddedSignatures(receiptResponse, returned));
             }
 
             RestoreIdentity(service, receiptResponse, returned, queueItem, actionJournals);
+            RestoreDroppedStateData(service, receiptResponse, returned, queueItem, actionJournals);
             ReportDroppedSignatures(service, receiptResponse, returned, queueItem, actionJournals);
             _logger.LogDebug("{Service} process call succeeded for queue item {QueueItemId}.", service.DisplayName(), queueItem.ftQueueItemId);
             return (returned, PostFiscalizationServiceOutcome.Ok);
         }
         catch (Exception ex)
         {
-            // The receipt is fiscalized: mark it as failed (0xEEEE_EEEE) with a signature naming the service, and record
-            // the technical detail. The POS must recover via ReceiptRequested, never by resending the receipt.
+            // The receipt is fiscalized: it will be marked as failed (0xEEEE_EEEE) with a signature naming the service once
+            // all services returned, and the technical detail is recorded. The POS must recover via ReceiptRequested,
+            // never by resending the receipt.
             var (reason, detail) = Describe(ex);
             _logger.LogError(ex, "{Service} process call failed for queue item {QueueItemId}; the receipt is fiscalized and is marked as failed.", service.DisplayName(), queueItem.ftQueueItemId);
 
-            receiptResponse.MarkAsFailed();
-            var signature = CreateFailureSignature(receiptRequest, service.FailedCaption(), $"{service.DisplayName()} process call failed after fiscalization: {reason}");
-            receiptResponse.AddSignatureItem(signature);
-            failureSignatures.Add(signature);
+            failureSignatures.Add(CreateFailureSignature(receiptRequest, service.FailedCaption(), $"{service.DisplayName()} process call failed after fiscalization: {reason}"));
             actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityError, service.FailedCaption(),
                 $"{service.DisplayName()} process call failed for queue item {queueItem.ftQueueItemId} after fiscalization: {reason}",
                 new { service = service.Key(), phase = "process", reason, detail }));
@@ -313,18 +322,43 @@ public class PostFiscalizationProcessor
         actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-dropped-signatures", message, new { service = service.Key(), droppedSignatures = dropped }));
     }
 
-    /// <summary>A later service must not undo an earlier finalize failure.</summary>
-    private static void EnsureFailurePersists(ReceiptResponse response, List<SignatureItem> failureSignatures)
+    /// <summary>
+    /// A service must merge into the existing <c>ftStateData</c>, never replace it. When the returned response dropped
+    /// the state data or replaced it with something that is not a JSON object, the state data from before the call is
+    /// restored so that neither the previous receipt references nor the market sections are lost.
+    /// </summary>
+    private void RestoreDroppedStateData(PostFiscalizationService service, ReceiptResponse before, ReceiptResponse after, ftQueueItem queueItem, List<ftActionJournal> actionJournals)
     {
-        response.MarkAsFailed();
-        foreach (var signature in failureSignatures)
+        string? problem = null;
+        if (after.ftStateData is null && before.ftStateData is not null)
         {
-            if (!response.ftSignatures.Any(candidate => SameSignature(candidate, signature)))
-            {
-                response.AddSignatureItem(signature);
-            }
+            problem = "dropped the existing ftStateData";
         }
+        else if (after.ftStateData is not null && !IsJsonObject(after.ftStateData))
+        {
+            problem = "returned ftStateData that is not a JSON object";
+        }
+
+        if (problem is null)
+        {
+            return;
+        }
+
+        after.ftStateData = before.ftStateData;
+        var message = $"The {service.DisplayName()} service {problem} of queue item {queueItem.ftQueueItemId}; the state data from before the call was restored.";
+        _logger.LogWarning(message);
+        actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-contract-violation", message, new { service = service.Key(), problem }));
     }
+
+    private static bool IsJsonObject(object stateData) => stateData switch
+    {
+        JsonElement element => element.ValueKind == JsonValueKind.Object,
+        string => false,
+        ValueType => false,
+        System.Collections.IDictionary => true,
+        System.Collections.IEnumerable => false,
+        _ => true,
+    };
 
     /// <summary>
     /// Writes the outcome into a section the middleware owns, after the last service returned so that no service can
@@ -347,9 +381,28 @@ public class PostFiscalizationProcessor
         }
         catch (Exception ex)
         {
-            var message = $"The PostFiscalization outcome could not be written into ftStateData of queue item {queueItem.ftQueueItemId}: the existing state data could not be interpreted and was kept unchanged.";
+            // The existing state data is not something the middleware can merge into. The middleware-owned section must
+            // still be persisted, because without FiscalizationSucceeded a receipt whose finalize call failed would look
+            // unfiscalized to IsFiscalized() and become unreferenceable. The original data is preserved under its own key.
+            var wrapped = new MiddlewareStateData { PostFiscalization = outcome };
+            wrapped.ExtraData[OriginalStateDataKey] = ToJsonElement(response.ftStateData);
+            response.ftStateData = wrapped;
+
+            var message = $"The existing ftStateData of queue item {queueItem.ftQueueItemId} could not be interpreted as an object; it was preserved under '{OriginalStateDataKey}' next to the PostFiscalization outcome.";
             _logger.LogError(ex, message);
             actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityError, "postfiscalization-statedata", message, new { outcome, error = ex.ToString() }));
+        }
+    }
+
+    private static JsonElement ToJsonElement(object? value)
+    {
+        try
+        {
+            return JsonSerializer.SerializeToElement(value, _journalSerializerOptions);
+        }
+        catch (Exception)
+        {
+            return JsonSerializer.SerializeToElement(value?.ToString());
         }
     }
 
