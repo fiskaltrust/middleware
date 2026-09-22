@@ -100,6 +100,9 @@ The services are configured in the queue's configuration (the `Configuration` di
   | `service` | Purpose | Sandbox base | Production base |
   | --- | --- | --- | --- |
   | `government-it` | fiskaltrust government services Italy (FatturaPA via the SdI); the API version matches the v2 payload | `https://government-sandbox.fiskaltrust.it/v2` | `https://government.fiskaltrust.it/v2` |
+  | `government-eu` | fiskaltrust market-agnostic government services on the `.eu` domain (e.g. PEPPOL-based eInvoicing) | `https://government-sandbox.fiskaltrust.eu/v2` | `https://government.fiskaltrust.eu/v2` |
+
+  The ids follow the scheme `government-{market}` on the market's fiskaltrust domain; further markets are added to the catalog as their services go live.
 
   For an `einvoicing` section on a sandbox queue the calls therefore go to `https://government-sandbox.fiskaltrust.it/v2/einvoicing/validate` and `https://government-sandbox.fiskaltrust.it/v2/einvoicing/process`.
 

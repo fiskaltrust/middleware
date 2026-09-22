@@ -166,7 +166,7 @@ public class PostFiscalizationConfigurationTests
     {
         var configuration = new PostFiscalizationConfiguration { EInvoicing = new PostFiscalizationServiceConfiguration { Service = "government-xx" } };
 
-        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*service 'government-xx' is unknown*'government-it'*");
+        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*service 'government-xx' is unknown*'government-it'*'government-eu'*");
     }
 
     [Theory]
@@ -188,6 +188,16 @@ public class PostFiscalizationConfigurationTests
         section.ResolveEndpoint("einvoicing", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.it/v2/einvoicing"));
         section.ResolveEndpoint("einvoicing", isSandbox: false).Should().Be(new Uri("https://government.fiskaltrust.it/v2/einvoicing"));
         section.ResolveEndpoint("ereporting", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.it/v2/ereporting"), "the section a service is configured under is the concern segment");
+    }
+
+    [Fact]
+    public void ResolveEndpoint_KnowsTheEuGovernmentService()
+    {
+        var section = new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentEu };
+
+        section.ResolveEndpoint("einvoicing", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.eu/v2/einvoicing"));
+        section.ResolveEndpoint("einvoicing", isSandbox: false).Should().Be(new Uri("https://government.fiskaltrust.eu/v2/einvoicing"));
+        KnownPostFiscalizationServices.Ids.Should().BeEquivalentTo("government-it", "government-eu");
     }
 
     [Fact]
