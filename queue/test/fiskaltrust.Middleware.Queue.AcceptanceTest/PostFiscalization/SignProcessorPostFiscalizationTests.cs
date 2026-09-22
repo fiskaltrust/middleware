@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
 
             await act.Should().NotThrowAsync("a rejection is returned like the other pre-fiscalization exits, even for a v1 request");
             response.Should().NotBeNull();
-            response.ftState.Should().Be(unchecked((long) 0x4954_2000_EEEE_EEEEUL));
+            response.ftState.Should().Be(unchecked((long) 0x4954_2000_FFFF_FFFFUL), "a response without a queue item carries the fail state, not the error state of a processed receipt");
             response.ftQueueItemID.Should().Be(Guid.Empty.ToString());
             response.ftQueueID.Should().Be(harness.QueueId.ToString());
             response.ftCashBoxID.Should().Be(harness.CashBoxId.ToString());
@@ -159,7 +159,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
 
             var response = await sut.ProcessAsync(harness.Request());
 
-            response.ftState.Should().Be(unchecked((long) 0x4954_2000_EEEE_EEEEUL));
+            response.ftState.Should().Be(unchecked((long) 0x4954_2000_FFFF_FFFFUL));
             var signature = response.ftSignatures.Should().ContainSingle().Subject;
             signature.Caption.Should().Be("ereporting-rejected");
             signature.Data.Should().Be("eReporting validate call failed: timeout after 2 attempt(s) of 15000 ms each");
