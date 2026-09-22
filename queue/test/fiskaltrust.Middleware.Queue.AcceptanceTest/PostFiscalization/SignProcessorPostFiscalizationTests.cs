@@ -25,7 +25,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
     /// </summary>
     public class SignProcessorPostFiscalizationTests
     {
-        private const long ItReceiptCase = 0x4954_0000_0000_0001L; // a v1 request without the 0x2000 version nibble
+        private const long ItReceiptCase = 0x4954_0000_0000_1001L; // an IT B2C invoice: invoice type nibble, no 0x2000 version nibble
+        private const long ItPosReceiptCase = 0x4954_0000_0000_0001L;
         private const long ItSuccessState = 0x4954_0000_0000_0000L;
 
         private sealed class Harness
@@ -45,14 +46,14 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
                 Configuration = new MiddlewareConfiguration { QueueId = QueueId, CashBoxId = CashBoxId, ProcessingVersion = "test" };
             }
 
-            public ReceiptRequest Request() => new ReceiptRequest
+            public ReceiptRequest Request(long ftReceiptCase = ItReceiptCase) => new ReceiptRequest
             {
                 ftCashBoxID = CashBoxId.ToString(),
                 ftQueueID = QueueId.ToString(),
                 cbTerminalID = "T1",
                 cbReceiptReference = "R-1",
                 cbReceiptMoment = DateTime.UtcNow,
-                ftReceiptCase = ItReceiptCase,
+                ftReceiptCase = ftReceiptCase,
                 cbCustomer = "{\"CustomerName\":\"Max\"}",
                 cbChargeItems = new[] { new ChargeItem { Amount = 12.5m, Quantity = 1, Description = "Item", ftChargeItemCase = 0x4954_0000_0000_0001L } },
                 cbPayItems = new PayItem[0],
@@ -256,6 +257,22 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             response.ftStateData.Should().NotContain("PostFiscalization");
             harness.ReceiptJournals.Should().BeEmpty();
             harness.ActionJournals.Should().ContainSingle().Which.Message.Should().Contain("0xEEEE_EEEE");
+        }
+
+        [Fact]
+        public async Task NonInvoiceDocuments_NeverReachTheEInvoicingService()
+        {
+            var harness = new Harness();
+            var eInvoicing = new FakePostFiscalizationService { OnValidate = _ => throw new InvalidOperationException("must not be asked for a POS receipt") };
+            var sut = harness.Create(eInvoicing, null, (request, queueItem) => harness.Fiscalized(request, queueItem));
+
+            var response = await sut.ProcessAsync(harness.Request(ItPosReceiptCase));
+
+            eInvoicing.ValidateCalls.Should().BeEmpty();
+            eInvoicing.ProcessCalls.Should().BeEmpty();
+            response.ftState.Should().Be(ItSuccessState);
+            response.ftStateData.Should().Contain("\"EInvoicing\":\"not-applicable\"");
+            harness.ReceiptJournals.Should().ContainSingle();
         }
 
         [Fact]

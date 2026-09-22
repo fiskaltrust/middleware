@@ -43,7 +43,7 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
             await InvoiceCounterMigration.EnsureMigratedAsync(await configurationRepository, await queueItemRepository, id, migrationLogger));
 
         var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(queueItemRepository), new LifecycleCommandProcessorGR(queueStorageProvider, configurationRepository), new ReceiptCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<ReceiptCommandProcessorGR>()), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<InvoiceCommandProcessorGR>()), new ProtocolCommandProcessorGR(grSSCD, queueStorageProvider, configurationRepository, loggerFactory.CreateLogger<ProtocolCommandProcessorGR>()));
-        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration);
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration, middlewareConfiguration.IsSandbox);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, async (request, response, queue, queueItem) =>
         {
             await invoiceCounterMigration.EnsureMigratedAsync();

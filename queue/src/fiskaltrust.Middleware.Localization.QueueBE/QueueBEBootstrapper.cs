@@ -33,7 +33,7 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorBE = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new ReceiptReferenceProvider(storageProvider.CreateMiddlewareQueueItemRepository()), new LifecycleCommandProcessorBE(queueStorageProvider), new ReceiptCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorBE(beSSCD), new InvoiceCommandProcessorBE(beSSCD, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorBE(beSSCD));
-        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration);
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration, middlewareConfiguration.IsSandbox);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorBE.ProcessAsync, cashBoxIdentification, middlewareConfiguration, postFiscalizationProcessor);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorBE(storageProvider, GetFromConfig(configuration, storageProvider) ?? new MasterDataConfiguration { }), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

@@ -7,10 +7,13 @@ namespace fiskaltrust.Middleware.PostFiscalization;
 /// Queue-level configuration of the optional eInvoicing and eReporting services (RFC 712). Both sections live in
 /// the queue's <c>Configuration</c> dictionary next to keys like <c>scu-timeout-ms</c>:
 /// <code>
-/// { "einvoicing": { "endpoint": "https://...", "timeout-ms": 15000, "max-retries": 1 },
-///   "ereporting": { "endpoint": "https://...", "timeout-ms": 15000, "max-retries": 1 } }
+/// { "einvoicing": { "service": "government-it", "timeout-ms": 15000, "max-retries": 1 },
+///   "ereporting": { "service": "...", "timeout-ms": 15000, "max-retries": 1 } }
 /// </code>
-/// Presence of a section enables the respective service; absence (the default) disables it.
+/// <c>service</c> names one of the <see cref="KnownPostFiscalizationServices"/>, whose endpoint and API version are
+/// fixed in the middleware (sandbox queues use the sandbox endpoint). An explicit <c>endpoint</c> overrides the catalog
+/// for local development and testing. Presence of a section enables the respective service; absence (the default)
+/// disables it.
 /// </summary>
 public class PostFiscalizationConfiguration
 {
@@ -72,7 +75,7 @@ public class PostFiscalizationConfiguration
                 System.Text.Json.JsonElement element => JsonConvert.DeserializeObject<PostFiscalizationServiceConfiguration>(element.GetRawText()),
                 _ => JsonConvert.DeserializeObject<PostFiscalizationServiceConfiguration>(JsonConvert.SerializeObject(entry.Value)),
             };
-            return section ?? throw new PostFiscalizationConfigurationException($"The '{key}' configuration section is present but empty. Remove it to disable the service, or configure at least its 'endpoint'.");
+            return section ?? throw new PostFiscalizationConfigurationException($"The '{key}' configuration section is present but empty. Remove it to disable the service, or configure its 'service'.");
         }
         catch (JsonException ex)
         {
@@ -87,6 +90,11 @@ public class PostFiscalizationServiceConfiguration
     public const long DefaultTimeoutMs = 15000;
     public const int DefaultMaxRetries = 1;
 
+    /// <summary>Id of a known service (see <see cref="KnownPostFiscalizationServices"/>); endpoint and API version are fixed in the middleware.</summary>
+    [JsonProperty("service")]
+    public string? Service { get; set; }
+
+    /// <summary>Optional endpoint override for local development and testing; takes precedence over <see cref="Service"/>.</summary>
     [JsonProperty("endpoint")]
     public string? Endpoint { get; set; }
 
@@ -104,34 +112,11 @@ public class PostFiscalizationServiceConfiguration
     [JsonIgnore]
     public int EffectiveMaxRetries => MaxRetries ?? DefaultMaxRetries;
 
-    /// <summary>
-    /// Validates the section and returns the endpoint as an absolute URI. Endpoints must be https, because every
-    /// call carries the cashbox access token; plain http is accepted for loopback addresses only.
-    /// </summary>
+    /// <summary>Validates the section: a known service or a usable endpoint override, and sane timeout and retry values.</summary>
     /// <exception cref="PostFiscalizationConfigurationException">The section is invalid.</exception>
-    public Uri Validate(string sectionName)
+    public void Validate(string sectionName)
     {
-        if (string.IsNullOrWhiteSpace(Endpoint))
-        {
-            throw new PostFiscalizationConfigurationException($"The '{sectionName}' configuration section is present but has no 'endpoint'. Configure the service URL (https) or remove the section to disable the service.");
-        }
-
-        if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri))
-        {
-            throw new PostFiscalizationConfigurationException($"The '{sectionName}' endpoint '{Endpoint}' is not a valid absolute URL.");
-        }
-
-        if (uri.Scheme == Uri.UriSchemeHttp)
-        {
-            if (!uri.IsLoopback)
-            {
-                throw new PostFiscalizationConfigurationException($"The '{sectionName}' endpoint '{Endpoint}' must use https. Every call carries the cashbox access token, so plain http is only accepted for loopback addresses (localhost, 127.0.0.0/8, ::1).");
-            }
-        }
-        else if (uri.Scheme != Uri.UriSchemeHttps)
-        {
-            throw new PostFiscalizationConfigurationException($"The '{sectionName}' endpoint '{Endpoint}' uses the unsupported scheme '{uri.Scheme}'. Only https (and http for loopback addresses) is supported.");
-        }
+        ResolveEndpoint(sectionName, isSandbox: true);
 
         if (TimeoutMs is <= 0)
         {
@@ -141,6 +126,51 @@ public class PostFiscalizationServiceConfiguration
         if (MaxRetries is < 0)
         {
             throw new PostFiscalizationConfigurationException($"The '{sectionName}' 'max-retries' must not be negative, but was {MaxRetries}.");
+        }
+    }
+
+    /// <summary>
+    /// The endpoint the queue calls: the configured <c>endpoint</c> override if present, otherwise the known service's
+    /// sandbox or production endpoint. An override must be https, because every call carries the cashbox access token;
+    /// plain http is accepted for loopback addresses only.
+    /// </summary>
+    /// <exception cref="PostFiscalizationConfigurationException">Neither a known service nor a usable endpoint is configured.</exception>
+    public Uri ResolveEndpoint(string sectionName, bool isSandbox)
+    {
+        if (!string.IsNullOrWhiteSpace(Endpoint))
+        {
+            return ValidateEndpointOverride(sectionName, Endpoint!);
+        }
+
+        var known = KnownPostFiscalizationServices.Find(Service);
+        if (known is not null)
+        {
+            return known.Endpoint(isSandbox);
+        }
+
+        var knownIds = string.Join(", ", KnownPostFiscalizationServices.Ids.Select(id => $"'{id}'"));
+        throw new PostFiscalizationConfigurationException(string.IsNullOrWhiteSpace(Service)
+            ? $"The '{sectionName}' configuration section is present but names no 'service'. Configure one of {knownIds}, or an 'endpoint' override for local development, or remove the section to disable the service."
+            : $"The '{sectionName}' service '{Service}' is unknown. Known services: {knownIds}.");
+    }
+
+    private static Uri ValidateEndpointOverride(string sectionName, string endpoint)
+    {
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            throw new PostFiscalizationConfigurationException($"The '{sectionName}' endpoint '{endpoint}' is not a valid absolute URL.");
+        }
+
+        if (uri.Scheme == Uri.UriSchemeHttp)
+        {
+            if (!uri.IsLoopback)
+            {
+                throw new PostFiscalizationConfigurationException($"The '{sectionName}' endpoint '{endpoint}' must use https. Every call carries the cashbox access token, so plain http is only accepted for loopback addresses (localhost, 127.0.0.0/8, ::1).");
+            }
+        }
+        else if (uri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new PostFiscalizationConfigurationException($"The '{sectionName}' endpoint '{endpoint}' uses the unsupported scheme '{uri.Scheme}'. Only https (and http for loopback addresses) is supported.");
         }
 
         return uri;

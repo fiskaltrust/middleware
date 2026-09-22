@@ -45,6 +45,7 @@ public class PostFiscalizationProcessor
     private readonly IEInvoicingService? _eInvoicingService;
     private readonly IEReportingService? _eReportingService;
     private readonly Func<ReceiptRequest, SignatureType> _failureSignatureType;
+    private readonly Func<ReceiptRequest, bool> _eInvoicingReceiptFilter;
 
     /// <summary>
     /// Builds the processor from the queue configuration. Validates the configuration and resolves the cashbox
@@ -53,12 +54,15 @@ public class PostFiscalizationProcessor
     /// <param name="configuration">The parsed <c>einvoicing</c> / <c>ereporting</c> sections.</param>
     /// <param name="cashBoxId">The queue's cashbox id, sent as <c>x-cashbox-id</c> (a <c>cashboxid</c> entry in the queue configuration takes precedence).</param>
     /// <param name="queueConfiguration">The queue's configuration dictionary; the hosting environment injects <c>cashboxid</c> and <c>accesstoken</c> into it.</param>
+    /// <param name="isSandbox">Whether the queue is a sandbox queue; known services are then called at their sandbox endpoint.</param>
     /// <param name="failureSignatureType">How the <c>ftSignatureType</c> of failure signatures is derived from the request. Defaults to the v2 rule; the legacy stack passes its own convention.</param>
+    /// <param name="eInvoicingReceiptFilter">Which receipts the eInvoicing service is called for at all. Defaults to <see cref="IsInvoiceDocument"/>; a market can pass an allow list of its own receipt cases.</param>
     /// <exception cref="PostFiscalizationConfigurationException">A configured section is invalid or the access token is missing.</exception>
-    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, PostFiscalizationConfiguration configuration, Guid cashBoxId, Dictionary<string, object>? queueConfiguration, Func<ReceiptRequest, SignatureType>? failureSignatureType = null)
+    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, PostFiscalizationConfiguration configuration, Guid cashBoxId, Dictionary<string, object>? queueConfiguration, bool isSandbox, Func<ReceiptRequest, SignatureType>? failureSignatureType = null, Func<ReceiptRequest, bool>? eInvoicingReceiptFilter = null)
     {
         _logger = logger;
         _failureSignatureType = failureSignatureType ?? DefaultFailureSignatureType;
+        _eInvoicingReceiptFilter = eInvoicingReceiptFilter ?? IsInvoiceDocument;
         ValidateAtStartup(configuration, queueConfiguration);
         if (!configuration.IsEnabled)
         {
@@ -68,25 +72,36 @@ public class PostFiscalizationProcessor
         var (headerCashBoxId, accessToken) = ResolveCashBoxIdentity(cashBoxId, queueConfiguration);
         if (configuration.EInvoicing is not null)
         {
-            _eInvoicingService = new PostFiscalizationServiceClient(PostFiscalizationService.EInvoicing, configuration.EInvoicing, headerCashBoxId, accessToken, logger);
-            _logger.LogInformation("eInvoicing service enabled for cashbox {CashBoxId}: {Endpoint} (timeout {Timeout} ms per attempt, {Retries} retries)", headerCashBoxId, configuration.EInvoicing.Endpoint, configuration.EInvoicing.Timeout.TotalMilliseconds, configuration.EInvoicing.EffectiveMaxRetries);
+            var client = new PostFiscalizationServiceClient(PostFiscalizationService.EInvoicing, configuration.EInvoicing, isSandbox, headerCashBoxId, accessToken, logger);
+            _eInvoicingService = client;
+            _logger.LogInformation("eInvoicing service '{Service}' enabled for cashbox {CashBoxId}: {Endpoint} (sandbox: {Sandbox}, timeout {Timeout} ms per attempt, {Retries} retries)", configuration.EInvoicing.Service ?? "endpoint override", headerCashBoxId, client.ValidateUri, isSandbox, configuration.EInvoicing.Timeout.TotalMilliseconds, configuration.EInvoicing.EffectiveMaxRetries);
         }
 
         if (configuration.EReporting is not null)
         {
-            _eReportingService = new PostFiscalizationServiceClient(PostFiscalizationService.EReporting, configuration.EReporting, headerCashBoxId, accessToken, logger);
-            _logger.LogInformation("eReporting service enabled for cashbox {CashBoxId}: {Endpoint} (timeout {Timeout} ms per attempt, {Retries} retries)", headerCashBoxId, configuration.EReporting.Endpoint, configuration.EReporting.Timeout.TotalMilliseconds, configuration.EReporting.EffectiveMaxRetries);
+            var client = new PostFiscalizationServiceClient(PostFiscalizationService.EReporting, configuration.EReporting, isSandbox, headerCashBoxId, accessToken, logger);
+            _eReportingService = client;
+            _logger.LogInformation("eReporting service '{Service}' enabled for cashbox {CashBoxId}: {Endpoint} (sandbox: {Sandbox}, timeout {Timeout} ms per attempt, {Retries} retries)", configuration.EReporting.Service ?? "endpoint override", headerCashBoxId, client.ValidateUri, isSandbox, configuration.EReporting.Timeout.TotalMilliseconds, configuration.EReporting.EffectiveMaxRetries);
         }
     }
 
     /// <summary>Builds the processor from service instances. Pass <c>null</c> for a service that is not configured.</summary>
-    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, IEInvoicingService? eInvoicingService, IEReportingService? eReportingService, Func<ReceiptRequest, SignatureType>? failureSignatureType = null)
+    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, IEInvoicingService? eInvoicingService, IEReportingService? eReportingService, Func<ReceiptRequest, SignatureType>? failureSignatureType = null, Func<ReceiptRequest, bool>? eInvoicingReceiptFilter = null)
     {
         _logger = logger;
         _eInvoicingService = eInvoicingService;
         _eReportingService = eReportingService;
         _failureSignatureType = failureSignatureType ?? DefaultFailureSignatureType;
+        _eInvoicingReceiptFilter = eInvoicingReceiptFilter ?? IsInvoiceDocument;
     }
+
+    /// <summary>
+    /// The receipts the eInvoicing service is called for: invoice document types, recognized by the <c>0x1000</c> type
+    /// nibble of <c>ftReceiptCase</c> (<c>ReceiptCaseType.Invoice</c>: InvoiceUnknown, B2C, B2B, B2G). The Italian
+    /// receipt cases carry the same nibble, so this works for IT on the legacy stack as well. v1 receipt cases without a
+    /// type nibble (DE, AT, FR) are never invoices to this rule; an allow list for them is a pending decision in the RFC.
+    /// </summary>
+    public static bool IsInvoiceDocument(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice);
 
     /// <summary>A processor with neither service configured, which leaves receipt processing exactly as it is.</summary>
     public static PostFiscalizationProcessor Disabled(ILogger<PostFiscalizationProcessor> logger) => new(logger, eInvoicingService: null, eReportingService: null);
@@ -135,7 +150,18 @@ public class PostFiscalizationProcessor
             return PostFiscalizationPreflight.Disabled;
         }
 
-        var (eInvoicing, rejection) = await PreflightAsync(PostFiscalizationService.EInvoicing, _eInvoicingService is null ? null : _eInvoicingService.ValidateReceiptAsync, receiptRequest).ConfigureAwait(false);
+        PostFiscalizationServiceOutcome eInvoicing;
+        PostFiscalizationRejection? rejection;
+        if (_eInvoicingService is not null && !_eInvoicingReceiptFilter(receiptRequest))
+        {
+            // eInvoicing is only ever called for invoice document types; every other receipt is not applicable without a call.
+            _logger.LogDebug("eInvoicing skipped for receipt {ReceiptReference}: ftReceiptCase 0x{ReceiptCase:X} is not an invoice document type.", receiptRequest.cbReceiptReference, receiptRequest.ftReceiptCase);
+            (eInvoicing, rejection) = (PostFiscalizationServiceOutcome.NotApplicable, null);
+        }
+        else
+        {
+            (eInvoicing, rejection) = await PreflightAsync(PostFiscalizationService.EInvoicing, _eInvoicingService is null ? null : _eInvoicingService.ValidateReceiptAsync, receiptRequest).ConfigureAwait(false);
+        }
 
         var eReporting = _eReportingService is null ? PostFiscalizationServiceOutcome.Disabled : PostFiscalizationServiceOutcome.Skipped;
         if (rejection is null)

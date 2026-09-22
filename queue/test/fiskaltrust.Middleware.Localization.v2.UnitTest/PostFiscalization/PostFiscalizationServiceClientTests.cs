@@ -42,7 +42,20 @@ public class PostFiscalizationServiceClientTests
     private static HttpResponseMessage Json(HttpStatusCode status, string body) => new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
     private static PostFiscalizationServiceClient CreateClient(StubHandler handler, string endpoint = "https://einvoicing.example.com/v2/", long? timeoutMs = null, int? maxRetries = null, PostFiscalizationService service = PostFiscalizationService.EInvoicing)
-        => new(service, new PostFiscalizationServiceConfiguration { Endpoint = endpoint, TimeoutMs = timeoutMs, MaxRetries = maxRetries }, _cashBoxId, _accessToken, NullLogger.Instance, handler);
+        => new(service, new PostFiscalizationServiceConfiguration { Endpoint = endpoint, TimeoutMs = timeoutMs, MaxRetries = maxRetries }, isSandbox: false, _cashBoxId, _accessToken, NullLogger.Instance, handler);
+
+    [Theory]
+    [InlineData(true, "https://government-sandbox.fiskaltrust.it/v2/validate")]
+    [InlineData(false, "https://government.fiskaltrust.it/v2/validate")]
+    public async Task KnownService_IsCalledAtItsFixedEndpointForTheQueueEnvironment(bool isSandbox, string expectedUri)
+    {
+        var handler = StubHandler.Returning(() => Json(HttpStatusCode.OK, """{ "Applies": true }"""));
+        using var client = new PostFiscalizationServiceClient(PostFiscalizationService.EInvoicing, new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentIt }, isSandbox, _cashBoxId, _accessToken, NullLogger.Instance, handler);
+
+        await client.ValidateReceiptAsync(new ValidateRequest { ReceiptRequest = Request() });
+
+        handler.Requests.Single().Uri.Should().Be(new Uri(expectedUri));
+    }
 
     private static ReceiptRequest Request(string reference = "R-2026-0001") => new()
     {

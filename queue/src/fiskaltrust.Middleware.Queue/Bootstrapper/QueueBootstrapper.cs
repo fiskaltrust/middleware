@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             // that a misconfigured queue fails at startup instead of failing every receipt; the same JSON as on the v2 stack.
             var postFiscalizationConfiguration = PostFiscalizationConfiguration.FromConfiguration(_configuration);
             PostFiscalizationProcessor.ValidateAtStartup(postFiscalizationConfiguration, _configuration);
-            services.AddSingleton(sp => new PostFiscalizationProcessor(sp.GetRequiredService<ILogger<PostFiscalizationProcessor>>(), postFiscalizationConfiguration, middlewareConfiguration.CashBoxId, _configuration, PostFiscalizationMapper.LegacyFailureSignatureType));
+            services.AddSingleton(sp => new PostFiscalizationProcessor(sp.GetRequiredService<ILogger<PostFiscalizationProcessor>>(), postFiscalizationConfiguration, middlewareConfiguration.CashBoxId, _configuration, middlewareConfiguration.IsSandbox, PostFiscalizationMapper.LegacyFailureSignatureType));
 
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();
