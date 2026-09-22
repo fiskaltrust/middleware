@@ -99,7 +99,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
                         .Returns<ReceiptRequest, ftQueue, ftQueueItem>((request, _, queueItem) => Task.FromResult((countryResponse(request, queueItem), new List<ftActionJournal>())));
                 }
 
-                var processor = new PostFiscalizationProcessor(Mock.Of<ILogger<PostFiscalizationProcessor>>(), eInvoicing, eReporting, PostFiscalizationMapper.LegacyFailureSignatureType);
+                var processor = new PostFiscalizationProcessor(Mock.Of<ILogger<PostFiscalizationProcessor>>(), eInvoicing, eReporting, PostFiscalizationMapper.LegacyFailureSignatureType, LegacyInvoiceReceiptCases.IsInvoiceDocument);
                 return new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, CountryProcessor.Object, Configuration, processor);
             }
         }
@@ -273,6 +273,20 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             response.ftState.Should().Be(ItSuccessState);
             response.ftStateData.Should().Contain("\"EInvoicing\":\"not-applicable\"");
             harness.ReceiptJournals.Should().ContainSingle();
+        }
+
+        [Fact]
+        public async Task DeInvoiceCases_ReachTheEInvoicingServiceThroughTheAllowList()
+        {
+            var harness = new Harness();
+            var eInvoicing = new FakePostFiscalizationService();
+            var sut = harness.Create(eInvoicing, null, (request, queueItem) => harness.Fiscalized(request, queueItem));
+
+            var response = await sut.ProcessAsync(harness.Request(0x4445_0000_0000_000CL)); // DE B2B-invoice
+
+            eInvoicing.ValidateCalls.Should().ContainSingle();
+            eInvoicing.ProcessCalls.Should().ContainSingle();
+            response.ftStateData.Should().Contain("\"EInvoicing\":\"ok\"");
         }
 
         [Fact]

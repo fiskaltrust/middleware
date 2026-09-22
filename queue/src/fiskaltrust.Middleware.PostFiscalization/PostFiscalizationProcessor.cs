@@ -99,7 +99,8 @@ public class PostFiscalizationProcessor
     /// The receipts the eInvoicing service is called for: invoice document types, recognized by the <c>0x1000</c> type
     /// nibble of <c>ftReceiptCase</c> (<c>ReceiptCaseType.Invoice</c>: InvoiceUnknown, B2C, B2B, B2G). The Italian
     /// receipt cases carry the same nibble, so this works for IT on the legacy stack as well. v1 receipt cases without a
-    /// type nibble (DE, AT, FR) are never invoices to this rule; an allow list for them is a pending decision in the RFC.
+    /// type nibble (DE, AT, FR) are never invoices to this rule; the legacy stack adds its per-market allow list on top
+    /// (<c>LegacyInvoiceReceiptCases</c>).
     /// </summary>
     public static bool IsInvoiceDocument(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice);
 
