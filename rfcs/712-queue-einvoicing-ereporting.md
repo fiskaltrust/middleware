@@ -105,6 +105,78 @@ The services are configured in the queue's configuration (the `Configuration` di
 - `timeout-ms` is **per attempt** and defaults to 15000. `max-retries` is the number of **additional** attempts after the first and defaults to 1, so out of the box each call is at most two attempts of at most 15s.
 - Authentication is not configured per service. Every call carries the cashbox identity as headers, taken from the queue's own configuration — see "HTTP wire protocol".
 
+### Sample cashbox configurations
+
+Two developer samples in the placeholder notation of the developer samples, one per stack flavor. Only the market wiring differs; the `einvoicing` block is identical. A sandbox queue calls `https://government-sandbox.fiskaltrust.it/v2/validate` and `/process`, a production queue the production endpoint. `timeout-ms` and `max-retries` are shown at their defaults and can be omitted.
+
+Italy (legacy stack, CustomRTServer):
+
+```json
+{
+  "ftCashBoxId": "|[cashbox_id]|",
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "|[scu0_id]|",
+      "Package": "fiskaltrust.Middleware.SCU.IT.CustomRTServer",
+      "Configuration": { "ConfigurationBasedOn": "|[fiskaltrust-it-custom-rtsevrer-configuration]|" },
+      "Url": [ "rest://127.0.0.1:1501" ]
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "|[queue0_id]|",
+      "Package": "fiskaltrust.Middleware.Queue.AzureTableStorage",
+      "Configuration": {
+        "storageaccountname": "|[storage_account]|",
+        "init_ftQueue": [ { "ftQueueId": "|[queue0_id]|", "ftCashBoxId": "|[cashbox_id]|", "CountryCode": "IT", "Timeout": 1500 } ],
+        "init_ftQueueIT": [ { "ftQueueITId": "|[queue0_id]|", "ftSignaturCreationUnitITId": "|[scu0_id]|", "CashBoxIdentification": "|[fiskaltrust-it-custom-rtsevrer-identification]|" } ],
+        "init_ftSignaturCreationUnitIT": [ { "ftSignaturCreationUnitITId": "|[scu0_id]|", "Url": "[\"rest://127.0.0.1:1501\"]" } ],
+        "einvoicing": {
+          "service": "government-it",
+          "timeout-ms": 15000,
+          "max-retries": 1
+        }
+      },
+      "Url": [ "https://cloucashbox-sandbox.fiskaltrust.it" ]
+    }
+  ]
+}
+```
+
+Germany (legacy stack, fiskaly TSE). With the invoice-type gate, a DE queue on v1 receipt cases reports eInvoicing as `not-applicable` on every receipt until the DE allow list exists (see "Unresolved questions"); the wiring is the same:
+
+```json
+{
+  "ftCashBoxId": "|[cashbox_id]|",
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "|[scu0_id]|",
+      "Package": "fiskaltrust.Middleware.SCU.DE.FiskalyCertified",
+      "Configuration": { "ConfigurationBasedOn": "|[fiskaltrust-de-fiskaly-configuration]|" },
+      "Url": [ "grpc://localhost:10081" ]
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "|[queue0_id]|",
+      "Package": "fiskaltrust.Middleware.Queue.AzureTableStorage",
+      "Configuration": {
+        "storageaccountname": "|[storage_account]|",
+        "init_ftQueue": [ { "ftQueueId": "|[queue0_id]|", "ftCashBoxId": "|[cashbox_id]|", "CountryCode": "DE", "Timeout": 1500 } ],
+        "init_ftQueueDE": [ { "ftQueueDEId": "|[queue0_id]|", "ftSignaturCreationUnitDEId": "|[scu0_id]|", "CashBoxIdentification": "|[fiskaltrust-de-cashbox-identification]|" } ],
+        "init_ftSignaturCreationUnitDE": [ { "ftSignaturCreationUnitDEId": "|[scu0_id]|", "Url": "grpc://localhost:10081" } ],
+        "einvoicing": {
+          "service": "government-it",
+          "timeout-ms": 15000,
+          "max-retries": 1
+        }
+      },
+      "Url": [ "https://cloucashbox-sandbox.fiskaltrust.de" ]
+    }
+  ]
+}
+```
+
 ## Processing order and failure behavior
 
 1. **Preflight.** Before any bookkeeping that produces a fiscal record, the queue calls the configured services in order (eInvoicing, then eReporting) with the `ReceiptRequest`. Each service answers whether the receipt is valid for it, and whether it acts on this receipt at all.
