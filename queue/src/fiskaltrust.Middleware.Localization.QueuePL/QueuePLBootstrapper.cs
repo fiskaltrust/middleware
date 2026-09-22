@@ -18,9 +18,6 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD)
-        : this(id, loggerFactory, configuration, plSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
-
     public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);

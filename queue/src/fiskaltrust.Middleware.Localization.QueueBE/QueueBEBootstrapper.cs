@@ -23,12 +23,10 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueBEBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IBESSCD beSSCD)
+    public QueueBEBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IBESSCD beSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var signaturCreationUnitBE = new ftSignaturCreationUnitBE();
-
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
 
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueBEAsync(id)).CashBoxIdentification);
 
