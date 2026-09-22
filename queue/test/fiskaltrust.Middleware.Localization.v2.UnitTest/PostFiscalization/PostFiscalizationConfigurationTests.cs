@@ -21,7 +21,7 @@ public class PostFiscalizationConfigurationTests
         => PostFiscalizationConfiguration.FromConfiguration(middlewareConfiguration.Configuration);
 
     private static PostFiscalizationProcessor Processor(MiddlewareConfiguration middlewareConfiguration)
-        => new(NullLogger<PostFiscalizationProcessor>.Instance, FromMiddleware(middlewareConfiguration), middlewareConfiguration.CashBoxId, middlewareConfiguration.Configuration);
+        => new(NullLogger<PostFiscalizationProcessor>.Instance, FromMiddleware(middlewareConfiguration), middlewareConfiguration.CashBoxId, middlewareConfiguration.Configuration, middlewareConfiguration.IsSandbox);
 
     [Fact]
     public void FromMiddlewareConfiguration_WithoutSections_IsDisabled()
@@ -146,11 +146,11 @@ public class PostFiscalizationConfigurationTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_RejectsSectionWithoutEndpoint(string? endpoint)
+    public void Validate_RejectsSectionWithoutServiceOrEndpoint(string? endpoint)
     {
         var configuration = new PostFiscalizationConfiguration { EInvoicing = new PostFiscalizationServiceConfiguration { Endpoint = endpoint } };
 
-        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'einvoicing'*no 'endpoint'*");
+        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'einvoicing'*names no 'service'*'government-it'*");
     }
 
     [Fact]
@@ -158,7 +158,56 @@ public class PostFiscalizationConfigurationTests
     {
         var configuration = FromMiddleware(Middleware(new Dictionary<string, object> { ["ereporting"] = new JObject() }));
 
-        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'ereporting'*no 'endpoint'*");
+        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*'ereporting'*names no 'service'*");
+    }
+
+    [Fact]
+    public void Validate_RejectsAnUnknownService()
+    {
+        var configuration = new PostFiscalizationConfiguration { EInvoicing = new PostFiscalizationServiceConfiguration { Service = "government-xx" } };
+
+        configuration.Invoking(c => c.Validate()).Should().Throw<PostFiscalizationConfigurationException>().WithMessage("*service 'government-xx' is unknown*'government-it'*");
+    }
+
+    [Theory]
+    [InlineData("government-it")]
+    [InlineData("Government-IT")]
+    [InlineData(" government-it ")]
+    public void Validate_AcceptsAKnownService_CaseInsensitively(string service)
+    {
+        var configuration = new PostFiscalizationConfiguration { EInvoicing = new PostFiscalizationServiceConfiguration { Service = service } };
+
+        configuration.Invoking(c => c.Validate()).Should().NotThrow();
+    }
+
+    [Fact]
+    public void ResolveEndpoint_UsesTheSandboxOrProductionEndpointOfTheKnownService()
+    {
+        var section = new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentIt };
+
+        section.ResolveEndpoint("einvoicing", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.it/v2"));
+        section.ResolveEndpoint("einvoicing", isSandbox: false).Should().Be(new Uri("https://government.fiskaltrust.it/v2"));
+    }
+
+    [Fact]
+    public void ResolveEndpoint_AnEndpointOverrideWinsOverTheService()
+    {
+        var section = new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentIt, Endpoint = "http://localhost:5000/einvoicing" };
+
+        section.ResolveEndpoint("einvoicing", isSandbox: true).Should().Be(new Uri("http://localhost:5000/einvoicing"));
+    }
+
+    [Fact]
+    public void FromMiddlewareConfiguration_ParsesTheServiceKey()
+    {
+        var configuration = FromMiddleware(Middleware(new Dictionary<string, object>
+        {
+            ["einvoicing"] = JObject.Parse("""{ "service": "government-it" }"""),
+        }));
+
+        configuration.EInvoicing!.Service.Should().Be("government-it");
+        configuration.EInvoicing.Endpoint.Should().BeNull();
+        configuration.Invoking(c => c.Validate()).Should().NotThrow();
     }
 
     [Theory]

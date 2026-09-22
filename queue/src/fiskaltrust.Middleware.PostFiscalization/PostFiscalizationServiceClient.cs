@@ -47,16 +47,17 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
     private readonly string _cashBoxId;
     private readonly string _accessToken;
 
-    public PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, Guid cashBoxId, string accessToken, ILogger logger)
-        : this(service, configuration, cashBoxId, accessToken, logger, new HttpClient()) { }
+    public PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, bool isSandbox, Guid cashBoxId, string accessToken, ILogger logger)
+        : this(service, configuration, isSandbox, cashBoxId, accessToken, logger, new HttpClient()) { }
 
     /// <summary>Constructor for tests, which inject a stub <see cref="HttpMessageHandler"/>.</summary>
-    public PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, Guid cashBoxId, string accessToken, ILogger logger, HttpMessageHandler handler)
-        : this(service, configuration, cashBoxId, accessToken, logger, new HttpClient(handler)) { }
+    public PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, bool isSandbox, Guid cashBoxId, string accessToken, ILogger logger, HttpMessageHandler handler)
+        : this(service, configuration, isSandbox, cashBoxId, accessToken, logger, new HttpClient(handler)) { }
 
-    private PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, Guid cashBoxId, string accessToken, ILogger logger, HttpClient httpClient)
+    private PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, bool isSandbox, Guid cashBoxId, string accessToken, ILogger logger, HttpClient httpClient)
     {
-        var endpoint = configuration.Validate(service.Key());
+        configuration.Validate(service.Key());
+        var endpoint = configuration.ResolveEndpoint(service.Key(), isSandbox);
         var baseUrl = endpoint.AbsoluteUri.TrimEnd('/');
         _service = service;
         _validateUri = new Uri($"{baseUrl}/validate");

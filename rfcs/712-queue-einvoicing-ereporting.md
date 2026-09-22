@@ -60,7 +60,7 @@ Which receipts are affected depends on the concern:
 - **eInvoicing** only applies to the invoice receipt cases (`B2C`, `B2B`, `B2G`).
 - **eReporting** is market-dependent: depending on the regulation it may act on daily operations (daily, monthly, or yearly closing), on specific document types, or on other receipt cases entirely.
 
-The queue drives the flow. Each service reports in its preflight response whether it acts on the receipt at all, and the queue skips the finalize call for a service that does not. Services must answer this consistently, across markets and providers, so the queue can rely on it; the queue does not maintain a receipt-case allowlist of its own.
+The queue drives the flow. The **eInvoicing** service is only ever called for invoice document types: receipts whose `ftReceiptCase` carries the `0x1000` type nibble (`ReceiptCaseType.Invoice`: `InvoiceUnknown`, `B2C`, `B2B`, `B2G`). Every other receipt is `not-applicable` for eInvoicing without a call. The Italian receipt cases carry the same nibble, so this holds for IT on the legacy stack too; for the v1 receipt cases of `DE`, `AT` and `FR`, which have no type nibble, an allow list per market is a pending decision (see "Unresolved questions") and until then eInvoicing is not applicable there. The **eReporting** service is called for every receipt and reports in its preflight response whether it acts on it; the queue skips the finalize call for a service that does not. Services must answer this consistently, across markets and providers, so the queue can rely on it.
 
 Example: a queue in Greece configured with an eInvoicing service. The response to a `PointOfSaleReceipt` contains the myDATA signatures created by the SCU (invoice MARK, authentication code, QR URL) *plus* signatures added by the eInvoicing service, e.g.:
 
@@ -81,20 +81,27 @@ The services are configured in the queue's configuration (the `Configuration` di
 ```json
 {
   "einvoicing": {
-    "endpoint": "https://einvoicing.example.com/v2",
+    "service": "government-it",
     "timeout-ms": 15000,
     "max-retries": 1
   },
   "ereporting": {
-    "endpoint": "https://ereporting.example.com/v2",
+    "service": "<a known eReporting service>",
     "timeout-ms": 15000,
     "max-retries": 1
   }
 }
 ```
 
-- All configuration keys are lowercase (`einvoicing`, `ereporting`, `endpoint`, …), consistent with the existing lowercase/kebab-case queue configuration keys.
-- Presence of a section enables the respective service; absence (the default) disables it. Each section supports exactly one endpoint.
+- All configuration keys are lowercase (`einvoicing`, `ereporting`, `service`, …), consistent with the existing lowercase/kebab-case queue configuration keys.
+- Presence of a section enables the respective service; absence (the default) disables it. Each section names exactly one service.
+- `service` names one of the services known to the middleware. The **endpoint and API version are fixed in the middleware** for each known service, so a queue configuration says *which* service it uses, not where it lives, and sandbox queues are routed to the service's sandbox endpoint automatically. An unknown or missing `service` fails queue startup with a message listing the known ids. Known services today:
+
+  | `service` | Purpose | Sandbox endpoint | Production endpoint |
+  | --- | --- | --- | --- |
+  | `government-it` | fiskaltrust eInvoicing Italy (FatturaPA via the SdI); the API version matches the v2 payload | `https://government-sandbox.fiskaltrust.it/v2` | `https://government.fiskaltrust.it/v2` |
+
+- `endpoint` is an optional **override for local development and testing** (e.g. `http://localhost:5000/einvoicing`) and takes precedence over `service` when present. It must be `https`, or `http` on a loopback address; see "HTTP wire protocol".
 - `timeout-ms` is **per attempt** and defaults to 15000. `max-retries` is the number of **additional** attempts after the first and defaults to 1, so out of the box each call is at most two attempts of at most 15s.
 - Authentication is not configured per service. Every call carries the cashbox identity as headers, taken from the queue's own configuration — see "HTTP wire protocol".
 
@@ -132,7 +139,7 @@ sequenceDiagram
     POS->>Q: Sign(ReceiptRequest)
 
     Note over Q,ER: Phase 1 preflight, no fiscal record exists yet
-    opt einvoicing configured
+    opt einvoicing configured and invoice document type
         Q->>EI: POST /validate {ReceiptRequest}
         alt accepted
             EI-->>Q: 200 {applies true or false}
@@ -231,7 +238,7 @@ public interface IEReportingService
 
 - The `ProcessRequest`/`ProcessResponse` shape is deliberately identical to the market SCU contracts, but defined once in the market-agnostic `fiskaltrust.ifPOS.v2` namespace (the existing per-market types remain untouched).
 - Two distinct interfaces rather than one shared interface keep the two concerns separately addressable in wiring, and leave room for the contracts to diverge later without a breaking change.
-- `Applies` is what removes the receipt-case allowlist from the queue. A service that does not handle a given `ftReceiptCase` answers `Applies = false` and is not called again for that receipt.
+- `Applies` lets a service decline a receipt the queue presents to it. A service that does not handle a given `ftReceiptCase` answers `Applies = false` and is not called again for that receipt. The queue narrows the eInvoicing calls to invoice document types beforehand; eReporting sees every receipt.
 - `Errors` is deliberately a flat list of strings for now. eInvoicing has many specific validation failures that will need structured handling; that is a known follow-up (see "Unresolved questions"), and the shape here is the minimum that lets the queue reject with a reason.
 - This requires a new `fiskaltrust.interface` version (current reference: `1.3.78-rc1`).
 
@@ -261,7 +268,7 @@ The middleware ships **its own HTTP client** for this, in `fiskaltrust.Middlewar
 - Response `200 OK` with a well-formed body means success. Any other status code, a malformed body, or a timeout is a failure. There are no partial successes.
 - **Timeout**: `timeout-ms` bounds each individual attempt and is enforced by passing a `CancellationToken` to `HttpClient.SendAsync`, so the in-flight request is actually cancelled rather than merely abandoned.
 - **Retries**: up to `max-retries` *additional* attempts, on timeout and 5xx only. A 4xx, or a `200` whose body carries an error `ftState`, is never retried: both are deliberate answers and the request will not get better. Combined with the idempotency requirement this is safe.
-- Endpoints must be `https`. Every request carries the cashbox access token, so a plain `http` endpoint would hand the credential to any network observer. The only exception is a loopback address (`localhost`, `127.0.0.0/8`, `::1`), accepted over `http` for local development and testing. Anything else, including `grpc://`, fails queue startup.
+- The endpoint is the known service's fixed endpoint for the queue's environment, or the configured `endpoint` override. An override must be `https`. Every request carries the cashbox access token, so a plain `http` endpoint would hand the credential to any network observer. The only exception is a loopback address (`localhost`, `127.0.0.0/8`, `::1`), accepted over `http` for local development and testing. Anything else, including `grpc://`, fails queue startup.
 
 Worked example of a finalize call:
 
@@ -300,7 +307,7 @@ Content-Type: application/json
 
 ## Configuration model
 
-A new configuration class in `fiskaltrust.Middleware.Localization.v2`, parsed like `QueueESConfiguration`:
+A configuration class in the shared `fiskaltrust.Middleware.PostFiscalization` project (used by both stacks), parsed from the queue's configuration dictionary like `QueueESConfiguration`:
 
 ```cs
 public class PostFiscalizationConfiguration
@@ -311,14 +318,16 @@ public class PostFiscalizationConfiguration
     [JsonProperty("ereporting")]
     public PostFiscalizationServiceConfiguration? EReporting { get; set; }
 
-    public static PostFiscalizationConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration)
-        => JsonConvert.DeserializeObject<PostFiscalizationConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
+    public static PostFiscalizationConfiguration FromConfiguration(Dictionary<string, object>? configuration) { /* parses the "einvoicing" / "ereporting" entries */ }
 }
 
 public class PostFiscalizationServiceConfiguration
 {
+    [JsonProperty("service")]
+    public string? Service { get; set; }              // id of a known service; endpoint and API version are fixed in the middleware
+
     [JsonProperty("endpoint")]
-    public required string Endpoint { get; set; }
+    public string? Endpoint { get; set; }             // optional override for local development and testing
 
     [JsonProperty("timeout-ms")]
     public long? TimeoutMs { get; set; }              // default 15000, per attempt
@@ -328,7 +337,9 @@ public class PostFiscalizationServiceConfiguration
 }
 ```
 
-Validation at bootstrap: a present section with a missing `endpoint`, or one that is not `https` (loopback excepted), fails queue startup with a clear error message — a half-configured compliance feature must not silently no-op, and a misconfigured one must not leak the access token.
+The known services live in one catalog class (`KnownPostFiscalizationServices`) with a sandbox and a production endpoint each; the queue's sandbox flag picks the one to call.
+
+Validation at bootstrap: a present section that names no known `service` and has no `endpoint` override, or an override that is not `https` (loopback excepted), fails queue startup with a clear error message — a half-configured compliance feature must not silently no-op, and a misconfigured one must not leak the access token.
 
 ## Insertion point in the pipeline
 
@@ -400,7 +411,7 @@ Signatures alone do not make the queue item an audit trail: a service may legiti
 }
 ```
 
-Each service outcome is one of `ok`, `not-applicable` (preflight answered `Applies = false`), `failed`, or `disabled` (section not configured). The section is written by the middleware *after* the last service returned, so a service cannot overwrite it. It is persisted with the response in `ftQueueItem.response` and returned to the POS, and is added as a typed property on `MiddlewareStateData` next to `ftPreviousReceiptReference`. With it, the queue item records what was and wasn't invoiced or reported regardless of whether a service chose to add signatures.
+Each service outcome is one of `ok`, `not-applicable` (preflight answered `Applies = false`, or, for eInvoicing, the receipt is not an invoice document type), `failed`, or `disabled` (section not configured). The section is written by the middleware *after* the last service returned, so a service cannot overwrite it. It is persisted with the response in `ftQueueItem.response` and returned to the POS, and is added as a typed property on `MiddlewareStateData` next to `ftPreviousReceiptReference`. With it, the queue item records what was and wasn't invoiced or reported regardless of whether a service chose to add signatures.
 
 ### Effect on receipt references
 
@@ -571,6 +582,7 @@ Other alternatives considered:
 
 To resolve during the RFC process:
 
+- **Invoice allow list for the v1 receipt cases of DE, AT and FR** (decision deferred). eInvoicing is only called for invoice document types, recognized by the `0x1000` type nibble of `ftReceiptCase`, which the v2 markets and IT carry. The v1 receipt cases of DE, AT and FR have no type nibble (see for example the [DE `ftReceiptCase` reference table](https://docs.fiskaltrust.eu/docs/poscreators/middleware-doc/germany/reference-tables/ftreceiptcase)), so on those markets eInvoicing is currently `not-applicable` for every v1-cased receipt. The plan is an allow list of invoice receipt cases per market; the `PostFiscalizationProcessor` already takes the receipt filter as a strategy, so the allow list plugs in at the legacy `QueueBootstrapper` without touching the shared code.
 - **Persisting preflight rejections as queue items** (decision deferred). Today a receipt refused in the preflight leaves no queue item: the response carries an empty `ftQueueItemID`, `ftQueueRow = 0` and the fail state `0xFFFF_FFFF`, and the only trace is an action journal entry (type `einvoicing-rejected` / `ereporting-rejected`) whose data holds the `cbReceiptReference`, terminal id, receipt case and the technical detail. The alternative is to reserve a queue item for the rejected receipt and persist the request together with the error response: the POS would get a real `ftQueueItemID`, the rejection would be visible in the queue item journal and retrievable via `ReceiptRequested`, and support could correlate it the same way as any other receipt. The costs are a queue item, and a queue row, for a receipt that was never fiscalized, and a persisted error response the read-side predicates (`IsFiscalized()`) must keep treating as not fiscalized. Both stacks implement the current behavior in one method each (`RejectBeforeFiscalizationAsync`), so the switch is cheap once decided.
 - **Structured validation errors**: eInvoicing has many specific failure cases that will need dedicated handling, both on the wire (`Errors` as more than a list of strings) and in the response to the POS (dedicated `ftSignatureType` values instead of the generic `Failure` category). This is a known TODO. It is not needed to ship the mechanism and is left for a follow-up so the contract here stays minimal.
 

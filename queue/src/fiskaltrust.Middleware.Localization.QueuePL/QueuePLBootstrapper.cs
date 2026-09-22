@@ -45,7 +45,7 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
             new InvoiceCommandProcessorPL(),
             new ProtocolCommandProcessorPL(),
             validationConfig);
-        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration);
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration, middlewareConfiguration.IsSandbox);
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPL.ProcessAsync, cashBoxIdentification, middlewareConfiguration, postFiscalizationProcessor);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPL(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

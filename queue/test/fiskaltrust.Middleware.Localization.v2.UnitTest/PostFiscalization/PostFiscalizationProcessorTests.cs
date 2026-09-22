@@ -120,6 +120,69 @@ public class PostFiscalizationProcessorTests
         preflight.EReporting.Should().Be(PostFiscalizationServiceOutcome.NotApplicable);
     }
 
+    [Theory]
+    [InlineData(0x4752_2000_0000_1000UL, true)]  // InvoiceUnknown
+    [InlineData(0x4752_2000_0000_1001UL, true)]  // B2C
+    [InlineData(0x4752_2000_0000_1002UL, true)]  // B2B
+    [InlineData(0x4752_2000_0000_1003UL, true)]  // B2G
+    [InlineData(0x4954_0000_0000_1001UL, true)]  // IT on the legacy stack: same type nibble, no version nibble
+    [InlineData(0x4752_2000_0000_0001UL, false)] // PointOfSaleReceipt
+    [InlineData(0x4752_2000_0000_2011UL, false)] // DailyClosing
+    [InlineData(0x4752_2000_0000_4001UL, false)] // InitialOperationReceipt
+    [InlineData(0x4445_0000_0000_0001UL, false)] // DE v1 receipt case: no type nibble
+    public void IsInvoiceDocument_RecognizesTheInvoiceTypeNibble(ulong receiptCase, bool expected)
+    {
+        PostFiscalizationProcessor.IsInvoiceDocument(new ReceiptRequest { ftReceiptCase = (ReceiptCase) receiptCase }).Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_SkipsEInvoicingForNonInvoiceDocuments_ButStillAsksEReporting()
+    {
+        var eInvoicing = FakePostFiscalizationService.Rejecting("would reject if asked");
+        var eReporting = FakePostFiscalizationService.Applying();
+        var request = Request();
+        request.ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001; // PointOfSaleReceipt
+
+        var preflight = await Processor(eInvoicing, eReporting).ValidateAsync(request);
+
+        preflight.Accepted.Should().BeTrue();
+        preflight.EInvoicing.Should().Be(PostFiscalizationServiceOutcome.NotApplicable);
+        preflight.EReporting.Should().Be(PostFiscalizationServiceOutcome.Applies);
+        eInvoicing.ValidateCalls.Should().BeEmpty("eInvoicing is only called for invoice document types");
+        eReporting.ValidateCalls.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_NeverCallsEInvoicingForNonInvoiceDocuments()
+    {
+        var eInvoicing = FakePostFiscalizationService.Applying();
+        var processor = Processor(eInvoicing, null);
+        var queueItem = QueueItem();
+        var request = Request();
+        request.ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_2011; // DailyClosing
+
+        var preflight = await processor.ValidateAsync(request);
+        var finalized = await processor.FinalizeAsync(request, Fiscalized(queueItem), queueItem, preflight, []);
+
+        eInvoicing.ValidateCalls.Should().BeEmpty();
+        eInvoicing.ProcessCalls.Should().BeEmpty();
+        Outcome(finalized).EInvoicing.Should().Be(PostFiscalizationStateData.NotApplicable);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_UsesACustomReceiptFilterWhenGiven()
+    {
+        var eInvoicing = FakePostFiscalizationService.Applying();
+        var processor = new PostFiscalizationProcessor(NullLogger<PostFiscalizationProcessor>.Instance, eInvoicing, null, eInvoicingReceiptFilter: request => request.cbReceiptReference == "allowed");
+        var allowed = Request();
+        allowed.cbReceiptReference = "allowed";
+        allowed.ftReceiptCase = (ReceiptCase) 0x4445_0000_0000_0001; // a v1 case an allow list may admit
+
+        (await processor.ValidateAsync(allowed)).EInvoicing.Should().Be(PostFiscalizationServiceOutcome.Applies);
+        (await processor.ValidateAsync(Request())).EInvoicing.Should().Be(PostFiscalizationServiceOutcome.NotApplicable);
+        eInvoicing.ValidateCalls.Should().ContainSingle();
+    }
+
     [Fact]
     public async Task ValidateAsync_ReportsDisabledForAMissingService()
     {
