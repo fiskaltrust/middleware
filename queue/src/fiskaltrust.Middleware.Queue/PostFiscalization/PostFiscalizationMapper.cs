@@ -37,6 +37,9 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
         /// <summary>The legacy convention for the error state of a response, mirroring the uncaught-exception response of the legacy sign processor.</summary>
         public static long LegacyErrorState(long ftReceiptCase) => unchecked((long) (((ulong) ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE));
 
+        /// <summary>The fail state (0xFFFF_FFFF) of a response for which no queue item was created, such as a receipt refused in the preflight.</summary>
+        public static long LegacyFailState(long ftReceiptCase) => unchecked((long) (((ulong) ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_FFFF_FFFF));
+
         public static V2.ReceiptRequest ToV2(ReceiptRequest request)
         {
             var json = JObject.FromObject(request);

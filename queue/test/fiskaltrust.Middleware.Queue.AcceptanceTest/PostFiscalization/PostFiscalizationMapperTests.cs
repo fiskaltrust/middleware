@@ -178,6 +178,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
         {
             PostFiscalizationMapper.LegacyFailureSignatureType(ItReceiptCase).Should().Be(unchecked((long) 0x4954_2000_0000_3000UL));
             PostFiscalizationMapper.LegacyErrorState(ItReceiptCase).Should().Be(unchecked((long) 0x4954_2000_EEEE_EEEEUL));
+            PostFiscalizationMapper.LegacyFailState(ItReceiptCase).Should().Be(unchecked((long) 0x4954_2000_FFFF_FFFFUL));
             PostFiscalizationMapper.LegacyFailureSignatureType(new V2.ReceiptRequest { ftReceiptCase = (ReceiptCase) 0x4954_0000_0000_0001UL })
                 .Should().Be((SignatureType) 0x4954_2000_0000_3000UL);
         }

@@ -109,7 +109,8 @@ public class SignProcessorPostFiscalizationTests
         var response = await processor.ProcessAsync(request);
 
         response.Should().NotBeNull();
-        response!.ftState.IsState(State.Error).Should().BeTrue();
+        response!.ftState.IsState(State.Fail).Should().BeTrue("a response without a queue item carries the fail state, not the error state of a processed receipt");
+        response.ftState.IsState(State.Error).Should().BeFalse();
         response.ftQueueItemID.Should().Be(Guid.Empty);
         response.ftQueueID.Should().Be(harness.QueueId);
         response.ftCashBoxID.Should().Be(harness.CashBoxId);
@@ -143,7 +144,7 @@ public class SignProcessorPostFiscalizationTests
 
         var response = await processor.ProcessAsync(harness.Request());
 
-        response!.ftState.IsState(State.Error).Should().BeTrue();
+        response!.ftState.IsState(State.Fail).Should().BeTrue();
         var signature = response.ftSignatures.Should().ContainSingle().Subject;
         signature.Caption.Should().Be("ereporting-rejected");
         signature.Data.Should().Be("eReporting validate call failed: timeout after 2 attempt(s) of 15000 ms each");

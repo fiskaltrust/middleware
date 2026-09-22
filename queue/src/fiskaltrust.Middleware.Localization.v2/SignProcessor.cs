@@ -199,8 +199,11 @@ public class SignProcessor : ISignProcessor
 
     /// <summary>
     /// RFC 712: a configured eInvoicing/eReporting service declined the receipt, or could not be reached, in the preflight.
-    /// Nothing is fiscalized and no queue item exists, so the response carries no queue item id. The POS gets a normal
-    /// error response with a signature naming the reason, and an action journal entry records the technical detail.
+    /// Nothing is fiscalized and no queue item exists, so the response carries no queue item id and, following the
+    /// middleware convention for responses without a queue item, the Fail state (0xFFFF_FFFF) rather than the Error
+    /// state (0xEEEE_EEEE) a processed-but-failed receipt carries. The POS gets that response with a signature naming
+    /// the reason, and an action journal entry records the technical detail. Whether rejected receipts should get a
+    /// queue item after all is an open decision recorded in the RFC.
     /// </summary>
     private async Task<ReceiptResponse> RejectBeforeFiscalizationAsync(ReceiptRequest receiptRequest, PostFiscalizationRejection rejection)
     {
@@ -215,7 +218,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = await _cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = State.Success.WithCountry(queue.CountryCode?.ToUpper()).WithVersion(0x2).WithState(State.Error),
+            ftState = State.Success.WithCountry(queue.CountryCode?.ToUpper()).WithVersion(0x2).WithState(State.Fail),
             ftReceiptIdentification = "",
         };
         receiptResponse.AddSignatureItem(_postFiscalizationProcessor.CreateFailureSignature(receiptRequest, rejection.Caption, rejection.Reason));

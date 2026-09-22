@@ -364,7 +364,7 @@ This guarantees the services see everything the Queue and SCU produced, and that
 
 ### Failure classes
 
-1. **Preflight rejection**: a service returned `Errors`. The receipt is not fiscalized. Action journal entry, error response, no receipt journal.
+1. **Preflight rejection**: a service returned `Errors`. The receipt is not fiscalized. Action journal entry, error response, no receipt journal. Because no queue item exists, the response carries `ftQueueItemID = 00000000-0000-0000-0000-000000000000`, `ftQueueRow = 0`, an empty `ftReceiptIdentification` and the fail state `0xFFFF_FFFF` (the middleware convention for a response without a queue item), not the `0xEEEE_EEEE` error state of a processed receipt. See "Unresolved questions" for whether rejected receipts should get a queue item after all.
 2. **Preflight transport or protocol failure**: unreachable, timeout, 5xx after retries, 4xx, or a malformed body. Treated exactly like a rejection. The queue cannot know whether the receipt is invoiceable, and refusing before fiscalization is the safe direction.
 3. **Fiscalization failed**: finalize is skipped entirely. Unchanged behavior.
 4. **Finalize failure**: any non-2xx, malformed body, or timeout after retries, or a `200` whose returned `ReceiptResponse` carries an error `ftState`. The receipt **is** fiscalized. `MarkAsFailed()` sets `ftState` to `0xEEEE_EEEE`, a failure signature is appended, and an action journal entry records the technical detail.
@@ -571,6 +571,7 @@ Other alternatives considered:
 
 To resolve during the RFC process:
 
+- **Persisting preflight rejections as queue items** (decision deferred). Today a receipt refused in the preflight leaves no queue item: the response carries an empty `ftQueueItemID`, `ftQueueRow = 0` and the fail state `0xFFFF_FFFF`, and the only trace is an action journal entry (type `einvoicing-rejected` / `ereporting-rejected`) whose data holds the `cbReceiptReference`, terminal id, receipt case and the technical detail. The alternative is to reserve a queue item for the rejected receipt and persist the request together with the error response: the POS would get a real `ftQueueItemID`, the rejection would be visible in the queue item journal and retrievable via `ReceiptRequested`, and support could correlate it the same way as any other receipt. The costs are a queue item, and a queue row, for a receipt that was never fiscalized, and a persisted error response the read-side predicates (`IsFiscalized()`) must keep treating as not fiscalized. Both stacks implement the current behavior in one method each (`RejectBeforeFiscalizationAsync`), so the switch is cheap once decided.
 - **Structured validation errors**: eInvoicing has many specific failure cases that will need dedicated handling, both on the wire (`Errors` as more than a list of strings) and in the response to the POS (dedicated `ftSignatureType` values instead of the generic `Failure` category). This is a known TODO. It is not needed to ship the mechanism and is left for a follow-up so the contract here stays minimal.
 
 Out of scope for this RFC (future, independent work):

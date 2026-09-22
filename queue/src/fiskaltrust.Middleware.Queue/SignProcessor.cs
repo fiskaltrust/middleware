@@ -312,9 +312,12 @@ namespace fiskaltrust.Middleware.Queue
 
         /// <summary>
         /// RFC 712: a configured eInvoicing/eReporting service declined the receipt, or could not be reached, in the preflight.
-        /// Nothing is fiscalized and no queue item exists. The POS gets a normal error response with a signature naming the
-        /// reason, and an action journal entry records the technical detail. Structurally this is one more of the
-        /// pre-fiscalization exits of InternalSign.
+        /// Nothing is fiscalized and no queue item exists, so the response carries no queue item id and, following the
+        /// middleware convention for responses without a queue item, the fail state (0xFFFF_FFFF) rather than the error
+        /// state (0xEEEE_EEEE) a processed-but-failed receipt carries. The POS gets that response with a signature naming
+        /// the reason, and an action journal entry records the technical detail. Structurally this is one more of the
+        /// pre-fiscalization exits of InternalSign; whether rejected receipts should get a queue item after all is an
+        /// open decision recorded in the RFC.
         /// </summary>
         private async Task<ReceiptResponse> RejectBeforeFiscalizationAsync(ftQueue queue, ReceiptRequest data, PostFiscalizationRejection rejection)
         {
@@ -339,7 +342,7 @@ namespace fiskaltrust.Middleware.Queue
                         Data = rejection.Reason
                     }
                 },
-                ftState = PostFiscalizationMapper.LegacyErrorState(data.ftReceiptCase)
+                ftState = PostFiscalizationMapper.LegacyFailState(data.ftReceiptCase)
             };
             if (_middlewareConfiguration.IsSandbox)
             {
