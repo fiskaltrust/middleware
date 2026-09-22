@@ -7,6 +7,7 @@ using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
