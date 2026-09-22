@@ -185,8 +185,9 @@ public class PostFiscalizationConfigurationTests
     {
         var section = new PostFiscalizationServiceConfiguration { Service = KnownPostFiscalizationServices.GovernmentIt };
 
-        section.ResolveEndpoint("einvoicing", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.it/v2"));
-        section.ResolveEndpoint("einvoicing", isSandbox: false).Should().Be(new Uri("https://government.fiskaltrust.it/v2"));
+        section.ResolveEndpoint("einvoicing", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.it/v2/einvoicing"));
+        section.ResolveEndpoint("einvoicing", isSandbox: false).Should().Be(new Uri("https://government.fiskaltrust.it/v2/einvoicing"));
+        section.ResolveEndpoint("ereporting", isSandbox: true).Should().Be(new Uri("https://government-sandbox.fiskaltrust.it/v2/ereporting"), "the section a service is configured under is the concern segment");
     }
 
     [Fact]

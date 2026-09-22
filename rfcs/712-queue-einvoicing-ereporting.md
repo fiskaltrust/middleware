@@ -95,11 +95,13 @@ The services are configured in the queue's configuration (the `Configuration` di
 
 - All configuration keys are lowercase (`einvoicing`, `ereporting`, `service`, …), consistent with the existing lowercase/kebab-case queue configuration keys.
 - Presence of a section enables the respective service; absence (the default) disables it. Each section names exactly one service.
-- `service` names one of the services known to the middleware. The **endpoint and API version are fixed in the middleware** for each known service, so a queue configuration says *which* service it uses, not where it lives, and sandbox queues are routed to the service's sandbox endpoint automatically. An unknown or missing `service` fails queue startup with a message listing the known ids. Known services today:
+- `service` names one of the services known to the middleware. The **host and API version are fixed in the middleware** for each known service, so a queue configuration says *which* service it uses, not where it lives, and sandbox queues are routed to the service's sandbox host automatically. The section a service is configured under is appended as the concern, and the queue appends the route: `{base}/einvoicing/validate`, `{base}/einvoicing/process` (or `.../ereporting/...`). An unknown or missing `service` fails queue startup with a message listing the known ids. Known services today:
 
-  | `service` | Purpose | Sandbox endpoint | Production endpoint |
+  | `service` | Purpose | Sandbox base | Production base |
   | --- | --- | --- | --- |
-  | `government-it` | fiskaltrust eInvoicing Italy (FatturaPA via the SdI); the API version matches the v2 payload | `https://government-sandbox.fiskaltrust.it/v2` | `https://government.fiskaltrust.it/v2` |
+  | `government-it` | fiskaltrust government services Italy (FatturaPA via the SdI); the API version matches the v2 payload | `https://government-sandbox.fiskaltrust.it/v2` | `https://government.fiskaltrust.it/v2` |
+
+  For an `einvoicing` section on a sandbox queue the calls therefore go to `https://government-sandbox.fiskaltrust.it/v2/einvoicing/validate` and `https://government-sandbox.fiskaltrust.it/v2/einvoicing/process`.
 
 - `endpoint` is an optional **override for local development and testing** (e.g. `http://localhost:5000/einvoicing`) and takes precedence over `service` when present. It must be `https`, or `http` on a loopback address; see "HTTP wire protocol".
 - `timeout-ms` is **per attempt** and defaults to 15000. `max-retries` is the number of **additional** attempts after the first and defaults to 1, so out of the box each call is at most two attempts of at most 15s.
@@ -107,7 +109,7 @@ The services are configured in the queue's configuration (the `Configuration` di
 
 ### Sample cashbox configurations
 
-Two developer samples in the placeholder notation of the developer samples, one per stack flavor. Only the market wiring differs; the `einvoicing` block is identical. A sandbox queue calls `https://government-sandbox.fiskaltrust.it/v2/validate` and `/process`, a production queue the production endpoint. `timeout-ms` and `max-retries` are shown at their defaults and can be omitted.
+Two developer samples in the placeholder notation of the developer samples, one per stack flavor. Only the market wiring differs; the `einvoicing` block is identical. A sandbox queue calls `https://government-sandbox.fiskaltrust.it/v2/einvoicing/validate` and `/process`, a production queue the production host. `timeout-ms` and `max-retries` are shown at their defaults and can be omitted.
 
 Italy (legacy stack, CustomRTServer):
 
@@ -409,7 +411,7 @@ public class PostFiscalizationServiceConfiguration
 }
 ```
 
-The known services live in one catalog class (`KnownPostFiscalizationServices`) with a sandbox and a production endpoint each; the queue's sandbox flag picks the one to call.
+The known services live in one catalog class (`KnownPostFiscalizationServices`) with a sandbox and a production base (host and API version) each; the queue's sandbox flag picks the one to call, and the section name supplies the concern segment.
 
 Validation at bootstrap: a present section that names no known `service` and has no `endpoint` override, or an override that is not `https` (loopback excepted), fails queue startup with a clear error message — a half-configured compliance feature must not silently no-op, and a misconfigured one must not leak the access token.
 
