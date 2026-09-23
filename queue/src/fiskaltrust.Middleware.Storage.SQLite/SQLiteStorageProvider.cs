@@ -50,12 +50,12 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     
 
 
-    public SQLiteStorageProvider(Guid queueId, Dictionary<string, object> configuration,
-            SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
+    public SQLiteStorageProvider(ILoggerFactory loggerFactory, Guid queueId, Dictionary<string, object> configuration,
+            SQLiteStorageConfiguration sqliteStorageConfiguration)
     {
         _configuration = configuration;
         _initializedCompletionSource = new TaskCompletionSource<bool>();
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger<IMiddlewareBootstrapper>();
         _queueId = queueId;
         _sqliteStorageConfiguration = sqliteStorageConfiguration;
 
