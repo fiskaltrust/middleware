@@ -675,8 +675,18 @@ public static class AADEMappings
     public static bool SupportsIncomeClassification(InvoiceType invoiceType) => invoiceType switch
     {
         InvoiceType.Item31 or InvoiceType.Item32 => false,
+        InvoiceType.Item101 or InvoiceType.Item102 => false,
         _ => true
     };
+
+    /// <summary>
+    /// 10.1 / 10.2 — Δελτίο Ποσοτικής Παραλαβής (Quantitative Receipt Notes). Non-monetary
+    /// movement documents issued by the recipient of goods. AADE mandates itemDescr / quantity /
+    /// measurementUnit on each line and forbids currency and income classification. They are only
+    /// reachable via the invoiceType override (there is no dedicated ftReceiptCase)
+    /// </summary>
+    public static bool IsQuantitativeReceiptNote(InvoiceType invoiceType)
+        => invoiceType is InvoiceType.Item101 or InvoiceType.Item102;
 
     /// <summary>
     /// Maps ChargeItemCase Nature of VAT to MyData VAT exemption category.
