@@ -32,7 +32,7 @@ public class ReceiptReferenceProvider
                 Request = JsonSerializer.Deserialize<ReceiptRequest>(qi.request),
                 Response = JsonSerializer.Deserialize<ReceiptResponse>(qi.response)
             })
-            .Where(x => x.Request != null && x.Response != null && !x.Response!.ftState.IsState(State.Error))
+            .Where(x => x.Request != null && x.Response != null && x.Response!.IsFiscalized())
             .ToList();
 
         return finished.Count == 1 ? (finished[0].Request!, finished[0].Response!) : null;

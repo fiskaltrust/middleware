@@ -6,8 +6,10 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.Middleware.Queue.Extensions;
 using fiskaltrust.Middleware.Queue.Helpers;
+using fiskaltrust.Middleware.Queue.PostFiscalization;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -27,6 +29,7 @@ namespace fiskaltrust.Middleware.Queue
 
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly SignatureFactory _signatureFactory;
+        private readonly PostFiscalizationProcessor _postFiscalizationProcessor;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -36,8 +39,10 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareActionJournalRepository actionJournalRepository,
             ICryptoHelper cryptoHelper,
             IMarketSpecificSignProcessor countrySpecificSignProcessor,
-            MiddlewareConfiguration middlewareConfiguration)
+            MiddlewareConfiguration middlewareConfiguration,
+            PostFiscalizationProcessor postFiscalizationProcessor)
         {
+            _postFiscalizationProcessor = postFiscalizationProcessor ?? throw new ArgumentNullException(nameof(postFiscalizationProcessor));
             _logger = logger;
             _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
             _countrySpecificSignProcessor = countrySpecificSignProcessor;
@@ -108,15 +113,11 @@ namespace fiskaltrust.Middleware.Queue
                         var message = $"Queue {_middlewareConfiguration.QueueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
-                        if (response.IsError()) // this if(data.ftReceiptCase & 0x0000800000000000L>0) is valid only for V1
-                        {
-                            return null;
-                        }
-                        else
-                        {
-                            return response;
-                        }
+                        // RFC 712: a replay returns whatever was persisted for this cbReceiptReference, error state included.
+                        // A POS recovering from a failed eInvoicing/eReporting finalize call needs the fiscalized-but-failed
+                        // response; on a queue without such services an error response still means the receipt was not
+                        // fiscalized, so resending it stays the correct reaction, the response now just carries the reason.
+                        return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
                     }
                 }
                 catch (Exception x)
@@ -139,6 +140,15 @@ namespace fiskaltrust.Middleware.Queue
             }
 
             await _countrySpecificSignProcessor.FirstTaskAsync().ConfigureAwait(false);
+
+            // RFC 712, phase 1 (legacy backport): the configured eInvoicing/eReporting services validate the receipt before
+            // any bookkeeping that produces a fiscal record. A rejection or an unreachable service refuses the receipt: no
+            // queue item, no fiscal record, no receipt journal, so the POS can correct and resend it as a new transaction.
+            var (preflight, v2Request) = await PreflightAsync(data).ConfigureAwait(false);
+            if (!preflight.Accepted)
+            {
+                return await RejectBeforeFiscalizationAsync(queue, data, preflight.Rejection).ConfigureAwait(false);
+            }
 
             var queueItem = new ftQueueItem
             {
@@ -208,6 +218,17 @@ namespace fiskaltrust.Middleware.Queue
 
                 actionjournals.AddRange(countrySpecificActionJournals);
 
+                // RFC 712, phase 3: the services that act on this receipt get the fully fiscalized response, only when
+                // fiscalization succeeded. The receipt journal decision below is based on this fiscalization outcome, not
+                // on the final ftState: a finalize failure marks a fiscalized receipt with the error state, that receipt
+                // is journaled like any other fiscalized receipt, and it is returned rather than thrown (there is no
+                // processor exception to rethrow).
+                var fiscalizationSucceeded = !receiptResponse.IsError();
+                if (fiscalizationSucceeded)
+                {
+                    receiptResponse = await FinalizeAsync(v2Request, receiptResponse, queueItem, preflight, actionjournals).ConfigureAwait(false);
+                }
+
                 if (_middlewareConfiguration.IsSandbox)
                 {
                     receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(_signatureFactory.CreateSandboxSignature(_middlewareConfiguration.QueueId));
@@ -223,7 +244,7 @@ namespace fiskaltrust.Middleware.Queue
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
-                if (receiptResponse.IsError())
+                if (!fiscalizationSucceeded)
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
@@ -255,6 +276,156 @@ namespace fiskaltrust.Middleware.Queue
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
                 }
                 await _countrySpecificSignProcessor.FinalTaskAsync(queue, queueItem, data, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Converts the v1 request to the v2 contract and runs the preflight. A receipt that cannot be converted cannot be
+        /// presented to the services, so it is refused before fiscalization like a transport failure.
+        /// </summary>
+        private async Task<(PostFiscalizationPreflight preflight, ifPOS.v2.ReceiptRequest request)> PreflightAsync(ReceiptRequest data)
+        {
+            if (!_postFiscalizationProcessor.IsEnabled)
+            {
+                return (PostFiscalizationPreflight.Disabled, null);
+            }
+
+            ifPOS.v2.ReceiptRequest v2Request;
+            try
+            {
+                v2Request = PostFiscalizationMapper.ToV2(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Receipt {ReceiptReference} could not be converted to the v2 contract; it is refused before fiscalization.", data.cbReceiptReference);
+                var service = _postFiscalizationProcessor.FirstConfiguredService.Value;
+                var rejection = new PostFiscalizationRejection(service, PostFiscalizationServiceOutcome.Failed, $"{service.DisplayName()} validate call failed: the receipt could not be converted to the v2 contract: {ex.Message}", ex.ToString());
+                var eInvoicing = service == PostFiscalizationService.EInvoicing ? PostFiscalizationServiceOutcome.Failed : PostFiscalizationServiceOutcome.Disabled;
+                var eReporting = service == PostFiscalizationService.EReporting
+                    ? PostFiscalizationServiceOutcome.Failed
+                    : _postFiscalizationProcessor.IsConfigured(PostFiscalizationService.EReporting) ? PostFiscalizationServiceOutcome.Skipped : PostFiscalizationServiceOutcome.Disabled;
+                return (new PostFiscalizationPreflight(eInvoicing, eReporting, rejection), null);
+            }
+
+            return (await _postFiscalizationProcessor.ValidateAsync(v2Request).ConfigureAwait(false), v2Request);
+        }
+
+        /// <summary>
+        /// RFC 712: a configured eInvoicing/eReporting service declined the receipt, or could not be reached, in the preflight.
+        /// Nothing is fiscalized and no queue item exists, so the response carries no queue item id and, following the
+        /// middleware convention for responses without a queue item, the fail state (0xFFFF_FFFF) rather than the error
+        /// state (0xEEEE_EEEE) a processed-but-failed receipt carries. The POS gets that response with a signature naming
+        /// the reason, and an action journal entry records the technical detail. Structurally this is one more of the
+        /// pre-fiscalization exits of InternalSign; whether rejected receipts should get a queue item after all is an
+        /// open decision recorded in the RFC.
+        /// </summary>
+        private async Task<ReceiptResponse> RejectBeforeFiscalizationAsync(ftQueue queue, ReceiptRequest data, PostFiscalizationRejection rejection)
+        {
+            var receiptResponse = new ReceiptResponse
+            {
+                ftCashBoxID = queue.ftCashBoxId.ToString(),
+                ftQueueID = queue.ftQueueId.ToString(),
+                ftQueueItemID = Guid.Empty.ToString(),
+                ftQueueRow = 0,
+                cbTerminalID = data.cbTerminalID,
+                cbReceiptReference = data.cbReceiptReference,
+                ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue).ConfigureAwait(false),
+                ftReceiptMoment = DateTime.UtcNow,
+                ftReceiptIdentification = string.Empty,
+                ftSignatures = new SignaturItem[]
+                {
+                    new SignaturItem
+                    {
+                        ftSignatureFormat = 0x1,
+                        ftSignatureType = PostFiscalizationMapper.LegacyFailureSignatureType(data.ftReceiptCase),
+                        Caption = rejection.Caption,
+                        Data = rejection.Reason
+                    }
+                },
+                ftState = PostFiscalizationMapper.LegacyFailState(data.ftReceiptCase)
+            };
+            if (_middlewareConfiguration.IsSandbox)
+            {
+                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(_signatureFactory.CreateSandboxSignature(_middlewareConfiguration.QueueId)).ToArray();
+            }
+
+            var message = $"Receipt \"{data.cbReceiptReference}\" was refused before fiscalization by the {rejection.Service.DisplayName()} service ({rejection.Caption}): {rejection.Reason}";
+            _logger.LogWarning(message);
+            await _actionJournalRepository.InsertAsync(new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = Guid.Empty,
+                Moment = DateTime.UtcNow,
+                Priority = 0x10,
+                Type = rejection.Caption,
+                Message = message,
+                DataJson = JsonConvert.SerializeObject(new
+                {
+                    service = rejection.Service.Key(),
+                    phase = "validate",
+                    outcome = rejection.Outcome.ToTagValue(),
+                    reason = rejection.Reason,
+                    detail = rejection.Detail,
+                    cbReceiptReference = data.cbReceiptReference,
+                    cbTerminalID = data.cbTerminalID,
+                    ftReceiptCase = $"0x{data.ftReceiptCase:X}"
+                })
+            }).ConfigureAwait(false);
+
+            return receiptResponse;
+        }
+
+        /// <summary>
+        /// Maps the fiscalized v1 response to the v2 contract, runs the finalize phase and merges the result back. A
+        /// middleware-side failure in the mapping is handled like a finalize failure: the receipt is fiscalized, so it is
+        /// marked as failed and attributed to the first service that applies.
+        /// </summary>
+        private async Task<ReceiptResponse> FinalizeAsync(ifPOS.v2.ReceiptRequest v2Request, ReceiptResponse receiptResponse, ftQueueItem queueItem, PostFiscalizationPreflight preflight, List<ftActionJournal> actionJournals)
+        {
+            if (!_postFiscalizationProcessor.IsEnabled || v2Request == null)
+            {
+                return receiptResponse;
+            }
+
+            try
+            {
+                var v2Response = PostFiscalizationMapper.ToV2(receiptResponse);
+                var finalized = await _postFiscalizationProcessor.FinalizeAsync(v2Request, v2Response, queueItem, preflight, actionJournals).ConfigureAwait(false);
+                PostFiscalizationMapper.MergeIntoV1(receiptResponse, finalized);
+                return receiptResponse;
+            }
+            catch (Exception ex)
+            {
+                var service = preflight.EInvoicing == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationService.EInvoicing
+                    : preflight.EReporting == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationService.EReporting
+                    : _postFiscalizationProcessor.FirstConfiguredService.Value;
+                var reason = $"{service.DisplayName()} process call failed after fiscalization: the receipt could not be converted between the v1 and the v2 contract: {ex.Message}";
+                _logger.LogError(ex, "Post-fiscalization mapping failed for queue item {QueueItemId}; the receipt is fiscalized and is marked as failed.", queueItem.ftQueueItemId);
+
+                receiptResponse.ftState = PostFiscalizationMapper.LegacyErrorState(receiptResponse.ftState);
+                receiptResponse.ftSignatures = (receiptResponse.ftSignatures ?? new SignaturItem[0]).Concat(new[]
+                {
+                    new SignaturItem
+                    {
+                        ftSignatureFormat = 0x1,
+                        ftSignatureType = PostFiscalizationMapper.LegacyFailureSignatureType(unchecked((long) v2Request.ftReceiptCase)),
+                        Caption = service.FailedCaption(),
+                        Data = reason
+                    }
+                }).ToArray();
+                actionJournals.Add(new ftActionJournal
+                {
+                    ftActionJournalId = Guid.NewGuid(),
+                    ftQueueId = queueItem.ftQueueId,
+                    ftQueueItemId = queueItem.ftQueueItemId,
+                    Moment = DateTime.UtcNow,
+                    Priority = 0x10,
+                    Type = service.FailedCaption(),
+                    Message = $"{reason} (queue item {queueItem.ftQueueItemId})",
+                    DataJson = JsonConvert.SerializeObject(new { service = service.Key(), phase = "process", reason, detail = ex.ToString() })
+                });
+                return receiptResponse;
             }
         }
 

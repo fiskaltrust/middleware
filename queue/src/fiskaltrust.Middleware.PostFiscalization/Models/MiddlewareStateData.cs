@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.v2.Models;
@@ -41,20 +40,29 @@ public class MiddlewareStateData : MiddlewareStateDataBase<MiddlewareStateData>
     {
         ExtraData = middlewareStateData.ExtraData;
         PreviousReceiptReference = middlewareStateData.PreviousReceiptReference;
+        PostFiscalization = middlewareStateData.PostFiscalization;
     }
 
     [JsonPropertyName("ftPreviousReceiptReference")] // QUESTION: ftPreviousReceiptReferences or ftPreviousReceiptReference?
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public List<Receipt>? PreviousReceiptReference { get; set; }
+
+    /// <summary>
+    /// Outcome of the eInvoicing/eReporting phase (RFC 712), written by the middleware after the last service returned.
+    /// Absent when neither service is configured or when fiscalization itself failed.
+    /// </summary>
+    [JsonPropertyName("PostFiscalization")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PostFiscalizationStateData? PostFiscalization { get; set; }
 }
 
 public class Receipt
 {
     [JsonPropertyName("ReceiptRequest")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public required ReceiptRequest Request { get; set; }
+    public ReceiptRequest Request { get; set; } = null!;
 
     [JsonPropertyName("ReceiptResponse")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public required ReceiptResponse Response { get; set; }
+    public ReceiptResponse Response { get; set; } = null!;
 }

@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +45,8 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
             new InvoiceCommandProcessorPL(),
             new ProtocolCommandProcessorPL(),
             validationConfig);
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPL.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
+        var postFiscalizationProcessor = new PostFiscalizationProcessor(loggerFactory.CreateLogger<PostFiscalizationProcessor>(), PostFiscalizationConfiguration.FromConfiguration(configuration), middlewareConfiguration.CashBoxId, configuration, middlewareConfiguration.IsSandbox);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPL.ProcessAsync, cashBoxIdentification, middlewareConfiguration, postFiscalizationProcessor);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPL(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
