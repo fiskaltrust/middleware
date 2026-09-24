@@ -33,6 +33,9 @@ namespace fiskaltrust.storage.V0
         Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync();
         Task<ftSignaturCreationUnitME> GetSignaturCreationUnitMEAsync(Guid signaturCreationUnitDEId);
 
+        Task<IEnumerable<ftSignaturCreationUnitPL>> GetSignaturCreationUnitPLListAsync();
+        Task<ftSignaturCreationUnitPL> GetSignaturCreationUnitPLAsync(Guid signaturCreationUnitPLId);
+
         Task<IEnumerable<ftQueue>> GetQueueListAsync();
         Task<ftQueue> GetQueueAsync(Guid queueId);
 
@@ -62,5 +65,8 @@ namespace fiskaltrust.storage.V0
 
         Task<IEnumerable<ftQueueME>> GetQueueMEListAsync();
         Task<ftQueueME> GetQueueMEAsync(Guid queueMEId);
+
+        Task<IEnumerable<ftQueuePL>> GetQueuePLListAsync();
+        Task<ftQueuePL> GetQueuePLAsync(Guid queuePLId);
     }
 }

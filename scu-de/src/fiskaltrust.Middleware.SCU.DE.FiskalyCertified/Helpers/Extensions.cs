@@ -12,6 +12,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             {
                 FiskalyTseState.INITIALIZED => new TseState { CurrentState = TseStates.Initialized },
                 FiskalyTseState.DISABLED => new TseState { CurrentState = TseStates.Terminated },
+                FiskalyTseState.DELETED => new TseState { CurrentState = TseStates.Terminated },
+                FiskalyTseState.DEFECTIVE => new TseState { CurrentState = TseStates.Terminated },
+                FiskalyTseState.EVICTED => new TseState { CurrentState = TseStates.Terminated },
                 _ => new TseState { CurrentState = TseStates.Uninitialized },
             };
         }
@@ -22,6 +25,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             {
                 FiskalyTseState.INITIALIZED => TseStates.Initialized,
                 FiskalyTseState.DISABLED => TseStates.Terminated,
+                FiskalyTseState.DELETED => TseStates.Terminated,
+                FiskalyTseState.DEFECTIVE => TseStates.Terminated,
+                FiskalyTseState.EVICTED => TseStates.Terminated,
                 _ => TseStates.Uninitialized
             };
         }

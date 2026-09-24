@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.ifPOS.v1.de;
@@ -343,12 +345,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
             });
 
             ExportDataResponse exportDataResponse;
-            var maxRetries = 30;
+            var maxRetries = 60;
             var retryCount = 0;
+            var retryAfterSec = 5; // matches FiskalyV2ApiProvider default Retry-After
 
             do
             {
-                await Task.Delay(60000);
+                await Task.Delay(retryAfterSec * 1000);
                 exportDataResponse = await sut.ExportDataAsync(new ExportDataRequest
                 {
                     TokenId = exportSession.TokenId,

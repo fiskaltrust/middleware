@@ -1,8 +1,13 @@
-﻿namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
+namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
 public class Customer
 {
     public string? CustomerName { get; set; }
+
+    /// <summary>
+    /// No longer read by the Italian SCUs: the codice fiscale moved to <see cref="CustomerTaxId"/>.
+    /// Kept on the model so that a PoS still sending it does not fail deserialization.
+    /// </summary>
     public string? CustomerId { get; set; }
     public string? CustomerType { get; set; }
     public string? CustomerStreet { get; set; }
@@ -10,6 +15,9 @@ public class Customer
     public string? CustomerCity { get; set; }
     public string? CustomerCountry { get; set; }
     public string? CustomerVATId { get; set; }
+
+    /// <summary>The codice fiscale of the customer.</summary>
+    public string? CustomerTaxId { get; set; }
 }
 
 

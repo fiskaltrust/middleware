@@ -134,6 +134,17 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             return transactionState;
         }
 
+        private FiskalyTseState ParseFiskalyTseState(string state)
+        {
+            if (Enum.TryParse<FiskalyTseState>(state, true, out var parsed))
+            {
+                return parsed;
+            }
+
+            _logger.LogError("Received unknown TSE state '{State}' from fiskaly that cannot be mapped; defaulting to {DefaultState}.", state, FiskalyTseState.UNINITIALIZED);
+            return FiskalyTseState.UNINITIALIZED;
+        }
+
         public async Task<TseInfo> GetTseInfoAsync()
         {
             try
@@ -146,13 +157,18 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var clientDto = await clientsTask;
                 var tssResult = await tssResultTask;
 
+                var currentState = ParseFiskalyTseState(tssResult.State);
+                _logger.LogWarning("TSE {TssId} reports fiskaly state '{FiskalyState}', mapped to SCU state '{ScuState}'.", _configuration.TssId, tssResult.State, currentState.ToTseStateEnum());
+
+                // A deleted TSE must still report its state (Terminated) so it can be persisted and pushed to
+                // the portal; the state is handed back here and the actual error is thrown later, on the next
+                // operation that tries to use the TSE (e.g. StartTransactionAsync).
                 if (tssResult.State.Equals("DELETED") && tssResult.Env.Equals("TEST"))
                 {
-                    throw new FiskalyException("The specified TSE is in 'DELETED' state. Fiskaly automatically deletes all v2 test TSEs each Sunday, which can lead to this behavior; " +
-                        "please produce a new TSE for test purposes. Production TSEs are not affected by these regular cleanups.");
+                    _logger.LogWarning("The specified TSE is in 'DELETED' state. Fiskaly automatically deletes all v2 test TSEs each Sunday, which can lead to this behavior; " +
+                        "please produce a new TSE for test purposes. Production TSEs are not affected by these regular cleanups. The SCU state is reported as 'Terminated'.");
                 }
 
-                // Only start this API call after we've confirmed the TSE is valid
                 var startedTransactions = await startedTransactionsTask;
                 var serial = tssResult.SerialNumber;
 
@@ -178,7 +194,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     MaxLogMemorySize = long.MaxValue,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.Number).ToList(),
-                    CurrentState = ((FiskalyTseState) Enum.Parse(typeof(FiskalyTseState), tssResult.State, true)).ToTseStateEnum()
+                    CurrentState = currentState.ToTseStateEnum()
                 };
             }
             catch (Exception ex)
@@ -204,7 +220,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
 
                 var response = await _fiskalyApiProvider.PatchTseStateAsync(_configuration.TssId, tseStateDto);
 
-                return ((FiskalyTseState) Enum.Parse(typeof(FiskalyTseState), response.State, true)).ToTseState();
+                return ParseFiskalyTseState(response.State).ToTseState();
             }
             catch (Exception ex)
             {

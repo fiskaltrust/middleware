@@ -38,7 +38,7 @@ public class AADEFactory
     {
         if (string.IsNullOrWhiteSpace(receiptBaseAddress))
         {
-            throw new ArgumentException("Receipt base address is required for myDATA v2.0.1", nameof(receiptBaseAddress));
+            throw new ArgumentException("Receipt base address is required for myDATA v2.0.2", nameof(receiptBaseAddress));
         }
         _masterDataConfiguration = masterDataConfiguration;
         _receiptBaseAddress = receiptBaseAddress;
@@ -123,6 +123,25 @@ public class AADEFactory
     {
         return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData)
             && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
+    }
+
+    /// <summary>
+    /// Resolves the invoice type the produced document will actually carry: the mydataoverride
+    /// invoiceType when one is supplied, otherwise the type derived from the ftReceiptCase. Some
+    /// types (e.g. 8.2) have no native ftReceiptCase and are only reachable via the override
+    /// </summary>
+    private static InvoiceType GetEffectiveInvoiceType(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData))
+        {
+            var overrideType = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
+            if (!string.IsNullOrEmpty(overrideType)
+                && AADEMappings.InvoiceTypeOverrideMap.TryGetValue(overrideType, out var mapped))
+            {
+                return mapped;
+            }
+        }
+        return AADEMappings.GetInvoiceType(receiptRequest);
     }
 
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
@@ -632,6 +651,33 @@ public class AADEFactory
             invoice.invoiceHeader.toWeighSpecified = true;
         }
 
+        // Apply nonObligatedRecipient (delivery-note flag added in myDATA v2.0.2)
+        if (headerOverride.NonObligatedRecipient.HasValue)
+        {
+            invoice.invoiceHeader.nonObligatedRecipient = headerOverride.NonObligatedRecipient.Value;
+            invoice.invoiceHeader.nonObligatedRecipientSpecified = true;
+        }
+
+        // Apply withoutDigitalTransportTracking (delivery-note flag added in myDATA v2.0.2)
+        if (headerOverride.WithoutDigitalTransportTracking.HasValue)
+        {
+            invoice.invoiceHeader.withoutDigitalTransportTracking = headerOverride.WithoutDigitalTransportTracking.Value;
+            invoice.invoiceHeader.withoutDigitalTransportTrackingSpecified = true;
+        }
+
+        // Apply receivingNotePurpose (receiving-note reason, added in myDATA v2.0.2)
+        if (headerOverride.ReceivingNotePurpose.HasValue)
+        {
+            invoice.invoiceHeader.receivingNotePurpose = headerOverride.ReceivingNotePurpose.Value;
+            invoice.invoiceHeader.receivingNotePurposeSpecified = true;
+        }
+
+        // Apply otherReceivingNotePurposeTitle (added in myDATA v2.0.2)
+        if (!string.IsNullOrEmpty(headerOverride.OtherReceivingNotePurposeTitle))
+        {
+            invoice.invoiceHeader.otherReceivingNotePurposeTitle = headerOverride.OtherReceivingNotePurposeTitle;
+        }
+
         // Overriding the document numbering is not supported: series/aa are assigned by
         // the middleware's invoice counter (or taken inbound for handwritten documents),
         // and an override silently renumbering the doc would desynchronize the counter
@@ -708,8 +754,23 @@ public class AADEFactory
         {
             party.address = new AddressType
             {
-                number = partyOverride.Address.Number ?? "0"
+                street = partyOverride.Address.Street,
+                number = partyOverride.Address.Number ?? "0",
+                postalCode = partyOverride.Address.PostalCode,
+                city = partyOverride.Address.City
             };
+        }
+        if(!string.IsNullOrEmpty(partyOverride.VatNumber))
+        {
+            party.vatNumber = partyOverride.VatNumber;
+        }
+        if(!string.IsNullOrEmpty(partyOverride.Country) && Enum.TryParse<CountryType>(partyOverride.Country, true, out var country))
+        {
+            party.country = country;
+        }
+        if (!string.IsNullOrEmpty(partyOverride.Name))
+        {
+            party.name = partyOverride.Name;
         }
     }
 
@@ -978,7 +1039,7 @@ public class AADEFactory
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
     {
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (GetEffectiveInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For item 82 we define the taxes at line level only
             return new List<TaxTotalsType>();
@@ -1170,7 +1231,7 @@ public class AADEFactory
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (GetEffectiveInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For Invoice Types of type 82 we use a different loading mechanism for the invocies to ensure that taxlevels are included
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);

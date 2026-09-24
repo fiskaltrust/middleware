@@ -85,14 +85,14 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         [MemberData(nameof(RequestBuilders))]
         public void AllBuilders_WithACodiceFiscale_EmitDirectIO1061(string builder)
         {
-            AssertSingleCommand(BuildDirectIOCommands(builder, "{\"CustomerId\":\"" + CodiceFiscale + "\"}"), "1061", CodiceFiscale);
+            AssertSingleCommand(BuildDirectIOCommands(builder, "{\"CustomerTaxId\":\"" + CodiceFiscale + "\"}"), "1061", CodiceFiscale);
         }
 
         [Theory]
         [MemberData(nameof(RequestBuilders))]
         public void AllBuilders_WithAnUntrimmedLowerCaseCodiceFiscale_StillEmitDirectIO1061(string builder)
         {
-            AssertSingleCommand(BuildDirectIOCommands(builder, "{\"CustomerId\":\"  rssmra80a01h501u \"}"), "1061", CodiceFiscale);
+            AssertSingleCommand(BuildDirectIOCommands(builder, "{\"CustomerTaxId\":\"  rssmra80a01h501u \"}"), "1061", CodiceFiscale);
         }
 
         /// <summary>Same precedence rule as the Custom SCUs: the codice fiscale wins.</summary>
@@ -100,25 +100,30 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         [MemberData(nameof(RequestBuilders))]
         public void AllBuilders_WithBothIdentifiers_PreferTheCodiceFiscale(string builder)
         {
-            var cbCustomer = "{\"CustomerId\":\"" + CodiceFiscale + "\",\"CustomerVATId\":\"" + PartitaIva + "\"}";
+            var cbCustomer = "{\"CustomerTaxId\":\"" + CodiceFiscale + "\",\"CustomerVATId\":\"" + PartitaIva + "\"}";
 
             AssertSingleCommand(BuildDirectIOCommands(builder, cbCustomer), "1061", CodiceFiscale);
         }
 
-        /// <summary>An Italian legal entity uses its partita IVA as codice fiscale, so it belongs on 1060.</summary>
+        /// <summary>
+        /// CustomerTaxId carries a codice fiscale only. A legal entity using its partita IVA as codice
+        /// fiscale has to send it as CustomerVATId; put on CustomerTaxId it reaches neither command.
+        /// </summary>
         [Theory]
         [MemberData(nameof(RequestBuilders))]
-        public void AllBuilders_WithAPartitaIvaInCustomerId_EmitDirectIO1060(string builder)
+        public void AllBuilders_WithAPartitaIvaInCustomerTaxId_EmitNoDirectIO(string builder)
         {
-            AssertSingleCommand(BuildDirectIOCommands(builder, "{\"CustomerId\":\"IT" + PartitaIva + "\"}"), "1060", PartitaIva);
+            var commands = BuildDirectIOCommands(builder, "{\"CustomerTaxId\":\"" + PartitaIva + "\"}");
+
+            Assert.Empty(commands.Where(x => x.Command == "1060" || x.Command == "1061"));
         }
 
-        /// <summary>An empty CustomerId must not suppress a usable partita IVA.</summary>
+        /// <summary>An empty CustomerTaxId must not suppress a usable partita IVA.</summary>
         [Theory]
         [MemberData(nameof(RequestBuilders))]
-        public void AllBuilders_WithAnEmptyCustomerId_FallBackToThePartitaIva(string builder)
+        public void AllBuilders_WithAnEmptyCustomerTaxId_FallBackToThePartitaIva(string builder)
         {
-            var cbCustomer = "{\"CustomerId\":\"\",\"CustomerVATId\":\"" + PartitaIva + "\"}";
+            var cbCustomer = "{\"CustomerTaxId\":\"\",\"CustomerVATId\":\"" + PartitaIva + "\"}";
 
             AssertSingleCommand(BuildDirectIOCommands(builder, cbCustomer), "1060", PartitaIva);
         }
@@ -126,8 +131,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         [Theory]
         [InlineData("{\"CustomerVATId\":\"12345\"}")]              // too short
         [InlineData("{\"CustomerVATId\":\"0160672021A\"}")]        // right length, not all digits
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501\"}")]       // 15 characters
-        [InlineData("{\"CustomerId\":\"RSSMRA80A01H501U!\"}")]     // 16 characters, not alphanumeric
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501\"}")]       // 15 characters
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U!\"}")]     // 16 characters, not alphanumeric
+        [InlineData("{\"CustomerTaxId\":\"IT01606720215\"}")]         // a partita IVA does not belong here
+        [InlineData("{\"CustomerVATId\":\"RSSMRA80A01H501U\"}")]      // ... and neither does a codice fiscale there
         [InlineData("{\"CustomerVATId\":\"\"}")]
         [InlineData("{\"CustomerName\":\"Mario Rossi\"}")]
         [InlineData("")]

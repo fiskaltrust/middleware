@@ -1,0 +1,54 @@
+{
+  "RecordedAgainst": "serial://COM9",
+  "RecordedAtUtc": "2026-09-08T15:55:23.5726542Z",
+  "Exchanges": [
+    {
+      "Command": "stot\t",
+      "Response": "stot\tno3\tfa0\tfb0\tfc0\tfd0\tfe0\tff0\tfg0\tfn0\tpa369\tpb0\tpc0\tpd0\tpe0\tpf0\tpg0\tpn1\tct0\tcn0\tcc0\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\tds2026-09-08;17:55\tis2026-09-08T17:55:21\u002B02:00\tde2026-09-08;17:55\tie2026-09-08T17:55:21\u002B02:00\tft0\tfl0\tnf1\tbc0\tle0\toe0\ttf0\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn31\tbn1\tfn0\tnuZBF 2101002392\tbc0\tbt1\tfc0\t"
+    },
+    {
+      "Command": "scomm\t",
+      "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    },
+    {
+      "Command": "trinit\tbm0\t",
+      "Response": "trinit\t"
+    },
+    {
+      "Command": "trline\tnaCandies\tvt0\tpr10000\twa10000\trd0\trnDoplata za pakowanie\trw2300\t",
+      "Response": "trline\t"
+    },
+    {
+      "Command": "trdiscntsubtot\tnaNarzut od podsumy (oplata\trd0\trw100\t",
+      "Response": "trdiscntsubtot\t"
+    },
+    {
+      "Command": "trpayment\tty0\twa12400\tnaGot\u00F3wka\tre0\t",
+      "Response": "trpayment\t"
+    },
+    {
+      "Command": "trend\tto12400\tfp12400\t",
+      "Response": "trend\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn32\tbn2\tfn0\tnuZBF 2101002392\tbc0\tbt2\tfc0\t"
+    },
+    {
+      "Command": "strns\t",
+      "Response": "strns\tto0\tts16\tva12400\tvb0\tvc0\tvd0\tve0\tvf0\tvg0\tpp0\tpm0\tre0\tfp12400\tfeN\t"
+    },
+    {
+      "Command": "stot\t",
+      "Response": "stot\tno3\tfa0\tfb0\tfc0\tfd0\tfe0\tff0\tfg0\tfn0\tpa12769\tpb0\tpc0\tpd0\tpe0\tpf0\tpg0\tpn2\tct0\tcn0\tcc0\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\tds2026-09-08;17:55\tis2026-09-08T17:55:21\u002B02:00\tde2026-09-08;17:55\tie2026-09-08T17:55:24\u002B02:00\tft0\tfl0\tnf1\tbc0\tle0\toe0\ttf0\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd2\thn32\tbn2\tfn0\tnuZBF 2101002392\tbc0\tbt2\tfc0\t"
+    }
+  ]
+}
