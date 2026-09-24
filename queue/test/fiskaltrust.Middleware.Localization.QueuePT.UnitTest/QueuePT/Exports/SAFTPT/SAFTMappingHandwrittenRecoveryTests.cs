@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;

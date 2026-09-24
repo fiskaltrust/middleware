@@ -7,6 +7,9 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -18,14 +21,13 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueGRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IGRSSCD grSSCD)
+    public QueueGRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IGRSSCD grSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var signaturCreationUnitGR = new ftSignaturCreationUnitGR();
 
 
         //var storageProvider = new AzureStorageProvider(loggerFactory, id, Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonSerializer.Serialize(configuration)));
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueGRAsync(id)).CashBoxIdentification);
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);

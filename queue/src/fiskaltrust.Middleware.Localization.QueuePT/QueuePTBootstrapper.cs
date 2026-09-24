@@ -17,14 +17,14 @@ using fiskaltrust.Middleware.Localization.v2.Validation;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Storage.Base.Interface;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT;
 
 public class QueuePTBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
-
-    public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD) : this(id, loggerFactory, configuration, ptSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
     public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD, IStorageProvider storageProvider)
     {

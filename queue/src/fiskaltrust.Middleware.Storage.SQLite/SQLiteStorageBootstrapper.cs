@@ -13,7 +13,6 @@ using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.AT;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.DE;
-using fiskaltrust.Middleware.Storage.SQLite.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.ME;
