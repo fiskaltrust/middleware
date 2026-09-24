@@ -1,0 +1,30 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "pl-nip-receipt",
+  "cbReceiptMoment": "2026-08-04T10:00:00Z",
+  "cbCustomer": "{\"CustomerVATId\":\"PL5260250274\"}",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Description": "Materiały biurowe",
+      "Amount": 123.0,
+      "VATRate": 23,
+      "ftChargeItemCase": 5786034805636333571,
+      "Currency": "PLN"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Gotówka",
+      "Amount": 123.0,
+      "ftPayItemCase": 5786034805636333569,
+      "Currency": "PLN"
+    }
+  ],
+  "cbReceiptAmount": 123.0,
+  "ftReceiptCase": 5786034805638430721,
+  "Currency": "PLN"
+}

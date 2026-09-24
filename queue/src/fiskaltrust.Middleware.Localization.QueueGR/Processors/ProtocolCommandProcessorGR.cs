@@ -1,14 +1,22 @@
-﻿using fiskaltrust.ifPOS.v2.gr;
+using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ProtocolCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queueStorageProvider) : IProtocolCommandProcessor
+public class ProtocolCommandProcessorGR(
+    IGRSSCD sscd,
+    IQueueStorageProvider queueStorageProvider,
+    AsyncLazy<IConfigurationRepository> configurationRepository,
+    ILogger logger) : IProtocolCommandProcessor
 {
     private readonly IGRSSCD _sscd = sscd;
-    readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
+    private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
+    private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
+    private readonly ILogger _logger = logger;
 
     public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
@@ -18,16 +26,7 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queu
 
     public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "InternalUsageMaterialConsumption");
 
-    public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
-    {
-        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        }, receiptReferences);
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => SubmitAsync(request);
 
     public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request)
     {
@@ -37,15 +36,29 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd, IQueueStorageProvider queu
             return await GRFallBackOperations.NoOp(request);
         }
 
-        var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        }, receiptReferences);
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        return await SubmitAsync(request);
     }
 
-
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
+
+    // Everything that calls the SCU runs through the counter reservation. Whether an
+    // invoice was actually filed is decided by the mark gate inside the reservation:
+    // orders are submitted via SendInvoices and consume an aa, while Pay0x3005 is
+    // transmitted via the payment-methods endpoint, produces no invoiceMark and
+    // therefore never consumes one.
+    private Task<ProcessCommandResponse> SubmitAsync(ProcessCommandRequest request) =>
+        InvoiceCounterReservation.InvokeWithCounterAsync(
+            request,
+            _configurationRepository,
+            _queueStorageProvider,
+            _logger,
+            async () =>
+            {
+                var receiptReferences = await _queueStorageProvider.GetReceiptReferencesIfNecessaryAsync(request);
+                return await _sscd.ProcessReceiptAsync(new ProcessRequest
+                {
+                    ReceiptRequest = request.ReceiptRequest,
+                    ReceiptResponse = request.ReceiptResponse,
+                }, receiptReferences);
+            });
 }

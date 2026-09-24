@@ -6,7 +6,7 @@ inputs:
     required: true
   targetFramework:
     required: false
-    default: net6
+    default: net6.0
 
 outputs:
   version:

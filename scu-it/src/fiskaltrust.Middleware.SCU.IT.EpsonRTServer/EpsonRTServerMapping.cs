@@ -6,6 +6,7 @@ using System.Security;
 using System.Text;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
@@ -35,7 +36,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         {
             var docNumber = tillState.LastDocNumber + 1;
             var zNumber = tillState.LastZNumber;
-            var moment = receiptRequest.cbReceiptMoment;
+            // The RT Server records the LOCAL emission time (Metadata Guide 3.8: dateTime "YYYYMMDDThhmmss"
+            // + srtUtcOffset 1=winter/2=summer). cbReceiptMoment is defined as UTC (fiskaltrust interface-doc),
+            // so convert with the device-reported offset — correct on any host (the cloud host runs in UTC,
+            // where ToLocalTime would be wrong).
+            var moment = ToRtServerLocalTime(receiptRequest.cbReceiptMoment, tillState.SrtUtcOffset);
 
             var recAmount = GetReceiptTotal(receiptRequest, docType);
             var recVat = GetReceiptVat(receiptRequest, docType);
@@ -74,6 +79,22 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             };
         }
 
+        /// <summary>
+        /// Converts the receipt moment to the RT Server's local wall-clock time using the device-reported
+        /// <paramref name="srtUtcOffset"/> (1 = winter/+1h, 2 = summer/+2h). cbReceiptMoment is defined as UTC
+        /// (fiskaltrust interface-doc: "Must be provided in UTC"); since the DateTimeKind is not guaranteed
+        /// after deserialization, a Local value is normalised via ToUniversalTime and a zoneless (Unspecified)
+        /// value is honoured as UTC per that contract. Returns an Unspecified-kind value so it formats without
+        /// a timezone designator, as the metadata format requires.
+        /// </summary>
+        public static DateTime ToRtServerLocalTime(DateTime moment, int srtUtcOffset)
+        {
+            var utc = moment.Kind == DateTimeKind.Local
+                ? moment.ToUniversalTime()
+                : DateTime.SpecifyKind(moment, DateTimeKind.Utc);
+            return DateTime.SpecifyKind(utc.AddHours(srtUtcOffset), DateTimeKind.Unspecified);
+        }
+
         private static string BuildPrinterFiscalReceipt(
             ReceiptRequest receiptRequest, TillState tillState, int docType, long docNumber, long zNumber, DateTime moment,
             decimal recAmount, decimal recVat, decimal dailyAmount, PaymentTotals payments,
@@ -87,28 +108,38 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             {
                 sb.Append("<beginFiscalReceipt />");
             }
-            else
+            else if (referenceDocMoment.HasValue)
             {
                 sb.Append($"<beginFiscalReceipt docType=\"{docType}\"");
                 if (referenceZNumber.HasValue) sb.Append($" refZRepNum=\"{referenceZNumber.Value:D4}\"");
                 if (referenceDocNumber.HasValue) sb.Append($" refRecNum=\"{referenceDocNumber.Value:D4}\"");
-                if (referenceDocMoment.HasValue) sb.Append($" refDateTime=\"{referenceDocMoment.Value:yyyyMMddTHHmmss}\"");
+                sb.Append($" refDateTime=\"{referenceDocMoment.Value:yyyyMMddTHHmmss}\"");
                 if (!string.IsNullOrEmpty(referenceTillId)) sb.Append($" refTillID=\"{referenceTillId}\"");
                 sb.Append(" />");
+            }
+            else
+            {
+                // Unreferenced refund/void: no traceable original (Metadata Guide 3.7.2 "ND"). Emit the ND type with
+                // the receipt's own moment as refDateTime: zeroed reference numbers are logged as a wrong reference
+                // (-35) and an omitted/zeroed time as a reference-document error (-45); ND with a real datetime is
+                // accepted cleanly (device-confirmed on Fiberland).
+                sb.Append($"<beginFiscalReceipt docType=\"{docType}\" refDateTime=\"{moment:yyyyMMddTHHmmss}\" refRefundVoidType=\"ND\" />");
             }
 
             AppendChargeItemLines(sb, receiptRequest, docType);
 
-            foreach (var payItem in receiptRequest.cbPayItems ?? Array.Empty<PayItem>())
+            var payItems = receiptRequest.cbPayItems ?? Array.Empty<PayItem>();
+            var paymentAmounts = GetEffectivePaymentAmounts(payItems, recAmount);
+            for (var i = 0; i < payItems.Length; i++)
             {
-                var paymentType = GetEpsonPaymentType(payItem);
+                var paymentType = GetEpsonPaymentType(payItems[i]);
                 sb.Append("<printRecTotal");
-                sb.Append($" description=\"{Escape(payItem.Description)}\"");
-                sb.Append($" payment=\"{FormatAmount(Math.Abs(payItem.Amount))}\"");
+                sb.Append($" description=\"{Escape(payItems[i].Description)}\"");
+                sb.Append($" payment=\"{FormatAmount(paymentAmounts[i])}\"");
                 sb.Append($" paymentType=\"{paymentType.PaymentType}\" index=\"{paymentType.Index}\" />");
             }
 
-            if ((receiptRequest.cbPayItems?.Length ?? 0) == 0)
+            if (payItems.Length == 0)
             {
                 // No pay items: fall back to a single cash payment covering the receipt total. The cash bucket in
                 // fiscalInformation is aligned by GetPaymentTotals so the amounts stay consistent (error -38).
@@ -124,7 +155,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
             }
             else
             {
-                var customerTaxId = receiptRequest.GetCustomer()?.CustomerVATId;
+                // printRecTaxID offers a single slot, so the codice fiscale takes precedence over the
+                // partita IVA, as in the Custom SCUs. Normalized so the IT country prefix is not
+                // forwarded to the server as part of the tax id.
+                var customer = receiptRequest.GetCustomer();
+                var customerTaxId = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId);
                 if (!string.IsNullOrEmpty(customerTaxId))
                 {
                     sb.Append($"<printRecTaxID taxID=\"{Escape(customerTaxId)}\" />");
@@ -333,17 +368,18 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 return totals;
             }
 
-            foreach (var payItem in payItems)
+            var amounts = GetEffectivePaymentAmounts(payItems, recAmount);
+            for (var i = 0; i < payItems.Length; i++)
             {
-                var amount = Math.Abs(payItem.Amount);
-                switch (GetEpsonPaymentType(payItem).PaymentType)
+                var amount = amounts[i];
+                switch (GetEpsonPaymentType(payItems[i]).PaymentType)
                 {
                     case 0: totals.Cash += amount; break;
                     case 1: totals.Check += amount; break;
                     case 2: totals.EPay += amount; break;
                     case 3:
                         totals.Ticket += amount;
-                        totals.TicketNum += Math.Max(1, (int) Math.Abs(payItem.Quantity));
+                        totals.TicketNum += Math.Max(1, (int) Math.Abs(payItems[i].Quantity));
                         break;
                     case 4: totals.NoPayServices += amount; break;
                     case 5: totals.NoPayGoods += amount; break;
@@ -355,6 +391,30 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 }
             }
             return totals;
+        }
+
+        // Only cash (paymentType 0) may be tendered above the amount still owed (the surplus becomes changeAmount).
+        // Every other method is clamped to the outstanding balance: the device forbids change on non-cash payments
+        // (Metadata Guide 3.4.2/3.8.1) and rejects an over-tendered non-cash printRecTotal with -39.
+        private static decimal[] GetEffectivePaymentAmounts(PayItem[] payItems, decimal recAmount)
+        {
+            var amounts = new decimal[payItems.Length];
+            var nonCashOutstanding = recAmount;
+            for (var i = 0; i < payItems.Length; i++)
+            {
+                var tendered = Math.Abs(payItems[i].Amount);
+                if (GetEpsonPaymentType(payItems[i]).PaymentType == 0)
+                {
+                    amounts[i] = tendered;
+                }
+                else
+                {
+                    var capped = Math.Min(tendered, Math.Max(0m, nonCashOutstanding));
+                    amounts[i] = capped;
+                    nonCashOutstanding -= capped;
+                }
+            }
+            return amounts;
         }
 
         private static long ToCents(decimal value) => (long) Math.Round(value * 100, MidpointRounding.AwayFromZero);
@@ -398,8 +458,21 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 case 0x3: vatId = 1; return true;  // 22%
                 case 0x4: vatId = 4; return true;  // 5%
                 case 0x7: vatId = 13; return true; // 0%
+                // No VAT nibble (0x0): honour the item's stated VATRate so receipts that omit ftChargeItemCase
+                // are not rejected; unrecognised rates stay strict (fall through to throw).
+                case 0x0: return TryGetVatIdFromVatRate(chargeItem.VATRate, out vatId);
                 default: vatId = -1; return false;
             }
+        }
+
+        private static bool TryGetVatIdFromVatRate(decimal vatRate, out int vatId)
+        {
+            if (vatRate == 22m) { vatId = 1; return true; }
+            if (vatRate == 10m) { vatId = 2; return true; }
+            if (vatRate == 5m) { vatId = 4; return true; }
+            if (vatRate == 4m) { vatId = 3; return true; }
+            vatId = -1;
+            return false;
         }
 
         // Resolves the vatID for an emitted item line. Tips and multi-use vouchers are outside the taxable

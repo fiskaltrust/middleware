@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware implementation of the MyData SCU for Greece.</Description>
-        <TargetFrameworks>net8</TargetFrameworks>
+        <TargetFrameworks>net8.0</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
         <LangVersion>12.0</LangVersion>
@@ -35,6 +35,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.SCU.GR.MyData.UnitTest" />
     </ItemGroup>
 
 </Project>

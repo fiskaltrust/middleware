@@ -47,6 +47,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
                 UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
                 UsedFailedMomentMax = src.UsedFailedMomentMax?.ToUniversalTime(),
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                InvoiceSeries = src.InvoiceSeries,
+                InvoiceNumerator = src.InvoiceNumerator,
+                LastInvoiceMoment = src.LastInvoiceMoment?.ToUniversalTime(),
+                LastInvoiceQueueItemId = src.LastInvoiceQueueItemId,
+                LastInvoiceMark = src.LastInvoiceMark,
                 TimeStamp = src.TimeStamp,
             };
         }
@@ -72,6 +77,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
                 UsedFailedMomentMin = src.UsedFailedMomentMin,
                 UsedFailedMomentMax = src.UsedFailedMomentMax,
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                InvoiceSeries = src.InvoiceSeries,
+                InvoiceNumerator = src.InvoiceNumerator,
+                LastInvoiceMoment = src.LastInvoiceMoment,
+                LastInvoiceQueueItemId = src.LastInvoiceQueueItemId,
+                LastInvoiceMark = src.LastInvoiceMark,
                 TimeStamp = src.TimeStamp,
             };
         }

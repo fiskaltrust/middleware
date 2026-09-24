@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
 using System.Globalization;
 
@@ -27,6 +28,7 @@ public static class CustomRTServerMapping
             refCashUuid = "ND";
         }
         (var totalAmount, var vatAmount, var items) = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1);
+        (var fiscalcode, var vatcode) = GetCustomerDataForReceiptRequest(receiptRequest);
         var fiscalDocument = new FDocument
         {
             document = new DocumentData
@@ -37,8 +39,8 @@ public static class CustomRTServerMapping
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
                 amount = ConvertToFullAmountInt(totalAmount),
-                fiscalcode = "",
-                vatcode = "",
+                fiscalcode = fiscalcode,
+                vatcode = vatcode,
                 fiscaloperator = "",
                 businessname = null,
                 prevSignature = queueIdentification.LastSignature,
@@ -77,6 +79,7 @@ public static class CustomRTServerMapping
             refCashUuid = "ND";
         }
         (var totalAmount, var vatAmount, var items) = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1);
+        (var fiscalcode, var vatcode) = GetCustomerDataForReceiptRequest(receiptRequest);
 
         var fiscalDocument = new FDocument
         {
@@ -88,8 +91,8 @@ public static class CustomRTServerMapping
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
                 amount = ConvertToFullAmountInt(totalAmount),
-                fiscalcode = "",
-                vatcode = "",
+                fiscalcode = fiscalcode,
+                vatcode = vatcode,
                 fiscaloperator = "",
                 businessname = null,
                 prevSignature = queueIdentification.LastSignature,
@@ -130,8 +133,9 @@ public static class CustomRTServerMapping
         document.docnumber = queueIdentification.LastDocNumber + 1;
         document.docznumber = queueIdentification.LastZNumber + 1;
         document.amount = ConvertToFullAmountInt(totalAmount);
-        document.fiscalcode = "";
-        document.vatcode = "";
+        // The lottery code and the customer identification are not mutually exclusive here: both are sent
+        // on the same document, so this also applies to the DocumentDataLottery branch above.
+        (document.fiscalcode, document.vatcode) = GetCustomerDataForReceiptRequest(receiptRequest);
         document.fiscaloperator = "";
         document.businessname = null;
         document.prevSignature = queueIdentification.LastSignature;
@@ -167,6 +171,19 @@ public static class CustomRTServerMapping
         };
         qrCode.signature = GlobalTools.CreateHMAC(Convert.FromBase64String(key), qrCode.shaMetadata);
         return qrCode;
+    }
+
+    /// <summary>
+    /// Reads the customer identification from cbCustomer. By convention across the IT SCUs
+    /// (cf. CustomRTPrinterSCU) Customer.CustomerTaxId carries the codice fiscale and
+    /// Customer.CustomerVATId the partita IVA, so each one maps to its own document field.
+    /// Both values are forwarded as-is apart from normalization: their shape is validated upstream in
+    /// CustomRTServerSCU.ProcessReceiptAsync.
+    /// </summary>
+    public static (string fiscalcode, string vatcode) GetCustomerDataForReceiptRequest(ReceiptRequest receiptRequest)
+    {
+        var customer = receiptRequest.GetCustomer();
+        return (ItalyValidationHelpers.Normalize(customer?.CustomerTaxId), ItalyValidationHelpers.NormalizeVatId(customer?.CustomerVATId));
     }
 
     public static bool InverseAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();

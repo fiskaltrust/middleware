@@ -1,0 +1,30 @@
+{
+  "RecordedAgainst": "serial://COM9",
+  "RecordedAtUtc": "2026-09-08T15:54:51.7894596Z",
+  "Exchanges": [
+    {
+      "Command": "scomm\t",
+      "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    },
+    {
+      "Command": "trinit\tbm0\t",
+      "Response": "trinit\t"
+    },
+    {
+      "Command": "trline\tnaCandies\tvt1\tpr999\t",
+      "Response": "trline\t"
+    },
+    {
+      "Command": "trpayment\tty0\twa999\tnaGot\u00F3wka\tre0\t",
+      "Response": "trpayment\t"
+    },
+    {
+      "Command": "trend\tto999\tfp999\t",
+      "Response": "trend\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd0\thn11\tbn10\tfn0\tnuZBF 2101002392\tbc0\tbt10\tfc0\t"
+    }
+  ]
+}

@@ -284,6 +284,234 @@ public class AADEFactoryTests
     }
 
     [Fact]
+    public void MapToInvoicesDoc_WithCountrySuffix_ParsesSeriesAndAaFromSuffix()
+    {
+        // ftReceiptIdentification format used by the new QueueGR processor:
+        //   "ft{ftReceiptNumerator:X}#{series}-{aa}"
+        // AADEFactory must read the country segment after "#" instead of the legacy
+        // hex prefix. Without this the new reservation flow can't communicate the
+        // reserved (series, aa) to the doc builder.
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Amount = 100,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24,
+                },
+            ],
+            cbPayItems = [new PayItem { Amount = 100 }],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = 100,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftCashBoxIdentification = "ignored-when-suffix-present",
+            ftReceiptIdentification = "ft7#RESERVED-42",
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "Test" },
+        }, "https://test.receipts.example.com");
+
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.series.Should().Be("RESERVED");
+        doc!.invoice[0].invoiceHeader.aa.Should().Be("42");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithDashedSeriesInCountrySuffix_SplitsAtLastDash()
+    {
+        // CashBoxIdentifications regularly contain dashes (GUID-like values), so the
+        // series in the country segment may itself be dashed. The aa must be split off
+        // at the LAST dash of the segment.
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Amount = 100,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24,
+                },
+            ],
+            cbPayItems = [new PayItem { Amount = 100 }],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001),
+            cbReceiptAmount = 100,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftCashBoxIdentification = "ignored-when-suffix-present",
+            ftReceiptIdentification = "ft7#e9c02867-fbd6-4c50-88e6-6b6892dcbf2b-105",
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "Test" },
+        }, "https://test.receipts.example.com");
+
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.series.Should().Be("e9c02867-fbd6-4c50-88e6-6b6892dcbf2b");
+        doc!.invoice[0].invoiceHeader.aa.Should().Be("105");
+    }
+
+    [Theory]
+    [InlineData(-5L)]
+    [InlineData(0L)]
+    public void MapToInvoicesDoc_Handwritten_WithNonPositiveAA_ShouldReturnError(long handwrittenAa)
+    {
+        // Must stay aligned with the queue's inbound gate (AA > 0): a payload the queue
+        // treats as incomplete must never be accepted here, otherwise the document is
+        // filed under the caller's values while the queue commits its own reservation.
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Amount = 100,
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                    VATRate = 24,
+                },
+            ],
+            cbPayItems = [new PayItem { Amount = 100 }],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001).WithFlag(ReceiptCaseFlags.HandWritten),
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    MerchantVATID = "Test",
+                    Series = "HW",
+                    AA = handwrittenAa,
+                    HashAlg = "SHA256",
+                    HashPayload = "irrelevant — validation fails before the hash is checked",
+                },
+            },
+            cbReceiptAmount = 100,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftCashBoxIdentification = "CB-A",
+            ftReceiptIdentification = "ft7#CB-A-42",
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "Test" },
+        }, "https://test.receipts.example.com");
+
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("greater than 0");
+    }
+
+    [Fact]
+    public void MarkSignatureContract_IsPinnedForTheQueueCommitGate()
+    {
+        // The QueueGR invoice counter commits a reservation only when the response
+        // carries a signature captioned "invoiceMark" typed as SignatureTypeGR.Mark.
+        // The queue project duplicates that enum value; if either the value or the
+        // caption drifts here, the counter silently stops advancing and every invoice
+        // re-submits the same aa.
+        ((long) SignatureTypeGR.Mark).Should().Be(0x4752_2000_0000_0014);
+        ItemsChoiceType.invoiceMark.ToString().Should().Be("invoiceMark");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_Handwritten_OverridesSuffixBasedSeriesAndAa()
+    {
+        // In production the queue takes handwritten numbering inbound, so the segment
+        // in ftReceiptIdentification already carries the merchant's values and this
+        // override re-applies the same payload. This test pins the layering for a
+        // caller that stamped a different segment: the handwritten payload is the
+        // authoritative source for the doc's (series, aa).
+        var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
+        var merchantId = "Test";
+        var handwrittenSeries = "HW";
+        var handwrittenAa = 9999L;
+        var cbReceiptReference = Guid.NewGuid().ToString();
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Amount = 100,
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+                VATRate = 24,
+            },
+        };
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = dateTime,
+            cbReceiptReference = cbReceiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = chargeItems,
+            cbPayItems = [new PayItem { Amount = 100 }],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001).WithFlag(ReceiptCaseFlags.HandWritten),
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    MerchantVATID = merchantId,
+                    Series = handwrittenSeries,
+                    AA = handwrittenAa,
+                    HashAlg = "SHA256",
+                    HashPayload = $"{merchantId}-{handwrittenSeries}-{handwrittenAa}-{cbReceiptReference}-2025-12-15T12:13:14Z-{chargeItems.Sum(x => x.Amount)}",
+                },
+            },
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            // Country processor's reservation suffix — must lose to the handwritten override.
+            ftReceiptIdentification = "ft7#RESERVED-42",
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = merchantId },
+        }, "https://test.receipts.example.com");
+
+        (var doc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.series.Should().Be(handwrittenSeries);
+        doc!.invoice[0].invoiceHeader.aa.Should().Be(handwrittenAa.ToString());
+    }
+
+    [Fact]
     public void MapToInvoiceDoc_ForReceiptRequest_ShouldWork()
     {
         var merchantId = "Test";

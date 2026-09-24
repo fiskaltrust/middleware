@@ -93,6 +93,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         public Task<RtServerResponse> GetFiscalInformationAsync(string tillId)
             => SendToFpServerAsync($"<createReport><fiscalInformation tillId=\"{tillId}\" /></createReport>");
 
+        public Task<RtServerResponse> GetReceiptAsync(string tillId, long zRepNumber, long recNumber, string date)
+            => SendToFpServerAsync($"<createReport><receipt tillId=\"{tillId}\" zRepNumber=\"{zRepNumber:D4}\" recNumber=\"{recNumber:D4}\" date=\"{date}\" reportType=\"txt\" /></createReport>");
+
         public Task<RtServerResponse> GetPublicKeyAsync()
             => SendToFpServerAsync("<createReport><publicKey /></createReport>");
 

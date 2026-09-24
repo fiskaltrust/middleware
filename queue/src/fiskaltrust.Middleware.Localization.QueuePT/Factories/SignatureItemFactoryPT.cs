@@ -83,12 +83,12 @@ public static class SignatureItemFactoryPT
         };
     }
 
-    public static SignatureItem AddCertificateSignature(string printHash)
+    public static SignatureItem AddCertificateSignature(string printHash, bool sandbox)
     {
         return new SignatureItem
         {
             Caption = $"-----",
-            Data = $"{printHash} - Processado por programa certificado " + $" n.º {fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PTMappings.CertificationPosSystem.SoftwareCertificateNumber}/AT",
+            Data = $"{printHash} - Processado por programa certificado " + $" n.º {fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401.PTMappings.CertificationPosSystem.GetSoftwareCertificateNumber(sandbox)}/AT",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
         };

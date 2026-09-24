@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Queue.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -187,6 +188,67 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
 
             var response = await sut.ProcessAsync(request);
             response.Should().NotBeNull();
+        }
+
+        [Theory]
+        [InlineData(0x0000_0000_0000_0001L, false)] // V1: no 0x2000 version nibble
+        [InlineData(0x0000_2000_0000_0001L, true)]  // V2: 0x2000 version nibble
+        public async Task ProcessAsync_WhenCountryProcessorReturnsErrorStateWithoutThrowing_ReturnsResponseAndDoesNotThrow(long ftReceiptCase, bool isV2)
+        {
+            // Regression for market-it #635: every IT SCU (TRS, EpsonRTServer, CustomRTServer) handles its own
+            // failure and RETURNS an error response (ftState EEEE) without throwing. Pre-fix the V1 case threw a
+            // NullReferenceException ("throw null") at SignProcessor.InternalSign; the V2 case already returned the
+            // response. Both must return the error response and keep the host up.
+            var logger = new Mock<ILogger<SignProcessor>>(MockBehavior.Loose);
+            var receiptJournalRepository = new Mock<IMiddlewareReceiptJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepository = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
+            actionJournalRepository.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Returns(Task.CompletedTask);
+            var cryptoHelper = new Mock<ICryptoHelper>(MockBehavior.Strict);
+            cryptoHelper.Setup(x => x.GenerateBase64Hash(It.IsAny<string>())).Returns("MyHash");
+
+            var queueId = Guid.NewGuid();
+            var cashboxId = Guid.NewGuid();
+            var queue = new ftQueue { ftCashBoxId = cashboxId, ftQueueId = queueId, ftCurrentRow = 1 };
+            var configuration = new MiddlewareConfiguration { QueueId = queueId, CashBoxId = cashboxId, ProcessingVersion = "test" };
+
+            var configurationRepository = new Mock<IConfigurationRepository>(MockBehavior.Strict);
+            configurationRepository.Setup(x => x.GetQueueAsync(queueId)).ReturnsAsync(queue);
+            configurationRepository.Setup(x => x.InsertOrUpdateQueueAsync(queue)).Returns(Task.CompletedTask);
+
+            var request = new ReceiptRequest
+            {
+                ftCashBoxID = cashboxId.ToString(),
+                ftQueueID = queueId.ToString(),
+                cbTerminalID = "MyTerminalId",
+                ftReceiptCase = ftReceiptCase
+            };
+            request.IsV2().Should().Be(isV2);
+
+            var errorResponse = new ReceiptResponse
+            {
+                ftCashBoxID = cashboxId.ToString(),
+                ftQueueID = queueId.ToString(),
+                cbTerminalID = request.cbTerminalID,
+                ftState = 0xEEEE_EEEE,
+                ftSignatures = Array.Empty<SignaturItem>()
+            };
+
+            var marketSpecificSignProcessor = new Mock<IMarketSpecificSignProcessor>(MockBehavior.Strict);
+            marketSpecificSignProcessor.Setup(x => x.FirstTaskAsync()).Returns(Task.CompletedTask);
+            marketSpecificSignProcessor.Setup(x => x.ProcessAsync(request, queue, It.IsAny<ftQueueItem>())).ReturnsAsync((errorResponse, new List<ftActionJournal>()));
+            marketSpecificSignProcessor.Setup(x => x.FinalTaskAsync(queue, It.IsAny<ftQueueItem>(), request, actionJournalRepository.Object, It.IsAny<IMiddlewareQueueItemRepository>(), receiptJournalRepository.Object)).Returns(Task.CompletedTask);
+
+            var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+            queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.IsAny<ftQueueItem>())).Returns(Task.CompletedTask);
+
+            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration);
+
+            ReceiptResponse response = null;
+            Func<Task> act = async () => response = await sut.ProcessAsync(request);
+
+            await act.Should().NotThrowAsync();
+            response.Should().NotBeNull();
+            response.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE);
         }
 
         private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo) SetupTestEnvironment(long ftReceiptCase, long ftState)

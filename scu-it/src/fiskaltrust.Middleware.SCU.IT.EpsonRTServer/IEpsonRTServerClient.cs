@@ -37,6 +37,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
         /// <summary>Reads the current-day totals for a till. fpserver.cgi / createReport / fiscalInformation.</summary>
         Task<RtServerResponse> GetFiscalInformationAsync(string tillId);
 
+        /// <summary>
+        /// Reads a stored fiscal receipt by its coordinates. fpserver.cgi / createReport / receipt.
+        /// The response addInfo carries the receipt's <c>hash</c> (the prefixed CCDC); returns -31 when absent.
+        /// </summary>
+        Task<RtServerResponse> GetReceiptAsync(string tillId, long zRepNumber, long recNumber, string date);
+
         /// <summary>Retrieves the RT Server public certificate key (instant lottery). fpserver.cgi / createReport / publicKey.</summary>
         Task<RtServerResponse> GetPublicKeyAsync();
 

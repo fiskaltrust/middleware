@@ -91,6 +91,46 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
             }
         }
 
+        [Fact]
+        public void BuildFiscalDocument_UnreferencedRefund_Should_Emit_ND_With_RefDateTime()
+        {
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(SaleRequest(), NewTillState(), 1, 0, 0, null, "FISK0001");
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<beginFiscalReceipt docType=\"1\" refDateTime=\"20260702T140000\" refRefundVoidType=\"ND\" />");
+                doc.CreateReceiptXml.Should().NotContain("refZRepNum=");
+                doc.ReferenceDocMoment.Should().BeNull();
+            }
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Utc)]
+        [InlineData(DateTimeKind.Unspecified)]
+        public void ToRtServerLocalTime_Should_Treat_Utc_And_Zoneless_As_Utc(DateTimeKind kind)
+        {
+            var moment = DateTime.SpecifyKind(new DateTime(2026, 7, 2, 12, 0, 0), kind);
+
+            var local = EpsonRTServerMapping.ToRtServerLocalTime(moment, 2);
+
+            using (new AssertionScope())
+            {
+                local.Should().Be(new DateTime(2026, 7, 2, 14, 0, 0));
+                local.Kind.Should().Be(DateTimeKind.Unspecified);
+            }
+        }
+
+        [Fact]
+        public void ToRtServerLocalTime_Should_Normalise_Local_Kind_Independent_Of_Host()
+        {
+            // A Local value is converted to UTC first, so the result does not depend on the host time zone.
+            var localKind = new DateTime(2026, 7, 2, 12, 0, 0, DateTimeKind.Utc).ToLocalTime();
+
+            var local = EpsonRTServerMapping.ToRtServerLocalTime(localKind, 2);
+
+            local.Should().Be(new DateTime(2026, 7, 2, 14, 0, 0));
+        }
+
         private static ReceiptRequest RequestWith(ChargeItem[] items, decimal cashPayment) => new()
         {
             ftReceiptCase = 0x0001,
@@ -306,12 +346,53 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
         }
 
         [Theory]
+        [InlineData(22, 1)]
+        [InlineData(10, 2)]
+        [InlineData(5, 4)]
+        [InlineData(4, 3)]
+        public void GetVatId_Should_Fall_Back_To_VatRate_When_Case_Nibble_Unspecified(double vatRate, int expectedVatId)
+        {
+            EpsonRTServerMapping.GetVatId(new ChargeItem { ftChargeItemCase = 0x0, VATRate = (decimal) vatRate }).Should().Be(expectedVatId);
+        }
+
+        [Fact]
+        public void GetVatId_Should_Throw_For_Unspecified_Case_Without_Recognised_VatRate()
+        {
+            var act = () => EpsonRTServerMapping.GetVatId(new ChargeItem { ftChargeItemCase = 0x0, VATRate = 0m });
+            act.Should().Throw<NotSupportedException>().WithMessage("*no VAT-index mapping*");
+        }
+
+        [Theory]
         [InlineData(0x00, 0)] // cash
         [InlineData(0x03, 1)] // cheque
         [InlineData(0x04, 2)] // electronic
         public void GetEpsonPaymentType_Should_Map_PaymentTypes(long payItemCase, int expectedPaymentType)
         {
             EpsonRTServerMapping.GetEpsonPaymentType(new PayItem { ftPayItemCase = payItemCase }).PaymentType.Should().Be(expectedPaymentType);
+        }
+
+        [Fact]
+        public void BuildFiscalDocument_NonCashOverpayment_Should_Clamp_To_Total_And_Emit_No_Change()
+        {
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = 0x0001,
+                cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0),
+                cbChargeItems = new[] { new ChargeItem { Amount = 3.30m, Quantity = 1, Description = "Coffee", VATRate = 22m, ftChargeItemCase = 0x3 } },
+                cbPayItems = new[] { new PayItem { Amount = 3.50m, Quantity = 1, Description = "CARTA", ftPayItemCase = 0x04 } },
+                ftReceiptCaseData = "{\"servizi_lotteriadegliscontrini_gov_it\":{\"codicelotteria\":\"ABCD1234\"}}"
+            };
+
+            var doc = EpsonRTServerMapping.BuildFiscalDocument(request, NewTillState(), 0);
+
+            using (new AssertionScope())
+            {
+                doc.CreateReceiptXml.Should().Contain("<printRecTotal description=\"CARTA\" payment=\"3.30\" paymentType=\"2\"");
+                doc.CreateReceiptXml.Should().Contain("ePayAmount=\"3.30\"");
+                doc.CreateReceiptXml.Should().Contain("changeAmount=\"0.00\"");
+                doc.CreateReceiptXml.Should().Contain("paidAmount=\"3.30\"");
+                doc.CreateReceiptXml.Should().Contain("recAmount=\"3.30\"");
+            }
         }
     }
 }

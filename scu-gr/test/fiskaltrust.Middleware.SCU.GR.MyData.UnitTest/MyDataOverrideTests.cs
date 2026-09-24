@@ -73,6 +73,45 @@ public class MyDataOverrideTests
         };
     }
 
+    [Theory]
+    [InlineData("MY-SERIES", null)]
+    [InlineData(null, "9999")]
+    [InlineData("MY-SERIES", "9999")]
+    public void MapToInvoicesDoc_WithSeriesOrAaOverride_ShouldReturnError(string? series, string? aa)
+    {
+        // Overriding the document numbering is not supported: series/aa are assigned by
+        // the middleware's invoice counter, or taken inbound for handwritten documents.
+        // The fields must be rejected loudly, not silently ignored — otherwise the
+        // caller believes their numbering was applied while AADE received a different
+        // one.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            series,
+                            aa
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("invoiceHeader.series or invoiceHeader.aa");
+        doc.Should().BeNull();
+    }
+
     [Fact]
     public void MapToInvoicesDoc_WithoutOverride_ShouldNotHaveDispatchFields()
     {
@@ -1030,8 +1069,10 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_WithHeaderIdentificationOverrides_ShouldSetFields()
+    public void MapToInvoicesDoc_WithHeaderFieldOverrides_ShouldSetFields()
     {
+        // series/aa are deliberately absent here: overriding the document numbering is
+        // not supported (see MapToInvoicesDoc_WithSeriesOrAaOverride_ShouldReturnError).
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
         request.ftReceiptCaseData = new
@@ -1044,8 +1085,6 @@ public class MyDataOverrideTests
                     {
                         invoiceHeader = new
                         {
-                            series = "OVR-A",
-                            aa = "999",
                             issueDate = new DateTime(2026, 5, 8, 0, 0, 0, DateTimeKind.Utc),
                             currency = "USD",
                             correlatedInvoices = new long[] { 12345L, 67890L },
@@ -1063,8 +1102,6 @@ public class MyDataOverrideTests
 
         error.Should().BeNull();
         var header = doc!.invoice[0].invoiceHeader;
-        header.series.Should().Be("OVR-A");
-        header.aa.Should().Be("999");
         header.issueDate.Should().Be(new DateTime(2026, 5, 8));
         header.currencySpecified.Should().BeTrue();
         header.currency.Should().Be(CurrencyType.USD);
@@ -1146,7 +1183,9 @@ public class MyDataOverrideTests
     [InlineData("6.2", InvoiceType.Item62)]
     [InlineData("7.1", InvoiceType.Item71)]
     [InlineData("8.1", InvoiceType.Item81)]
-    [InlineData("8.2", InvoiceType.Item82)]
+    // 8.2 is intentionally omitted here: it routes to the special-tax-only line builder and so
+    // cannot be produced from this basic (normal goods) request. Its header+body behavior is
+    // covered by ClimateResilienceFee82Tests.
     [InlineData("8.4", InvoiceType.Item84)]
     [InlineData("8.5", InvoiceType.Item85)]
     [InlineData("8.6", InvoiceType.Item86)]
@@ -2719,5 +2758,127 @@ public class MyDataOverrideTests
         error.Should().BeNull();
         doc.Should().NotBeNull();
         doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutOverride_ShouldNotHaveV202DeliveryNoteFields()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        doc!.invoice[0].invoiceHeader.nonObligatedRecipientSpecified.Should().BeFalse();
+        doc.invoice[0].invoiceHeader.withoutDigitalTransportTrackingSpecified.Should().BeFalse();
+        doc.invoice[0].invoiceHeader.receivingNotePurposeSpecified.Should().BeFalse();
+        doc.invoice[0].invoiceHeader.otherReceivingNotePurposeTitle.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithV202DeliveryNoteOverrides_ShouldSetAllFourFields()
+    {
+        // myDATA v2.0.2 invoiceHeader additions (issue #280): nonObligatedRecipient,
+        // withoutDigitalTransportTracking, receivingNotePurpose, otherReceivingNotePurposeTitle.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            nonObligatedRecipient = true,
+                            withoutDigitalTransportTracking = true,
+                            receivingNotePurpose = 2,
+                            otherReceivingNotePurposeTitle = "Λοιπή αιτία παραλαβής"
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var header = doc!.invoice[0].invoiceHeader;
+        header.nonObligatedRecipientSpecified.Should().BeTrue();
+        header.nonObligatedRecipient.Should().BeTrue();
+        header.withoutDigitalTransportTrackingSpecified.Should().BeTrue();
+        header.withoutDigitalTransportTracking.Should().BeTrue();
+        header.receivingNotePurposeSpecified.Should().BeTrue();
+        header.receivingNotePurpose.Should().Be(2);
+        header.otherReceivingNotePurposeTitle.Should().Be("Λοιπή αιτία παραλαβής");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithOtherCorrelatedEntitiesOverride_ShouldMapEntityData()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            otherCorrelatedEntities = new[]
+                            {
+                                new
+                                {
+                                    type = 3,
+                                    entityData = new
+                                    {
+                                        vatNumber = "997671770",
+                                        country = "GR",
+                                        name = "Μεταφορική Α.Ε.",
+                                        branch = 0,
+                                        address = new
+                                        {
+                                            street = "Λεωφόρος Αθηνών",
+                                            number = "100",
+                                            postalCode = "10442",
+                                            city = "Αθήνα"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+        var entities = doc!.invoice[0].invoiceHeader.otherCorrelatedEntities;
+        entities.Should().NotBeNull();
+        entities.Should().HaveCount(1);
+        var entity = entities[0];
+        entity.type.Should().Be(3);
+        entity.entityData.Should().NotBeNull();
+        entity.entityData.vatNumber.Should().Be("997671770");
+        entity.entityData.country.Should().Be(CountryType.GR);
+        entity.entityData.name.Should().Be("Μεταφορική Α.Ε.");
+        entity.entityData.address.Should().NotBeNull();
+        entity.entityData.address.street.Should().Be("Λεωφόρος Αθηνών");
+        entity.entityData.address.number.Should().Be("100");
+        entity.entityData.address.postalCode.Should().Be("10442");
+        entity.entityData.address.city.Should().Be("Αθήνα");
     }
 }

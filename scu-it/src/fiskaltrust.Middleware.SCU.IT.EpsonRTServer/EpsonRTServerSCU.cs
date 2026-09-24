@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -36,6 +37,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
     // The SCU is registered as scoped, so multiple instances can process receipts for the same SCU id
     // concurrently. Serialize per SCU id to protect the CCDC chain counters and the state-cache file.
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> _scuLocks = new();
+    private static readonly TimeSpan RealignLockTimeout = TimeSpan.FromSeconds(30);
 
     private string StateCacheFilePath => Path.Combine(_scuCacheFolder, $"{_id}_epsonrtserver_statecache.json");
 
@@ -46,6 +48,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
         _configuration = configuration;
         _client = client;
         _queue = queue;
+        _queue.TillStateRealigner = RealignTillStateAsync;
 
         var personalFolder = personalFolderProvider ?? (() => Environment.GetFolderPath(Environment.SpecialFolder.Personal));
         _scuCacheFolder = string.IsNullOrEmpty(configuration.ServiceFolder)
@@ -80,6 +83,16 @@ public sealed class EpsonRTServerSCU : LegacySCU
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
+
+            // Reject a malformed codice fiscale / partita IVA before any RT Server call.
+            if (request.ReceiptRequest.CarriesCustomerTaxIds()
+                && !request.ReceiptRequest.TryValidateCustomerTaxIds(out var customerTaxIdError))
+            {
+                _logger.LogWarning("({receiptreference}) Rejected: {error}", request.ReceiptRequest.cbReceiptReference, customerTaxIdError);
+                request.ReceiptResponse.SetReceiptResponseErrored(CustomerTaxIdValidation.CustomerTaxIdErrorCaption, customerTaxIdError!);
+                request.ReceiptResponse.ftState = StateFailed;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
+            }
 
             if (request.ReceiptRequest.IsInitialOperationReceipt())
             {
@@ -248,10 +261,12 @@ public sealed class EpsonRTServerSCU : LegacySCU
             }
             else if (string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
             {
-                // Unreferenced refund/void: use neutral references and the current moment.
+                // Unreferenced refund/void: no original document exists, so its emission moment is unknown.
+                // Send neutral references and omit the reference date (referenceDocMoment stays null) rather
+                // than inventing one from cbReceiptMoment (~today): the device logs the missing reference
+                // (-45, accepted with warning) but still registers the document.
                 referenceZNumber = 0;
                 referenceDocNumber = 0;
-                referenceDocMoment = receiptRequest.cbReceiptMoment;
                 referenceTillId = tillState.TillId;
             }
             else
@@ -297,6 +312,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
         }
         PersistState();
 
+        var customer = receiptRequest.GetCustomer();
         var signatureData = new POSReceiptSignatureData
         {
             RTSerialNumber = tillState.RTServerSerialNumber,
@@ -306,7 +322,11 @@ public sealed class EpsonRTServerSCU : LegacySCU
             RTDocType = docType switch { 1 => "REFUND", 3 => "VOID", _ => "POSRECEIPT" },
             RTServerSHAMetadata = document.Ccdc,
             RTCodiceLotteria = document.LotteryCode,
-            RTCustomerID = "",
+            // Reports what was actually sent: printRecTaxID is suppressed when a lottery code is present,
+            // because the two are mutually exclusive (see EpsonRTServerMapping).
+            RTCustomerID = string.IsNullOrEmpty(document.LotteryCode)
+                ? ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId)
+                : "",
             RTReferenceZNumber = document.ReferenceZNumber,
             RTReferenceDocNumber = document.ReferenceDocNumber,
             RTReferenceDocMoment = document.ReferenceDocMoment
@@ -427,34 +447,81 @@ public sealed class EpsonRTServerSCU : LegacySCU
 
         if (requestToken)
         {
-            var tokenResponse = await _client.CreateTokenAsync(tillId).ConfigureAwait(false);
-            var token = tokenResponse.GetAddInfo("token");
-            if (string.IsNullOrEmpty(token))
-            {
-                _logger.LogWarning("createToken for till {tillId} did not return a token in addInfo. The blockchain seed may be incorrect. Raw: {raw}", tillId, tokenResponse.RawResponse);
-            }
-            tillState.LastFingerPrint = token ?? string.Empty;
-            tillState.TokenInitialized = true;
-
-            // The token carries the authoritative Z number, next expected document number and daily amount for
-            // the current session (validated against firmware 6.01). Prefer it over the ambiguous fiscalInformation
-            // recNumber. LastDocNumber is stored as "last issued", so it is one less than the next expected number.
-            var parsedToken = EpsonToken.TryParse(token);
-            if (parsedToken != null)
-            {
-                tillState.LastZNumber = parsedToken.ZRepNumber;
-                tillState.LastDocNumber = parsedToken.NextDocNumber - 1;
-                tillState.CurrentDailyAmount = parsedToken.DailyAmountCents;
-                if (string.IsNullOrEmpty(tillState.RTServerSerialNumber))
-                {
-                    tillState.RTServerSerialNumber = parsedToken.SerialNumber;
-                }
-            }
+            await ReseedFromTokenAsync(tillState).ConfigureAwait(false);
         }
 
         _tillStates[queueId] = tillState;
         PersistState();
         return tillState;
+    }
+
+    /// <summary>
+    /// Requests a fresh token and adopts the RT Server's authoritative session counters (Z number, next
+    /// document number, daily amount) into <paramref name="tillState"/>. The token is the canonical CCDC seed,
+    /// so this both seeds a new till and realigns one whose session moved on the device. LastDocNumber is stored
+    /// as "last issued", one less than the token's next expected number.
+    /// </summary>
+    private async Task ReseedFromTokenAsync(TillState tillState)
+    {
+        var tokenResponse = await _client.CreateTokenAsync(tillState.TillId).ConfigureAwait(false);
+        var token = tokenResponse.GetAddInfo("token");
+        if (string.IsNullOrEmpty(token))
+        {
+            _logger.LogWarning("createToken for till {tillId} did not return a token in addInfo. The blockchain seed may be incorrect. Raw: {raw}", tillState.TillId, tokenResponse.RawResponse);
+        }
+        tillState.LastFingerPrint = token ?? string.Empty;
+        tillState.TokenInitialized = true;
+
+        var parsedToken = EpsonToken.TryParse(token);
+        if (parsedToken != null)
+        {
+            tillState.LastZNumber = parsedToken.ZRepNumber;
+            tillState.LastDocNumber = parsedToken.NextDocNumber - 1;
+            tillState.CurrentDailyAmount = parsedToken.DailyAmountCents;
+            if (string.IsNullOrEmpty(tillState.RTServerSerialNumber))
+            {
+                tillState.RTServerSerialNumber = parsedToken.SerialNumber;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Realigns the till to the RT Server's current session after the offline queue hit an out-of-sync
+    /// rejection (-21/-22/-25). Requests a fresh token (Metadata Guide §3.4.7) so subsequent documents build on
+    /// the live session. Takes the same per-SCU lock as receipt processing; invoked only from the background
+    /// drain — never the daily-closing path, which already holds that (non-reentrant) lock.
+    /// </summary>
+    private async Task RealignTillStateAsync(string tillId)
+    {
+        var scuLock = _scuLocks.GetOrAdd(_id, _ => new SemaphoreSlim(1, 1));
+        // Bounded wait: a concurrent daily closing holds this lock while ProcessAllReceipts busy-waits for the
+        // background drain to finish; blocking here would deadlock the two. On timeout, skip — the drain retries
+        // the realignment on its next cycle (realignedTills is scoped to a single cycle).
+        if (!await scuLock.WaitAsync(RealignLockTimeout).ConfigureAwait(false))
+        {
+            _logger.LogWarning("Could not acquire the SCU lock to realign till {tillId} within {timeout}; skipping (the offline drain will retry).", tillId, RealignLockTimeout);
+            return;
+        }
+        try
+        {
+            LoadStateFromDisk();
+            var matches = _tillStates.Values.Where(x => x.TillId == tillId).ToList();
+            if (matches.Count == 0)
+            {
+                _logger.LogWarning("Cannot realign till {tillId}: no cached state found; it will be re-seeded on the next receipt.", tillId);
+                return;
+            }
+            foreach (var tillState in matches)
+            {
+                await ReseedFromTokenAsync(tillState).ConfigureAwait(false);
+            }
+            PersistState();
+            _logger.LogWarning("Realigned till {tillId} to the RT Server's current session after an out-of-sync rejection in the offline queue.", tillId);
+        }
+        finally
+        {
+            scuLock.Release();
+        }
     }
 
     private async Task<RtServerResponse?> SafeGetServerTimeAsync()

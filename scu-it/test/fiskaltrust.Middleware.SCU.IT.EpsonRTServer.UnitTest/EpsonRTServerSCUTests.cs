@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTServer.Models;
 using FluentAssertions;
@@ -98,6 +100,55 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
                 Status = "OK",
                 RawResponse = $"<response success=\"true\" code=\"0\" status=\"OK\"><addInfo>{addInfo}</addInfo></response>"
             };
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_Should_Record_Local_Time_From_Utc_Moment_Summer()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock(); // GetServerTimeAsync -> srtUtcOffset "2" (summer)
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out _);
+
+            var request = SaleProcessRequest();
+            request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 7, 2, 12, 0, 0, DateTimeKind.Utc);
+
+            var result = await scu.ProcessReceiptAsync(request);
+
+            using (new AssertionScope())
+            {
+                // 12:00 UTC + srtUtcOffset 2 => 14:00 local, sent to the device without a timezone designator.
+                sentDocuments.Should().ContainSingle().Which.Should().Contain("dateTime=\"20260702T140000\"");
+                result.ReceiptResponse.ftSignatures.Should().Contain(
+                    x => x.Caption == "<rt-doc-moment>" && x.Data == "2026-07-02 14:00:00");
+            }
+        }
+
+        [Fact]
+        public async Task ProcessReceiptAsync_Should_Record_Local_Time_From_Utc_Moment_Winter()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.GetServerTimeAsync()).ReturnsAsync(Ok(("srtUtcOffset", "1"))); // winter
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out _);
+
+            var request = SaleProcessRequest();
+            request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 1, 15, 12, 0, 0, DateTimeKind.Utc);
+
+            var result = await scu.ProcessReceiptAsync(request);
+
+            using (new AssertionScope())
+            {
+                // 12:00 UTC + srtUtcOffset 1 => 13:00 local.
+                sentDocuments.Should().ContainSingle().Which.Should().Contain("dateTime=\"20260115T130000\"");
+                result.ReceiptResponse.ftSignatures.Should().Contain(
+                    x => x.Caption == "<rt-doc-moment>" && x.Data == "2026-01-15 13:00:00");
+            }
         }
 
         [Fact]
@@ -327,6 +378,169 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer.UnitTest
                 ((ulong) result.ReceiptResponse.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
                 client.Verify(x => x.CreateTillsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()), Times.Never);
                 client.Verify(x => x.RebootWebServerAsync(), Times.Never);
+            }
+        }
+
+        [Fact]
+        public async Task Realign_Should_Reseed_Till_State_To_The_Current_Device_Session()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var configuration = new EpsonRTServerConfiguration
+            {
+                ServerUrl = "https://localhost",
+                SendReceiptsSync = true,
+                ServiceFolder = Path.Combine(Path.GetTempPath(), "epsonrtserver-tests", Guid.NewGuid().ToString())
+            };
+            Directory.CreateDirectory(configuration.ServiceFolder!);
+            var queue = new EpsonRTServerCommunicationQueue(Guid.NewGuid(), client.Object, NullLogger<EpsonRTServerCommunicationQueue>.Instance, configuration);
+            var scu = new EpsonRTServerSCU(Guid.NewGuid(), NullLogger<EpsonRTServerSCU>.Instance, configuration, client.Object, queue);
+            try
+            {
+                var queueId = Guid.NewGuid();
+                await scu.ProcessReceiptAsync(SaleProcessRequest(queueId)); // seeds session 0743
+
+                // The RT Server rolls to a new session (forced/daily closure); a fresh token now reports Z 0799.
+                var newSessionToken = "99SEA004010FISK0001" + "12345" + "20260723" + "0799" + "0001" + "000000000";
+                client.Setup(x => x.CreateTokenAsync("FISK0001")).ReturnsAsync(Ok(("token", newSessionToken)));
+
+                queue.TillStateRealigner.Should().NotBeNull("the SCU must wire the queue's realign hook");
+                await queue.TillStateRealigner!("FISK0001");
+
+                sentDocuments.Clear();
+                await scu.ProcessReceiptAsync(SaleProcessRequest(queueId));
+
+                using (new AssertionScope())
+                {
+                    sentDocuments.Should().ContainSingle();
+                    sentDocuments[0].Should().Contain("zRepNumber=\"0799\"");
+                    sentDocuments[0].Should().Contain("recNumber=\"0001\"");
+                }
+            }
+            finally
+            {
+                queue.Dispose();
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData("{\"CustomerVATId\":\"12345\"}")]
+        [InlineData("{\"CustomerVATId\":\"DE123456789\"}")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501Z\"}")]
+        public async Task ProcessReceiptAsync_WithAnInvalidCustomerTaxId_FailsWithoutSendingAnyDocument(string cbCustomer)
+        {
+            var client = CreateClientMock();
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = cbCustomer;
+
+                var result = await scu.ProcessReceiptAsync(request);
+
+                using var scope = new AssertionScope();
+                result.ReceiptResponse.HasFailed().Should().BeTrue();
+                result.ReceiptResponse.ftSignatures.Should().ContainSingle()
+                    .Which.Caption.Should().Be(CustomerTaxIdValidation.CustomerTaxIdErrorCaption);
+                client.Verify(x => x.CreateReceiptAsync(It.IsAny<string>()), Times.Never);
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"IT01606720215\"}")]
+        [InlineData("{\"CustomerName\":\"Mario Rossi\"}")]
+        [InlineData("")]
+        public async Task ProcessReceiptAsync_WithAValidOrAbsentCustomerTaxId_SendsTheDocument(string cbCustomer)
+        {
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>())).ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = cbCustomer;
+
+                var result = await scu.ProcessReceiptAsync(request);
+
+                using var scope = new AssertionScope();
+                result.ReceiptResponse.HasFailed().Should().BeFalse();
+                client.Verify(x => x.CreateReceiptAsync(It.IsAny<string>()), Times.Once);
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        /// <summary>The IT country prefix must not be forwarded to the server as part of the tax id.</summary>
+        [Fact]
+        public async Task ProcessReceiptAsync_WithACountryPrefixedCustomerVATId_SendsTheTaxIdWithoutThePrefix()
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = "{\"CustomerVATId\":\"IT01606720215\"}";
+
+                await scu.ProcessReceiptAsync(request);
+
+                sentDocuments.Should().ContainSingle()
+                    .Which.Should().Contain("<printRecTaxID taxID=\"01606720215\" />");
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
+            }
+        }
+
+        /// <summary>
+        /// printRecTaxID has a single slot, so CustomerTaxId (codice fiscale) takes precedence over
+        /// CustomerVATId, matching the Custom SCUs. An empty CustomerTaxId must fall through to the partita
+        /// IVA, whose IT country prefix is stripped before it is sent.
+        /// </summary>
+        [Theory]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\"}", "RSSMRA80A01H501U")]
+        [InlineData("{\"CustomerTaxId\":\"RSSMRA80A01H501U\",\"CustomerVATId\":\"01606720215\"}", "RSSMRA80A01H501U")]
+        [InlineData("{\"CustomerTaxId\":\"\",\"CustomerVATId\":\"01606720215\"}", "01606720215")]
+        [InlineData("{\"CustomerVATId\":\"IT01606720215\"}", "01606720215")]
+        public async Task ProcessReceiptAsync_WithACustomerTaxId_SendsItAsTheTaxId(string cbCustomer, string expectedTaxId)
+        {
+            var sentDocuments = new List<string>();
+            var client = CreateClientMock();
+            client.Setup(x => x.CreateReceiptAsync(It.IsAny<string>()))
+                .Callback<string>(sentDocuments.Add)
+                .ReturnsAsync(Ok(("fingerPrint", "ignored")));
+            var scu = CreateScu(client, out var configuration);
+            try
+            {
+                var request = SaleProcessRequest();
+                request.ReceiptRequest.cbCustomer = cbCustomer;
+
+                var response = await scu.ProcessReceiptAsync(request);
+
+                sentDocuments.Should().ContainSingle()
+                    .Which.Should().Contain($"<printRecTaxID taxID=\"{expectedTaxId}\" />");
+                // The signature must report exactly what was sent to the server.
+                response.ReceiptResponse.ftSignatures
+                    .Should().ContainSingle(x => (x.ftSignatureType & 0xFF) == (long) SignatureTypesIT.RTCustomerID)
+                    .Which.Data.Should().Be(expectedTaxId);
+            }
+            finally
+            {
+                if (Directory.Exists(configuration.ServiceFolder!)) Directory.Delete(configuration.ServiceFolder!, recursive: true);
             }
         }
     }

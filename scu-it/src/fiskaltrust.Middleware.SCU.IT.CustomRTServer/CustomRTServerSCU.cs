@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.Abstraction.Validation;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
 using System.Linq;
@@ -67,6 +68,19 @@ public sealed class CustomRTServerSCU : LegacySCU
         try
         {
             var receiptCase = request.ReceiptRequest.GetReceiptCase();
+
+            // Reject a malformed codice fiscale / partita IVA before any RT Server call. This has to be an
+            // explicit pre-check rather than a thrown exception: the catch below would relabel it as
+            // rt-server-generic-error and bury the actual cause.
+            if (request.ReceiptRequest.CarriesCustomerTaxIds()
+                && !request.ReceiptRequest.TryValidateCustomerTaxIds(out var customerTaxIdError))
+            {
+                _logger.LogWarning("({receiptreference}) Rejected: {error}", request.ReceiptRequest.cbReceiptReference, customerTaxIdError);
+                request.ReceiptResponse.SetReceiptResponseErrored(CustomerTaxIdValidation.CustomerTaxIdErrorCaption, customerTaxIdError!);
+                request.ReceiptResponse.ftState = 0x4954_2001_EEEE_EEEE;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
+            }
+
             if (request.ReceiptRequest.IsInitialOperationReceipt())
             {
                 (var signatures, var state) = await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse);
@@ -337,7 +351,9 @@ public sealed class CustomRTServerSCU : LegacySCU
             RTDocType = docType,
             RTServerSHAMetadata = commercialDocument.qrData.shaMetadata,
             RTCodiceLotteria = (fiscalDocument.document as DocumentDataLottery)?.lottery_client_code ?? "",
-            RTCustomerID = "",
+            RTCustomerID = string.IsNullOrEmpty(fiscalDocument.document.fiscalcode)
+                ? fiscalDocument.document.vatcode
+                : fiscalDocument.document.fiscalcode,
             RTReferenceZNumber = fiscalDocument.document.referenceClosurenumber,
             RTReferenceDocNumber = fiscalDocument.document.referenceDocnumber,
             RTReferenceDocMoment = string.IsNullOrEmpty(fiscalDocument.document.referenceDtime) ? null : DateTime.Parse(fiscalDocument.document.referenceDtime)
