@@ -1,0 +1,41 @@
+name: "Package V1"
+inputs:
+  path:
+    required: true
+  project:
+    required: true
+  version:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Publish v1 Nuget packages
+      shell: pwsh
+      run: |
+        $projectDirectory = "${{ inputs.path }}/${{ inputs.project }}"
+        $csprojFile = "$projectDirectory/${{ inputs.project }}.csproj"
+        $nuspecFile = "$projectDirectory/.nuspec"
+
+        $version = "${{ inputs.version }}"
+
+        Write-Host "Version: $version"
+
+        $args = ""
+        if(Test-Path $nuspecFile) {
+          $xml = New-Object XML
+          $xml.Load($nuspecFile)
+          $element =  $xml.SelectSingleNode("/package/metadata/version")
+          $element.InnerText = $version
+          $xml.Save($nuspecFile)
+
+          $args += "/p:NuspecFile=.nuspec"
+        }
+
+        dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
+
+    - name: Upload v1 Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-v1-${{ inputs.project }}
+        path: ./publish/package-v1-${{ inputs.project }}
