@@ -23,6 +23,7 @@ internal sealed class InMemoryLocalizationStorageProvider : IStorageProvider
     private readonly AsyncLazy<IMiddlewareReceiptJournalRepository> _receiptJournalRepository;
     private readonly AsyncLazy<IMiddlewareActionJournalRepository> _actionJournalRepository;
     private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalEsRepository;
+    private readonly AsyncLazy<IMiddlewareJournalITRepository> _journalItRepository;
     private readonly AsyncLazy<IMasterDataRepository<AccountMasterData>> _accountMasterDataRepository;
     private readonly AsyncLazy<IMasterDataRepository<OutletMasterData>> _outletMasterDataRepository;
     private readonly AsyncLazy<IMasterDataRepository<PosSystemMasterData>> _posSystemMasterDataRepository;
@@ -47,6 +48,7 @@ internal sealed class InMemoryLocalizationStorageProvider : IStorageProvider
         _receiptJournalRepository = new AsyncLazy<IMiddlewareReceiptJournalRepository>(() => Task.FromResult(provider.GetRequiredService<IMiddlewareReceiptJournalRepository>()));
         _actionJournalRepository = new AsyncLazy<IMiddlewareActionJournalRepository>(() => Task.FromResult(provider.GetRequiredService<IMiddlewareActionJournalRepository>()));
         _journalEsRepository = new AsyncLazy<IMiddlewareJournalESRepository>(() => Task.FromResult(provider.GetRequiredService<IMiddlewareJournalESRepository>()));
+        _journalItRepository = new AsyncLazy<IMiddlewareJournalITRepository>(() => Task.FromResult(provider.GetRequiredService<IMiddlewareJournalITRepository>()));
         _accountMasterDataRepository = new AsyncLazy<IMasterDataRepository<AccountMasterData>>(() => Task.FromResult(provider.GetRequiredService<IMasterDataRepository<AccountMasterData>>()));
         _outletMasterDataRepository = new AsyncLazy<IMasterDataRepository<OutletMasterData>>(() => Task.FromResult(provider.GetRequiredService<IMasterDataRepository<OutletMasterData>>()));
         _posSystemMasterDataRepository = new AsyncLazy<IMasterDataRepository<PosSystemMasterData>>(() => Task.FromResult(provider.GetRequiredService<IMasterDataRepository<PosSystemMasterData>>()));
@@ -66,6 +68,8 @@ internal sealed class InMemoryLocalizationStorageProvider : IStorageProvider
     public AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository() => _actionJournalRepository;
 
     public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => _journalEsRepository;
+
+    public AsyncLazy<IMiddlewareJournalITRepository> CreateMiddlewareJournalITRepository() => _journalItRepository;
 
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => _accountMasterDataRepository;
 

@@ -35,6 +35,13 @@
       "environmentVariables": {
         "MW_MARKET": "ES"
       }
+    },
+    "IT (Custom RT Server, HTTP host)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "IT",
+        "MW_HOST_URL": "http://localhost:1500"
+      }
     }
   }
 }

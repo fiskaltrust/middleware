@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.storage.encryption.V0;
@@ -119,6 +120,11 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
         {
             await Initialized;
             return new AzureTableStorageJournalESRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMiddlewareJournalITRepository> CreateMiddlewareJournalITRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageJournalITRepository(_queueConfiguration, _tableServiceClient);
         });
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => new(async () =>
         {
