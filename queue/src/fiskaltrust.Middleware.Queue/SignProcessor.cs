@@ -109,14 +109,12 @@ namespace fiskaltrust.Middleware.Queue
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
-                        if (response.IsError()) // this if(data.ftReceiptCase & 0x0000800000000000L>0) is valid only for V1
+                        // Returning null for errored responses is only valid for v1; v2 (and IT fallback) requests return the error response.
+                        if (response.IsError() && !data.IsV2() && ReceiptRequestHelper.GetCountry(data, queue.CountryCode) != "IT")
                         {
                             return null;
                         }
-                        else
-                        {
-                            return response;
-                        }
+                        return response;
                     }
                 }
                 catch (Exception x)
@@ -157,7 +155,7 @@ namespace fiskaltrust.Middleware.Queue
                 queueItem.ftQueueTimeout = 15000;
             }
 
-            queueItem.country = ReceiptRequestHelper.GetCountry(data);
+            queueItem.country = ReceiptRequestHelper.GetCountry(data, queue.CountryCode);
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
             queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
@@ -228,9 +226,10 @@ namespace fiskaltrust.Middleware.Queue
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
 
-                    // V1 rethrows only a genuine processor exception; when the country processor returned an error
-                    // response (ftState EEEE) without throwing, surface it like V2 rather than `throw null` (market-it #635).
-                    if (!data.IsV2() && exception != null)
+                    // IT and V2 should never rethrow: their failures are always surfaced as error responses.
+                    // Because for the fallback receipt case (0x0) IsV2 returns false we have to also check if the country is IT.
+                    // The exception null check prevents `throw null` when a V1 processor returned an error response (`0xEEEE_EEEE`) explicitly.
+                    if (!data.IsV2() && queueItem.country != "IT" && exception != null)
                     {
                         throw exception;
                     }
