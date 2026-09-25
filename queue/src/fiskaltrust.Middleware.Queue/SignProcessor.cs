@@ -226,9 +226,9 @@ namespace fiskaltrust.Middleware.Queue
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
 
-                    // V1 (non-IT) rethrows only a genuine processor exception; when the country processor returned an
-                    // error response (ftState EEEE) without throwing, surface it like V2 rather than `throw null` (market-it #635).
-                    // IT queues also handle fallback (empty) ftReceiptCase requests, whose errors are returned as responses.
+                    // IT and V2 should never rethrow: their failures are always surfaced as error responses.
+                    // Because for the fallback receipt case (0x0) IsV2 returns false we have to also check if the country is IT.
+                    // The exception null check prevents `throw null` when a V1 processor returned an error response (`0xEEEE_EEEE`) explicitly.
                     if (!data.IsV2() && queueItem.country != "IT" && exception != null)
                     {
                         throw exception;
