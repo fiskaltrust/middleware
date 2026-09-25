@@ -40,6 +40,7 @@
       "commandName": "Project",
       "environmentVariables": {
         "MW_MARKET": "IT",
+        "MW_SCU_CONFIGURATION": "scu-configuration-it.json",
         "MW_HOST_URL": "http://localhost:1500"
       }
     }
