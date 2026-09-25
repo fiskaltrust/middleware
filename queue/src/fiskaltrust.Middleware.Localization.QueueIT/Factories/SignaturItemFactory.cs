@@ -1,151 +1,141 @@
-﻿using System.Collections.Generic;
 using System.Text;
-using System;
-using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
+using fiskaltrust.Middleware.Localization.QueueIT.Models.Cases;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
+
+namespace fiskaltrust.Middleware.Localization.QueueIT.Factories;
+
+public static class SignaturItemFactory
 {
-    public static class SignaturItemFactory
+    public static SignatureItem CreateInitialOperationSignature(ftQueueIT queueIT, RTInfo rtInfo)
     {
-        public static SignaturItem CreateInitialOperationSignature(ftQueueIT queueIT, RTInfo rtInfo)
+        return new SignatureItem
         {
-            return new SignaturItem()
+            ftSignatureType = SignatureTypeIT.InitialOperationReceipt.As<SignatureType>().WithFlag(SignatureTypeFlags.ArchivingRequired),
+            ftSignatureFormat = SignatureFormat.Text,
+            Caption = "Initial-operation receipt",
+            Data = $"Queue-ID: {queueIT.ftQueueITId} Serial-Nr: {rtInfo.SerialNumber}"
+        };
+    }
+
+    public static SignatureItem CreateOutOfOperationSignature(ftQueueIT queueIT)
+    {
+        return new SignatureItem
+        {
+            ftSignatureType = SignatureTypeIT.OutOfOperationReceipt.As<SignatureType>().WithFlag(SignatureTypeFlags.ArchivingRequired),
+            ftSignatureFormat = SignatureFormat.Text,
+            Caption = "Out-of-operation receipt",
+            Data = $"Queue-ID: {queueIT.ftQueueITId}"
+        };
+    }
+
+    /// <summary>
+    /// The printable header and footer of the "documento commerciale", built from the RT signatures the SCU returned.
+    /// </summary>
+    public static List<SignatureItem> CreatePOSReceiptFormatSignatures(ReceiptResponse response)
+    {
+        return
+        [
+            new SignatureItem
             {
-                ftSignatureType = Cases.BASE_STATE | 0x1_1001,
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                Caption = $"Initial-operation receipt",
-                Data = $"Queue-ID: {queueIT.ftQueueITId} Serial-Nr: {rtInfo.SerialNumber}"
-            };
+                Caption = "[www.fiskaltrust.it]",
+                Data = CreateFooter(response).ToString(),
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeIT.PosReceiptPrimarySignature.As<SignatureType>()
+            },
+            new SignatureItem
+            {
+                Caption = "DOCUMENTO COMMERCIALE",
+                Data = CreateHeader(response).ToString(),
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeIT.PosReceiptSecondarySignature.As<SignatureType>()
+            }
+        ];
+    }
+
+    private static StringBuilder CreateFooter(ReceiptResponse receiptResponse)
+    {
+        var receiptNumber = long.Parse(receiptResponse.GetSignatureItem(SignatureTypeIT.RTDocumentNumber)!.Data);
+        var zRepNumber = long.Parse(receiptResponse.GetSignatureItem(SignatureTypeIT.RTZNumber)!.Data);
+        var rtDocumentMoment = DateTime.Parse(receiptResponse.GetSignatureItem(SignatureTypeIT.RTDocumentMoment)!.Data);
+        var codiceLotteria = receiptResponse.GetSignatureItem(SignatureTypeIT.RTLotteryID)?.Data;
+        var customerIdentification = receiptResponse.GetSignatureItem(SignatureTypeIT.RTCustomerID)?.Data;
+        var shaMetadata = receiptResponse.GetSignatureItem(SignatureTypeIT.RTServerShaMetadata)?.Data;
+        var rtServerSerialNumber = receiptResponse.GetSignatureItem(SignatureTypeIT.RTSerialNumber)?.Data;
+
+        var stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine($"{rtDocumentMoment:dd-MM-yyyy HH:mm}");
+        stringBuilder.AppendLine($"DOCUMENTO N. {zRepNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}");
+        if (!string.IsNullOrEmpty(codiceLotteria))
+        {
+            stringBuilder.AppendLine($"Codice Lotteria: {codiceLotteria}");
+            stringBuilder.AppendLine();
+        }
+        if (!string.IsNullOrEmpty(customerIdentification))
+        {
+            stringBuilder.AppendLine($"Cod. Fisc./P.IVA: {customerIdentification}");
+        }
+        if (!string.IsNullOrEmpty(shaMetadata))
+        {
+            stringBuilder.AppendLine($"Server RT {rtServerSerialNumber}");
+        }
+        stringBuilder.AppendLine($"Cassa {receiptResponse.ftCashBoxIdentification}");
+        if (!string.IsNullOrEmpty(shaMetadata))
+        {
+            stringBuilder.AppendLine($"-----FIRMA ELETTRONICA-----");
+            stringBuilder.AppendLine(shaMetadata);
+            stringBuilder.AppendLine("---------------------------");
+        }
+        return stringBuilder;
+    }
+
+    private static StringBuilder CreateHeader(ReceiptResponse receiptResponse, string? referencedRT = null, string? referencedPrinterRT = null)
+    {
+        var docType = receiptResponse.GetSignatureItem(SignatureTypeIT.RTDocumentType)?.Data ?? "";
+        if (docType.ToUpper() == "POSRECEIPT")
+        {
+            return new StringBuilder("di vendita o prestazione");
         }
 
-        public static SignaturItem CreateOutOfOperationSignature(ftQueueIT queueIT)
+        var referenceZNumberString = receiptResponse.GetSignatureItem(SignatureTypeIT.RTReferenceZNumber)?.Data;
+        var referenceDocNumberString = receiptResponse.GetSignatureItem(SignatureTypeIT.RTReferenceDocumentNumber)?.Data;
+        var referenceDateTimeString = receiptResponse.GetSignatureItem(SignatureTypeIT.RTReferenceDocumentMoment)?.Data;
+        var stringBuilder = new StringBuilder();
+        if (docType.ToUpper() == "REFUND")
         {
-            return new SignaturItem()
-            {
-                ftSignatureType = Cases.BASE_STATE | 0x1_1002,
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                Caption = $"Out-of-operation receipt",
-                Data = $"Queue-ID: {queueIT.ftQueueITId}"
-            };
+            stringBuilder.AppendLine("emesso per RESO MERCE");
+            AppendReference(stringBuilder, referenceZNumberString, referenceDocNumberString, referenceDateTimeString, referencedRT, referencedPrinterRT);
         }
-
-        public static List<SignaturItem> CreatePOSReceiptFormatSignatures(ReceiptResponse response)
+        else if (docType.ToUpper() == "VOID")
         {
-            return new List<SignaturItem>
-            {
-                new SignaturItem
-                {
-                    Caption = "[www.fiskaltrust.it]",
-                    Data = CreateFooter(response).ToString(),
-                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.PosReceiptPrimarySignature
-                },
-                new SignaturItem
-                {
-                    Caption = "DOCUMENTO COMMERCIALE",
-                    Data = CreateHeader(response).ToString(),
-                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.PosReceiptSecondarySignature
-                }
-            };
+            stringBuilder.AppendLine("emesso per ANNULLAMENTO");
+            AppendReference(stringBuilder, referenceZNumberString, referenceDocNumberString, referenceDateTimeString, referencedRT, referencedPrinterRT);
         }
+        return stringBuilder;
+    }
 
-        private static StringBuilder CreateFooter(ReceiptResponse receiptResponse)
+    private static void AppendReference(StringBuilder stringBuilder, string? referenceZNumberString, string? referenceDocNumberString, string? referenceDateTimeString, string? referencedRT, string? referencedPrinterRT)
+    {
+        if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
         {
-            var receiptNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data);
-            var zRepNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data);
-            var rtDocumentMoment = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data);
-            var codiceLotteria = receiptResponse.GetSignaturItem(SignatureTypesIT.RTLotteryID)?.Data;
-            var customerIdentification = receiptResponse.GetSignaturItem(SignatureTypesIT.RTCustomerID)?.Data;
-            var shaMetadata = receiptResponse.GetSignaturItem(SignatureTypesIT.RTServerShaMetadata)?.Data;
-            var rtServerSerialNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTSerialNumber)?.Data;
-
-            var stringBuilder = new StringBuilder();
-            stringBuilder.AppendLine($"{rtDocumentMoment.ToString("dd-MM-yyyy HH:mm")}");
-            stringBuilder.AppendLine($"DOCUMENTO N. {zRepNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}");
-            if (!string.IsNullOrEmpty(codiceLotteria))
-            {
-                stringBuilder.AppendLine($"Codice Lotteria: {codiceLotteria}");
-                stringBuilder.AppendLine();
-            }
-            if (!string.IsNullOrEmpty(customerIdentification))
-            {
-                stringBuilder.AppendLine($"Cod. Fisc./P.IVA: {customerIdentification}");
-            }
-            if (!string.IsNullOrEmpty(shaMetadata))
-            {
-                stringBuilder.AppendLine($"Server RT {rtServerSerialNumber}");
-            }
-            stringBuilder.AppendLine($"Cassa {receiptResponse.ftCashBoxIdentification}");
-            if (!string.IsNullOrEmpty(shaMetadata))
-            {
-                stringBuilder.AppendLine($"-----FIRMA ELETTRONICA-----");
-                stringBuilder.AppendLine(shaMetadata);
-                stringBuilder.AppendLine("---------------------------");
-            }
-            return stringBuilder;
+            stringBuilder.AppendLine(string.IsNullOrEmpty(referenceDateTimeString)
+                ? "ND"
+                : $"ND del {DateTime.Parse(referenceDateTimeString):dd-MM-yyyy}");
         }
-
-        private static StringBuilder CreateHeader(ReceiptResponse receiptResponse, string referencedRT = null, string referencedPrinterRT = null)
+        else
         {
-            var docType = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentType)?.Data;
-            if (docType.ToUpper() == "POSRECEIPT")
-            {
-                return new StringBuilder("di vendita o prestazione");
-            }
-
-            var referenceZNumberString = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
-            var referenceDocNumberString = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-            var referenceDateTimeString = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
-            var stringBuilder = new StringBuilder();
-            if (docType.ToUpper() == "REFUND")
-            {
-                stringBuilder.AppendLine("emesso per RESO MERCE");
-                if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
-                {
-                    stringBuilder.AppendLine(string.IsNullOrEmpty(referenceDateTimeString)
-                        ? "ND"
-                        : $"ND del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
-                }
-                else
-                {
-                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumberString).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
-                }
-                if (!string.IsNullOrEmpty(referencedRT))
-                {
-                    stringBuilder.AppendLine($"Server RT {referencedRT}");
-                }
-                if (!string.IsNullOrEmpty(referencedPrinterRT))
-                {
-                    stringBuilder.AppendLine($"RT {referencedRT}");
-                }
-            }
-            else if (docType.ToUpper() == "VOID")
-            {
-                stringBuilder.AppendLine("emesso per ANNULLAMENTO");
-                if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
-                {
-                    stringBuilder.AppendLine(string.IsNullOrEmpty(referenceDateTimeString)
-                        ? "ND"
-                        : $"ND del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
-                }
-                else
-                {
-                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumberString).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
-                }
-                if (!string.IsNullOrEmpty(referencedRT))
-                {
-                    stringBuilder.AppendLine($"Server RT {referencedRT}");
-                }
-                if (!string.IsNullOrEmpty(referencedPrinterRT))
-                {
-                    stringBuilder.AppendLine($"RT {referencedRT}");
-                }
-            }
-            return stringBuilder;
+            stringBuilder.AppendLine($"N. {long.Parse(referenceZNumberString).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTimeString!):dd-MM-yyyy}");
+        }
+        if (!string.IsNullOrEmpty(referencedRT))
+        {
+            stringBuilder.AppendLine($"Server RT {referencedRT}");
+        }
+        if (!string.IsNullOrEmpty(referencedPrinterRT))
+        {
+            stringBuilder.AppendLine($"RT {referencedRT}");
         }
     }
 }
