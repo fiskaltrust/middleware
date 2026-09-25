@@ -167,11 +167,12 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
         [Fact]
         public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnNull()
         {
-            var (request, configuration, queueItemRepository) = SetupTestEnvironment(
+            var (request, configuration, queueItemRepository, configurationRepository) = SetupTestEnvironment(
             ftReceiptCase: 0x0000800000000000L, // V1 tagging
-            ftState: 0xEEEE_EEEE);
+            ftState: 0xEEEE_EEEE,
+            countryCode: "DE");
 
-            var sut = CreateSignProcessor(queueItemRepository, configuration);
+            var sut = CreateSignProcessor(queueItemRepository, configuration, configurationRepository);
 
             var response = await sut.ProcessAsync(request);
             response.Should().BeNull();           
@@ -180,14 +181,84 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
         [Fact]
         public async Task RequestPreviousReceipt_WithNonErrorFtState_ShouldReturnResponseRegardlessOfTagging()
         {
-            var (request, configuration, queueItemRepository) = SetupTestEnvironment(
+            var (request, configuration, queueItemRepository, configurationRepository) = SetupTestEnvironment(
                  ftReceiptCase: 0x0000800000000000L, // V1 tagging
-                 ftState: 0x0000_EEEE);
+                 ftState: 0x0000_EEEE,
+                 countryCode: "DE");
 
-            var sut = CreateSignProcessor(queueItemRepository, configuration);
+            var sut = CreateSignProcessor(queueItemRepository, configuration, configurationRepository);
 
             var response = await sut.ProcessAsync(request);
             response.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task RequestPreviousReceipt_WithCountrylessV1RequestAndFtStateError_WhenQueueCountryCodeIsIT_ShouldReturnCachedErrorResponse()
+        {
+            // Regression for the IT fallback in the cached-response branch: a countryless receipt case
+            // (no country prefix in ftReceiptCase) must resolve the country from queue.CountryCode. When
+            // that resolves to IT, the cached error response must be returned instead of null.
+            var (request, configuration, queueItemRepository, configurationRepository) = SetupTestEnvironment(
+                ftReceiptCase: 0x0000800000000000L, // countryless V1 tagging
+                ftState: 0xEEEE_EEEE,
+                countryCode: "IT");
+
+            var sut = CreateSignProcessor(queueItemRepository, configuration, configurationRepository);
+
+            var response = await sut.ProcessAsync(request);
+
+            response.Should().NotBeNull();
+            response.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE);
+        }
+
+        [Fact]
+        public async Task ProcessAsync_WhenExceptionIsThrown_WithCountrylessRequestAndITQueueCountryCode_ShouldReturnErrorResponseAndNotThrow()
+        {
+            // Regression for the IT fallback in the rethrow guard: queueItem.country is resolved via
+            // queue.CountryCode for countryless receipt cases, so an IT queue must never rethrow - the
+            // failure is surfaced as an error response instead.
+            var logger = new Mock<ILogger<SignProcessor>>(MockBehavior.Loose);
+            var receiptJournalRepository = new Mock<IMiddlewareReceiptJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepository = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
+            actionJournalRepository.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Returns(Task.CompletedTask);
+            var cryptoHelper = new Mock<ICryptoHelper>(MockBehavior.Strict);
+            cryptoHelper.Setup(x => x.GenerateBase64Hash(It.IsAny<string>())).Returns("MyHash");
+
+            var queueId = Guid.NewGuid();
+            var cashboxId = Guid.NewGuid();
+            var queue = new ftQueue { ftCashBoxId = cashboxId, ftQueueId = queueId, ftCurrentRow = 1, CountryCode = "IT" };
+            var configuration = new MiddlewareConfiguration { QueueId = queueId, CashBoxId = cashboxId, ProcessingVersion = "test" };
+
+            var configurationRepository = new Mock<IConfigurationRepository>(MockBehavior.Strict);
+            configurationRepository.Setup(x => x.GetQueueAsync(queueId)).ReturnsAsync(queue);
+            configurationRepository.Setup(x => x.InsertOrUpdateQueueAsync(queue)).Returns(Task.CompletedTask);
+
+            var request = new ReceiptRequest
+            {
+                ftCashBoxID = cashboxId.ToString(),
+                ftQueueID = queueId.ToString(),
+                cbTerminalID = "MyTerminalId",
+                ftReceiptCase = 0x0000_0000_0000_0001L // countryless V1 case
+            };
+            request.IsV2().Should().BeFalse();
+
+            var marketSpecificSignProcessor = new Mock<IMarketSpecificSignProcessor>(MockBehavior.Strict);
+            marketSpecificSignProcessor.Setup(x => x.FirstTaskAsync()).Returns(Task.CompletedTask);
+            marketSpecificSignProcessor.Setup(x => x.ProcessAsync(request, queue, It.IsAny<ftQueueItem>())).ThrowsAsync(new Exception("MyException"));
+            marketSpecificSignProcessor.Setup(x => x.GetFtCashBoxIdentificationAsync(queue)).ReturnsAsync("MyCashBoxIdentification");
+            marketSpecificSignProcessor.Setup(x => x.FinalTaskAsync(queue, It.IsAny<ftQueueItem>(), request, actionJournalRepository.Object, It.IsAny<IMiddlewareQueueItemRepository>(), receiptJournalRepository.Object)).Returns(Task.CompletedTask);
+
+            var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+            queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId))).Returns(Task.CompletedTask);
+
+            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration);
+
+            ReceiptResponse response = null;
+            Func<Task> act = async () => response = await sut.ProcessAsync(request);
+
+            await act.Should().NotThrowAsync();
+            response.Should().NotBeNull();
+            response.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE);
         }
 
         [Theory]
@@ -251,7 +322,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             response.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE);
         }
 
-        private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo) SetupTestEnvironment(long ftReceiptCase, long ftState)
+        private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo, IConfigurationRepository configurationRepository) SetupTestEnvironment(long ftReceiptCase, long ftState, string countryCode)
         {
             var queueId = Guid.NewGuid();
             var cashboxId = Guid.NewGuid();
@@ -287,16 +358,26 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 ProcessingVersion = "test"
             };
 
-            return (request, config, repo);
+            var queue = new ftQueue
+            {
+                ftCashBoxId = cashboxId,
+                ftQueueId = queueId,
+                CountryCode = countryCode
+            };
+            var configurationRepository = new Mock<IConfigurationRepository>(MockBehavior.Strict);
+            configurationRepository.Setup(x => x.GetQueueAsync(queueId)).ReturnsAsync(queue);
+
+            return (request, config, repo, configurationRepository.Object);
         }
 
         private static SignProcessor CreateSignProcessor(
             Mock<IMiddlewareQueueItemRepository> repo,
-            MiddlewareConfiguration config)
+            MiddlewareConfiguration config,
+            IConfigurationRepository configurationRepository)
         {
             return new SignProcessor(
                 Mock.Of<ILogger<SignProcessor>>(),
-                Mock.Of<IConfigurationRepository>(),
+                configurationRepository,
                 repo.Object,
                 Mock.Of<IMiddlewareReceiptJournalRepository>(),
                 Mock.Of<IMiddlewareActionJournalRepository>(),
