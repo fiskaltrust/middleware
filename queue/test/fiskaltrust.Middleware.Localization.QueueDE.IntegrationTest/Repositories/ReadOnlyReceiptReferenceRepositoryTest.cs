@@ -326,6 +326,53 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
             receiptRef.First().TargetQueueItemId = ref1.ftQueueItemId;
         }
 
+        private static async Task<(List<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem queueItem)> GetExternalReferencesAsync(string ftReceiptCaseData)
+        {
+            var receiptFixture = GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.response, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptResponse>())));
+
+            var request = receiptFixture.Create<ReceiptRequest>();
+            request.cbPreviousReceiptReference = "";
+            request.ftReceiptCaseData = ftReceiptCaseData;
+            var queueItem = queueItemFixture.Create<ftQueueItem>();
+            queueItem.cbReceiptReference = "TestReference1";
+            queueItem.ftQueueRow = 1;
+            queueItem.request = JsonConvert.SerializeObject(request);
+
+            var queueItemRepo = new InMemoryQueueItemRepository();
+            await queueItemRepo.InsertOrUpdateAsync(queueItem);
+
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo);
+            var receiptReferences = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks, new List<DailyClosingReceipt>());
+            return (receiptReferences.ToList(), queueItem);
+        }
+
+        [Fact]
+        public async Task GetReceiptReferenceAsync_ExternalReferenceNestedUnderMarketKey_ValidResult()
+        {
+            var ftReceiptCaseData = "{\"DE\": {\"RefType\": \"Transaktion\", \"RefMoment\": \"2020-08-21T12:12:32\", \"RefCashBoxIdentification\": \"other-test-cbi\", \"RefClosingNr\": 12, \"RefReceiptId\": \"ft123#IT123\"}, \"v2ReceiptRequest\": {\"cbReceiptReference\": \"TestReference1\"}}";
+
+            var (receiptReferences, queueItem) = await GetExternalReferencesAsync(ftReceiptCaseData);
+
+            receiptReferences.Should().HaveCount(1);
+            receiptReferences.First().TargetQueueItemId.Should().Be(queueItem.ftQueueItemId);
+            receiptReferences.First().TargetReceiptIdentification.Should().Be(JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response).ftReceiptIdentification);
+        }
+
+        [Theory]
+        [InlineData("not json")]
+        [InlineData("{\"DE\": {\"RefType\": \"Transaktion\"}, \"v2ReceiptRequest\": {}}")]
+        public async Task GetReceiptReferenceAsync_ExternalReferenceMalformedOrWithoutRefReceiptId_NoResult(string ftReceiptCaseData)
+        {
+            var (receiptReferences, _) = await GetExternalReferencesAsync(ftReceiptCaseData);
+
+            receiptReferences.Should().BeEmpty();
+        }
+
         private static Fixture GetFixture()
         {
             var fixture = new Fixture();
