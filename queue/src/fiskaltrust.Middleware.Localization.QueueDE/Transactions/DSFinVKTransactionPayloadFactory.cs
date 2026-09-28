@@ -91,6 +91,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
             return (DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1, payload);
         }
 
+        public (string processType, string payload) CreateAbortReceiptPayload(ReceiptRequest receiptRequest)
+        {
+            _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateAbortReceiptPayload [enter].");
+            // DSFinV-K Anhang B: No payment may be made in connection with the transaction type AVBelegabbruch.
+            if ((receiptRequest.cbPayItems ?? Array.Empty<PayItem>()).Any())
+            {
+                throw new ArgumentException("An aborted receipt (AVBelegabbruch) must not contain any pay items.");
+            }
+
+            // DSFinV-K Anhang I: The gross amounts of all tax rates are 0.00 for an aborted receipt, e.g. "AVBelegabbruch^0.00_0.00_0.00_0.00_0.00^"
+            var emptyReceiptRequest = new ReceiptRequest { cbChargeItems = Array.Empty<ChargeItem>(), cbPayItems = Array.Empty<PayItem>() };
+            var taxes = emptyReceiptRequest.GetReceiptTaxes();
+            // Training receipts are signed as AVTraining, consistent with GetReceiptTransactionType
+            var transactionType = receiptRequest.IsTraining() ? DSFinVKConstants.BON_TYP_OTHERACTION_TRAINING : DSFinVKConstants.BON_TYP_OTHERACTION_FAILED;
+            var payload = $"{transactionType}^{taxes}^";
+
+            _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateAbortReceiptPayload [exit].");
+            return (DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1, payload);
+        }
+
         private string GetReceiptPayments(ReceiptRequest request)
         {
             const string currencyCodeKey = "CurrencyCode";
