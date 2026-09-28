@@ -148,7 +148,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
                 queueItem.ftQueueTimeout = 15000;
             }
 
-            queueItem.country = ReceiptRequestHelper.GetCountry(request);
+            queueItem.country = ReceiptRequestHelper.GetCountry(request, "AT");
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(request);
             queueItem.request = JsonConvert.SerializeObject(request);
             return queueItem;
