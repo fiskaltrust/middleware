@@ -199,6 +199,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 0x0016 => DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1,
                 0x0017 => DSFinVKConstants.PROCESS_TYPE_SONSTIGER_VORGANG,
                 0x0018 => DSFinVKConstants.PROCESS_TYPE_SONSTIGER_VORGANG,
+                0x001A => DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1,
                 _ => DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1
             };
         }
@@ -232,6 +233,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 0x0016 => "void-receipt",
                 0x0017 => "initiate-scu-switch",
                 0x0018 => "finish-scu-switch",
+                0x001A => "abort-receipt",
                 _ => throw new NotImplementedException($"The given ftReceiptCase {request.ftReceiptCase} is not yet supported.")
             };
         }
@@ -276,6 +278,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 0x0016 => DSFinVKConstants.BON_TYP_OTHERACTION_VOIDED,
                 0x0017 => DSFinVKConstants.BON_TYP_NONE,
                 0x0018 => DSFinVKConstants.BON_TYP_NONE,
+                0x001A => DSFinVKConstants.BON_TYP_OTHERACTION_FAILED,
                 _ => DSFinVKConstants.BON_TYP_RECEIPT
             };
         }

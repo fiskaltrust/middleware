@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
-            serviceCollection.Count.Should().Be(37); // includes the RFC 712 PostFiscalizationProcessor
+            serviceCollection.Count.Should().Be(38); // includes the RFC 712 PostFiscalizationProcessor and the DE AbortReceiptCommand (#792)
 
             CheckServiceType(serviceCollection, typeof(ICryptoHelper)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(ISignProcessor)).Should().BeTrue();
