@@ -103,7 +103,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
             // DSFinV-K Anhang I: The gross amounts of all tax rates are 0.00 for an aborted receipt, e.g. "AVBelegabbruch^0.00_0.00_0.00_0.00_0.00^"
             var emptyReceiptRequest = new ReceiptRequest { cbChargeItems = Array.Empty<ChargeItem>(), cbPayItems = Array.Empty<PayItem>() };
             var taxes = emptyReceiptRequest.GetReceiptTaxes();
-            var payload = $"{DSFinVKConstants.BON_TYP_OTHERACTION_FAILED}^{taxes}^";
+            // Training receipts are signed as AVTraining, consistent with GetReceiptTransactionType
+            var transactionType = receiptRequest.IsTraining() ? DSFinVKConstants.BON_TYP_OTHERACTION_TRAINING : DSFinVKConstants.BON_TYP_OTHERACTION_FAILED;
+            var payload = $"{transactionType}^{taxes}^";
 
             _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateAbortReceiptPayload [exit].");
             return (DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1, payload);
