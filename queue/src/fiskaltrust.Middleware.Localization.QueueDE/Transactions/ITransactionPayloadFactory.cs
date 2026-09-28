@@ -6,5 +6,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
     {
         (string processType, string payload) CreateReceiptPayload(ReceiptRequest receiptRequest);
         (string processType, string payload) CreateAutomaticallyCanceledReceiptPayload();
+        (string processType, string payload) CreateAbortReceiptPayload(ReceiptRequest receiptRequest);
     }
 }

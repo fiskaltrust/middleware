@@ -12,6 +12,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             services.AddSingleton<DisabledQueueReceiptCommand>();
             services.AddSingleton<DisabledScuReceiptCommand>();
             services.AddSingleton<FailTransactionReceiptCommand>();
+            services.AddSingleton<AbortReceiptCommand>();
             services.AddSingleton<FinishScuSwitchReceiptCommand>();
             services.AddSingleton<InitialOperationReceiptCommand>();
             services.AddSingleton<InitiateScuSwitchReceiptCommand>();
