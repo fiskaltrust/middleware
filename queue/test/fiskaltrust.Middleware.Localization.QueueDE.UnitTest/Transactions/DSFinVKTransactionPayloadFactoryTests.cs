@@ -1008,5 +1008,64 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
             }
             vatSum.Should().Be(paySum);
         }
+
+        private static ReceiptRequest CreateAbortReceiptRequest(long ftReceiptCase) => new ReceiptRequest
+        {
+            ftReceiptCase = ftReceiptCase,
+            cbChargeItems = new[]
+            {
+                new ChargeItem { Quantity = 1.0m, Description = "Bier 0,5 lt", Amount = 3.80m, VATRate = 19.0m, ftChargeItemCase = 0x4445000000000001 },
+                new ChargeItem { Quantity = 1.0m, Description = "Schnitzel", Amount = 9.20m, VATRate = 7.0m, ftChargeItemCase = 0x4445000000000002 }
+            },
+            cbPayItems = Array.Empty<PayItem>()
+        };
+
+        [Fact]
+        public void CreateAbortReceiptPayload_WithChargeItems_ShouldCreateZeroTaxPayloadWithoutPayments()
+        {
+            var sut = new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>());
+
+            var (processType, payload) = sut.CreateAbortReceiptPayload(CreateAbortReceiptRequest(0x444500010000001A));
+
+            processType.Should().Be("Kassenbeleg-V1");
+            payload.Should().Be("AVBelegabbruch^0.00_0.00_0.00_0.00_0.00^");
+        }
+
+        [Fact]
+        public void CreateAbortReceiptPayload_WithoutPayItemsArray_ShouldCreateZeroTaxPayloadWithoutPayments()
+        {
+            var receiptRequest = CreateAbortReceiptRequest(0x444500010000001A);
+            receiptRequest.cbPayItems = null;
+            var sut = new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>());
+
+            var (_, payload) = sut.CreateAbortReceiptPayload(receiptRequest);
+
+            payload.Should().Be("AVBelegabbruch^0.00_0.00_0.00_0.00_0.00^");
+        }
+
+        [Fact]
+        public void CreateAbortReceiptPayload_WithTrainingFlag_ShouldUseTrainingTransactionType()
+        {
+            var sut = new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>());
+
+            var (processType, payload) = sut.CreateAbortReceiptPayload(CreateAbortReceiptRequest(0x444500010002001A));
+
+            processType.Should().Be("Kassenbeleg-V1");
+            payload.Should().Be("AVTraining^0.00_0.00_0.00_0.00_0.00^");
+        }
+
+        [Theory]
+        [InlineData(13.00)]
+        [InlineData(0.00)]
+        public void CreateAbortReceiptPayload_WithPayItem_ShouldThrowArgumentException(decimal amount)
+        {
+            var receiptRequest = CreateAbortReceiptRequest(0x444500010000001A);
+            receiptRequest.cbPayItems = new[] { new PayItem { Quantity = 1, Description = "Bar", Amount = amount, ftPayItemCase = 0x4445000000000001 } };
+            var sut = new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>());
+
+            Action act = () => sut.CreateAbortReceiptPayload(receiptRequest);
+
+            act.Should().Throw<ArgumentException>().WithMessage("An aborted receipt (AVBelegabbruch) must not contain any pay items.");
+        }
     }
 }
