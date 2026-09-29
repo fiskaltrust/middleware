@@ -361,6 +361,12 @@ public class AADEFactory
             inv.invoiceSummary.incomeClassification = null;
         }
 
+        // 10.1/10.2 Quantitative Receipt Notes forbid a currency on the header (AADE error 205).
+        if (AADEMappings.IsQuantitativeReceiptNote(inv.invoiceHeader.invoiceType))
+        {
+            inv.invoiceHeader.currencySpecified = false;
+        }
+
         // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
         // (after override, so the correct field is used for the resolved type).
         // Marks come from two sources:
@@ -1260,6 +1266,9 @@ public class AADEFactory
             .ToList();
 
         var nextPosition = 1;
+        // 10.1/10.2 (Quantitative Receipt Notes) must emit the quantitative line fields
+        // (itemDescr/quantity/measurementUnit) like the 9.3 movement family.
+        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -1287,7 +1296,7 @@ public class AADEFactory
                 invoiceRow.netValue = Math.Abs(invoiceRow.netValue);
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
                 invoiceRow.quantitySpecified = true;
             }
@@ -1301,7 +1310,7 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
                 if (!string.IsNullOrEmpty(x.ProductNumber))
                 {
