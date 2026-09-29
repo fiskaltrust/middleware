@@ -384,7 +384,15 @@ public class AADEFactory
 
     private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest, ftReceiptCaseDataPayload? overrideData)
     {
-        var itemsWithClassificationOverride = receiptRequest.cbChargeItems.Where(ci =>
+        // Special-tax / fee lines carry their charge via
+        // feesAmount / stampDutyAmount / otherTaxesAmount / withheldAmount on the row itself, and
+        // AADE forbids pairing an income/expenses classification with them on the same row (rejects
+        // with error 231 "incomeClassification is forbidden for invoice detail N").
+        var classifiableItems = receiptRequest.cbChargeItems
+            .Where(ci => !SpecialTaxMappings.IsSpecialTaxItem(ci))
+            .ToList();
+
+        var itemsWithClassificationOverride = classifiableItems.Where(ci =>
         {
             if (ci.ftChargeItemCaseData == null)
                 return false;
@@ -402,10 +410,10 @@ public class AADEFactory
         if (itemsWithClassificationOverride == 0)
             return;
 
-        if (itemsWithClassificationOverride != receiptRequest.cbChargeItems.Count)
+        if (itemsWithClassificationOverride != classifiableItems.Count)
         {
             throw new ArgumentException(
-                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
+                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every non-fee charge item must have a classification override.");
         }
 
     }
@@ -858,7 +866,9 @@ public class AADEFactory
 
         if (!string.IsNullOrEmpty(detailOverride.LineComments))
             row.lineComments = detailOverride.LineComments;
-        if (detailOverride.IncomeClassification != null)
+        // AADE forbids an incomeClassification on a fee line (recType 2) 
+        var isFeeRow = row.recTypeSpecified && row.recType == 2;
+        if (detailOverride.IncomeClassification != null && !isFeeRow)
         {
             if (detailOverride.IncomeClassification.Count != 1)
             {
