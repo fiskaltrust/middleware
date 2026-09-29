@@ -66,7 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     _logger.LogTrace("FailTransactionReceiptCommand.ExecuteAsync Section CloseMultipleTransactions [enter].");
                     var openSignatures = new List<SignaturItem>();
                     var openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
-                    var transactionsToClose = JsonConvert.DeserializeObject<TseInfo>(request.ftReceiptCaseData);
+                    var transactionsToClose = JsonConvert.DeserializeObject<TseInfo>(request.ftReceiptCaseData.GetMarketReceiptCaseData());
                     foreach (var openTransactionNumber in transactionsToClose.CurrentStartedTransactionNumbers)
                     {
                         (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
