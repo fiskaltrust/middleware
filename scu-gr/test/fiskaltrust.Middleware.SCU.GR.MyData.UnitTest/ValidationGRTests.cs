@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
@@ -127,7 +127,7 @@ public class ValidationGRTests
         error!.ErrorMessage.Should().Contain("OwnConsumption");
     }
 
-    // ── VATAmount consistency (market-gr#309) ───────────────────────
+    // ── Zero VATAmount with non-zero VATRate (market-gr#309) ────────
 
     [Fact]
     public void Validate_ZeroVatAmount_WithNormalVatRate_ShouldFail()
@@ -140,15 +140,42 @@ public class ValidationGRTests
         var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
 
         valid.Should().BeFalse();
-        error!.ErrorCode.Should().Be("VatAmountMismatch");
-        error.ErrorMessage.Should().Contain("0.24");
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
+        error.ErrorMessage.Should().Contain("position 1").And.Contain("VATRate is 24");
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_OnRefundLine_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(-1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_OnHandWrittenReceipt_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+        receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.HandWritten);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
     }
 
     [Theory]
-    [InlineData(10, 1.94)] // calculated 1.9355, rounded
-    [InlineData(10, 1.93)] // within 0.01 tolerance
+    [InlineData(10, 1.90)] // non-zero deviation from 1.94 is not this rule's concern (e.g. per-unit rounding)
+    [InlineData(1.24, 0.24)]
     [InlineData(-1.24, -0.24)] // refund / negative line
-    public void Validate_VatAmountWithinTolerance_ShouldPass(decimal amount, decimal vatAmount)
+    public void Validate_NonZeroVatAmount_ShouldPass(decimal amount, decimal vatAmount)
     {
         var chargeItem = CreateChargeItem(amount, 24, ChargeItemCaseTypeOfService.Delivery);
         chargeItem.VATAmount = vatAmount;
@@ -160,17 +187,20 @@ public class ValidationGRTests
         error.Should().BeNull();
     }
 
-    [Fact]
-    public void Validate_VatAmountOutsideTolerance_ShouldFail()
+    [Theory]
+    [InlineData(0, 24)] // free item
+    [InlineData(0.01, 6)] // VAT 0.0006 rounds to 0.00
+    [InlineData(0.02, 24)] // VAT 0.0039 rounds to 0.00
+    public void Validate_ZeroVatAmount_WhenCalculatedVatRoundsToZero_ShouldPass(decimal amount, int vatRate)
     {
-        var chargeItem = CreateChargeItem(10, 24, ChargeItemCaseTypeOfService.Delivery);
-        chargeItem.VATAmount = 1.90m;
+        var chargeItem = CreateChargeItem(amount, vatRate, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
         var receiptRequest = CreateReceipt([chargeItem]);
 
         var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
 
-        valid.Should().BeFalse();
-        error!.ErrorCode.Should().Be("VatAmountMismatch");
+        valid.Should().BeTrue();
+        error.Should().BeNull();
     }
 
     [Fact]
@@ -192,20 +222,6 @@ public class ValidationGRTests
         var chargeItem = CreateChargeItem(1.24m, 0, ChargeItemCaseTypeOfService.Delivery);
         chargeItem.VATAmount = 0;
         var receiptRequest = CreateReceipt([chargeItem]);
-
-        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
-
-        valid.Should().BeTrue();
-        error.Should().BeNull();
-    }
-
-    [Fact]
-    public void Validate_ZeroVatAmount_OnHandWrittenReceipt_ShouldBeSkipped()
-    {
-        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
-        chargeItem.VATAmount = 0;
-        var receiptRequest = CreateReceipt([chargeItem]);
-        receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.HandWritten);
 
         var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
 

@@ -1028,7 +1028,7 @@ public class AADEFactoryTests
                     ftChargeItemCase = (ChargeItemCase)0x4752200000000003, // Normal VAT + delivery service
                     Moment = receiptMoment,
                     Position = 2,
-                    VATAmount = 19.35m,
+                    VATAmount = 24,
                     Unit = "pcs"
                 }
             },
@@ -1094,14 +1094,14 @@ public class AADEFactoryTests
         // Verify second charge item has income classification
         var secondDetail = invoice.invoiceDetails[1];
         secondDetail.lineNumber.Should().Be(2);
-        secondDetail.netValue.Should().Be(80.65m); // 100 - 19.35 VAT
-        secondDetail.vatAmount.Should().Be(19.35m);
+        secondDetail.netValue.Should().Be(76); // 100 - 24 VAT  
+        secondDetail.vatAmount.Should().Be(24);
 
         // Verify income classifications are present for standard item
         secondDetail.incomeClassification.Should().NotBeNull();
         secondDetail.incomeClassification.Should().HaveCount(1);
         var incomeClassification2 = secondDetail.incomeClassification[0];
-        incomeClassification2.amount.Should().Be(80.65m);
+        incomeClassification2.amount.Should().Be(76);
         // Based on the actual mapping behavior - for unknown service types only category is set
         incomeClassification2.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
         incomeClassification2.classificationTypeSpecified.Should().BeFalse(); // For unknown services
@@ -1116,7 +1116,7 @@ public class AADEFactoryTests
         var summaryClassification = invoice.invoiceSummary.incomeClassification
             .FirstOrDefault(ic => ic.classificationCategory == IncomeClassificationCategoryType.category1_95);
         summaryClassification.Should().NotBeNull();
-        summaryClassification!.amount.Should().Be(180.65m); // 100 + 80.65 = 180.65 (sum of both items)
+        summaryClassification!.amount.Should().Be(176); // 100 + 76 = 176 (sum of both items)
         summaryClassification.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
         summaryClassification.classificationTypeSpecified.Should().BeFalse(); // For unknown services
 
@@ -2289,7 +2289,7 @@ public class AADEFactoryTests
         (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
 
         invoiceDoc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("VATAmount (0").And.Contain("0.24");
+        error!.Exception.Message.Should().Contain("VATAmount of charge item at position 1 is 0 although VATRate is 24");
     }
 
 }

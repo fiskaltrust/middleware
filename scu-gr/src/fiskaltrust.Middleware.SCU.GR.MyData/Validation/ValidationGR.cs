@@ -10,24 +10,18 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Validation;
 
 public class ValidationGR
 {
-    private const decimal VatAmountRoundingTolerance = 0.01m;
-
     public static (bool, MiddlewareValidationError? middlewareValidationError) ValidateReceiptRequest(ReceiptRequest receiptRequest)
     {
         // A caller-supplied VATAmount is sent to AADE as-is, while the VAT category is derived from
-        // ftChargeItemCase/VATRate. Without this check a VATAmount of 0 on a 24% item is transmitted
-        // (and accepted by AADE) as category 1 with no VAT. Mirrors the queue's global VatCalculation rule.
-        // Special tax items (fees, withholdings, stamp duty, ...) carry their own VAT semantics and are excluded.
-        if (!receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten))
+        // ftChargeItemCase/VATRate. A VATAmount of 0 on an item with a non-zero VATRate would be transmitted
+        // (and accepted by AADE) as e.g. category 1 with no VAT. Items whose VAT legitimately rounds to 0.00
+        // (zero amount, or sub-cent VAT) are allowed.
+        var zeroVatItem = receiptRequest.cbChargeItems.FirstOrDefault(x => x.VATRate != 0
+            && x.VATAmount == 0
+            && Math.Round(x.Amount / (100 + x.VATRate) * x.VATRate, 2) != 0);
+        if (zeroVatItem != null)
         {
-            var mismatch = receiptRequest.cbChargeItems.FirstOrDefault(x => x.VATAmount.HasValue && x.VATRate > 0
-                && !SpecialTaxMappings.IsSpecialTaxItem(x)
-                && Math.Abs(x.VATAmount.Value - x.Amount / (100 + x.VATRate) * x.VATRate) > VatAmountRoundingTolerance);
-            if (mismatch != null)
-            {
-                var calculated = mismatch.Amount / (100 + mismatch.VATRate) * mismatch.VATRate;
-                return (false, new MiddlewareValidationError("VatAmountMismatch", FormattableString.Invariant($"VATAmount ({mismatch.VATAmount}) of charge item at position {mismatch.Position} does not match calculated value ({calculated:F2}) for VATRate {mismatch.VATRate}, difference exceeds tolerance of {VatAmountRoundingTolerance}.")));
-            }
+            return (false, new MiddlewareValidationError("ZeroVatAmountWithNonZeroVatRate", FormattableString.Invariant($"VATAmount of charge item at position {zeroVatItem.Position} is 0 although VATRate is {zeroVatItem.VATRate}. Either provide the correct VATAmount (or omit it to have it calculated) or use a zero VAT rate with the matching VAT case.")));
         }
 
         if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales))
