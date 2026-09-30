@@ -59,6 +59,22 @@ public class ReceiptReferencesTests
     }
 
     [Fact]
+    public void WithGroupReference_Fails_EvenWhenTheGroupWasResolved()
+    {
+        var first = CreateReferencedReceipt();
+        var second = CreateReferencedReceipt();
+        var request = TestHelpers.CreateRequest(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010);
+        request.cbPreviousReceiptReference = new[] { first.request.cbReceiptReference, second.request.cbReceiptReference };
+        var response = TestHelpers.CreateResponse(_fixture.Queue, _fixture.QueueItem, request);
+        TestHelpers.SetPreviousReceipt(response, first, second);
+
+        ReceiptReferences.TryAddReferenceSignatures(request, response, required: true).Should().BeFalse();
+
+        response.State().Should().Be(0x4954_2000_EEEE_EEEE);
+        response.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE" && x.Data.Contains("single cbPreviousReceiptReference"));
+    }
+
+    [Fact]
     public void WithReference_ButNothingResolved_Fails()
     {
         var request = TestHelpers.CreateRequest(ReceiptCase.PointOfSaleReceipt0x0001, (ulong) ReceiptCaseFlags.Refund, "missing");

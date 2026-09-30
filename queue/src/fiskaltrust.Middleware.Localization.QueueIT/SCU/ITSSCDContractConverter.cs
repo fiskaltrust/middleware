@@ -205,8 +205,9 @@ public static class ITSSCDContractConverter
     }
 
     /// <summary>
-    /// The v1 model knows a single reference only. A group reference cannot be represented; the queue rejects group
-    /// references for refunds and voids before the SCU is involved, so this only affects cases the SCU does not read.
+    /// The v1 model knows a single reference only. A group reference cannot be represented; the Italian queue refuses
+    /// group references on every receipt that is processed against a referenced document (refund, void, reprint)
+    /// before the SCU is involved, so a dropped group here only affects receipts the SCU does not read it for.
     /// </summary>
     internal static string? ToV1PreviousReceiptReference(V2.cbPreviousReceiptReference? previousReceiptReference)
     {

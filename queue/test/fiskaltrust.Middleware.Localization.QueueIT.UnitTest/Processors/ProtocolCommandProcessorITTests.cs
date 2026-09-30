@@ -54,6 +54,28 @@ public class ProtocolCommandProcessorITTests
     }
 
     [Fact]
+    public async Task CopyReceipt_WithAGroupReference_IsRefused_WithoutCallingTheScu()
+    {
+        var sscd = new Mock<IITSSCDProvider>(MockBehavior.Strict);
+        var first = TestHelpers.CreateRequest(ReceiptCase.PointOfSaleReceipt0x0001);
+        var second = TestHelpers.CreateRequest(ReceiptCase.PointOfSaleReceipt0x0001);
+        var firstResponse = TestHelpers.CreateResponse(_queue, TestHelpers.CreateQueueItem(_queue), first);
+        firstResponse.ftSignatures.AddRange(TestHelpers.CreateRTSignatures(zNumber: 1, documentNumber: 1, new DateTime(2024, 10, 14, 8, 55, 45)));
+        var secondResponse = TestHelpers.CreateResponse(_queue, TestHelpers.CreateQueueItem(_queue), second);
+        secondResponse.ftSignatures.AddRange(TestHelpers.CreateRTSignatures(zNumber: 1, documentNumber: 2, new DateTime(2024, 10, 14, 8, 56, 45)));
+
+        var request = TestHelpers.CreateRequest(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010);
+        request.cbPreviousReceiptReference = new[] { first.cbReceiptReference, second.cbReceiptReference };
+        var response = TestHelpers.CreateResponse(_queue, _queueItem, request);
+        TestHelpers.SetPreviousReceipt(response, (first, firstResponse), (second, secondResponse));
+
+        var result = await new ProtocolCommandProcessorIT(sscd.Object).CopyReceiptPrintExistingReceipt0x3010Async(new ProcessCommandRequest(_queue, request, response));
+
+        result.receiptResponse.State().Should().Be(0x4954_2000_EEEE_EEEE);
+        result.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE" && x.Data.Contains("single cbPreviousReceiptReference"));
+    }
+
+    [Fact]
     public async Task CopyReceipt_WithReference_HandsTheReferencedRTDocumentToTheScu()
     {
         ProcessRequest? scuRequest = null;

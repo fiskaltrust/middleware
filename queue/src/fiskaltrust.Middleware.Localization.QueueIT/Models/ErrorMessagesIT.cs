@@ -12,6 +12,8 @@ public static class ErrorMessagesIT
 
     public const string PreviousReceiptReferenceRequired = "A copy of an existing receipt requires the cbPreviousReceiptReference of the receipt that should be reprinted.";
 
+    public const string GroupReferenceNotSupported = "Referencing a receipt is only supported with a single cbPreviousReceiptReference; the RT device processes one referenced document per receipt.";
+
     public const string MissingRTDocumentIdentification = "The response of the SCU does not contain the RT document number (0x12) and the RT Z number (0x11) signatures.";
 
     public const string MissingRTZNumber = "The response of the SCU does not contain the RT Z number (0x11) signature.";

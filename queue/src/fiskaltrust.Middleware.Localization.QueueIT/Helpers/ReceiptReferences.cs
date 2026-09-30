@@ -18,8 +18,9 @@ public static class ReceiptReferences
     /// Adds the <c>RTReference*</c> signatures of the referenced receipt to <paramref name="receiptResponse"/>.
     /// </summary>
     /// <returns>
-    /// <c>false</c> when the request names a receipt the queue could not resolve (or names none although one is
-    /// <paramref name="required"/>); the response is then already marked as failed.
+    /// <c>false</c> when the request names a receipt the queue could not resolve, names a group of receipts (the RT
+    /// device handles one referenced document per receipt), or names none although one is <paramref name="required"/>;
+    /// the response is then already marked as failed.
     /// </returns>
     public static bool TryAddReferenceSignatures(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, bool required = false)
     {
@@ -33,11 +34,16 @@ public static class ReceiptReferences
             return true;
         }
 
+        if (receiptRequest.cbPreviousReceiptReference.IsGroup)
+        {
+            receiptResponse.SetReceiptResponseError(ErrorMessagesIT.GroupReferenceNotSupported);
+            return false;
+        }
+
         var referencedReceipt = receiptResponse.GetPreviousReceiptReference()?.FirstOrDefault(x => !x.Response.ftState.IsState(State.Error));
         if (referencedReceipt is null)
         {
-            var reference = receiptRequest.cbPreviousReceiptReference.Match(single => single, group => string.Join(", ", group));
-            receiptResponse.SetReceiptResponseError(ErrorMessagesIT.ReferencedReceiptNotFound(reference));
+            receiptResponse.SetReceiptResponseError(ErrorMessagesIT.ReferencedReceiptNotFound(receiptRequest.cbPreviousReceiptReference.SingleValue));
             return false;
         }
 
