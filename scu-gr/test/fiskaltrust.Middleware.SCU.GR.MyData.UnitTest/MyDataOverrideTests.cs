@@ -1256,6 +1256,54 @@ public class MyDataOverrideTests
         error!.Exception.Message.Should().Contain("99.9");
     }
 
+    // === Quantitative Receipt Notes 10.1 / 10.2 (market-gr #300) ===
+
+    [Theory]
+    [InlineData("10.1", InvoiceType.Item101)]
+    [InlineData("10.2", InvoiceType.Item102)]
+    public void MapToInvoicesDoc_WithQuantitativeReceiptNoteOverride_ShouldBuildQuantitativeDocument(string overrideValue, InvoiceType expected)
+    {
+        // 10.1/10.2 (Δελτίο Ποσοτικής Παραλαβής) are non-monetary movement documents.The middleware must therefore build them like the 9.3 family:
+        // emit the quantitative line fields, and drop currency + income classification.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = overrideValue
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var invoice = doc!.invoice[0];
+        invoice.invoiceHeader.invoiceType.Should().Be(expected);
+
+        // 205 — currency is forbidden on the header
+        invoice.invoiceHeader.currencySpecified.Should().BeFalse();
+
+        // 331 — income classification is forbidden (line + summary)
+        invoice.invoiceDetails.Should().OnlyContain(d => d.incomeClassification == null);
+        invoice.invoiceSummary.incomeClassification.Should().BeNullOrEmpty();
+
+        // 230 — itemDescr / quantity / measurementUnit are mandatory on every line
+        invoice.invoiceDetails.Should().OnlyContain(d => d.quantitySpecified);
+        invoice.invoiceDetails.Should().OnlyContain(d => !string.IsNullOrEmpty(d.itemDescr));
+        invoice.invoiceDetails.Should().OnlyContain(d => d.measurementUnitSpecified);
+    }
+
     // === PHASE 2: INCOME CLASSIFICATION OVERRIDE TESTS ===
 
     [Fact]
