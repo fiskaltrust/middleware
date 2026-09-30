@@ -465,6 +465,11 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
         }
 
+        if (invoiceOverride.Issuer != null)
+        {
+            ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
+        }
+
         if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
         {
             var counterpart = invoice.counterpart;
@@ -738,6 +743,55 @@ public class AADEFactory
         if (!string.IsNullOrEmpty(headerOverride.TableAA))
         {
             invoice.invoiceHeader.tableAA = headerOverride.TableAA;
+        }
+    }
+
+    /// <summary>
+    /// Applies the issuer override. Only the establishment-level fields (branch, name, address) can be
+    /// overridden, e.g. to report sales of several branches under one VAT number through a single cashbox.
+    /// The issuer's identity (vatNumber, country) is bound to the cashbox's AADE credentials, and
+    /// documentIdNo / supplyAccountNo / countryDocumentId only apply to counterparts, so those are rejected
+    /// instead of being silently ignored.
+    /// </summary>
+    private static void ApplyIssuerOverride(PartyType issuer, PartyTypeOverride issuerOverride)
+    {
+        if (!string.IsNullOrEmpty(issuerOverride.VatNumber) || !string.IsNullOrEmpty(issuerOverride.Country))
+        {
+            throw new ArgumentException(
+                "Overriding issuer.vatNumber or issuer.country is not supported. " +
+                "The issuer is identified by the VAT number configured for the cashbox.");
+        }
+
+        if (!string.IsNullOrEmpty(issuerOverride.DocumentIdNo) || !string.IsNullOrEmpty(issuerOverride.SupplyAccountNo) || !string.IsNullOrEmpty(issuerOverride.CountryDocumentId))
+        {
+            throw new ArgumentException(
+                "issuer.documentIdNo, issuer.supplyAccountNo and issuer.countryDocumentId are not supported. " +
+                "These fields only apply to the counterpart.");
+        }
+
+        if (issuerOverride.Branch.HasValue)
+        {
+            if (issuerOverride.Branch.Value < 0)
+            {
+                throw new ArgumentException($"Invalid issuer.branch '{issuerOverride.Branch.Value}'. The branch must be 0 (headquarters) or a positive AADE branch number.");
+            }
+            issuer.branch = issuerOverride.Branch.Value;
+        }
+
+        if (!string.IsNullOrEmpty(issuerOverride.Name))
+        {
+            issuer.name = issuerOverride.Name;
+        }
+
+        if (issuerOverride.Address != null)
+        {
+            issuer.address = new AddressType
+            {
+                street = issuerOverride.Address.Street,
+                number = issuerOverride.Address.Number ?? "0",
+                postalCode = issuerOverride.Address.PostalCode,
+                city = issuerOverride.Address.City
+            };
         }
     }
 
