@@ -196,4 +196,31 @@ public class Issue302OverrideOnFeeLineTests
         feeRow.incomeClassification.Should().BeNull();
         doc.invoice[0].invoiceSummary.expensesClassification.Should().BeEmpty();
     }
+
+    [Fact]
+    public void MapToInvoicesDoc_SecondOrdinaryLineWithoutOverride_WithFeeLine_IsRejected()
+    {
+        // Excluding fee lines must not relax the all-or-nothing rule for ordinary lines.
+        var factory = CreateFactory();
+        var request = CreateRequest(feeLineCaseData: null);
+        request.cbChargeItems.Add(new ChargeItem
+        {
+            Position = 3,
+            Quantity = 1,
+            Description = "ΕΠΙΠΛΕΟΝ ΧΡΕΩΣΗ",
+            Amount = 12.4m,
+            VATRate = 24,
+            VATAmount = 2.4m,
+            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013
+        });
+        request.cbPayItems[0].Amount += 12.4m;
+        var response = CreateResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>()
+            .Which.Message.Should().Contain("must have a classification override");
+    }
 }
