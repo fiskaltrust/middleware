@@ -413,7 +413,7 @@ public class AADEFactory
         if (itemsWithClassificationOverride != classifiableItems.Count)
         {
             throw new ArgumentException(
-                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every non-special-tax charge item must have a classification override."
+                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every non-special-tax charge item must have a classification override.");
         }
 
     }
