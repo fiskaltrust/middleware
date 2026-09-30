@@ -754,7 +754,8 @@ public class AADEFactory
     /// </summary>
     private static void ApplyIssuerOverride(PartyType issuer, PartyTypeOverride issuerOverride)
     {
-        // Presence (not content) decides: an empty string is still an attempted override.
+        // Any non-null value (even an empty string) is an attempted override. As everywhere in the
+        // override model, JSON null is treated as "not set" and has no effect on the invoice.
         if (issuerOverride.VatNumber is not null
             || issuerOverride.Country is not null
             || issuerOverride.Name is not null
