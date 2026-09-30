@@ -392,15 +392,15 @@ public class AADEFactory
         // with error 231 "incomeClassification is forbidden for invoice detail N"). They are therefore
         // exempt from the all-or-nothing rule below, and a classification override on them is rejected.
         var feeItemWithClassificationOverride = receiptRequest.cbChargeItems
-            .FirstOrDefault(ci => IsFeeLine(ci) && HasClassificationOverride(ci));
+            .FirstOrDefault(ci => SpecialTaxMappings.IsSpecialTaxItem(ci) && HasClassificationOverride(ci));
         if (feeItemWithClassificationOverride != null)
         {
             throw new ArgumentException(
-                $"A classification override (incomeClassification or expensesClassification) is not allowed on special-tax/fee charge items (type of service 0xF0 or recType 2), because AADE forbids classifications on these lines. Remove it from the charge item at position {feeItemWithClassificationOverride.Position}.");
+                $"A classification override (incomeClassification or expensesClassification) is not allowed on special-tax/fee charge items (type of service 0xF0), because AADE forbids classifications on these lines. Remove it from the charge item at position {feeItemWithClassificationOverride.Position}.");
         }
 
         var classifiableItems = receiptRequest.cbChargeItems
-            .Where(ci => !IsFeeLine(ci))
+            .Where(ci => !SpecialTaxMappings.IsSpecialTaxItem(ci))
             .ToList();
 
         var itemsWithClassificationOverride = classifiableItems.Count(HasClassificationOverride);
@@ -411,33 +411,24 @@ public class AADEFactory
         if (itemsWithClassificationOverride != classifiableItems.Count)
         {
             throw new ArgumentException(
-                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item except special-tax/fee items (type of service 0xF0 or recType 2) must have a classification override.");
+                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item except special-tax/fee items (type of service 0xF0) must have a classification override.");
         }
 
     }
 
-    // A fee line is a special-tax charge item, or any item whose override turns its row into a fee row (recType 2).
-    private static bool IsFeeLine(ChargeItem chargeItem) =>
-        SpecialTaxMappings.IsSpecialTaxItem(chargeItem) || GetInvoiceDetailsOverride(chargeItem)?.RecType == 2;
-
     private static bool HasClassificationOverride(ChargeItem chargeItem)
     {
-        var details = GetInvoiceDetailsOverride(chargeItem);
-        return details?.IncomeClassification != null || details?.ExpensesClassification != null;
-    }
-
-    private static InvoiceRowTypeOverride? GetInvoiceDetailsOverride(ChargeItem chargeItem)
-    {
         if (chargeItem.ftChargeItemCaseData == null)
-            return null;
+            return false;
         try
         {
             var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
                 JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData),
                 _caseDataJsonOptions);
-            return data?.GR?.MyDataOverride?.InvoiceDetails;
+            var details = data?.GR?.MyDataOverride?.InvoiceDetails;
+            return details?.IncomeClassification != null || details?.ExpensesClassification != null;
         }
-        catch { return null; }
+        catch { return false; }
     }
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
@@ -1434,15 +1425,6 @@ public class AADEFactory
                 {
                     // ftChargeItemCaseData may contain data for other purposes, ignore deserialization errors
                 }
-            }
-
-            // AADE forbids classifications on fee rows (error 231). Special-tax items are never auto-classified,
-            // but an ordinary item whose override sets recType 2 would keep its auto-generated classification.
-            // Caller-supplied classifications on fee lines are rejected in ValidateClassificationOverrideConsistency.
-            if (invoiceRow.recTypeSpecified && invoiceRow.recType == 2)
-            {
-                invoiceRow.incomeClassification = null;
-                invoiceRow.expensesClassification = null;
             }
 
             // Guard the spec-mandatory pair for measurementUnit=7 — covers callers who flipped
