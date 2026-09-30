@@ -1028,7 +1028,7 @@ public class AADEFactoryTests
                     ftChargeItemCase = (ChargeItemCase)0x4752200000000003, // Normal VAT + delivery service
                     Moment = receiptMoment,
                     Position = 2,
-                    VATAmount = 24,
+                    VATAmount = 19.35m,
                     Unit = "pcs"
                 }
             },
@@ -1094,14 +1094,14 @@ public class AADEFactoryTests
         // Verify second charge item has income classification
         var secondDetail = invoice.invoiceDetails[1];
         secondDetail.lineNumber.Should().Be(2);
-        secondDetail.netValue.Should().Be(76); // 100 - 24 VAT  
-        secondDetail.vatAmount.Should().Be(24);
+        secondDetail.netValue.Should().Be(80.65m); // 100 - 19.35 VAT
+        secondDetail.vatAmount.Should().Be(19.35m);
 
         // Verify income classifications are present for standard item
         secondDetail.incomeClassification.Should().NotBeNull();
         secondDetail.incomeClassification.Should().HaveCount(1);
         var incomeClassification2 = secondDetail.incomeClassification[0];
-        incomeClassification2.amount.Should().Be(76);
+        incomeClassification2.amount.Should().Be(80.65m);
         // Based on the actual mapping behavior - for unknown service types only category is set
         incomeClassification2.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
         incomeClassification2.classificationTypeSpecified.Should().BeFalse(); // For unknown services
@@ -1116,7 +1116,7 @@ public class AADEFactoryTests
         var summaryClassification = invoice.invoiceSummary.incomeClassification
             .FirstOrDefault(ic => ic.classificationCategory == IncomeClassificationCategoryType.category1_95);
         summaryClassification.Should().NotBeNull();
-        summaryClassification!.amount.Should().Be(176); // 100 + 76 = 176 (sum of both items)
+        summaryClassification!.amount.Should().Be(180.65m); // 100 + 80.65 = 180.65 (sum of both items)
         summaryClassification.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
         summaryClassification.classificationTypeSpecified.Should().BeFalse(); // For unknown services
 
@@ -2237,6 +2237,59 @@ public class AADEFactoryTests
         header.correlatedInvoices.Should().NotBeNull("2.4 uses correlatedInvoices");
         header.correlatedInvoices.Should().Contain(400002958034190);
         header.multipleConnectedMarks.Should().BeNull("2.4 does not support multipleConnectedMarks");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ShouldReturnError_WhenVatAmountIsZeroForNormalVatRate()
+    {
+        // market-gr#309: a caller-supplied VATAmount of 0 on a 24% item was transmitted to AADE
+        // as vatCategory 1 with vatAmount 0.
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001,
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 1.24m,
+                    VATRate = 24,
+                    VATAmount = 0,
+                    Description = "product x",
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Position = 1,
+                    Amount = 1.24m,
+                    Description = "cash-payment",
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
+                }
+            ]
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#",
+            ftCashBoxIdentification = "1233"
+        };
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData { VatId = "112545020" },
+        }, "https://test.receipts.example.com");
+
+        (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+
+        invoiceDoc.Should().BeNull();
+        error!.Exception.Message.Should().Contain("VATAmount (0").And.Contain("0.24");
     }
 
 }

@@ -126,4 +126,90 @@ public class ValidationGRTests
         valid.Should().BeFalse();
         error!.ErrorMessage.Should().Contain("OwnConsumption");
     }
+
+    // ── VATAmount consistency (market-gr#309) ───────────────────────
+
+    [Fact]
+    public void Validate_ZeroVatAmount_WithNormalVatRate_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        chargeItem.Quantity = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("VatAmountMismatch");
+        error.ErrorMessage.Should().Contain("0.24");
+    }
+
+    [Theory]
+    [InlineData(10, 1.94)] // calculated 1.9355, rounded
+    [InlineData(10, 1.93)] // within 0.01 tolerance
+    [InlineData(-1.24, -0.24)] // refund / negative line
+    public void Validate_VatAmountWithinTolerance_ShouldPass(decimal amount, decimal vatAmount)
+    {
+        var chargeItem = CreateChargeItem(amount, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = vatAmount;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void Validate_VatAmountOutsideTolerance_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(10, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 1.90m;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("VatAmountMismatch");
+    }
+
+    [Fact]
+    public void Validate_VatAmountNotProvided_ShouldPass()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = null;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_WithZeroVatRate_ShouldPass()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 0, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_OnHandWrittenReceipt_ShouldBeSkipped()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+        receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.HandWritten);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
 }
