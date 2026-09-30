@@ -465,6 +465,11 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
         }
 
+        if (invoiceOverride.Issuer != null)
+        {
+            ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
+        }
+
         if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
         {
             var counterpart = invoice.counterpart;
@@ -738,6 +743,37 @@ public class AADEFactory
         if (!string.IsNullOrEmpty(headerOverride.TableAA))
         {
             invoice.invoiceHeader.tableAA = headerOverride.TableAA;
+        }
+    }
+
+    /// <summary>
+    /// Applies the issuer override. Only issuer.branch can be overridden, e.g. to report sales of several
+    /// branches under one VAT number through a single cashbox. All other issuer fields are rejected instead
+    /// of being silently ignored: the issuer's identity (vatNumber, country) is bound to the cashbox's AADE
+    /// credentials, and documentIdNo / supplyAccountNo / countryDocumentId only apply to counterparts.
+    /// </summary>
+    private static void ApplyIssuerOverride(PartyType issuer, PartyTypeOverride issuerOverride)
+    {
+        // Any non-null value (even an empty string) is an attempted override. As everywhere in the
+        // override model, JSON null is treated as "not set" and has no effect on the invoice.
+        if (issuerOverride.VatNumber is not null
+            || issuerOverride.Country is not null
+            || issuerOverride.Name is not null
+            || issuerOverride.Address is not null
+            || issuerOverride.DocumentIdNo is not null
+            || issuerOverride.SupplyAccountNo is not null
+            || issuerOverride.CountryDocumentId is not null)
+        {
+            throw new ArgumentException("Only issuer.branch can be overridden. All other issuer fields are taken from the cashbox configuration.");
+        }
+
+        if (issuerOverride.Branch.HasValue)
+        {
+            if (issuerOverride.Branch.Value < 0)
+            {
+                throw new ArgumentException($"Invalid issuer.branch '{issuerOverride.Branch.Value}'. The branch must be 0 (headquarters) or a positive AADE branch number.");
+            }
+            issuer.branch = issuerOverride.Branch.Value;
         }
     }
 
