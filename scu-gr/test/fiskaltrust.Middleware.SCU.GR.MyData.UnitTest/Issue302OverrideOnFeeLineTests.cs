@@ -241,4 +241,72 @@ public class Issue302OverrideOnFeeLineTests
         error!.Exception.Should().BeOfType<ArgumentException>()
             .Which.Message.Should().Contain("must have a classification override");
     }
+
+    private static ChargeItem OrdinaryItemWithRecType2Override(bool withClassification) => new()
+    {
+        Position = 3,
+        Quantity = 1,
+        Description = "ΕΠΙΠΛΕΟΝ ΧΡΕΩΣΗ",
+        Amount = 12.4m,
+        VATRate = 24,
+        VATAmount = 2.4m,
+        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
+        ftChargeItemCaseData = withClassification
+            ? new
+            {
+                GR = new
+                {
+                    mydataoverride = new
+                    {
+                        invoicedetails = new
+                        {
+                            recType = 2,
+                            incomeClassification = new[]
+                            {
+                                new { classificationType = "E3_561_001", classificationCategory = "category1_1" }
+                            }
+                        }
+                    }
+                }
+            }
+            : new { GR = new { mydataoverride = new { invoicedetails = new { recType = 2 } } } }
+    };
+
+    [Fact]
+    public void MapToInvoicesDoc_ClassificationOverride_OnOrdinaryLineOverriddenToRecType2_IsRejected()
+    {
+        // An ordinary item whose override turns it into a fee row (recType 2) is a fee line too,
+        // so a classification override on it is rejected just like on a 0xF0 item.
+        var factory = CreateFactory();
+        var request = CreateRequest(feeLineCaseData: null);
+        request.cbChargeItems.Add(OrdinaryItemWithRecType2Override(withClassification: true));
+        request.cbPayItems[0].Amount += 12.4m;
+        var response = CreateResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        doc.Should().BeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>()
+            .Which.Message.Should().Contain("not allowed on special-tax/fee charge items").And.Contain("position 3");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_OrdinaryLineOverriddenToRecType2_WithoutClassification_IsAcceptedAndUnclassified()
+    {
+        // The recType-2 line is exempt from the all-or-nothing rule, and its auto-generated
+        // classification is stripped so AADE does not reject it with error 231.
+        var factory = CreateFactory();
+        var request = CreateRequest(feeLineCaseData: null);
+        request.cbChargeItems.Add(OrdinaryItemWithRecType2Override(withClassification: false));
+        request.cbPayItems[0].Amount += 12.4m;
+        var response = CreateResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails.Single(r => r.lineNumber == 3);
+        row.recType.Should().Be(2);
+        row.incomeClassification.Should().BeNull();
+        row.expensesClassification.Should().BeNull();
+    }
 }
