@@ -15,8 +15,8 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData.UnitTest;
 /// a classification override on the ordinary line(s) of an invoice that ALSO carries a
 /// fee line (environmental / plastic-bag fee, type-of-service 0xF0, recType 2).
 ///
-/// AADE forbids an incomeClassification on a fee line (error 231 "incomeClassification is forbidden
-/// for invoice detail N"), so the caller must leave the fee line unclassified. Before the fix the
+/// AADE forbids income/expenses classifications on a fee line (error 231 "incomeClassification is forbidden
+/// for invoice detail N"), so the caller must leave the fee line unclassified; an override there is rejected. Before the fix the
 /// middleware's all-or-nothing consistency check counted the fee line too and threw
 /// "…every charge item must have a classification override", making the request impossible to satisfy.
 /// </summary>
@@ -161,40 +161,58 @@ public class Issue302OverrideOnFeeLineTests
         feeRow.incomeClassification.Should().BeNull("AADE forbids an incomeClassification on a fee line (error 231)");
     }
 
-    [Fact]
-    public void MapToInvoicesDoc_IncomeClassificationOverride_OnFeeLine_IsIgnored()
+    [Theory]
+    [InlineData("income")]
+    [InlineData("expenses")]
+    public void MapToInvoicesDoc_ClassificationOverride_OnFeeLine_IsRejected(string kind)
     {
-        // Even if the caller mistakenly puts an incomeClassification on the fee line, it must not be emitted.
+        // AADE forbids income and expenses classifications on a fee line, so a caller-supplied one is rejected
+        // with a clear message instead of being silently dropped.
         var factory = CreateFactory();
-        var request = CreateRequest(feeLineCaseData: IncomeClassificationOverride("E3_561_001", "category1_1"));
+        var feeLineCaseData = kind == "income"
+            ? IncomeClassificationOverride("E3_561_001", "category1_1")
+            : ExpensesClassificationOverride("E3_102_001", "category2_1");
+        var request = CreateRequest(feeLineCaseData);
         var response = CreateResponse(request);
 
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-
-        var feeRow = doc!.invoice[0].invoiceDetails.Single(r => r.recTypeSpecified && r.recType == 2);
-        feeRow.incomeClassification.Should().BeNull("an override must not re-introduce the AADE-forbidden classification on a fee line");
+        doc.Should().BeNull();
+        error.Should().NotBeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>()
+            .Which.Message.Should().Contain("not allowed on special-tax/fee charge items").And.Contain("position 2");
     }
 
     [Fact]
-    public void MapToInvoicesDoc_ExpensesClassificationOverride_OnFeeLine_IsIgnored()
+    public void MapToInvoicesDoc_ClassificationOverride_OnFeeLine_WithRecTypeOverride_IsRejected()
     {
-        // AADE forbids expenses classifications on a fee line just like income classifications.
+        // Fee-ness is decided by the charge item (type of service 0xF0), not by the row's recType,
+        // so overriding recType on the fee line must not let a classification through.
         var factory = CreateFactory();
-        var request = CreateRequest(feeLineCaseData: ExpensesClassificationOverride("E3_102_001", "category2_1"));
+        var request = CreateRequest(feeLineCaseData: new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoicedetails = new
+                    {
+                        recType = 1,
+                        incomeClassification = new[]
+                        {
+                            new { classificationType = "E3_561_001", classificationCategory = "category1_1" }
+                        }
+                    }
+                }
+            }
+        });
         var response = CreateResponse(request);
 
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
-        error.Should().BeNull();
-        doc.Should().NotBeNull();
-
-        var feeRow = doc!.invoice[0].invoiceDetails.Single(r => r.recTypeSpecified && r.recType == 2);
-        feeRow.expensesClassification.Should().BeNull("an override must not introduce the AADE-forbidden classification on a fee line");
-        feeRow.incomeClassification.Should().BeNull();
-        doc.invoice[0].invoiceSummary.expensesClassification.Should().BeEmpty();
+        doc.Should().BeNull();
+        error!.Exception.Should().BeOfType<ArgumentException>()
+            .Which.Message.Should().Contain("not allowed on special-tax/fee charge items");
     }
 
     [Fact]
