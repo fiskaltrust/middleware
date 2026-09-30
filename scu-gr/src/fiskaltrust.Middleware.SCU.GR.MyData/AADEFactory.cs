@@ -868,7 +868,11 @@ public class AADEFactory
             row.lineComments = detailOverride.LineComments;
         // AADE forbids an incomeClassification on a fee line (recType 2) 
         var isFeeRow = row.recTypeSpecified && row.recType == 2;
-        if (detailOverride.IncomeClassification != null && !isFeeRow)
+        if (isFeeRow)
+        {
+            row.incomeClassification = null;
+        }
+        else if (detailOverride.IncomeClassification != null)
         {
             if (detailOverride.IncomeClassification.Count != 1)
             {
