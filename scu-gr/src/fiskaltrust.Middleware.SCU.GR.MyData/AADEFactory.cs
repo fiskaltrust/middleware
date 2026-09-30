@@ -164,6 +164,10 @@ public class AADEFactory
 
     private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
+        // Validate classification overrides before GetInvoiceDetails applies them, so a classification on a
+        // fee line gets the fee-line error rather than an enum/format error from ApplyInvoiceDetailOverride.
+        ValidateClassificationOverrideConsistency(receiptRequest);
+
         var invoiceDetails = GetInvoiceDetails(receiptRequest);
         var documentLevelTaxes = GetDocumentLevelTaxes(receiptRequest);
 
@@ -378,13 +382,10 @@ public class AADEFactory
                 }
             }
         }
-
-        // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
-        ValidateClassificationOverrideConsistency(receiptRequest, overrideData);
         return inv;
     }
 
-    private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest, ftReceiptCaseDataPayload? overrideData)
+    private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest)
     {
         // Special-tax / fee lines carry their charge via
         // feesAmount / stampDutyAmount / otherTaxesAmount / withheldAmount on the row itself, and

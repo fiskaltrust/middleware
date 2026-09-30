@@ -164,14 +164,20 @@ public class Issue302OverrideOnFeeLineTests
     [Theory]
     [InlineData("income")]
     [InlineData("expenses")]
+    [InlineData("invalid")]
     public void MapToInvoicesDoc_ClassificationOverride_OnFeeLine_IsRejected(string kind)
     {
         // AADE forbids income and expenses classifications on a fee line, so a caller-supplied one is rejected
         // with a clear message instead of being silently dropped.
         var factory = CreateFactory();
-        var feeLineCaseData = kind == "income"
-            ? IncomeClassificationOverride("E3_561_001", "category1_1")
-            : ExpensesClassificationOverride("E3_102_001", "category2_1");
+        // "invalid" mirrors the issue #302 payload ("classificationCategory": "null"): the fee-line error must
+        // win over the enum-parsing error that ApplyInvoiceDetailOverride would otherwise throw first.
+        var feeLineCaseData = kind switch
+        {
+            "income" => IncomeClassificationOverride("E3_561_001", "category1_1"),
+            "expenses" => ExpensesClassificationOverride("E3_102_001", "category2_1"),
+            _ => IncomeClassificationOverride("", "null")
+        };
         var request = CreateRequest(feeLineCaseData);
         var response = CreateResponse(request);
 
