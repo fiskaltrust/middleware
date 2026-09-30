@@ -956,6 +956,8 @@ public class MyDataOverrideTests
         [new { supplyAccountNo = "SUP-001" }],
         [new { countryDocumentId = "GR" }],
         [new { branch = 3, name = "Branch Thessaloniki" }],
+        [new { vatNumber = "" }],
+        [new { name = "" }],
     ];
 
     [Theory]

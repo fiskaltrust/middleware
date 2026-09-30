@@ -754,13 +754,14 @@ public class AADEFactory
     /// </summary>
     private static void ApplyIssuerOverride(PartyType issuer, PartyTypeOverride issuerOverride)
     {
-        if (!string.IsNullOrEmpty(issuerOverride.VatNumber)
-            || !string.IsNullOrEmpty(issuerOverride.Country)
-            || !string.IsNullOrEmpty(issuerOverride.Name)
-            || issuerOverride.Address != null
-            || !string.IsNullOrEmpty(issuerOverride.DocumentIdNo)
-            || !string.IsNullOrEmpty(issuerOverride.SupplyAccountNo)
-            || !string.IsNullOrEmpty(issuerOverride.CountryDocumentId))
+        // Presence (not content) decides: an empty string is still an attempted override.
+        if (issuerOverride.VatNumber is not null
+            || issuerOverride.Country is not null
+            || issuerOverride.Name is not null
+            || issuerOverride.Address is not null
+            || issuerOverride.DocumentIdNo is not null
+            || issuerOverride.SupplyAccountNo is not null
+            || issuerOverride.CountryDocumentId is not null)
         {
             throw new ArgumentException("Only issuer.branch can be overridden. All other issuer fields are taken from the cashbox configuration.");
         }
