@@ -67,7 +67,6 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
         _queueItemRepository = new SQLiteQueueItemRepository(_connectionFactory, _sqliteFile);
         _receiptJournalRepository = new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile);
         _accountMasterDataRepository = new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile);
-        //_journalESRepository = new SQLiteJournalESRepository();
         _outletMasterDataRepository = new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile);
         _posSystemMasterDataRepository = new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile);
         _agencyMasterDataRepository = new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile);
@@ -99,11 +98,6 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,_accountMasterDataRepository, _outletMasterDataRepository,_agencyMasterDataRepository, _posSystemMasterDataRepository).ConfigureAwait(false);
-
-            var journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
-            var journalFRRepository = new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile);
-
-            await PerformMigrationInitialization(newlyAppliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
 
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, _logger).ConfigureAwait(false);
             _initializedCompletionSource.SetResult(true);
