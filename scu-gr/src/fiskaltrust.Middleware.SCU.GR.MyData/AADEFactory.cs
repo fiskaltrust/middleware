@@ -361,6 +361,12 @@ public class AADEFactory
             inv.invoiceSummary.incomeClassification = null;
         }
 
+        // 10.1/10.2 Quantitative Receipt Notes forbid a currency on the header (AADE error 205).
+        if (AADEMappings.IsQuantitativeReceiptNote(inv.invoiceHeader.invoiceType))
+        {
+            inv.invoiceHeader.currencySpecified = false;
+        }
+
         // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
         // (after override, so the correct field is used for the resolved type).
         // Marks come from two sources:
@@ -457,6 +463,11 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNotePurpose =
                AADEMappings.GetReverseDeliveryNotePurpose(invoiceOverride.InvoiceHeader!.ReverseDeliveryNotePurpose!.Value);
             invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
+        }
+
+        if (invoiceOverride.Issuer != null)
+        {
+            ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
         }
 
         if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
@@ -732,6 +743,37 @@ public class AADEFactory
         if (!string.IsNullOrEmpty(headerOverride.TableAA))
         {
             invoice.invoiceHeader.tableAA = headerOverride.TableAA;
+        }
+    }
+
+    /// <summary>
+    /// Applies the issuer override. Only issuer.branch can be overridden, e.g. to report sales of several
+    /// branches under one VAT number through a single cashbox. All other issuer fields are rejected instead
+    /// of being silently ignored: the issuer's identity (vatNumber, country) is bound to the cashbox's AADE
+    /// credentials, and documentIdNo / supplyAccountNo / countryDocumentId only apply to counterparts.
+    /// </summary>
+    private static void ApplyIssuerOverride(PartyType issuer, PartyTypeOverride issuerOverride)
+    {
+        // Any non-null value (even an empty string) is an attempted override. As everywhere in the
+        // override model, JSON null is treated as "not set" and has no effect on the invoice.
+        if (issuerOverride.VatNumber is not null
+            || issuerOverride.Country is not null
+            || issuerOverride.Name is not null
+            || issuerOverride.Address is not null
+            || issuerOverride.DocumentIdNo is not null
+            || issuerOverride.SupplyAccountNo is not null
+            || issuerOverride.CountryDocumentId is not null)
+        {
+            throw new ArgumentException("Only issuer.branch can be overridden. All other issuer fields are taken from the cashbox configuration.");
+        }
+
+        if (issuerOverride.Branch.HasValue)
+        {
+            if (issuerOverride.Branch.Value < 0)
+            {
+                throw new ArgumentException($"Invalid issuer.branch '{issuerOverride.Branch.Value}'. The branch must be 0 (headquarters) or a positive AADE branch number.");
+            }
+            issuer.branch = issuerOverride.Branch.Value;
         }
     }
 
@@ -1260,6 +1302,9 @@ public class AADEFactory
             .ToList();
 
         var nextPosition = 1;
+        // 10.1/10.2 (Quantitative Receipt Notes) must emit the quantitative line fields
+        // (itemDescr/quantity/measurementUnit) like the 9.3 movement family.
+        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -1287,7 +1332,7 @@ public class AADEFactory
                 invoiceRow.netValue = Math.Abs(invoiceRow.netValue);
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
                 invoiceRow.quantitySpecified = true;
             }
@@ -1301,7 +1346,7 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
                 if (!string.IsNullOrEmpty(x.ProductNumber))
                 {
