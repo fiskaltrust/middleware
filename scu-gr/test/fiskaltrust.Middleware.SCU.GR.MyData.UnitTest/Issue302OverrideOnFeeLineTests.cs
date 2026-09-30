@@ -291,10 +291,34 @@ public class Issue302OverrideOnFeeLineTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_OrdinaryLineOverriddenToRecType2_WithoutClassification_IsAcceptedAndUnclassified()
+    public void MapToInvoicesDoc_OrdinaryLineOverriddenToRecType2_AutoClassificationIsStripped()
     {
-        // The recType-2 line is exempt from the all-or-nothing rule, and its auto-generated
-        // classification is stripped so AADE does not reject it with error 231.
+        // No line carries a classification override, so the consistency validation returns early and
+        // only the row-level strip can remove the classification the middleware auto-generates for an
+        // ordinary item. Once its override turns the row into a fee row (recType 2), AADE would reject
+        // that classification with error 231.
+        var factory = CreateFactory();
+        var request = CreateRequest(feeLineCaseData: null);
+        request.cbChargeItems[0].ftChargeItemCaseData = null;
+        request.cbChargeItems.Add(OrdinaryItemWithRecType2Override(withClassification: false));
+        request.cbPayItems[0].Amount += 12.4m;
+        var response = CreateResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var rows = doc!.invoice[0].invoiceDetails;
+        rows.Single(r => r.lineNumber == 1).incomeClassification.Should().NotBeNullOrEmpty("ordinary items are auto-classified");
+        var row = rows.Single(r => r.lineNumber == 3);
+        row.recType.Should().Be(2);
+        row.incomeClassification.Should().BeNull();
+        row.expensesClassification.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_OrdinaryLineOverriddenToRecType2_IsExemptFromAllOrNothingRule()
+    {
+        // With line 1 classified, the recType-2 line must not be required to carry a classification override.
         var factory = CreateFactory();
         var request = CreateRequest(feeLineCaseData: null);
         request.cbChargeItems.Add(OrdinaryItemWithRecType2Override(withClassification: false));
@@ -304,9 +328,6 @@ public class Issue302OverrideOnFeeLineTests
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
         error.Should().BeNull();
-        var row = doc!.invoice[0].invoiceDetails.Single(r => r.lineNumber == 3);
-        row.recType.Should().Be(2);
-        row.incomeClassification.Should().BeNull();
-        row.expensesClassification.Should().BeNull();
+        doc.Should().NotBeNull();
     }
 }
