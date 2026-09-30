@@ -866,11 +866,12 @@ public class AADEFactory
 
         if (!string.IsNullOrEmpty(detailOverride.LineComments))
             row.lineComments = detailOverride.LineComments;
-        // AADE forbids an incomeClassification on a fee line (recType 2) 
+        // AADE forbids income/expenses classifications on a fee line (recType 2)
         var isFeeRow = row.recTypeSpecified && row.recType == 2;
         if (isFeeRow)
         {
             row.incomeClassification = null;
+            row.expensesClassification = null;
         }
         else if (detailOverride.IncomeClassification != null)
         {
@@ -899,7 +900,7 @@ public class AADEFactory
             }
             row.incomeClassification = [existing];
         }
-        if (detailOverride.ExpensesClassification != null)
+        if (!isFeeRow && detailOverride.ExpensesClassification != null)
         {
             var expensesClassifications = new List<ExpensesClassificationType>();
             for (var i = 0; i < detailOverride.ExpensesClassification.Count; i++)

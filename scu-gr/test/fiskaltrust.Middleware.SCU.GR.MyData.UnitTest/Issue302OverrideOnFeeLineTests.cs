@@ -50,6 +50,24 @@ public class Issue302OverrideOnFeeLineTests
             }
         };
 
+    private static object ExpensesClassificationOverride(string type, string category) =>
+        new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoicedetails = new
+                    {
+                        expensesClassification = new[]
+                        {
+                            new { classificationType = type, classificationCategory = category }
+                        }
+                    }
+                }
+            }
+        };
+
     private static ReceiptRequest CreateRequest(object? feeLineCaseData)
     {
         return new ReceiptRequest
@@ -158,5 +176,24 @@ public class Issue302OverrideOnFeeLineTests
 
         var feeRow = doc!.invoice[0].invoiceDetails.Single(r => r.recTypeSpecified && r.recType == 2);
         feeRow.incomeClassification.Should().BeNull("an override must not re-introduce the AADE-forbidden classification on a fee line");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_ExpensesClassificationOverride_OnFeeLine_IsIgnored()
+    {
+        // AADE forbids expenses classifications on a fee line just like income classifications.
+        var factory = CreateFactory();
+        var request = CreateRequest(feeLineCaseData: ExpensesClassificationOverride("E3_102_001", "category2_1"));
+        var response = CreateResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc.Should().NotBeNull();
+
+        var feeRow = doc!.invoice[0].invoiceDetails.Single(r => r.recTypeSpecified && r.recType == 2);
+        feeRow.expensesClassification.Should().BeNull("an override must not introduce the AADE-forbidden classification on a fee line");
+        feeRow.incomeClassification.Should().BeNull();
+        doc.invoice[0].invoiceSummary.expensesClassification.Should().BeEmpty();
     }
 }
