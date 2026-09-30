@@ -920,48 +920,6 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_WithIssuerNameAndAddressOverride_ShouldSetFields()
-    {
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.ftReceiptCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoice = new
-                    {
-                        issuer = new
-                        {
-                            branch = 2,
-                            name = "Branch Thessaloniki",
-                            address = new
-                            {
-                                street = "Tsimiski",
-                                postalCode = "54623",
-                                city = "Thessaloniki"
-                            }
-                        }
-                    }
-                }
-            }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        error.Should().BeNull();
-        var issuer = doc!.invoice[0].issuer;
-        issuer.branch.Should().Be(2);
-        issuer.name.Should().Be("Branch Thessaloniki");
-        issuer.address.street.Should().Be("Tsimiski");
-        issuer.address.number.Should().Be("0");
-        issuer.address.postalCode.Should().Be("54623");
-        issuer.address.city.Should().Be("Thessaloniki");
-    }
-
-    [Fact]
     public void MapToInvoicesDoc_WithNegativeIssuerBranchOverride_ShouldReturnError()
     {
         var factory = CreateFactory();
@@ -988,11 +946,24 @@ public class MyDataOverrideTests
         doc.Should().BeNull();
     }
 
+    public static IEnumerable<object[]> NonBranchIssuerOverrides() =>
+    [
+        [new { vatNumber = "987654321" }],
+        [new { country = "CY" }],
+        [new { name = "Branch Thessaloniki" }],
+        [new { address = new { street = "Tsimiski", postalCode = "54623", city = "Thessaloniki" } }],
+        [new { documentIdNo = "AB123456" }],
+        [new { supplyAccountNo = "SUP-001" }],
+        [new { countryDocumentId = "GR" }],
+        [new { branch = 3, name = "Branch Thessaloniki" }],
+    ];
+
     [Theory]
-    [InlineData("987654321", null, "issuer.vatNumber")]
-    [InlineData(null, "CY", "issuer.vatNumber")]
-    public void MapToInvoicesDoc_WithIssuerIdentityOverride_ShouldReturnError(string? vatNumber, string? country, string expectedMessage)
+    [MemberData(nameof(NonBranchIssuerOverrides))]
+    public void MapToInvoicesDoc_WithNonBranchIssuerOverride_ShouldReturnError(object issuer)
     {
+        // Only issuer.branch is overridable; everything else must be rejected loudly so the
+        // caller doesn't assume an override was applied that AADE never received.
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
         request.ftReceiptCaseData = new
@@ -1001,10 +972,7 @@ public class MyDataOverrideTests
             {
                 mydataoverride = new
                 {
-                    invoice = new
-                    {
-                        issuer = new { vatNumber, country }
-                    }
+                    invoice = new { issuer }
                 }
             }
         };
@@ -1013,34 +981,7 @@ public class MyDataOverrideTests
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
         error.Should().NotBeNull();
-        error!.Exception.Message.Should().Contain(expectedMessage);
-        doc.Should().BeNull();
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithIssuerCounterpartOnlyFieldsOverride_ShouldReturnError()
-    {
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.ftReceiptCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoice = new
-                    {
-                        issuer = new { documentIdNo = "AB123456" }
-                    }
-                }
-            }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        error.Should().NotBeNull();
-        error!.Exception.Message.Should().Contain("issuer.documentIdNo");
+        error!.Exception.Message.Should().Contain("Only issuer.branch can be overridden");
         doc.Should().BeNull();
     }
 
