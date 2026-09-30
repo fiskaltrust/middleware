@@ -228,4 +228,39 @@ public class ValidationGRTests
         valid.Should().BeTrue();
         error.Should().BeNull();
     }
+
+    // ── Final invoice rows (after line-level overrides) ─────────────
+
+    [Theory]
+    [InlineData(1, 100)]
+    [InlineData(2, 100)]
+    [InlineData(9, 100)]
+    [InlineData(10, 100)]
+    [InlineData(1, -100)] // refund row
+    public void ValidateInvoiceDetails_ZeroVatAmount_OnNonZeroRateCategory_ShouldFail(int vatCategory, decimal netValue)
+    {
+        var rows = new[] { new InvoiceRowType { lineNumber = 3, vatCategory = vatCategory, netValue = netValue, vatAmount = 0 } };
+
+        var (valid, error) = ValidationGR.ValidateInvoiceDetails(rows);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatCategory");
+        error.ErrorMessage.Should().Contain("Invoice row 3");
+    }
+
+    [Theory]
+    [InlineData(7, 100, 0)]      // 0% excluding VAT
+    [InlineData(8, 100, 0)]      // registrations without VAT (e.g. 8.6 void)
+    [InlineData(1, 0, 0)]        // zero net value (e.g. 8.2 special tax rows)
+    [InlineData(3, 0.05, 0)]     // 6% of 0.05 rounds to 0.00
+    [InlineData(1, 100, 24)]
+    public void ValidateInvoiceDetails_ValidRows_ShouldPass(int vatCategory, decimal netValue, decimal vatAmount)
+    {
+        var rows = new[] { new InvoiceRowType { lineNumber = 1, vatCategory = vatCategory, netValue = netValue, vatAmount = vatAmount } };
+
+        var (valid, error) = ValidationGR.ValidateInvoiceDetails(rows);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
 }

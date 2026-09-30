@@ -404,6 +404,13 @@ public class AADEFactory
 
         // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
         ValidateClassificationOverrideConsistency(receiptRequest, overrideData);
+
+        // Validate the final rows (after line-level overrides) for zero VAT on a non-zero-rate VAT category
+        (var validRows, var rowError) = ValidationGR.ValidateInvoiceDetails(inv.invoiceDetails);
+        if (!validRows)
+        {
+            throw new Exception(rowError?.ErrorMessage ?? "Invalid invoice details.");
+        }
         return inv;
     }
 
