@@ -41,6 +41,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private byte[] _certificatesBytes = null;
         private TimeSpan _selftestInterval = TimeSpan.FromHours(24);
         private uint _hwSelftestIntervalSeconds = 0;
+        private bool _isTseV2 = false;
         private ISwissbitProxy _proxy = null;
 
         // Never change these values, as all existing installations are dependent on them
@@ -249,6 +250,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
         private async Task<DateTime> GetStartTransactionTimeStamp(ISwissbitProxy proxy, ulong transactionNumber)
         {
+            if (_isTseV2)
+            {
+                // Filtered exports are not supported anymore by TSE v2.0.0
+                var fallback = DateTime.UtcNow;
+                _logger.LogWarning("StartTransactionTimeStamp for TransactionNumber {transactionNumber} is not cached and cannot be read from a TSE v2. Fallback is now {DateTimeUtcNow}.", transactionNumber, fallback);
+                return fallback;
+            }
+
             try
             {
                 using (var ms = new MemoryStream())
@@ -314,6 +323,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             }
 
             var status = await proxy.GetTseStatusAsync();
+            _isTseV2 = status.IsTseV2;
             var tseInfo = new TseInfo()
             {
                 Info = null
@@ -775,7 +785,16 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                     await EnsureInitializedAsync();
                     if (erase)
                     {
-                        await GetProxy().UserLoginAsync(WormUserId.WORM_USER_ADMIN, Encoding.ASCII.GetBytes(_configuration.AdminPin));
+                        if (_isTseV2)
+                        {
+                            // TSE v2 requires a valid time for deleting, and updating the time creates a log message,
+                            // so the time has to be updated by the Admin *before* the export (see Swissbit migration guide).
+                            await GetProxy().TseUpdateTimeAsAdminAsync();
+                        }
+                        else
+                        {
+                            await GetProxy().UserLoginAsync(WormUserId.WORM_USER_ADMIN, Encoding.ASCII.GetBytes(_configuration.AdminPin));
+                        }
                         SetEraseEnabledForExportState(exportId, ExportState.Running);
                     }
                     _readStreamPointer.TryGetValue(exportId.ToString(), out var exportStateData);
