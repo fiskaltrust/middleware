@@ -14,10 +14,13 @@ public class ValidationGR
     {
         // A caller-supplied VATAmount is sent to AADE as-is, while the VAT category is derived from
         // ftChargeItemCase/VATRate. A VATAmount of 0 on an item with a non-zero VATRate would be transmitted
-        // (and accepted by AADE) as e.g. category 1 with no VAT. Items whose VAT legitimately rounds to 0.00
-        // (zero amount, or sub-cent VAT) are allowed.
+        // (and accepted by AADE) as e.g. category 1 with no VAT.
         var zeroVatItem = receiptRequest.cbChargeItems.FirstOrDefault(x => x.VATRate != 0
             && x.VATAmount == 0
+            // By now VATAmount is always set: MapToInvoicesDoc fills in VATAmount = Math.Round(VATAmount ?? calculated, 2),
+            // which keeps a caller-supplied 0 and only calculates when it was null. A 0 here is therefore either
+            // caller-supplied or a calculated VAT that rounded down to 0.00 (e.g. a free item, or 0.01 at 6%).
+            // Only reject when the expected VAT is not 0.00, i.e. when the 0 must have come from the caller.
             && Math.Round(x.Amount / (100 + x.VATRate) * x.VATRate, 2) != 0);
         if (zeroVatItem != null)
         {
