@@ -367,7 +367,7 @@ jobs:
                   if ($null -ne $body) {
                         $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType $contentType -Headers $headers -ErrorAction Stop
                   } else {
-                        $response = Invoke-RestMethod -Uri $req.Url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
+                        $response = Invoke-RestMethod -Uri $url -Method Post -ContentType $contentType -Headers $headers -ErrorAction Stop
                   }    
                   $result = "✅ $($req.Name) request succeeded%0A"
                   if ($req.Url -match "$baseUrl$signPath") {
