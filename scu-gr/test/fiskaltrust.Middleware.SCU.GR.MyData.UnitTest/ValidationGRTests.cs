@@ -171,20 +171,6 @@ public class ValidationGRTests
         error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
     }
 
-    [Fact]
-    public void Validate_ZeroVatAmount_OnVoidReceipt_ShouldBeSkipped()
-    {
-        // 8.6 cancellations ignore the line tax fields and emit a single zero-value category-8 row.
-        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
-        chargeItem.VATAmount = 0;
-        var receiptRequest = CreateReceipt([chargeItem]);
-        receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Void);
-
-        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
-
-        error?.ErrorCode.Should().NotBe("ZeroVatAmountWithNonZeroVatRate");
-    }
-
     [Theory]
     [InlineData(10, 1.90)] // non-zero deviation from 1.94 is not this rule's concern (e.g. per-unit rounding)
     [InlineData(1.24, 0.24)]
