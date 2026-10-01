@@ -3073,40 +3073,4 @@ public class MyDataOverrideTests
         entity.entityData.address.postalCode.Should().Be("10442");
         entity.entityData.address.city.Should().Be("Αθήνα");
     }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithLineLevelVatAmountOverrideZero_OnNonZeroRateCategory_ShouldReturnError()
-    {
-        // market-gr#309: the line-level override must not reintroduce a category-1 row with vatAmount 0.
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.cbChargeItems[0].ftChargeItemCaseData = new
-        {
-            GR = new { mydataoverride = new { invoiceDetails = new { vatAmount = 0m } } }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("vatAmount 0 although vatCategory 1 (24%)");
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_WithLineLevelVatCategoryAndVatAmountOverride_ToZeroRateCategory_ShouldSucceed()
-    {
-        var factory = CreateFactory();
-        var request = CreateBasicReceiptRequest();
-        request.cbChargeItems[0].ftChargeItemCaseData = new
-        {
-            GR = new { mydataoverride = new { invoiceDetails = new { vatCategory = 7, vatAmount = 0m, vatExemptionCategory = 1 } } }
-        };
-        var response = CreateBasicReceiptResponse(request);
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, response);
-
-        error.Should().BeNull();
-        doc!.invoice[0].invoiceDetails[0].vatCategory.Should().Be(7);
-        doc.invoice[0].invoiceDetails[0].vatAmount.Should().Be(0);
-    }
 }

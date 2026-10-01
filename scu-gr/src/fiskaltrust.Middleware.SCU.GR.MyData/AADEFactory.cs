@@ -407,13 +407,6 @@ public class AADEFactory
                 }
             }
         }
-
-        // Validate the final rows (after line-level overrides) for zero VAT on a non-zero-rate VAT category
-        (var validRows, var rowError) = ValidationGR.ValidateInvoiceDetails(inv.invoiceDetails);
-        if (!validRows)
-        {
-            throw new Exception(rowError?.ErrorMessage ?? "Invalid invoice details.");
-        }
         return inv;
     }
 

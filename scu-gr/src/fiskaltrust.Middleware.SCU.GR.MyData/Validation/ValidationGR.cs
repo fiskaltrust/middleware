@@ -3,9 +3,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.GR.Abstraction;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
-using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Validation;
@@ -46,39 +44,6 @@ public class ValidationGR
         if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest)) && !receiptRequest.ContainsCustomerInfo())
         {
             return (false, new MiddlewareValidationError("CustomerInfoRequired", "Customer info is required for this invoice type."));
-        }
-
-        return (true, null);
-    }
-
-    private static readonly Dictionary<int, decimal> VatRateByCategory = new()
-    {
-        { MyDataVatCategory.VatRate24_Category1, 24m },
-        { MyDataVatCategory.VatRate13_Category2, 13m },
-        { MyDataVatCategory.VatRate6_Category3, 6m },
-        { MyDataVatCategory.VatRate17_Category4, 17m },
-        { MyDataVatCategory.VatRate9_Category5, 9m },
-        { MyDataVatCategory.VatRate4_Category6, 4m },
-        { MyDataVatCategory.VatRate3_Category9, 3m },
-        { MyDataVatCategory.VatRate4_Category10, 4m },
-    };
-
-    /// <summary>
-    /// Final-row counterpart of the charge item check in <see cref="ValidateReceiptRequest"/>: runs on the
-    /// generated invoice rows after line-level mydataoverride has been applied, so an override cannot emit
-    /// a row with a non-zero-rate VAT category and vatAmount 0. Rows whose VAT legitimately rounds to 0.00
-    /// (e.g. netValue 0) are allowed.
-    /// </summary>
-    public static (bool, MiddlewareValidationError? middlewareValidationError) ValidateInvoiceDetails(IEnumerable<InvoiceRowType> invoiceDetails)
-    {
-        foreach (var row in invoiceDetails)
-        {
-            if (row.vatAmount == 0
-                && VatRateByCategory.TryGetValue(row.vatCategory, out var vatRate)
-                && Math.Round(row.netValue * vatRate / 100, 2) != 0)
-            {
-                return (false, new MiddlewareValidationError("ZeroVatAmountWithNonZeroVatCategory", FormattableString.Invariant($"Invoice row {row.lineNumber} has vatAmount 0 although vatCategory {row.vatCategory} ({vatRate}%) applies to netValue {row.netValue}. Check the VATAmount and any mydataoverride.invoiceDetails.vatAmount/vatCategory of the charge item.")));
-            }
         }
 
         return (true, null);
