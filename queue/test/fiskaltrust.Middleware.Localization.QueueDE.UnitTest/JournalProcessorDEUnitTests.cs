@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
@@ -196,6 +198,60 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             var resultBytes = chunks.SelectMany(x => x.Chunk);
             resultBytes.Should().BeEquivalentTo(chunkBytes);
+        }
+
+        [Fact]
+        public async Task ProcessAsync_ShouldWriteTempFileToServiceFolder_WhenTarExportFromTseIsRequested()
+        {
+            var serviceFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(serviceFolder);
+            var tokenId = Guid.NewGuid().ToString();
+            var tempFilePath = Path.Combine(serviceFolder, tokenId + "mw.temp");
+            var tarBytes = Convert.FromBase64String(_tar01FileBase64);
+            var tempFileExistedDuringExport = false;
+
+            var sscdMock = new Mock<IDESSCD>(MockBehavior.Strict);
+            sscdMock.Setup(x => x.StartExportSessionAsync(It.IsAny<StartExportSessionRequest>())).ReturnsAsync(new StartExportSessionResponse { TokenId = tokenId });
+            sscdMock.Setup(x => x.ExportDataAsync(It.IsAny<ExportDataRequest>())).ReturnsAsync(new ExportDataResponse
+            {
+                TokenId = tokenId,
+                TarFileByteChunkBase64 = _tar01FileBase64,
+                TotalTarFileSize = tarBytes.Length,
+                TotalTarFileSizeAvailable = true,
+                TarFileEndOfFile = true
+            });
+            sscdMock.Setup(x => x.EndExportSessionAsync(It.IsAny<EndExportSessionRequest>()))
+                .Callback(() => tempFileExistedDuringExport = File.Exists(tempFilePath))
+                .ReturnsAsync(new EndExportSessionResponse { TokenId = tokenId, IsValid = true });
+            var sscdProviderMock = new Mock<IDESSCDProvider>();
+            sscdProviderMock.SetupGet(x => x.Instance).Returns(sscdMock.Object);
+
+            var middlewareConfiguration = new MiddlewareConfiguration
+            {
+                QueueId = Guid.NewGuid(),
+                ServiceFolder = serviceFolder,
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), null, null, null, null, null, null, null, sscdProviderMock.Object, middlewareConfiguration, Mock.Of<IMasterDataService>(), null, Mock.Of<ITarFileCleanupService>(), new QueueDEConfiguration());
+
+            try
+            {
+                var chunks = await sut.ProcessAsync(new JournalRequest
+                {
+                    ftJournalType = 0x4445000000000001,
+                    MaxChunkSize = 1024
+                }).ToListAsync();
+
+                chunks.SelectMany(x => x.Chunk).Should().BeEquivalentTo(tarBytes);
+                tempFileExistedDuringExport.Should().BeTrue();
+                File.Exists(tempFilePath).Should().BeFalse();
+            }
+            finally
+            {
+                Directory.Delete(serviceFolder, true);
+            }
         }
     }
 }

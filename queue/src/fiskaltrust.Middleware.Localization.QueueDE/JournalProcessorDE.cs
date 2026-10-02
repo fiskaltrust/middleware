@@ -155,12 +155,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         {
             var exportSession = await _deSSCDProvider.Instance.StartExportSessionAsync(new StartExportSessionRequest()).ConfigureAwait(false);
             var sha256CheckSum = "";
+            // Don't use a relative path: the working directory is not writable on every platform (e.g. "/" on Android)
+            var tempFilePath = Path.Combine(_middlewareConfiguration.ServiceFolder ?? Path.GetTempPath(), exportSession.TokenId + "mw.temp");
 
             byte[] chunk;
             var response = new JournalResponse();
             try
             {
-                using (var stream = new FileStream(exportSession.TokenId + "mw.temp", FileMode.Create, FileAccess.ReadWrite))
+                using (var stream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite))
                 {
                     ExportDataResponse export;
                     var backoff = TimeSpan.FromMilliseconds(100);
@@ -202,9 +204,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             finally
             {
-                if (File.Exists(exportSession.TokenId + "mw.temp"))
+                if (File.Exists(tempFilePath))
                 {
-                    File.Delete(exportSession.TokenId + "mw.temp");
+                    File.Delete(tempFilePath);
                 }
             }
             yield break;
