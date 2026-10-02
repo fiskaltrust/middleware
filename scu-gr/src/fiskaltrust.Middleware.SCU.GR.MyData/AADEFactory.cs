@@ -499,7 +499,8 @@ public class AADEFactory
             invoice.counterpart = counterpart;
         }
 
-        // Plain passthrough: content is validated by AADE, not here.
+        // Plain passthrough: content is validated by AADE, not here. The XSD-required ints have no
+        // "absent" form in the XML, so a missing value is rejected rather than sent as 0.
         if (invoiceOverride.PackingsDeclarations != null)
         {
             invoice.PackingsDeclarations = invoiceOverride.PackingsDeclarations
@@ -508,8 +509,10 @@ public class AADEFactory
                     Packages = declaration.Packages?
                         .Select(package => new PackagingDetailType
                         {
-                            packagingType = package.PackagingType,
-                            quantity = package.Quantity,
+                            packagingType = package.PackagingType
+                                ?? throw new ArgumentException("packingsDeclarations[].Packages[].packagingType is mandatory."),
+                            quantity = package.Quantity
+                                ?? throw new ArgumentException("packingsDeclarations[].Packages[].quantity is mandatory."),
                             otherPackagingTypeTitle = package.OtherPackagingTypeTitle
                         })
                         .ToArray()

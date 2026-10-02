@@ -752,6 +752,39 @@ public class MyDataOverrideTests
         deserializedDoc.invoice[0].PackingsDeclarations.Should().BeEquivalentTo(declarations);
     }
 
+    [Theory]
+    [InlineData("packagingType")]
+    [InlineData("quantity")]
+    public void MapToInvoicesDoc_WithPackingsDeclarationsMissingRequiredField_ShouldReturnError(string missingField)
+    {
+        // Both fields are required ints in the XSD; a missing value must not be sent as 0.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        object package = missingField == "packagingType"
+            ? new { quantity = 3 }
+            : new { packagingType = 2 };
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        packingsDeclarations = new[] { new { Packages = new[] { package } } }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain($"Packages[].{missingField} is mandatory");
+        doc.Should().BeNull();
+    }
+
     [Fact]
     public void MapToInvoicesDoc_WithEmptyOverride_ShouldNotThrowException()
     {
