@@ -499,6 +499,24 @@ public class AADEFactory
             invoice.counterpart = counterpart;
         }
 
+        // Plain passthrough: content is validated by AADE, not here.
+        if (invoiceOverride.PackingsDeclarations != null)
+        {
+            invoice.packingsDeclarations = invoiceOverride.PackingsDeclarations
+                .Select(declaration => new PackingsDeclaration
+                {
+                    Packages = declaration.Packages?
+                        .Select(package => new PackagingDetailType
+                        {
+                            packagingType = package.PackagingType,
+                            quantity = package.Quantity,
+                            otherPackagingTypeTitle = package.OtherPackagingTypeTitle
+                        })
+                        .ToArray()
+                })
+                .ToArray();
+        }
+
         // Invoice-level `otherTransportDetails` was removed from the AADE invoice schema in
         // v2.0.1 (multi-vehicle transport moved to the separate e-transport API surface:
         // RegisterTransfer / TransportTypes). The former override has therefore been dropped;

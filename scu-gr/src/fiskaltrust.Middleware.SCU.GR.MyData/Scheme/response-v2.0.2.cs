@@ -1101,7 +1101,7 @@ public partial class AadeBookInvoiceType {
     
     private string downloadingInvoiceUrlField;
     
-    private PackagingDetailType[][] packingsDeclarationsField;
+    private PackingsDeclaration[] packingsDeclarationsField;
     
     private sbyte invoiceDeliveryStatusField;
     
@@ -1290,12 +1290,12 @@ public partial class AadeBookInvoiceType {
     // The 'packingsDeclarations' element (type PackingsDeclaration, a wrapper around an
     // unbounded 'Packages') is flattened by xsd.exe into a jagged PackagingDetailType[][],
     // which the XmlSerializer cannot construct ("Cannot convert PackagingDetailType[] to
-    // PackagingDetailType") — this breaks serialization of the ENTIRE InvoicesDoc. It belongs
-    // to the v2.0.2 e-transport surface, which is out of scope for this SCU and never populated
-    // here, so it is excluded from (de)serialization. Faithful support (a proper
-    // PackingsDeclaration wrapper type) should be added when the delivery-note API is implemented.
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public PackagingDetailType[][] packingsDeclarations {
+    // PackagingDetailType") — this breaks serialization of the ENTIRE InvoicesDoc. Replace the
+    // jagged array with PackingsDeclaration[] and re-add the hand-written PackingsDeclaration
+    // wrapper class (next to PackagingDetailType below) so the element round-trips as
+    // <packingsDeclarations><Packages>…</Packages></packingsDeclarations>.
+    [System.Xml.Serialization.XmlElementAttribute("packingsDeclarations")]
+    public PackingsDeclaration[] packingsDeclarations {
         get {
             return this.packingsDeclarationsField;
         }
@@ -5066,6 +5066,31 @@ public partial class PackagingDetailType {
         }
         set {
             this.otherPackagingTypeTitleField = value;
+        }
+    }
+}
+
+/// <remarks/>
+// MANUAL POST-GENERATION EDIT (re-apply after regenerating from XSD):
+// xsd.exe does not emit the PackingsDeclaration complexType (TransportTypes-v2.0.2.xsd); it
+// flattens it into PackagingDetailType[][]. This hand-written wrapper restores it so that
+// AadeBookInvoiceType.packingsDeclarations can be serialized.
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="http://www.aade.gr/myDATA/invoice/v1.0")]
+public partial class PackingsDeclaration {
+
+    private PackagingDetailType[] packagesField;
+
+    /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute("Packages")]
+    public PackagingDetailType[] Packages {
+        get {
+            return this.packagesField;
+        }
+        set {
+            this.packagesField = value;
         }
     }
 }

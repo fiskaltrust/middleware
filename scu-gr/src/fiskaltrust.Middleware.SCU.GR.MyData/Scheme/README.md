@@ -32,10 +32,12 @@ Notes:
 - **Manual post-generation edit (required):** `xsd.exe` flattens the `packingsDeclarations`
   element into a jagged `PackagingDetailType[][]`, which `XmlSerializer` cannot construct — it
   throws `CodeGenError … Cannot convert PackagingDetailType[] to PackagingDetailType` and
-  breaks serialization of the whole `InvoicesDoc`. After regenerating, replace that member's
-  `[XmlArrayItem(...)]` with `[System.Xml.Serialization.XmlIgnoreAttribute()]` (see the comment
-  on `packingsDeclarations` in the current file). It is part of the out-of-scope e-transport
-  surface and is not populated by this SCU.
+  breaks serialization of the whole `InvoicesDoc`. After regenerating, change that member to
+  `[XmlElement("packingsDeclarations")] PackingsDeclaration[]` (dropping the `[XmlArrayItem(...)]`)
+  and re-add the hand-written `PackingsDeclaration` wrapper class (`[XmlElement("Packages")]
+  PackagingDetailType[] Packages`) next to `PackagingDetailType`. Both spots are marked with a
+  `MANUAL POST-GENERATION EDIT` comment in the current file. The field is populated from the
+  `mydataoverride.invoice.packingsDeclarations` override.
 - The e-transport endpoint schemas (`RegisterTransfer`, `RejectDeliveryNote`,
   `ConfirmDeliveryOutcome`, `ConfirmDeliveryReturn`, `GetDeliveryStatusResponse`,
   `GenerateGroupQRCode` + `Response`, `RequestGroupQRDetailsResponse`) are kept for
