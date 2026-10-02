@@ -675,7 +675,7 @@ public class MyDataOverrideTests
         var xml = AADEFactory.GenerateInvoicePayload(doc!);
 
         error.Should().BeNull();
-        doc!.invoice[0].packingsDeclarations.Should().BeNull();
+        doc!.invoice[0].PackingsDeclarations.Should().BeNull();
         xml.Should().NotContain("packingsDeclarations");
     }
 
@@ -717,7 +717,7 @@ public class MyDataOverrideTests
         var (doc, error) = factory.MapToInvoicesDoc(request, response);
 
         error.Should().BeNull();
-        var declarations = doc!.invoice[0].packingsDeclarations;
+        var declarations = doc!.invoice[0].PackingsDeclarations;
         declarations.Should().ContainSingle();
         declarations[0].Packages.Should().HaveCount(2);
         declarations[0].Packages[0].packagingType.Should().Be(2);
@@ -739,15 +739,17 @@ public class MyDataOverrideTests
         packagesXml[0].Element(inv + "otherPackagingTypeTitle").Should().BeNull();
         packagesXml[1].Element(inv + "otherPackagingTypeTitle")!.Value.Should().Be("Κιβώτιο");
 
-        // XSD sequence: packingsDeclarations follows invoiceSummary (and the optional URLs).
+        // XSD sequence: packingsDeclarations follows invoiceSummary and the optional URLs. It is
+        // declared in a separate partial file, so it is emitted last; that stays valid only while
+        // the AADE-owned invoiceDeliveryStatus/deliveryLifecycle that follow it are never set.
+        invoiceXml.Elements().Last().Name.LocalName.Should().Be("packingsDeclarations");
         invoiceXml.Elements().Select(e => e.Name.LocalName)
-            .SkipWhile(n => n != "invoiceSummary")
-            .Should().Contain("packingsDeclarations");
+            .Should().NotContain(new[] { "invoiceDeliveryStatus", "deliveryLifecycle" });
 
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
         using var stringReader = new StringReader(xml);
         var deserializedDoc = (InvoicesDoc) xmlSerializer.Deserialize(stringReader)!;
-        deserializedDoc.invoice[0].packingsDeclarations.Should().BeEquivalentTo(declarations);
+        deserializedDoc.invoice[0].PackingsDeclarations.Should().BeEquivalentTo(declarations);
     }
 
     [Fact]

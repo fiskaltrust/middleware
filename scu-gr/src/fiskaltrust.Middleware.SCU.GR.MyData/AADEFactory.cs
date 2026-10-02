@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -502,7 +502,7 @@ public class AADEFactory
         // Plain passthrough: content is validated by AADE, not here.
         if (invoiceOverride.PackingsDeclarations != null)
         {
-            invoice.packingsDeclarations = invoiceOverride.PackingsDeclarations
+            invoice.PackingsDeclarations = invoiceOverride.PackingsDeclarations
                 .Select(declaration => new PackingsDeclaration
                 {
                     Packages = declaration.Packages?
