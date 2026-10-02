@@ -201,12 +201,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
         }
 
         [Fact]
-        public async Task ProcessAsync_ShouldWriteTempFileToServiceFolder_WhenTarExportFromTseIsRequested()
+        public async Task ProcessAsync_ShouldUseTempFileInWorkingDirectory_WhenTarExportFromTseIsRequestedOutsideOfAndroid()
         {
             var serviceFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(serviceFolder);
             var tokenId = Guid.NewGuid().ToString();
-            var tempFilePath = Path.Combine(serviceFolder, tokenId + "mw.temp");
+            // The service folder is only used on Android; everywhere else the temp file stays in the working directory
+            var tempFilePath = Path.Combine(Directory.GetCurrentDirectory(), tokenId + "mw.temp");
             var tarBytes = Convert.FromBase64String(_tar01FileBase64);
             var tempFileExistedDuringExport = false;
 

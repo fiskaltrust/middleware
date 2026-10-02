@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -155,8 +156,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         {
             var exportSession = await _deSSCDProvider.Instance.StartExportSessionAsync(new StartExportSessionRequest()).ConfigureAwait(false);
             var sha256CheckSum = "";
-            // Don't use a relative path: the working directory is not writable on every platform (e.g. "/" on Android)
-            var tempFilePath = Path.Combine(_middlewareConfiguration.ServiceFolder ?? Path.GetTempPath(), exportSession.TokenId + "mw.temp");
+            var tempFilePath = GetTarExportTempFilePath(exportSession.TokenId);
 
             byte[] chunk;
             var response = new JournalResponse();
@@ -211,6 +211,21 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             yield break;
         }
+
+        private string GetTarExportTempFilePath(string tokenId)
+        {
+            var fileName = tokenId + "mw.temp";
+
+            // On Android the working directory is "/", which is not writable, so the relative path can't be used there
+            if (IsAndroid)
+            {
+                return Path.Combine(_middlewareConfiguration.ServiceFolder ?? Path.GetTempPath(), fileName);
+            }
+            return fileName;
+        }
+
+        // Xamarin.Android reports Linux via RuntimeInformation, so check for the Android runtime assembly as well
+        private static readonly bool IsAndroid = RuntimeInformation.IsOSPlatform(OSPlatform.Create("ANDROID")) || Type.GetType("Android.OS.Build, Mono.Android") != null;
 
         private async IAsyncEnumerable<JournalResponse> ProcessDSFinVKExportAsync(JournalRequest request)
         {
