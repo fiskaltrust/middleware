@@ -704,7 +704,7 @@ public class MyDataOverrideTests
                                 Packages = new object[]
                                 {
                                     new { packagingType = 2, quantity = 1 },
-                                    new { packagingType = 6, quantity = 3, otherPackagingTypeTitle = "Κιβώτιο" }
+                                    new { packagingType = 6, quantity = 3, otherPackagingTypeTitle = "Δεξαμενή IBC" }
                                 }
                             }
                         }
@@ -725,7 +725,7 @@ public class MyDataOverrideTests
         declarations[0].Packages[0].otherPackagingTypeTitle.Should().BeNull();
         declarations[0].Packages[1].packagingType.Should().Be(6);
         declarations[0].Packages[1].quantity.Should().Be(3);
-        declarations[0].Packages[1].otherPackagingTypeTitle.Should().Be("Κιβώτιο");
+        declarations[0].Packages[1].otherPackagingTypeTitle.Should().Be("Δεξαμενή IBC");
 
         var xml = AADEFactory.GenerateInvoicePayload(doc);
         var invoiceXml = System.Xml.Linq.XDocument.Parse(xml).Root!
@@ -737,7 +737,7 @@ public class MyDataOverrideTests
         packagesXml[0].Element(inv + "packagingType")!.Value.Should().Be("2");
         packagesXml[0].Element(inv + "quantity")!.Value.Should().Be("1");
         packagesXml[0].Element(inv + "otherPackagingTypeTitle").Should().BeNull();
-        packagesXml[1].Element(inv + "otherPackagingTypeTitle")!.Value.Should().Be("Κιβώτιο");
+        packagesXml[1].Element(inv + "otherPackagingTypeTitle")!.Value.Should().Be("Δεξαμενή IBC");
 
         // XSD sequence: packingsDeclarations follows invoiceSummary and the optional URLs. It is
         // declared in a separate partial file, so it is emitted last; that stays valid only while
