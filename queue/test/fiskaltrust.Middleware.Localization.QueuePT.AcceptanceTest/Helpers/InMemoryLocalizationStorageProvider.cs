@@ -1,10 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.Middleware.Storage.InMemory;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;

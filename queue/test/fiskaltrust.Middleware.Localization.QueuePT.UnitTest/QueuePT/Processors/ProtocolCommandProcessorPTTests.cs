@@ -12,6 +12,7 @@ using Moq;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
@@ -132,7 +133,7 @@ public class ProtocolCommandProcessorPTTests
                 LastHash = ""
             }
         };
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorPT(grSSCDMock.Object, queuePT, new v2.Helpers.AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorPT(grSSCDMock.Object, queuePT, new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000, because: string.Join(Environment.NewLine, result.receiptResponse.ftSignatures.Select(x => x.Data)));
@@ -200,7 +201,7 @@ public class ProtocolCommandProcessorPTTests
             }, ""));
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
 
-        var protocolCommandProcessorPT = new ProtocolCommandProcessorPT(grSSCDMock.Object, queuePT, new v2.Helpers.AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
+        var protocolCommandProcessorPT = new ProtocolCommandProcessorPT(grSSCDMock.Object, queuePT, new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), Mock.Of<IMarketValidator>(), null!, null!, null!, null!, protocolCommandProcessorPT);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 

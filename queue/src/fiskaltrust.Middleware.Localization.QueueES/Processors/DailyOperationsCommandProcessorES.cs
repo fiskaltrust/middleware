@@ -3,6 +3,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
