@@ -128,7 +128,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 var exportService = new TarFileExportService();
                 (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_logger, _deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
-                if (success)
+                if (success && new FileInfo(filePath).Length == 0)
+                {
+                    // The SCU had no new data to export (e.g. nothing was signed since the last export)
+                    _logger.LogInformation("The TSE returned no new data to export, no TAR file journal is created.");
+                    File.Delete(filePath);
+                }
+                else if (success)
                 {
                     Guid? ftJournalDEId = null;
                     if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased && !isErased)
