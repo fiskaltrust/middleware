@@ -102,6 +102,7 @@ var builder = new CashBoxBuilder(
     market switch
     {
         "ES" => (ICashBoxBuilder)new CashBoxBuilderES(),
+        "IT" => new CashBoxBuilderIT(),
         "PL" => new CashBoxBuilderPL(),
         _ => throw new NotImplementedException(),
     },

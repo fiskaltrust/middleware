@@ -1,8 +1,10 @@
-This solution contains two test launchers one for the localization v2 and one for the older localizations.
+This solution contains the test launcher for the v2 localizations (ES, IT, PL). The launcher for the older
+localizations was retired together with the last v1 market it served (IT); the v1 markets (AT, DE, FR, ME) are
+started with `queue/test/Manual/fiskaltrust.Middleware.Queue.Test.Launcher`.
 
 It's meant as a way to quickly test and debug the localizations and scus.
 
-Those test launchers start an in memory queue in a certain market that's connected to a specific scu-type.
+The test launcher starts an in memory queue in a certain market that's connected to a specific scu-type.
 
 ## Goals
 

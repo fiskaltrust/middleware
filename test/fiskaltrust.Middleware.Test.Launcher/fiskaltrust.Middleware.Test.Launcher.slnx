@@ -1,7 +1,6 @@
 <Solution>
   <Project Path="src/fiskaltrust.Middleware.Test.Launcher.v2/fiskaltrust.Middleware.Test.Launcher.v2.csproj" />
-  <Project Path="src/fiskaltrust.Middleware.Test.Launcher/fiskaltrust.Middleware.Test.Launcher.csproj" />
-  
+
   <Project Path="..\..\queue\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
 
   <Project Path="..\..\queue\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
@@ -18,6 +17,7 @@
 
   <Project Path="..\..\queue\src\fiskaltrust.Middleware.Queue.InMemory\fiskaltrust.Middleware.Queue.InMemory.csproj" />
 
+  <Project Path="..\..\queue\src\fiskaltrust.Middleware.Localization.QueueIT\fiskaltrust.Middleware.Localization.QueueIT.csproj" />
   <Project Path="..\..\scu-it\src\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj" />
   <Project Path="..\..\scu-it\src\fiskaltrust.Middleware.SCU.IT.CustomRTServer\fiskaltrust.Middleware.SCU.IT.CustomRTServer.csproj" />
 </Solution>
