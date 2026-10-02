@@ -180,8 +180,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                         StartedTransactions = _nativeFunctionPointer.func_worm_info_startedTransactions(infoPtr),
                         TarExportSizeInBytes = _nativeFunctionPointer.func_worm_info_tarExportSize(infoPtr),
                         TarExportSizeInSectors = _nativeFunctionPointer.func_worm_info_tarExportSizeInSectors(infoPtr),
-                        TimeUntilNextSelfTest = _nativeFunctionPointer.func_worm_info_timeUntilNextSelfTest(infoPtr)
+                        TimeUntilNextSelfTest = _nativeFunctionPointer.func_worm_info_timeUntilNextSelfTest(infoPtr),
+                        IsTseV2 = _nativeFunctionPointer.func_worm_info_isTSEv2(infoPtr) != 0
                     };
+                    status.LoggedInUser = status.IsTseV2 ? _nativeFunctionPointer.func_worm_info_loggedInUser(infoPtr) : WormUserId.WORM_USER_UNAUTHENTICATED;
 
                     _logger.LogTrace("GetTseStatusAsync: Reading customization identifier from TSE..");
                     _nativeFunctionPointer.func_worm_info_customizationIdentifier(infoPtr, ref idPtr, idLengthPtr);
@@ -202,7 +204,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                     Marshal.Copy(serialNumberPtr, serialNumberBytes, 0, (int) serialNumberLength);
                     status.TseSerialNumber = serialNumberBytes;
 
-                    status.TseDescription = Marshal.PtrToStringAnsi(_nativeFunctionPointer.func_worm_info_tseDescription(infoPtr));
+                    // worm_info_tseDescription is deprecated since SDK v6.0.0; both return the TR-03153 certification id
+                    status.TseDescription = Marshal.PtrToStringAnsi(_nativeFunctionPointer.func_worm_info_tseCertificationId(infoPtr));
+                    if (string.IsNullOrEmpty(status.TseDescription))
+                    {
+                        status.TseDescription = Marshal.PtrToStringAnsi(_nativeFunctionPointer.func_worm_info_tseDescription(infoPtr));
+                    }
 
                     status.FormFactor = Marshal.PtrToStringAnsi(_nativeFunctionPointer.func_worm_info_formFactor(infoPtr));
 
@@ -253,20 +260,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                         clientIdPtr)
                         .ThrowIfError();
 
-                    // In Swissbit TSE API v6.0.0, worm_tse_setup no longer leaves users
-                    // logged in after completion. Ignore logout failures to stay compatible
-                    // with both old and new SDK versions.
+                    // TSE v1 leaves Admin and TimeAdmin logged in after setup, TSE v2 only Admin (and
+                    // ignores the user id on logout). Logout failures are not relevant for the setup result.
                     var adminLogout = _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_ADMIN);
-                    if (adminLogout != WormError.WORM_ERROR_NOERROR && adminLogout != WormError.WORM_ERROR_AUTHENTICATION_USER_NOT_LOGGED_IN)
-                    {
-                        adminLogout.ThrowIfError();
-                    }
-
                     var timeAdminLogout = _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_TIME_ADMIN);
-                    if (timeAdminLogout != WormError.WORM_ERROR_NOERROR && timeAdminLogout != WormError.WORM_ERROR_AUTHENTICATION_USER_NOT_LOGGED_IN)
-                    {
-                        timeAdminLogout.ThrowIfError();
-                    }
+                    _logger.LogDebug("Logout after TSE setup: Admin={AdminLogout}, TimeAdmin={TimeAdminLogout}", adminLogout, timeAdminLogout);
                 }
                 finally
                 {
@@ -302,14 +300,35 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 try
                 {
                     _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_TIME_ADMIN, _timeAdminPin.Ptr, _timeAdminPin.Length, IntPtr.Zero);
-                    _nativeFunctionPointer.func_worm_tse_updateTime(context, DateTime.UtcNow.ToLinuxTimestamp()).ThrowIfError();
+                    ThrowIfErrorExceptStoreFull(_nativeFunctionPointer.func_worm_tse_updateTime(context, DateTime.UtcNow.ToLinuxTimestamp()), "worm_tse_updateTime");
                 }
                 finally
                 {
-                    // Fix: was logging out WORM_USER_ADMIN but logged in WORM_USER_TIME_ADMIN
+                    // TimeAdmin must not stay logged in: on TSE v2 it is not allowed to export or read data
                     _nativeFunctionPointer.func_worm_user_logout(context, WormUserId.WORM_USER_TIME_ADMIN);
                 }
             });
+        }
+
+        public async Task TseUpdateTimeAsAdminAsync()
+        {
+            await _lockingHelper.PerformWithLock(_hwSemaphore, () =>
+            {
+                ThrowIfErrorExceptStoreFull(_nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPin.Ptr, _adminPin.Length, IntPtr.Zero), "worm_user_login");
+                ThrowIfErrorExceptStoreFull(_nativeFunctionPointer.func_worm_tse_updateTime(context, DateTime.UtcNow.ToLinuxTimestamp()), "worm_tse_updateTime");
+            });
+        }
+
+        // On TSE v2, login and updateTime return WORM_ERROR_STORE_FULL when less than 1 MB is left, although the
+        // operation itself was performed. Treating it as an error would make it impossible to export and erase the TSE.
+        private void ThrowIfErrorExceptStoreFull(WormError error, string operation)
+        {
+            if (error == WormError.WORM_ERROR_STORE_FULL)
+            {
+                _logger.LogWarning("{Operation} reported that the TSE store is full. The data on the TSE must be exported and deleted.", operation);
+                return;
+            }
+            error.ThrowIfError();
         }
 
         public async Task TseRunSelfTestAsnyc(bool throwException = true)
@@ -419,7 +438,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 try
                 {
                     Marshal.Copy(pin, 0, pinPtr, pin.Length);
-                    _nativeFunctionPointer.func_worm_user_login(context, id, pinPtr, pin.Length, IntPtr.Zero).ThrowIfError();
+                    ThrowIfErrorExceptStoreFull(_nativeFunctionPointer.func_worm_user_login(context, id, pinPtr, pin.Length, IntPtr.Zero), "worm_user_login");
                 }
                 finally
                 {
@@ -924,13 +943,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 try
                 {
                     _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
-
-                    // Software version is encoded as: 2 bytes major | 1 byte minor | 1 byte patch
-                    var softwareVersion = _nativeFunctionPointer.func_worm_info_softwareVersion(infoPtr);
-                    var major = (softwareVersion >> 16) & 0xFFFF;
-
-                    // Swissbit V2 TSEs use major version >= 2
-                    return major >= 2;
+                    return _nativeFunctionPointer.func_worm_info_isTSEv2(infoPtr) != 0;
                 }
                 finally
                 {

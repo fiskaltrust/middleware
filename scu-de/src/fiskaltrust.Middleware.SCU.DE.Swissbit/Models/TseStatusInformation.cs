@@ -39,5 +39,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Models
         public uint HardwareVersion { get; set; }
         public uint SoftwareVersion { get; set; }
         public string FormFactor { get; set; }
+        public bool IsTseV2 { get; set; }
+        public NativeFunctionPointer.WormUserId LoggedInUser { get; set; }
     }
 }
