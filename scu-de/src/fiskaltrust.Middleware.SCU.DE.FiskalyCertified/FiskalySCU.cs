@@ -339,6 +339,16 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 }
 
                 var (from, to) = GetExportRange(tss);
+                if (from > to)
+                {
+                    // Everything up to the current transaction has already been exported; fiskaly rejects a range with start > end
+                    _logger.LogInformation("No new transactions to export since the last export (last exported transaction number: {LastExportedTransactionNumber}).", to);
+                    return new StartExportSessionResponse
+                    {
+                        TokenId = _noExport + Guid.NewGuid().ToString(),
+                        TseSerialNumberOctet = tss.SerialNumber
+                    };
+                }
 
                 var exportId = Guid.NewGuid();
                 var range = (to - from) ?? 0;
@@ -584,6 +594,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 return new ExportDataResponse
                 {
                     TokenId = request.TokenId,
+                    TarFileByteChunkBase64 = string.Empty,
                     TotalTarFileSizeAvailable = true,
                     TotalTarFileSize = 0,
                     TarFileEndOfFile = true

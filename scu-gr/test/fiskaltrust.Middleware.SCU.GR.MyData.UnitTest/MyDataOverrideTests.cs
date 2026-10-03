@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
@@ -662,6 +662,127 @@ public class MyDataOverrideTests
         var deserializedDoc = (InvoicesDoc)xmlSerializer.Deserialize(stringReader)!;
         deserializedDoc.Should().NotBeNull();
         deserializedDoc.invoice[0].invoiceHeader.otherDeliveryNoteHeader.loadingAddress.street.Should().Be("Παπαδιαμάντη 24");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutPackingsDeclarationsOverride_ShouldNotEmitPackingsDeclarations()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+
+        error.Should().BeNull();
+        doc!.invoice[0].PackingsDeclarations.Should().BeNull();
+        xml.Should().NotContain("packingsDeclarations");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithPackingsDeclarationsOverride_ShouldSerializeToXml()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            isDeliveryNote = true,
+                            movePurpose = 1
+                        },
+                        packingsDeclarations = new[]
+                        {
+                            new
+                            {
+                                Packages = new object[]
+                                {
+                                    new { packagingType = 2, quantity = 1 },
+                                    new { packagingType = 6, quantity = 3, otherPackagingTypeTitle = "Δεξαμενή IBC" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var declarations = doc!.invoice[0].PackingsDeclarations;
+        declarations.Should().ContainSingle();
+        declarations[0].Packages.Should().HaveCount(2);
+        declarations[0].Packages[0].packagingType.Should().Be(2);
+        declarations[0].Packages[0].quantity.Should().Be(1);
+        declarations[0].Packages[0].otherPackagingTypeTitle.Should().BeNull();
+        declarations[0].Packages[1].packagingType.Should().Be(6);
+        declarations[0].Packages[1].quantity.Should().Be(3);
+        declarations[0].Packages[1].otherPackagingTypeTitle.Should().Be("Δεξαμενή IBC");
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        var invoiceXml = System.Xml.Linq.XDocument.Parse(xml).Root!
+            .Elements().Single(e => e.Name.LocalName == "invoice");
+        System.Xml.Linq.XNamespace inv = "http://www.aade.gr/myDATA/invoice/v1.0";
+        var declarationXml = invoiceXml.Elements(inv + "packingsDeclarations").Should().ContainSingle().Subject;
+        var packagesXml = declarationXml.Elements(inv + "Packages").ToList();
+        packagesXml.Should().HaveCount(2);
+        packagesXml[0].Element(inv + "packagingType")!.Value.Should().Be("2");
+        packagesXml[0].Element(inv + "quantity")!.Value.Should().Be("1");
+        packagesXml[0].Element(inv + "otherPackagingTypeTitle").Should().BeNull();
+        packagesXml[1].Element(inv + "otherPackagingTypeTitle")!.Value.Should().Be("Δεξαμενή IBC");
+
+        // XSD sequence: packingsDeclarations follows invoiceSummary and the optional URLs. It is
+        // declared in a separate partial file, so it is emitted last; that stays valid only while
+        // the AADE-owned invoiceDeliveryStatus/deliveryLifecycle that follow it are never set.
+        invoiceXml.Elements().Last().Name.LocalName.Should().Be("packingsDeclarations");
+        invoiceXml.Elements().Select(e => e.Name.LocalName)
+            .Should().NotContain(new[] { "invoiceDeliveryStatus", "deliveryLifecycle" });
+
+        var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
+        using var stringReader = new StringReader(xml);
+        var deserializedDoc = (InvoicesDoc) xmlSerializer.Deserialize(stringReader)!;
+        deserializedDoc.invoice[0].PackingsDeclarations.Should().BeEquivalentTo(declarations);
+    }
+
+    [Theory]
+    [InlineData("packagingType")]
+    [InlineData("quantity")]
+    public void MapToInvoicesDoc_WithPackingsDeclarationsMissingRequiredField_ShouldReturnError(string missingField)
+    {
+        // Both fields are required ints in the XSD; a missing value must not be sent as 0.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        object package = missingField == "packagingType"
+            ? new { quantity = 3 }
+            : new { packagingType = 2 };
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        packingsDeclarations = new[] { new { Packages = new[] { package } } }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain($"Packages[].{missingField} is mandatory");
+        doc.Should().BeNull();
     }
 
     [Fact]

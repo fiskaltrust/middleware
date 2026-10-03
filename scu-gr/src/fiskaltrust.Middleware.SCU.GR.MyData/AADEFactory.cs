@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -497,6 +497,27 @@ public class AADEFactory
             var counterpart = invoice.counterpart;
             ApplyPartyOverride(ref counterpart, invoiceOverride.Counterpart);
             invoice.counterpart = counterpart;
+        }
+
+        // Plain passthrough: content is validated by AADE, not here. The XSD-required ints have no
+        // "absent" form in the XML, so a missing value is rejected rather than sent as 0.
+        if (invoiceOverride.PackingsDeclarations != null)
+        {
+            invoice.PackingsDeclarations = invoiceOverride.PackingsDeclarations
+                .Select(declaration => new PackingsDeclaration
+                {
+                    Packages = declaration.Packages?
+                        .Select(package => new PackagingDetailType
+                        {
+                            packagingType = package.PackagingType
+                                ?? throw new ArgumentException("packingsDeclarations[].Packages[].packagingType is mandatory."),
+                            quantity = package.Quantity
+                                ?? throw new ArgumentException("packingsDeclarations[].Packages[].quantity is mandatory."),
+                            otherPackagingTypeTitle = package.OtherPackagingTypeTitle
+                        })
+                        .ToArray()
+                })
+                .ToArray();
         }
 
         // Invoice-level `otherTransportDetails` was removed from the AADE invoice schema in

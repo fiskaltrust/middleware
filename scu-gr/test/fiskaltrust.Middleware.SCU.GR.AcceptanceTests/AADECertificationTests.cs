@@ -1,10 +1,11 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.SCU.GR.MyData;
+using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
 using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
@@ -117,6 +118,113 @@ namespace fiskaltrust.Middleware.SCU.GR.IntegrationTest.MyDataSCU
             var xml = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
             await SendToMayData(xml);
             Console.WriteLine(caller);
+        }
+
+        /// <summary>
+        /// fiskaltrust/market-gr#325: a 1.1 invoice that is also a delivery note, with
+        /// packingsDeclarations supplied via mydataoverride (Viva's request shape, wrapped in an array).
+        /// </summary>
+        [Fact]
+        public async Task SalesInvoice_1_1_DeliveryNote_WithPackingsDeclarationsOverride_IsAcceptedByMyData()
+        {
+            var receiptRequest = new ReceiptRequest
+            {
+                cbTerminalID = "1",
+                Currency = Currency.EUR,
+                cbReceiptAmount = 124m,
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbChargeItems =
+                [
+                    new ChargeItem
+                    {
+                        Position = 1,
+                        Amount = 124,
+                        VATRate = 24,
+                        VATAmount = 24,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
+                        Quantity = 1,
+                        Description = "Line item 1"
+                    }
+                ],
+                cbPayItems =
+                [
+                    new PayItem
+                    {
+                        Amount = 124m,
+                        Description = "Μετρητά",
+                        ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
+                    }
+                ],
+                ftPosSystemId = Guid.NewGuid(),
+                // Invoice with the GR HasTransportInformation flag (0x0400_0000), as in Viva's request
+                // (which additionally sets the handwritten flag; not relevant here).
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0400_1001,
+                cbCustomer = new MiddlewareCustomer
+                {
+                    CustomerVATId = AADECertificationExamples.CUSOMTER_VATNUMBER,
+                    CustomerName = "Πελάτης A.E.",
+                    CustomerStreet = "Κηφισίας 12",
+                    CustomerZip = "12345",
+                    CustomerCity = "Αθηνών",
+                    CustomerCountry = "GR",
+                },
+                ftReceiptCaseData = new
+                {
+                    GR = new
+                    {
+                        mydataoverride = new
+                        {
+                            invoice = new
+                            {
+                                invoiceHeader = new
+                                {
+                                    invoiceType = "1.1",
+                                    withoutDigitalTransportTracking = true,
+                                    dispatchDate = DateTime.UtcNow,
+                                    dispatchTime = DateTime.UtcNow,
+                                    movePurpose = 1,
+                                    isDeliveryNote = true,
+                                    otherDeliveryNoteHeader = new
+                                    {
+                                        loadingAddress = new { street = "ARKTINOY9", number = "229", postalCode = "11635", city = "ΑΘΗΝΑ9" },
+                                        deliveryAddress = new { street = "ODOD1", number = "2", postalCode = "19200", city = "ATHINA" },
+                                        startShippingBranch = 0,
+                                        completeShippingBranch = 0
+                                    }
+                                },
+                                packingsDeclarations = new[]
+                                {
+                                    new
+                                    {
+                                        Packages = new[]
+                                        {
+                                            new { packagingType = 2, quantity = 1 },
+                                            new { packagingType = 4, quantity = 3 }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Delivery notes need the issuer name and address, which come from master data.
+            var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+            {
+                Account = new storage.V0.MasterData.AccountMasterData { VatId = "112545020", AccountName = "Εκδότης Α.Ε." },
+                Outlet = new storage.V0.MasterData.OutletMasterData { LocationId = "0", Street = "Λεωφόρος Βουλιαγμένης", Zip = "11636", City = "Αθηνών" }
+            }, "https://test.receipts.example.com");
+
+            (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
+            error.Should().BeNull();
+            invoiceDoc!.invoice[0].PackingsDeclarations.Should().ContainSingle();
+
+            var xml = AADEFactory.GenerateInvoicePayload(invoiceDoc);
+            _output.WriteLine(xml);
+            var mark = await SendToMayData(xml);
+            mark.Should().NotBeNullOrEmpty();
         }
 
         [Fact]

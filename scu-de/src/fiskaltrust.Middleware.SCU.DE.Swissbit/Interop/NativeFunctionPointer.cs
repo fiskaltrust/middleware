@@ -425,6 +425,28 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate IntPtr worm_info_formFactor(IntPtr info);
 
+        /* Returns the TR-03153 certification id of the TSE (replaces the deprecated
+        @ref worm_info_tseDescription).
+
+        The returned string MUST NOT be freed by the caller and will be valid
+        until the @ref WormInfo parent gets freed.
+        */
+        //WORMAPI const char* WORMAPI_CALL worm_info_tseCertificationId(const WormInfo* info);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate IntPtr worm_info_tseCertificationId(IntPtr info);
+
+        /* Returns whether the TSE is running at least software version 2.0.0.
+        */
+        //WORMAPI int WORMAPI_CALL worm_info_isTSEv2(const WormInfo* info);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate int worm_info_isTSEv2(IntPtr info);
+
+        /* Returns the currently logged in user (TSE v2.0.0 and later only).
+        */
+        //WORMAPI WormUserId WORMAPI_CALL worm_info_loggedInUser(const WormInfo* info);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate WormUserId worm_info_loggedInUser(IntPtr info);
+
 
         /* Returns the flash health summary.
 
@@ -1810,7 +1832,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 
             /* Same as @ref WORM_USER_UNAUTHENTICATED, but is allowed to call
                 @ref worm_tse_updateTime. */
-            WORM_USER_TIME_ADMIN = 2
+            WORM_USER_TIME_ADMIN = 2,
+
+            /* Only exists for TSE v2.0.0 and later. Required for transactions; the SDK
+                sets its PIN during @ref worm_tse_setup and logs it in automatically. */
+            WORM_USER_LOGGER = 3
         }
 
         /* Possible initialization states of the TSE. */
@@ -2052,6 +2078,135 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             /* Signature creation error. */
             WORM_ERROR_SIG_ERROR = 0xff00,
 
+            // Error codes added with Swissbit TSE SDK v6.0.x (mostly raised by TSE v2.0.0)
+
+            /* Network Error (when operating in LAN or WAN mode). */
+            WORM_ERROR_NETWORK = 16,
+
+            /* Command not supported in this mode (when operating in LAN mode). */
+            WORM_ERROR_CMD_NOT_SUPPORTED = 17,
+
+            /* Invalid API token (when operating in LAN mode).  */
+            WORM_ERROR_LAN_INVALID_API_TOKEN = 18,
+
+            /* Network timeout error (when operating in LAN mode). */
+            WORM_ERROR_NETWORK_TIMEOUT = 19,
+
+            /* Network connection failed (when operating in LAN mode). */
+            WORM_ERROR_CONNECTION_FAILED = 20,
+
+            /* @ref worm_lantse_unlock called more often than @ref worm_lantse_lock. */
+            WORM_ERROR_LAN_UNBALANCED_LOCKS = 21,
+
+            /* Server response could not be parsed correctly. */
+            WORM_ERROR_LAN_INVALID_SERVER_RESPONSE = 22,
+
+            /* Command called at a moment where the SDK does not allow it. */
+            WORM_ERROR_INVALID_STATE = 23,
+
+            /* TSE not found (raised from the server when operating in LAN mode). */
+            WORM_ERROR_TSE_NOT_FOUND = 24,
+
+            /* Incremental Export: the parameter maxExportSize is lower than the
+            smallest export that can be generated. */
+            WORM_ERROR_INCREMENTAL_EXPORT_LIMIT_TOO_LOW = 25,
+
+            /* The provided client was already registered. */
+            WORM_ERROR_CLIENT_ALREADY_REGISTERED = 0x1018,
+
+            /* The logical limit was reached. */
+            WORM_ERROR_TSE_SEAPI_TRANSACTION_COUNTER_OVERFLOW = 0x1020,
+
+            /* The new PIN was the same as the old one or an empty PIN. */
+            WORM_ERROR_TSE_SEAPI_SETTING_NEW_PIN_FAILED = 0x1021,
+
+            /* The new device description could not be stored. */
+            WORM_ERROR_TSE_SEAPI_STORING_DATA_FAILED = 0x1022,
+
+            /* The deactivation of the Secure Element failed. */
+            WORM_ERROR_TSE_SEAPI_DISABLE_SECURE_ELEMENT_FAILED = 0x1023,
+
+            /* PUK is blocked. */
+            WORM_ERROR_TSE_SEAPI_AUTHENTICATION_PUK_TEMPORARILY_BLOCKED = 0x1203,
+
+            /* Wrong PUK provided. */
+            WORM_ERROR_TSE_SEAPI_AUTHENTICATION_WRONG_PUK = 0x1700,
+
+            WORM_ERROR_TSE_SEAPI_STORING_LOG_MESSAGE_FAILED = 0xa016,
+
+            /* Uknown User ID. */
+            WORM_ERROR_TSE_SEAPI_UNKNOWN_USER_ID = 0xa018,
+
+            /* Function not supported. */
+            WORM_ERROR_TSE_SEAPI_FUNCTION_NOT_SUPPORTED = 0xf100,
+
+            /* Get max number of clients failed. */
+            WORM_ERROR_TSE_SEAPI_GET_MAX_NUMBER_OF_CLIENTS_FAILED = 0xf101,
+
+            /* At least one parameter is too long. */
+            WORM_ERROR_TSE_SEAPI_PARAMETER_TOO_LONG = 0xf103,
+
+            /* At least one parameter is invalid. */
+            WORM_ERROR_TSE_SEAPI_PARAMETER_SYNTAX = 0xf104,
+
+            /* Get max tx failed. */
+            WORM_ERROR_TSE_SEAPI_GET_MAX_NUMBER_TRANSACTIONS_FAILED = 0xf106,
+
+            /* Get registered clients failed. */
+            WORM_ERROR_TSE_SEAPI_GET_REGISTERED_CLIENTS_FAILED = 0xf107,
+
+            /* Get open transactions failed. */
+            WORM_ERROR_TSE_SEAPI_GET_OPEN_TRANSACTIONS_FAILED = 0xf108,
+
+            /* Get description failed. */
+            WORM_ERROR_TSE_SEAPI_GET_DESCRIPTION_FAILED = 0xf109,
+
+            /* The execution of self test failed. */
+            WORM_ERROR_TSE_SEAPI_SELF_TEST_FAILED = 0xf10a,
+
+            /* No data was found for a provided selection (e.g., last transaction of
+            client). */
+            WORM_ERROR_TSE_SEAPI_NO_DATA_AVAILABLE = 0xf10d,
+
+            /* The provided clientId contains invalid characters. */
+            WORM_ERROR_TSE_SEAPI_INVALID_CLIENT_ID_CHARACTER = 0xf10f,
+
+            /* The time parameter value is invalid. */
+            WORM_ERROR_TSE_SEAPI_INVALID_TIME = 0xf110,
+
+            /* The physical limit was reached. */
+            WORM_ERROR_TSE_SEAPI_TRANSACTION_COUNTER_EXHAUSTED = 0xf112,
+
+            /* Get current transaction counter failed. */
+            WORM_ERROR_TSE_SEAPI_GET_CURRENT_TRANSACTION_COUNTER_FAILED = 0xf124,
+
+            /* Register client failed. */
+            WORM_ERROR_TSE_SEAPI_REGISTER_CLIENT_FAILED = 0xf129,
+
+            /* Deregister client failed. */
+            WORM_ERROR_TSE_SEAPI_DEREGISTER_CLIENT_FAILED = 0xf12a,
+
+            /* Initialization failed. */
+            WORM_ERROR_TSE_SEAPI_DEVICE_INITIALIZATION_FAILED = 0xf12b,
+
+            /* Update time failed. */
+            WORM_ERROR_TSE_SEAPI_UPDATE_TIME_FAILED = 0xf12d,
+
+            /* The update of the device failed. */
+            WORM_ERROR_TSE_SEAPI_DEVICE_UPDATE_FAILED = 0xf12e,
+
+            /* Delete log messages failed. */
+            WORM_ERROR_TSE_SEAPI_DELETE_LOG_MESSAGES_FAILED = 0xf130,
+
+            /* The signature counter reached its logical maximum */
+            WORM_ERROR_TSE_SEAPI_SIGNATURE_COUNTER_OVERFLOW = 0xff02,
+
+            /* Log data to sign could not be determined */
+            WORM_ERROR_TSE_SEAPI_SIGNING_EVENT_DATA_FAILED = 0xff03,
+
+            /* Log message could not be retrieved */
+            WORM_ERROR_TSE_SEAPI_RETRIEVE_LOG_MESSAGE_FAILED = 0xff04,
+
             /* Highest error code that might be raised from the TSE. */
             WORM_ERROR_FROM_CARD_LAST = 0xFFFF
         }
@@ -2094,6 +2249,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public worm_info_hardwareVersion func_worm_info_hardwareVersion { get; set; }
         public worm_info_softwareVersion func_worm_info_softwareVersion { get; set; }
         public worm_info_formFactor func_worm_info_formFactor { get; set; }
+        public worm_info_tseCertificationId func_worm_info_tseCertificationId { get; set; }
+        public worm_info_isTSEv2 func_worm_info_isTSEv2 { get; set; }
+        public worm_info_loggedInUser func_worm_info_loggedInUser { get; set; }
         public worm_flash_health_summary func_worm_flash_health_summary { get; set; }
         public worm_flash_health_needs_replacement func_worm_flash_health_needs_replacement { get; set; }
         public worm_tse_factoryReset func_worm_tse_factoryReset { get; set; }
