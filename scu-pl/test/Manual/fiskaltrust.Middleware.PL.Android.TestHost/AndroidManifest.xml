@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="PL TestHost" android:allowBackup="false" />
+    <!-- tcp:// reaches the POSNET over the network, usbhost:// over USB (OTG). USB host is not
+         required, so the app still installs on the emulator, which has none. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+</manifest>

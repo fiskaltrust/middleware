@@ -12,11 +12,24 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 
-class CashBoxBuilderPL : ICashBoxBuilder
+class CashBoxBuilderPL : ICashBoxBuilder, IDisposable
 {
+    /// <summary>
+    /// Owns the PosNet SCU's singletons — the transport among them, which holds the printer's port or
+    /// USB interface open. A host that builds a second cashbox in the same process disposes this one
+    /// first, or the new transport finds the device still claimed.
+    /// </summary>
+    private ServiceProvider? _scuServices;
+
     public string Market { get => "PL"; }
 
     public PackageConfiguration? _scuConfiguration { get; set; }
+
+    /// <summary>
+    /// Registers what the host adds to the PosNet SCU's services — the Android test host brings the
+    /// USB host link a <c>usbhost://</c> DeviceUrl is opened through.
+    /// </summary>
+    public Action<IServiceCollection>? ConfigureScuServices { get; init; }
 
     public void AddSCU(ref PackageConfiguration queueConfiguration, PackageConfiguration scuConfiguration, Guid scuId)
     {
@@ -83,7 +96,7 @@ class CashBoxBuilderPL : ICashBoxBuilder
     /// Builds the PosNet SCU the way the launcher does — through its bootstrapper, so the DI wiring
     /// under test is the wiring that runs here too.
     /// </summary>
-    private static IPLSSCD CreatePosNetSCU(PackageConfiguration scuConfiguration)
+    private IPLSSCD CreatePosNetSCU(PackageConfiguration scuConfiguration)
     {
         var bootstrapper = new SCU.PL.PosNet.ScuBootstrapper
         {
@@ -92,6 +105,15 @@ class CashBoxBuilderPL : ICashBoxBuilder
         };
         var services = new ServiceCollection();
         bootstrapper.ConfigureServices(services);
-        return services.BuildServiceProvider().GetRequiredService<IPLSSCD>();
+        ConfigureScuServices?.Invoke(services);
+        _scuServices?.Dispose();
+        _scuServices = services.BuildServiceProvider();
+        return _scuServices.GetRequiredService<IPLSSCD>();
+    }
+
+    public void Dispose()
+    {
+        _scuServices?.Dispose();
+        _scuServices = null;
     }
 }
