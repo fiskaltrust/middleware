@@ -407,7 +407,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
         if (receiptReferences.Count > 1)
         {
-            throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+            var rule = PortugalValidationRules.MultipleReceiptReferencesNotSupported;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.MultipleReceiptReferencesNotSupported,
+                rule.Code,
+                rule.Field
+            ));
         }
 
 
@@ -546,7 +551,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
         if (receiptReferences.Count > 1)
         {
-            throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+            var rule = PortugalValidationRules.MultipleReceiptReferencesNotSupported;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.MultipleReceiptReferencesNotSupported,
+                rule.Code,
+                rule.Field
+            ));
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
@@ -598,7 +608,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
         if (receiptReferences.Count > 1)
         {
-            throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+            var rule = PortugalValidationRules.MultipleReceiptReferencesNotSupported;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.MultipleReceiptReferencesNotSupported,
+                rule.Code,
+                rule.Field
+            ));
         }
 
         var previousReceiptRef = receiptRequest.cbPreviousReceiptReference.SingleValue!;
