@@ -31,7 +31,6 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
             IsRefund = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund),
             GeneratesSignature = true,
             IsHandwritten = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten),
-            //NumberSeries = series  // Include series for moment order validation
         });
         if (!validationResults.IsValid)
         {

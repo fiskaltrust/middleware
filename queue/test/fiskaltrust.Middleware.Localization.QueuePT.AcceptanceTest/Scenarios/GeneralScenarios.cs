@@ -373,7 +373,7 @@ public class GeneralScenarios : AbstractScenarioTests
             """;
         var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) receiptCase.WithCountry("PT"));
         response.ftState.State().Should().Be(State.Error, because: Environment.NewLine + string.Join(Environment.NewLine, response.ftSignatures.Select(x => x.Data)));
-        response.ftSignatures[0].Data.Should().Contain("EEEE_Charge item at position").And.Contain("discount amount");
+        response.ftSignatures[0].Data.Should().Contain("EEEE_cbChargeItems[").And.Contain("discount amount");
     }
 
     #endregion
@@ -619,7 +619,7 @@ public class GeneralScenarios : AbstractScenarioTests
 
         var (request, response) = await ProcessReceiptAsync(json, (long) receiptCase.WithCountry("PT"));
         response.ftState.State().Should().Be(State.Error);
-        response.ftSignatures[0].Data.Should().Contain("which exceeds the maximum allowed difference of 2 minutes");
+        response.ftSignatures[0].Data.Should().Contain("which exceeds the maximum allowed difference of 1 minute");
     }
 
     #endregion

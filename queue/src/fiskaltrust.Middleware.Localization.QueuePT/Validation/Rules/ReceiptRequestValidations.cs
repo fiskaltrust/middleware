@@ -100,59 +100,7 @@ public class ReceiptRequestValidations
     }
 
     /// <summary>
-    /// Validates that receipt moment is not more than 10 minutes different from the current server time,
-    /// and that it is never in the future.
-    /// This ensures receipts are created with accurate timestamps (except for handwritten receipts which may be backdated).
-    /// Returns a single ValidationResult if validation fails.
-    /// </summary>
-    public static IEnumerable<ValidationResult> ValidateReceiptMomentOrder(ReceiptRequest request, object series, bool isHandwritten)
-    {
-        var serverTime = DateTime.UtcNow;
-        var receiptMomentUtc = request.cbReceiptMoment.ToUniversalTime();
-
-        // Check if receipt moment is in the future - this is always invalid
-        if (receiptMomentUtc > serverTime)
-        {
-            var rule = PortugalValidationRules.CbReceiptMomentInFuture;
-            yield return ValidationResult.Failed(new ValidationError(
-                ErrorMessagesPT.EEEE_CbReceiptMomentInFuture(request.cbReceiptMoment, serverTime),
-                rule.Code,
-                rule.Field
-            )
-            .WithContext("ServerTime", serverTime)
-            .WithContext("CbReceiptMoment", request.cbReceiptMoment));
-
-            // If receipt is in the future, don't check time deviation
-            yield break;
-        }
-
-        // Skip time deviation validation for handwritten receipts which may be backdated
-        if (isHandwritten)
-        {
-            yield break;
-        }
-
-        var timeDifference = Math.Abs((receiptMomentUtc - serverTime).TotalMinutes);
-
-        const double maxAllowedDifferenceMinutes = 10.0;
-
-        if (timeDifference > maxAllowedDifferenceMinutes)
-        {
-            var rule = PortugalValidationRules.CbReceiptMomentDeviationExceeded;
-            yield return ValidationResult.Failed(new ValidationError(
-                ErrorMessagesPT.EEEE_CbReceiptMomentDeviationExceeded(request.cbReceiptMoment, serverTime, timeDifference),
-                rule.Code,
-                rule.Field
-            )
-            .WithContext("ServerTime", serverTime)
-            .WithContext("CbReceiptMoment", request.cbReceiptMoment)
-            .WithContext("DifferenceInMinutes", timeDifference)
-            .WithContext("MaxAllowedDifferenceMinutes", maxAllowedDifferenceMinutes));
-        }
-    }
-
-    /// <summary>
-    /// Validates that the time difference between cbReceiptMoment and ftReceiptMoment does not exceed 2 minutes.
+    /// Validates that the time difference between cbReceiptMoment and ftReceiptMoment does not exceed 1 minute.
     /// Returns a single ValidationResult if validation fails.
     /// </summary>
     public static IEnumerable<ValidationResult> ValidateReceiptMomentTimeDifference(ReceiptRequest request, ReceiptResponse receiptResponse)
@@ -180,7 +128,7 @@ public class ReceiptRequestValidations
         {
             var rule = PortugalValidationRules.ReceiptMomentTimeDifferenceExceeded;
             yield return ValidationResult.Failed(new ValidationError(
-                $"The time difference between cbReceiptMoment ({request.cbReceiptMoment:yyyy-MM-dd HH:mm:ss}) and ftReceiptMoment ({receiptResponse.ftReceiptMoment:yyyy-MM-dd HH:mm:ss}) is {timeDifference.TotalMinutes:F2} minutes, which exceeds the maximum allowed difference of 2 minutes.",
+                $"The time difference between cbReceiptMoment ({request.cbReceiptMoment:yyyy-MM-dd HH:mm:ss}) and ftReceiptMoment ({receiptResponse.ftReceiptMoment:yyyy-MM-dd HH:mm:ss}) is {timeDifference.TotalMinutes:F2} minutes, which exceeds the maximum allowed difference of 1 minute.",
                 rule.Code,
                 rule.Field
             ));
