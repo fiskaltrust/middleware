@@ -16,11 +16,16 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet;
 /// device path such as <c>/dev/ttyACM0</c> (also <c>serial:///dev/ttyACM0</c>): the printer's PC
 /// interface set to USB or COM. Over USB the device enumerates as a CDC virtual COM port, so both
 /// look like a serial port to the host.</item>
+/// <item><see cref="UsbHost"/> — <c>usbhost://1424:10B0</c> (vendor and product id, hex): the same
+/// USB interface, but opened by the host application itself instead of through an operating-system
+/// serial driver. That is the only way in on Android, where an app has no access to
+/// <c>/dev/ttyACM*</c> and talks to the device through the USB host API instead.</item>
 /// </list>
 /// </summary>
 public abstract record PosNetDeviceAddress
 {
     private static readonly Regex s_windowsComPort = new("^COM[0-9]+$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex s_usbIds = new("^(?<vendor>[0-9A-F]{1,4}):(?<product>[0-9A-F]{1,4})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private PosNetDeviceAddress() { }
 
@@ -32,6 +37,12 @@ public abstract record PosNetDeviceAddress
     public sealed record Serial(string PortName) : PosNetDeviceAddress
     {
         public override string ToString() => PortName;
+    }
+
+    /// <summary>A USB device the host application opens itself, found by its vendor and product id.</summary>
+    public sealed record UsbHost(int VendorId, int ProductId) : PosNetDeviceAddress
+    {
+        public override string ToString() => $"usbhost://{VendorId:X4}:{ProductId:X4}";
     }
 
     public static PosNetDeviceAddress Parse(string deviceUrl)
@@ -49,6 +60,18 @@ public abstract record PosNetDeviceAddress
                 throw new PLValidationException($"The PosNet DeviceUrl '{deviceUrl}' names no serial port (expected e.g. serial://COM9 or serial:///dev/ttyACM0).");
             }
             return new Serial(portName);
+        }
+
+        if (TryStripScheme(address, "usbhost://", out var usbIds))
+        {
+            var ids = s_usbIds.Match(usbIds);
+            if (!ids.Success)
+            {
+                throw new PLValidationException($"The PosNet DeviceUrl '{deviceUrl}' names no USB device (expected the vendor and product id in hex, e.g. usbhost://1424:10B0).");
+            }
+            return new UsbHost(
+                int.Parse(ids.Groups["vendor"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                int.Parse(ids.Groups["product"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
         }
 
         if (s_windowsComPort.IsMatch(address) || address.StartsWith("/dev/", StringComparison.Ordinal))
@@ -69,7 +92,7 @@ public abstract record PosNetDeviceAddress
             return new Tcp(address[..separator], port);
         }
 
-        throw new PLValidationException($"The PosNet DeviceUrl '{deviceUrl}' is neither a tcp://host:port address nor a serial port (serial://COM9, /dev/ttyACM0).");
+        throw new PLValidationException($"The PosNet DeviceUrl '{deviceUrl}' is neither a tcp://host:port address, a serial port (serial://COM9, /dev/ttyACM0) nor a USB device (usbhost://1424:10B0).");
     }
 
     private static bool TryStripScheme(string address, string scheme, out string remainder)

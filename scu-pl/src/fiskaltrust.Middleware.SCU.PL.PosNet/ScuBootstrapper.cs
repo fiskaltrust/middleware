@@ -20,8 +20,11 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
         // serializes commands on it — one instance per configured device. The transport is a
         // registration of its own so the wire can be swapped or decorated (a recording transport
         // in the acceptance tests) without touching the SCU; which wire — TCP to the network
-        // interface, serial to the USB/COM interface — follows from the DeviceUrl.
-        services.AddSingleton(provider => PosNetTransportFactory.Create(provider.GetRequiredService<PosNetConfiguration>()));
+        // interface, serial to the USB/COM interface — follows from the DeviceUrl. A usbhost://
+        // address is opened through the IPosNetUsbHostLinkFactory the host registers (on Android).
+        services.AddSingleton(provider => PosNetTransportFactory.Create(
+            provider.GetRequiredService<PosNetConfiguration>(),
+            provider.GetService<IPosNetUsbHostLinkFactory>()));
         services.AddSingleton<PosNetClient>();
         services.AddSingleton<IPLSSCD, PosNetPLSSCD>();
     }

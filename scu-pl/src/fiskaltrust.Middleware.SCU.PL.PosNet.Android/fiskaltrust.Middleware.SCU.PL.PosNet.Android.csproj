@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The Android half of the PosNet SCU's usbhost:// transport: opens the printer through the
+         Android USB host API, which is the only way an app reaches a USB device there. Everything
+         protocol-related stays in the platform-neutral SCU (UsbHostPosNetTransport). -->
+    <PropertyGroup>
+        <Description>Android USB host support for the fiskaltrust Middleware SCU for POSNET Online fiscal printers (Poland).</Description>
+        <TargetFramework>net10.0-android</TargetFramework>
+        <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+    </ItemGroup>
+
+</Project>
