@@ -304,15 +304,6 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
                 }
             }
 
-            // Validate receipt moment order if series is provided
-            if (context.NumberSeries != null)
-            {
-                foreach (var result in ReceiptRequestValidations.ValidateReceiptMomentOrder(_receiptRequest, context.NumberSeries, context.IsHandwritten))
-                {
-                    yield return result;
-                }
-            }
-
             if (_receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002) && _receiptRequest.cbPreviousReceiptReference is null)
             {
                 var rule = PortugalValidationRules.PreviousReceiptReference;
@@ -489,7 +480,7 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         }
     }
 
-    public async Task<string?> ValidatePaymentTransferAsync(
+    public async Task<ValidationError?> ValidatePaymentTransferAsync(
      ReceiptRequest paymentTransferRequest,
      ReceiptRequest originalRequest,
      string originalReceiptReference,
@@ -500,7 +491,11 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
            originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2B0x1002 &&
            originalRequest.ftReceiptCase.Case() != ReceiptCase.InvoiceB2G0x1003)
         {
-            return $"The original receipt '{originalReceiptReference}' is not a valid receipt for payment transfer. Only Invoices are allowed.";
+            var rule = PortugalValidationRules.PaymentTransferOriginalNotInvoice;
+            return new ValidationError(
+                ErrorMessagesPT.EEEE_PaymentTransferOriginalNotInvoice(originalReceiptReference),
+                rule.Code,
+                rule.Field);
         }
 
         // Calculate original accounts receivable amount
@@ -522,11 +517,15 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         // Validate payment transfer amount doesn't exceed remaining amount
         if (paymentTransferAmount > remainingAmount + 0.01m)
         {
-            return ErrorMessagesPT.EEEE_PaymentTransferExceedsRemainingAmount(
-                originalReceiptReference,
-                paymentTransferAmount,
-                remainingAmount,
-                alreadyRefundedAmount);
+            var rule = PortugalValidationRules.PaymentTransferExceedsRemainingAmount;
+            return new ValidationError(
+                ErrorMessagesPT.EEEE_PaymentTransferExceedsRemainingAmount(
+                    originalReceiptReference,
+                    paymentTransferAmount,
+                    remainingAmount,
+                    alreadyRefundedAmount),
+                rule.Code,
+                rule.Field);
         }
 
         return null; // Validation passed
@@ -571,7 +570,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (validationError != null)
         {
-            return ValidationResult.Failed(validationError);
+            var rule = PortugalValidationRules.FullRefundItemsMismatch;
+            return ValidationResult.Failed(new ValidationError(
+                validationError,
+                rule.Code,
+                rule.Field
+            ));
         }
         else
         {
@@ -650,7 +654,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (validationError != null)
         {
-            return ValidationResult.Failed(validationError);
+            var rule = PortugalValidationRules.VoidItemsMismatch;
+            return ValidationResult.Failed(new ValidationError(
+                validationError,
+                rule.Code,
+                rule.Field
+            ));
         }
         else
         {
@@ -673,7 +682,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
         var receiptReferences = receiptResponse.GetRequiredPreviousReceiptReference();
         if (receiptReferences.Count > 1)
         {
-            return ValidationResult.Failed(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+            var rule = PortugalValidationRules.MultipleReceiptReferencesNotSupported;
+            return ValidationResult.Failed(new ValidationError(
+                ErrorMessagesPT.MultipleReceiptReferencesNotSupported,
+                rule.Code,
+                rule.Field
+            ));
         }
 
         if (receiptRequest.cbChargeItems?.Any(item => !item.IsRefund()) == true)
@@ -729,7 +743,12 @@ public class ReceiptValidator(ReceiptRequest request, ReceiptResponse receiptRes
 
         if (validationError != null)
         {
-            return ValidationResult.Failed(validationError);
+            var rule = PortugalValidationRules.PartialRefundItemsMismatch;
+            return ValidationResult.Failed(new ValidationError(
+                validationError,
+                rule.Code,
+                rule.Field
+            ));
         }
         else
         {

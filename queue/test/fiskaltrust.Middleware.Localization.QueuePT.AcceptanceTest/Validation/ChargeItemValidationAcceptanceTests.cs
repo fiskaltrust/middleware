@@ -1571,7 +1571,7 @@ public class ChargeItemValidationAcceptanceTests
         failureSignature.Should().NotBeNull("Error should be in signatures");
         failureSignature!.Data.Should().Contain("EEEE_ZeroVatRateMissingNature",
             "Error should indicate missing exempt reason on second item");
-        failureSignature.Data.Should().Contain("position 1",
+        failureSignature.Data.Should().Contain("cbChargeItems[1]",
             "Error should reference the correct item position");
     }
 
