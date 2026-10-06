@@ -68,6 +68,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.commit }}
+          # Nerdbank.GitVersioning computes the version height from the history.
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
