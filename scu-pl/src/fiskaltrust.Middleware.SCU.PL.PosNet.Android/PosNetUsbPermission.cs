@@ -17,18 +17,29 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Android;
 /// </remarks>
 public static class PosNetUsbPermission
 {
-    /// <returns>Whether access is granted; <c>false</c> also when the device is not attached.</returns>
-    public static Task<bool> RequestAsync(Context context, PosNetDeviceAddress.UsbHost address)
+    /// <summary>
+    /// How long the user has to answer the prompt. The system's answer is a broadcast, and it never
+    /// comes if the prompt is lost on the way — the app sent to the background, its process restarted
+    /// — so the wait has to end on its own.
+    /// </summary>
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(2);
+
+    /// <param name="timeout">How long to wait for the user's answer; <see cref="DefaultTimeout"/> if not given.</param>
+    /// <returns>
+    /// Whether access is granted; <c>false</c> also when the device is not attached, or no answer
+    /// came within <paramref name="timeout"/>.
+    /// </returns>
+    public static async Task<bool> RequestAsync(Context context, PosNetDeviceAddress.UsbHost address, TimeSpan? timeout = null)
     {
         var manager = UsbDevices.Manager(context);
         var device = UsbDevices.Find(manager, address);
         if (device is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
         if (manager.HasPermission(device))
         {
-            return Task.FromResult(true);
+            return true;
         }
 
         var action = $"{context.PackageName}.POSNET_USB_PERMISSION";
@@ -49,15 +60,16 @@ public static class PosNetUsbPermission
         // explicit through its package so that a mutable intent is allowed at all (Android 14+).
         var intent = new Intent(action).SetPackage(context.PackageName);
         var flags = OperatingSystem.IsAndroidVersionAtLeast(31) ? PendingIntentFlags.Mutable : 0;
-        manager.RequestPermission(device, PendingIntent.GetBroadcast(context, 0, intent, flags));
-
-        return result.Task.ContinueWith(
-            granted =>
-            {
-                context.UnregisterReceiver(receiver);
-                return granted.Result;
-            },
-            TaskScheduler.Default);
+        try
+        {
+            manager.RequestPermission(device, PendingIntent.GetBroadcast(context, 0, intent, flags));
+            var answered = await Task.WhenAny(result.Task, Task.Delay(timeout ?? DefaultTimeout)).ConfigureAwait(false);
+            return answered == result.Task && await result.Task.ConfigureAwait(false);
+        }
+        finally
+        {
+            context.UnregisterReceiver(receiver);
+        }
     }
 
     private sealed class PermissionReceiver(TaskCompletionSource<bool> result) : BroadcastReceiver
