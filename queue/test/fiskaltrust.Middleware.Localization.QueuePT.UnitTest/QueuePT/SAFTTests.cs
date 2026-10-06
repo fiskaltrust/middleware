@@ -37,12 +37,12 @@ public class SAFTTests
     }
 
     [Fact]
-    public void AuditFile_TaxTable_ShouldBeEmptys()
+    public void AuditFile_TaxTable_ShouldBeOmittedWithoutEntries()
     {
         var data = new SaftExporter().CreateAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "999"
         }, [], 0);
-        data.MasterFiles.TaxTable!.TaxTableEntry.Should().BeEmpty();
+        data.MasterFiles.TaxTable.Should().BeNull();
     }
 }
