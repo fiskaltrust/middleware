@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.QueuePL.Processors;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
@@ -81,6 +82,9 @@ internal class FakeLocalizedQueueStorageProvider : ILocalizedQueueStorageProvide
 
 public class ProcessorTestsBase
 {
+    /// <summary>The processors resolve their SCU lazily (from the configuration repository in production) — the tests hand in the fake through the same shape.</summary>
+    internal static AsyncLazy<IPLSSCD> Lazy(IPLSSCD sscd) => new(() => Task.FromResult(sscd));
+
     internal static ProcessCommandRequest CreateRequest(ulong receiptCase, List<ChargeItem>? chargeItems = null, string? cbCustomer = null)
     {
         var queue = new ftQueue { ftQueueId = Guid.NewGuid(), ftCashBoxId = Guid.NewGuid() };
@@ -115,7 +119,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     {
         var sscd = new FakePLSSCD { Fiscalized = true };
         var storage = new FakeLocalizedQueueStorageProvider();
-        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+        var sut = new LifecycleCommandProcessorPL(Lazy(sscd), storage);
 
         var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
 
@@ -129,7 +133,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     {
         var sscd = new FakePLSSCD { Fiscalized = false };
         var storage = new FakeLocalizedQueueStorageProvider();
-        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+        var sut = new LifecycleCommandProcessorPL(Lazy(sscd), storage);
 
         var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
 
@@ -152,7 +156,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     {
         var sscd = new FakePLSSCD { InfoOverride = new PLSSCDInfo { InfoData = infoData } };
         var storage = new FakeLocalizedQueueStorageProvider();
-        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+        var sut = new LifecycleCommandProcessorPL(Lazy(sscd), storage);
 
         var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
 
@@ -165,7 +169,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     {
         var sscd = new FakePLSSCD { InfoOverride = new PLSSCDInfo() };
         var storage = new FakeLocalizedQueueStorageProvider();
-        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+        var sut = new LifecycleCommandProcessorPL(Lazy(sscd), storage);
 
         var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
 
@@ -178,7 +182,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     {
         var sscd = new FakePLSSCD { ThrowOnGetInfo = new PLDeviceUnreachableException("printer offline") };
         var storage = new FakeLocalizedQueueStorageProvider();
-        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+        var sut = new LifecycleCommandProcessorPL(Lazy(sscd), storage);
 
         var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
 
@@ -192,7 +196,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     [Fact]
     public async Task InitialAndOutOfOperationSignatures_AreDistinguishable()
     {
-        var sut = new LifecycleCommandProcessorPL(new FakePLSSCD(), new FakeLocalizedQueueStorageProvider());
+        var sut = new LifecycleCommandProcessorPL(Lazy(new FakePLSSCD()), new FakeLocalizedQueueStorageProvider());
 
         var started = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
         var stopped = await sut.OutOfOperationReceipt0x4002Async(CreateRequest(0x504C_2000_0000_4002));
@@ -210,7 +214,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     {
         var sscd = new FakePLSSCD();
         var storage = new FakeLocalizedQueueStorageProvider();
-        var sut = new LifecycleCommandProcessorPL(sscd, storage);
+        var sut = new LifecycleCommandProcessorPL(Lazy(sscd), storage);
 
         var result = await sut.OutOfOperationReceipt0x4002Async(CreateRequest(0x504C_2000_0000_4002));
 
@@ -225,7 +229,7 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     public async Task PointOfSaleReceipt_ShouldPassThroughToSCU()
     {
         var sscd = new FakePLSSCD();
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
 
         await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, new List<ChargeItem>
         {
@@ -239,7 +243,7 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     public async Task PointOfSaleReceipt_ShouldFail_WhenSaleAndReturnAreMixed()
     {
         var sscd = new FakePLSSCD();
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, new List<ChargeItem>
         {
@@ -255,7 +259,7 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     public async Task DiscountedSale_ShouldNotBeTreatedAsMixedReturn()
     {
         var sscd = new FakePLSSCD();
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
 
         await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, new List<ChargeItem>
         {
@@ -270,7 +274,7 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     public async Task NipReceipt_ShouldFail_WithCustomerDataButNoVatId()
     {
         var sscd = new FakePLSSCD();
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
         var receiptCase = 0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.ReceiverIsBusiness;
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(receiptCase, new List<ChargeItem>
@@ -286,7 +290,7 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     public async Task NipReceipt_ShouldFail_WithoutCustomerData()
     {
         var sscd = new FakePLSSCD();
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
         var receiptCase = 0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.ReceiverIsBusiness;
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(receiptCase, new List<ChargeItem>
@@ -302,7 +306,7 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     public async Task NipReceipt_ShouldPassThrough_WithCustomerData()
     {
         var sscd = new FakePLSSCD();
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
         var receiptCase = 0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.ReceiverIsBusiness;
 
         await sut.PointOfSaleReceipt0x0001Async(CreateRequest(receiptCase, new List<ChargeItem>
@@ -332,7 +336,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
         {
             ThrowOnProcessReceipt = (Exception)Activator.CreateInstance(exceptionType, "printer offline")!,
         };
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
@@ -343,7 +347,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     public async Task Receipt_ShouldLetOtherScuFailuresBubble()
     {
         var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new InvalidOperationException("device error 2005") };
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new ReceiptCommandProcessorPL(Lazy(sscd));
 
         var act = () => sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
@@ -354,7 +358,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     public async Task DailyClosing_ShouldCarryDeviceUnreachableState_WhenScuIsUnreachable()
     {
         var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") };
-        var sut = new DailyOperationsCommandProcessorPL(sscd);
+        var sut = new DailyOperationsCommandProcessorPL(Lazy(sscd));
 
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
@@ -368,7 +372,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     public async Task MonthlyClosing_ShouldNotWriteAnActionJournal_WhenScuIsUnreachable()
     {
         var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") };
-        var sut = new DailyOperationsCommandProcessorPL(sscd);
+        var sut = new DailyOperationsCommandProcessorPL(Lazy(sscd));
 
         var result = await sut.MonthlyClosing0x2012Async(CreateRequest(0x504C_2000_0000_2012));
 
@@ -379,7 +383,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     [Fact]
     public async Task DailyClosing_ShouldWriteTheActionJournal_WhenTheReportWasPrinted()
     {
-        var sut = new DailyOperationsCommandProcessorPL(new FakePLSSCD());
+        var sut = new DailyOperationsCommandProcessorPL(Lazy(new FakePLSSCD()));
 
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
