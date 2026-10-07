@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             var storageBootStrapper = new InMemoryStorageBootstrapper(values.ftQueues[0].Id, dictionary, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
-            serviceCollection.Count.Should().Be(48);
+            serviceCollection.Count.Should().Be(49);
 
             CheckServiceType(serviceCollection, typeof(IConfigurationRepository)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(IReadOnlyConfigurationRepository)).Should().BeTrue();
@@ -63,6 +63,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             CheckServiceType(serviceCollection, typeof(IReadOnlyReceiptJournalRepository)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(IActionJournalRepository)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(IReadOnlyActionJournalRepository)).Should().BeTrue();
+            serviceCollection.Should().ContainEquivalentOf(new ServiceDescriptor(typeof(IEmptyDatabaseCheck), typeof(NoOpEmptyDatabaseCheck), ServiceLifetime.Singleton));
         }
 
         [Fact]
@@ -90,7 +91,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
-            serviceCollection.Count.Should().Be(37);
+            serviceCollection.Count.Should().Be(38);
 
             CheckServiceType(serviceCollection, typeof(ICryptoHelper)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(ISignProcessor)).Should().BeTrue();

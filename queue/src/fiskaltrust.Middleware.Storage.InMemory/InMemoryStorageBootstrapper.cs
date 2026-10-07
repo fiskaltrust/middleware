@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Base;
@@ -54,6 +55,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory
         {
             services.AddSingleton<IConfigurationRepository>(_configurationRepository);
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<IEmptyDatabaseCheck, NoOpEmptyDatabaseCheck>();
 
             services.AddSingleton<IQueueItemRepository, InMemoryQueueItemRepository>();
             services.AddSingleton<IMiddlewareQueueItemRepository, InMemoryQueueItemRepository>();
