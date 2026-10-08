@@ -56,7 +56,7 @@ jobs:
           path: artifacts/package-v2-${{ inputs.package }}
 
       - name: Deploy to v2 Packages
-        uses: fiskaltrust/middleware/.github/actions/deploy-v2-packages@main
+        uses: ./.github/actions/deploy-v2-packages
         with:
           directory: artifacts/package-v2-${{ inputs.package }}
           destinationPath: undefined/${{ inputs.package }}
