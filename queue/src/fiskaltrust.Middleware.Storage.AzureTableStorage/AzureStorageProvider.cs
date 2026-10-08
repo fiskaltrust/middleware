@@ -57,8 +57,8 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
                 throw new Exception($"The value for the queue parameter storageaccountname '{_tableStorageConfiguration.StorageAccountName}' is not valid.", e);
             }
 #if DEBUG
-            _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
-            _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
+            _tableServiceClient = new TableServiceClient(tableUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
+            _blobServiceClient = new BlobServiceClient(blobUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
 #else
             _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
             _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
