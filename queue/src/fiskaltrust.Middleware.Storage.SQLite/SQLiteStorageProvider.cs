@@ -42,7 +42,6 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly IMiddlewareQueueItemRepository _queueItemRepository;
     private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
     private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;
-    private readonly IMiddlewareJournalESRepository _journalESRepository;
     private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
     private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
     private readonly IMasterDataRepository<AgencyMasterData> _agencyMasterDataRepository;
@@ -81,7 +80,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository() => CreateAsyncLazy(_queueItemRepository);
     public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => CreateAsyncLazy(_receiptJournalRepository);
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => CreateAsyncLazy(_accountMasterDataRepository);
-    public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => CreateAsyncLazy(_journalESRepository);
+    public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => throw new NotImplementedException();
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => CreateAsyncLazy(_outletMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => CreateAsyncLazy(_posSystemMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => CreateAsyncLazy(_agencyMasterDataRepository);
