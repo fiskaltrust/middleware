@@ -1,28 +1,27 @@
-﻿using System;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueIT.Models;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
+namespace fiskaltrust.Middleware.Localization.QueueIT.Factories;
+
+public static class ftJournalITFactory
 {
-    public static class ftJournalITFactory
+    public static ftJournalIT CreateFrom(ReceiptResponse receiptResponse, ftQueueIT queueIT, ScuResponse scuResponse)
     {
-        public static ftJournalIT CreateFrom(ftQueueItem queueItem, ftQueueIT queueIT, ScuResponse scuResponse)
+        return new ftJournalIT
         {
-            var ftJournalIT = new ftJournalIT
-            {
-                ftJournalITId = Guid.NewGuid(),
-                ftQueueId = queueIT.ftQueueId,
-                ftQueueItemId = queueItem.ftQueueItemId,
-                cbReceiptReference = queueItem.cbReceiptReference,
-                ftSignaturCreationUnitITId = queueIT.ftSignaturCreationUnitId.Value,
-                JournalType = scuResponse.ftReceiptCase & 0xFFFF,
-                ReceiptDateTime = scuResponse.ReceiptDateTime,
-                ReceiptNumber = scuResponse.ReceiptNumber,
-                ZRepNumber = scuResponse.ZRepNumber,
-                DataJson = scuResponse.DataJson,
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
-            return ftJournalIT;
-        }
+            ftJournalITId = Guid.NewGuid(),
+            ftQueueId = queueIT.ftQueueId,
+            ftQueueItemId = receiptResponse.ftQueueItemID,
+            cbReceiptReference = receiptResponse.cbReceiptReference,
+            ftSignaturCreationUnitITId = queueIT.ftSignaturCreationUnitITId ?? throw new InvalidOperationException(ErrorMessagesIT.NoSignaturCreationUnitAssigned(queueIT.ftQueueId)),
+            JournalType = (long) scuResponse.ftReceiptCase.Case(),
+            ReceiptDateTime = scuResponse.ReceiptDateTime,
+            ReceiptNumber = scuResponse.ReceiptNumber,
+            ZRepNumber = scuResponse.ZRepNumber,
+            DataJson = scuResponse.DataJson,
+            TimeStamp = DateTime.UtcNow.Ticks
+        };
     }
 }
