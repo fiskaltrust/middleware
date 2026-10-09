@@ -8,7 +8,7 @@
     {
       "Position": 1,
       "Quantity": 1,
-      "Description": "Kawa",
+      "Description": "Espresso",
       "Amount": 10.00,
       "VATRate": 23,
       "ftChargeItemCase": 5786034805636333571,
@@ -26,7 +26,7 @@
     {
       "Position": 2,
       "Quantity": 1,
-      "Description": "Piwo",
+      "Description": "Wino",
       "Amount": 8.00,
       "VATRate": 23,
       "ftChargeItemCase": 5786034805636333571,

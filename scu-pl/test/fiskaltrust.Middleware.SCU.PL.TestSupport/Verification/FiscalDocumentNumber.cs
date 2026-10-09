@@ -13,10 +13,15 @@ namespace fiskaltrust.Middleware.SCU.PL.TestSupport.Verification;
 public static class FiscalDocumentNumber
 {
     /// <summary>The number in the response, or null when the SCU reported none.</summary>
-    public static long? Of(ReceiptResponse response)
+    public static long? Of(ReceiptResponse response) => SignedNumberOf(response, SignatureTypePL.FiscalDocumentNumber);
+
+    /// <summary>The protected-memory document number in the response, or null when the SCU reported none.</summary>
+    public static long? InProtectedMemoryOf(ReceiptResponse response) => SignedNumberOf(response, SignatureTypePL.ProtectedMemoryDocumentNumber);
+
+    private static long? SignedNumberOf(ReceiptResponse response, SignatureTypePL signatureType)
     {
         ArgumentNullException.ThrowIfNull(response);
-        var signature = response.ftSignatures.SingleOrDefault(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.FiscalDocumentNumber);
+        var signature = response.ftSignatures.SingleOrDefault(s => (ulong)s.ftSignatureType == (ulong)signatureType);
         return signature is null ? null : long.Parse(signature.Data, NumberStyles.None, CultureInfo.InvariantCulture);
     }
 }

@@ -47,6 +47,33 @@ public class PosNetDeviceModelTests
     }
 
     [Fact]
+    public void EveryDocument_IsFiledUnderTheNextNumberOfOneProtectedMemorySequence()
+    {
+        var model = new PosNetDeviceModel();
+        var documentsBefore = model.ProtectedMemoryDocuments;
+
+        Send(model, PosNetCommands.Stocash(369));
+        Sell(model,
+            PosNetCommands.Trinit(),
+            PosNetCommands.Trline("Candies", SlotB, 999, 1m, 999),
+            PosNetCommands.Trpayment(0, 999, isChange: false, "Gotówka"),
+            PosNetCommands.Trend(999, 999, 0));
+
+        // The goods return took one number and the receipt the next: di is not the receipt number.
+        Send(model, PosNetCommands.Eclastdocnoget(5)).Should().Be($"eclastdocnoget\tdi{documentsBefore + 1}\t");
+        Send(model, PosNetCommands.Eclastdocnoget(PosNetCommands.ReceiptDocumentType)).Should().Be($"eclastdocnoget\tdi{documentsBefore + 2}\t");
+        Send(model, PosNetCommands.Eclastdocnoget(2)).Should().Be("eclastdocnoget\tdi0\t");
+    }
+
+    [Fact]
+    public void Rtcget_AnswersTheClockInBothShapes()
+    {
+        var model = new PosNetDeviceModel { Clock = () => new DateTimeOffset(2026, 9, 8, 17, 54, 51, TimeSpan.FromHours(2)) };
+
+        Send(model, PosNetCommands.Rtcget()).Should().Be("rtcget\tda2026-09-08;17:54\ttm2026-09-08T17:54:51+02:00\t");
+    }
+
+    [Fact]
     public void CardSaleWithChange_SettlesLikeTheSpecExample()
     {
         var model = new PosNetDeviceModel();
