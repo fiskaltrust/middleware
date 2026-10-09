@@ -13,6 +13,14 @@ public enum SignatureTypePL : long
     StoredNotFiscalized = 0x504C_2000_0000_0106,
     /// <summary>A non-fiscal printout the register produced for the receipt — a goods return (zwrot towaru), which has no fiscal document number.</summary>
     NonFiscalPrintout = 0x504C_2000_0000_0107,
+    /// <summary>
+    /// The number the register filed the fiscal document under in its protected memory (pamięć chroniona) —
+    /// the anchor that ties the receipt to the register's own archive. One sequence across all document
+    /// types, so it differs from the receipt number and has to be kept alongside it.
+    /// </summary>
+    ProtectedMemoryDocumentNumber = 0x504C_2000_0000_0108,
+    /// <summary>The register's own clock at the fiscal document, ISO 8601 with offset — never the host's clock.</summary>
+    DeviceMoment = 0x504C_2000_0000_0109,
 }
 
 public static class SignatureTypePLExt

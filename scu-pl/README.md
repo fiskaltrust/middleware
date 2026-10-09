@@ -66,6 +66,14 @@ Notable mapping rules, all covered by unit tests:
   configured one, unless `VatRateTable` pins it deliberately (e.g. for a recording).
 * **The daily report** is dated from the receipt moment in `Europe/Warsaw`. A register stands in
   Poland by law, and a middleware host in UTC would otherwise close the wrong day around midnight.
+* **Every sale is anchored in the register.** The receipt number alone is no key, because a register
+  with a daily counter repeats it every day. After `trend` the SCU therefore also reads the
+  protected-memory document number (`eclastdocnoget ty0`), the register's clock (`rtcget`) and the
+  daily report the receipt is booked into (`scnt.rd + 1`), and signs each of them. Status commands
+  describe the *last* document, not this one, so the completed-receipt counter is read before `trinit`
+  and again as the last readback. Only if it advanced by exactly one does the SCU sign anything. A
+  failed or unprovable readback leaves the values out rather than failing a receipt that is already
+  printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
 
 #### Configuration
 

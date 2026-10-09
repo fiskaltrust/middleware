@@ -25,4 +25,10 @@ public static class PLReceiptCases
 
     /// <summary>The caption the daily report number is signed under, in the wording the register prints.</summary>
     public const string ZReportNumberCaption = "Numer raportu dobowego";
+
+    /// <summary>The caption the protected-memory document number is signed under.</summary>
+    public const string ProtectedMemoryDocumentNumberCaption = "Numer dokumentu w pamięci chronionej";
+
+    /// <summary>The caption the register's clock at the fiscal document is signed under.</summary>
+    public const string DeviceMomentCaption = "Data i czas urządzenia";
 }

@@ -26,7 +26,7 @@ public class PosNetDeviceProbeTests
         var after = await target.Probe.SnapshotAsync();
 
         // The probe's reads are on the wire but are not the SCU's commands.
-        target.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var expected = FiscalFootprint.Of(request.ReceiptRequest, new PtuSlotResolver(target.Configuration.VatRateTable));
         FootprintComparer.Compare(expected, transaction, before, after, FiscalDocumentNumber.Of(result.ReceiptResponse)).Should().BeEmpty();
     }

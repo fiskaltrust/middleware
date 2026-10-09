@@ -2,6 +2,7 @@ using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 using fiskaltrust.Middleware.SCU.PL.PosNet;
@@ -48,7 +49,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
         result.ReceiptResponse.ftReceiptIdentification.Should().EndWith("85");
         // The numer unikatowy is a legal element of the fiscal document and identifies the register.
@@ -67,7 +68,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trnipset", "trline", "trpayment", "trend", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trnipset", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Single(p => p.StartsWith("trnipset")).Should().Contain("ni1234563218");
     }
 
@@ -86,16 +87,105 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_FailedFiscalNumberReadback_DoesNotFailTheReceipt()
+    public async Task ProcessReceiptAsync_Sale_AnchorsTheReceiptInTheRegister()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        // The receipt number repeats on a register with a daily counter; numer unikatowy + daily
+        // report + receipt number + device moment do not, and di links into the protected memory.
+        var signatures = result.ReceiptResponse.ftSignatures;
+        signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber).Which.Data.Should().Be("13");
+        signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber).Which.Data.Should().Be("96");
+        signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment).Which.Data.Should().Be("2026-09-08T17:54:51+02:00");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_AnotherReceiptCompletedBeforeTheReadback_LeavesTheReceiptUnanchored()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.CompleteAnotherReceiptAfterTrend();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        // Every number read back describes the last document, which is now someone else's: none
+        // of them may be attributed to this receipt — but the printed receipt does not fail.
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s =>
+            (ulong)s.ftSignatureType == (ulong)SignatureTypePL.FiscalDocumentNumber
+            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber
+            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber
+            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer unikatowy");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_FailedGuardReadback_DoesNotFailTheReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailUnreachable("scnt", occurrence: 2);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_FailedCounterReadBeforeTheSale_OpensNoTransaction()
     {
         var transport = FakePosNetTransport.Confirming();
         transport.FailUnreachable("scnt");
         var sut = CreateSut(transport);
 
+        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        await act.Should().ThrowAsync<PLDeviceUnreachableException>();
+        transport.SentMnemonics.Should().Equal("scomm", "scnt");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_FailedDocumentNumberRead_KeepsTheRestOfTheAnchor()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailAmbiguously("eclastdocnoget");
+        var sut = CreateSut(transport);
+
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
-        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment);
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_DocumentNotFoundInTheProtectedMemory_SignsNoDocumentNumber()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.Answer("eclastdocnoget", "eclastdocnoget\tdi0\t");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_FirmwareWithoutIsoClock_ReadsTheWallClockAsPolishTime()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        // POT-I-DEV-05 firmware answers rtcget with da only; winter time here, so +01:00.
+        transport.Answer("rtcget", "rtcget\tda2026-01-15;9:05\t");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment)
+            .Which.Data.Should().Be("2026-01-15T09:05:00+01:00");
     }
 
     [Fact]
@@ -111,7 +201,7 @@ public class PosNetPLSSCDTests
         // Whether the cancel reached the device is unknown, so the receipt must surface the
         // ambiguous/unreachable state rather than the (already handled) device error.
         await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "prncancel");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "prncancel");
     }
 
     [Fact]
@@ -124,7 +214,7 @@ public class PosNetPLSSCDTests
         var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
         (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(382);
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "prncancel");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "prncancel");
     }
 
     [Fact]
@@ -139,7 +229,7 @@ public class PosNetPLSSCDTests
         await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
         // The ambiguous command is sent exactly once and nothing (not even a cancel) follows —
         // a blind retry or cleanup could duplicate or destroy a successfully printed document.
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment");
     }
 
     [Fact]
@@ -152,7 +242,7 @@ public class PosNetPLSSCDTests
         var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
         await act.Should().ThrowAsync<PLDeviceUnreachableException>();
-        transport.SentMnemonics.Should().Equal("scomm", "trinit");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit");
     }
 
     [Fact]
@@ -305,8 +395,8 @@ public class PosNetPLSSCDTests
 
         // Mapping needs the slots, so the table is read before anything else; identity and table are then reused.
         transport.SentMnemonics.Should().Equal(
-            "sfsk", "scomm", "trinit", "trline", "trpayment", "trend", "scnt",
-            "trinit", "trline", "trpayment", "trend", "scnt");
+            "sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt",
+            "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
     }
 
     [Fact]
@@ -372,8 +462,8 @@ public class PosNetPLSSCDTests
         await sut.ProcessReceiptAsync(CreateSaleRequest());
 
         transport.SentMnemonics.Should().Equal(
-            "scomm", "trinit", "trline", "trpayment", "trend", "scnt",
-            "trinit", "trline", "trpayment", "trend", "scnt");
+            "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt",
+            "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
     }
 
     [Fact]
@@ -424,7 +514,7 @@ public class PosNetPLSSCDTests
         // The queue passes discounts through (they do not make a document a return), and a register
         // has no position for one: it travels as the rabat of the line it follows. The line keeps
         // its own value (wa) and the receipt is settled with the discounted total.
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trpayment", "trend", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Single(p => p.StartsWith("trline")).Should().Contain("wa999").And.Contain("rd1").And.Contain("rw200");
         transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
     }
@@ -447,7 +537,7 @@ public class PosNetPLSSCDTests
 
         // It cannot belong to a line, so it is a rabat od podsumy — sent after every line and
         // before the payments, which is where the register applies it.
-        transport.SentMnemonics.Should().Equal("scomm", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Single(p => p.StartsWith("trdiscntsubtot")).Should().Contain("rd1").And.Contain("rw200");
         transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
     }
@@ -475,6 +565,8 @@ public class PosNetPLSSCDTests
     private sealed class FakePosNetTransport : IPosNetTransport
     {
         private readonly Dictionary<string, Func<Exception>> _failures = [];
+        private readonly Dictionary<string, int> _failFromOccurrence = [];
+        private readonly Dictionary<string, string> _answers = [];
 
         public List<string> SentMnemonics { get; } = [];
 
@@ -482,10 +574,21 @@ public class PosNetPLSSCDTests
 
         private string _scommResponse = "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t";
 
+        /// <summary>Completed receipts of the day (bn = bt); every confirmed trend completes one.</summary>
+        private int _completedReceipts = 84;
+
+        private bool _anotherReceiptAfterTrend;
+
         public static FakePosNetTransport Confirming() => new();
 
         /// <summary>Answers the status read with a specific payload — device firmwares differ.</summary>
         public void AnswerScommWith(string payload) => _scommResponse = payload;
+
+        /// <summary>Answers a command with a fixed payload instead of the scripted one.</summary>
+        public void Answer(string mnemonic, string payload) => _answers[mnemonic] = payload;
+
+        /// <summary>Another interface completes a receipt right after this one, before the readback.</summary>
+        public void CompleteAnotherReceiptAfterTrend() => _anotherReceiptAfterTrend = true;
 
         public void FailWithDeviceError(string mnemonic, int errorCode)
             => _failures[mnemonic] = () => new ExpectedDeviceError(errorCode);
@@ -496,6 +599,13 @@ public class PosNetPLSSCDTests
         public void FailUnreachable(string mnemonic)
             => _failures[mnemonic] = () => new PLDeviceUnreachableException("connection refused");
 
+        /// <summary>Fails a command from its <paramref name="occurrence"/>-th sending on (1-based) — scnt is sent before and after a sale.</summary>
+        public void FailUnreachable(string mnemonic, int occurrence)
+        {
+            FailUnreachable(mnemonic);
+            _failFromOccurrence[mnemonic] = occurrence;
+        }
+
         public Task<byte[]> SendReceiveAsync(byte[] frame, CancellationToken cancellationToken = default)
         {
             var payload = Encoding.ASCII.GetString(frame, 1, frame.Length - 2);
@@ -503,7 +613,8 @@ public class PosNetPLSSCDTests
             SentMnemonics.Add(mnemonic);
             SentPayloads.Add(payload);
 
-            if (_failures.TryGetValue(mnemonic, out var failure))
+            var armed = !_failFromOccurrence.TryGetValue(mnemonic, out var from) || SentMnemonics.Count(m => m == mnemonic) >= from;
+            if (armed && _failures.TryGetValue(mnemonic, out var failure))
             {
                 var exception = failure();
                 if (exception is ExpectedDeviceError deviceError)
@@ -513,11 +624,19 @@ public class PosNetPLSSCDTests
                 throw exception;
             }
 
-            var responsePayload = mnemonic switch
+            if (mnemonic == "trend")
+            {
+                _completedReceipts += _anotherReceiptAfterTrend ? 2 : 1;
+            }
+
+            var responsePayload = _answers.TryGetValue(mnemonic, out var answer) ? answer : mnemonic switch
             {
                 // The T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them.
                 "scomm" => _scommResponse,
-                "scnt" => "scnt\trd12\tbn85\tbt85\tfn3\t",
+                "scnt" => $"scnt\trd12\tbn{_completedReceipts}\tbt{_completedReceipts}\tfn3\t",
+                // One protected-memory sequence across all document types, ahead of the receipt number.
+                "eclastdocnoget" => $"eclastdocnoget\tdi{_completedReceipts + 11}\t",
+                "rtcget" => "rtcget\tda2026-09-08;17:54\ttm2026-09-08T17:54:51+02:00\t",
                 // The rate table as the office printer reports it after fiscalization: E–G not in use.
                 "sfsk" => "sfsk\tfsT\tcl0\trd12\tvt1\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\trw2026-09-03;16:54\tnuZBF 2101002392\t",
                 _ => $"{mnemonic}\t",
