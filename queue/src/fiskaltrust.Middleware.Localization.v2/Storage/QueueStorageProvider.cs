@@ -213,7 +213,7 @@ public class QueueStorageProvider : IQueueStorageProvider
                 {
                     Request = JsonSerializer.Deserialize<ReceiptRequest>(qi.request)!,
                     Response = JsonSerializer.Deserialize<ReceiptResponse>(qi.response)!,
-                }).Where(x => !x.Response.ftState.IsState(State.Error)).ToList();
+                }).Where(x => x.Response.IsFiscalized()).ToList();
 
             if (receipts.Count == 0)
             {
