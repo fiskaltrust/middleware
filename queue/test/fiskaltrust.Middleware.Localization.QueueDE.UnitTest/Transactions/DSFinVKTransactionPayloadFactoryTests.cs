@@ -15,6 +15,49 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
     {
         public static IEnumerable<object[]> ReceiptPayloadData()
         {
+            // Auszahlung with VAT (0x00B1 - 0x00B7), e.g. purchase of goods paid from the till
+            yield return new object[]
+            {
+                "Kassenbeleg-V1",
+                "Beleg^-50.00_-50.00_-10.70_-5.50_-20.00^-136.20:Bar",
+                JsonConvert.SerializeObject(
+                new ReceiptRequest()
+                {
+                    ftReceiptCase = 0x4445000000000011,
+                    cbChargeItems = new ChargeItem[]
+                    {
+                        new ChargeItem() { Quantity = 1.0m, Amount = -50.0m, VATRate = 19.0m, Description = "Einkauf Material", ftChargeItemCase = 0x44450000000000B1 },
+                        new ChargeItem() { Quantity = 1.0m, Amount = -50.0m, VATRate = 7.0m, Description = "Einkauf Getränke", ftChargeItemCase = 0x44450000000000B2 },
+                        new ChargeItem() { Quantity = 1.0m, Amount = -10.7m, VATRate = 10.7m, Description = "Durchschnittsatz", ftChargeItemCase = 0x44450000000000B3 },
+                        new ChargeItem() { Quantity = 1.0m, Amount = -5.5m, VATRate = 5.5m, Description = "Durchschnittsatz", ftChargeItemCase = 0x44450000000000B4 },
+                        new ChargeItem() { Quantity = 1.0m, Amount = -20.0m, VATRate = 0.0m, Description = "Porto", ftChargeItemCase = 0x44450000000000B5 }
+                    },
+                    cbPayItems = new PayItem[]
+                    {
+                        new PayItem() { Quantity = 1.0m, Amount = -136.2m, Description = "Bar", ftPayItemCase = 0x4445000000000001 }
+                    }
+                })
+            };
+            // Einzahlung with VAT (0x00B1 - 0x00B7), e.g. return of goods refunded in cash into the till
+            yield return new object[]
+            {
+                "Kassenbeleg-V1",
+                "Beleg^50.00_50.00_0.00_0.00_0.00^100.00:Bar",
+                JsonConvert.SerializeObject(
+                new ReceiptRequest()
+                {
+                    ftReceiptCase = 0x4445000000000011,
+                    cbChargeItems = new ChargeItem[]
+                    {
+                        new ChargeItem() { Quantity = 1.0m, Amount = 50.0m, VATRate = 19.0m, Description = "Rückgabe Material", ftChargeItemCase = 0x44450000000000B1 },
+                        new ChargeItem() { Quantity = 1.0m, Amount = 50.0m, VATRate = 7.0m, Description = "Rückgabe Getränke", ftChargeItemCase = 0x44450000000000B2 }
+                    },
+                    cbPayItems = new PayItem[]
+                    {
+                        new PayItem() { Quantity = 1.0m, Amount = 100.0m, Description = "Bar", ftPayItemCase = 0x4445000000000001 }
+                    }
+                })
+            };
             yield return new object[]
 {
                 "Kassenbeleg-V1",
