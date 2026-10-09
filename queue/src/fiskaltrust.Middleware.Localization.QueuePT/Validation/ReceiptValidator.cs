@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Validation.Rules;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using Currency = fiskaltrust.ifPOS.v2.Currency;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Validation;
