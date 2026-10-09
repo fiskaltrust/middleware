@@ -18,13 +18,13 @@ runs:
   steps:
     - name: Get Version
       id: version
-      uses: ./.github/actions/version
+      uses: fiskaltrust/middleware/.github/actions/version@main
       with:
         path: ${{ inputs.path }}
         project: ${{ inputs.project }}
 
     - name: Package V1
-      uses: ./.github/actions/package-v1
+      uses: fiskaltrust/middleware/.github/actions/package-v1@main
       with:
         path: ${{ inputs.path }}
         project: ${{ inputs.project }}
@@ -36,7 +36,7 @@ runs:
         dotnet publish "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --configuration Release -f ${{ inputs.targetFramework }} --no-build --output ./publish/raw/package-v2-${{ inputs.project }} /p:DebugType=None /p:DebugSymbols=false
 
     - name: Package V2
-      uses: ./.github/actions/package-v2
+      uses: fiskaltrust/middleware/.github/actions/package-v2@main
       with:
         artifactName: package-v2-${{ inputs.project }}
         path: ./publish/raw/package-v2-${{ inputs.project }}
