@@ -15,6 +15,10 @@
         <PackageReference Include="sharpcompress" Version="0.24.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.SCU.DE.FiskalyCertified.UnitTest" />
+    </ItemGroup>
+
     <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
         <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
     </ItemGroup>
