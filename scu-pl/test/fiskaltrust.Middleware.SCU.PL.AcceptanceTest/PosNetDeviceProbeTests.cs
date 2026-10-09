@@ -24,10 +24,11 @@ public class PosNetDeviceProbeTests
         var result = await target.Sut.ProcessReceiptAsync(request);
         var transaction = await target.Probe.ReadTransactionAsync();
         var after = await target.Probe.SnapshotAsync();
+        var ptuSlots = await target.Probe.ReadPtuSlotsAsync(target.Configuration);
 
         // The probe's reads are on the wire but are not the SCU's commands.
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
-        var expected = FiscalFootprint.Of(request.ReceiptRequest, new PtuSlotResolver(target.Configuration.VatRateTable));
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        var expected = FiscalFootprint.Of(request.ReceiptRequest, ptuSlots);
         FootprintComparer.Compare(expected, transaction, before, after, FiscalDocumentNumber.Of(result.ReceiptResponse)).Should().BeEmpty();
     }
 
@@ -41,9 +42,10 @@ public class PosNetDeviceProbeTests
         var result = await target.Sut.ProcessReceiptAsync(request);
         var transaction = await target.Probe.ReadTransactionAsync();
         var after = await target.Probe.SnapshotAsync();
+        var ptuSlots = await target.Probe.ReadPtuSlotsAsync(target.Configuration);
 
         // Kawa 10.00 less 2.00, Piwo 8.00, the coffee reversed: 8.00 in PTU B is what stays.
-        var expected = FiscalFootprint.Of(request.ReceiptRequest, new PtuSlotResolver(target.Configuration.VatRateTable));
+        var expected = FiscalFootprint.Of(request.ReceiptRequest, ptuSlots);
         expected.TotalGrosze.Should().Be(800);
         FootprintComparer.Compare(expected, transaction, before, after, FiscalDocumentNumber.Of(result.ReceiptResponse)).Should().BeEmpty();
     }

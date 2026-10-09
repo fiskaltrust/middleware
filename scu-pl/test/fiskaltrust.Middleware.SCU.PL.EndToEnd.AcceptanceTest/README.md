@@ -30,6 +30,13 @@ Remove-Item Env:SCU_PL_POSNET_DEVICE_URL, Env:SCU_PL_POSNET_RECORD
 The suite never runs two tests at once, so a hardware run does not interleave transactions on the
 printer. A fiscalized printer prints real fiscal receipts.
 
+The printer remembers the PTU rate every goods name was sold under. Once a name has been sold at a
+lower rate, it can no longer be sold at a higher one, and `trline` answers 2106 `ERR_DF_DB_LOCKED`
+(POT-I-DEV-37, note 13 on `trline`). Names are compared on their alphanumerics, case-insensitively.
+So a goods name keeps its rate across *all* suites recorded against the same printer: the
+acceptance examples sell `Candies`, `Kawa` and `Piwo` at 8 %, and the business cases here therefore
+use other names for their 23 % goods.
+
 ## What is verified
 
 `PLEndToEndHarness.SignAndVerifyAsync` reads the register around the receipt over the SCU's own

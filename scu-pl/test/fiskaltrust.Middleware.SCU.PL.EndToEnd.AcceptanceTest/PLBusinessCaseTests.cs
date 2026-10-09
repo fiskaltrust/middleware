@@ -46,7 +46,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_CashSaleReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         harness.SentCommands.Single(c => c.CommandId == "trline").Parameters.Should().Contain(Field("pr", "369"));
         receipt.Discrepancies.Should().BeEmpty();
 
@@ -62,7 +62,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_CardSaleReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         // 2 × 8.00: the line states price, quantity and value, the card is payment type 2.
         harness.SentCommands.Single(c => c.CommandId == "trline").Parameters.Should().Contain(Field("il", "2.000")).And.Contain(Field("wa", "1600"));
         harness.SentCommands.Single(c => c.CommandId == "trpayment").Parameters.Should().Contain(Field("ty", "2"));
@@ -77,7 +77,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_CardSaleWithChange"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trend = harness.SentCommands.Single(c => c.CommandId == "trend");
         trend.Parameters.Should().Contain(Field("to", "200")).And.Contain(Field("re", "300")).And.Contain(Field("fp", "500"));
         receipt.Expected.ChangeGrosze.Should().Be(300);
@@ -92,7 +92,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_DiscountReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         harness.SentCommands.Single(c => c.CommandId == "trline").Parameters.Should().Contain(Field("rd", "1")).And.Contain(Field("rw", "2300"));
         harness.SentCommands.Single(c => c.CommandId == "trdiscntsubtot").Parameters.Should().Contain(Field("rd", "1")).And.Contain(Field("rw", "100"));
         // 100.00 less 23.00 on the line less 1.00 off the subtotal.
@@ -108,7 +108,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_MarkupReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         harness.SentCommands.Single(c => c.CommandId == "trline").Parameters.Should().Contain(Field("rd", "0")).And.Contain(Field("rw", "2300"));
         harness.SentCommands.Single(c => c.CommandId == "trdiscntsubtot").Parameters.Should().Contain(Field("rd", "0")).And.Contain(Field("rw", "100"));
         receipt.Expected.TotalGrosze.Should().Be(12400);
@@ -123,9 +123,9 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_StornoReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var storno = harness.SentCommands.Where(c => c.CommandId == "trline").Last();
-        storno.Parameters.Should().Contain(Field("na", "Kawa")).And.Contain(Field("st", "1")).And.Contain(Field("wa", "1000"));
+        storno.Parameters.Should().Contain(Field("na", "Espresso")).And.Contain(Field("st", "1")).And.Contain(Field("wa", "1000"));
         receipt.Expected.TotalGrosze.Should().Be(800);
         receipt.Discrepancies.Should().BeEmpty();
     }
@@ -138,7 +138,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_StornoOfDiscountedReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var storno = harness.SentCommands.Where(c => c.CommandId == "trline").Last();
         storno.Parameters.Should().Contain(Field("st", "1")).And.Contain(Field("rd", "1")).And.Contain(Field("rw", "200"));
         receipt.Expected.TotalGrosze.Should().Be(800);
@@ -153,7 +153,7 @@ public class PLBusinessCaseTests
         var receipt = await harness.SignAndVerifyAsync(TestProject.BusinessCase("SignRequestReceipt_NipReceipt"));
 
         ShouldBeSigned(receipt.Response);
-        harness.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trnipset", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trnipset", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         // "PL5260250274" in cbCustomer travels as digits only.
         harness.SentCommands.Single(c => c.CommandId == "trnipset").Parameters.Should().Contain(Field("ni", "5260250274"));
         receipt.Discrepancies.Should().BeEmpty();
@@ -180,9 +180,9 @@ public class PLBusinessCaseTests
 
         ((ulong)activation.ftState & ErrorStateMask).Should().NotBe(ErrorState);
         activation.ftSignatures.Should().Contain(s => ((ulong)s.ftSignatureType & 0xFFFF) == 0x1001, "the initial operation receipt carries its own signature");
-        // The activation reads the register state; the first sale reads the identity once more,
+        // The activation reads the register state and its PTU table; the first sale reads the identity once more,
         // because the SCU caches it per instance and GetInfo does not fill that cache.
-        harness.SentMnemonics.Should().Equal("scomm", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        harness.SentMnemonics.Should().Equal("scomm", "sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         ShouldBeSigned(sale.Response);
         sale.Discrepancies.Should().BeEmpty();
     }

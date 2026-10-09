@@ -45,7 +45,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         NoTransactionShouldBeOpen(target);
         DocumentNumberOf(result).Should().BePositive();
         // The protected memory numbers every document type in one sequence, so di runs ahead of
@@ -63,7 +63,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CardSaleWithChange());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trend = target.SentCommands.Single(c => c.CommandId == "trend");
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "200"));
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("re", "300"));
@@ -77,7 +77,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.DiscountSale());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trline = target.SentCommands.Single(c => c.CommandId == "trline");
         // The line value stays the value before the rabat — the register prints both and totalizes
         // the difference.
@@ -101,7 +101,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.MarkupSale());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         // Same fields as a rabat, with rd0: the register adds the value instead of subtracting it.
         var trline = target.SentCommands.Single(c => c.CommandId == "trline");
         trline.Parameters.Should().Contain(new KeyValuePair<string, string>("wa", "1000"));
@@ -123,7 +123,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoSale());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var lines = target.SentCommands.Where(c => c.CommandId == "trline").ToList();
         // The storno repeats the goods of the position it reverses — the coffee, not the beer that
         // was sold between them — and states the value the device verifies against what it printed.
@@ -145,7 +145,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoOfDiscountedSale());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trline", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var lines = target.SentCommands.Where(c => c.CommandId == "trline").ToList();
         // The reversal repeats the rabat the position was sold with. Without it the register takes
         // the value before the rabat off the receipt: the same three commands with rw200 missing were
@@ -167,7 +167,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.NipReceipt());
 
-        target.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trnipset", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trnipset", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trnipset = target.SentCommands.Single(c => c.CommandId == "trnipset");
         trnipset.Parameters.Should().Contain(new KeyValuePair<string, string>("ni", "1234563218"));
     }
@@ -180,9 +180,10 @@ public class PosNetPLSSCDAcceptanceTests
         var first = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
         var second = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        // The register identity is read once, so only the first sale carries the leading scomm;
-        // the receipt counter is read before every sale, the guard needs a fresh baseline each time.
-        target.SentMnemonics.Should().HaveCount(17);
+        // The PTU table and the register identity are read once, so only the first sale carries the
+        // leading sfsk and scomm; the receipt counter is read before every sale, the guard needs a
+        // fresh baseline each time.
+        target.SentMnemonics.Should().HaveCount(18);
         NoTransactionShouldBeOpen(target);
         DocumentNumberOf(second).Should().Be(DocumentNumberOf(first) + 1);
         FiscalDocumentNumber.InProtectedMemoryOf(second.ReceiptResponse).Should().Be(FiscalDocumentNumber.InProtectedMemoryOf(first.ReceiptResponse) + 1);
@@ -199,13 +200,13 @@ public class PosNetPLSSCDAcceptanceTests
     }
 
     [Fact]
-    public async Task GetInfo_ReadsTheRegisterStateWithASingleStatusCommand()
+    public async Task GetInfo_ReadsTheRegisterStatusAndItsPtuTable()
     {
         using var target = PosNetTestTarget.Open(TestProject.Cassettes);
 
         var info = await target.Sut.GetInfoAsync();
 
-        target.SentMnemonics.Should().Equal("scomm");
+        target.SentMnemonics.Should().Equal("scomm", "sfsk");
         var deviceInfo = PLDeviceInfo.FromPLSSCDInfo(info);
         deviceInfo.Should().NotBeNull();
         // Which state a real register reports depends on the device in front of you, but the status
