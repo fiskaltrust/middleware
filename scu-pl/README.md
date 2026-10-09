@@ -75,9 +75,9 @@ full set and the defaults.
 
 | Parameter | Meaning |
 | --- | --- |
-| `DeviceUrl` | `tcp://192.168.1.50:6666` (or `host:port`), or `serial://COM9` / `usb://COM9` / `/dev/ttyACM0` |
+| `DeviceUrl` | `tcp://192.168.1.50:6666` (or `host:port`), or `serial://COM9` / `usb://COM9` / `/dev/ttyACM0`, or `usbhost://1424:10B0` (vendor:product id, hex) for a USB printer the host opens itself — on Android, see below |
 | `ConnectTimeoutMs`, `SendTimeoutMs`, `ReceiveTimeoutMs` | Must be positive; a command whose answer is never waited for would be reported as ambiguous on a register that answered |
-| `SerialBaudRate`, `SerialParity`, `SerialStopBits`, `SerialHandshake` | Serial line settings; the defaults are the device's own (115200 8N1, no flow control, which is what a USB virtual COM port needs) |
+| `SerialBaudRate`, `SerialParity`, `SerialStopBits`, `SerialHandshake` | Serial line settings; the defaults are the device's own (115200 8N1, no flow control, which is what a USB virtual COM port needs). A `usbhost://` printer gets them as its CDC line coding; the handshake does not apply there |
 | `VatRateTable` | Empty by default — the register's own table is used |
 
 Everything arrives from the Portal as strings, so numbers are read from strings and a cleared field
@@ -86,18 +86,18 @@ naming the setting, not as a raw `JsonException`.
 
 ## Tests
 
-294 tests, all runnable without hardware.
+318 tests, all runnable without hardware.
 
 | Suite | Count | Needs |
 | --- | --- | --- |
-| [`SCU.PL.UnitTest`](test/fiskaltrust.Middleware.SCU.PL.UnitTest) | 204 | nothing |
+| [`SCU.PL.UnitTest`](test/fiskaltrust.Middleware.SCU.PL.UnitTest) | 228 | nothing |
 | [`SCU.PL.AcceptanceTest`](test/fiskaltrust.Middleware.SCU.PL.AcceptanceTest) | 39 | the in-process printer emulator |
 | [`SCU.PL.EndToEnd.AcceptanceTest`](test/fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest) | 14 | recorded cassettes, or a real register when `SCU_PL_POSNET_DEVICE_URL` is set |
 | [`QueuePL.UnitTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.UnitTest) | 25 | nothing |
 | [`QueuePL.AcceptanceTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest) | 12 | nothing |
 
 ```powershell
-# the three SCU suites (257 tests)
+# the three SCU suites (281 tests)
 dotnet test scu-pl/fiskaltrust.Middleware.SCU.PL.sln
 
 # the two QueuePL suites (37 tests) — they live in the queue solution
@@ -123,6 +123,33 @@ hosts the middleware from a cashbox configuration — in-memory SCU or a real pr
 end-to-end suite's business cases over HTTP, so a printout is one POST away. Its
 [README](../test/fiskaltrust.Middleware.Test.Launcher/src/fiskaltrust.Middleware.Test.Launcher.v2/README.md#poland)
 has the Polish recipes. The v1 launcher cannot host `QueuePL` (net461 vs. net8.0) and says so.
+
+### On Android
+
+The production Android launcher is a legacy Xamarin.Android app that cannot reference the net8.0
+PL packages, so Android is exercised with a test host of its own:
+[`PL.Android.TestHost`](test/Manual/fiskaltrust.Middleware.PL.Android.TestHost) runs `QueuePL` with
+the PosNet SCU in-process (in-memory storage — there is no PL SQLite storage yet), built by the same
+`CashBoxBuilderPL` the desktop launcher uses, with one button per business case.
+
+- **Over the network**, `tcp://…` works unchanged, also from the Android emulator.
+- **Over USB**, Android gives an app no serial port, so the printer is opened through the USB host
+  API: `usbhost://1424:10B0` and
+  [`SCU.PL.PosNet.Android`](src/fiskaltrust.Middleware.SCU.PL.PosNet.Android), which a host adds
+  with `services.AddPosNetAndroidUsbHost(context)`. The protocol side —
+  [`UsbHostPosNetTransport`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transport/UsbHostPosNetTransport.cs)
+  — is platform-neutral and unit-tested; the Android link only moves bytes. It needs a physical
+  device with USB-OTG — the emulator cannot pass a USB device through on Windows — and has not yet
+  been run against a printer.
+
+```powershell
+# with an emulator or a device attached (adb devices)
+dotnet build scu-pl/test/Manual/fiskaltrust.Middleware.PL.Android.TestHost -f net10.0-android -t:Run
+adb logcat -s PLTestHost
+```
+
+The Android projects are not in the solution: building them needs the .NET `android` workload,
+which CI does not install.
 
 ---
 

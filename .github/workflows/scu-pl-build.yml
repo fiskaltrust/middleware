@@ -21,6 +21,11 @@ on:
       - queue/src/fiskaltrust.Middleware.Storage.InMemory/**
       - queue/src/fiskaltrust.Middleware.Storage.AzureTableStorage/**
       - storage/src/fiskaltrust.storage/**
+      - storage/src/fiskaltrust.storage.serialization/**
+      # The Android test host builds its cashbox with the desktop launcher's PL helpers.
+      - test/fiskaltrust.Middleware.Test.Launcher/src/fiskaltrust.Middleware.Test.Launcher.v2/Helpers/**
+      - test/fiskaltrust.Middleware.Test.Launcher/src/fiskaltrust.Middleware.Test.Launcher.v2/Extensions/**
+      - test/fiskaltrust.Middleware.Test.Launcher/src/fiskaltrust.Middleware.Test.Launcher.v2/configuration/PL/**
 
 jobs:
   test:
@@ -51,6 +56,35 @@ jobs:
           directory: scu-pl/test
           pattern: "AcceptanceTest"
           args: "--no-build"
+
+  # The Android projects are kept out of the solution — building them needs the android workload,
+  # which the test job above has no use for. Built here instead, so a change to the PosNet SCU that
+  # breaks them fails the PR rather than the next person who builds for a device.
+  android:
+    name: Build Android
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          # Nerdbank.GitVersioning computes the version height from the history.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Install android workload
+        run: dotnet workload install android
+        shell: pwsh
+
+      # The test host references SCU.PL.PosNet.Android, so this builds both.
+      - name: Build
+        run: dotnet build scu-pl/test/Manual/fiskaltrust.Middleware.PL.Android.TestHost -f net10.0-android --configuration Debug
+        shell: pwsh
 
   publish-test-results:
     name: Publish Tests Results
