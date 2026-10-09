@@ -51,7 +51,7 @@ public class PosNetPLSSCDAcceptanceTests
         // The protected memory numbers every document type in one sequence, so di runs ahead of
         // the receipt number rather than along with it.
         FiscalDocumentNumber.InProtectedMemoryOf(result.ReceiptResponse).Should().BeGreaterThan(DocumentNumberOf(result));
-        result.ReceiptResponse.ftSignatures.Should().Contain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber);
+        result.ReceiptResponse.ftSignatures.Should().Contain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.CurrentDailyReportNumber);
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment)
             .Which.Data.Should().MatchRegex(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$");
     }

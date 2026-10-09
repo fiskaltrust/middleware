@@ -21,6 +21,11 @@ public enum SignatureTypePL : long
     ProtectedMemoryDocumentNumber = 0x504C_2000_0000_0108,
     /// <summary>The register's own clock at the fiscal document, ISO 8601 with offset — never the host's clock.</summary>
     DeviceMoment = 0x504C_2000_0000_0109,
+    /// <summary>
+    /// The daily report a fiscal document is booked into — the one still to be printed. Kept apart
+    /// from <see cref="ZReportNumber"/>, which a daily closing signs for the report it did print.
+    /// </summary>
+    CurrentDailyReportNumber = 0x504C_2000_0000_010A,
 }
 
 public static class SignatureTypePLExt

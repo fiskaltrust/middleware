@@ -97,7 +97,9 @@ public class PosNetPLSSCDTests
         // The receipt number repeats on a register with a daily counter; numer unikatowy + daily
         // report + receipt number + device moment do not, and di links into the protected memory.
         var signatures = result.ReceiptResponse.ftSignatures;
-        signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber).Which.Data.Should().Be("13");
+        signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.CurrentDailyReportNumber).Which.Data.Should().Be("13");
+        // The report is still to be printed, so the sale does not claim the closing's signature type.
+        signatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber);
         signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber).Which.Data.Should().Be("96");
         signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment).Which.Data.Should().Be("2026-09-08T17:54:51+02:00");
     }
@@ -115,10 +117,40 @@ public class PosNetPLSSCDTests
         // of them may be attributed to this receipt — but the printed receipt does not fail.
         result.ReceiptResponse.ftSignatures.Should().NotContain(s =>
             (ulong)s.ftSignatureType == (ulong)SignatureTypePL.FiscalDocumentNumber
-            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ZReportNumber
+            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.CurrentDailyReportNumber
             || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber
             || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment);
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer unikatowy");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_AnotherReceiptCanceledBeforeTheReadback_LeavesTheReceiptUnanchored()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.CancelAnotherReceiptAfterTrend();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        // bn moved by exactly one — this receipt — but bt numbers canceled receipts too, so the last
+        // receipt number is now the canceled one's and must not be signed as this receipt's.
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s =>
+            (ulong)s.ftSignatureType == (ulong)SignatureTypePL.FiscalDocumentNumber
+            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_IsoClockWithoutOffset_ReadsTheWallClockAsPolishTime()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        // Parsed on its own, tm would take the host's zone; da is the register's wall clock.
+        transport.Answer("rtcget", "rtcget\tda2026-10-09;11:49\ttm2026-10-09T11:49:13\t");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment)
+            .Which.Data.Should().Be("2026-10-09T11:49+02:00");
     }
 
     [Fact]
@@ -185,7 +217,7 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment)
-            .Which.Data.Should().Be("2026-01-15T09:05:00+01:00");
+            .Which.Data.Should().Be("2026-01-15T09:05+01:00");
     }
 
     [Fact]
@@ -579,6 +611,11 @@ public class PosNetPLSSCDTests
 
         private bool _anotherReceiptAfterTrend;
 
+        /// <summary>Canceled receipts of the day (bc); bt numbers completed and canceled receipts alike.</summary>
+        private int _canceledReceipts;
+
+        private bool _anotherReceiptCanceledAfterTrend;
+
         public static FakePosNetTransport Confirming() => new();
 
         /// <summary>Answers the status read with a specific payload — device firmwares differ.</summary>
@@ -589,6 +626,9 @@ public class PosNetPLSSCDTests
 
         /// <summary>Another interface completes a receipt right after this one, before the readback.</summary>
         public void CompleteAnotherReceiptAfterTrend() => _anotherReceiptAfterTrend = true;
+
+        /// <summary>Another interface opens and cancels a receipt right after this one, before the readback.</summary>
+        public void CancelAnotherReceiptAfterTrend() => _anotherReceiptCanceledAfterTrend = true;
 
         public void FailWithDeviceError(string mnemonic, int errorCode)
             => _failures[mnemonic] = () => new ExpectedDeviceError(errorCode);
@@ -627,13 +667,14 @@ public class PosNetPLSSCDTests
             if (mnemonic == "trend")
             {
                 _completedReceipts += _anotherReceiptAfterTrend ? 2 : 1;
+                _canceledReceipts += _anotherReceiptCanceledAfterTrend ? 1 : 0;
             }
 
             var responsePayload = _answers.TryGetValue(mnemonic, out var answer) ? answer : mnemonic switch
             {
                 // The T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them.
                 "scomm" => _scommResponse,
-                "scnt" => $"scnt\trd12\tbn{_completedReceipts}\tbt{_completedReceipts}\tfn3\t",
+                "scnt" => $"scnt\trd12\tbn{_completedReceipts}\tbc{_canceledReceipts}\tbt{_completedReceipts + _canceledReceipts}\tfn3\t",
                 // One protected-memory sequence across all document types, ahead of the receipt number.
                 "eclastdocnoget" => $"eclastdocnoget\tdi{_completedReceipts + 11}\t",
                 "rtcget" => "rtcget\tda2026-09-08;17:54\ttm2026-09-08T17:54:51+02:00\t",

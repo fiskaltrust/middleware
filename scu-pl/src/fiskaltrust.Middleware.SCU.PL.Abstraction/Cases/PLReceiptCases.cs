@@ -26,6 +26,9 @@ public static class PLReceiptCases
     /// <summary>The caption the daily report number is signed under, in the wording the register prints.</summary>
     public const string ZReportNumberCaption = "Numer raportu dobowego";
 
+    /// <summary>The caption the daily report a receipt is booked into is signed under.</summary>
+    public const string CurrentDailyReportNumberCaption = "Numer bieżącego raportu dobowego";
+
     /// <summary>The caption the protected-memory document number is signed under.</summary>
     public const string ProtectedMemoryDocumentNumberCaption = "Numer dokumentu w pamięci chronionej";
 

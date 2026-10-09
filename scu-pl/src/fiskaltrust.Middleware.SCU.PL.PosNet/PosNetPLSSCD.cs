@@ -32,6 +32,13 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// </summary>
     private const string RegisterTimeZoneId = "Europe/Warsaw";
 
+    /// <summary>
+    /// The register's zone for reading its wall clock back after a receipt, resolved once. A host
+    /// without zone data yields null rather than an exception: by the time the clock is read the
+    /// receipt is printed, and a moment that cannot be told is left out instead of failing it.
+    /// </summary>
+    private static readonly TimeZoneInfo? s_registerZone = FindRegisterZone();
+
     private readonly PosNetClient _client;
     private readonly PosNetConfiguration _configuration;
 
@@ -117,7 +124,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // that cannot answer its status has not been asked to open a transaction either. The same
         // holds for the receipt counter the readback is checked against.
         await EnrichWithDeviceIdentityAsync(response);
-        var completedReceiptsBefore = await PosNetReceiptReadback.ReadCompletedReceiptsAsync(_client);
+        var countersBefore = await PosNetReceiptReadback.ReadCountersAsync(_client);
 
         var executed = 0;
         try
@@ -140,7 +147,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             throw;
         }
 
-        var anchor = await PosNetReceiptReadback.ReadAsync(_client, completedReceiptsBefore, RegisterTimeZoneId);
+        var anchor = await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
         if (anchor is not null)
         {
             EnrichWithReceiptAnchor(response, anchor);
@@ -157,7 +164,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         response.EnrichWithFiscalDocumentNumber(anchor.ReceiptNumber);
         if (anchor.DailyReportNumber is { } dailyReportNumber)
         {
-            response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, dailyReportNumber.ToString(CultureInfo.InvariantCulture));
+            response.AddSignatureItem(SignatureTypePL.CurrentDailyReportNumber, PLReceiptCases.CurrentDailyReportNumberCaption, dailyReportNumber.ToString(CultureInfo.InvariantCulture));
         }
         if (anchor.DocumentNumber is { } documentNumber)
         {
@@ -165,7 +172,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
         if (anchor.DeviceMoment is { } deviceMoment)
         {
-            response.AddSignatureItem(SignatureTypePL.DeviceMoment, PLReceiptCases.DeviceMomentCaption, deviceMoment.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture));
+            response.AddSignatureItem(SignatureTypePL.DeviceMoment, PLReceiptCases.DeviceMomentCaption, deviceMoment);
         }
     }
 
@@ -193,7 +200,11 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     {
         await EnrichWithDeviceIdentityAsync(response);
         await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
-        await TryReadCounterAsync("rd", number => response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture)));
+        var reportsDone = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), counters => PosNetStatus.ReadNumber(counters, "rd"));
+        if (reportsDone is { } number)
+        {
+            response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture));
+        }
     }
 
     /// <summary>
@@ -254,20 +265,15 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
     }
 
-    private async Task TryReadCounterAsync(string counter, Action<long> report)
+    private static TimeZoneInfo? FindRegisterZone()
     {
         try
         {
-            var counters = await _client.ExecuteAsync(PosNetCommands.Scnt());
-            if (counters.Parameters.TryGetValue(counter, out var text)
-                && long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
-            {
-                report(number);
-            }
+            return TimeZoneInfo.FindSystemTimeZoneById(RegisterTimeZoneId);
         }
-        catch (PLSSCDException)
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            // scnt is read-only — swallowing an ambiguous or failed readback is safe.
+            return null;
         }
     }
 

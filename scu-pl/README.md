@@ -69,9 +69,12 @@ Notable mapping rules, all covered by unit tests:
 * **Every sale is anchored in the register.** The receipt number alone is no key, because a register
   with a daily counter repeats it every day. After `trend` the SCU therefore also reads the
   protected-memory document number (`eclastdocnoget ty0`), the register's clock (`rtcget`) and the
-  daily report the receipt is booked into (`scnt.rd + 1`), and signs each of them. Status commands
-  describe the *last* document, not this one, so the completed-receipt counter is read before `trinit`
-  and again as the last readback. Only if it advanced by exactly one does the SCU sign anything. A
+  daily report the receipt is booked into (`scnt.rd + 1`, signed as `CurrentDailyReportNumber`, not
+  as the closing's `ZReportNumber`), and signs each of them. Status commands describe the *last*
+  document, not this one, so the receipt counters are read before `trinit` and again as the last
+  readback. Only if the register completed exactly one receipt (`bn`) and numbered exactly one (`bt`,
+  which a receipt canceled elsewhere also advances) does the SCU sign anything. The clock is signed
+  only with a known offset: `tm` must state it, and `da` is read as Warsaw time, to the minute. A
   failed or unprovable readback leaves the values out rather than failing a receipt that is already
   printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
 
