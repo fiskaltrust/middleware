@@ -102,6 +102,13 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
 
+        // The VAT summary is printed on the receipt (R13 v4.2 Récapitulatif), so it travels as
+        // signature items (ADR 0011), one per rate.
+        foreach (var (rate, line) in InfoCertVatSummary.From(receiptRequest) ?? new Dictionary<string, InfoCertVatRate>())
+        {
+            response.AddSignatureItem(SignatureTypeFR.VatSummary, $"TVA {rate} %", InfoCertVatSummary.Format(line));
+        }
+
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
