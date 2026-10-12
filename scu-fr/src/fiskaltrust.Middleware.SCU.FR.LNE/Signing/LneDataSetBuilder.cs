@@ -6,6 +6,7 @@ using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.FR.LNE.Signing;
 
@@ -24,7 +25,7 @@ internal static class LneDataSetBuilder
     /// <summary>Field separator. Never appears in the values, which are all identifiers, numbers or moments.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, string siret, string certificateSerialNumber, string? lastHash, FRPeriodTotals? periodTotals = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, string siret, string certificateSerialNumber, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null)
     {
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
@@ -44,7 +45,11 @@ internal static class LneDataSetBuilder
             PaymentBreakdown(payItems),
             PeriodTotals(periodTotals),
             certificateSerialNumber,
-            lastHash ?? "",
+            // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
+            // signature, verbatim as its signature field stores it.
+            chainCounter.ToString(CultureInfo.InvariantCulture),
+            FRChaining.Flag(previousSignature),
+            previousSignature ?? "",
         };
 
         return string.Join(FieldSeparator, fields);

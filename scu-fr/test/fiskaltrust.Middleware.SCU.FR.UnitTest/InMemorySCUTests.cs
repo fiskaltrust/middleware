@@ -22,16 +22,17 @@ public class InMemorySCUTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_LinksTheChain()
+    public async Task ProcessReceiptAsync_ChainsOnThePreviousSignature()
     {
         using var sut = new InMemorySCU();
 
-        var (_, firstHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
-        var (second, secondHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, firstHash);
+        var (first, firstSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(1), null);
+        var (second, secondSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(2), firstSignature);
 
-        firstHash.Should().NotBeNullOrEmpty();
-        secondHash.Should().NotBe(firstHash);
-        second.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash)).Data.Should().Be(secondHash);
+        firstSignature.Should().Be(SignatureData(first, SignatureTypeFR.ReceiptSignature), "the chained value is the stored signature itself");
+        secondSignature.Should().Be(SignatureData(second, SignatureTypeFR.ReceiptSignature));
+        FRTestData.IsBase64Url(firstSignature).Should().BeTrue();
+        second.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash));
     }
 
     [Fact]
@@ -39,8 +40,8 @@ public class InMemorySCUTests
     {
         using var sut = new InMemorySCU();
 
-        var (first, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
-        var (second, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (first, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+        var (second, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         // ECDSA signatures are randomized, but the identity signatures must not move.
         SignatureData(first, SignatureTypeFR.Siret).Should().Be(SignatureData(second, SignatureTypeFR.Siret));

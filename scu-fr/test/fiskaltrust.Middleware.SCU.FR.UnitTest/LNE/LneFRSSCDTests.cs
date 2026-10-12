@@ -33,48 +33,67 @@ public class LneFRSSCDTests
         using var _ = key;
         using var sut = new LneFRSSCD(Configuration(privateKey));
 
-        var (response, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var signatures = response.ReceiptResponse.ftSignatures;
         var dataSet = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
         var signature = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
 
-        key.VerifyData(Encoding.UTF8.GetBytes(dataSet), Convert.FromBase64String(signature), HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence)
+        FRTestData.IsBase64Url(signature).Should().BeTrue();
+        key.VerifyData(Encoding.UTF8.GetBytes(dataSet), FRTestData.FromBase64Url(signature), HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence)
             .Should().BeTrue("an LNE audit re-verifies the archived data set field by field");
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_ChainHashCoversTheSignature()
+    public async Task ProcessReceiptAsync_ReturnsTheStoredSignature_AndNoChainHash()
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
         using var sut = new LneFRSSCD(Configuration(privateKey));
 
-        var (response, hash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var signatures = response.ReceiptResponse.ftSignatures;
-        var dataSet = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
-        var signature = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
-
-        var expected = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{dataSet}|{signature}")));
-        hash.Should().Be(expected);
-        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash)).Data.Should().Be(hash);
+        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data.Should().Be(signature);
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash), "ADR 0001 chains on the signature itself");
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_DataSetCarriesThePreviousHashAsItsLastField()
+    public async Task ProcessReceiptAsync_DataSetEndsWithCounterFlagAndPreviousSignature()
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
         using var sut = new LneFRSSCD(Configuration(privateKey));
 
-        var (_, firstHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
-        var (second, secondHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, firstHash);
+        var (first, firstSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(1), null);
+        var (second, _) = await sut.ProcessReceiptAsync(FRTestData.Request(2), firstSignature);
 
-        var dataSet = second.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
-        dataSet.Split('|').Last().Should().Be(firstHash);
-        secondHash.Should().NotBe(firstHash);
+        DataSetOf(first).Split('|')[^3..].Should().Equal("1", "N", "");
+        DataSetOf(second).Split('|')[^3..].Should().Equal("2", "O", firstSignature);
     }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ChainContinuesAcrossAnScuSwitch()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var infocert = new fiskaltrust.Middleware.SCU.FR.InfoCert.InfoCertFRSSCD(new fiskaltrust.Middleware.SCU.FR.InfoCert.InfoCertConfiguration
+        {
+            Siret = FRTestData.Siret,
+            PrivateKey = privateKey,
+            CertificateSerialNumber = "CERT-4711",
+        });
+        using var lne = new LneFRSSCD(Configuration(privateKey));
+
+        var (_, infocertSignature) = await infocert.ProcessReceiptAsync(FRTestData.Request(1), null);
+        var (second, _) = await lne.ProcessReceiptAsync(FRTestData.Request(2), infocertSignature);
+
+        // ADR 0005: the rule is shared, so the LNE entry chains on the Infocert entry's signature.
+        DataSetOf(second).Split('|')[^3..].Should().Equal("2", "O", infocertSignature);
+    }
+
+    private static string DataSetOf(ProcessResponse response)
+        => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
 
     [Fact]
     public async Task ProcessReceiptAsync_DataSetIsCultureInvariant()
@@ -165,7 +184,7 @@ public class LneFRSSCDTests
         Thread.CurrentThread.CurrentCulture = culture;
         try
         {
-            var (response, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+            var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
             return response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
         }
         finally

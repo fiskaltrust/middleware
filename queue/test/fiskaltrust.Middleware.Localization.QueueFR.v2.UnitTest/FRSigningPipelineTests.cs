@@ -52,7 +52,7 @@ public class FRSigningPipelineTests
     }
 
     [Fact]
-    public async Task SignAsync_PassesThePreviousHashOfTheSameChain()
+    public async Task SignAsync_PassesThePreviousSignatureOfTheSameChain()
     {
         var sscd = new FakeFRSSCD();
         var pipeline = CreatePipeline(sscd);
@@ -61,9 +61,22 @@ public class FRSigningPipelineTests
         await pipeline.SignAsync(CommandRequest(ReceiptCase.InvoiceB2B0x1002));
         await pipeline.SignAsync(CommandRequest());
 
-        sscd.Calls[0].lastHash.Should().BeNull("the first ticket starts its chain");
-        sscd.Calls[1].lastHash.Should().BeNull("the invoice chain is independent of the ticket chain");
-        sscd.Calls[2].lastHash.Should().Be("hash-1", "the second ticket continues the ticket chain");
+        sscd.Calls[0].previousSignature.Should().BeNull("the first ticket starts its chain");
+        sscd.Calls[1].previousSignature.Should().BeNull("the invoice chain is independent of the ticket chain");
+        sscd.Calls[2].previousSignature.Should().Be("sig-1", "the second ticket continues the ticket chain");
+    }
+
+    [Fact]
+    public async Task SignAsync_HandsTheChainCounterToTheScu()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(CommandRequest());
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.InvoiceB2B0x1002));
+        await pipeline.SignAsync(CommandRequest());
+
+        sscd.Calls.Select(x => x.chainCounter).Should().Equal([1L, 1L, 2L], "the counter is the entry's position in its own chain");
     }
 
     [Fact]
@@ -81,12 +94,24 @@ public class FRSigningPipelineTests
     public async Task SignAsync_ResumesTheChainFromTheStoredQueueItems()
     {
         var sscd = new FakeFRSSCD();
-        var pipeline = CreatePipeline(sscd, StoredTicket(queueRow: 1, identification: "ft1#T7", chainHash: "stored-hash"));
+        var pipeline = CreatePipeline(sscd, StoredTicket(queueRow: 1, identification: "ft1#T7", receiptSignature: "c3RvcmVkLXNpZw"));
 
         var response = await pipeline.SignAsync(CommandRequest());
 
         response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#T8");
-        sscd.Calls.Single().lastHash.Should().Be("stored-hash");
+        sscd.Calls.Single().previousSignature.Should().Be("c3RvcmVkLXNpZw", "a bare signature is the chained signature as it stands");
+        sscd.Calls.Single().chainCounter.Should().Be(8);
+    }
+
+    [Fact]
+    public async Task SignAsync_ResumingAfterAJws_ChainsOnItsSignatureSegment()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd, StoredTicket(queueRow: 1, identification: "ft1#T7", receiptSignature: "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl"));
+
+        await pipeline.SignAsync(CommandRequest());
+
+        sscd.Calls.Single().previousSignature.Should().Be("c2lnbmF0dXJl", "an Infocert JWS chains on its signature segment, verbatim");
     }
 
     [Fact]
@@ -128,7 +153,7 @@ public class FRSigningPipelineTests
         response.actionJournals.Should().ContainSingle().Which.Should().Be(actionJournal);
     }
 
-    private static ftQueueItem StoredTicket(long queueRow, string identification, string chainHash) => new()
+    private static ftQueueItem StoredTicket(long queueRow, string identification, string receiptSignature) => new()
     {
         ftQueueItemId = Guid.NewGuid(),
         ftQueueRow = queueRow,
@@ -144,10 +169,10 @@ public class FRSigningPipelineTests
             [
                 new SignatureItem
                 {
-                    ftSignatureType = SignatureTypeFR.ChainHash.As<SignatureType>(),
-                    ftSignatureFormat = SignatureFormat.Text,
-                    Caption = "Empreinte",
-                    Data = chainHash,
+                    ftSignatureType = SignatureTypeFR.ReceiptSignature.As<SignatureType>(),
+                    ftSignatureFormat = SignatureFormat.QRCode,
+                    Caption = "Signature",
+                    Data = receiptSignature,
                 },
             ],
         }),

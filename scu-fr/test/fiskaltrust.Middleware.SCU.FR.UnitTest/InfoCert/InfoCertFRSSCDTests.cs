@@ -33,13 +33,14 @@ public class InfoCertFRSSCDTests
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
 
-        var (response, hash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var jws = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
         var parts = jws.Split('.');
         parts.Should().HaveCount(3);
         Encoding.UTF8.GetString(FromBase64Url(parts[0])).Should().Be("{\"alg\":\"ES256\",\"typ\":\"JWT\"}");
-        hash.Should().NotBeNullOrEmpty();
+        signature.Should().Be(parts[2], "the chained value is the JWS signature segment, never a re-encoding of it");
+        FRTestData.IsBase64Url(signature).Should().BeTrue();
     }
 
     [Fact]
@@ -49,7 +50,7 @@ public class InfoCertFRSSCDTests
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
 
-        var (response, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var jws = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
         var parts = jws.Split('.');
@@ -60,20 +61,27 @@ public class InfoCertFRSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_PayloadCarriesThePreviousHash_SoTheChainIsLinked()
+    public async Task ProcessReceiptAsync_PayloadCarriesCounterFlagAndPreviousSignature_SoTheChainIsLinked()
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
 
-        var (first, firstHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
-        var (second, secondHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, firstHash);
+        var (first, firstSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(1), null);
+        var (second, _) = await sut.ProcessReceiptAsync(FRTestData.Request(2), firstSignature);
 
-        secondHash.Should().NotBe(firstHash, "an entry covering a different previous hash must hash differently");
+        firstSignature.Should().Be(SignatureOf(first).Split('.')[2]);
 
-        using var payload = JsonDocument.Parse(FromBase64Url(SignatureOf(second).Split('.')[1]));
-        payload.RootElement.GetProperty("lastHash").GetString().Should().Be(firstHash, "the signed payload has to carry the previous entry's hash");
-        SignatureOf(first).Should().NotBe(SignatureOf(second));
+        using var firstPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(first).Split('.')[1]));
+        firstPayload.RootElement.GetProperty("chainCounter").GetInt64().Should().Be(1);
+        firstPayload.RootElement.GetProperty("previousSignatureCarriedOver").GetString().Should().Be("N", "the first entry starts the chain");
+        firstPayload.RootElement.GetProperty("previousSignature").GetString().Should().BeEmpty();
+
+        using var secondPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(second).Split('.')[1]));
+        secondPayload.RootElement.GetProperty("chainCounter").GetInt64().Should().Be(2);
+        secondPayload.RootElement.GetProperty("previousSignatureCarriedOver").GetString().Should().Be("O");
+        secondPayload.RootElement.GetProperty("previousSignature").GetString().Should().Be(firstSignature, "the signed payload carries the previous entry's signature verbatim");
+        secondPayload.RootElement.TryGetProperty("lastHash", out var _).Should().BeFalse();
     }
 
     [Fact]
@@ -83,10 +91,10 @@ public class InfoCertFRSSCDTests
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
 
-        var (response, hash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var signatures = response.ReceiptResponse.ftSignatures;
-        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash)).Data.Should().Be(hash);
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash), "ADR 0001 chains on the signature itself");
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificateSerialNumber)).Data.Should().Be("CERT-4711");
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Siret)).Data.Should().Be(FRTestData.Siret);
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody)).Data.Should().Be("Infocert IC-2026-001");
@@ -148,9 +156,5 @@ public class InfoCertFRSSCDTests
     private static string SignatureOf(ProcessResponse response)
         => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
 
-    private static byte[] FromBase64Url(string value)
-    {
-        var padded = value.Replace('-', '+').Replace('_', '/');
-        return Convert.FromBase64String(padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '='));
-    }
+    private static byte[] FromBase64Url(string value) => FRTestData.FromBase64Url(value);
 }

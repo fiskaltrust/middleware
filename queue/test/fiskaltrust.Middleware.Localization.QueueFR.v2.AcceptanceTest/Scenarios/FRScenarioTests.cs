@@ -72,7 +72,8 @@ public class FRScenarioTests
         response.ftState.IsState(State.Error).Should().BeFalse();
         response.ftReceiptIdentification.Should().EndWith("T1");
         SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().NotBeNullOrEmpty();
-        SignatureOf(response, SignatureTypeFR.ChainHash).Should().NotBeNullOrEmpty();
+        SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().MatchRegex("^[A-Za-z0-9_-]+$", "chained signatures are stored in Base64Url (ADR 0001)");
+        SignatureOf(response, SignatureTypeFR.ChainHash).Should().BeNull("an entry chains on the previous signature, not on a separate hash");
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class FRScenarioTests
 
         first.ftReceiptIdentification.Should().EndWith("T1");
         second.ftReceiptIdentification.Should().EndWith("T2");
-        SignatureOf(second, SignatureTypeFR.ChainHash).Should().NotBe(SignatureOf(first, SignatureTypeFR.ChainHash));
+        SignatureOf(second, SignatureTypeFR.ReceiptSignature).Should().NotBe(SignatureOf(first, SignatureTypeFR.ReceiptSignature));
     }
 
     [Fact]

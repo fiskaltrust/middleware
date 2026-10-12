@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
 
 namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
@@ -17,6 +19,24 @@ public static class FRTestData
         var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         return (Convert.ToBase64String(key.ExportPkcs8PrivateKey()), key);
     }
+
+    /// <summary>Decodes RFC 4648 §5 Base64Url without padding, the encoding chained signatures use.</summary>
+    public static byte[] FromBase64Url(string value)
+    {
+        var padded = value.Replace('-', '+').Replace('_', '/');
+        return Convert.FromBase64String(padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '='));
+    }
+
+    /// <summary>True when <paramref name="value"/> only uses the Base64Url alphabet, unpadded.</summary>
+    public static bool IsBase64Url(string value)
+        => value.Length > 0 && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_');
+
+    public static ProcessRequest Request(long chainCounter = 1) => new()
+    {
+        ReceiptRequest = CashSaleRequest(),
+        ReceiptResponse = Response(),
+        ChainCounter = chainCounter,
+    };
 
     public static ReceiptRequest CashSaleRequest() => new()
     {
