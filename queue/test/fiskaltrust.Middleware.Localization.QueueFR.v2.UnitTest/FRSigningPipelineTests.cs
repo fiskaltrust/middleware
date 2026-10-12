@@ -37,6 +37,17 @@ public class FRSigningPipelineTests
             });
 
     [Fact]
+    public async Task SignAsync_HandsTheStoredRequestHashToTheScu()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(CommandRequest() with { QueueItem = new ftQueueItem { requestHash = "c3RvcmVk" } });
+
+        sscd.LastRequest!.RequestHash.Should().Be("c3RvcmVk");
+    }
+
+    [Fact]
     public async Task SignAsync_NumbersEachChainIndependently()
     {
         var sscd = new FakeFRSSCD();

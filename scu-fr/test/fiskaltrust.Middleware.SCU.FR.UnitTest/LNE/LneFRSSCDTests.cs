@@ -210,6 +210,33 @@ public class LneFRSSCDTests
     }
 
     [Fact]
+    public async Task RequestHash_IsSignedAfterTheQueueItemId()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+        var request = FRTestData.Request();
+        request.RequestHash = "q1w2e3+/=";
+
+        var (response, _) = await sut.ProcessReceiptAsync(request, null);
+
+        // siret, five issuer claims, queue id, queue item id, then the request hash verbatim.
+        DataSetOf(response).Split('|')[8].Should().Be("q1w2e3+/=");
+    }
+
+    [Fact]
+    public async Task RequestHash_IsAnEmptyFieldWhenNotGiven()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        DataSetOf(response).Split('|')[8].Should().BeEmpty();
+    }
+
+    [Fact]
     public void FromConfiguration_WithAnUnknownVatOption_IsRejected()
     {
         var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["VatOption"] = "monthly" });
