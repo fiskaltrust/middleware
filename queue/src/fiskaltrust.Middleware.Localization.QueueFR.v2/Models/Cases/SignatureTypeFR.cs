@@ -4,7 +4,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 
 /// <summary>
 /// FR-localized signature types the queue itself emits. The values are shared with
-/// <c>fiskaltrust.Middleware.SCU.FR.Abstraction</c>: the SCU produces the signature and chain-hash
+/// <c>fiskaltrust.Middleware.SCU.FR.Abstraction</c>: the SCU produces the signature
 /// items, the queue adds the lifecycle and information items around them.
 /// </summary>
 public enum SignatureTypeFR : long
@@ -15,6 +15,7 @@ public enum SignatureTypeFR : long
     MonthTotals = 0x4652_2000_0000_0004,
     YearTotals = 0x4652_2000_0000_0005,
     PerpetualTotals = 0x4652_2000_0000_0007,
+    /// <summary>Reserved, not emitted since ADR 0001 (market-fr#122); see the SCU abstraction.</summary>
     ChainHash = 0x4652_2000_0000_0008,
     StoredNotSigned = 0x4652_2000_0000_000B,
     InitialOperationReceipt = 0x4652_2000_0000_0010,

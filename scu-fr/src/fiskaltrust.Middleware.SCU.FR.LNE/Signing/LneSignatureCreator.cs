@@ -1,18 +1,17 @@
 using System;
 using System.Security.Cryptography;
-using System.Text;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.FR.LNE.Signing;
 
 /// <summary>
-/// Signs the LNE data set with SHA-256withECDSA over secp256r1 and links it into the chain.
+/// Signs the LNE data set with SHA-256withECDSA over secp256r1.
 /// </summary>
 /// <remarks>
-/// Two deliberate differences to the Infocert SCU, both dictated by how the respective referential
-/// describes the archive format: the signature is emitted as a plain base64 DER sequence rather than
-/// wrapped in a JWS, and the chain hash covers the data set <em>including</em> its signature, so an
-/// altered signature breaks the chain of every following entry.
+/// The signature is emitted as a bare Base64Url DER sequence rather than wrapped in a JWS. The chain
+/// is the one every French SCU follows (ADR 0001): the next entry's data set carries this signature
+/// verbatim, so an altered signature breaks the verification of the entry after it.
 /// </remarks>
 internal sealed class LneSignatureCreator : IDisposable
 {
@@ -26,14 +25,11 @@ internal sealed class LneSignatureCreator : IDisposable
         _key = ImportKey(privateKeyBase64);
     }
 
-    public (string signature, string chainHash) Sign(string dataSet)
+    public string Sign(string dataSet)
     {
         var dataSetBytes = LneDataSetBuilder.ToBytes(dataSet);
         var signature = _key.SignData(dataSetBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
-        var signatureBase64 = Convert.ToBase64String(signature);
-
-        var chainInput = Encoding.UTF8.GetBytes($"{dataSet}{LneDataSetBuilder.FieldSeparator}{signatureBase64}");
-        return (signatureBase64, Convert.ToBase64String(SHA256.HashData(chainInput)));
+        return FRChaining.ToBase64Url(signature);
     }
 
     public void Dispose() => _key.Dispose();

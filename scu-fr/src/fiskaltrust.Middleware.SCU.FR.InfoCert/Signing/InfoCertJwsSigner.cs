@@ -7,8 +7,8 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 /// <summary>
 /// Produces the Infocert receipt signature: an ES256 JWS in compact serialization over the json
-/// receipt payload. The chain hash returned alongside is the SHA-256 of the JWS signing input,
-/// which is what the next entry of the same chain covers.
+/// receipt payload. The JWS signature segment returned alongside — Base64Url of the raw R||S
+/// signature — is what the next entry of the same chain covers (ADR 0001).
 /// </summary>
 internal sealed class InfoCertJwsSigner : IDisposable
 {
@@ -25,16 +25,16 @@ internal sealed class InfoCertJwsSigner : IDisposable
         _key = ImportKey(privateKeyBase64);
     }
 
-    public (string jws, string chainHash) Sign(string payloadJson)
+    public (string jws, string signature) Sign(string payloadJson)
     {
         var signingInput = $"{Es256JwsHeader}.{ToBase64Url(Encoding.UTF8.GetBytes(payloadJson))}";
         var signingInputBytes = Encoding.UTF8.GetBytes(signingInput);
 
         // JWS mandates the raw R||S form (RFC 7518 §3.4), not the DER sequence.
         var signature = _key.SignData(signingInputBytes, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-        var chainHash = SHA256.HashData(signingInputBytes);
+        var signatureBase64Url = ToBase64Url(signature);
 
-        return ($"{signingInput}.{ToBase64Url(signature)}", Convert.ToBase64String(chainHash));
+        return ($"{signingInput}.{signatureBase64Url}", signatureBase64Url);
     }
 
     public void Dispose() => _key.Dispose();

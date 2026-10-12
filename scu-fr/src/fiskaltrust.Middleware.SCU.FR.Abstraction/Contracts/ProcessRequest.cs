@@ -18,6 +18,13 @@ public class ProcessRequest
     /// queue owns and the SCU signs.
     /// </summary>
     public FRPeriodTotals? PeriodTotals { get; set; }
+
+    /// <summary>
+    /// The position of this entry in its receipt chain, starting at 1 — the numerator the queue
+    /// also writes into <c>ftReceiptIdentification</c>. Every SCU signs it explicitly, so the
+    /// signature authenticates the entry's place in the chain and not only its predecessor.
+    /// </summary>
+    public long ChainCounter { get; set; }
 }
 
 /// <summary>The signed receipt returned by a French SCU.</summary>
