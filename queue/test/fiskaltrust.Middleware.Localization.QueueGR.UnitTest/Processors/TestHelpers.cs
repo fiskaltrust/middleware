@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.storage.V0;
 using Moq;
 

@@ -294,7 +294,7 @@ public class RefundScenarios : AbstractScenarioTests
 
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
         voidResponse.ftState.State().Should().Be(State.Error);
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"Validation error []: EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: Amount) (Field: , Index: )");
+        voidResponse.ftSignatures[0].Data.Should().EndWith($"Validation error [EEEE_FullRefundItemsMismatch]: EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: Amount) (Field: cbPreviousReceiptReference, Index: )");
     }
 
     #endregion
@@ -500,7 +500,7 @@ public class RefundScenarios : AbstractScenarioTests
         var (voidRequest, voidResponse) = await ProcessReceiptAsync(copyReceipt, (long) receiptCase.WithCountry("PT").WithFlag(ReceiptCaseFlags.Refund));
         voidResponse.ftState.State().Should().Be(State.Error);
 
-        voidResponse.ftSignatures[0].Data.Should().EndWith($"Validation error []: EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: cbCustomer). Different fields: CustomerName (Field: , Index: )");
+        voidResponse.ftSignatures[0].Data.Should().EndWith($"Validation error [EEEE_FullRefundItemsMismatch]: EEEE_Full refund does not match the original invoice '{originalResponse.cbReceiptReference}'. All articles from the original invoice must be properly refunded with matching quantities and amounts. (Field: cbCustomer). Different fields: CustomerName (Field: cbPreviousReceiptReference, Index: )");
     }
 
     #endregion

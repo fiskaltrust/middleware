@@ -46,13 +46,13 @@ public static class ErrorMessagesPT
 
     public const string EEEE_PreviousReceiptLineItemMismatch = "EEEE_cbPreviousReceiptReference must point to a receipt that shares at least one matching line item.";
 
-    public static string EEEE_ChargeItemValidationFailed(int position, string field) => $"EEEE_Charge item at position {position}: {field} validation failed.";
+    public static string EEEE_ChargeItemValidationFailed(int index, string field) => $"EEEE_cbChargeItems[{index}]: {field} validation failed.";
 
     /// <summary>
     /// Error message when charge item description contains characters not representable in Windows-1252
     /// </summary>
-    public static string EEEE_ChargeItemDescriptionEncodingInvalid(int position) =>
-        $"EEEE_Charge item at position {position}: Description contains characters that cannot be encoded with Windows-1252.";
+    public static string EEEE_ChargeItemDescriptionEncodingInvalid(int index) =>
+        $"EEEE_cbChargeItems[{index}]: Description contains characters that cannot be encoded with Windows-1252.";
 
     /// <summary>
     /// Error message for invalid Portuguese Tax Identification Number (NIF)
@@ -65,7 +65,7 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for cash payment exceeding 3000€ limit
     /// </summary>
-    public const string EEEE_CashPaymentExceedsLimit = "EEEE_Individual cash payment exceeds the legal limit of 3000€. No single cash payment can exceed this amount in Portugal.";
+    public const string EEEE_CashPaymentExceedsLimit = "EEEE_The sum of all cash pay items exceeds the legal limit of 3000€. Cash payments for a single receipt must not exceed this amount in Portugal, even when split across several pay items.";
 
     /// <summary>
     /// Error message for POS receipt exceeding 100€ net amount limit
@@ -79,18 +79,6 @@ public static class ErrorMessagesPT
 
     public static string EEEE_CbReceiptMomentBeforeLastMoment(string seriesIdentifier, DateTime lastMoment) =>
         $"EEEE_cbReceiptMoment ({lastMoment:O}) must not be earlier than the last recorded cbReceiptMoment for series '{seriesIdentifier}'. Only handwritten receipts may be backdated.";
-
-    /// <summary>
-    /// Error message for cbReceiptMoment deviating too much from server time
-    /// </summary>
-    public static string EEEE_CbReceiptMomentDeviationExceeded(DateTime cbReceiptMoment, DateTime serverTime, double differenceInMinutes) =>
-        $"EEEE_cbReceiptMoment ({cbReceiptMoment:O}) deviates more than 10 minutes from server time ({serverTime:O}). Time difference: {differenceInMinutes:F2} minutes. Please ensure the client system clock is synchronized with the server.";
-
-    /// <summary>
-    /// Error message for cbReceiptMoment being in the future
-    /// </summary>
-    public static string EEEE_CbReceiptMomentInFuture(DateTime cbReceiptMoment, DateTime serverTime) =>
-        $"EEEE_cbReceiptMoment ({cbReceiptMoment:O}) cannot be in the future. Server time: ({serverTime:O}). Please ensure the receipt moment is set to the current time or a past time.";
 
     /// <summary>
     /// Error message for attempting to create multiple refunds for the same receipt
@@ -109,8 +97,8 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for unsupported VAT rates
     /// </summary>
-    public static string EEEE_UnsupportedVatRate(int position, ChargeItemCase vatRate) =>
-        $"EEEE_Charge item at position {position} uses unsupported VAT rate '{vatRate}' (0x{(long) vatRate:X}). Portugal only supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE).";
+    public static string EEEE_UnsupportedVatRate(int index, ChargeItemCase vatRate) =>
+        $"EEEE_cbChargeItems[{index}] uses unsupported VAT rate '{vatRate}' (0x{(long) vatRate:X}). Portugal only supports: DiscountedVatRate1 (RED/6%), DiscountedVatRate2 (INT/13%), NormalVatRate (NOR/23%), and NotTaxable (ISE).";
 
     /// <summary>
     /// Error message for unsupported receipt type for copy receipt operation
@@ -121,32 +109,32 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for VAT rate category not matching the specified VAT rate percentage
     /// </summary>
-    public static string EEEE_VatRateMismatch(int position, ChargeItemCase vatRateCategory, decimal expectedVatRate, decimal actualVatRate) =>
-        $"EEEE_Charge item at position {position}: VAT rate category '{vatRateCategory}' expects {expectedVatRate}% but VATRate property is set to {actualVatRate}%. Please ensure the VATRate matches the category.";
+    public static string EEEE_VatRateMismatch(int index, ChargeItemCase vatRateCategory, decimal expectedVatRate, decimal actualVatRate) =>
+        $"EEEE_cbChargeItems[{index}]: VAT rate category '{vatRateCategory}' expects {expectedVatRate}% but VATRate property is set to {actualVatRate}%. Please ensure the VATRate matches the category.";
 
     /// <summary>
     /// Error message for VAT amount calculation mismatch
     /// </summary>
-    public static string EEEE_VatAmountMismatch(int position, decimal providedVatAmount, decimal calculatedVatAmount, decimal difference) =>
-        $"EEEE_Charge item at position {position}: VATAmount {providedVatAmount:F2} does not match the calculated VAT amount {calculatedVatAmount:F2} (difference: {difference:F2}). The difference exceeds the acceptable rounding tolerance of 0.01.";
+    public static string EEEE_VatAmountMismatch(int index, decimal providedVatAmount, decimal calculatedVatAmount, decimal difference) =>
+        $"EEEE_cbChargeItems[{index}]: VATAmount {providedVatAmount:F2} does not match the calculated VAT amount {calculatedVatAmount:F2} (difference: {difference:F2}). The difference exceeds the acceptable rounding tolerance of 0.01.";
 
     /// <summary>
     /// Error message for discounts/extras whose VAT configuration does not match the related line item
     /// </summary>
-    public static string EEEE_DiscountVatRateOrCaseMismatch(int mainItemPosition, int discountPosition, decimal mainVatRate, decimal discountVatRate, ChargeItemCase mainVatCase, ChargeItemCase discountVatCase) =>
-        $"EEEE_Discount/extra at position {discountPosition} must use the same VAT rate ({mainVatRate}%) and VAT case '{mainVatCase}' as its related line item at position {mainItemPosition}, but VAT rate is {discountVatRate}% and VAT case is '{discountVatCase}'.";
+    public static string EEEE_DiscountVatRateOrCaseMismatch(int mainItemIndex, int discountIndex, decimal mainVatRate, decimal discountVatRate, ChargeItemCase mainVatCase, ChargeItemCase discountVatCase) =>
+        $"EEEE_Discount/extra cbChargeItems[{discountIndex}] must use the same VAT rate ({mainVatRate}%) and VAT case '{mainVatCase}' as its related line item cbChargeItems[{mainItemIndex}], but VAT rate is {discountVatRate}% and VAT case is '{discountVatCase}'.";
 
     /// <summary>
     /// Error message for negative quantity in non-refund receipts
     /// </summary>
-    public static string EEEE_NegativeQuantityNotAllowed(int position, decimal quantity) =>
-        $"EEEE_Charge item at position {position}: Negative quantity ({quantity}) is not allowed in non-refund receipts. Only discounts may have negative values.";
+    public static string EEEE_NegativeQuantityNotAllowed(int index, decimal quantity) =>
+        $"EEEE_cbChargeItems[{index}]: Negative quantity ({quantity}) is not allowed in non-refund receipts. Only discounts may have negative values.";
 
     /// <summary>
     /// Error message for negative amount in non-refund receipts
     /// </summary>
-    public static string EEEE_NegativeAmountNotAllowed(int position, decimal amount) =>
-        $"EEEE_Charge item at position {position}: Negative amount ({amount:F2}) is not allowed in non-refund receipts. Only discounts may have negative values.";
+    public static string EEEE_NegativeAmountNotAllowed(int index, decimal amount) =>
+        $"EEEE_cbChargeItems[{index}]: Negative amount ({amount:F2}) is not allowed in non-refund receipts. Only discounts may have negative values.";
 
     /// <summary>
     /// Error message for receipt balance mismatch between charge items and pay items
@@ -158,18 +146,13 @@ public static class ErrorMessagesPT
     /// Error message for invalid cbUser structure
     /// </summary>
     public static string EEEE_InvalidUserStructure(string reason) =>
-        $"EEEE_cbUser must follow the PTUserObject structure (UserId, UserDisplayName, UserEmail). {reason}";
-
-    /// <summary>
-    /// Error message for missing cbUser in receipts that generate signatures
-    /// </summary>
-    public const string EEEE_UserRequiredForSignatures = "EEEE_cbUser is mandatory for all receipts that generate signatures. Please provide a valid PTUserObject with UserId.";
+        $"EEEE_cbUser must be a string. {reason}";
 
     /// <summary>
     /// Error message for unsupported charge item service type
     /// </summary>
-    public static string EEEE_UnsupportedChargeItemServiceType(int position, ChargeItemCaseTypeOfService serviceType) =>
-        $"EEEE_Charge item at position {position}: Type of service '{serviceType}' is not supported in Portugal. Supported types: UnknownService, Delivery, OtherService, Tip, CatalogService.";
+    public static string EEEE_UnsupportedChargeItemServiceType(int index, ChargeItemCaseTypeOfService serviceType) =>
+        $"EEEE_cbChargeItems[{index}]: Type of service '{serviceType}' is not supported in Portugal. Supported types: UnknownService, Delivery, OtherService, Tip, CatalogService, Receivable.";
 
     /// <summary>
     /// Error message for full refund not matching original invoice items
@@ -226,17 +209,17 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for missing nature of VAT (exempt reason) when VAT rate is 0
     /// </summary>
-    public static string EEEE_ZeroVatRateMissingNature(int position) =>
-        $"EEEE_Charge item at position {position}: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. ";
+    public static string EEEE_ZeroVatRateMissingNature(int index) =>
+        $"EEEE_cbChargeItems[{index}]: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. ";
 
     public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) =>
-        $"EEEE_Charge item at position {i}: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
+        $"EEEE_cbChargeItems[{i}]: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
 
     /// <summary>
     /// Error message for discount exceeding the article amount
     /// </summary>
-    public static string EEEE_DiscountExceedsArticleAmount(int position, string description, decimal discountAmount, decimal articleAmount) =>
-        $"EEEE_Charge item at position {position} ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
+    public static string EEEE_DiscountExceedsArticleAmount(int index, string description, decimal discountAmount, decimal articleAmount) =>
+        $"EEEE_cbChargeItems[{index}] ('{description}'): The discount amount ({discountAmount:F2}) exceeds the article amount ({articleAmount:F2}). A discount cannot be greater than the article it is applied to.";
 
     /// <summary>
     /// Error message for invalid positions sequence.
@@ -247,8 +230,8 @@ public static class ErrorMessagesPT
     /// <summary>
     /// Error message for discounts/extras that are positive (not allowed in PT)
     /// </summary>
-    public static string EEEE_PositiveDiscountNotAllowed(int position, decimal amount) =>
-        $"EEEE_Charge item at position {position}: Positive discounts/extras are not allowed in Portugal. Amount was {amount:F2}.";
+    public static string EEEE_PositiveDiscountNotAllowed(int index, decimal amount) =>
+        $"EEEE_cbChargeItems[{index}]: Positive discounts/extras are not allowed in Portugal. Amount was {amount:F2}.";
 
     /// <summary>
     /// Error message for attempting to create multiple voids for the same receipt
@@ -310,6 +293,12 @@ public static class ErrorMessagesPT
         $"EEEE_Customer data in payment transfer does not match the original invoice '{receiptReference}'. {differences}";
 
     /// <summary>
+    /// Error message for payment transfer referencing a receipt that is not an invoice
+    /// </summary>
+    public static string EEEE_PaymentTransferOriginalNotInvoice(string receiptReference) =>
+        $"EEEE_The original receipt '{receiptReference}' is not a valid receipt for payment transfer. Only Invoices are allowed.";
+
+    /// <summary>
     /// Error message for payment transfer amount exceeding remaining amount after partial refunds
     /// </summary>
     public static string EEEE_PaymentTransferExceedsRemainingAmount(string receiptReference, decimal paymentAmount, decimal remainingAmount, decimal alreadyRefundedAmount) =>
@@ -326,9 +315,9 @@ public static class ErrorMessagesPT
         $"EEEE_cbReceiptReference '{receiptReference}' has already been used by a successfully processed receipt. cbReceiptReference must be unique.";
 
     /// <summary>
-    /// Error message for training mode not being enabled for this queue
+    /// Error message for training mode, which is not supported in Portugal
     /// </summary>
-    public const string EEEE_TrainingModeNotSupported = "EEEE_Training mode is not enabled for this queue.";
+    public const string EEEE_TrainingModeNotSupported = "EEEE_Training mode is not supported in Portugal.";
 
     /// <summary>
     /// Error message for working documents containing payment items

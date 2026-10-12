@@ -138,6 +138,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Exceptions
                     throw new SwissbitException("Command not found. ", error);
                 case NativeFunctionPointer.WormError.WORM_ERROR_SIG_ERROR:
                     throw new SwissbitException("Signature creation error. ", error);
+                case NativeFunctionPointer.WormError.WORM_ERROR_TSE_SEAPI_TRANSACTION_COUNTER_EXHAUSTED:
+                    throw new SwissbitException("The transaction counter of the TSE reached its flash endurance limit. The TSE must be replaced. ", error);
+                case NativeFunctionPointer.WormError.WORM_ERROR_TSE_SEAPI_INVALID_CLIENT_ID_CHARACTER:
+                    throw new SwissbitException("The client id contains a character that is not allowed by the TSE ('/', ':' and '?' are not allowed). ", error);
+                case NativeFunctionPointer.WormError.WORM_ERROR_TSE_SEAPI_AUTHENTICATION_PUK_TEMPORARILY_BLOCKED:
+                    throw new SwissbitException("The PUK is temporarily blocked because it was entered wrongly too many times. ", error);
                 case NativeFunctionPointer.WormError.WORM_ERROR_FROM_CARD_LAST:
                     throw new SwissbitException($"Highest error code that might be raised from the TSE. {error}", error);
                 default:

@@ -133,7 +133,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task RequestExportAsync(Guid tssId, ExportTransactions exportRequest, Guid exportId, long? fromTransactionNumber, long toTransactionNumber)
         {
-            var query = $"?end_transaction_number={toTransactionNumber}";
+            var query = $"end_transaction_number={toTransactionNumber}";
             if (exportRequest.ClientId != default)
             {
                 query += $"&client_id={exportRequest.ClientId}";

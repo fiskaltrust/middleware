@@ -56,10 +56,10 @@ jobs:
           path: artifacts/package-v2-${{ inputs.package }}
 
       - name: Deploy to v2 Packages
-        uses: fiskaltrust/middleware/.github/actions/deploy-v2-packages@main
+        uses: ./.github/actions/deploy-v2-packages
         with:
           directory: artifacts/package-v2-${{ inputs.package }}
-          package: ${{ inputs.package }}
+          destinationPath: undefined/${{ inputs.package }}
           storageAccountName: ${{ vars.PACKAGES_V2_STORAGE_ACCOUNT_NAME }}
           clientId: ${{ secrets.AZURE_CLIENT_ID }}
           tenantId: ${{ secrets.AZURE_TENANT_ID }}

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v2;
@@ -125,5 +125,107 @@ public class ValidationGRTests
 
         valid.Should().BeFalse();
         error!.ErrorMessage.Should().Contain("OwnConsumption");
+    }
+
+    // ── Zero VATAmount with non-zero VATRate (market-gr#309) ────────
+
+    [Fact]
+    public void Validate_ZeroVatAmount_WithNormalVatRate_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        chargeItem.Quantity = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
+        error.ErrorMessage.Should().Contain("position 1").And.Contain("VATRate is 24");
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_OnRefundLine_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(-1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_OnHandWrittenReceipt_ShouldFail()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+        receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.HandWritten);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeFalse();
+        error!.ErrorCode.Should().Be("ZeroVatAmountWithNonZeroVatRate");
+    }
+
+    [Theory]
+    [InlineData(10, 1.90)] // non-zero deviation from 1.94 is not this rule's concern (e.g. per-unit rounding)
+    [InlineData(1.24, 0.24)]
+    [InlineData(-1.24, -0.24)] // refund / negative line
+    public void Validate_NonZeroVatAmount_ShouldPass(decimal amount, decimal vatAmount)
+    {
+        var chargeItem = CreateChargeItem(amount, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = vatAmount;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(0, 24)] // free item
+    [InlineData(0.01, 6)] // VAT 0.0006 rounds to 0.00
+    [InlineData(0.02, 24)] // VAT 0.0039 rounds to 0.00
+    public void Validate_ZeroVatAmount_WhenCalculatedVatRoundsToZero_ShouldPass(decimal amount, int vatRate)
+    {
+        var chargeItem = CreateChargeItem(amount, vatRate, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void Validate_VatAmountNotProvided_ShouldPass()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 24, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = null;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void Validate_ZeroVatAmount_WithZeroVatRate_ShouldPass()
+    {
+        var chargeItem = CreateChargeItem(1.24m, 0, ChargeItemCaseTypeOfService.Delivery);
+        chargeItem.VATAmount = 0;
+        var receiptRequest = CreateReceipt([chargeItem]);
+
+        var (valid, error) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+
+        valid.Should().BeTrue();
+        error.Should().BeNull();
     }
 }

@@ -12,4 +12,7 @@ public class InvoiceOverride
 
     [JsonPropertyName("invoiceHeader")]
     public InvoiceHeaderTypeOverride? InvoiceHeader { get; set; }
+
+    [JsonPropertyName("packingsDeclarations")]
+    public PackingsDeclarationOverride[]? PackingsDeclarations { get; set; }
 }

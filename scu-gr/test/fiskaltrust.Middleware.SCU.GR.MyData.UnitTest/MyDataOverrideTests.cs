@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
@@ -665,6 +665,127 @@ public class MyDataOverrideTests
     }
 
     [Fact]
+    public void MapToInvoicesDoc_WithoutPackingsDeclarationsOverride_ShouldNotEmitPackingsDeclarations()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+
+        error.Should().BeNull();
+        doc!.invoice[0].PackingsDeclarations.Should().BeNull();
+        xml.Should().NotContain("packingsDeclarations");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithPackingsDeclarationsOverride_ShouldSerializeToXml()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            isDeliveryNote = true,
+                            movePurpose = 1
+                        },
+                        packingsDeclarations = new[]
+                        {
+                            new
+                            {
+                                Packages = new object[]
+                                {
+                                    new { packagingType = 2, quantity = 1 },
+                                    new { packagingType = 6, quantity = 3, otherPackagingTypeTitle = "Δεξαμενή IBC" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var declarations = doc!.invoice[0].PackingsDeclarations;
+        declarations.Should().ContainSingle();
+        declarations[0].Packages.Should().HaveCount(2);
+        declarations[0].Packages[0].packagingType.Should().Be(2);
+        declarations[0].Packages[0].quantity.Should().Be(1);
+        declarations[0].Packages[0].otherPackagingTypeTitle.Should().BeNull();
+        declarations[0].Packages[1].packagingType.Should().Be(6);
+        declarations[0].Packages[1].quantity.Should().Be(3);
+        declarations[0].Packages[1].otherPackagingTypeTitle.Should().Be("Δεξαμενή IBC");
+
+        var xml = AADEFactory.GenerateInvoicePayload(doc);
+        var invoiceXml = System.Xml.Linq.XDocument.Parse(xml).Root!
+            .Elements().Single(e => e.Name.LocalName == "invoice");
+        System.Xml.Linq.XNamespace inv = "http://www.aade.gr/myDATA/invoice/v1.0";
+        var declarationXml = invoiceXml.Elements(inv + "packingsDeclarations").Should().ContainSingle().Subject;
+        var packagesXml = declarationXml.Elements(inv + "Packages").ToList();
+        packagesXml.Should().HaveCount(2);
+        packagesXml[0].Element(inv + "packagingType")!.Value.Should().Be("2");
+        packagesXml[0].Element(inv + "quantity")!.Value.Should().Be("1");
+        packagesXml[0].Element(inv + "otherPackagingTypeTitle").Should().BeNull();
+        packagesXml[1].Element(inv + "otherPackagingTypeTitle")!.Value.Should().Be("Δεξαμενή IBC");
+
+        // XSD sequence: packingsDeclarations follows invoiceSummary and the optional URLs. It is
+        // declared in a separate partial file, so it is emitted last; that stays valid only while
+        // the AADE-owned invoiceDeliveryStatus/deliveryLifecycle that follow it are never set.
+        invoiceXml.Elements().Last().Name.LocalName.Should().Be("packingsDeclarations");
+        invoiceXml.Elements().Select(e => e.Name.LocalName)
+            .Should().NotContain(new[] { "invoiceDeliveryStatus", "deliveryLifecycle" });
+
+        var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
+        using var stringReader = new StringReader(xml);
+        var deserializedDoc = (InvoicesDoc) xmlSerializer.Deserialize(stringReader)!;
+        deserializedDoc.invoice[0].PackingsDeclarations.Should().BeEquivalentTo(declarations);
+    }
+
+    [Theory]
+    [InlineData("packagingType")]
+    [InlineData("quantity")]
+    public void MapToInvoicesDoc_WithPackingsDeclarationsMissingRequiredField_ShouldReturnError(string missingField)
+    {
+        // Both fields are required ints in the XSD; a missing value must not be sent as 0.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        object package = missingField == "packagingType"
+            ? new { quantity = 3 }
+            : new { packagingType = 2 };
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        packingsDeclarations = new[] { new { Packages = new[] { package } } }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain($"Packages[].{missingField} is mandatory");
+        doc.Should().BeNull();
+    }
+
+    [Fact]
     public void MapToInvoicesDoc_WithEmptyOverride_ShouldNotThrowException()
     {
         // Arrange
@@ -841,6 +962,150 @@ public class MyDataOverrideTests
         doc.invoice[0].counterpart.supplyAccountNo.Should().Be("SUP-001");
         doc.invoice[0].counterpart.countryDocumentIdSpecified.Should().BeTrue();
         doc.invoice[0].counterpart.countryDocumentId.Should().Be(CountryType.GR);
+    }
+
+    // === ISSUER OVERRIDE TESTS ===
+
+    [Fact]
+    public void MapToInvoicesDoc_WithoutIssuerOverride_ShouldUseOutletLocationIdAsBranch()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].issuer.branch.Should().Be(0);
+        doc.invoice[0].issuer.vatNumber.Should().Be("123456789");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithIssuerBranchOverride_ShouldSetBranch()
+    {
+        // e.g. online sales of several branches under one VAT number through a single cashbox
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        issuer = new { branch = 3 }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        doc!.invoice[0].issuer.branch.Should().Be(3);
+        doc.invoice[0].issuer.vatNumber.Should().Be("123456789");
+        doc.invoice[0].issuer.country.Should().Be(CountryType.GR);
+        doc.invoice[0].issuer.name.Should().BeNull();
+        doc.invoice[0].issuer.address.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithIssuerBranchOverride_ShouldChangeInvoiceUid()
+    {
+        // The AADE invoice UID is derived from vatNumber-issueDate-branch-invoiceType-series-aa,
+        // so the overridden branch must be part of it.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        var response = CreateBasicReceiptResponse(request);
+        var (docWithoutOverride, _) = factory.MapToInvoicesDoc(request, response);
+
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        issuer = new { branch = 7 }
+                    }
+                }
+            }
+        };
+        var (docWithOverride, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        factory.GetUid(docWithOverride!.invoice[0]).Should().NotBe(factory.GetUid(docWithoutOverride!.invoice[0]));
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_WithNegativeIssuerBranchOverride_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        issuer = new { branch = -1 }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("issuer.branch");
+        doc.Should().BeNull();
+    }
+
+    public static IEnumerable<object[]> NonBranchIssuerOverrides() =>
+    [
+        [new { vatNumber = "987654321" }],
+        [new { country = "CY" }],
+        [new { name = "Branch Thessaloniki" }],
+        [new { address = new { street = "Tsimiski", postalCode = "54623", city = "Thessaloniki" } }],
+        [new { documentIdNo = "AB123456" }],
+        [new { supplyAccountNo = "SUP-001" }],
+        [new { countryDocumentId = "GR" }],
+        [new { branch = 3, name = "Branch Thessaloniki" }],
+        [new { vatNumber = "" }],
+        [new { name = "" }],
+    ];
+
+    [Theory]
+    [MemberData(nameof(NonBranchIssuerOverrides))]
+    public void MapToInvoicesDoc_WithNonBranchIssuerOverride_ShouldReturnError(object issuer)
+    {
+        // Only issuer.branch is overridable; everything else must be rejected loudly so the
+        // caller doesn't assume an override was applied that AADE never received.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new { issuer }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().NotBeNull();
+        error!.Exception.Message.Should().Contain("Only issuer.branch can be overridden");
+        doc.Should().BeNull();
     }
 
 
@@ -1254,6 +1519,54 @@ public class MyDataOverrideTests
 
         error.Should().NotBeNull();
         error!.Exception.Message.Should().Contain("99.9");
+    }
+
+    // === Quantitative Receipt Notes 10.1 / 10.2 (market-gr #300) ===
+
+    [Theory]
+    [InlineData("10.1", InvoiceType.Item101)]
+    [InlineData("10.2", InvoiceType.Item102)]
+    public void MapToInvoicesDoc_WithQuantitativeReceiptNoteOverride_ShouldBuildQuantitativeDocument(string overrideValue, InvoiceType expected)
+    {
+        // 10.1/10.2 (Δελτίο Ποσοτικής Παραλαβής) are non-monetary movement documents.The middleware must therefore build them like the 9.3 family:
+        // emit the quantitative line fields, and drop currency + income classification.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new
+                        {
+                            invoiceType = overrideValue
+                        }
+                    }
+                }
+            }
+        };
+        var response = CreateBasicReceiptResponse(request);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, response);
+
+        error.Should().BeNull();
+        var invoice = doc!.invoice[0];
+        invoice.invoiceHeader.invoiceType.Should().Be(expected);
+
+        // 205 — currency is forbidden on the header
+        invoice.invoiceHeader.currencySpecified.Should().BeFalse();
+
+        // 331 — income classification is forbidden (line + summary)
+        invoice.invoiceDetails.Should().OnlyContain(d => d.incomeClassification == null);
+        invoice.invoiceSummary.incomeClassification.Should().BeNullOrEmpty();
+
+        // 230 — itemDescr / quantity / measurementUnit are mandatory on every line
+        invoice.invoiceDetails.Should().OnlyContain(d => d.quantitySpecified);
+        invoice.invoiceDetails.Should().OnlyContain(d => !string.IsNullOrEmpty(d.itemDescr));
+        invoice.invoiceDetails.Should().OnlyContain(d => d.measurementUnitSpecified);
     }
 
     // === PHASE 2: INCOME CLASSIFICATION OVERRIDE TESTS ===

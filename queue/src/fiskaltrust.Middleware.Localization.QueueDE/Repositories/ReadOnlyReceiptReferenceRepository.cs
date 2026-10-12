@@ -5,6 +5,7 @@ using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Exports.Common.Helpers;
+using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -69,7 +70,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 {
                     return false;
                 }
-                var receiptCaseData = SerializationHelper.GetReceiptCaseData(requestTarget);
+                // ftReceiptCaseData may be the flat (base) shape or the market-keyed shape produced by the
+                // v2 -> v0 mapping ({ "DE": { ... }, "v2ReceiptRequest": { ... } }); read the DE fields from either.
+                ReceiptCaseData receiptCaseData;
+                try
+                {
+                    receiptCaseData = JsonConvert.DeserializeObject<ReceiptCaseData>(requestTarget.ftReceiptCaseData.GetMarketReceiptCaseData());
+                }
+                catch (JsonException)
+                {
+                    // Invalid ftReceiptCaseData carries no external reference
+                    return false;
+                }
                 if (receiptCaseData == null || string.IsNullOrEmpty(receiptCaseData.RefReceiptId))
                 {
                     return false;

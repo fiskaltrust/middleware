@@ -190,9 +190,14 @@ public class SaftExporter
             .ThenBy(x => int.Parse(x!.PaymentRefNo.Split("/")[1]))
             .ToList();
 
+        var documentDates = invoices.Select(x => x!.InvoiceDate)
+            .Concat(workingDocuments.Select(x => x!.WorkDate))
+            .Concat(paymentDocuments.Select(x => x!.TransactionDate))
+            .ToList();
+
         return new AuditFile
         {
-            Header = GetHeader(accountMasterData, _sandbox),
+            Header = GetHeader(accountMasterData, _sandbox, documentDates.Count > 0 ? documentDates.Min() : null, documentDates.Count > 0 ? documentDates.Max() : null),
             MasterFiles = new MasterFiles
             {
                 Customer = [.. actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
@@ -243,7 +248,7 @@ public class SaftExporter
             {
                 ProductType = PTMappings.GetProductType(x),
                 ProductCode = GenerateUniqueProductIdentifier(x),
-                ProductGroup = x.ProductGroup?.Trim(),
+                ProductGroup = string.IsNullOrWhiteSpace(x.ProductGroup) ? null : x.ProductGroup.Trim(),
                 ProductDescription = x.Description?.Trim(),
                 ProductNumberCode = GenerateUniqueProductIdentifier(x),
             };
@@ -252,7 +257,7 @@ public class SaftExporter
 
     public static string GenerateUniqueProductIdentifier(ChargeItem x) => Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description.Trim())));
 
-    private TaxTable GetTaxTable(List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipt)
+    private TaxTable? GetTaxTable(List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipt)
     {
         var staticTaxes = new List<TaxTableEntry> {
                     new TaxTableEntry
@@ -405,7 +410,12 @@ public class SaftExporter
                 }
         };
         var lines = receipt.Where(x => !x.receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)).SelectMany(x => x.receiptRequest.GetGroupedChargeItemsModifyPositionsIfNotSet().Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
-        var taxTableEntries = lines.Select(x => staticTaxes.Single(t => t.TaxType == x.Tax.TaxType && t.TaxCountryRegion == x.Tax.TaxCountryRegion && t.TaxCode == x.Tax.TaxCode && t.TaxPercentage == x.Tax.TaxPercentage)).DistinctBy(x => x.TaxCode).ToList();
+        var taxTableEntries = lines.Select(x => staticTaxes.Single(t => t.TaxType == x.Tax.TaxType && t.TaxCountryRegion == x.Tax.TaxCountryRegion && t.TaxCode == x.Tax.TaxCode && t.TaxPercentage == x.Tax.TaxPercentage)).DistinctBy(x => (x.TaxType, x.TaxCountryRegion, x.TaxCode)).ToList();
+        if (taxTableEntries.Count == 0)
+        {
+            // TaxTable requires at least one TaxTableEntry, so an export without lines must omit it entirely
+            return null;
+        }
         return new TaxTable
         {
             TaxTableEntry = taxTableEntries
@@ -413,8 +423,11 @@ public class SaftExporter
 
     }
 
-    public static Header GetHeader(AccountMasterData accountMasterData, bool sandbox)
+    public static Header GetHeader(AccountMasterData accountMasterData, bool sandbox, DateTime? firstDocumentDate = null, DateTime? lastDocumentDate = null)
     {
+        // The period covers the months of the exported documents; without documents we fall back to the current month
+        var periodStart = firstDocumentDate ?? DateTime.UtcNow;
+        var periodEnd = lastDocumentDate ?? DateTime.UtcNow;
         return new Header
         {
             AuditFileVersion = "1.04_01",
@@ -432,9 +445,9 @@ public class SaftExporter
                 Region = "Desconhecido",
                 Country = accountMasterData.Country,
             },
-            FiscalYear = DateTime.UtcNow.Year,
-            StartDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 01),
-            EndDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.DaysInMonth(DateTime.UtcNow.Year, DateTime.UtcNow.Month)),
+            FiscalYear = periodStart.Year,
+            StartDate = new DateTime(periodStart.Year, periodStart.Month, 01),
+            EndDate = new DateTime(periodEnd.Year, periodEnd.Month, DateTime.DaysInMonth(periodEnd.Year, periodEnd.Month)),
             CurrencyCode = "EUR",
             DateCreated = DateTime.UtcNow,
             TaxEntity = "GLOBAL",
@@ -748,7 +761,7 @@ public class SaftExporter
                 ProductCode = GenerateUniqueProductIdentifier(chargeItemData),
                 ProductDescription = chargeItemData.Description?.Trim(),
                 Quantity = Helpers.CreateMonetaryValue(quantity),
-                UnitOfMeasure = chargeItemData.Unit ?? "Unit",
+                UnitOfMeasure = string.IsNullOrWhiteSpace(chargeItemData.Unit) ? "Unit" : chargeItemData.Unit.Trim(),
                 UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
                 TaxPointDate = receiptResponse.ftReceiptMoment,
                 Description = chargeItemData.Description?.Trim(),
