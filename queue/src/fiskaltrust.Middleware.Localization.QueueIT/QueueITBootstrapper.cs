@@ -10,21 +10,21 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT;
 
 /// <summary>
-/// Wires the Italian localization onto the v2 stream. The SCU is reached through the launcher's
-/// <see cref="IClientFactory{T}"/> for <see cref="IITSSCD"/>, the only contract the Italian RT devices and
-/// servers implement; see <see cref="ITSSCDProvider"/> for the v1/v2 translation.
+/// Wires the Italian localization onto the v2 stream. The host supplies the storage provider (Azure Table Storage,
+/// SQLite or in-memory) and the SCU is reached through the launcher's <see cref="IClientFactory{T}"/> for
+/// <see cref="IITSSCD"/>, the only contract the Italian RT devices and servers implement; see
+/// <see cref="ITSSCDProvider"/> for the v1/v2 translation.
 /// </summary>
 public class QueueITBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
-
-    public QueueITBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IITSSCD> clientFactory, Dictionary<string, object> configuration)
-        : this(id, loggerFactory, clientFactory, configuration, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
     public QueueITBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IITSSCD> clientFactory, Dictionary<string, object> configuration, IStorageProvider storageProvider)
     {
