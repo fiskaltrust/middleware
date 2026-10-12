@@ -6,8 +6,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 /// <summary>
 /// Reads the SCU state out of the generic <see cref="FRSSCDInfo.InfoData"/> blob. The blob's
 /// contract is owned by the SCU implementation; the queue only needs to know whether usable
-/// signature creation data is present and which body certified it, so it parses those two
-/// properties instead of referencing an SCU package.
+/// signature creation data is present, which body certified it and which certificate it
+/// signs with, so it parses those properties instead of referencing an SCU package.
 /// </summary>
 internal static class FRSSCDInfoHelper
 {
@@ -15,6 +15,10 @@ internal static class FRSSCDInfoHelper
         && element.ValueKind is JsonValueKind.True;
 
     public static string? GetCertificationBody(FRSSCDInfo? info) => TryRead(info, "CertificationBody", out var element) && element.ValueKind == JsonValueKind.String
+        ? element.GetString()
+        : null;
+
+    public static string? GetCertificateSerialNumber(FRSSCDInfo? info) => TryRead(info, "CertificateSerialNumber", out var element) && element.ValueKind == JsonValueKind.String
         ? element.GetString()
         : null;
 

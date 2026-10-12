@@ -45,6 +45,12 @@ public class FRChainStateProvider
     private readonly SemaphoreSlim _lock = new(1, 1);
     private bool _loaded;
 
+    /// <summary>
+    /// The switch an 0x4011 receipt started and no 0x4012 receipt has finished yet; null when no
+    /// switch is pending. Only read or written while the state lock is held.
+    /// </summary>
+    public FRScuSwitch? PendingScuSwitch { get; private set; }
+
     public FRChainStateProvider(AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository)
     {
         _queueItemRepository = queueItemRepository;
@@ -82,6 +88,45 @@ public class FRChainStateProvider
         }
     }
 
+    /// <summary>The switch that is pending, loading the state from storage on the first call.</summary>
+    public async Task<FRScuSwitch?> GetPendingScuSwitchAsync()
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!_loaded)
+            {
+                await LoadAsync().ConfigureAwait(false);
+                _loaded = true;
+            }
+
+            return PendingScuSwitch;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Records that a signed receipt started (0x4011) or finished (0x4012) an SCU switch. Called
+    /// with the state lock held, once the receipt is signed.
+    /// </summary>
+    internal void TrackScuSwitch(ReceiptRequest request, ReceiptResponse response)
+    {
+        if (request.ftReceiptCase.Case() == ReceiptCase.InitSCUSwitch0x4011)
+        {
+            PendingScuSwitch = MiddlewareStateData.FromReceiptResponse(response).FR?.ScuSwitch ?? new FRScuSwitch();
+        }
+        else if (request.ftReceiptCase.Case() == ReceiptCase.FinishSCUSwitch0x4012)
+        {
+            PendingScuSwitch = null;
+        }
+    }
+
+    public static bool IsScuSwitch(ReceiptRequest request)
+        => request.ftReceiptCase.Case() is ReceiptCase.InitSCUSwitch0x4011 or ReceiptCase.FinishSCUSwitch0x4012;
+
     private async Task LoadAsync()
     {
         foreach (var chain in Enum.GetValues<FRReceiptChain>())
@@ -92,6 +137,10 @@ public class FRChainStateProvider
         // Every period starts open and is closed as soon as its closing receipt is reached, so
         // walking backwards accumulates exactly the receipts since each period's last closing.
         var openPeriods = new HashSet<FRTotalsPeriod>(Enum.GetValues<FRTotalsPeriod>());
+
+        // Only the newest switch receipt counts: an 0x4011 without a later 0x4012 is pending.
+        var scuSwitchResolved = false;
+        PendingScuSwitch = null;
 
         var queueItems = (await (await _queueItemRepository).GetAsync().ConfigureAwait(false))
             .OrderByDescending(x => x.ftQueueRow)
@@ -132,6 +181,12 @@ public class FRChainStateProvider
                     var signature = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature))?.Data;
                     state.LastSignature = string.IsNullOrEmpty(signature) ? null : FRChaining.ChainedSignatureOf(signature);
                 }
+            }
+
+            if (!scuSwitchResolved && IsScuSwitch(request))
+            {
+                TrackScuSwitch(request, response);
+                scuSwitchResolved = true;
             }
 
             _totals.AddToOpenPeriods(request, openPeriods);
