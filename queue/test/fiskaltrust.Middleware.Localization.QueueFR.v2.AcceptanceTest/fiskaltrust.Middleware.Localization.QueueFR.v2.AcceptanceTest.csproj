@@ -25,6 +25,7 @@
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueFR.v2\fiskaltrust.Middleware.Localization.QueueFR.v2.csproj" />
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
         <ProjectReference Include="..\..\..\scu-fr\src\fiskaltrust.Middleware.SCU.FR.InMemory\fiskaltrust.Middleware.SCU.FR.InMemory.csproj" />
+        <ProjectReference Include="..\..\..\scu-fr\src\fiskaltrust.Middleware.SCU.FR.SelfCertified\fiskaltrust.Middleware.SCU.FR.SelfCertified.csproj" />
     </ItemGroup>
 
 </Project>
