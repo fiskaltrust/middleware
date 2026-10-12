@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
 /// <summary>
 /// The single path through which a French receipt becomes a signed, chained entry: take the next
-/// number of its chain, let the SCU sign it against the chain's previous hash, and advance the
+/// number of its chain, let the SCU sign it against the chain's previous signature, and advance the
 /// chain and the period totals only once the signature exists.
 /// </summary>
 public class FRSigningPipeline
@@ -39,14 +39,15 @@ public class FRSigningPipeline
 
             try
             {
-                var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+                var (response, signature) = await _sscd.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request.ReceiptRequest,
                     ReceiptResponse = receiptResponse,
                     PeriodTotals = periodTotals,
-                }, chain.LastHash).ConfigureAwait(false);
+                    ChainCounter = chain.Numerator,
+                }, chain.LastSignature).ConfigureAwait(false);
 
-                chain.LastHash = hash;
+                chain.LastSignature = signature;
                 totals.Add(request.ReceiptRequest);
 
                 if (closingPeriod is not null)

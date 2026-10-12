@@ -6,8 +6,9 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 /// <summary>
 /// The json data set the Infocert signature covers. It carries the receipt identity, the totals
-/// broken down by VAT class and payment nature, and the hash of the previous entry of the same
-/// chain — the elements NF525 requires for inaltérabilité.
+/// broken down by VAT class and payment nature, and the chaining fields of ADR 0001 — the chain
+/// counter, the start-of-chain flag and the previous entry's signature, the counterparts of
+/// Infocert's <c>TAG-*-OEN</c> and <c>TAG-*-SIG</c> — the elements NF525 requires for inaltérabilité.
 /// </summary>
 /// <remarks>
 /// The field set has to be confirmed against the Infocert dossier before certification; the
@@ -54,7 +55,20 @@ internal class InfoCertReceiptPayload
 
     [JsonPropertyName("piUnknown")] public decimal PIUnknown { get; set; }
 
-    [JsonPropertyName("lastHash")] public string LastHash { get; set; } = "";
+    /// <summary>The entry's position in its chain, starting at 1.</summary>
+    [JsonPropertyName("chainCounter")] public long ChainCounter { get; set; }
+
+    /// <summary>
+    /// The start-of-chain flag, coded like <c>TAG-*-OEN</c>: <c>O</c> when the previous signature
+    /// is carried over, <c>N</c> on the first entry of the chain.
+    /// </summary>
+    [JsonPropertyName("previousSignatureCarriedOver")] public string PreviousSignatureCarriedOver { get; set; } = "";
+
+    /// <summary>
+    /// The JWS signature segment of the previous entry of the same chain (Base64Url, like
+    /// <c>TAG-*-SIG</c>), or empty on the first entry.
+    /// </summary>
+    [JsonPropertyName("previousSignature")] public string PreviousSignature { get; set; } = "";
 
     [JsonPropertyName("certificateSerialNumber")] public string CertificateSerialNumber { get; set; } = "";
 

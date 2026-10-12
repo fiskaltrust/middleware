@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE;
 
 /// <summary>
 /// The LNE flavour of the NF525 signature. It builds the ordered "jeu de données à signer",
-/// signs it with SHA-256withECDSA and chains over data set plus signature. The signed data set is
+/// signs it with SHA-256withECDSA and chains on the previous signature (ADR 0001). The signed data set is
 /// attached to the response as its own signature item, because an LNE audit reconstructs the
 /// signed string from the archive and re-verifies it field by field.
 /// </summary>
@@ -47,18 +47,17 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
-    public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration.Siret, _configuration.CertificateSerialNumber, lastHash, request.PeriodTotals);
+        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration.Siret, _configuration.CertificateSerialNumber, request.ChainCounter, previousSignature, request.PeriodTotals);
 
         string signature;
-        string chainHash;
         try
         {
-            (signature, chainHash) = _signatureCreator.Sign(dataSet);
+            signature = _signatureCreator.Sign(dataSet);
         }
         catch (Exception ex) when (ex is not FRSSCDException)
         {
@@ -66,13 +65,12 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         }
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
-        response.AddSignatureItem(SignatureTypeFR.ChainHash, "Empreinte", chainHash);
         response.AddSignatureItem(SignatureTypeFR.Information, "Donnees signees", dataSet);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Certification", $"{CertificationBody} {_configuration.LneCertificateNumber}".TrimEnd());
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
+        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
     }
 
     public void Dispose() => _signatureCreator.Dispose();

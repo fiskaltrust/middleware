@@ -4,14 +4,14 @@ using fiskaltrust.ifPOS.v2.fr;
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
-/// A recording IFRSSCD. It hands back a hash derived from the call count so a test can tell the
-/// chain entries apart, and can be told to fail so the queue's error handling is exercised.
+/// A recording IFRSSCD. It hands back a signature derived from the call count so a test can tell
+/// the chain entries apart, and can be told to fail so the queue's error handling is exercised.
 /// </summary>
 public class FakeFRSSCD : IFRSSCD
 {
     private int _calls;
 
-    public List<(string? lastHash, string? receiptIdentification, FRPeriodTotals? periodTotals)> Calls { get; } = new();
+    public List<(string? previousSignature, string? receiptIdentification, FRPeriodTotals? periodTotals, long chainCounter)> Calls { get; } = new();
 
     public Func<Exception>? ThrowOnProcess { get; set; }
 
@@ -26,9 +26,9 @@ public class FakeFRSSCD : IFRSSCD
         InfoData = $"{{\"CertificationBody\":\"Fake\",\"SignatureCreationDataAvailable\":{(HasSignatureCreationData ? "true" : "false")}}}",
     });
 
-    public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
-        Calls.Add((lastHash, request.ReceiptResponse.ftReceiptIdentification, request.PeriodTotals));
+        Calls.Add((previousSignature, request.ReceiptResponse.ftReceiptIdentification, request.PeriodTotals, request.ChainCounter));
         LastRequest = request;
 
         if (ThrowOnProcess is not null)
@@ -36,7 +36,7 @@ public class FakeFRSSCD : IFRSSCD
             throw ThrowOnProcess();
         }
 
-        var hash = $"hash-{++_calls}";
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = request.ReceiptResponse }, hash));
+        var signature = $"sig-{++_calls}";
+        return Task.FromResult((new ProcessResponse { ReceiptResponse = request.ReceiptResponse }, signature));
     }
 }

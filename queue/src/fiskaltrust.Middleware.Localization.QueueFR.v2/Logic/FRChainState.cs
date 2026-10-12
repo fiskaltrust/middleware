@@ -6,10 +6,11 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
+using FRChaining = fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRChaining;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 
-/// <summary>The position of one FR receipt chain: its numerator and the hash of its last entry.</summary>
+/// <summary>The position of one FR receipt chain: its numerator and the signature of its last entry.</summary>
 public class FRChainState
 {
     public FRChainState(FRReceiptChain chain)
@@ -23,7 +24,11 @@ public class FRChainState
 
     public long Numerator { get; set; }
 
-    public string? LastHash { get; set; }
+    /// <summary>
+    /// The Base64Url signature of the chain's last entry, which the next entry covers (ADR 0001);
+    /// null while the chain has no signed entry yet.
+    /// </summary>
+    public string? LastSignature { get; set; }
 }
 
 /// <summary>
@@ -49,7 +54,7 @@ public class FRChainStateProvider
     /// Runs <paramref name="operation"/> against the chain the request belongs to and the period
     /// totals, loading both from storage on the first call. The state is held for the whole
     /// operation: an NF525 chain is strictly sequential, so numbering, signing and advancing the
-    /// hash must not interleave with another receipt of the same chain.
+    /// signature must not interleave with another receipt of the same chain.
     /// </summary>
     public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, Task<T>> operation)
     {
@@ -124,7 +129,8 @@ public class FRChainStateProvider
                 if (numerator is not null)
                 {
                     state.Numerator = numerator.Value;
-                    state.LastHash = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash))?.Data;
+                    var signature = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature))?.Data;
+                    state.LastSignature = string.IsNullOrEmpty(signature) ? null : FRChaining.ChainedSignatureOf(signature);
                 }
             }
 

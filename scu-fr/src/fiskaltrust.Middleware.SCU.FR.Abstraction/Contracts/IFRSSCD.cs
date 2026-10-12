@@ -10,11 +10,15 @@ namespace fiskaltrust.ifPOS.v2.fr;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The signature is chained: every entry covers the hash of the previous entry of the same
-/// receipt chain. Like <c>IPTSSCD</c> — the other software-signing market — the durable chain
-/// state stays with the queue: it passes the previous hash in and persists the returned one.
-/// France has several parallel chains (tickets, invoices, payment proofs, grand totals, logs, …),
-/// so the queue resolves which chain a receipt belongs to and hands over that chain's hash.
+/// The signature is chained (ADR 0001, market-fr#122): the signed content of every entry holds the
+/// chain counter (<see cref="ProcessRequest.ChainCounter"/>), the start-of-chain flag and the
+/// <em>previous signature</em> of the same receipt chain — the exact Base64Url string the previous
+/// entry's signature field holds, never a hash of it and never a re-encoding. Like <c>IPTSSCD</c> —
+/// the other software-signing market — the durable chain state stays with the queue: it passes the
+/// previous signature in and keeps the returned one for the next entry. France has several parallel
+/// chains (tickets, invoices, payment proofs, grand totals, logs, …), so the queue resolves which
+/// chain a receipt belongs to and hands over that chain's last signature. Because the rule is the
+/// same for every SCU, a chain carries on unbroken when the SCU behind the queue changes.
 /// </para>
 /// <para>
 /// This type is declared here on purpose. The country SSCD contracts normally live in the
@@ -32,9 +36,13 @@ public interface IFRSSCD
 
     Task<FRSSCDInfo> GetInfoAsync();
 
-    /// <param name="lastHash">
-    /// The chain hash of the previous entry of the same receipt chain, or null for the first entry.
+    /// <param name="previousSignature">
+    /// The Base64Url signature of the previous entry of the same receipt chain, or null for the
+    /// first entry — which then carries the start-of-chain flag.
     /// </param>
-    /// <returns>The signed response and the chain hash the queue has to persist for the next entry.</returns>
-    Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash);
+    /// <returns>
+    /// The signed response and this entry's own Base64Url signature, which the next entry of the
+    /// chain covers.
+    /// </returns>
+    Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature);
 }

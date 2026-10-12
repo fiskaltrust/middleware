@@ -42,7 +42,7 @@ public class InMemorySCU : IFRSSCD, IDisposable
         InfoData = $"{{\"CertificationBody\":\"InMemory\",\"Siret\":\"{_siret}\",\"CertificateSerialNumber\":\"{_certificateSerialNumber}\",\"SignatureCreationDataAvailable\":true}}",
     });
 
-    public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
         foreach (var validator in _validators)
         {
@@ -57,11 +57,12 @@ public class InMemorySCU : IFRSSCD, IDisposable
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             (request.ReceiptRequest.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
             PeriodTotals(request.PeriodTotals),
-            lastHash ?? "");
+            request.ChainCounter.ToString(CultureInfo.InvariantCulture),
+            FRChaining.Flag(previousSignature),
+            previousSignature ?? "");
 
         var dataSetBytes = Encoding.UTF8.GetBytes(dataSet);
-        var signature = Convert.ToBase64String(_key.SignData(dataSetBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence));
-        var chainHash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{dataSet}|{signature}")));
+        var signature = FRChaining.ToBase64Url(_key.SignData(dataSetBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence));
 
         if (request.PeriodTotals is not null)
         {
@@ -70,11 +71,10 @@ public class InMemorySCU : IFRSSCD, IDisposable
         }
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
-        response.AddSignatureItem(SignatureTypeFR.ChainHash, "Empreinte", chainHash);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _certificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _siret);
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
+        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
     }
 
     /// <summary>The accumulated totals a closing attests, folded into the signed data set.</summary>

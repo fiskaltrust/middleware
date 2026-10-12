@@ -14,9 +14,9 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert;
 
 /// <summary>
 /// The Infocert flavour of the NF525 signature. It serializes the receipt into a json data set,
-/// signs it as an ES256 JWS and returns the SHA-256 of the signing input as the chain hash, so the
-/// signature travels as one self-describing token a verifier can check against the certificate
-/// without knowing the middleware.
+/// signs it as an ES256 JWS and returns the JWS signature segment, which the next entry of the
+/// chain carries (ADR 0001). The signature travels as one self-describing token a verifier can
+/// check against the certificate without knowing the middleware.
 /// </summary>
 /// <remarks>
 /// Deliberately independent of the LNE SCU: the two certification bodies audit against their own
@@ -49,7 +49,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
-    public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
@@ -76,17 +76,19 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             PINonCash = totals.PINonCash,
             PIInternal = totals.PIInternal,
             PIUnknown = totals.PIUnknown,
-            LastHash = lastHash ?? "",
+            ChainCounter = request.ChainCounter,
+            PreviousSignatureCarriedOver = FRChaining.Flag(previousSignature),
+            PreviousSignature = previousSignature ?? "",
             CertificateSerialNumber = _configuration.CertificateSerialNumber,
             AttestationNumber = _configuration.AttestationNumber,
             PeriodTotals = request.PeriodTotals,
         };
 
         string jws;
-        string chainHash;
+        string signature;
         try
         {
-            (jws, chainHash) = _signer.Sign(JsonSerializer.Serialize(payload));
+            (jws, signature) = _signer.Sign(JsonSerializer.Serialize(payload));
         }
         catch (Exception ex) when (ex is not FRSSCDException)
         {
@@ -94,12 +96,11 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         }
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "www.fiskaltrust.fr", jws, SignatureFormat.QRCode);
-        response.AddSignatureItem(SignatureTypeFR.ChainHash, "Empreinte", chainHash);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
+        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
     }
 
     public void Dispose() => _signer.Dispose();

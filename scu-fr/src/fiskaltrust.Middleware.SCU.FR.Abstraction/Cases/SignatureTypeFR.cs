@@ -15,7 +15,10 @@ public enum SignatureTypeFR : long
     /// <summary>Free-text information (mention légale, "document provisoire", "Duplicata", …).</summary>
     Information = 0x4652_2000_0000_0000,
 
-    /// <summary>The NF525 receipt signature — an ES256 JWS token over the receipt payload.</summary>
+    /// <summary>
+    /// The NF525 receipt signature, in Base64Url — a compact ES256 JWS for Infocert, a bare
+    /// signature for LNE. The next entry of the same chain covers it (ADR 0001).
+    /// </summary>
     ReceiptSignature = 0x4652_2000_0000_0001,
 
     /// <summary>Serial number of the certificate the signature was created with.</summary>
@@ -27,7 +30,11 @@ public enum SignatureTypeFR : long
     ArchiveTotals = 0x4652_2000_0000_0006,
     PerpetualTotals = 0x4652_2000_0000_0007,
 
-    /// <summary>Hash of the previous entry of the same chain — the "inaltérabilité" link.</summary>
+    /// <summary>
+    /// Reserved: the chain hash item of the first QueueFR.v2 drafts. Not emitted since ADR 0001
+    /// (market-fr#122) — an entry chains on the previous <see cref="ReceiptSignature"/> itself.
+    /// The value stays allocated so it is never reused for something else.
+    /// </summary>
     ChainHash = 0x4652_2000_0000_0008,
 
     /// <summary>SIRET of the establishment the signature creation unit is registered for.</summary>
