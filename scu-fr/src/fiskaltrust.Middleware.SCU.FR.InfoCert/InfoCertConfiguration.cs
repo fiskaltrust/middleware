@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
+using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert;
 
@@ -25,11 +26,22 @@ public class InfoCertConfiguration
     /// <summary>Serial number of the signing certificate; printed alongside every signature.</summary>
     public string CertificateSerialNumber { get; set; } = "";
 
-    /// <summary>The Infocert attestation number issued for the certified solution.</summary>
+    /// <summary>
+    /// The Infocert attestation number issued for the certified solution: the product number the
+    /// NF525 mention prints (NF525 V2.3 §6.1.6.1, market-fr#131).
+    /// </summary>
     public string AttestationNumber { get; set; } = "";
 
+    /// <summary>
+    /// The NF525 software category, <c>A</c>, <c>B</c> or <c>C</c> (NF525 V2.3 §2.1), printed in the
+    /// NF525 mention (market-fr#131). Without it no mention is emitted.
+    /// </summary>
+    public string? SoftwareCategory { get; set; }
+
+    /// <summary>The certified software's name; optional in the NF525 mention.</summary>
     public string SoftwareName { get; set; } = "fiskaltrust.Middleware";
 
+    /// <summary>The certified software's version, as on the certificate; printed in the NF525 mention.</summary>
     public string SoftwareVersion { get; set; } = "";
 
     /// <summary>Issuer claim: RCS registration, e.g. "RCS Nanterre B 642036065" (SOC-RCS, market-fr#141).</summary>
@@ -64,6 +76,11 @@ public class InfoCertConfiguration
         }
 
         FRIssuerClaims.ValidateVatOption("Infocert", result.VatOption);
+
+        if (!string.IsNullOrEmpty(result.SoftwareCategory) && System.Array.IndexOf(InfoCertMention.Categories, result.SoftwareCategory) < 0)
+        {
+            throw new FRValidationException($"The Infocert SCU SoftwareCategory must be A, B or C (NF525 V2.3 §2.1), not '{result.SoftwareCategory}'.");
+        }
 
         return result;
     }
