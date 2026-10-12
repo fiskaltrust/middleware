@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -23,7 +24,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         {
             var xml = SoapSerializer.Serialize(zReportResult);
             var client = new Mock<IEpsonFpMateClient>();
-            client.Setup(c => c.SendCommandAsync(It.IsAny<string>()))
+            client.Setup(c => c.SendCommandAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>()))
                   .ReturnsAsync(() => new HttpResponseMessage { Content = new StringContent(xml) });
             return client;
         }
@@ -36,7 +37,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
 
-            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p))), Times.Once);
+            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p)), It.IsAny<TimeSpan?>()), Times.Once);
         }
 
         [Fact]
@@ -47,7 +48,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
 
-            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p))), Times.Never);
+            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p)), It.IsAny<TimeSpan?>()), Times.Never);
         }
 
         [Fact]
@@ -58,7 +59,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
             await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = DailyClosing(), ReceiptResponse = new ReceiptResponse() });
 
-            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p))), Times.Never);
+            client.Verify(c => c.SendCommandAsync(It.Is<string>(p => IsRebootCommand(p)), It.IsAny<TimeSpan?>()), Times.Never);
         }
     }
 }

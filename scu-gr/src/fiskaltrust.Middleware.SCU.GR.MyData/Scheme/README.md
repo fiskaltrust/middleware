@@ -33,9 +33,21 @@ Notes:
   element into a jagged `PackagingDetailType[][]`, which `XmlSerializer` cannot construct — it
   throws `CodeGenError … Cannot convert PackagingDetailType[] to PackagingDetailType` and
   breaks serialization of the whole `InvoicesDoc`. After regenerating, replace that member's
-  `[XmlArrayItem(...)]` with `[System.Xml.Serialization.XmlIgnoreAttribute()]` (see the comment
-  on `packingsDeclarations` in the current file). It is part of the out-of-scope e-transport
-  surface and is not populated by this SCU.
+  `[XmlArrayItem(...)]` with `[System.Xml.Serialization.XmlIgnoreAttribute()]`. The comment on
+  that member in the current file predates packingsDeclarations support and wrongly calls the
+  element out of scope and never populated; when re-applying the edit, use this comment instead:
+  `// MANUAL POST-GENERATION EDIT: xsd.exe emits this jagged member, which XmlSerializer cannot
+  build. It stays [XmlIgnore]d; packingsDeclarations is serialized via the PackingsDeclarations
+  property in AadeBookInvoiceType.PackingsDeclarations.cs (see Scheme/README.md).`
+  This is an `xsd.exe` defect, not a schema
+  problem: it collapses the `PackingsDeclaration` wrapper type into an array and annotates the
+  resulting two-level array with a single-level `[XmlArrayItem]`. The element is supported via
+  the hand-written `AadeBookInvoiceType.PackingsDeclarations.cs`, which adds the
+  `PackingsDeclaration` wrapper class and a serializable `PackingsDeclarations` property. Keep
+  that file as-is when regenerating; do not edit `response-v2.0.2.cs` beyond the
+  `[XmlIgnore]` above. `XmlSerializer` writes members in compile order, so the csproj compiles
+  that file explicitly last; without that the element can be emitted before `uid` and the
+  document fails XSD validation.
 - The e-transport endpoint schemas (`RegisterTransfer`, `RejectDeliveryNote`,
   `ConfirmDeliveryOutcome`, `ConfirmDeliveryReturn`, `GetDeliveryStatusResponse`,
   `GenerateGroupQRCode` + `Response`, `RequestGroupQRDetailsResponse`) are kept for

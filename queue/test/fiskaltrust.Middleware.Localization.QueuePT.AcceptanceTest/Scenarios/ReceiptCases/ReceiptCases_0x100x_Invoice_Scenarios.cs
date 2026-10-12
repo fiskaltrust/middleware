@@ -60,7 +60,7 @@ public class ReceiptCases_0x100x_Invoice_Scenarios : AbstractScenarioTests
             """;
         var (request, response) = await ProcessReceiptAsync(originalReceipt, (long) ReceiptCase.InvoiceB2C0x1001.WithCountry("PT"));
         response.ftState.State().Should().Be(State.Error);
-        response.ftSignatures[0].Data.Should().Contain("EEEE_Individual cash payment exceeds the legal limit of 3000€. No single cash payment can exceed this amount in Portugal.");
+        response.ftSignatures[0].Data.Should().Contain("EEEE_The sum of all cash pay items exceeds the legal limit of 3000€.");
     }
 
     #endregion

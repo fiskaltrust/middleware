@@ -25,6 +25,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public Task TseSetupAsync(byte[] credentialSeed, byte[] adminPuk, byte[] adminPin, byte[] timeAdminPin);
         public Task TseDecommissionAsync();
         public Task TseUpdateTimeAsync();
+        public Task TseUpdateTimeAsAdminAsync();
         public Task TseRunSelfTestAsnyc(bool throwException = true);
         public Task TseRegisterClientAsync(string clientId);
         public Task TseDeregisterClientAsync(string clientId);

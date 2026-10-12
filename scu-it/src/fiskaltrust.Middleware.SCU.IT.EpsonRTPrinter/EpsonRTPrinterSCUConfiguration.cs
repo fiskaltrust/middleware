@@ -24,6 +24,54 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         /// </summary>
         public int MaxNetworkRetries { get; set; } = 3;
 
+        /// <summary>
+        /// How long a command waits for the device when it is reached through a relay instead of a direct
+        /// connection. Ignored by the direct client, which uses <see cref="ClientTimeoutMs"/>.
+        /// <para>
+        /// It has to leave room, inside the timeout of whoever called the SCU, for this wait plus
+        /// <see cref="RecoveryVerdictTimeoutMs"/>: past that point the recovery still reaches the right
+        /// answer, but there is nobody left to hand it to.
+        /// </para>
+        /// </summary>
+        public int RelayCommandTimeoutMs { get; set; } = 45000;
+
+        /// <summary>
+        /// How long the network-error recovery keeps asking the printer what it did before giving up.
+        /// <para>
+        /// The recovery concludes only from an answer, never from silence, so this is the window the printer
+        /// has to become responsive again in. Raising it makes the recovery more patient; lowering it makes
+        /// an unresponsive printer fail faster, always as "state unknown", never as a reprint.
+        /// </para>
+        /// <para>
+        /// It bounds when the last query may <em>start</em>, not when it ends, so the recovery can overrun it
+        /// by up to one <see cref="RecoveryStatusQueryTimeoutMs"/>. Budget for the sum when comparing against
+        /// the caller's own deadline.
+        /// </para>
+        /// <para>
+        /// This is the budget of a single pass. A <c>NotPrinted</c> verdict resends the receipt, and a further
+        /// network error starts another pass, so the worst case is roughly
+        /// <see cref="MaxNetworkRetries"/> times the whole wait-plus-window. Only the first pass is guaranteed
+        /// to land while the caller is still listening; lower <see cref="MaxNetworkRetries"/> where that
+        /// matters more than the extra attempts.
+        /// </para>
+        /// </summary>
+        public int RecoveryVerdictTimeoutMs { get; set; } = 40000;
+
+        /// <summary>
+        /// Pause between two status queries while waiting for the printer to become responsive again.
+        /// </summary>
+        public int RecoveryVerdictPollIntervalMs { get; set; } = 3000;
+
+        /// <summary>
+        /// How long a single status query inside the recovery waits for the printer.
+        /// <para>
+        /// It has to be a small fraction of <see cref="RecoveryVerdictTimeoutMs"/>: the query is asked
+        /// repeatedly, and one that waited as long as a print command would burn the whole window on the
+        /// first attempt — which is exactly the attempt most likely to find the printer busy and silent.
+        /// </para>
+        /// </summary>
+        public int RecoveryStatusQueryTimeoutMs { get; set; } = 8000;
+
         public string? Password { get; set; }
 
         public string? AdditionalTrailerLines { get; set;}

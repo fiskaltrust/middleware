@@ -14,11 +14,13 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 public class JournalProcessorPT : IJournalProcessor
 {
     private readonly IStorageProvider _storageProvider;
+    private readonly bool _sandbox;
 
-    public JournalProcessorPT(IStorageProvider storageProvider)
+    public JournalProcessorPT(IStorageProvider storageProvider, bool sandbox)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _storageProvider = storageProvider;
+        _sandbox = sandbox;
     }
 
     public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
@@ -49,7 +51,7 @@ public class JournalProcessorPT : IJournalProcessor
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
         var documentStatusProvider = new DocumentStatusProvider(_storageProvider.CreateMiddlewareQueueItemRepository());
-        var data = new SaftExporter(documentStatusProvider).SerializeAuditFile(masterData, queueItems, (int) request.To);
+        var data = new SaftExporter(documentStatusProvider, _sandbox).SerializeAuditFile(masterData, queueItems, (int) request.To);
         yield return data;
     }
 }

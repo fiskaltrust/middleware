@@ -325,7 +325,7 @@ public sealed class EpsonRTServerSCU : LegacySCU
             // Reports what was actually sent: printRecTaxID is suppressed when a lottery code is present,
             // because the two are mutually exclusive (see EpsonRTServerMapping).
             RTCustomerID = string.IsNullOrEmpty(document.LotteryCode)
-                ? ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId)
+                ? ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId)
                 : "",
             RTReferenceZNumber = document.ReferenceZNumber,
             RTReferenceDocNumber = document.ReferenceDocNumber,

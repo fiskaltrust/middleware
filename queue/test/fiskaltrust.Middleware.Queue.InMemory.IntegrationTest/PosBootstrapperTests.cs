@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
-            serviceCollection.Count.Should().Be(36);
+            serviceCollection.Count.Should().Be(37);
 
             CheckServiceType(serviceCollection, typeof(ICryptoHelper)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(ISignProcessor)).Should().BeTrue();

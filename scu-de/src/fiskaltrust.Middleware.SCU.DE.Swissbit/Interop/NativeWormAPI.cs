@@ -173,10 +173,17 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         [DllImport("WormAPI")]
         internal static extern int worm_info_isDataImportInProgress(IntPtr info);
 
-        // Removed in Swissbit TSE API v6.0.0:
-        // - worm_info_hasChangedPuk
-        // - worm_info_hasChangedAdminPin
-        // - worm_info_hasChangedTimeAdminPin
+        //WORMAPI const char* WORMAPI_CALL worm_info_tseCertificationId(const WormInfo* info);
+        [DllImport("WormAPI")]
+        internal static extern IntPtr worm_info_tseCertificationId(IntPtr info);
+
+        //WORMAPI int WORMAPI_CALL worm_info_isTSEv2(const WormInfo* info);
+        [DllImport("WormAPI")]
+        internal static extern int worm_info_isTSEv2(IntPtr info);
+
+        //WORMAPI WormUserId WORMAPI_CALL worm_info_loggedInUser(const WormInfo* info);
+        [DllImport("WormAPI")]
+        internal static extern NativeFunctionPointer.WormUserId worm_info_loggedInUser(IntPtr info);
 
         [DllImport("WormAPI")]
         internal static extern uint worm_info_timeUntilNextSelfTest(IntPtr info);

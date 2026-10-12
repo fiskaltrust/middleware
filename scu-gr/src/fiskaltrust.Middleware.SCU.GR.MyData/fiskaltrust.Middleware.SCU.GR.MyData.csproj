@@ -37,6 +37,14 @@
       <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
     </ItemGroup>
 
+    <!-- XmlSerializer emits members in declaration (compile) order. Compile the hand-written
+         AadeBookInvoiceType partial last so its packingsDeclarations element is written after all
+         xsd.exe-generated members, independent of glob/file-system ordering. See Scheme/README.md. -->
+    <ItemGroup>
+        <Compile Remove="Scheme\AadeBookInvoiceType.PackingsDeclarations.cs" />
+        <Compile Include="Scheme\AadeBookInvoiceType.PackingsDeclarations.cs" />
+    </ItemGroup>
+
     <ItemGroup>
         <InternalsVisibleTo Include="fiskaltrust.Middleware.SCU.GR.MyData.UnitTest" />
     </ItemGroup>

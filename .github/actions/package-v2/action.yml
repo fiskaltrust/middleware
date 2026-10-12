@@ -1,0 +1,57 @@
+name: "Zip and Upload"
+inputs:
+  path:
+    required: true
+  artifactName:
+    required: true
+  zipFileName:
+    required: true
+  includeHash:
+    required: false
+    default: "true"
+  
+runs:
+  using: "composite"
+  steps:
+    - name: Zip v2 package
+      id: zip
+      shell: pwsh
+      run: |
+        
+
+        $artifactName = "${{ inputs.artifactName }}"
+        $sourcePath = "${{ inputs.path }}"
+        $zipFileName = "${{ inputs.zipFileName }}"
+                  
+        $destinationPath = "./publish/$artifactName/" 
+        New-Item -ItemType Directory -Force -Path $destinationPath
+        $destinationFile = Join-Path $destinationPath "$zipFileName.zip"
+
+        if($IsWindows) {
+         Compress-Archive -Path (Join-Path $sourcePath *) -DestinationPath $destinationFile
+        } 
+        else 
+        {
+         bash -c "cd '$sourcePath' && zip -r $zipFileName.zip ."
+         bash -c "mv '$sourcePath/${zipFileName}.zip' '$destinationPath'"                
+        }
+
+        echo "destinationPath=$destinationPath" >> $env:GITHUB_OUTPUT
+        echo "destinationFile=$destinationFile" >> $env:GITHUB_OUTPUT
+        ls $destinationPath
+
+    - name: Hash v2 package
+      if: inputs.includeHash == 'true'
+      shell: pwsh
+      run: |
+        $file = "${{ steps.zip.outputs.destinationFile }}"
+        $hash = Get-FileHash $file -Algorithm SHA256
+        $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+        $hashstring = [System.Convert]::ToBase64String($hashbytes)
+        $hashstring | Set-Content "$file.hash"
+
+    - name: Upload v2 Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifactName }}
+        path: ${{ steps.zip.outputs.destinationPath }}

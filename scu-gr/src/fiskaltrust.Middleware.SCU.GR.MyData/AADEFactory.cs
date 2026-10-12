@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -30,6 +30,8 @@ public class AADEFactoryError
 public class AADEFactory
 {
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
+
+    private static readonly JsonSerializerOptions _caseDataJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly MasterDataConfiguration _masterDataConfiguration;
     private readonly string _receiptBaseAddress;
@@ -125,6 +127,25 @@ public class AADEFactory
             && !string.IsNullOrEmpty(overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType);
     }
 
+    /// <summary>
+    /// Resolves the invoice type the produced document will actually carry: the mydataoverride
+    /// invoiceType when one is supplied, otherwise the type derived from the ftReceiptCase. Some
+    /// types (e.g. 8.2) have no native ftReceiptCase and are only reachable via the override
+    /// </summary>
+    private static InvoiceType GetEffectiveInvoiceType(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var overrideData))
+        {
+            var overrideType = overrideData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.InvoiceType;
+            if (!string.IsNullOrEmpty(overrideType)
+                && AADEMappings.InvoiceTypeOverrideMap.TryGetValue(overrideType, out var mapped))
+            {
+                return mapped;
+            }
+        }
+        return AADEMappings.GetInvoiceType(receiptRequest);
+    }
+
     public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         try
@@ -162,6 +183,10 @@ public class AADEFactory
 
     private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
+        // Validate classification overrides before GetInvoiceDetails applies them, so a classification on a
+        // fee line gets the fee-line error rather than an enum/format error from ApplyInvoiceDetailOverride.
+        ValidateClassificationOverrideConsistency(receiptRequest);
+
         var invoiceDetails = GetInvoiceDetails(receiptRequest);
         var documentLevelTaxes = GetDocumentLevelTaxes(receiptRequest);
 
@@ -342,6 +367,12 @@ public class AADEFactory
             inv.invoiceSummary.incomeClassification = null;
         }
 
+        // 10.1/10.2 Quantitative Receipt Notes forbid a currency on the header (AADE error 205).
+        if (AADEMappings.IsQuantitativeReceiptNote(inv.invoiceHeader.invoiceType))
+        {
+            inv.invoiceHeader.currencySpecified = false;
+        }
+
         // Set correlatedInvoices / multipleConnectedMarks based on the final invoice type
         // (after override, so the correct field is used for the resolved type).
         // Marks come from two sources:
@@ -376,38 +407,54 @@ public class AADEFactory
                 }
             }
         }
-
-        // Validate: if any charge item has incomeClassification override, all must have it and invoiceType must be overridden
-        ValidateClassificationOverrideConsistency(receiptRequest, overrideData);
         return inv;
     }
 
-    private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest, ftReceiptCaseDataPayload? overrideData)
+    private static void ValidateClassificationOverrideConsistency(ReceiptRequest receiptRequest)
     {
-        var itemsWithClassificationOverride = receiptRequest.cbChargeItems.Where(ci =>
+        // Special-tax / fee lines carry their charge via
+        // feesAmount / stampDutyAmount / otherTaxesAmount / withheldAmount on the row itself, and
+        // AADE forbids pairing an income/expenses classification with them on the same row (rejects
+        // with error 231 "incomeClassification is forbidden for invoice detail N"). They are therefore
+        // exempt from the all-or-nothing rule below, and a classification override on them is rejected.
+        var feeItemWithClassificationOverride = receiptRequest.cbChargeItems
+            .FirstOrDefault(ci => SpecialTaxMappings.IsSpecialTaxItem(ci) && HasClassificationOverride(ci));
+        if (feeItemWithClassificationOverride != null)
         {
-            if (ci.ftChargeItemCaseData == null)
-                return false;
-            try
-            {
-                var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
-                    JsonSerializer.Serialize(ci.ftChargeItemCaseData),
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                var details = data?.GR?.MyDataOverride?.InvoiceDetails;
-                return details?.IncomeClassification != null || details?.ExpensesClassification != null;
-            }
-            catch { return false; }
-        }).Count();
+            throw new ArgumentException(
+                $"A classification override (incomeClassification or expensesClassification) is not allowed on special-tax/fee charge items (type of service 0xF0), because AADE forbids classifications on these lines. Remove it from the charge item at position {feeItemWithClassificationOverride.Position}.");
+        }
+
+        var classifiableItems = receiptRequest.cbChargeItems
+            .Where(ci => !SpecialTaxMappings.IsSpecialTaxItem(ci))
+            .ToList();
+
+        var itemsWithClassificationOverride = classifiableItems.Count(HasClassificationOverride);
 
         if (itemsWithClassificationOverride == 0)
             return;
 
-        if (itemsWithClassificationOverride != receiptRequest.cbChargeItems.Count)
+        if (itemsWithClassificationOverride != classifiableItems.Count)
         {
             throw new ArgumentException(
-                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item must have a classification override.");
+                "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item except special-tax/fee items (type of service 0xF0) must have a classification override.");
         }
 
+    }
+
+    private static bool HasClassificationOverride(ChargeItem chargeItem)
+    {
+        if (chargeItem.ftChargeItemCaseData == null)
+            return false;
+        try
+        {
+            var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
+                JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData),
+                _caseDataJsonOptions);
+            var details = data?.GR?.MyDataOverride?.InvoiceDetails;
+            return details?.IncomeClassification != null || details?.ExpensesClassification != null;
+        }
+        catch { return false; }
     }
 
     private static void ApplyMyDataOverride(AadeBookInvoiceType invoice, ReceiptRequestMyDataOverride overrideData)
@@ -440,11 +487,37 @@ public class AADEFactory
             invoice.invoiceHeader.reverseDeliveryNotePurposeSpecified = true;
         }
 
+        if (invoiceOverride.Issuer != null)
+        {
+            ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
+        }
+
         if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
         {
             var counterpart = invoice.counterpart;
             ApplyPartyOverride(ref counterpart, invoiceOverride.Counterpart);
             invoice.counterpart = counterpart;
+        }
+
+        // Plain passthrough: content is validated by AADE, not here. The XSD-required ints have no
+        // "absent" form in the XML, so a missing value is rejected rather than sent as 0.
+        if (invoiceOverride.PackingsDeclarations != null)
+        {
+            invoice.PackingsDeclarations = invoiceOverride.PackingsDeclarations
+                .Select(declaration => new PackingsDeclaration
+                {
+                    Packages = declaration.Packages?
+                        .Select(package => new PackagingDetailType
+                        {
+                            packagingType = package.PackagingType
+                                ?? throw new ArgumentException("packingsDeclarations[].Packages[].packagingType is mandatory."),
+                            quantity = package.Quantity
+                                ?? throw new ArgumentException("packingsDeclarations[].Packages[].quantity is mandatory."),
+                            otherPackagingTypeTitle = package.OtherPackagingTypeTitle
+                        })
+                        .ToArray()
+                })
+                .ToArray();
         }
 
         // Invoice-level `otherTransportDetails` was removed from the AADE invoice schema in
@@ -713,6 +786,37 @@ public class AADEFactory
         if (!string.IsNullOrEmpty(headerOverride.TableAA))
         {
             invoice.invoiceHeader.tableAA = headerOverride.TableAA;
+        }
+    }
+
+    /// <summary>
+    /// Applies the issuer override. Only issuer.branch can be overridden, e.g. to report sales of several
+    /// branches under one VAT number through a single cashbox. All other issuer fields are rejected instead
+    /// of being silently ignored: the issuer's identity (vatNumber, country) is bound to the cashbox's AADE
+    /// credentials, and documentIdNo / supplyAccountNo / countryDocumentId only apply to counterparts.
+    /// </summary>
+    private static void ApplyIssuerOverride(PartyType issuer, PartyTypeOverride issuerOverride)
+    {
+        // Any non-null value (even an empty string) is an attempted override. As everywhere in the
+        // override model, JSON null is treated as "not set" and has no effect on the invoice.
+        if (issuerOverride.VatNumber is not null
+            || issuerOverride.Country is not null
+            || issuerOverride.Name is not null
+            || issuerOverride.Address is not null
+            || issuerOverride.DocumentIdNo is not null
+            || issuerOverride.SupplyAccountNo is not null
+            || issuerOverride.CountryDocumentId is not null)
+        {
+            throw new ArgumentException("Only issuer.branch can be overridden. All other issuer fields are taken from the cashbox configuration.");
+        }
+
+        if (issuerOverride.Branch.HasValue)
+        {
+            if (issuerOverride.Branch.Value < 0)
+            {
+                throw new ArgumentException($"Invalid issuer.branch '{issuerOverride.Branch.Value}'. The branch must be 0 (headquarters) or a positive AADE branch number.");
+            }
+            issuer.branch = issuerOverride.Branch.Value;
         }
     }
 
@@ -1020,7 +1124,7 @@ public class AADEFactory
 
     private static List<TaxTotalsType> GetDocumentLevelTaxes(ReceiptRequest receiptRequest)
     {
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (GetEffectiveInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For item 82 we define the taxes at line level only
             return new List<TaxTotalsType>();
@@ -1212,7 +1316,7 @@ public class AADEFactory
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item82)
+        if (GetEffectiveInvoiceType(receiptRequest) == InvoiceType.Item82)
         {
             // For Invoice Types of type 82 we use a different loading mechanism for the invocies to ensure that taxlevels are included
             return GetInvoiceDetailsIncludingTaxes(receiptRequest);
@@ -1241,6 +1345,9 @@ public class AADEFactory
             .ToList();
 
         var nextPosition = 1;
+        // 10.1/10.2 (Quantitative Receipt Notes) must emit the quantitative line fields
+        // (itemDescr/quantity/measurementUnit) like the 9.3 movement family.
+        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -1268,7 +1375,7 @@ public class AADEFactory
                 invoiceRow.netValue = Math.Abs(invoiceRow.netValue);
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
                 invoiceRow.quantitySpecified = true;
             }
@@ -1282,7 +1389,7 @@ public class AADEFactory
                 nextPosition = (int) x.Position + 1;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
                 if (!string.IsNullOrEmpty(x.ProductNumber))
                 {
@@ -1394,7 +1501,7 @@ public class AADEFactory
                 {
                     var chargeItemData = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
                         JsonSerializer.Serialize(x.ftChargeItemCaseData),
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        _caseDataJsonOptions);
                     if (chargeItemData?.GR?.MyDataOverride?.InvoiceDetails != null)
                     {
                         ApplyInvoiceDetailOverride(invoiceRow, chargeItemData.GR.MyDataOverride.InvoiceDetails);

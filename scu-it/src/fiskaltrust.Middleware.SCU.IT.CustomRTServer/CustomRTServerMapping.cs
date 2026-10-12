@@ -175,7 +175,7 @@ public static class CustomRTServerMapping
 
     /// <summary>
     /// Reads the customer identification from cbCustomer. By convention across the IT SCUs
-    /// (cf. CustomRTPrinterSCU) Customer.CustomerId carries the codice fiscale and
+    /// (cf. CustomRTPrinterSCU) Customer.CustomerTaxId carries the codice fiscale and
     /// Customer.CustomerVATId the partita IVA, so each one maps to its own document field.
     /// Both values are forwarded as-is apart from normalization: their shape is validated upstream in
     /// CustomRTServerSCU.ProcessReceiptAsync.
@@ -183,7 +183,7 @@ public static class CustomRTServerMapping
     public static (string fiscalcode, string vatcode) GetCustomerDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
         var customer = receiptRequest.GetCustomer();
-        return (ItalyValidationHelpers.NormalizeTaxCode(customer?.CustomerId), ItalyValidationHelpers.NormalizeVatId(customer?.CustomerVATId));
+        return (ItalyValidationHelpers.Normalize(customer?.CustomerTaxId), ItalyValidationHelpers.NormalizeVatId(customer?.CustomerVATId));
     }
 
     public static bool InverseAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();

@@ -47,11 +47,11 @@ public static class CustomerTaxIdValidation
             return false;
         }
 
-        return !string.IsNullOrWhiteSpace(customer.CustomerId) || !string.IsNullOrWhiteSpace(customer.CustomerVATId);
+        return !string.IsNullOrWhiteSpace(customer.CustomerTaxId) || !string.IsNullOrWhiteSpace(customer.CustomerVATId);
     }
 
     /// <summary>
-    /// Validates <see cref="Customer.CustomerId"/> (codice fiscale) and <see cref="Customer.CustomerVATId"/>
+    /// Validates <see cref="Customer.CustomerTaxId"/> (codice fiscale) and <see cref="Customer.CustomerVATId"/>
     /// (partita IVA) of the request's cbCustomer. Empty fields are valid - both identifiers are optional.
     /// </summary>
     /// <param name="errorMessage">The failure reason, or null when the request is valid.</param>
@@ -65,15 +65,15 @@ public static class CustomerTaxIdValidation
             return true;
         }
 
-        if (!string.IsNullOrWhiteSpace(customer.CustomerId) && !ItalyValidationHelpers.IsValidCodiceFiscale(customer.CustomerId))
+        if (!string.IsNullOrWhiteSpace(customer.CustomerTaxId) && !ItalyValidationHelpers.IsValidCodiceFiscale(customer.CustomerTaxId))
         {
-            errorMessage = $"The given codice fiscale '{customer.CustomerId}' is not valid. cbCustomer.CustomerId must contain either a 16 character Italian codice fiscale with a valid check character, or an 11 digit partita IVA, or must be left empty.";
+            errorMessage = $"The given codice fiscale '{customer.CustomerTaxId}' is not valid. cbCustomer.CustomerTaxId must contain a 16 character Italian codice fiscale.";
             return false;
         }
 
         if (!string.IsNullOrWhiteSpace(customer.CustomerVATId) && !ItalyValidationHelpers.IsValidPartitaIva(customer.CustomerVATId))
         {
-            errorMessage = $"The given partita IVA '{customer.CustomerVATId}' is not valid. cbCustomer.CustomerVATId must contain 11 digits with a valid check digit, optionally prefixed with 'IT', or must be left empty.";
+            errorMessage = $"The given partita IVA '{customer.CustomerVATId}' is not valid. cbCustomer.CustomerVATId must contain 11 digits with a valid check digit, optionally prefixed with 'IT', or must be left empty. A codice fiscale belongs in cbCustomer.CustomerTaxId.";
             return false;
         }
 

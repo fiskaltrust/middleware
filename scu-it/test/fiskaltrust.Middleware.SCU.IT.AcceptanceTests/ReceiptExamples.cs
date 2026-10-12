@@ -110,6 +110,14 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
+        /// <summary>#514: the same redemption, but with the voucher as a negative 0x..48 charge item instead of pay item 0x06.</summary>
+        public static ReceiptRequest CashWithMultiUseVoucherRedeem_AsChargeItem()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithMultiUseVoucherRedeem_AsChargeItem.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
         public static ReceiptRequest CashWithMutliUseVoucherPurchase()
         {
             var current_moment = DateTime.UtcNow.ToString("o");

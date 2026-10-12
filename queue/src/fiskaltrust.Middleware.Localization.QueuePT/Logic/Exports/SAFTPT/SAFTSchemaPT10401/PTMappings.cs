@@ -157,7 +157,17 @@ public static class PTMappings
     public static class CertificationPosSystem
     {
         public const string ProductCompanyTaxID = "980833310";
-        public const string SoftwareCertificateNumber = "9999";
+        /// <summary>
+        /// Certificate number assigned by the AT to the fiskaltrust.CloudCashBox. Used in production.
+        /// </summary>
+        public const string SoftwareCertificateNumber = "3535";
+
+        /// <summary>
+        /// Placeholder certificate number used in the sandbox environment, as required for non-productive documents.
+        /// </summary>
+        public const string SandboxSoftwareCertificateNumber = "9999";
+
+        public static string GetSoftwareCertificateNumber(bool sandbox) => sandbox ? SandboxSoftwareCertificateNumber : SoftwareCertificateNumber;
         public const string ProductID = "fiskaltrust.CloudCashBox/FISKALTRUST CONSULTING GMBH - Sucursal em Portugal";
         public const string ProductVersion = "2.0";
     }

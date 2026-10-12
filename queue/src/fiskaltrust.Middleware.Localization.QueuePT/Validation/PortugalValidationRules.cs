@@ -41,17 +41,11 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition RefundMissingPreviousReceiptReference =
         new("EEEE_RefundMissingPreviousReceiptReference", "Refunds must reference a previous receipt.", PortugalValidationFields.PreviousReceiptReference);
 
-    public static readonly ValidationRuleDefinition CbReceiptMomentInFuture =
-        new("EEEE_CbReceiptMomentInFuture", "cbReceiptMoment must not be in the future.", PortugalValidationFields.ReceiptMoment);
-
-    public static readonly ValidationRuleDefinition CbReceiptMomentDeviationExceeded =
-        new("EEEE_CbReceiptMomentDeviationExceeded", "cbReceiptMoment must be within 10 minutes of server time for non-handwritten receipts.", PortugalValidationFields.ReceiptMoment);
-
     public static readonly ValidationRuleDefinition CbReceiptMomentNotUtc =
         new("EEEE_CbReceiptMomentNotUtc", "cbReceiptMoment must be in UTC for time difference validation.", PortugalValidationFields.ReceiptMoment);
 
     public static readonly ValidationRuleDefinition ReceiptMomentTimeDifferenceExceeded =
-        new("EEEE_ReceiptMomentTimeDifferenceExceeded", "cbReceiptMoment and ftReceiptMoment must not differ by more than 2 minutes.", PortugalValidationFields.ReceiptMomentAndFtReceiptMoment);
+        new("EEEE_ReceiptMomentTimeDifferenceExceeded", "cbReceiptMoment and ftReceiptMoment must not differ by more than 1 minute.", PortugalValidationFields.ReceiptMomentAndFtReceiptMoment);
 
     public static readonly ValidationRuleDefinition InvalidPositions =
         new("EEEE_InvalidPositions", "Item positions must start at 1 and be strictly increasing without gaps.");
@@ -120,10 +114,10 @@ public static class PortugalValidationRules
         new("EEEE_UserTooShort", "cbUser must be at least 3 characters.", PortugalValidationFields.User);
 
     public static readonly ValidationRuleDefinition InvalidUserStructure =
-        new("EEEE_InvalidUserStructure", "cbUser must follow PTUserObject structure.", PortugalValidationFields.User);
+        new("EEEE_InvalidUserStructure", "cbUser must be a string.", PortugalValidationFields.User);
 
     public static readonly ValidationRuleDefinition CashPaymentExceedsLimit =
-        new("EEEE_CashPaymentExceedsLimit", "Individual cash payment must not exceed 3000 EUR.", PortugalValidationFields.PayItems);
+        new("EEEE_CashPaymentExceedsLimit", "The sum of all cash pay items in a receipt must not exceed 3000 EUR.", PortugalValidationFields.PayItems);
 
     public static readonly ValidationRuleDefinition InvalidCountryCodeForPT =
         new("EEEE_InvalidCountryCodeForPT", "Receipt country must be PT.", PortugalValidationFields.ReceiptCase);
@@ -209,11 +203,26 @@ public static class PortugalValidationRules
     public static readonly ValidationRuleDefinition PaymentTransferExceedsRemainingAmount =
         new("EEEE_PaymentTransferExceedsRemainingAmount", "Payment transfer amount exceeds the remaining amount after partial refunds.", PortugalValidationFields.PayItems);
 
+    public static readonly ValidationRuleDefinition PaymentTransferOriginalNotInvoice =
+        new("EEEE_PaymentTransferOriginalNotInvoice", "Payment transfers can only reference invoices.", PortugalValidationFields.PreviousReceiptReference);
+
+    public static readonly ValidationRuleDefinition VoidItemsMismatch =
+        new("EEEE_VoidItemsMismatch", "A void must match the referenced receipt.", PortugalValidationFields.PreviousReceiptReference);
+
+    public static readonly ValidationRuleDefinition FullRefundItemsMismatch =
+        new("EEEE_FullRefundItemsMismatch", "A full refund must match the referenced receipt.", PortugalValidationFields.PreviousReceiptReference);
+
+    public static readonly ValidationRuleDefinition PartialRefundItemsMismatch =
+        new("EEEE_PartialRefundItemsMismatch", "Partial refund items must match the referenced receipt and must not exceed its remaining quantities or amounts.", PortugalValidationFields.PreviousReceiptReference);
+
+    public static readonly ValidationRuleDefinition MultipleReceiptReferencesNotSupported =
+        new("EEEE_MultipleReceiptReferencesNotSupported", "cbPreviousReceiptReference must reference exactly one receipt.", PortugalValidationFields.PreviousReceiptReference);
+
     public static readonly ValidationRuleDefinition HandwrittenReceiptSeriesNumberAlreadyLinked =
         new("EEEE_HandwrittenReceiptSeriesNumberAlreadyLinked", "A handwritten receipt with the same series and number has already been linked.", PortugalValidationFields.ReceiptCaseData);
 
     public static readonly ValidationRuleDefinition TrainingModeNotSupported =
-        new("EEEE_TrainingModeNotSupported", "Training mode is not enabled for this queue.", PortugalValidationFields.ReceiptCaseFlags);
+        new("EEEE_TrainingModeNotSupported", "Training mode is not supported in Portugal.", PortugalValidationFields.ReceiptCaseFlags);
 
     public static readonly ValidationRuleDefinition WorkingDocumentPayItemsNotAllowed =
         new("EEEE_WorkingDocumentPayItemsNotAllowed", "Working documents (ProForma, Table Check, Budget) must not contain payment items.", PortugalValidationFields.PayItems);
@@ -223,8 +232,6 @@ public static class PortugalValidationRules
         ReceiptNotBalanced,
         OtherServiceNetAmountExceedsLimit,
         RefundMissingPreviousReceiptReference,
-        CbReceiptMomentInFuture,
-        CbReceiptMomentDeviationExceeded,
         CbReceiptMomentNotUtc,
         ReceiptMomentTimeDifferenceExceeded,
         InvalidPositions,
@@ -274,6 +281,12 @@ public static class PortugalValidationRules
         MixedRefundPayItemsNotAllowed,
         PayItemsMissingForRefund,
         TransportationIsNotSupported,
+        PaymentTransferExceedsRemainingAmount,
+        PaymentTransferOriginalNotInvoice,
+        VoidItemsMismatch,
+        FullRefundItemsMismatch,
+        PartialRefundItemsMismatch,
+        MultipleReceiptReferencesNotSupported,
         HandwrittenReceiptSeriesNumberAlreadyLinked,
         TrainingModeNotSupported,
         WorkingDocumentPayItemsNotAllowed

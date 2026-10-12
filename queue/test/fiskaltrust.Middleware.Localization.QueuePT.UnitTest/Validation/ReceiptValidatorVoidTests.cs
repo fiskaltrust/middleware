@@ -55,8 +55,7 @@ public class ReceiptValidatorVoidTests
         {
             IsRefund = false,
             GeneratesSignature = false,
-            IsHandwritten = false,
-            NumberSeries = null
+            IsHandwritten = false
         });
 
         results.AllErrors.Should().NotContain(e => e.Code == "EEEE_WorkingDocumentAlreadyInvoiced");

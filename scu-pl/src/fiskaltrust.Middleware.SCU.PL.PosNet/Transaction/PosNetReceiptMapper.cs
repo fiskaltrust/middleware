@@ -136,7 +136,10 @@ public static class PosNetReceiptMapper
             transaction.AddPayment(ToPaymentType(payItem.ftPayItemCase), amountGrosze, isChange, PosNetText.ToField(payItem.Description, MaxPaymentNameLength));
         }
 
-        return transaction.End();
+        // Additional lines the POS asked for (ftReceiptCaseData.PL.printout.lines) close the
+        // receipt with trend fe0 and follow it; the footer codes of the same request are a printout
+        // configuration the SCU sends before trinit (see PosNetPLSSCD).
+        return transaction.End(PosNetPrintoutReader.Read(request)?.Lines ?? []);
     }
 
     /// <summary>A command this receipt will send for a charge item, in the order the POS sent it.</summary>
@@ -521,11 +524,68 @@ public static class PosNetReceiptMapper
     };
 
     /// <summary>
+    /// The IDZ limit of the printer: an e-receipt customer identifier is at most 128 alphanumeric
+    /// characters (e.g. the KID from the MF e-Paragony app or a hub-specific customer id).
+    /// </summary>
+    public const int MaxEReceiptCustomerIdLength = 128;
+
+    /// <summary>
     /// Reads CustomerVATId from cbCustomer (MiddlewareCustomer shape) without referencing the
     /// queue assemblies. The trnipset ni parameter is numeric, so formatting characters
     /// (e.g. "123-456-32-18") are stripped.
     /// </summary>
     private static string? GetCustomerVatId(ReceiptRequest request)
+    {
+        var value = GetCustomerField(request, "CustomerVATId");
+        if (value is null)
+        {
+            return null;
+        }
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        return digits.Length == 0 ? null : digits;
+    }
+
+    /// <summary>
+    /// Reads the e-receipt customer identifier (IDZ) from the Polish sub-payload of
+    /// ftReceiptCaseData — <c>{ "PL": { "eReceipt": { "customerId": "…" } } }</c> (middleware#764).
+    /// It is a delivery address for the e-paragon (the KID from the e-Paragony app or a hub token),
+    /// deliberately separate from the customer identity in cbCustomer: binding it makes the receipt
+    /// paperless, so it has to be an explicit request. A present identifier is validated here,
+    /// before any frame is sent: the printer limits the IDZ to
+    /// <see cref="MaxEReceiptCustomerIdLength"/> characters, and the protocol field carries ASCII
+    /// only. Absent or empty means no binding — a plain paper receipt.
+    /// </summary>
+    public static string? GetEReceiptCustomerId(ReceiptRequest request)
+    {
+        if (PLReceiptCaseDataReader.ReadPLSection(request) is not { } pl
+            || !PLReceiptCaseDataReader.TryGetPropertyIgnoreCase(pl, "eReceipt", out var eReceipt)
+            || eReceipt.ValueKind != JsonValueKind.Object
+            || !PLReceiptCaseDataReader.TryGetPropertyIgnoreCase(eReceipt, "customerId", out var value)
+            || value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var customerId = value.GetString();
+        if (string.IsNullOrWhiteSpace(customerId))
+        {
+            return null;
+        }
+        if (customerId.Length > MaxEReceiptCustomerIdLength)
+        {
+            throw new PLValidationException(
+                $"The e-receipt customer identifier (ftReceiptCaseData.PL.eReceipt.customerId) is {customerId.Length} characters long — the printer's IDZ limit is {MaxEReceiptCustomerIdLength}.");
+        }
+        if (customerId.Any(c => c is < ' ' or > '~'))
+        {
+            throw new PLValidationException(
+                "The e-receipt customer identifier (ftReceiptCaseData.PL.eReceipt.customerId) contains non-ASCII or control characters, which the IDZ protocol field cannot carry.");
+        }
+        return customerId;
+    }
+
+    /// <summary>Reads one string property of the cbCustomer JSON object, tolerating any other shape.</summary>
+    private static string? GetCustomerField(ReceiptRequest request, string fieldName)
     {
         var cbCustomer = request.cbCustomer?.ToString();
         if (string.IsNullOrWhiteSpace(cbCustomer))
@@ -536,12 +596,15 @@ public static class PosNetReceiptMapper
         try
         {
             using var document = JsonDocument.Parse(cbCustomer);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
             foreach (var property in document.RootElement.EnumerateObject())
             {
-                if (property.Name.Equals("CustomerVATId", StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.String)
+                if (property.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.String)
                 {
-                    var digits = new string(property.Value.GetString()!.Where(char.IsDigit).ToArray());
-                    return digits.Length == 0 ? null : digits;
+                    return property.Value.GetString();
                 }
             }
         }

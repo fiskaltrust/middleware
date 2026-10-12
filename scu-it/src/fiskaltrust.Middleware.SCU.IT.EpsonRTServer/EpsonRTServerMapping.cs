@@ -159,7 +159,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTServer
                 // partita IVA, as in the Custom SCUs. Normalized so the IT country prefix is not
                 // forwarded to the server as part of the tax id.
                 var customer = receiptRequest.GetCustomer();
-                var customerTaxId = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerId, customer?.CustomerVATId);
+                var customerTaxId = ItalyValidationHelpers.SelectCustomerTaxId(customer?.CustomerTaxId, customer?.CustomerVATId);
                 if (!string.IsNullOrEmpty(customerTaxId))
                 {
                     sb.Append($"<printRecTaxID taxID=\"{Escape(customerTaxId)}\" />");

@@ -172,7 +172,7 @@ namespace fiskaltrust.Middleware.Queue
             }
         }
 
-        public static string GetCountry(ReceiptRequest data)
+        public static string GetCountry(ReceiptRequest data, string fallback)
         {
             return (0xFFFF000000000000 & (ulong) data.ftReceiptCase) switch
             {
@@ -180,6 +180,7 @@ namespace fiskaltrust.Middleware.Queue
                 0x4652000000000000 => "FR",
                 0x4D45000000000000 => "ME",
                 0x4954000000000000 => "IT",
+                0x0000000000000000 => fallback?.ToUpperInvariant(),
                 _ => "AT",
             };
         }

@@ -74,6 +74,36 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         }
 
         [Fact]
+        public async Task FailTransaction_ValidMultiTransNestedUnderMarketKey_ExpectValid()
+        {
+            // Shape produced by the v2 -> v0 mapping: the DE case data is nested under the market key
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", string.Empty, 0x444500010000000b);
+            receiptRequest.ftReceiptCaseData = "{\"DE\": {\"CurrentStartedTransactionNumbers\": [8, 9]}, \"v2ReceiptRequest\": {\"cbReceiptReference\": \"\"}}";
+            await _fixture.AddOpenOrders("FailTransaction-X", 8);
+            await _fixture.AddOpenOrders("FailTransaction-Y", 9);
+            await _fixture.AddOpenOrders("FailTransaction-Z", 10);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1));
+            var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
+            receiptResponse.Should().NotBeNull();
+            receiptResponse.ftSignatures.Should().NotBeNull();
+            await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, string.Empty);
+            var opentrans = await _fixture.openTransactionRepository.GetAsync("FailTransaction-Z").ConfigureAwait(false);
+            opentrans.Should().NotBeNull();
+            opentrans = await _fixture.openTransactionRepository.GetAsync("FailTransaction-Y").ConfigureAwait(false);
+            opentrans.Should().BeNull();
+            opentrans = await _fixture.openTransactionRepository.GetAsync("FailTransaction-X").ConfigureAwait(false);
+            opentrans.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task FailTransaction_NestedUnderMarketKeyWithoutTransactionNumbers_ExpectArgumentException()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", string.Empty, 0x444500010000000b);
+            receiptRequest.ftReceiptCaseData = "{\"DE\": {}, \"v2ReceiptRequest\": {\"CurrentStartedTransactionNumbers\": [8, 9]}}";
+            await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, "CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.").ConfigureAwait(false);
+        }
+
+        [Fact]
         public async Task FailTransaction_WithFailedStartTransaction_ExpectValid()
         {
             var receiptRequest = _receiptTests.GetReceipt("FailTransactionReceipt", "FailedStartTransaction", 0x444500000000000B);

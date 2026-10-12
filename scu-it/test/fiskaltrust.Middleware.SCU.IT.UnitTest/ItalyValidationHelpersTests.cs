@@ -49,9 +49,6 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         // substituted code.
         [InlineData("MRTMTT25D09F20RU")]
         [InlineData("RSSMRA80A01H5LMX")]
-        // Legal entities use their partita IVA as codice fiscale.
-        [InlineData("01606720215")]
-        [InlineData("IT01606720215")]
         public void IsValidCodiceFiscale_WithValidValue_ReturnsTrue(string codiceFiscale)
         {
             ItalyValidationHelpers.IsValidCodiceFiscale(codiceFiscale).Should().BeTrue();
@@ -68,6 +65,10 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [InlineData("RSSMRA80A00H501U")]        // day 00 is out of range
         [InlineData("DE123456789")]
         [InlineData("01606720216")]             // 11 digits, wrong check digit
+        // A partita IVA is not a codice fiscale, not even a valid one from a legal entity: it belongs
+        // in cbCustomer.CustomerVATId.
+        [InlineData("01606720215")]
+        [InlineData("IT01606720215")]
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
@@ -111,26 +112,16 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         }
 
         [Theory]
-        [InlineData(null, "")]
-        [InlineData("  it01606720215 ", "01606720215")]           // an IT prefixed partita IVA is stripped
-        [InlineData("IT12345678901", "12345678901")]              // 11 digits remain, so it is a partita IVA
-        [InlineData("RSSMRA80A01H501U", "RSSMRA80A01H501U")]
-        [InlineData("ITLMRA80A01H501U", "ITLMRA80A01H501U")]      // a surname starting with IT is left alone
-        [InlineData("IT12345", "IT12345")]                        // not 11 digits, so nothing is stripped
-        public void NormalizeTaxCode_StripsTheCountryPrefixOnlyForAPartitaIva(string value, string expected)
-        {
-            ItalyValidationHelpers.NormalizeTaxCode(value).Should().Be(expected);
-        }
-
-        [Theory]
         [InlineData(null, null, "")]
         [InlineData("RSSMRA80A01H501U", null, "RSSMRA80A01H501U")]
         [InlineData(null, "01606720215", "01606720215")]
         [InlineData(null, "IT01606720215", "01606720215")]
         [InlineData("RSSMRA80A01H501U", "01606720215", "RSSMRA80A01H501U")]   // the codice fiscale wins
-        [InlineData("", "01606720215", "01606720215")]                        // an empty CustomerId falls through
+        [InlineData("", "01606720215", "01606720215")]                        // an empty CustomerTaxId falls through
         [InlineData("   ", "01606720215", "01606720215")]                     // ... and so does a blank one
-        [InlineData("IT01606720215", null, "01606720215")]                    // CustomerId carrying a partita IVA
+        // CustomerTaxId is a codice fiscale slot, so it is only normalized: the IT country prefix is
+        // stripped from the partita IVA alone.
+        [InlineData("IT01606720215", null, "IT01606720215")]
         [InlineData("ITLMRA80A01H501U", null, "ITLMRA80A01H501U")]            // a surname starting with IT survives
         public void SelectCustomerTaxId_PrefersTheCodiceFiscaleAndNormalizesBoth(string customerId, string customerVatId, string expected)
         {
