@@ -61,6 +61,11 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             QueueItemId = response.ftQueueItemID,
             CashBoxIdentification = response.ftCashBoxIdentification,
             Siret = _configuration.Siret,
+            Rcs = NullIfEmpty(_configuration.Rcs),
+            Naf = NullIfEmpty(_configuration.Naf),
+            LegalForm = NullIfEmpty(_configuration.LegalForm),
+            VatOption = NullIfEmpty(_configuration.VatOption),
+            ElectronicAddress = NullIfEmpty(_configuration.ElectronicAddress),
             ReceiptId = response.ftReceiptIdentification,
             ReceiptMoment = response.ftReceiptMoment,
             ReceiptCase = (long) receiptRequest.ftReceiptCase,
@@ -102,6 +107,8 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
 
         return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
     }
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     public void Dispose() => _signer.Dispose();
 }
