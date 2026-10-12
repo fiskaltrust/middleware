@@ -72,6 +72,11 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             QueueItemId = response.ftQueueItemID,
             CashBoxIdentification = response.ftCashBoxIdentification,
             Siret = _configuration.Siret,
+            Rcs = NullIfEmpty(_configuration.Rcs),
+            Naf = NullIfEmpty(_configuration.Naf),
+            LegalForm = NullIfEmpty(_configuration.LegalForm),
+            VatOption = NullIfEmpty(_configuration.VatOption),
+            ElectronicAddress = NullIfEmpty(_configuration.ElectronicAddress),
             ReceiptId = response.ftReceiptIdentification,
             ReceiptMoment = response.ftReceiptMoment,
             ReceiptCase = (long) receiptRequest.ftReceiptCase,
@@ -109,6 +114,8 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         => Task.FromResult(FRHashSigning.SigningCertificate(_signer.Key, _configuration.CertificateBase64, _configuration.CertificateSerialNumber, CertificationBody));
 
     public Task<FRHashSignature> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_signer.Key, sha256, CertificationBody));
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     public void Dispose() => _signer.Dispose();
 }
