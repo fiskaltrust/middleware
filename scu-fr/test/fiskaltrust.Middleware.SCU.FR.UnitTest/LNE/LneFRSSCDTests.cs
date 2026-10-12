@@ -178,6 +178,62 @@ public class LneFRSSCDTests
         act.Should().Throw<FRValidationException>().WithMessage("*Siret*");
     }
 
+    [Fact]
+    public async Task IssuerClaims_FollowTheSiretInTheSignedDataSet()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration(privateKey);
+        configuration.Rcs = "RCS Nanterre B 642036065";
+        configuration.Naf = "4711D";
+        configuration.LegalForm = "SAS, au capital de 500000 EUR";
+        configuration.VatOption = "debits";
+        configuration.ElectronicAddress = "123456789_POS";
+        using var sut = new LneFRSSCD(configuration);
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // market-fr#141: fixed positions right after the SIRET.
+        DataSetOf(response).Split('|')[..6].Should().Equal(FRTestData.Siret, "RCS Nanterre B 642036065", "4711D", "SAS, au capital de 500000 EUR", "debits", "123456789_POS");
+    }
+
+    [Fact]
+    public async Task IssuerClaims_AreEmptyFieldsWhenNotConfigured()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        DataSetOf(response).Split('|')[..6].Should().Equal(FRTestData.Siret, "", "", "", "", "");
+    }
+
+    [Fact]
+    public void FromConfiguration_WithAnUnknownVatOption_IsRejected()
+    {
+        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["VatOption"] = "monthly" });
+
+        act.Should().Throw<FRValidationException>().WithMessage("*VatOption*");
+    }
+
+    [Fact]
+    public void FromConfiguration_WithTheFieldSeparatorInAClaim_IsRejected()
+    {
+        var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["LegalForm"] = "SAS|SARL" });
+
+        act.Should().Throw<FRValidationException>().WithMessage("*LegalForm*|*");
+    }
+
+    [Fact]
+    public void FromConfiguration_ReadsTheIssuerClaims()
+    {
+        var configuration = LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["rcs"] = "RCS Paris B 1", ["VatOption"] = "receipts" });
+
+        configuration.Rcs.Should().Be("RCS Paris B 1");
+        configuration.VatOption.Should().Be("receipts");
+    }
+
     private static async Task<string> DataSetUnderCulture(LneFRSSCD sut, CultureInfo culture)
     {
         var previous = Thread.CurrentThread.CurrentCulture;

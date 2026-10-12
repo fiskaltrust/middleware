@@ -153,6 +153,54 @@ public class InfoCertFRSSCDTests
         act.Should().Throw<FRValidationException>().WithMessage("*PrivateKey*");
     }
 
+    [Fact]
+    public async Task IssuerClaims_AreSignedNextToTheSiret()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration(privateKey);
+        configuration.Rcs = "RCS Nanterre B 642036065";
+        configuration.Naf = "4711D";
+        configuration.LegalForm = "SAS, au capital de 500000 EUR";
+        configuration.VatOption = "receipts";
+        configuration.ElectronicAddress = "123456789";
+        using var sut = new InfoCertFRSSCD(configuration);
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        using var payload = JsonDocument.Parse(FromBase64Url(SignatureOf(response).Split('.')[1]));
+        var root = payload.RootElement;
+        root.GetProperty("rcs").GetString().Should().Be("RCS Nanterre B 642036065");
+        root.GetProperty("naf").GetString().Should().Be("4711D");
+        root.GetProperty("legalform").GetString().Should().Be("SAS, au capital de 500000 EUR");
+        root.GetProperty("vatoption").GetString().Should().Be("receipts");
+        root.GetProperty("elecaddress").GetString().Should().Be("123456789");
+    }
+
+    [Fact]
+    public async Task IssuerClaims_AreOmittedWhenNotConfigured()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        using var payload = JsonDocument.Parse(FromBase64Url(SignatureOf(response).Split('.')[1]));
+        foreach (var claim in new[] { "rcs", "naf", "legalform", "vatoption", "elecaddress" })
+        {
+            payload.RootElement.TryGetProperty(claim, out var _).Should().BeFalse(claim);
+        }
+    }
+
+    [Fact]
+    public void FromConfiguration_WithAnUnknownVatOption_IsRejected()
+    {
+        var act = () => InfoCertConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["VatOption"] = "monthly" });
+
+        act.Should().Throw<FRValidationException>().WithMessage("*VatOption*");
+    }
+
     private static string SignatureOf(ProcessResponse response)
         => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
 
