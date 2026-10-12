@@ -70,7 +70,11 @@ public class JournalProcessor
                     _ => new[] {Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
                     {
                         Assembly = ThisAssembly.AssemblyName,
-                        ThisAssembly.AssemblyVersion
+                        ThisAssembly.AssemblyVersion,
+                        // AssemblyVersion carries major.minor only; build and revision are in the file version
+                        // and the informational version (the attributes the v1 QueueBootstrapper reads).
+                        ThisAssembly.AssemblyFileVersion,
+                        ThisAssembly.AssemblyInformationalVersion
                     }))}.ToAsyncEnumerable()
                 };
             }

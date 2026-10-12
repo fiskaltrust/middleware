@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Mime;
+using System.Reflection;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -12,6 +13,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.v2.UnitTest;
@@ -181,6 +183,27 @@ public class JournalProcessorTests
         Assert.Equal("utf-8", contentType.CharSet);
         Assert.True(isValidJson, "Assembly info should be valid JSON");
         Assert.Contains("Assembly", jsonString);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_VersionJournal_ReturnsFileAndInformationalVersion()
+    {
+        // Arrange
+        var request = new JournalRequest { ftJournalType = (JournalType) 0 };
+        var assembly = typeof(JournalProcessor).Assembly;
+        var expectedFileVersion = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version;
+        var expectedInformationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
+
+        // Act
+        var (_, pipeReader) = await _journalProcessor.ProcessAsync(request);
+        var json = JObject.Parse(await ReadPipeReaderAsStringAsync(pipeReader));
+
+        // Assert: the existing fields are unchanged (backward compatible) ...
+        Assert.Equal(assembly.GetName().Name, json["Assembly"]!.Value<string>());
+        Assert.Equal(assembly.GetName().Version!.ToString(), json["AssemblyVersion"]!.Value<string>());
+        // ... and the build/revision are now exposed.
+        Assert.Equal(expectedFileVersion, json["AssemblyFileVersion"]!.Value<string>());
+        Assert.Equal(expectedInformationalVersion, json["AssemblyInformationalVersion"]!.Value<string>());
     }
 
     [Fact]
