@@ -188,8 +188,8 @@ public static class PLReceiptExamples
         cbPayItems = [],
     });
 
-    /// <summary>The moment the daily-report cassettes were recorded at: 2026-09-08, 12:00 Warsaw time.</summary>
-    public static readonly DateTime RecordedClosingMoment = new(2026, 9, 8, 10, 0, 0, DateTimeKind.Utc);
+    /// <summary>The moment the daily-report cassettes were recorded at: 2026-10-09, 12:00 Warsaw time.</summary>
+    public static readonly DateTime RecordedClosingMoment = new(2026, 10, 9, 10, 0, 0, DateTimeKind.Utc);
 
     private static ProcessRequest Wrap(ReceiptRequest request) => new()
     {

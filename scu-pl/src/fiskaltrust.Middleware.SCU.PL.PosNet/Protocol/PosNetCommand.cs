@@ -136,6 +136,22 @@ public static class PosNetCommands
 
     public static PosNetCommand Scnt() => new("scnt");
 
+    /// <summary>The protected-memory document type of a receipt (paragon) for <see cref="Eclastdocnoget"/>.</summary>
+    public const int ReceiptDocumentType = 0;
+
+    /// <summary>
+    /// The number of the last document of a type in the protected memory (POT-I-DEV-37 p.102, <c>di</c>;
+    /// <c>di0</c> when there is none). One numbering across all document types, so it is not the receipt number.
+    /// </summary>
+    public static PosNetCommand Eclastdocnoget(int documentType)
+        => new("eclastdocnoget", [new("ty", documentType.ToString(CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The register's clock (POT-I-DEV-37 p.18): <c>tm</c> in ISO 8601 with offset, and <c>da</c> as
+    /// <c>yyyy-MM-dd;HH:mm</c> — the only field older firmware answers (POT-I-DEV-05).
+    /// </summary>
+    public static PosNetCommand Rtcget() => new("rtcget");
+
     /// <summary>The fiscal memory status — among it the PTU rate table as programmed on the register (<c>va..vg</c>).</summary>
     public static PosNetCommand Sfsk() => new("sfsk");
 

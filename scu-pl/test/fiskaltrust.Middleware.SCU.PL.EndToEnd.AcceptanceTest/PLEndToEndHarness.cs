@@ -46,7 +46,6 @@ public sealed class PLEndToEndHarness : IDisposable
         ScuId = Guid.NewGuid();
         PosSystemId = Guid.NewGuid();
         Target = PosNetTestTarget.Open(TestProject.Cassettes, cassetteName);
-        PtuSlots = new PtuSlotResolver(Target.Configuration.VatRateTable);
 
         var configuration = new Dictionary<string, object>
         {
@@ -125,8 +124,11 @@ public sealed class PLEndToEndHarness : IDisposable
 
     public IEnumerable<PosNetResponse> SentCommands => Target.SentCommands;
 
-    /// <summary>The PTU slots as the SCU resolves them — the footprint has to use the same table.</summary>
-    public PtuSlotResolver PtuSlots { get; }
+    /// <summary>
+    /// The PTU slots as the SCU resolves them — the footprint has to use the same table. Read once,
+    /// after the first verified receipt, so the read sits in a fixed place in the recording.
+    /// </summary>
+    private PtuSlotResolver? _ptuSlots;
 
     /// <summary>
     /// The committed business case with this harness's cashbox and pos system filled in — resolved by
@@ -153,8 +155,9 @@ public sealed class PLEndToEndHarness : IDisposable
         var response = await SignPreparedAsync(preparedJson);
         var transaction = await Probe.ReadTransactionAsync();
         var after = await Probe.SnapshotAsync();
+        _ptuSlots ??= await Probe.ReadPtuSlotsAsync(Target.Configuration);
 
-        var expected = FiscalFootprint.Of(request, PtuSlots);
+        var expected = FiscalFootprint.Of(request, _ptuSlots);
         var discrepancies = FootprintComparer.Compare(expected, transaction, before, after, FiscalDocumentNumber.Of(response));
         return new VerifiedReceipt(request, response, expected, discrepancies);
     }

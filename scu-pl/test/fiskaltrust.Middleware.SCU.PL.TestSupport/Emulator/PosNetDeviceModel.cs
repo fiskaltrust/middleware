@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.SCU.PL.TestSupport.Emulator;
 /// subtotal discount split over the PTU rates — and verifies the fiscal value a <c>trend</c> claims
 /// against its own, answering 2805 like the device. What it totalizes is readable back through the
 /// same status commands a printer offers (<c>strns</c>, <c>stot</c>, <c>scnt</c>, <c>sfsk</c>,
-/// <c>scomm</c>), in the shape the real device answers them.
+/// <c>scomm</c>, <c>eclastdocnoget</c>, <c>rtcget</c>), in the shape the real device answers them.
 /// </summary>
 /// <remarks>
 /// It is a model, not a printer: it can only ever confirm what the protocol demands, never what a
@@ -38,7 +38,11 @@ public sealed class PosNetDeviceModel
 
     private const string NoSalesMoment = "2000-01-01;00:00";
 
+    /// <summary>The protected-memory document types the model files documents under (POT-I-DEV-37 p.102).</summary>
+    private const int ReceiptDocument = 0, CanceledReceiptDocument = 1, DailyReportDocument = 4, NonFiscalDocument = 5;
+
     private readonly long[] _receiptTotalizers = new long[SlotCount];
+    private readonly Dictionary<int, int> _lastDocumentByType = new() { [ReceiptDocument] = 95 };
     private OpenTransaction? _transaction;
     private CompletedReceipt? _lastReceipt;
 
@@ -84,6 +88,20 @@ public sealed class PosNetDeviceModel
     /// (measured: <c>bt18 nf1</c> → <c>hn20</c>, then <c>hn21</c> after the report).
     /// </summary>
     public int Printouts { get; private set; } = 84;
+
+    /// <summary>
+    /// The protected memory files every document under one sequence across all types (measured:
+    /// receipts and non-fiscal printouts interleave in <c>eclastdocnoget</c>), and runs ahead of the
+    /// printout counter by the documents that are never printed — 11 on the office printer, which
+    /// the seed mirrors. The last receipt of the seeded day is the last document.
+    /// </summary>
+    public int ProtectedMemoryDocuments { get; private set; } = 95;
+
+    /// <summary>
+    /// The register's clock, in the register's zone. A test that asserts the device moment pins it;
+    /// the default runs on the real clock, like the printer.
+    /// </summary>
+    public Func<DateTimeOffset> Clock { get; set; } = () => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Europe/Warsaw");
 
     /// <summary>Non-fiscal printouts since the last daily report (<c>nf</c>), e.g. goods returns.</summary>
     public int NonFiscalPrintouts { get; private set; }
@@ -137,6 +155,8 @@ public sealed class PosNetDeviceModel
             "prncancel" => Prncancel(),
             "dailyrep" => Dailyrep(parameters),
             "stocash" => Stocash(parameters),
+            "eclastdocnoget" => Eclastdocnoget(parameters),
+            "rtcget" => Rtcget(),
             _ => Ok(command.CommandId),
         };
     }
@@ -316,6 +336,7 @@ public sealed class PosNetDeviceModel
         }
         CompletedReceipts++;
         Printouts++;
+        FileDocument(ReceiptDocument);
         _lastReceipt = new CompletedReceipt(transaction.PerRate.ToArray(), payments, change);
         _transaction = null;
         return Ok("trend");
@@ -349,6 +370,7 @@ public sealed class PosNetDeviceModel
         NonFiscalPrintouts = 0;
         _lastReceipt = null;
         Printouts++;
+        FileDocument(DailyReportDocument);
         return Ok("dailyrep");
     }
 
@@ -365,6 +387,7 @@ public sealed class PosNetDeviceModel
         }
         NonFiscalPrintouts++;
         Printouts++;
+        FileDocument(NonFiscalDocument);
         return Ok("stocash");
     }
 
@@ -377,6 +400,7 @@ public sealed class PosNetDeviceModel
         CanceledReceipts++;
         CanceledTotalGrosze += transaction.PerRate.Sum();
         Printouts++;
+        FileDocument(CanceledReceiptDocument);
         _transaction = null;
         return Ok("prncancel");
     }
@@ -405,6 +429,30 @@ public sealed class PosNetDeviceModel
     /// <summary>The rate table as the register formats it: <c>va23,00 vb8,00 … ve101,00</c>.</summary>
     private string RateTableFields()
         => string.Concat(RateTable.Select((rate, i) => $"v{(char)('a' + i)}{rate.ToString("0.00", CultureInfo.InvariantCulture).Replace('.', ',')}\t"));
+
+    /// <summary>Files a document in the protected memory under the next number of the one sequence.</summary>
+    private void FileDocument(int documentType) => _lastDocumentByType[documentType] = ++ProtectedMemoryDocuments;
+
+    /// <summary>The last document of a type, <c>di0</c> when there is none; without a type, the last document of all.</summary>
+    private string Eclastdocnoget(IReadOnlyDictionary<string, string> p)
+    {
+        if (!p.ContainsKey("ty"))
+        {
+            return $"eclastdocnoget\tdi{ProtectedMemoryDocuments}\t";
+        }
+        if (!TryInt(p, "ty", out var documentType))
+        {
+            return Error("eclastdocnoget", PosNetErrors.Parameter);
+        }
+        return $"eclastdocnoget\tdi{_lastDocumentByType.GetValueOrDefault(documentType)}\t";
+    }
+
+    /// <summary>The clock in both shapes POT-I-DEV-37 answers it: <c>da2020-10-20;11:49</c> and ISO 8601 with offset.</summary>
+    private string Rtcget()
+    {
+        var now = Clock();
+        return $"rtcget\tda{now.ToString("yyyy-MM-dd;HH:mm", CultureInfo.InvariantCulture)}\ttm{now.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture)}\t";
+    }
 
     private static bool TryInt(IReadOnlyDictionary<string, string> p, string key, out int value)
     {
