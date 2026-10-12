@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 

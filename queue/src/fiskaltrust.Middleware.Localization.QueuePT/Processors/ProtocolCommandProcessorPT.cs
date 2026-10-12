@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Validation;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.storage.V0;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;

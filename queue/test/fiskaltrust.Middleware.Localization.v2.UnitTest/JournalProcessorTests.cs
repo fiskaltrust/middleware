@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Mime;
 using System.Text;
@@ -8,6 +8,8 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;

@@ -9,6 +9,9 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -20,12 +23,10 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueBEBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IBESSCD beSSCD)
+    public QueueBEBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IBESSCD beSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var signaturCreationUnitBE = new ftSignaturCreationUnitBE();
-
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
 
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueBEAsync(id)).CashBoxIdentification);
 
