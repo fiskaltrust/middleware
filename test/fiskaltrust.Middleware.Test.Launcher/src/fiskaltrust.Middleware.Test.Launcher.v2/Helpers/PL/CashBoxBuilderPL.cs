@@ -1,4 +1,5 @@
 using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.PL.InMemory;
@@ -75,8 +76,18 @@ class CashBoxBuilderPL : ICashBoxBuilder
             queueId,
             loggerFactory,
             queueConfiguration.Configuration,
-            new PLSSCDJsonWarper(scu),
+            new FixedPLSSCDClientFactory(new PLSSCDJsonWarper(scu)),
             new InMemoryStorageProvider(loggerFactory, queueId, queueConfiguration.Configuration));
+    }
+
+    /// <summary>
+    /// The queue resolves its SCU through a client factory using the ftSignaturCreationUnitPL row
+    /// from the configuration repository; the launcher builds the SCU locally, so the factory
+    /// always hands back that instance.
+    /// </summary>
+    private sealed class FixedPLSSCDClientFactory(IPLSSCD sscd) : IClientFactory<IPLSSCD>
+    {
+        public IPLSSCD CreateClient(ClientConfiguration configuration) => sscd;
     }
 
     /// <summary>

@@ -15,9 +15,9 @@ namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 /// device would reject anyway. Tax-class immutability (item name ↔ PTU slot) is enforced by the
 /// register's product database and therefore stays device-side.
 /// </summary>
-public class ReceiptCommandProcessorPL(IPLSSCD sscd) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorPL(AsyncLazy<IPLSSCD> sscd) : IReceiptCommandProcessor
 {
-    private readonly IPLSSCD _sscd = sscd;
+    private readonly AsyncLazy<IPLSSCD> _sscd = sscd;
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
 
@@ -51,7 +51,7 @@ public class ReceiptCommandProcessorPL(IPLSSCD sscd) : IReceiptCommandProcessor
 
         try
         {
-            var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            var response = await (await _sscd).ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
                 ReceiptResponse = request.ReceiptResponse,

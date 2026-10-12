@@ -157,7 +157,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 InitSignaturCreationUnitGRAsync(config.SignaturCreationUnitsGR, configurationRepository),
                 InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig),
                 InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository),
-                InitSignaturCreationUnitPLAsync(config.SignaturCreationUnitsPL, configurationRepository),
+                InitSignaturCreationUnitPLAsync(config.SignaturCreationUnitsPL, configurationRepository, enforceUpdateUserDefinedConfig),
             };
             await Task.WhenAll(tasks);
         }
@@ -180,7 +180,7 @@ namespace fiskaltrust.Middleware.Storage.Base
             await InitSignaturCreationUnitDEAsync(config.SignaturCreationUnitsDE, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
             await InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
             await InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository).ConfigureAwait(false);
-            await InitSignaturCreationUnitPLAsync(config.SignaturCreationUnitsPL, configurationRepository).ConfigureAwait(false);
+            await InitSignaturCreationUnitPLAsync(config.SignaturCreationUnitsPL, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
         }
 
         private T ParseParameter<T>(Dictionary<string, object> config, string key) where T : new()
@@ -537,14 +537,31 @@ namespace fiskaltrust.Middleware.Storage.Base
             }
         }
 
-        private async Task InitSignaturCreationUnitPLAsync(List<ftSignaturCreationUnitPL> signaturCreationUnitsPL, IConfigurationRepository configurationRepository)
+        private async Task InitSignaturCreationUnitPLAsync(List<ftSignaturCreationUnitPL> signaturCreationUnitsPL, IConfigurationRepository configurationRepository, bool enforceUpdateUserDefinedConfig)
         {
             foreach (var item in signaturCreationUnitsPL)
             {
-                var scu = await configurationRepository.GetSignaturCreationUnitPLAsync(item.ftSignaturCreationUnitPLId).ConfigureAwait(false);
-                if (scu == null)
+                var db_scu = await configurationRepository.GetSignaturCreationUnitPLAsync(item.ftSignaturCreationUnitPLId).ConfigureAwait(false);
+                if (db_scu == null)
                 {
                     await configurationRepository.InsertOrUpdateSignaturCreationUnitPLAsync(item).ConfigureAwait(false);
+                }
+                else if (db_scu.TimeStamp < item.TimeStamp || enforceUpdateUserDefinedConfig)
+                {
+                    // The PL queue resolves its SCU client from this repository row at runtime, so a
+                    // URL changed in the portal has to be carried over — same pattern as DE/IT.
+                    var changed = false;
+                    if (!string.IsNullOrEmpty(item.Url) && db_scu.Url != item.Url)
+                    {
+                        changed = true;
+                        db_scu.Url = item.Url;
+                    }
+
+                    if (changed)
+                    {
+                        db_scu.TimeStamp = item.TimeStamp;
+                        await configurationRepository.InsertOrUpdateSignaturCreationUnitPLAsync(db_scu).ConfigureAwait(false);
+                    }
                 }
             }
         }

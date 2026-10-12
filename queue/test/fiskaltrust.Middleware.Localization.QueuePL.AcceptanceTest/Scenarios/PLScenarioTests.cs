@@ -13,10 +13,14 @@ namespace fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest.Scenarios;
 
 public class PLScenarioTests
 {
+    private const string ScuUrl = "grpc://localhost:1400";
+
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly MockPLSSCD _sscd;
+    private readonly RecordingPLSSCDClientFactory _clientFactory;
     private readonly Guid _queueId;
     private readonly Guid _cashBoxId;
+    private readonly Guid _scuId;
 
     public PLScenarioTests() : this(startQueue: true) { }
 
@@ -24,7 +28,9 @@ public class PLScenarioTests
     {
         _queueId = Guid.NewGuid();
         _cashBoxId = Guid.NewGuid();
+        _scuId = Guid.NewGuid();
         _sscd = new MockPLSSCD();
+        _clientFactory = new RecordingPLSSCDClientFactory(_sscd);
 
 
         var configuration = new Dictionary<string, object>
@@ -52,11 +58,21 @@ public class PLScenarioTests
                     new ftQueuePL
                     {
                         ftQueuePLId = _queueId,
-                        CashBoxIdentification = MockPLSSCD.UniqueDeviceNumber
+                        CashBoxIdentification = MockPLSSCD.UniqueDeviceNumber,
+                        ftSignaturCreationUnitPLId = _scuId
                     }
                 })
             },
-            { "init_ftSignaturCreationUnitPL", JsonSerializer.Serialize(new List<ftSignaturCreationUnitPL>()) },
+            { "init_ftSignaturCreationUnitPL", JsonSerializer.Serialize(new List<ftSignaturCreationUnitPL>
+                {
+                    new ftSignaturCreationUnitPL
+                    {
+                        ftSignaturCreationUnitPLId = _scuId,
+                        Url = ScuUrl,
+                        TimeStamp = DateTime.UtcNow.Ticks
+                    }
+                })
+            },
             { "init_masterData", JsonSerializer.Serialize(new MasterDataConfiguration
                 {
                     Account = new AccountMasterData
@@ -76,7 +92,7 @@ public class PLScenarioTests
 
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var storageProvider = new InMemoryLocalizationStorageProvider(_queueId, configuration, loggerFactory);
-        var bootstrapper = new QueuePLBootstrapper(_queueId, loggerFactory, configuration, _sscd, storageProvider);
+        var bootstrapper = new QueuePLBootstrapper(_queueId, loggerFactory, configuration, _clientFactory, storageProvider);
         _signProcessor = bootstrapper.RegisterForSign();
     }
 
@@ -152,6 +168,19 @@ public class PLScenarioTests
         response.ftCashBoxIdentification.Should().Be(MockPLSSCD.UniqueDeviceNumber);
         response.ftReceiptIdentification.Should().EndWith("1");
         response.ftSignatures.Should().Contain(x => (ulong)x.ftSignatureType == 0x504C_2000_0000_0101);
+    }
+
+    [Fact]
+    public async Task Scu_ShouldBeResolvedFromConfigurationRepository()
+    {
+        // The SCU client must be created from the ftSignaturCreationUnitPL row the storage
+        // bootstrapper persisted into the configuration repository — the queue itself never
+        // reads the SCU from the init config.
+        await SignAsync(CreateRequest(0x504C_2000_0000_0001, Item(10m), Cash(10m)));
+
+        _clientFactory.CreateClientCalls.Should().Be(1);
+        _clientFactory.LastClientConfiguration.Should().NotBeNull();
+        _clientFactory.LastClientConfiguration!.Url.Should().Be(ScuUrl);
     }
 
     [Fact]

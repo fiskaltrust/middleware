@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.pl;
+using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePL;
 using fiskaltrust.Middleware.Localization.v2;
@@ -95,8 +97,17 @@ public sealed class PLEndToEndHarness : IDisposable
         _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         _storage = new InMemoryStorageProvider(_loggerFactory, QueueId, configuration);
         var sut = AssumeFiscalized ? new AssumeFiscalizedPLSSCD(Target.Sut) : Target.Sut;
-        var bootstrapper = new QueuePLBootstrapper(QueueId, _loggerFactory, configuration, sut, _storage);
+        var bootstrapper = new QueuePLBootstrapper(QueueId, _loggerFactory, configuration, new FixedPLSSCDClientFactory(sut), _storage);
         _sign = bootstrapper.RegisterForSign();
+    }
+
+    /// <summary>
+    /// The queue resolves its SCU through a client factory using the ftSignaturCreationUnitPL row
+    /// from the configuration repository; the harness always hands back the one device under test.
+    /// </summary>
+    private sealed class FixedPLSSCDClientFactory(IPLSSCD sscd) : IClientFactory<IPLSSCD>
+    {
+        public IPLSSCD CreateClient(ClientConfiguration configuration) => sscd;
     }
 
     /// <summary>Lifts the queue's fiscalization gate, for a run against a register that is not fiscalized yet.</summary>
