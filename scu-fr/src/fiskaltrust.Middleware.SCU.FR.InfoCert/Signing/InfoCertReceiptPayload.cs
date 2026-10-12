@@ -25,6 +25,17 @@ internal class InfoCertReceiptPayload
 
     [JsonPropertyName("siret")] public string Siret { get; set; } = "";
 
+    // market-fr#141: the issuer claims, next to the SIRET and omitted when not configured.
+    [JsonPropertyName("rcs"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Rcs { get; set; }
+
+    [JsonPropertyName("naf"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Naf { get; set; }
+
+    [JsonPropertyName("legalform"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LegalForm { get; set; }
+
+    [JsonPropertyName("vatoption"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? VatOption { get; set; }
+
+    [JsonPropertyName("elecaddress"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ElectronicAddress { get; set; }
+
     [JsonPropertyName("receiptId")] public string? ReceiptId { get; set; }
 
     [JsonPropertyName("receiptMoment")] public DateTime ReceiptMoment { get; set; }
