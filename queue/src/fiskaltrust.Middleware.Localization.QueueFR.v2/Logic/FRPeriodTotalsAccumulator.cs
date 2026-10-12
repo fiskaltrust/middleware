@@ -52,6 +52,12 @@ public class FRPeriodTotalsAccumulator
         }
     }
 
+    /// <summary>
+    /// Adds the totals a v1 queue carried over for <paramref name="period"/> (ADR 0003). Only
+    /// called while loading, for a period no v2 closing has reset yet.
+    /// </summary>
+    public void AddSeed(FRTotalsPeriod period, FRTotals totals) => _totals[period].Add(totals);
+
     /// <summary>The totals a closing of <paramref name="period"/> reports, plus the perpetual total.</summary>
     public FRPeriodTotals Snapshot(FRTotalsPeriod period) => new()
     {

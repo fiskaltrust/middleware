@@ -35,19 +35,22 @@ public class FRChainState
 /// Keeps the fiscal state of the French queue: the position of every receipt chain and the
 /// accumulated totals of every period. The state is reconstructed from the queue items on first
 /// use - the same approach QueuePT takes - so no v1 storage column has to be shared between the
-/// two French localizations.
+/// two French localizations. A queue migrated from v1 is also given a seed for the time before its
+/// first v2 entry (ADR 0003).
 /// </summary>
 public class FRChainStateProvider
 {
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
+    private readonly IFRChainSeedSource? _seedSource;
     private readonly Dictionary<FRReceiptChain, FRChainState> _chains = new();
     private readonly FRPeriodTotalsAccumulator _totals = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
     private bool _loaded;
 
-    public FRChainStateProvider(AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository)
+    public FRChainStateProvider(AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, IFRChainSeedSource? seedSource = null)
     {
         _queueItemRepository = queueItemRepository;
+        _seedSource = seedSource;
     }
 
     /// <summary>
@@ -140,6 +143,46 @@ public class FRChainStateProvider
             if (closedPeriod is not null)
             {
                 openPeriods.Remove(closedPeriod.Value);
+            }
+        }
+
+        await ApplySeedAsync(openPeriods).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Continues the v1 state underneath the v2 entries (ADR 0003). The seed only fills what the
+    /// v2 entries leave open: a chain that already has a v2 entry is positioned by it, and a period
+    /// already closed on v2 must not pick up v1 turnover from before that closing. The perpetual
+    /// total is never closed, so its seed always applies.
+    /// </summary>
+    private async Task ApplySeedAsync(IReadOnlySet<FRTotalsPeriod> openPeriods)
+    {
+        if (_seedSource is null)
+        {
+            return;
+        }
+
+        var seed = await _seedSource.GetAsync().ConfigureAwait(false);
+        if (seed is null)
+        {
+            return;
+        }
+
+        foreach (var (chain, entry) in seed.Chains)
+        {
+            var state = _chains[chain];
+            if (state.Numerator == 0)
+            {
+                state.Numerator = entry.Numerator;
+                state.LastSignature = string.IsNullOrEmpty(entry.LastSignature) ? null : entry.LastSignature;
+            }
+        }
+
+        foreach (var (period, totals) in seed.Totals)
+        {
+            if (openPeriods.Contains(period))
+            {
+                _totals.AddSeed(period, totals);
             }
         }
     }
