@@ -45,6 +45,8 @@ public class FRSigningPipeline
                     ReceiptResponse = receiptResponse,
                     PeriodTotals = periodTotals,
                     ChainCounter = chain.Numerator,
+                    // market-fr#225: the hash the queue stored with the request, never recomputed.
+                    RequestHash = request.QueueItem?.requestHash,
                 }, chain.LastSignature).ConfigureAwait(false);
 
                 chain.LastSignature = signature;
