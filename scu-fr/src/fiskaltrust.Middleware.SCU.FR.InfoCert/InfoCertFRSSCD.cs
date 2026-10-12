@@ -88,7 +88,9 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         string signature;
         try
         {
-            (jws, signature) = _signer.Sign(JsonSerializer.Serialize(payload));
+            // A technical event signs its R19 JET content instead of the receipt data set (market-fr#200).
+            var jetPayload = InfoCertJetPayload.TryCreate(request, previousSignature);
+            (jws, signature) = _signer.Sign(jetPayload is null ? JsonSerializer.Serialize(payload) : JsonSerializer.Serialize(jetPayload));
         }
         catch (Exception ex) when (ex is not FRSSCDException)
         {
