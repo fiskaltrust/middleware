@@ -6,4 +6,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Scenario
 public class InMemoryFRScenarioTests : FRScenarioTests
 {
     protected override IFRSSCD CreateScu() => new InMemorySCU();
+
+    protected override IFRSSCD CreateIncomingScu() => new InMemorySCU(certificateSerialNumber: "INMEMORY-0002");
 }

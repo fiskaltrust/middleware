@@ -49,4 +49,9 @@ public class MiddlewareStateDataFR
     [JsonPropertyName("ftTypeOfService")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ftTypeOfService { get; set; }
+
+    /// <summary>The SCU switch an 0x4011 (init) or 0x4012 (finish) receipt recorded; null on every other receipt.</summary>
+    [JsonPropertyName("ScuSwitch")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FRScuSwitch? ScuSwitch { get; set; }
 }

@@ -881,6 +881,11 @@ namespace fiskaltrust.storage.V0
         /// </summary>
         public string YLastSignature { get; set; }
 
+        /// <summary>
+        /// The SCU switch an 0x4011 receipt started and no 0x4012 receipt has finished yet, as JSON; null when none is pending
+        /// </summary>
+        public string PendingScuSwitch { get; set; }
+
         #endregion
 
         #region Late Signing

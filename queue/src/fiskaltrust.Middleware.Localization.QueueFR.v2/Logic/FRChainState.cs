@@ -1,4 +1,7 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 
@@ -72,7 +75,7 @@ public class FRChainStateProvider
         try
         {
             var repository = await _configurationRepository;
-            _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
 
             var state = new FRChainState(request.ResolveChain(), _queueFR);
             var numeratorBefore = state.Numerator;
@@ -102,4 +105,53 @@ public class FRChainStateProvider
             _lock.Release();
         }
     }
+
+    /// <summary>
+    /// The switch an 0x4011 receipt started and no 0x4012 receipt has finished yet; null when no
+    /// switch is pending. Persisted in ftQueueFR; only read while the state lock is held.
+    /// </summary>
+    public FRScuSwitch? PendingScuSwitch
+        => string.IsNullOrEmpty(_queueFR?.PendingScuSwitch) ? null : JsonSerializer.Deserialize<FRScuSwitch>(_queueFR.PendingScuSwitch);
+
+    /// <summary>The switch that is pending, loading the state from storage on the first call.</summary>
+    public async Task<FRScuSwitch?> GetPendingScuSwitchAsync()
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            _queueFR ??= await LoadAsync(await _configurationRepository).ConfigureAwait(false);
+            return PendingScuSwitch;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Records that a signed receipt started (0x4011) or finished (0x4012) an SCU switch. Called
+    /// with the state lock held, once the receipt is signed; stored with the chain it advanced.
+    /// </summary>
+    internal void TrackScuSwitch(ReceiptRequest request, ReceiptResponse response)
+    {
+        if (_queueFR is null)
+        {
+            return;
+        }
+
+        if (request.ftReceiptCase.Case() == ReceiptCase.InitSCUSwitch0x4011)
+        {
+            _queueFR.PendingScuSwitch = JsonSerializer.Serialize(MiddlewareStateData.FromReceiptResponse(response).FR?.ScuSwitch ?? new FRScuSwitch());
+        }
+        else if (request.ftReceiptCase.Case() == ReceiptCase.FinishSCUSwitch0x4012)
+        {
+            _queueFR.PendingScuSwitch = null;
+        }
+    }
+
+    public static bool IsScuSwitch(ReceiptRequest request)
+        => request.ftReceiptCase.Case() is ReceiptCase.InitSCUSwitch0x4011 or ReceiptCase.FinishSCUSwitch0x4012;
+
+    private async Task<ftQueueFR> LoadAsync(IConfigurationRepository repository)
+        => await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
 }
