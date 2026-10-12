@@ -55,7 +55,7 @@ public class ReceiptProcessor : IReceiptProcessor
             _logger.LogError(ex, "Exception during FV validation for cbReceiptReference={Ref} ftReceiptCase=0x{Case:X}", request.cbReceiptReference, request.ftReceiptCase);
         }
 
-        var processCommandRequest = new ProcessCommandRequest(queue, request, receiptResponse);
+        var processCommandRequest = new ProcessCommandRequest(queue, request, receiptResponse) { QueueItem = queueItem };
         ProcessCommandResponse? processCommandResponse = null;
         var receiptCase = request.ftReceiptCase.Case();
 

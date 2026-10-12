@@ -5,4 +5,9 @@ using fiskaltrust.storage.V0;
 namespace fiskaltrust.Middleware.Localization.v2;
 
 // Maybe add the scu state string here and in the response and pull the loading and saving of it into the v2.signprocessor.
-public record ProcessCommandRequest(ftQueue queue, ReceiptRequest ReceiptRequest, ReceiptResponse ReceiptResponse);
+public record ProcessCommandRequest(ftQueue queue, ReceiptRequest ReceiptRequest, ReceiptResponse ReceiptResponse)
+{
+    // The stored queue item of the request, so a market can reach what the queue persisted (e.g. its
+    // requestHash, market-fr#225). Not positional, so the markets' three-way deconstruction is unaffected.
+    public ftQueueItem? QueueItem { get; init; }
+}

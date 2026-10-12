@@ -25,6 +25,14 @@ public class ProcessRequest
     /// signature authenticates the entry's place in the chain and not only its predecessor.
     /// </summary>
     public long ChainCounter { get; set; }
+
+    /// <summary>
+    /// The <c>requestHash</c> of the stored queue item: base64 SHA-256 over the exact request string
+    /// the queue persisted (market-fr#225). It binds the signature to the request as received, so
+    /// an SCU signs it as given and never re-serializes the request to recompute it. Null when the
+    /// caller has no stored queue item.
+    /// </summary>
+    public string? RequestHash { get; set; }
 }
 
 /// <summary>The signed receipt returned by a French SCU.</summary>
