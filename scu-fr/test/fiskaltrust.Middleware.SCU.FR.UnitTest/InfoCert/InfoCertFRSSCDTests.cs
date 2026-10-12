@@ -10,6 +10,7 @@ using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.InfoCert;
+using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 using FluentAssertions;
 using Xunit;
 
@@ -22,8 +23,10 @@ public class InfoCertFRSSCDTests
         Siret = FRTestData.Siret,
         PrivateKey = privateKeyBase64,
         CertificateSerialNumber = "CERT-4711",
-        AttestationNumber = "IC-2026-001",
-        SoftwareVersion = "1.0.0",
+        AttestationNumber = "0546",
+        SoftwareCategory = "B",
+        SoftwareName = "OnQPMS",
+        SoftwareVersion = "06.07",
     };
 
     [Fact]
@@ -97,7 +100,7 @@ public class InfoCertFRSSCDTests
         signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash), "ADR 0001 chains on the signature itself");
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificateSerialNumber)).Data.Should().Be("CERT-4711");
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Siret)).Data.Should().Be(FRTestData.Siret);
-        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody)).Data.Should().Be("Infocert IC-2026-001");
+        signatures.Should().ContainSingle(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).ftSignatureFormat.Should().Be(SignatureFormat.QRCode);
     }
 
@@ -191,6 +194,65 @@ public class InfoCertFRSSCDTests
         {
             payload.RootElement.TryGetProperty(claim, out var _).Should().BeFalse(claim);
         }
+    }
+
+    [Fact]
+    public async Task Nf525Mention_FollowsTheReferentielFormat()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // market-fr#131, NF525 V2.3 §6.1.6.1: characters 3, 7, 13 and 19 of the signature.
+        var extract = new string(new[] { signature[2], signature[6], signature[12], signature[18] });
+        var item = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+        item.Caption.Should().BeEmpty();
+        item.Data.Should().Be($"(NF525) B 0546 {extract} OnQPMS 06.07");
+    }
+
+    [Fact]
+    public void Nf525Mention_LeavesOutAnEmptySoftwareName()
+    {
+        InfoCertMention.Build("C", "1234", "ABWCDExFGHIJiKLMNO2PQ", "", "v1.0").Should().Be("(NF525) C 1234 Wxi2 v1.0");
+    }
+
+    [Theory]
+    [InlineData(null, "0546", "06.07")]
+    [InlineData("B", "", "06.07")]
+    [InlineData("B", "0546", "")]
+    public void Nf525Mention_IsNotBuiltIncomplete(string? category, string productNumber, string version)
+    {
+        InfoCertMention.Build(category, productNumber, "ABWCDExFGHIJiKLMNO2PQ", "OnQPMS", version).Should().BeNull();
+    }
+
+    [Fact]
+    public void Nf525Mention_IsNotBuiltFromATooShortSignature()
+    {
+        InfoCertMention.Build("B", "0546", "ABWCDExFGHIJiKLMNO", "OnQPMS", "06.07").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Nf525Mention_IsOmittedWithoutACategory()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration(privateKey);
+        configuration.SoftwareCategory = null;
+        using var sut = new InfoCertFRSSCD(configuration);
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        response.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+    }
+
+    [Fact]
+    public void FromConfiguration_WithAnUnknownSoftwareCategory_IsRejected()
+    {
+        var act = () => InfoCertConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["SoftwareCategory"] = "D" });
+
+        act.Should().Throw<FRValidationException>().WithMessage("*SoftwareCategory*");
     }
 
     [Fact]

@@ -210,6 +210,21 @@ public class LneFRSSCDTests
     }
 
     [Fact]
+    public async Task CertificationMention_IsTheRev18WordingWithTheFullSignature()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // market-fr#131, LNE Rev. 1.8 Exigence 9.
+        var item = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+        item.Caption.Should().Be("Système de caisse certifié LNE");
+        item.Data.Should().Be(signature);
+    }
+
+    [Fact]
     public async Task RequestHash_IsSignedAfterTheQueueItemId()
     {
         var (privateKey, key) = FRTestData.CreateKey();
