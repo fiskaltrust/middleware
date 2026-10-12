@@ -49,4 +49,12 @@ public class MiddlewareStateDataFR
     [JsonPropertyName("ftTypeOfService")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ftTypeOfService { get; set; }
+
+    /// <summary>
+    /// The receipt's VAT summary as the SCU returned it, keyed by the culture-invariant VAT rate. Set for
+    /// receipts signed by the InfoCert SCU only, see <see cref="Logic.FRVatSummary"/>; omitted otherwise.
+    /// </summary>
+    [JsonPropertyName("VATSummary")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, fiskaltrust.ifPOS.v2.fr.FRVatRateSummary>? VATSummary { get; set; }
 }
