@@ -8,9 +8,9 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
 /// <summary>
-/// Opens and closes the queue. Both receipts are themselves grand-total entries, so they are
-/// signed into the "G" chain: the chain has to start with the initial-operation receipt and end
-/// with the out-of-operation receipt for an audit to be able to follow it end to end.
+/// Opens and closes the queue. Both receipts are signed into the technical chain (ADR 0002): the
+/// chain has to start with the initial-operation receipt and end with the out-of-operation
+/// receipt for an audit to be able to follow it end to end.
 /// </summary>
 /// <remarks>
 /// Activation and deactivation are persisted only once the corresponding entry is signed. The
