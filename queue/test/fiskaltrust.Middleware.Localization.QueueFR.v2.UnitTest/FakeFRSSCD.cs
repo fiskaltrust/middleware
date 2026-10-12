@@ -17,6 +17,7 @@ public class FakeFRSSCD : IFRSSCD
 
     public ProcessRequest? LastRequest { get; private set; }
 
+    public Dictionary<string, FRVatRateSummary>? VatSummary { get; set; }
     public bool HasSignatureCreationData { get; set; } = true;
 
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
@@ -37,6 +38,6 @@ public class FakeFRSSCD : IFRSSCD
         }
 
         var signature = $"sig-{++_calls}";
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = request.ReceiptResponse }, signature));
+        return Task.FromResult((new ProcessResponse { ReceiptResponse = request.ReceiptResponse, VatSummary = VatSummary }, signature));
     }
 }

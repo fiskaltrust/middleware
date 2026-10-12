@@ -47,6 +47,7 @@ public class FRSigningPipeline
                     ChainCounter = chain.Numerator,
                 }, chain.LastSignature).ConfigureAwait(false);
 
+                FRVatSummary.Apply(response.ReceiptResponse, response.VatSummary);
                 chain.LastSignature = signature;
                 totals.Add(request.ReceiptRequest);
 

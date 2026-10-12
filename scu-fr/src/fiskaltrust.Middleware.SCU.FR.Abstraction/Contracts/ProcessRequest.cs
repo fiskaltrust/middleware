@@ -32,4 +32,11 @@ public class ProcessRequest
 public class ProcessResponse
 {
     public ReceiptResponse ReceiptResponse { get; set; } = null!;
+
+    /// <summary>
+    /// The receipt's VAT summary, keyed by the VAT rate written culture-invariant ("20", "5.5", "0").
+    /// Only the InfoCert SCU produces it (ADR 0004); null from the other SCUs and for receipts without
+    /// charge items.
+    /// </summary>
+    public System.Collections.Generic.Dictionary<string, FRVatRateSummary>? VatSummary { get; set; }
 }

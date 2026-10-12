@@ -100,7 +100,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
+        return Task.FromResult((new ProcessResponse { ReceiptResponse = response, VatSummary = InfoCertVatSummary.From(receiptRequest) }, signature));
     }
 
     public void Dispose() => _signer.Dispose();
