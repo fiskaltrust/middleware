@@ -168,7 +168,7 @@ public class PeriodTotalsTests
         var sscd = new FakeFRSSCD();
         var pipeline = CreatePipeline(sscd,
             StoredReceipt(queueRow: 1, ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T1", amount: 30.00m),
-            StoredReceipt(queueRow: 2, ReceiptCase.DailyClosing0x2011, "ft1#G1", amount: 0m),
+            StoredReceipt(queueRow: 2, ReceiptCase.DailyClosing0x2011, "ft1#Z1", amount: 0m),
             StoredReceipt(queueRow: 3, ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T2", amount: 7.00m));
 
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
