@@ -98,12 +98,12 @@ public class FRScenarioTests
     }
 
     [Fact]
-    public async Task DailyClosing_IsSignedIntoTheGrandTotalChain()
+    public async Task DailyClosing_IsSignedIntoTheDailyClosingChain()
     {
         var response = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
         response.ftState.IsState(State.Error).Should().BeFalse();
-        response.ftReceiptIdentification.Should().EndWith("G1");
+        response.ftReceiptIdentification.Should().EndWith("Z1");
     }
 
     [Fact]

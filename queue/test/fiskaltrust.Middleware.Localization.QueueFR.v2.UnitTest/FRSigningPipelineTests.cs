@@ -67,6 +67,27 @@ public class FRSigningPipelineTests
     }
 
     [Fact]
+    public async Task SignAsync_ChainsEachClosingTypeOnItsOwnPredecessor()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        var firstDay = await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        var zero = await pipeline.SignAsync(CommandRequest(ReceiptCase.ZeroReceipt0x2000));
+        var month = await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        var secondDay = await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        firstDay.receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z1");
+        zero.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E1", "a zero receipt is not a closing (ADR 0002)");
+        month.receiptResponse.ftReceiptIdentification.Should().Be("ft1#M1");
+        secondDay.receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z2");
+
+        sscd.Calls[1].previousSignature.Should().BeNull("the technical chain is independent of the closing chains");
+        sscd.Calls[2].previousSignature.Should().BeNull("the monthly closing does not chain on a daily closing");
+        sscd.Calls[3].previousSignature.Should().Be("sig-1", "a daily closing chains on the previous daily closing");
+    }
+
+    [Fact]
     public async Task SignAsync_HandsTheChainCounterToTheScu()
     {
         var sscd = new FakeFRSSCD();
