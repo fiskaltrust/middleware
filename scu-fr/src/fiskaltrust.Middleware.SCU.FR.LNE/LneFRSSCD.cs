@@ -25,6 +25,9 @@ public class LneFRSSCD : IFRSSCD, IDisposable
 {
     public const string CertificationBody = "LNE";
 
+    /// <summary>The certification mention LNE Rev. 1.8 Exigence 9 recommends on every ticket.</summary>
+    public const string Mention = "Système de caisse certifié LNE";
+
     private readonly LneConfiguration _configuration;
     private readonly LneSignatureCreator _signatureCreator;
 
@@ -68,7 +71,9 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         response.AddSignatureItem(SignatureTypeFR.Information, "Donnees signees", dataSet);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Certification", $"{CertificationBody} {_configuration.LneCertificateNumber}".TrimEnd());
+        // market-fr#131: LNE Rev. 1.8 Exigence 9 recommends this wording, and recommends printing
+        // the full signature with it.
+        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, signature);
 
         return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
     }

@@ -103,7 +103,13 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "www.fiskaltrust.fr", jws, SignatureFormat.QRCode);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
+        // market-fr#131: the NF525 mention (NF525 V2.3 §6.1.6.1) is the whole line, so the caption
+        // stays empty. It is left out rather than emitted incomplete.
+        var mention = InfoCertMention.Build(_configuration.SoftwareCategory, _configuration.AttestationNumber, signature, _configuration.SoftwareName, _configuration.SoftwareVersion);
+        if (mention is not null)
+        {
+            response.AddSignatureItem(SignatureTypeFR.CertificationBody, "", mention);
+        }
 
         return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
     }
