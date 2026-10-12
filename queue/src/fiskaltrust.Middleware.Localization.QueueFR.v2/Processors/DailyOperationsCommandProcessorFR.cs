@@ -5,8 +5,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
 /// <summary>
 /// The closings are the French "grand total" receipts: NF525 requires a signed and chained
-/// cumulative total per period, so every closing goes through the grand-total chain ("G") rather
-/// than being a queue-side bookkeeping no-op.
+/// cumulative total per period, so every closing is signed into the closing chain of its own type
+/// (ADR 0002) rather than being a queue-side bookkeeping no-op. The zero receipt and the other
+/// non-closing daily operations go to the technical chain.
 /// </summary>
 public class DailyOperationsCommandProcessorFR : IDailyOperationsCommandProcessor
 {
