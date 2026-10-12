@@ -40,7 +40,7 @@ public enum SignatureTypeFR : long
     /// <summary>SIRET of the establishment the signature creation unit is registered for.</summary>
     Siret = 0x4652_2000_0000_0009,
 
-    /// <summary>The certification body the SCU implements (LNE or Infocert).</summary>
+    /// <summary>The certification body the SCU implements (LNE or Infocert). The self-certified SCU emits none.</summary>
     CertificationBody = 0x4652_2000_0000_000A,
 
     /// <summary>The receipt was stored but not signed, because no signing SCU is configured.</summary>
