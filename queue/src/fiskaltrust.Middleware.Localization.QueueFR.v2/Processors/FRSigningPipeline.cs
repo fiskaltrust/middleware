@@ -2,6 +2,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
@@ -22,10 +23,22 @@ public class FRSigningPipeline
         _chains = chains;
     }
 
+    /// <summary>The fiscal state the pipeline signs against, e.g. whether an SCU switch is pending.</summary>
+    public FRChainStateProvider Chains => _chains;
+
     public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null)
         => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals) =>
         {
             var receiptResponse = request.ReceiptResponse;
+
+            // ADR 0005: between 0x4011 and 0x4012 the outgoing SCU has signed its last entry and the
+            // incoming one is not confirmed yet, so nothing else may enter any chain (market-fr#177).
+            if (_chains.PendingScuSwitch is { } pending && request.ReceiptRequest.ftReceiptCase.Case() != ReceiptCase.FinishSCUSwitch0x4012)
+            {
+                receiptResponse.SetReceiptResponseError($"An SCU switch is pending: the outgoing SCU ({pending.Outgoing}) signed the init-SCU-switch receipt (0x4011). Configure the incoming SCU and send the finish-SCU-switch receipt (0x4012) before any other receipt.");
+                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            }
+
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
 
             // A closing attests the turnover accumulated up to it; the closing request itself
@@ -49,6 +62,7 @@ public class FRSigningPipeline
 
                 chain.LastSignature = signature;
                 totals.Add(request.ReceiptRequest);
+                _chains.TrackScuSwitch(request.ReceiptRequest, response.ReceiptResponse);
 
                 if (closingPeriod is not null)
                 {

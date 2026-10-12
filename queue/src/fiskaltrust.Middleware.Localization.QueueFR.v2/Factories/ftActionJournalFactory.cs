@@ -42,6 +42,12 @@ public static class ftActionJournalFactory
         return CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueFR)}", receiptResponse.ftQueueItemID, $"Out-of-Operation receipt. Queue-ID: {receiptResponse.ftQueueID}", JsonConvert.SerializeObject(notification));
     }
 
+    public static ftActionJournal CreateInitScuSwitchActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse, FRScuSwitch scuSwitch)
+        => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-InitScuSwitch", receiptResponse.ftQueueItemID, $"Init-SCU-switch receipt: {scuSwitch.Outgoing} signed its last entry.", JsonConvert.SerializeObject(scuSwitch));
+
+    public static ftActionJournal CreateFinishScuSwitchActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse, FRScuSwitch scuSwitch)
+        => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-FinishScuSwitch", receiptResponse.ftQueueItemID, $"Finish-SCU-switch receipt: {scuSwitch.Incoming} replaces {scuSwitch.Outgoing}.", JsonConvert.SerializeObject(scuSwitch));
+
     private static ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1) => new()
     {
         ftActionJournalId = Guid.NewGuid(),

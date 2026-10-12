@@ -19,11 +19,14 @@ public class FakeFRSSCD : IFRSSCD
 
     public bool HasSignatureCreationData { get; set; } = true;
 
+    /// <summary>The certificate the fake claims to sign with; a switch needs it to tell two SCUs apart.</summary>
+    public string CertificateSerialNumber { get; set; } = "FAKE-1";
+
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
     public Task<FRSSCDInfo> GetInfoAsync() => Task.FromResult(new FRSSCDInfo
     {
-        InfoData = $"{{\"CertificationBody\":\"Fake\",\"SignatureCreationDataAvailable\":{(HasSignatureCreationData ? "true" : "false")}}}",
+        InfoData = $"{{\"CertificationBody\":\"Fake\",\"CertificateSerialNumber\":\"{CertificateSerialNumber}\",\"SignatureCreationDataAvailable\":{(HasSignatureCreationData ? "true" : "false")}}}",
     });
 
     public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
