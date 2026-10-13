@@ -3194,4 +3194,89 @@ public class MyDataOverrideTests
         entity.entityData.address.postalCode.Should().Be("10442");
         entity.entityData.address.city.Should().Be("Αθήνα");
     }
+
+    // === RETAIL FUEL COUNTERPART (A.1139/2025) ===
+
+    private ReceiptRequest CreateRetailHeatingOilRequest(bool withFuelCode = true)
+    {
+        var request = CreateBasicReceiptRequest();
+        request.cbCustomer = new
+        {
+            CustomerVATId = "EL123456789",
+            CustomerCountry = "GR",
+            CustomerName = "Buyer",
+            CustomerZip = "10442",
+            CustomerCity = "Αθήνα"
+        };
+        if (withFuelCode)
+        {
+            request.cbChargeItems[0].ftChargeItemCaseData = new
+            {
+                GR = new { mydataoverride = new { invoiceDetails = new { fuelCode = 30 } } }
+            };
+        }
+        return request;
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailReceiptWithFuelCode_ShouldSetCounterpartWithVatOnly()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailHeatingOilRequest();
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        var invoice = doc!.invoice[0];
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        invoice.counterpart.Should().NotBeNull();
+        invoice.counterpart.vatNumber.Should().Be("123456789");
+        invoice.counterpart.country.Should().Be(CountryType.GR);
+        invoice.counterpart.name.Should().BeNull();
+        invoice.counterpart.address.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoOverride_ShouldSetSupplyAccountNo()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailHeatingOilRequest(withFuelCode: false);
+        request.ftReceiptCaseData = new
+        {
+            GR = new
+            {
+                mydataoverride = new
+                {
+                    invoice = new
+                    {
+                        invoiceHeader = new { fuelInvoice = true },
+                        counterpart = new { supplyAccountNo = "12345678901" }
+                    }
+                }
+            }
+        };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        var invoice = doc!.invoice[0];
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        invoice.invoiceHeader.fuelInvoice.Should().BeTrue();
+        invoice.counterpart.Should().NotBeNull();
+        invoice.counterpart.vatNumber.Should().Be("123456789");
+        invoice.counterpart.supplyAccountNo.Should().Be("12345678901");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailReceiptWithoutFuel_ShouldNotSetCounterpart()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailHeatingOilRequest(withFuelCode: false);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        doc.invoice[0].counterpart.Should().BeNull();
+    }
 }

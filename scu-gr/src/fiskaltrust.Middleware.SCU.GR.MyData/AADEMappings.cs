@@ -615,6 +615,12 @@ public static class AADEMappings
         _ => true
     };
 
+    /// <summary>
+    /// Retail types on which AADE requires the buyer's VAT number for fuel sales such as heating oil
+    /// (A.1139/2025 lists 11.1 ΑΛΠ and 11.4 Πιστωτικό Στοιχ. Λιανικής).
+    /// </summary>
+    public static bool SupportsRetailFuelCounterpart(InvoiceType invoiceType) => invoiceType is InvoiceType.Item111 or InvoiceType.Item114;
+
     public static bool SupportsCorrelatedInvoices(InvoiceType invoiceType) => invoiceType switch
     {
         InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,

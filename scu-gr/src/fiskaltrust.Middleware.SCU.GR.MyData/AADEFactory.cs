@@ -275,11 +275,18 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
+        var isRetailFuelDocumentWithBuyerVat = AADEMappings.SupportsRetailFuelCounterpart(inv.invoiceHeader.invoiceType) && IsFuelDocument(receiptRequest);
+        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType) || isRetailFuelDocumentWithBuyerVat || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
         {
             var counterpart = GetCounterPart(receiptRequest);
             if (counterpart != null)
             {
+                if (isRetailFuelDocumentWithBuyerVat && !AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType))
+                {
+                    // Retail fuel documents (e.g. heating oil, A.1139/2025) only declare the buyer's VAT number.
+                    counterpart.name = null;
+                    counterpart.address = null;
+                }
                 inv.counterpart = counterpart;
             }
         }
@@ -440,6 +447,35 @@ public class AADEFactory
                 "When a classification override (incomeClassification or expensesClassification) is set on any charge item, every charge item except special-tax/fee items (type of service 0xF0) must have a classification override.");
         }
 
+    }
+
+    /// <summary>
+    /// A receipt is a fuel document when <c>mydataoverride.invoice.invoiceHeader.fuelInvoice</c> is true
+    /// or any charge item sets <c>mydataoverride.invoiceDetails.fuelCode</c>.
+    /// </summary>
+    private static bool IsFuelDocument(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptData)
+            && receiptData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.FuelInvoice == true)
+        {
+            return true;
+        }
+
+        return receiptRequest.cbChargeItems?.Any(HasFuelCodeOverride) == true;
+    }
+
+    private static bool HasFuelCodeOverride(ChargeItem chargeItem)
+    {
+        if (chargeItem.ftChargeItemCaseData == null)
+            return false;
+        try
+        {
+            var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
+                JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData),
+                _caseDataJsonOptions);
+            return data?.GR?.MyDataOverride?.InvoiceDetails?.FuelCode != null;
+        }
+        catch { return false; }
     }
 
     private static bool HasClassificationOverride(ChargeItem chargeItem)
