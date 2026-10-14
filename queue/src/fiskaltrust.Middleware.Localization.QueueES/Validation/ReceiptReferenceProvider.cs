@@ -4,6 +4,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Validation;
 

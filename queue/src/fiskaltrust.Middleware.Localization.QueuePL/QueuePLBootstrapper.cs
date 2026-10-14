@@ -1,4 +1,4 @@
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Net.Mime;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Processors;
@@ -7,6 +7,9 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL;
@@ -14,9 +17,6 @@ namespace fiskaltrust.Middleware.Localization.QueuePL;
 public class QueuePLBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
-
-    public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD)
-        : this(id, loggerFactory, configuration, plSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
     public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD, IStorageProvider storageProvider)
     {

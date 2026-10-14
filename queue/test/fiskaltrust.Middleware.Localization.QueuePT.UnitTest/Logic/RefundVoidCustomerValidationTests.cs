@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using FluentAssertions;
 using Moq;
 using Xunit;

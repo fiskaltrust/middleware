@@ -14,6 +14,8 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 

@@ -1,4 +1,4 @@
-// C#
+﻿// C#
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -11,6 +11,8 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;

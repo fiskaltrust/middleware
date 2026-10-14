@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
-using fiskaltrust.Middleware.Storage.SQLite.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Moq;

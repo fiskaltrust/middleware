@@ -332,6 +332,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x0079:
                     case 0x0081:
                     case 0x0089:
+                    case 0x00B1:
                         normal += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     case 0x0002:
@@ -349,6 +350,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x007A:
                     case 0x0082:
                     case 0x008A:
+                    case 0x00B2:
                         discounted_1 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     case 0x0003:
@@ -366,6 +368,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x007B:
                     case 0x0083:
                     case 0x008B:
+                    case 0x00B3:
                         special_1 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     case 0x0004:
@@ -383,6 +386,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x007C:
                     case 0x0084:
                     case 0x008C:
+                    case 0x00B4:
                         special_2 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     default:

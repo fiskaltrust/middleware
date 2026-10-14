@@ -15,11 +15,13 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
         private readonly SQLiteQueueFRRepository _queueFRRepository;
         private readonly SQLiteQueueITRepository _queueITRepository;
         private readonly SQLiteQueueMERepository _queueMERepository;
+        private readonly SQLiteQueuePLRepository _queuePLRepository;
         private readonly SQLiteSignaturCreationUnitATRepository _signaturCreationUnitATRepository;
         private readonly SQLiteSignaturCreationUnitDERepository _signaturCreationUnitDERepository;
         private readonly SQLiteSignaturCreationUnitFRRepository _signaturCreationUnitFRRepository;
         private readonly SQLiteSignaturCreationUnitITRepository _signaturCreationUnitITRepository;
         private readonly SQLiteSignaturCreationUnitMERepository _signaturCreationUnitMERepository;
+        private readonly SQLiteSignaturCreationUnitPLRepository _signaturCreationUnitPLRepository;
 
         public SQLiteConfigurationRepository() { }
 
@@ -32,11 +34,13 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             _queueFRRepository = new SQLiteQueueFRRepository(connectionFactory, path);
             _queueITRepository = new SQLiteQueueITRepository(connectionFactory, path);
             _queueMERepository = new SQLiteQueueMERepository(connectionFactory, path);
+            _queuePLRepository = new SQLiteQueuePLRepository(connectionFactory, path);
             _signaturCreationUnitATRepository = new SQLiteSignaturCreationUnitATRepository(connectionFactory, path);
             _signaturCreationUnitDERepository = new SQLiteSignaturCreationUnitDERepository(connectionFactory, path);
             _signaturCreationUnitFRRepository = new SQLiteSignaturCreationUnitFRRepository(connectionFactory, path);
             _signaturCreationUnitITRepository = new SQLiteSignaturCreationUnitITRepository(connectionFactory, path);
             _signaturCreationUnitMERepository = new SQLiteSignaturCreationUnitMERepository(connectionFactory, path);
+            _signaturCreationUnitPLRepository = new SQLiteSignaturCreationUnitPLRepository(connectionFactory, path);
         }
 
         public async Task<ftCashBox> GetCashBoxAsync(Guid cashBoxId) => await _cashBoxRepository.GetAsync(cashBoxId).ConfigureAwait(false);
@@ -97,11 +101,11 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 
         public Task InsertOrUpdateQueueGRAsync(ftQueueGR queue) => throw new NotImplementedException();
 
-        public Task<ftQueuePL> GetQueuePLAsync(Guid queuePLId) => throw new NotImplementedException();
+        public async Task<ftQueuePL> GetQueuePLAsync(Guid queuePLId) => await _queuePLRepository.GetAsync(queuePLId).ConfigureAwait(false);
 
-        public Task<IEnumerable<ftQueuePL>> GetQueuePLListAsync() => throw new NotImplementedException();
+        public async Task<IEnumerable<ftQueuePL>> GetQueuePLListAsync() => await _queuePLRepository.GetAsync().ConfigureAwait(false);
 
-        public Task InsertOrUpdateQueuePLAsync(ftQueuePL queue) => throw new NotImplementedException();
+        public async Task InsertOrUpdateQueuePLAsync(ftQueuePL queue) => await _queuePLRepository.InsertOrUpdateAsync(queue).ConfigureAwait(false);
 
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id).ConfigureAwait(false);
 
@@ -149,11 +153,11 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 
         public Task InsertOrUpdateSignaturCreationUnitGRAsync(ftSignaturCreationUnitGR scu) => throw new NotImplementedException();
 
-        public Task<ftSignaturCreationUnitPL> GetSignaturCreationUnitPLAsync(Guid signaturCreationUnitPLId) => throw new NotImplementedException();
+        public async Task<ftSignaturCreationUnitPL> GetSignaturCreationUnitPLAsync(Guid signaturCreationUnitPLId) => await _signaturCreationUnitPLRepository.GetAsync(signaturCreationUnitPLId).ConfigureAwait(false);
 
-        public Task<IEnumerable<ftSignaturCreationUnitPL>> GetSignaturCreationUnitPLListAsync() => throw new NotImplementedException();
+        public async Task<IEnumerable<ftSignaturCreationUnitPL>> GetSignaturCreationUnitPLListAsync() => await _signaturCreationUnitPLRepository.GetAsync().ConfigureAwait(false);
 
-        public Task InsertOrUpdateSignaturCreationUnitPLAsync(ftSignaturCreationUnitPL scu) => throw new NotImplementedException();
+        public async Task InsertOrUpdateSignaturCreationUnitPLAsync(ftSignaturCreationUnitPL scu) => await _signaturCreationUnitPLRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
 
         public Task InsertOrUpdateQueueEUAsync(ftQueueEU queue) => throw new NotImplementedException();
         public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync() => throw new NotImplementedException();

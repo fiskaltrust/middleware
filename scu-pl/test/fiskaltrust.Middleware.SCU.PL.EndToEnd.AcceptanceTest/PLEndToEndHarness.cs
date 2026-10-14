@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 using fiskaltrust.Middleware.SCU.PL.TestSupport;
 using fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
 using fiskaltrust.Middleware.SCU.PL.TestSupport.Verification;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;

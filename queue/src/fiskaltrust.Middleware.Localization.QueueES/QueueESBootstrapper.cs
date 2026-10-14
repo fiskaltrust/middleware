@@ -1,4 +1,4 @@
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
@@ -15,6 +15,9 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -25,9 +28,6 @@ namespace fiskaltrust.Middleware.Localization.QueueES;
 public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
-
-    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration)
-        : this(id, loggerFactory, clientFactory, configuration, new AzureStorageProvider(loggerFactory, id, configuration)) { }
 
     public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration, IStorageProvider storageProvider)
     {
