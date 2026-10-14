@@ -4,7 +4,7 @@
          SCU_PL_POSNET_DEVICE_URL), with the register read back afterwards. Named *.AcceptanceTest so
          the SCU.PL workflow picks it up with the other acceptance suites. -->
     <PropertyGroup>
-        <TargetFrameworks>net8.0</TargetFrameworks>
+        <TargetFrameworks>net10.0</TargetFrameworks>
         <LangVersion>Latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>

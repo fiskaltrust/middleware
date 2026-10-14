@@ -5,7 +5,7 @@
          probe. Deliberately free of any test framework, so it can be referenced by xunit projects and
          by the launcher alike. -->
     <PropertyGroup>
-        <TargetFrameworks>net8.0</TargetFrameworks>
+        <TargetFrameworks>net10.0</TargetFrameworks>
         <LangVersion>Latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>

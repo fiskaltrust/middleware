@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an Entity Framework storage provider for SQL Server databases.</Description>
-        <TargetFrameworks>net461;net6.0</TargetFrameworks>
+        <TargetFrameworks>net461;net10.0</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 

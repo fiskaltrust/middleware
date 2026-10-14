@@ -219,7 +219,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 }
                 finally
                 {
-#pragma warning disable CS8073
+#pragma warning disable CS8073, CS0472
                     _logger.LogTrace("GetTseStatusAsync: Freeing memory..");
                     if (infoPtr != null && infoPtr != IntPtr.Zero)
                     {
@@ -229,7 +229,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                     Marshal.FreeHGlobal(publicKeyLengthPtr);
                     Marshal.FreeHGlobal(serialNumberLengthPtr);
                     _logger.LogTrace("GetTseStatusAsync: Memory freed successfully.");
-#pragma warning restore CS8073 
+#pragma warning restore CS8073, CS0472 
                 }
             });
         }
