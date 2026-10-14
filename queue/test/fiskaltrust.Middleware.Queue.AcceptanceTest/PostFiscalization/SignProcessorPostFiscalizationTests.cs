@@ -290,6 +290,24 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
         }
 
         [Fact]
+        public async Task V2InvoicesEmbeddedInTheV1CaseData_ReachTheEInvoicingService_WithoutAnAllowList()
+        {
+            var harness = new Harness();
+            var eInvoicing = new FakePostFiscalizationService();
+            var sut = harness.Create(eInvoicing, null, (request, queueItem) => harness.Fiscalized(request, queueItem));
+            // The POS sent an AT v2 B2B invoice; the PosSystem API mapped it to a v1 case without a type nibble and embedded the original.
+            var request = harness.Request(0x4154_0000_0000_0001L);
+            request.ftReceiptCaseData = "{\"AT\":{},\"v2ReceiptRequest\":{\"ftReceiptCase\":" + 0x4154_2000_0000_1002UL + ",\"cbReceiptReference\":\"R-1\"}}";
+
+            var response = await sut.ProcessAsync(request);
+
+            eInvoicing.ValidateCalls.Should().ContainSingle().Which.ReceiptRequest.ftReceiptCaseData.Should().BeOfType<JsonElement>()
+                .Which.GetProperty("v2ReceiptRequest").GetProperty("ftReceiptCase").GetUInt64().Should().Be(0x4154_2000_0000_1002UL, "the service judges the same embedded original");
+            eInvoicing.ProcessCalls.Should().ContainSingle();
+            response.ftStateData.Should().Contain("\"EInvoicing\":\"ok\"");
+        }
+
+        [Fact]
         public async Task NotApplicableServices_LeaveTheReceiptUntouched_ButRecordTheOutcome()
         {
             var harness = new Harness();

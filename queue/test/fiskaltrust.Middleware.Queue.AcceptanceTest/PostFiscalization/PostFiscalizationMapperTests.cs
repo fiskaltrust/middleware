@@ -188,6 +188,72 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             LegacyInvoiceReceiptCases.IsInvoiceDocument(new V2.ReceiptRequest { ftReceiptCase = (ReceiptCase) receiptCase }).Should().Be(expected);
         }
 
+        [Theory]
+        [InlineData(0x4445_0000_0000_0001UL, 0x4445_2000_0000_1002UL, true)]  // DE Pos-receipt after the PosSystem API's mapping, sent as a v2 B2B invoice
+        [InlineData(0x4154_0000_0000_0001UL, 0x4154_2000_0000_1001UL, true)]  // AT: a v2 B2C invoice qualifies without an allow list
+        [InlineData(0x4652_0000_0000_0003UL, 0x4652_2000_0000_1003UL, true)]  // FR: a v2 B2G invoice qualifies without an allow list
+        [InlineData(0x4445_0000_0000_0001UL, 0x4445_2000_0000_0001UL, false)] // sent as a v2 Pos-receipt: no invoice
+        [InlineData(0x4445_0000_0000_000CUL, 0x4445_2000_0000_0001UL, true)]  // the allow list still applies on its own
+        public void LegacyInvoiceReceiptCases_ReadTheV2RequestEmbeddedInTheCaseData(ulong receiptCase, ulong embeddedV2Case, bool expected)
+        {
+            // The PosSystem API embeds the unmapped v2 original next to the market section; the mapper turns the v1 string into a JsonElement.
+            var v1 = new ReceiptRequest { ftReceiptCase = unchecked((long) receiptCase), ftReceiptCaseData = "{\"DE\":{},\"v2ReceiptRequest\":{\"ftReceiptCase\":" + embeddedV2Case + ",\"cbReceiptReference\":\"R-1\"}}" };
+            var request = PostFiscalizationMapper.ToV2(v1);
+
+            request.ftReceiptCaseData.Should().BeOfType<JsonElement>();
+            LegacyInvoiceReceiptCases.EmbeddedV2ReceiptCase(request).Should().Be((ReceiptCase) embeddedV2Case);
+            LegacyInvoiceReceiptCases.IsInvoiceDocument(request).Should().Be(expected);
+        }
+
+        [Theory]
+        [InlineData("{\"V2ReceiptRequest\":{\"FtReceiptCase\":4919373352344227842}}")]        // property names are matched case-insensitively (0x4445_2000_0000_1002)
+        [InlineData("{\"v2ReceiptRequest\":{\"ftReceiptCase\":\"4919373352344227842\"}}")]   // decimal string
+        [InlineData("{\"v2ReceiptRequest\":{\"ftReceiptCase\":\"0x4445200000001002\"}}")]    // hexadecimal string
+        [InlineData("{\"v2ReceiptRequest\":{\"ftReceiptCase\":-13527370721365365758}}")]       // not representable: falls back to the signed reading only when it fits
+        public void EmbeddedV2ReceiptCase_AcceptsTheNumberFormsAPosMightSend(string caseData)
+        {
+            var request = new V2.ReceiptRequest { ftReceiptCase = (ReceiptCase) 0x4445_0000_0000_0001UL, ftReceiptCaseData = JsonSerializer.Deserialize<JsonElement>(caseData) };
+
+            var embedded = LegacyInvoiceReceiptCases.EmbeddedV2ReceiptCase(request);
+
+            if (caseData.Contains("-13527370721365365758"))
+            {
+                embedded.Should().BeNull("a number outside both the unsigned and the signed 64-bit range is malformed");
+            }
+            else
+            {
+                embedded.Should().Be((ReceiptCase) 0x4445_2000_0000_1002UL);
+                LegacyInvoiceReceiptCases.IsInvoiceDocument(request).Should().BeTrue();
+            }
+        }
+
+        [Fact]
+        public void EmbeddedV2ReceiptCase_ReadsARawCaseDataString_WhenTheRequestWasNotMapped()
+        {
+            var request = new V2.ReceiptRequest { ftReceiptCase = (ReceiptCase) 0x4154_0000_0000_0001UL, ftReceiptCaseData = "{\"AT\":{},\"v2ReceiptRequest\":{\"ftReceiptCase\":" + 0x4154_2000_0000_1001UL + "}}" };
+
+            LegacyInvoiceReceiptCases.IsInvoiceDocument(request).Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData(null)]                                                       // no case data at all (PosSystem API before #215, or a v1 POS)
+        [InlineData("plain text")]                                               // not JSON
+        [InlineData("[1, 2]")]                                                   // not an object
+        [InlineData("{\"DE\":{}}")]                                             // no embedded request
+        [InlineData("{\"v2ReceiptRequest\":\"not an object\"}")]               // embedded request of the wrong shape
+        [InlineData("{\"v2ReceiptRequest\":{}}")]                               // embedded request without a case
+        [InlineData("{\"v2ReceiptRequest\":{\"ftReceiptCase\":null}}")]        // case without a value
+        [InlineData("{\"v2ReceiptRequest\":{\"ftReceiptCase\":\"invoice\"}}") ]// case that is not a number
+        [InlineData("{\"v2ReceiptRequest\":{\"ftReceiptCase\":1.5}}")]         // case that is not an integer
+        public void EmbeddedV2ReceiptCase_FallsThroughToTheAllowList_WhenTheOriginalIsMissingOrMalformed(string caseData)
+        {
+            V2.ReceiptRequest Request(ulong receiptCase) => PostFiscalizationMapper.ToV2(new ReceiptRequest { ftReceiptCase = unchecked((long) receiptCase), ftReceiptCaseData = caseData });
+
+            LegacyInvoiceReceiptCases.EmbeddedV2ReceiptCase(Request(0x4445_0000_0000_0001UL)).Should().BeNull();
+            LegacyInvoiceReceiptCases.IsInvoiceDocument(Request(0x4445_0000_0000_0001UL)).Should().BeFalse("a DE Pos-receipt is not in the allow list");
+            LegacyInvoiceReceiptCases.IsInvoiceDocument(Request(0x4445_0000_0000_000CUL)).Should().BeTrue("the DE B2B-invoice is in the allow list");
+        }
+
         [Fact]
         public void LegacyConventions_MatchTheUncaughtExceptionSignatureAndState()
         {
