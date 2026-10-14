@@ -49,6 +49,14 @@ public class PostFiscalizationProcessorTests
         ftSignatureType = (SignatureType) 0x4752_2000_0000_0010,
     };
 
+    /// <summary>A signature in the failure category, where a service puts the reason for an error state.</summary>
+    private static SignatureItem FailureSignature(string caption, string data)
+    {
+        var signature = Signature(caption, data);
+        signature.ftSignatureType = signature.ftSignatureType.WithCategory(SignatureTypeCategory.Failure);
+        return signature;
+    }
+
     private static ReceiptResponse Fiscalized(ftQueueItem queueItem, object? stateData = null) => new()
     {
         ftQueueID = queueItem.ftQueueId,
@@ -469,6 +477,33 @@ public class PostFiscalizationProcessorTests
         finalized.ftSignatures.Single(signature => signature.Caption == "einvoicing-failed").Data.Should().Contain("reported an error state");
         journals.Single().DataJson.Should().Contain("PEPPOL participant not registered");
         Outcome(finalized).EInvoicing.Should().Be(PostFiscalizationStateData.Failed);
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_CarriesTheServicesOwnFailureReasonIntoTheFailedSignature()
+    {
+        var eInvoicing = new FakePostFiscalizationService
+        {
+            OnProcess = request =>
+            {
+                var returned = RoundTrip(request.ReceiptResponse);
+                returned.MarkAsFailed();
+                returned.ftSignatures.Add(FailureSignature("einvoicing-error", "PEPPOL participant not registered"));
+                returned.ftSignatures.Add(Signature("einvoicing-trace", "trace-42")); // not a failure signature: diagnosis only
+                return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
+            },
+        };
+        var processor = Processor(eInvoicing, null);
+        var queueItem = QueueItem();
+        var journals = new List<ftActionJournal>();
+
+        var preflight = await processor.ValidateAsync(Request());
+        var finalized = await processor.FinalizeAsync(Request(), Fiscalized(queueItem), queueItem, preflight, journals);
+
+        var failed = finalized.ftSignatures.Single(signature => signature.Caption == "einvoicing-failed");
+        failed.Data.Should().Contain("reported an error state").And.Contain("einvoicing-error: PEPPOL participant not registered", "a POS integrator needs the service's reason without the action journal");
+        failed.Data.Should().NotContain("trace-42", "only failure-category signatures carry a reason");
+        journals.Single().DataJson.Should().Contain("PEPPOL participant not registered").And.Contain("trace-42", "the action journal keeps every signature the service returned");
     }
 
     [Fact]

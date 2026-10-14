@@ -278,9 +278,10 @@ public class PostFiscalizationProcessor
             {
                 // Same meaning as a non-2xx: the two channels exist for convenience. The request never carries an error
                 // state (fiscalization succeeded and earlier failures are marked only after all services returned), so
-                // this is unambiguously the service's own signal. Its signatures are kept for diagnosis in the action
-                // journal; the response used from here on is the pre-call one.
-                throw new PostFiscalizationServiceException($"the service reported an error state (ftState 0x{returned.ftState:X})", DescribeAddedSignatures(receiptResponse, returned));
+                // this is unambiguously the service's own signal. The response used from here on is the pre-call one;
+                // the service's own reason travels in the failure signature, and all its signatures go to the action journal.
+                var added = AddedSignatures(receiptResponse, returned);
+                throw new PostFiscalizationServiceException(DescribeErrorState(returned, added), DescribeAddedSignatures(added));
             }
 
             RestoreIdentity(service, receiptResponse, returned, queueItem, actionJournals);
@@ -502,11 +503,28 @@ public class PostFiscalizationProcessor
         _ => ($"unexpected error: {exception.Message}", exception.ToString()),
     };
 
-    private static string? DescribeAddedSignatures(ReceiptResponse before, ReceiptResponse after)
+    /// <summary>
+    /// What the POS gets to see of a service's error state: the state itself and, since that is where a service puts its
+    /// reason, the caption and data of every <see cref="SignatureTypeCategory.Failure"/> signature it added. Other added
+    /// signatures are diagnosis only and stay in the action journal.
+    /// </summary>
+    private static string DescribeErrorState(ReceiptResponse returned, List<SignatureItem> added)
     {
-        var added = after.ftSignatures.Where(signature => !before.ftSignatures.Any(candidate => SameSignature(candidate, signature))).ToList();
-        return added.Count == 0 ? null : JsonSerializer.Serialize(new { signaturesReturnedByService = added }, _journalSerializerOptions);
+        var reasons = added
+            .Where(signature => signature.ftSignatureType.IsCategory(SignatureTypeCategory.Failure))
+            .Select(signature => (caption: signature.Caption?.Trim(), data: signature.Data?.Trim()))
+            .Select(parts => string.IsNullOrEmpty(parts.caption) ? parts.data : string.IsNullOrEmpty(parts.data) ? parts.caption : $"{parts.caption}: {parts.data}")
+            .Where(reason => !string.IsNullOrEmpty(reason))
+            .ToList();
+        var description = $"the service reported an error state (ftState 0x{returned.ftState:X})";
+        return reasons.Count == 0 ? description : $"{description}: {string.Join("; ", reasons)}";
     }
+
+    private static List<SignatureItem> AddedSignatures(ReceiptResponse before, ReceiptResponse after)
+        => after.ftSignatures.Where(signature => !before.ftSignatures.Any(candidate => SameSignature(candidate, signature))).ToList();
+
+    private static string? DescribeAddedSignatures(List<SignatureItem> added)
+        => added.Count == 0 ? null : JsonSerializer.Serialize(new { signaturesReturnedByService = added }, _journalSerializerOptions);
 
     private static bool SameSignature(SignatureItem a, SignatureItem b)
         => a.ftSignatureType == b.ftSignatureType
