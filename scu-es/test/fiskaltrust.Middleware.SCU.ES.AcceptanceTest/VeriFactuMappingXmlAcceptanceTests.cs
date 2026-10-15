@@ -154,7 +154,7 @@ public class VeriFactuMappingXmlAcceptanceTests
 
     private static string? ResolveSourcePath(string fileName)
     {
-        // Walk up from bin/Debug/net8.0 to the project root (where the .csproj lives).
+        // Walk up from bin/Debug/net10.0 to the project root (where the .csproj lives).
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
