@@ -137,6 +137,41 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
         ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
     }
 
+    [Fact]
+    public async Task InitialOperation_ShouldActivateQueue_WhenDeviceIsNotFiscalizedInSandbox()
+    {
+        var sscd = new FakePLSSCD { Fiscalized = false };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage, isSandbox: true);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        storage.Activated.Should().BeTrue();
+        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypePL.InitialOperationReceipt));
+    }
+
+    /// <summary>
+    /// Sandbox only relaxes an explicit "not fiscalized": a state the queue cannot read is still
+    /// unverified, so a broken or misbehaving SCU is caught in sandbox just as in production.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"FiscalizationState":"NonFiscal"}""")]
+    [InlineData("""{"FiscalizationState":0}""")]
+    [InlineData("""{"FiscalizationState":3}""")]
+    [InlineData("{}")]
+    [InlineData("not json at all")]
+    public async Task InitialOperation_ShouldFailInSandbox_WhenTheDeviceDoesNotReportNonFiscal(string infoData)
+    {
+        var sscd = new FakePLSSCD { InfoOverride = new PLSSCDInfo { InfoData = infoData } };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage, isSandbox: true);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        storage.Activated.Should().BeFalse();
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+    }
+
     /// <summary>
     /// The queue reads FiscalizationState out of the InfoData blob as a JSON number. Anything it
     /// cannot read that way — a string-encoded enum, a missing property, a malformed blob — must
