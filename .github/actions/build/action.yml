@@ -9,7 +9,6 @@ inputs:
   dotnet-version:
     type: string
     default: |
-      8.0.x
       10.0.x
 
 runs:
