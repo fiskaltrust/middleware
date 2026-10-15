@@ -192,6 +192,8 @@ public sealed class PosNetDeviceModel
             "trend" => InTransaction(command.CommandId, transaction => Trend(transaction, parameters)),
             "prncancel" => Prncancel(),
             "dailyrep" => Dailyrep(parameters),
+            "monthlyrep" => PeriodicReport(command.CommandId, parameters, "da"),
+            "periodicrepbydates" => PeriodicReport(command.CommandId, parameters, "fd", "td"),
             "stocash" => Stocash(parameters),
             "eclastdocnoget" => Eclastdocnoget(parameters),
             "rtcget" => Rtcget(),
@@ -433,6 +435,28 @@ public sealed class PosNetDeviceModel
         Printouts++;
         FileDocument(DailyReportDocument);
         return Ok("dailyrep");
+    }
+
+    /// <summary>
+    /// A periodic report (monthly, or by dates): a printout read from fiscal memory, outside a
+    /// transaction (POT-I-DEV-37 pp. 219–220). It changes no counter and no totalizer. Whether it is
+    /// filed in protected memory is not in the spec's document-type list, so the model does not file it.
+    /// </summary>
+    private string PeriodicReport(string mnemonic, IReadOnlyDictionary<string, string> p, params string[] dateFields)
+    {
+        if (_transaction is not null)
+        {
+            return Error(mnemonic, PosNetErrors.TransactionMode);
+        }
+        foreach (var field in dateFields)
+        {
+            if (!p.TryGetValue(field, out var date) || !DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            {
+                return Error(mnemonic, PosNetErrors.DateFormat);
+            }
+        }
+        Printouts++;
+        return Ok(mnemonic);
     }
 
     /// <summary>The goods return: one non-fiscal printout of the amount handed back, outside a transaction.</summary>

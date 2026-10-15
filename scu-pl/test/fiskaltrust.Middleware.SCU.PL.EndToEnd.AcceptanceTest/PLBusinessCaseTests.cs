@@ -32,10 +32,6 @@ public class PLBusinessCaseTests
         response.ftReceiptIdentification.Should().EndWith(FiscalDocumentNumber.Of(response).ToString());
     }
 
-    private static void ShouldBeStoredUnsigned(ReceiptResponse response)
-        => ((ulong)response.ftState & ErrorStateMask).Should().Be(ErrorState,
-            string.Join(" | ", response.ftSignatures.Select(s => $"{s.Caption}: {s.Data}")));
-
     private static KeyValuePair<string, string> Field(string key, string value) => new(key, value);
 
     [Fact]
@@ -252,15 +248,36 @@ public class PLBusinessCaseTests
         (await harness.QueueItemsAsync()).Should().HaveCount(2);
     }
 
-    /// <summary>Periodic reports are not implemented in the PosNet SCU yet; the closing is stored unsigned and nothing reaches the register.</summary>
+    /// <summary>The monthly closing prints the register's monthly report for the month closed; it reads fiscal memory and leaves the day open.</summary>
     [Fact]
-    public async Task MonthlyClosing_IsStoredUnsigned_UntilTheScuSupportsPeriodicReports()
+    public async Task MonthlyClosing_PrintsTheMonthlyReport_ForTheMonthClosed()
+    {
+        using var harness = new PLEndToEndHarness();
+        var before = await harness.Probe.SnapshotAsync();
+
+        var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestDailyOperations_MonthlyClosing"));
+        var after = await harness.Probe.SnapshotAsync();
+
+        ((ulong)response.ftState & ErrorStateMask).Should().NotBe(ErrorState,
+            string.Join(" | ", response.ftSignatures.Select(s => $"{s.Caption}: {s.Data}")));
+        harness.SentMnemonics.Should().EndWith(["monthlyrep"]);
+        // 22:00 UTC on 31 August is 00:00 on 1 September in Warsaw: the register's month is September.
+        harness.SentCommands.Single(c => c.CommandId == "monthlyrep").Parameters.Should().Contain(Field("da", "2026-09-01"));
+        after.NextDailyReportNumber.Should().Be(before.NextDailyReportNumber, "a periodic report closes no day");
+    }
+
+    /// <summary>The yearly closing prints a periodic report from 1 January to the day closed — the register has no yearly report.</summary>
+    [Fact]
+    public async Task YearlyClosing_PrintsAPeriodicReport_OverTheYear()
     {
         using var harness = new PLEndToEndHarness();
 
-        var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestDailyOperations_MonthlyClosing"));
+        var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestDailyOperations_YearlyClosing"));
 
-        ShouldBeStoredUnsigned(response);
-        harness.SentMnemonics.Should().BeEmpty();
+        ((ulong)response.ftState & ErrorStateMask).Should().NotBe(ErrorState,
+            string.Join(" | ", response.ftSignatures.Select(s => $"{s.Caption}: {s.Data}")));
+        harness.SentMnemonics.Should().EndWith(["periodicrepbydates"]);
+        harness.SentCommands.Single(c => c.CommandId == "periodicrepbydates").Parameters
+            .Should().Contain(Field("fd", "2026-01-01")).And.Contain(Field("td", "2026-12-31"));
     }
 }

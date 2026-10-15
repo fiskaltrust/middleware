@@ -357,17 +357,42 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_MonthlyClosing_IsNotSupportedYet()
+    public async Task ProcessReceiptAsync_MonthlyClosing_PrintsTheMonthlyReport_ForTheRegistersMonth()
     {
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2012;
+        // 00:30 Warsaw time on 1 October — the host's UTC clock would still be in September.
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 9, 30, 22, 30, 0, DateTimeKind.Utc);
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
 
-        var act = () => sut.ProcessReceiptAsync(request);
+        var result = await sut.ProcessReceiptAsync(request);
 
-        await act.Should().ThrowAsync<PLValidationException>();
-        transport.SentMnemonics.Should().BeEmpty();
+        transport.SentMnemonics.Should().Equal("scomm", "monthlyrep");
+        transport.SentPayloads.Single(p => p.StartsWith("monthlyrep")).Should().StartWith("monthlyrep\tda2026-10-01\t");
+        // A periodic report advances no counter, so it signs no report number.
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer raportu dobowego");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_YearlyClosing_PrintsAPeriodicReport_FromNewYearToTheDayClosed()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2013;
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 12, 31, 18, 0, 0, DateTimeKind.Utc);
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+
+        await sut.ProcessReceiptAsync(request);
+
+        // The register has no yearly report — and the settlement report (raport rozliczeniowy) would
+        // end its fiscal life — so the year is a plain periodic report by dates.
+        transport.SentMnemonics.Should().Equal("scomm", "periodicrepbydates");
+        transport.SentPayloads.Single(p => p.StartsWith("periodicrepbydates")).Should().StartWith("periodicrepbydates\tfd2026-01-01\ttd2026-12-31\t");
     }
 
     private static ProcessRequest CreateEReceiptSaleRequest(string eReceiptCustomerId = "KID0123456789ABC")

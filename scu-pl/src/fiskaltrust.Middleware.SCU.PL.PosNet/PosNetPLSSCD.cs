@@ -22,7 +22,8 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet;
 /// numbering, the PTU table, reports and the CRK transmission; this SCU translates receipt cases
 /// into the register's commands: the trinit → trline → trpayment → trend flow for a sale and the
 /// readback that anchors it (<see cref="PosNetReceiptReadback"/>), the goods return printout for a
-/// return, the daily report for a daily closing, and the status read behind the zero receipt. Periodic reports, non-fiscal forms and device setup are follow-ups.
+/// return, the daily report for a daily closing, the periodic reports for a monthly and a yearly
+/// closing, and the status read behind the zero receipt. Non-fiscal forms and device setup are follow-ups.
 /// </summary>
 public class PosNetPLSSCD : IPLSSCD, IDisposable
 {
@@ -126,9 +127,16 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
         }
-        else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012) || receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
+        else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012))
         {
-            throw new PLValidationException("Periodic reports (monthly/yearly closing) are not supported by the PosNet SCU yet — the daily report is (0x2011).");
+            await ExecutePeriodicReportAsync(response, PosNetCommands.Monthlyrep(ToRegisterDate(request.ReceiptRequest.cbReceiptMoment)));
+        }
+        else if (receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
+        {
+            // The register has no yearly report: the year is a periodic report from 1 January up to
+            // the day being closed, so a closing sent on 31 December covers the whole year.
+            var day = ToRegisterDate(request.ReceiptRequest.cbReceiptMoment);
+            await ExecutePeriodicReportAsync(response, PosNetCommands.Periodicrepbydates(new DateOnly(day.Year, 1, 1), day));
         }
 
         // Non-fiscal receipt cases pass through without device interaction — like the InMemory
@@ -380,6 +388,25 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         if (reportsDone is { } number)
         {
             response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    /// <summary>
+    /// Prints a periodic report for a monthly or yearly closing. The period is taken from the receipt
+    /// moment in the register's zone, as for the daily closing. A periodic report only reads fiscal
+    /// memory, so no report number is signed: unlike the daily report it advances no counter.
+    /// </summary>
+    private async Task ExecutePeriodicReportAsync(ReceiptResponse response, PosNetCommand report)
+    {
+        await _deviceLock.WaitAsync();
+        try
+        {
+            await EnrichWithDeviceIdentityAsync(response);
+            await _client.ExecuteAsync(report);
+        }
+        finally
+        {
+            _deviceLock.Release();
         }
     }
 
