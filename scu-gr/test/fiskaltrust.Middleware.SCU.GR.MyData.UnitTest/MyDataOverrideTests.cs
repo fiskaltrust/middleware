@@ -3196,8 +3196,9 @@ public class MyDataOverrideTests
     }
 
     // === RETAIL FUEL COUNTERPART (A.1139/2025) ===
+    // AADE (verified in sandbox) forbids a counterpart on 11.x (error 205) unless invoiceHeader.fuelInvoice = true.
 
-    private ReceiptRequest CreateRetailHeatingOilRequest(bool withFuelCode = true)
+    private ReceiptRequest CreateRetailFuelRequest(bool fuelInvoice = true, object? counterpartOverride = null, string? invoiceType = null)
     {
         var request = CreateBasicReceiptRequest();
         request.cbCustomer = new
@@ -3208,53 +3209,27 @@ public class MyDataOverrideTests
             CustomerZip = "10442",
             CustomerCity = "Αθήνα"
         };
-        if (withFuelCode)
+        request.cbChargeItems[0].ftChargeItemCaseData = new
         {
-            request.cbChargeItems[0].ftChargeItemCaseData = new
-            {
-                GR = new { mydataoverride = new { invoiceDetails = new { fuelCode = 30 } } }
-            };
-        }
+            GR = new { mydataoverride = new { invoiceDetails = new { fuelCode = 30 } } }
+        };
+        var header = new Dictionary<string, object>();
+        if (fuelInvoice)
+            header["fuelInvoice"] = true;
+        if (invoiceType != null)
+            header["invoiceType"] = invoiceType;
+        var invoice = new Dictionary<string, object> { ["invoiceHeader"] = header };
+        if (counterpartOverride != null)
+            invoice["counterpart"] = counterpartOverride;
+        request.ftReceiptCaseData = new { GR = new { mydataoverride = invoice.Count > 0 ? new { invoice } : null } };
         return request;
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailReceiptWithFuelCode_ShouldSetCounterpartWithVatOnly()
+    public void MapToInvoicesDoc_RetailFuelInvoice_ShouldSetCounterpartWithVatOnly()
     {
         var factory = CreateFactory();
-        var request = CreateRetailHeatingOilRequest();
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
-
-        error.Should().BeNull();
-        var invoice = doc!.invoice[0];
-        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
-        invoice.counterpart.Should().NotBeNull();
-        invoice.counterpart.vatNumber.Should().Be("123456789");
-        invoice.counterpart.country.Should().Be(CountryType.GR);
-        invoice.counterpart.name.Should().BeNull();
-        invoice.counterpart.address.Should().BeNull();
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoOverride_ShouldSetSupplyAccountNo()
-    {
-        var factory = CreateFactory();
-        var request = CreateRetailHeatingOilRequest(withFuelCode: false);
-        request.ftReceiptCaseData = new
-        {
-            GR = new
-            {
-                mydataoverride = new
-                {
-                    invoice = new
-                    {
-                        invoiceHeader = new { fuelInvoice = true },
-                        counterpart = new { supplyAccountNo = "12345678901" }
-                    }
-                }
-            }
-        };
+        var request = CreateRetailFuelRequest();
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
@@ -3264,14 +3239,48 @@ public class MyDataOverrideTests
         invoice.invoiceHeader.fuelInvoice.Should().BeTrue();
         invoice.counterpart.Should().NotBeNull();
         invoice.counterpart.vatNumber.Should().Be("123456789");
-        invoice.counterpart.supplyAccountNo.Should().Be("12345678901");
+        invoice.counterpart.country.Should().Be(CountryType.GR);
+        invoice.counterpart.name.Should().BeNull();
+        invoice.counterpart.address.Should().BeNull();
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailReceiptWithoutFuel_ShouldNotSetCounterpart()
+    public void MapToInvoicesDoc_RetailFuelInvoiceRefund_ShouldSetCounterpartOn114()
     {
         var factory = CreateFactory();
-        var request = CreateRetailHeatingOilRequest(withFuelCode: false);
+        var request = CreateRetailFuelRequest();
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        request.cbChargeItems[0].Amount = -100;
+        request.cbChargeItems[0].Quantity = -1;
+        request.cbPayItems[0].Amount = -100;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item114);
+        doc.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.vatNumber.Should().Be("123456789");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoOverride_ShouldSetSupplyAccountNo()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(counterpartOverride: new { supplyAccountNo = "12345678901" });
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.vatNumber.Should().Be("123456789");
+        doc.invoice[0].counterpart.supplyAccountNo.Should().Be("12345678901");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelCodeWithoutFuelInvoice_ShouldNotSetCounterpart()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(fuelInvoice: false);
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
@@ -3281,37 +3290,89 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_FuelInvoiceOverriddenToRetailType_ShouldSetCounterpartWithVatOnly()
+    public void MapToInvoicesDoc_RetailReceiptWithCustomer_ShouldNotSetCounterpart()
     {
         var factory = CreateFactory();
-        var request = CreateRetailHeatingOilRequest();
-        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2C0x1001);
-        request.ftReceiptCaseData = new
-        {
-            GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "11.1" } } } }
-        };
+        var request = CreateBasicReceiptRequest();
+        request.cbCustomer = new { CustomerVATId = "EL123456789", CustomerCountry = "GR" };
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
         error.Should().BeNull();
-        var invoice = doc!.invoice[0];
-        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
-        invoice.counterpart.Should().NotBeNull();
-        invoice.counterpart.vatNumber.Should().Be("123456789");
-        invoice.counterpart.address.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        doc.invoice[0].counterpart.Should().BeNull();
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailFuelReceiptWithoutBuyerVat_ShouldNotSetCounterpart()
+    public void MapToInvoicesDoc_FuelInvoiceOverriddenToRetailType_ShouldSetCounterpart()
     {
         var factory = CreateFactory();
-        var request = CreateRetailHeatingOilRequest();
+        var request = CreateRetailFuelRequest(invoiceType: "11.1");
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2C0x1001);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        doc.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.address.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithoutBuyerVat_ShouldNotSetCounterpart()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest();
         request.cbCustomer = new { CustomerCountry = "GR", CustomerName = "Buyer" };
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
         error.Should().BeNull();
-        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
-        doc.invoice[0].counterpart.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().BeNull();
+    }
+
+    // === FUEL CODE MAPPING ===
+
+    [Theory]
+    [InlineData(10, FuelCodes.Item10)]
+    [InlineData(30, FuelCodes.Item30)]
+    [InlineData(31, FuelCodes.Item31)]
+    [InlineData(40, FuelCodes.Item40)]
+    public void ApplyInvoiceDetailOverride_FuelCode_ShouldMapToAadeCodeAndSendQuantity(int fuelCode, FuelCodes expected)
+    {
+        var row = new global::InvoiceRowType { lineNumber = 1, quantity = 100 };
+
+        AADEFactory.ApplyInvoiceDetailOverride(row, new InvoiceRowTypeOverride { FuelCode = fuelCode });
+
+        row.fuelCode.Should().Be(expected);
+        row.fuelCodeSpecified.Should().BeTrue();
+        row.quantitySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApplyInvoiceDetailOverride_FuelCode_ShouldSerializeAadeCode()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest();
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        var xml = AADEFactory.GenerateInvoicePayload(doc!);
+        xml.Should().Contain("<fuelCode>30</fuelCode>");
+        xml.Should().Contain("<quantity>1</quantity>");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(16)]
+    [InlineData(99)]
+    public void ApplyInvoiceDetailOverride_InvalidFuelCode_ShouldThrow(int fuelCode)
+    {
+        var row = new global::InvoiceRowType { lineNumber = 1 };
+
+        var act = () => AADEFactory.ApplyInvoiceDetailOverride(row, new InvoiceRowTypeOverride { FuelCode = fuelCode });
+
+        act.Should().Throw<ArgumentException>().WithMessage($"Invalid fuelCode override value '{fuelCode}'*");
     }
 }

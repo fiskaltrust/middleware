@@ -277,17 +277,20 @@ public class AADEFactory
 
         // The mydataoverride invoiceType is only applied further down, so decide on the type the document will finally carry.
         var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
-        var isRetailFuelDocumentWithBuyerVat = AADEMappings.SupportsRetailFuelCounterpart(effectiveInvoiceType)
-            && !string.IsNullOrWhiteSpace(receiptRequest.GetCustomerOrNull()?.CustomerVATId)
-            && IsFuelDocument(receiptRequest);
-        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(effectiveInvoiceType) || isRetailFuelDocumentWithBuyerVat || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
+        var supportsCounterpart = AADEMappings.SupportsCounterpart(effectiveInvoiceType) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation);
+        // AADE forbids a counterpart on retail types (error 205) unless the document is a fuel document
+        // (invoiceHeader.fuelInvoice = true); then the buyer may be declared, e.g. for heating oil (A.1139/2025).
+        var isRetailFuelDocumentWithBuyerVat = !supportsCounterpart
+            && IsFuelInvoice(receiptRequest)
+            && !string.IsNullOrWhiteSpace(receiptRequest.GetCustomerOrNull()?.CustomerVATId);
+        if (receiptRequest.ContainsCustomerInfo() && (supportsCounterpart || isRetailFuelDocumentWithBuyerVat))
         {
             var counterpart = GetCounterPart(receiptRequest);
             if (counterpart != null)
             {
-                if (isRetailFuelDocumentWithBuyerVat && !AADEMappings.SupportsCounterpart(effectiveInvoiceType))
+                if (isRetailFuelDocumentWithBuyerVat)
                 {
-                    // Retail fuel documents (e.g. heating oil, A.1139/2025) only declare the buyer's VAT number.
+                    // Retail fuel documents only declare the buyer's VAT number by default.
                     counterpart.name = null;
                     counterpart.address = null;
                 }
@@ -453,33 +456,10 @@ public class AADEFactory
 
     }
 
-    /// <summary>
-    /// A receipt is a fuel document when <c>mydataoverride.invoice.invoiceHeader.fuelInvoice</c> is true
-    /// or any charge item sets <c>mydataoverride.invoiceDetails.fuelCode</c>.
-    /// </summary>
-    private static bool IsFuelDocument(ReceiptRequest receiptRequest)
+    private static bool IsFuelInvoice(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptData)
-            && receiptData?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.FuelInvoice == true)
-        {
-            return true;
-        }
-
-        return receiptRequest.cbChargeItems?.Any(HasFuelCodeOverride) == true;
-    }
-
-    private static bool HasFuelCodeOverride(ChargeItem chargeItem)
-    {
-        if (chargeItem.ftChargeItemCaseData == null)
-            return false;
-        try
-        {
-            var data = JsonSerializer.Deserialize<ftChargeItemCaseDataPayload>(
-                JsonSerializer.Serialize(chargeItem.ftChargeItemCaseData),
-                _caseDataJsonOptions);
-            return data?.GR?.MyDataOverride?.InvoiceDetails?.FuelCode != null;
-        }
-        catch { return false; }
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
+            && data?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.FuelInvoice == true;
     }
 
     private static bool HasClassificationOverride(ChargeItem chargeItem)
@@ -899,6 +879,21 @@ public class AADEFactory
         }
     }
 
+    /// <summary>
+    /// Maps an AADE fuel code (e.g. 30 = Diesel Θέρμανσης) to <see cref="FuelCodes"/>. The enum members are
+    /// named after the code (Item30), so a numeric cast would pick the member by position instead.
+    /// </summary>
+    private static FuelCodes GetFuelCode(int fuelCode)
+    {
+        if (!Enum.TryParse<FuelCodes>($"Item{fuelCode}", out var mapped) || !Enum.IsDefined(mapped))
+        {
+            throw new ArgumentException(
+                $"Invalid fuelCode override value '{fuelCode}'. " +
+                $"Allowed values: {string.Join(", ", Enum.GetNames<FuelCodes>().Select(n => n.Replace("Item", "")))}");
+        }
+        return mapped;
+    }
+
     public static void ApplyInvoiceDetailOverride(InvoiceRowType row, InvoiceRowTypeOverride detailOverride)
     {
         if (detailOverride.RecType.HasValue)
@@ -959,8 +954,10 @@ public class AADEFactory
         }
         if (detailOverride.FuelCode.HasValue)
         {
-            row.fuelCode = (FuelCodes) detailOverride.FuelCode.Value;
+            row.fuelCode = GetFuelCode(detailOverride.FuelCode.Value);
             row.fuelCodeSpecified = true;
+            // AADE rejects fuel lines without a quantity (error 230).
+            row.quantitySpecified = true;
         }
 
         if (detailOverride.InvoiceDetailType.HasValue)
