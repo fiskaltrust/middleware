@@ -609,9 +609,14 @@ public static class AADEMappings
         };
     }
 
-    public static bool SupportsCounterpart(InvoiceType invoiceType) => invoiceType switch
+    /// <summary>
+    /// Retail types forbid a counterpart (AADE error 205) unless the document is a fuel document
+    /// (invoiceHeader.fuelInvoice = true). 11.2 does not allow fuelInvoice at all.
+    /// </summary>
+    public static bool SupportsCounterpart(InvoiceType invoiceType, bool isFuelInvoice = false) => invoiceType switch
     {
-        InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+        InvoiceType.Item112 => false,
+        InvoiceType.Item111 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => isFuelInvoice,
         _ => true
     };
 

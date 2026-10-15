@@ -3226,7 +3226,7 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailFuelInvoice_ShouldSetCounterpartWithVatOnly()
+    public void MapToInvoicesDoc_RetailFuelInvoice_ShouldSetCounterpartFromCustomer()
     {
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest();
@@ -3240,8 +3240,97 @@ public class MyDataOverrideTests
         invoice.counterpart.Should().NotBeNull();
         invoice.counterpart.vatNumber.Should().Be("123456789");
         invoice.counterpart.country.Should().Be(CountryType.GR);
+        // AADE forbids the name for Greek counterparts on every type; the address is accepted on 11.1 too.
         invoice.counterpart.name.Should().BeNull();
-        invoice.counterpart.address.Should().BeNull();
+        invoice.counterpart.address.Should().NotBeNull();
+        invoice.counterpart.address.postalCode.Should().Be("10442");
+    }
+
+    [Theory]
+    [InlineData("11.1", true)]
+    [InlineData("11.3", true)]
+    [InlineData("11.4", true)]
+    [InlineData("11.5", true)]
+    [InlineData("11.2", false)]
+    public void MapToInvoicesDoc_RetailTypeWithFuelInvoice_ShouldSetCounterpartWhereAadeAllowsIt(string invoiceType, bool expectCounterpart)
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(invoiceType: invoiceType);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        if (expectCounterpart)
+            doc!.invoice[0].counterpart.Should().NotBeNull();
+        else
+            doc!.invoice[0].counterpart.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoButNoBuyerVat_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(counterpartOverride: new { supplyAccountNo = "12345678901" });
+        request.cbCustomer = new { CustomerCountry = "GR", CustomerName = "Buyer" };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        doc.Should().BeNull();
+        error!.Exception.Message.Should().Contain("requires the buyer's VAT number");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoWithoutCustomer_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(counterpartOverride: new { supplyAccountNo = "12345678901" });
+        request.cbCustomer = null;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        doc.Should().BeNull();
+        error!.Exception.Message.Should().Contain("requires the buyer's VAT number");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomer_ShouldCreateCounterpartFromOverride()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(counterpartOverride: new { vatNumber = "987654321", country = "GR", supplyAccountNo = "12345678901" });
+        request.cbCustomer = null;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        var counterpart = doc!.invoice[0].counterpart;
+        counterpart.vatNumber.Should().Be("987654321");
+        counterpart.country.Should().Be(CountryType.GR);
+        counterpart.supplyAccountNo.Should().Be("12345678901");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomerAndCountry_ShouldReturnError()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(counterpartOverride: new { vatNumber = "987654321" });
+        request.cbCustomer = null;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        doc.Should().BeNull();
+        error!.Exception.Message.Should().Contain("counterpart.country");
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_NonFuelRetailReceiptWithCounterpartOverride_ShouldNotSetCounterpart()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(fuelInvoice: false, counterpartOverride: new { supplyAccountNo = "12345678901" });
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().BeNull();
     }
 
     [Fact]
@@ -3315,7 +3404,7 @@ public class MyDataOverrideTests
         error.Should().BeNull();
         doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
         doc.invoice[0].counterpart.Should().NotBeNull();
-        doc.invoice[0].counterpart.address.Should().BeNull();
+        doc.invoice[0].counterpart.vatNumber.Should().Be("123456789");
     }
 
     [Fact]

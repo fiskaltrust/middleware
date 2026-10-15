@@ -31,6 +31,8 @@ public class AADEFactory
 {
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
 
+    private const string CounterpartWithoutVatNumberError = "A counterpart override requires the buyer's VAT number (cbCustomer.CustomerVATId or mydataoverride.invoice.counterpart.vatNumber); AADE rejects a counterpart without vatNumber.";
+
     private static readonly JsonSerializerOptions _caseDataJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly MasterDataConfiguration _masterDataConfiguration;
@@ -277,23 +279,29 @@ public class AADEFactory
 
         // The mydataoverride invoiceType is only applied further down, so decide on the type the document will finally carry.
         var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
-        var supportsCounterpart = AADEMappings.SupportsCounterpart(effectiveInvoiceType) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation);
-        // AADE forbids a counterpart on retail types (error 205) unless the document is a fuel document
-        // (invoiceHeader.fuelInvoice = true); then the buyer may be declared, e.g. for heating oil (A.1139/2025).
-        var isRetailFuelDocumentWithBuyerVat = !supportsCounterpart
-            && IsFuelInvoice(receiptRequest)
-            && !string.IsNullOrWhiteSpace(receiptRequest.GetCustomerOrNull()?.CustomerVATId);
-        if (receiptRequest.ContainsCustomerInfo() && (supportsCounterpart || isRetailFuelDocumentWithBuyerVat))
+        if (AADEMappings.SupportsCounterpart(effectiveInvoiceType, IsFuelInvoice(receiptRequest)) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
         {
-            var counterpart = GetCounterPart(receiptRequest);
+            var counterpart = receiptRequest.ContainsCustomerInfo() ? GetCounterPart(receiptRequest) : null;
+            if (counterpart != null && string.IsNullOrWhiteSpace(counterpart.vatNumber) && !AADEMappings.SupportsCounterpart(effectiveInvoiceType))
+            {
+                // Retail fuel documents are usually anonymous; without the buyer's VAT number there is no counterpart.
+                counterpart = null;
+            }
+            var counterpartOverride = GetCounterpartOverride(receiptRequest);
+            if (counterpart == null && counterpartOverride != null)
+            {
+                if (string.IsNullOrWhiteSpace(counterpartOverride.VatNumber))
+                {
+                    throw new ArgumentException(CounterpartWithoutVatNumberError);
+                }
+                if (!CountryTypeMapper.TryParseCountryCode(counterpartOverride.Country ?? "", out var country))
+                {
+                    throw new ArgumentException("A counterpart override without cbCustomer requires mydataoverride.invoice.counterpart.country.");
+                }
+                counterpart = new PartyType { country = country, branch = 0 };
+            }
             if (counterpart != null)
             {
-                if (isRetailFuelDocumentWithBuyerVat)
-                {
-                    // Retail fuel documents only declare the buyer's VAT number by default.
-                    counterpart.name = null;
-                    counterpart.address = null;
-                }
                 inv.counterpart = counterpart;
             }
         }
@@ -456,6 +464,13 @@ public class AADEFactory
 
     }
 
+    private static PartyTypeOverride? GetCounterpartOverride(ReceiptRequest receiptRequest)
+    {
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
+            ? data?.GR?.MyDataOverride?.Invoice?.Counterpart
+            : null;
+    }
+
     private static bool IsFuelInvoice(ReceiptRequest receiptRequest)
     {
         return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
@@ -516,6 +531,10 @@ public class AADEFactory
         {
             var counterpart = invoice.counterpart;
             ApplyPartyOverride(ref counterpart, invoiceOverride.Counterpart);
+            if (string.IsNullOrWhiteSpace(counterpart.vatNumber))
+            {
+                throw new ArgumentException(CounterpartWithoutVatNumberError);
+            }
             invoice.counterpart = counterpart;
         }
 

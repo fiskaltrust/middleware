@@ -15,9 +15,10 @@ using Xunit.Abstractions;
 namespace fiskaltrust.Middleware.SCU.GR.AcceptanceTests;
 
 /// <summary>
-/// Fuel documents against the AADE sandbox (fiskaltrust/market-gr#373). AADE forbids a counterpart on
-/// retail types (error 205) unless invoiceHeader.fuelInvoice = true; then the buyer's VAT number and the
-/// electricity supply number (counterpart.supplyAccountNo) can be declared, e.g. for heating oil (A.1139/2025).
+/// Fuel documents against the AADE sandbox (fiskaltrust/market-gr#373). fuelInvoice is independent of the
+/// invoice type (1.1 and 11.x). AADE forbids a counterpart on retail types (error 205) unless
+/// invoiceHeader.fuelInvoice = true; then the buyer and the electricity supply number
+/// (counterpart.supplyAccountNo) can be declared, e.g. for heating oil (A.1139/2025).
 /// </summary>
 [Trait("only", "local")]
 public class FuelInvoiceAcceptanceTests
@@ -35,7 +36,7 @@ public class FuelInvoiceAcceptanceTests
         Outlet = new fiskaltrust.storage.V0.MasterData.OutletMasterData { LocationId = "0" }
     }, "https://test.receipts.example.com");
 
-    private static ReceiptRequest CreateFuelReceipt(int fuelCode, string? supplyAccountNo, bool refund = false, bool withCustomer = true)
+    private static ReceiptRequest CreateFuelReceipt(int fuelCode, string? supplyAccountNo, bool refund = false, bool withCustomer = true, bool b2b = false)
     {
         var invoice = new Dictionary<string, object> { ["invoiceHeader"] = new { fuelInvoice = true } };
         if (supplyAccountNo != null)
@@ -43,7 +44,7 @@ public class FuelInvoiceAcceptanceTests
             invoice["counterpart"] = new { supplyAccountNo };
         }
         var sign = refund ? -1 : 1;
-        var receiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001);
+        var receiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(b2b ? ReceiptCase.InvoiceB2B0x1002 : ReceiptCase.PointOfSaleReceipt0x0001);
         return new ReceiptRequest
         {
             cbTerminalID = "1",
@@ -65,7 +66,7 @@ public class FuelInvoiceAcceptanceTests
                 }
             ],
             cbPayItems = [new PayItem { Amount = sign * 124, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }],
-            cbCustomer = withCustomer ? new { CustomerVATId = "EL" + CUSTOMER_VAT, CustomerCountry = "GR" } : null,
+            cbCustomer = withCustomer ? new { CustomerVATId = "EL" + CUSTOMER_VAT, CustomerCountry = "GR", CustomerName = "Πελάτης", CustomerStreet = "Κηφισίας", CustomerHouseNumber = "12", CustomerZip = "12345", CustomerCity = "Αθηνών" } : null,
             ftReceiptCase = refund ? receiptCase.WithFlag(ReceiptCaseFlags.Refund) : receiptCase,
             ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice } } }
         };
@@ -144,6 +145,14 @@ public class FuelInvoiceAcceptanceTests
     public async Task RetailFuelReceipt_WithoutCustomer_ShouldBeAccepted(int fuelCode, bool refund)
     {
         var result = await SendAsync(CreateFuelReceipt(fuelCode, supplyAccountNo: null, refund, withCustomer: false), expectCounterpart: false);
+
+        result.statusCode.Should().Be("Success");
+    }
+
+    [Fact]
+    public async Task FuelInvoice11_WithSupplyAccountNo_ShouldBeAccepted()
+    {
+        var result = await SendAsync(CreateFuelReceipt(30, supplyAccountNo: "12345678901", b2b: true));
 
         result.statusCode.Should().Be("Success");
     }
