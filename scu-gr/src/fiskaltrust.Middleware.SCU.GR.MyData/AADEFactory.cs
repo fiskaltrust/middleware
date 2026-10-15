@@ -275,13 +275,17 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        var isRetailFuelDocumentWithBuyerVat = AADEMappings.SupportsRetailFuelCounterpart(inv.invoiceHeader.invoiceType) && IsFuelDocument(receiptRequest);
-        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType) || isRetailFuelDocumentWithBuyerVat || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
+        // The mydataoverride invoiceType is only applied further down, so decide on the type the document will finally carry.
+        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
+        var isRetailFuelDocumentWithBuyerVat = AADEMappings.SupportsRetailFuelCounterpart(effectiveInvoiceType)
+            && !string.IsNullOrWhiteSpace(receiptRequest.GetCustomerOrNull()?.CustomerVATId)
+            && IsFuelDocument(receiptRequest);
+        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(effectiveInvoiceType) || isRetailFuelDocumentWithBuyerVat || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
         {
             var counterpart = GetCounterPart(receiptRequest);
             if (counterpart != null)
             {
-                if (isRetailFuelDocumentWithBuyerVat && !AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType))
+                if (isRetailFuelDocumentWithBuyerVat && !AADEMappings.SupportsCounterpart(effectiveInvoiceType))
                 {
                     // Retail fuel documents (e.g. heating oil, A.1139/2025) only declare the buyer's VAT number.
                     counterpart.name = null;

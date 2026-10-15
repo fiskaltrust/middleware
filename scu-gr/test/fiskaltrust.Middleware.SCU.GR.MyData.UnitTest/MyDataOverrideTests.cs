@@ -3279,4 +3279,39 @@ public class MyDataOverrideTests
         doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
         doc.invoice[0].counterpart.Should().BeNull();
     }
+
+    [Fact]
+    public void MapToInvoicesDoc_FuelInvoiceOverriddenToRetailType_ShouldSetCounterpartWithVatOnly()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailHeatingOilRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2C0x1001);
+        request.ftReceiptCaseData = new
+        {
+            GR = new { mydataoverride = new { invoice = new { invoiceHeader = new { invoiceType = "11.1" } } } }
+        };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        var invoice = doc!.invoice[0];
+        invoice.invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        invoice.counterpart.Should().NotBeNull();
+        invoice.counterpart.vatNumber.Should().Be("123456789");
+        invoice.counterpart.address.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_RetailFuelReceiptWithoutBuyerVat_ShouldNotSetCounterpart()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailHeatingOilRequest();
+        request.cbCustomer = new { CustomerCountry = "GR", CustomerName = "Buyer" };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+        doc.invoice[0].counterpart.Should().BeNull();
+    }
 }
