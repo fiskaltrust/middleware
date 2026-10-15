@@ -278,32 +278,10 @@ public class AADEFactory
         }
 
         // The mydataoverride invoiceType is only applied further down, so decide on the type the document will finally carry.
-        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
-        if (AADEMappings.SupportsCounterpart(effectiveInvoiceType, IsFuelInvoice(receiptRequest)) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        var counterpart = CreateCounterpart(receiptRequest, GetEffectiveInvoiceType(receiptRequest));
+        if (counterpart != null)
         {
-            var counterpart = receiptRequest.ContainsCustomerInfo() ? GetCounterPart(receiptRequest) : null;
-            if (counterpart != null && string.IsNullOrWhiteSpace(counterpart.vatNumber) && !AADEMappings.SupportsCounterpart(effectiveInvoiceType))
-            {
-                // Retail fuel documents are usually anonymous; without the buyer's VAT number there is no counterpart.
-                counterpart = null;
-            }
-            var counterpartOverride = GetCounterpartOverride(receiptRequest);
-            if (counterpart == null && counterpartOverride != null)
-            {
-                if (string.IsNullOrWhiteSpace(counterpartOverride.VatNumber))
-                {
-                    throw new ArgumentException(CounterpartWithoutVatNumberError);
-                }
-                if (!CountryTypeMapper.TryParseCountryCode(counterpartOverride.Country ?? "", out var country))
-                {
-                    throw new ArgumentException("A counterpart override without cbCustomer requires mydataoverride.invoice.counterpart.country.");
-                }
-                counterpart = new PartyType { country = country, branch = 0 };
-            }
-            if (counterpart != null)
-            {
-                inv.counterpart = counterpart;
-            }
+            inv.counterpart = counterpart;
         }
 
         if (inv.invoiceHeader.invoiceType == InvoiceType.Item86)
@@ -527,16 +505,7 @@ public class AADEFactory
             ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
         }
 
-        if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
-        {
-            var counterpart = invoice.counterpart;
-            ApplyPartyOverride(ref counterpart, invoiceOverride.Counterpart);
-            if (string.IsNullOrWhiteSpace(counterpart.vatNumber))
-            {
-                throw new ArgumentException(CounterpartWithoutVatNumberError);
-            }
-            invoice.counterpart = counterpart;
-        }
+        // invoiceOverride.Counterpart is merged in CreateCounterpart.
 
         // Plain passthrough: content is validated by AADE, not here. The XSD-required ints have no
         // "absent" form in the XML, so a missing value is rejected rather than sent as 0.
@@ -1711,6 +1680,65 @@ public class AADEFactory
         };
     }
 
+    /// <summary>
+    /// Builds the invoice counterpart (buyer). This is the only place that decides whether a counterpart is sent and what it contains:
+    /// <list type="number">
+    /// <item>AADE must allow a counterpart on the effective invoice type: retail types (11.x) only on fuel documents
+    /// (see <see cref="AADEMappings.SupportsCounterpart"/>), or the receipt carries transport information.
+    /// Otherwise there is no counterpart and a counterpart override is ignored (AADE error 205).</item>
+    /// <item>The base data comes from cbCustomer (<see cref="GetCounterPart"/>). A retail fuel sale without the buyer's
+    /// VAT number is anonymous and has no counterpart.</item>
+    /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name);
+    /// AADE validates its content.</item>
+    /// <item>AADE rejects a counterpart without vatNumber, so an override that ends up without one fails with a clear error.</item>
+    /// </list>
+    /// </summary>
+    public static PartyType? CreateCounterpart(ReceiptRequest receiptRequest, InvoiceType effectiveInvoiceType)
+    {
+        var supportsCounterpartWithoutFuel = AADEMappings.SupportsCounterpart(effectiveInvoiceType);
+        if (!AADEMappings.SupportsCounterpart(effectiveInvoiceType, IsFuelInvoice(receiptRequest))
+            && !receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        {
+            return null;
+        }
+
+        var counterpart = receiptRequest.ContainsCustomerInfo() ? GetCounterPart(receiptRequest) : null;
+        if (counterpart != null && string.IsNullOrWhiteSpace(counterpart.vatNumber) && !supportsCounterpartWithoutFuel)
+        {
+            counterpart = null;
+        }
+
+        var counterpartOverride = GetCounterpartOverride(receiptRequest);
+        if (counterpartOverride == null)
+        {
+            return counterpart;
+        }
+
+        if (counterpart == null)
+        {
+            if (string.IsNullOrWhiteSpace(counterpartOverride.VatNumber))
+            {
+                throw new ArgumentException(CounterpartWithoutVatNumberError);
+            }
+            if (!CountryTypeMapper.TryParseCountryCode(counterpartOverride.Country ?? "", out var country))
+            {
+                throw new ArgumentException("A counterpart override without cbCustomer requires mydataoverride.invoice.counterpart.country.");
+            }
+            counterpart = new PartyType { country = country, branch = 0 };
+        }
+
+        ApplyPartyOverride(ref counterpart, counterpartOverride);
+        if (string.IsNullOrWhiteSpace(counterpart.vatNumber))
+        {
+            throw new ArgumentException(CounterpartWithoutVatNumberError);
+        }
+        return counterpart;
+    }
+
+    /// <summary>
+    /// Maps cbCustomer to a counterpart. AADE forbids the name for counterparts from Greece (they are identified by
+    /// their VAT number), except on documents with transport information.
+    /// </summary>
     public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
     {
         var customer = receiptRequest.GetCustomerOrNull();

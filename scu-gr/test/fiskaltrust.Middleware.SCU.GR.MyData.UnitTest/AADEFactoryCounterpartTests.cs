@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
@@ -275,5 +276,162 @@ public class AADEFactoryCounterpartTests
         // Oceania
         yield return new object[] { "AU", CountryType.AU }; // Australia
         yield return new object[] { "NZ", CountryType.NZ }; // New Zealand
+    }
+
+    // === CreateCounterpart: the rules verified against the AADE sandbox (fiskaltrust/market-gr#373) ===
+
+    private static ReceiptRequest CreateCounterpartRequest(object? customer, bool fuelInvoice = false, object? counterpartOverride = null, bool b2b = false)
+    {
+        var invoice = new Dictionary<string, object>();
+        if (fuelInvoice)
+            invoice["invoiceHeader"] = new { fuelInvoice = true };
+        if (counterpartOverride != null)
+            invoice["counterpart"] = counterpartOverride;
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = [],
+            cbPayItems = [],
+            cbCustomer = customer,
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(b2b ? ReceiptCase.InvoiceB2B0x1002 : ReceiptCase.PointOfSaleReceipt0x0001),
+            ftReceiptCaseData = invoice.Count > 0 ? new { GR = new { mydataoverride = new { invoice } } } : null
+        };
+    }
+
+    private static readonly object GreekCustomer = new MiddlewareCustomer
+    {
+        CustomerVATId = "EL123456789",
+        CustomerName = "Πελάτης",
+        CustomerCountry = "GR",
+        CustomerZip = "12345",
+        CustomerCity = "Αθήνα"
+    };
+
+    [Theory]
+    [InlineData(InvoiceType.Item111)]
+    [InlineData(InvoiceType.Item112)]
+    [InlineData(InvoiceType.Item114)]
+    public void CreateCounterpart_RetailWithoutFuelInvoice_ReturnsNullAndIgnoresOverride(InvoiceType invoiceType)
+    {
+        var request = CreateCounterpartRequest(GreekCustomer, counterpartOverride: new { supplyAccountNo = "12345678901" });
+
+        AADEFactory.CreateCounterpart(request, invoiceType).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(InvoiceType.Item111, true)]
+    [InlineData(InvoiceType.Item113, true)]
+    [InlineData(InvoiceType.Item114, true)]
+    [InlineData(InvoiceType.Item115, true)]
+    [InlineData(InvoiceType.Item112, false)]
+    public void CreateCounterpart_RetailFuelInvoice_ReturnsCounterpartWhereAadeAllowsIt(InvoiceType invoiceType, bool expected)
+    {
+        var request = CreateCounterpartRequest(GreekCustomer, fuelInvoice: true);
+
+        var counterpart = AADEFactory.CreateCounterpart(request, invoiceType);
+
+        if (expected)
+        {
+            counterpart.Should().NotBeNull();
+            counterpart!.vatNumber.Should().Be("123456789");
+            counterpart.name.Should().BeNull();
+            counterpart.address.postalCode.Should().Be("12345");
+        }
+        else
+        {
+            counterpart.Should().BeNull();
+        }
+    }
+
+    [Fact]
+    public void CreateCounterpart_RetailFuelInvoiceWithForeignCustomer_KeepsName()
+    {
+        var request = CreateCounterpartRequest(new MiddlewareCustomer { CustomerVATId = "ATU68541544", CustomerName = "fiskaltrust consulting gmbh", CustomerCountry = "AT" }, fuelInvoice: true);
+
+        var counterpart = AADEFactory.CreateCounterpart(request, InvoiceType.Item111);
+
+        counterpart!.country.Should().Be(CountryType.AT);
+        counterpart.name.Should().Be("fiskaltrust consulting gmbh");
+    }
+
+    [Fact]
+    public void CreateCounterpart_AnonymousRetailFuelSale_ReturnsNull()
+    {
+        var request = CreateCounterpartRequest(new MiddlewareCustomer { CustomerName = "Buyer", CustomerCountry = "GR" }, fuelInvoice: true);
+
+        AADEFactory.CreateCounterpart(request, InvoiceType.Item111).Should().BeNull();
+    }
+
+    [Fact]
+    public void CreateCounterpart_InvoiceWithCustomerWithoutVat_KeepsCounterpartAsBefore()
+    {
+        var request = CreateCounterpartRequest(new MiddlewareCustomer { CustomerName = "Buyer", CustomerCountry = "AT" }, b2b: true);
+
+        var counterpart = AADEFactory.CreateCounterpart(request, InvoiceType.Item11);
+
+        counterpart.Should().NotBeNull();
+        counterpart!.vatNumber.Should().BeNull();
+    }
+
+    [Fact]
+    public void CreateCounterpart_OverrideIsMergedOnTopOfCustomer()
+    {
+        var request = CreateCounterpartRequest(GreekCustomer, fuelInvoice: true, counterpartOverride: new { supplyAccountNo = "12345678901", documentIdNo = "AB123" });
+
+        var counterpart = AADEFactory.CreateCounterpart(request, InvoiceType.Item111);
+
+        counterpart!.vatNumber.Should().Be("123456789");
+        counterpart.supplyAccountNo.Should().Be("12345678901");
+        counterpart.documentIdNo.Should().Be("AB123");
+    }
+
+    [Fact]
+    public void CreateCounterpart_OverrideNameForGreekCounterpart_IsPassedThrough()
+    {
+        // AADE rejects it, but overrides are passed through as-is and AADE stays the authority on their content.
+        var request = CreateCounterpartRequest(GreekCustomer, counterpartOverride: new { name = "Πελάτης" }, b2b: true);
+
+        var counterpart = AADEFactory.CreateCounterpart(request, InvoiceType.Item11);
+
+        counterpart!.name.Should().Be("Πελάτης");
+    }
+
+    [Fact]
+    public void CreateCounterpart_OverrideWithoutCustomer_CreatesCounterpartFromOverride()
+    {
+        var request = CreateCounterpartRequest(null, counterpartOverride: new { vatNumber = "987654321", country = "GR" }, b2b: true);
+
+        var counterpart = AADEFactory.CreateCounterpart(request, InvoiceType.Item11);
+
+        counterpart!.vatNumber.Should().Be("987654321");
+        counterpart.country.Should().Be(CountryType.GR);
+        counterpart.branch.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(InvoiceType.Item11)]
+    [InlineData(InvoiceType.Item111)]
+    public void CreateCounterpart_OverrideWithoutAnyVatNumber_Throws(InvoiceType invoiceType)
+    {
+        var request = CreateCounterpartRequest(new MiddlewareCustomer { CustomerName = "Buyer", CustomerCountry = "GR" }, fuelInvoice: true,
+            counterpartOverride: new { supplyAccountNo = "12345678901" }, b2b: invoiceType == InvoiceType.Item11);
+
+        var act = () => AADEFactory.CreateCounterpart(request, invoiceType);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer's VAT number*");
+    }
+
+    [Fact]
+    public void CreateCounterpart_OverrideWithoutCustomerAndCountry_Throws()
+    {
+        var request = CreateCounterpartRequest(null, counterpartOverride: new { vatNumber = "987654321" }, b2b: true);
+
+        var act = () => AADEFactory.CreateCounterpart(request, InvoiceType.Item11);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*counterpart.country*");
     }
 }
