@@ -35,7 +35,7 @@ public class FuelInvoiceAcceptanceTests
         Outlet = new fiskaltrust.storage.V0.MasterData.OutletMasterData { LocationId = "0" }
     }, "https://test.receipts.example.com");
 
-    private static ReceiptRequest CreateFuelReceipt(int fuelCode, string? supplyAccountNo, bool refund = false)
+    private static ReceiptRequest CreateFuelReceipt(int fuelCode, string? supplyAccountNo, bool refund = false, bool withCustomer = true)
     {
         var invoice = new Dictionary<string, object> { ["invoiceHeader"] = new { fuelInvoice = true } };
         if (supplyAccountNo != null)
@@ -65,13 +65,13 @@ public class FuelInvoiceAcceptanceTests
                 }
             ],
             cbPayItems = [new PayItem { Amount = sign * 124, ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001 }],
-            cbCustomer = new { CustomerVATId = "EL" + CUSTOMER_VAT, CustomerCountry = "GR" },
+            cbCustomer = withCustomer ? new { CustomerVATId = "EL" + CUSTOMER_VAT, CustomerCountry = "GR" } : null,
             ftReceiptCase = refund ? receiptCase.WithFlag(ReceiptCaseFlags.Refund) : receiptCase,
             ftReceiptCaseData = new { GR = new { mydataoverride = new { invoice } } }
         };
     }
 
-    private async Task<ResponseType> SendAsync(ReceiptRequest request)
+    private async Task<ResponseType> SendAsync(ReceiptRequest request, bool expectCounterpart = true)
     {
         var response = new ReceiptResponse
         {
@@ -87,8 +87,15 @@ public class FuelInvoiceAcceptanceTests
         error.Should().BeNull();
         var xml = AADEFactory.GenerateInvoicePayload(doc!);
         _output.WriteLine(xml);
-        // every case here declares the buyer, so a success must mean AADE accepted the counterpart
-        xml.Should().Contain($"<counterpart><vatNumber>{CUSTOMER_VAT}</vatNumber>");
+        if (expectCounterpart)
+        {
+            // a success must mean AADE accepted the declared buyer
+            xml.Should().Contain($"<counterpart><vatNumber>{CUSTOMER_VAT}</vatNumber>");
+        }
+        else
+        {
+            xml.Should().NotContain("<counterpart>");
+        }
 
         using var httpClient = new HttpClient { BaseAddress = new Uri("https://mydataapidev.aade.gr/") };
         httpClient.DefaultRequestHeaders.Add("aade-user-id", "user11111111");
@@ -126,6 +133,17 @@ public class FuelInvoiceAcceptanceTests
     public async Task RetailHeatingOilRefund_WithSupplyAccountNo_ShouldBeAccepted()
     {
         var result = await SendAsync(CreateFuelReceipt(30, supplyAccountNo: "12345678901", refund: true));
+
+        result.statusCode.Should().Be("Success");
+    }
+
+    [Theory]
+    [InlineData(10, false)] // anonymous petrol sale
+    [InlineData(30, false)] // anonymous heating oil sale
+    [InlineData(30, true)]  // anonymous heating oil refund (11.4)
+    public async Task RetailFuelReceipt_WithoutCustomer_ShouldBeAccepted(int fuelCode, bool refund)
+    {
+        var result = await SendAsync(CreateFuelReceipt(fuelCode, supplyAccountNo: null, refund, withCustomer: false), expectCounterpart: false);
 
         result.statusCode.Should().Be("Success");
     }
