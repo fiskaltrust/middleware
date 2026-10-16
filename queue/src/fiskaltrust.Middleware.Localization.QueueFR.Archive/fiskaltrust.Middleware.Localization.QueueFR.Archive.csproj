@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>11.0</LangVersion>
+        <Nullable>enable</Nullable>
+        <IsPackable>true</IsPackable>
+        <PackageId>fiskaltrust.Middleware.Localization.QueueFR.Archive</PackageId>
+        <Description>NF525 fiscal archive generation shared by the QueueFR middleware and service-datapipes: split into sub-archives, normalised CSV, signed manifest.</Description>
+        <PackageTags>fiskaltrust Middleware;fiscalization;NF525;France</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.Localization.QueueFR.Archive.UnitTest" />
+    </ItemGroup>
+
+</Project>
