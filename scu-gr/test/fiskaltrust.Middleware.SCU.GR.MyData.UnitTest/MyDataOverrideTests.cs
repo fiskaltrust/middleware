@@ -3563,8 +3563,10 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_NativeB2BWithoutCustomerAndWithoutOverride_ShouldStillRequireCustomerInfo()
+    public void MapToInvoicesDoc_NativeB2BWithoutCustomerAndWithoutOverride_ShouldLeaveValidationToMyData()
     {
+        // No local customer check: myDATA rejects it with "Counterpart is mandatory for this invoice type" (verified in
+        // the sandbox for 1.x-5.x, 7.1, 8.1, 9.3), while e.g. 6.1/6.2 are valid without a counterpart.
         var factory = CreateFactory();
         var request = CreateBasicReceiptRequest();
         request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
@@ -3572,7 +3574,7 @@ public class MyDataOverrideTests
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
-        doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("Customer info is required");
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().BeNull();
     }
 }
