@@ -465,5 +465,14 @@ public class AADEFactoryCounterpartTests
         counterpart.Should().NotBeNull();
         counterpart!.vatNumber.Should().BeNull();
         counterpart.supplyAccountNo.Should().Be("12345678901");
+        counterpart.country.Should().Be(CountryType.GR, "GR is the fallback when neither cbCustomer nor the override sets a country");
+    }
+
+    [Fact]
+    public void GetCounterPart_OverrideWithoutCustomer_OverrideCountryWinsOverFallback()
+    {
+        var request = CreateCounterpartRequest(InvoiceType.Item11, null, counterpartOverride: new { vatNumber = "ATU68541544", country = "AT" });
+
+        AADEFactory.GetCounterPart(request)!.country.Should().Be(CountryType.AT);
     }
 }

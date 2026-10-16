@@ -1717,7 +1717,9 @@ public class AADEFactory
         }
 
         // An explicit override always produces a counterpart. Without cbCustomer the caller provides all fields;
-        // myDATA validates the content (e.g. a missing vatNumber).
+        // myDATA validates the content (e.g. a missing vatNumber). PartyType.country cannot be empty and would default
+        // to the first enum value (AD), so fall back to GR unless the override sets the country.
+        counterpart ??= new PartyType { country = CountryType.GR, branch = 0 };
         ApplyPartyOverride(ref counterpart, counterpartOverride);
         return counterpart;
     }
