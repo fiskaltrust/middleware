@@ -156,4 +156,17 @@ public class FuelInvoiceAcceptanceTests
 
         result.statusCode.Should().Be("Success");
     }
+
+    [Theory]
+    [InlineData(-100)] // refund charge item with negative quantity
+    [InlineData(100)]  // refund charge item with positive quantity
+    public async Task RetailHeatingOilRefund_ShouldSendPositiveQuantity(decimal chargeItemQuantity)
+    {
+        var request = CreateFuelReceipt(30, supplyAccountNo: null, refund: true);
+        request.cbChargeItems[0].Quantity = chargeItemQuantity;
+
+        var result = await SendAsync(request);
+
+        result.statusCode.Should().Be("Success");
+    }
 }

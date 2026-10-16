@@ -944,7 +944,9 @@ public class AADEFactory
         {
             row.fuelCode = GetFuelCode(detailOverride.FuelCode.Value);
             row.fuelCodeSpecified = true;
-            // AADE rejects fuel lines without a quantity (error 230).
+            // AADE rejects fuel lines without a quantity (error 230) and only accepts positive quantities; the credit
+            // is expressed by the document type (e.g. 11.4), whatever sign the refund charge item carries.
+            row.quantity = Math.Abs(row.quantity);
             row.quantitySpecified = true;
         }
 

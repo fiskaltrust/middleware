@@ -3464,4 +3464,38 @@ public class MyDataOverrideTests
 
         act.Should().Throw<ArgumentException>().WithMessage($"Invalid fuelCode override value '{fuelCode}'*");
     }
+
+    [Theory]
+    [InlineData(-100)]
+    [InlineData(100)]
+    public void MapToInvoicesDoc_FuelRefund_ShouldSendPositiveChargeItemQuantity(decimal chargeItemQuantity)
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest();
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        request.cbChargeItems[0].Amount = -100;
+        request.cbChargeItems[0].Quantity = chargeItemQuantity;
+        request.cbPayItems[0].Amount = -100;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        var row = doc!.invoice[0].invoiceDetails[0];
+        row.quantitySpecified.Should().BeTrue();
+        row.quantity.Should().Be(100);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_FuelLine_ShouldSendChargeItemQuantity()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest();
+        request.cbChargeItems[0].Quantity = 42.5m;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].quantity.Should().Be(42.5m);
+        doc.invoice[0].invoiceDetails[0].quantitySpecified.Should().BeTrue();
+    }
 }
