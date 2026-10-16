@@ -103,6 +103,14 @@ class CashBoxBuilder
                 [ChargeItemCase.SuperReducedVatRate1] = 0.04m,
                 [ChargeItemCase.SuperReducedVatRate2] = 0.04m,
             },
+            "IT" => new Dictionary<ChargeItemCase, decimal>
+            {
+                [ChargeItemCase.NormalVatRate] = 0.22m,
+                [ChargeItemCase.DiscountedVatRate1] = 0.10m,
+                [ChargeItemCase.DiscountedVatRate2] = 0.05m,
+                [ChargeItemCase.SuperReducedVatRate1] = 0.04m,
+                [ChargeItemCase.ZeroVatRate] = 0.00m,
+            },
             "PL" => new Dictionary<ChargeItemCase, decimal>
             {
                 [ChargeItemCase.NormalVatRate] = 0.23m,
