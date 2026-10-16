@@ -3540,4 +3540,39 @@ public class MyDataOverrideTests
         error.Should().BeNull();
         doc!.invoice[0].invoiceDetails[0].quantity.Should().Be(55.5m);
     }
+
+    [Fact]
+    public void MapToInvoicesDoc_NativeB2BWithoutCustomerWithCounterpartOverride_ShouldUseOverride()
+    {
+        // The customer-info validation accepts a counterpart provided entirely via the override.
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = null;
+        request.ftReceiptCaseData = new
+        {
+            GR = new { mydataoverride = new { invoice = new { counterpart = new { vatNumber = "987654321", country = "GR" } } } }
+        };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item11);
+        doc.invoice[0].counterpart.vatNumber.Should().Be("987654321");
+        doc.invoice[0].counterpart.country.Should().Be(CountryType.GR);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_NativeB2BWithoutCustomerAndWithoutOverride_ShouldStillRequireCustomerInfo()
+    {
+        var factory = CreateFactory();
+        var request = CreateBasicReceiptRequest();
+        request.ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.InvoiceB2B0x1002);
+        request.cbCustomer = null;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        doc.Should().BeNull();
+        error!.Exception.Message.Should().Contain("Customer info is required");
+    }
 }

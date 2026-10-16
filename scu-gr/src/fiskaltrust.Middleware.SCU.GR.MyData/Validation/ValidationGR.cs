@@ -44,7 +44,8 @@ public class ValidationGR
             return (false, new MiddlewareValidationError("ChargePayItemsMismatch", "The sum of the charge items must be equal to the sum of the pay items."));
         }
 
-        if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest)) && !receiptRequest.ContainsCustomerInfo())
+        // The counterpart can also be provided entirely via mydataoverride.invoice.counterpart; myDATA validates its content.
+        if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest)) && !receiptRequest.ContainsCustomerInfo() && receiptRequest.GetCounterpartOverride() == null)
         {
             return (false, new MiddlewareValidationError("CustomerInfoRequired", "Customer info is required for this invoice type."));
         }

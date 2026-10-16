@@ -439,13 +439,6 @@ public class AADEFactory
 
     }
 
-    private static PartyTypeOverride? GetCounterpartOverride(ReceiptRequest receiptRequest)
-    {
-        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
-            ? data?.GR?.MyDataOverride?.Invoice?.Counterpart
-            : null;
-    }
-
     private static bool IsFuelInvoice(ReceiptRequest receiptRequest)
     {
         return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
@@ -1710,7 +1703,7 @@ public class AADEFactory
         var customer = receiptRequest.GetCustomerOrNull();
         var counterpart = customer != null ? MapCustomerToCounterpart(customer, hasTransportInformation) : null;
 
-        var counterpartOverride = GetCounterpartOverride(receiptRequest);
+        var counterpartOverride = receiptRequest.GetCounterpartOverride();
         if (counterpartOverride == null)
         {
             return counterpart;
