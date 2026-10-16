@@ -3427,7 +3427,8 @@ public class MyDataOverrideTests
     [InlineData(30, FuelCodes.Item30)]
     [InlineData(31, FuelCodes.Item31)]
     [InlineData(40, FuelCodes.Item40)]
-    public void ApplyInvoiceDetailOverride_FuelCode_ShouldMapToAadeCodeAndSendQuantity(int fuelCode, FuelCodes expected)
+    [InlineData(999, FuelCodes.Item999)]
+    public void ApplyInvoiceDetailOverride_FuelCode_ShouldMapToAadeCode(int fuelCode, FuelCodes expected)
     {
         var row = new global::InvoiceRowType { lineNumber = 1, quantity = 100 };
 
@@ -3435,7 +3436,6 @@ public class MyDataOverrideTests
 
         row.fuelCode.Should().Be(expected);
         row.fuelCodeSpecified.Should().BeTrue();
-        row.quantitySpecified.Should().BeTrue();
     }
 
     [Fact]
@@ -3497,5 +3497,57 @@ public class MyDataOverrideTests
         error.Should().BeNull();
         doc!.invoice[0].invoiceDetails[0].quantity.Should().Be(42.5m);
         doc.invoice[0].invoiceDetails[0].quantitySpecified.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_FuelInvoice_ShouldSendQuantityOnEveryLine()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest();
+        request.cbChargeItems.Add(new ChargeItem
+        {
+            Position = 2,
+            Amount = 10,
+            Quantity = 1,
+            Description = "Car wash",
+            ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+            VATRate = 24
+        });
+        request.cbPayItems[0].Amount = 110;
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails.Should().HaveCount(2);
+        doc.invoice[0].invoiceDetails.Should().OnlyContain(r => r.quantitySpecified && r.quantity > 0);
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_FuelCodeWithoutFuelInvoice_ShouldNotSendQuantity()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest(fuelInvoice: false);
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].fuelCodeSpecified.Should().BeTrue();
+        doc.invoice[0].invoiceDetails[0].quantitySpecified.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MapToInvoicesDoc_FuelInvoiceWithQuantityOverride_OverrideWins()
+    {
+        var factory = CreateFactory();
+        var request = CreateRetailFuelRequest();
+        request.cbChargeItems[0].ftChargeItemCaseData = new
+        {
+            GR = new { mydataoverride = new { invoiceDetails = new { fuelCode = 30, quantity = 55.5m } } }
+        };
+
+        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
+
+        error.Should().BeNull();
+        doc!.invoice[0].invoiceDetails[0].quantity.Should().Be(55.5m);
     }
 }

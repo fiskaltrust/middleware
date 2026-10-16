@@ -944,10 +944,6 @@ public class AADEFactory
         {
             row.fuelCode = GetFuelCode(detailOverride.FuelCode.Value);
             row.fuelCodeSpecified = true;
-            // AADE rejects fuel lines without a quantity (error 230) and only accepts positive quantities; the credit
-            // is expressed by the document type (e.g. 11.4), whatever sign the refund charge item carries.
-            row.quantity = Math.Abs(row.quantity);
-            row.quantitySpecified = true;
         }
 
         if (detailOverride.InvoiceDetailType.HasValue)
@@ -1375,6 +1371,7 @@ public class AADEFactory
         // 10.1/10.2 (Quantitative Receipt Notes) must emit the quantitative line fields
         // (itemDescr/quantity/measurementUnit) like the 9.3 movement family.
         var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
+        var isFuelInvoice = IsFuelInvoice(receiptRequest);
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -1404,6 +1401,15 @@ public class AADEFactory
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
+                invoiceRow.quantitySpecified = true;
+            }
+
+            if (isFuelInvoice)
+            {
+                // AADE requires a positive quantity on every line of a fuel document (error 230), together with a fuelCode
+                // (999 for other charges). The credit is expressed by the document type (e.g. 11.4), whatever sign the
+                // refund charge item carries.
+                invoiceRow.quantity = Math.Abs(invoiceRow.quantity);
                 invoiceRow.quantitySpecified = true;
             }
 

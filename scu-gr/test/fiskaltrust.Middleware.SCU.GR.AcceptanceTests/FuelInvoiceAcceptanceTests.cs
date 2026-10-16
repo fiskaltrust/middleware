@@ -169,4 +169,26 @@ public class FuelInvoiceAcceptanceTests
 
         result.statusCode.Should().Be("Success");
     }
+
+    [Fact]
+    public async Task RetailFuelReceipt_WithOtherChargeLine999_ShouldBeAccepted()
+    {
+        // On a fuel document every line needs a fuelCode and a quantity; non-fuel items (e.g. a car wash) use 999.
+        var request = CreateFuelReceipt(30, supplyAccountNo: null);
+        request.cbChargeItems.Add(new ChargeItem
+        {
+            Position = 2,
+            Amount = 12.4m,
+            Quantity = 1,
+            Description = "Car wash",
+            ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithVat(ChargeItemCase.NormalVatRate),
+            VATRate = 24,
+            ftChargeItemCaseData = new { GR = new { mydataoverride = new { invoiceDetails = new { fuelCode = 999 } } } }
+        });
+        request.cbPayItems[0].Amount = 136.4m;
+
+        var result = await SendAsync(request);
+
+        result.statusCode.Should().Be("Success");
+    }
 }
