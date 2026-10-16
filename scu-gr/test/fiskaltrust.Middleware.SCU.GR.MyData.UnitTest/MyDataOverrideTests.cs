@@ -3397,7 +3397,7 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailFuelInvoiceWithoutBuyerVat_ShouldNotSetCounterpart()
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithoutBuyerVat_ShouldPassCustomerOn()
     {
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest();
@@ -3406,7 +3406,8 @@ public class MyDataOverrideTests
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
         error.Should().BeNull();
-        doc!.invoice[0].counterpart.Should().BeNull();
+        doc!.invoice[0].counterpart.Should().NotBeNull();
+        doc.invoice[0].counterpart.vatNumber.Should().BeNull();
     }
 
     // === FUEL CODE MAPPING ===

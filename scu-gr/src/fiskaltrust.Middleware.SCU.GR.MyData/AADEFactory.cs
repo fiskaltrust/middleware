@@ -1691,8 +1691,8 @@ public class AADEFactory
     /// <item>AADE must allow a counterpart on the effective (post-override) invoice type: retail types (11.x) only on fuel
     /// documents (see <see cref="AADEMappings.SupportsCounterpart"/>), or the receipt carries transport information.
     /// Otherwise there is no counterpart and a counterpart override is ignored (AADE error 205).</item>
-    /// <item>The base data comes from cbCustomer. On retail fuel documents a customer without VAT number (and without an
-    /// override) is an anonymous sale and has no counterpart; other types pass the customer on as before.</item>
+    /// <item>The base data comes from cbCustomer and is passed on as-is; the caller only sends cbCustomer for an actual
+    /// buyer (e.g. not for an anonymous retail fuel sale).</item>
     /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name).</item>
     /// <item>An override always produces a counterpart; whether it is complete (e.g. has a vatNumber) is validated by myDATA,
     /// the caller is responsible for sending correct data.</item>
@@ -1713,11 +1713,7 @@ public class AADEFactory
         var counterpartOverride = GetCounterpartOverride(receiptRequest);
         if (counterpartOverride == null)
         {
-            // Retail types only allow a counterpart on fuel documents, which are usually anonymous: without the buyer's
-            // VAT number there is no counterpart. Other types pass the customer on as before, also without a VAT number.
-            return string.IsNullOrWhiteSpace(counterpart?.vatNumber) && !AADEMappings.SupportsCounterpart(effectiveInvoiceType)
-                ? null
-                : counterpart;
+            return counterpart;
         }
 
         // An explicit override always produces a counterpart; myDATA validates its content (e.g. a missing vatNumber).

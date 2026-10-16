@@ -370,9 +370,22 @@ public class AADEFactoryCounterpartTests
     }
 
     [Fact]
-    public void GetCounterPart_AnonymousRetailFuelSale_ReturnsNull()
+    public void GetCounterPart_RetailFuelInvoiceWithCustomerWithoutVat_PassesCustomerOn()
     {
+        // The caller only sends cbCustomer for an actual buyer; an anonymous fuel sale has no cbCustomer.
+        // A customer without VAT number is passed on and rejected by myDATA.
         var request = CreateCounterpartRequest(InvoiceType.Item111, new MiddlewareCustomer { CustomerName = "Buyer", CustomerCountry = "GR" }, fuelInvoice: true);
+
+        var counterpart = AADEFactory.GetCounterPart(request);
+
+        counterpart.Should().NotBeNull();
+        counterpart!.vatNumber.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetCounterPart_RetailFuelInvoiceWithoutCustomer_ReturnsNull()
+    {
+        var request = CreateCounterpartRequest(InvoiceType.Item111, null, fuelInvoice: true);
 
         AADEFactory.GetCounterPart(request).Should().BeNull();
     }
