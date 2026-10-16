@@ -31,8 +31,6 @@ public class AADEFactory
 {
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
 
-    private const string CounterpartWithoutVatNumberError = "A counterpart override requires the buyer in cbCustomer (CustomerVATId and CustomerCountry); AADE rejects a counterpart without vatNumber.";
-
     private static readonly JsonSerializerOptions _caseDataJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly MasterDataConfiguration _masterDataConfiguration;
@@ -1693,12 +1691,11 @@ public class AADEFactory
     /// <item>AADE must allow a counterpart on the effective (post-override) invoice type: retail types (11.x) only on fuel
     /// documents (see <see cref="AADEMappings.SupportsCounterpart"/>), or the receipt carries transport information.
     /// Otherwise there is no counterpart and a counterpart override is ignored (AADE error 205).</item>
-    /// <item>The base data comes from cbCustomer. Without the buyer's VAT number there is no counterpart (e.g. an anonymous
-    /// retail fuel sale).</item>
-    /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name);
-    /// AADE validates its content.</item>
-    /// <item>The buyer's VAT number always comes from cbCustomer; AADE rejects a counterpart without vatNumber, so an override
-    /// without cbCustomer.CustomerVATId/CustomerCountry fails with a clear error.</item>
+    /// <item>The base data comes from cbCustomer. Without the buyer's VAT number and without an override there is no
+    /// counterpart (e.g. an anonymous retail fuel sale).</item>
+    /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name).</item>
+    /// <item>An override always produces a counterpart; whether it is complete (e.g. has a vatNumber) is validated by myDATA,
+    /// the caller is responsible for sending correct data.</item>
     /// </list>
     /// </summary>
     public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
@@ -1712,22 +1709,23 @@ public class AADEFactory
 
         var customer = receiptRequest.GetCustomerOrNull();
         var counterpart = customer != null ? MapCustomerToCounterpart(customer, hasTransportInformation) : null;
-        if (string.IsNullOrWhiteSpace(counterpart?.vatNumber))
-        {
-            // AADE rejects a counterpart without vatNumber (XML schema), so a customer without a VAT ID is not a counterpart.
-            counterpart = null;
-        }
 
         var counterpartOverride = GetCounterpartOverride(receiptRequest);
         if (counterpartOverride == null)
         {
-            return counterpart;
+            // Without the buyer's VAT number the customer is not a counterpart (e.g. an anonymous retail fuel sale).
+            return string.IsNullOrWhiteSpace(counterpart?.vatNumber) ? null : counterpart;
         }
 
-        // The buyer always comes from cbCustomer; the override only adds to it.
-        if (counterpart == null || string.IsNullOrWhiteSpace(counterpart.vatNumber))
+        // An explicit override always produces a counterpart; myDATA validates its content (e.g. a missing vatNumber).
+        if (counterpart == null)
         {
-            throw new ArgumentException(CounterpartWithoutVatNumberError);
+            // PartyType.country cannot be left empty and would otherwise silently default to AD.
+            if (!CountryTypeMapper.TryParseCountryCode(counterpartOverride.Country ?? "", out var country))
+            {
+                throw new ArgumentException("The counterpart country cannot be determined. Set cbCustomer.CustomerCountry or mydataoverride.invoice.counterpart.country.");
+            }
+            counterpart = new PartyType { country = country, branch = 0 };
         }
 
         ApplyPartyOverride(ref counterpart, counterpartOverride);

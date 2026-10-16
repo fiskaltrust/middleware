@@ -411,36 +411,41 @@ public class AADEFactoryCounterpartTests
     }
 
     [Fact]
-    public void GetCounterPart_OverrideWithoutCustomer_Throws()
+    public void GetCounterPart_OverrideWithoutCustomer_CreatesCounterpartFromOverride()
     {
-        // The buyer always comes from cbCustomer; the override cannot replace it.
         var request = CreateCounterpartRequest(InvoiceType.Item11, null, counterpartOverride: new { vatNumber = "987654321", country = "GR" });
 
-        var act = () => AADEFactory.GetCounterPart(request);
+        var counterpart = AADEFactory.GetCounterPart(request);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer in cbCustomer*");
+        counterpart!.vatNumber.Should().Be("987654321");
+        counterpart.country.Should().Be(CountryType.GR);
+        counterpart.branch.Should().Be(0);
     }
 
     [Theory]
     [InlineData(InvoiceType.Item11)]
     [InlineData(InvoiceType.Item111)]
-    public void GetCounterPart_OverrideWithoutAnyVatNumber_Throws(InvoiceType invoiceType)
+    public void GetCounterPart_OverrideWithoutAnyVatNumber_IsPassedToMyData(InvoiceType invoiceType)
     {
+        // The middleware does not validate the content; myDATA rejects a counterpart without vatNumber.
         var request = CreateCounterpartRequest(invoiceType, new MiddlewareCustomer { CustomerName = "Buyer", CustomerCountry = "GR" }, fuelInvoice: true,
             counterpartOverride: new { supplyAccountNo = "12345678901" });
 
-        var act = () => AADEFactory.GetCounterPart(request);
+        var counterpart = AADEFactory.GetCounterPart(request);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer in cbCustomer*");
+        counterpart.Should().NotBeNull();
+        counterpart!.vatNumber.Should().BeNull();
+        counterpart.supplyAccountNo.Should().Be("12345678901");
     }
 
     [Fact]
-    public void GetCounterPart_OverrideWithCustomerWithoutCountry_Throws()
+    public void GetCounterPart_OverrideWithoutAnyCountry_Throws()
     {
+        // PartyType.country cannot be empty and would silently default to AD, so this is the one local check.
         var request = CreateCounterpartRequest(InvoiceType.Item11, new MiddlewareCustomer { CustomerVATId = "EL123456789" }, counterpartOverride: new { supplyAccountNo = "12345678901" });
 
         var act = () => AADEFactory.GetCounterPart(request);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer in cbCustomer*");
+        act.Should().Throw<ArgumentException>().WithMessage("*country cannot be determined*");
     }
 }

@@ -72,7 +72,7 @@ public class FuelInvoiceAcceptanceTests
         };
     }
 
-    private async Task<ResponseType> SendAsync(ReceiptRequest request, bool expectCounterpart = true)
+    private async Task<ResponseType> SendAsync(ReceiptRequest request, bool? expectCounterpart = true)
     {
         var response = new ReceiptResponse
         {
@@ -88,12 +88,12 @@ public class FuelInvoiceAcceptanceTests
         error.Should().BeNull();
         var xml = AADEFactory.GenerateInvoicePayload(doc!);
         _output.WriteLine(xml);
-        if (expectCounterpart)
+        if (expectCounterpart == true)
         {
             // a success must mean AADE accepted the declared buyer
             xml.Should().Contain($"<counterpart><vatNumber>{CUSTOMER_VAT}</vatNumber>");
         }
-        else
+        else if (expectCounterpart == false)
         {
             xml.Should().NotContain("<counterpart>");
         }
@@ -190,5 +190,17 @@ public class FuelInvoiceAcceptanceTests
         var result = await SendAsync(request);
 
         result.statusCode.Should().Be("Success");
+    }
+
+    [Fact]
+    public async Task RetailHeatingOilReceipt_WithSupplyAccountNoButNoBuyerVat_ShouldBeRejectedByMyData()
+    {
+        // The middleware passes the counterpart override through; myDATA rejects a counterpart without vatNumber.
+        var request = CreateFuelReceipt(30, supplyAccountNo: "12345678901");
+        request.cbCustomer = new { CustomerCountry = "GR" };
+
+        var result = await SendAsync(request, expectCounterpart: null);
+
+        result.statusCode.Should().Be("XMLSyntaxError");
     }
 }

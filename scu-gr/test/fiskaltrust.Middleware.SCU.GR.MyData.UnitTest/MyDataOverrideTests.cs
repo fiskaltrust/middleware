@@ -3267,20 +3267,22 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoButNoBuyerVat_ShouldReturnError()
+    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoButNoBuyerVat_ShouldPassCounterpartToMyData()
     {
+        // The caller is responsible for the buyer's VAT number; myDATA rejects the counterpart without it.
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest(counterpartOverride: new { supplyAccountNo = "12345678901" });
         request.cbCustomer = new { CustomerCountry = "GR", CustomerName = "Buyer" };
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
-        doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("requires the buyer in cbCustomer");
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.vatNumber.Should().BeNull();
+        doc.invoice[0].counterpart.supplyAccountNo.Should().Be("12345678901");
     }
 
     [Fact]
-    public void MapToInvoicesDoc_RetailFuelInvoiceWithSupplyAccountNoWithoutCustomer_ShouldReturnError()
+    public void MapToInvoicesDoc_CounterpartOverrideWithoutAnyCountry_ShouldReturnError()
     {
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest(counterpartOverride: new { supplyAccountNo = "12345678901" });
@@ -3289,11 +3291,11 @@ public class MyDataOverrideTests
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
         doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("requires the buyer in cbCustomer");
+        error!.Exception.Message.Should().Contain("country cannot be determined");
     }
 
     [Fact]
-    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomer_ShouldReturnError()
+    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomer_ShouldCreateCounterpartFromOverride()
     {
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest(counterpartOverride: new { vatNumber = "987654321", country = "GR", supplyAccountNo = "12345678901" });
@@ -3301,8 +3303,11 @@ public class MyDataOverrideTests
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
-        doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("requires the buyer in cbCustomer");
+        error.Should().BeNull();
+        var counterpart = doc!.invoice[0].counterpart;
+        counterpart.vatNumber.Should().Be("987654321");
+        counterpart.country.Should().Be(CountryType.GR);
+        counterpart.supplyAccountNo.Should().Be("12345678901");
     }
 
     [Fact]
