@@ -277,8 +277,7 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        // The mydataoverride invoiceType is only applied further down, so decide on the type the document will finally carry.
-        var counterpart = CreateCounterpart(receiptRequest, GetEffectiveInvoiceType(receiptRequest));
+        var counterpart = GetCounterPart(receiptRequest);
         if (counterpart != null)
         {
             inv.counterpart = counterpart;
@@ -1691,27 +1690,28 @@ public class AADEFactory
     /// <summary>
     /// Builds the invoice counterpart (buyer). This is the only place that decides whether a counterpart is sent and what it contains:
     /// <list type="number">
-    /// <item>AADE must allow a counterpart on the effective invoice type: retail types (11.x) only on fuel documents
-    /// (see <see cref="AADEMappings.SupportsCounterpart"/>), or the receipt carries transport information.
+    /// <item>AADE must allow a counterpart on the effective (post-override) invoice type: retail types (11.x) only on fuel
+    /// documents (see <see cref="AADEMappings.SupportsCounterpart"/>), or the receipt carries transport information.
     /// Otherwise there is no counterpart and a counterpart override is ignored (AADE error 205).</item>
-    /// <item>The base data comes from cbCustomer (<see cref="GetCounterPart"/>). A retail fuel sale without the buyer's
-    /// VAT number is anonymous and has no counterpart.</item>
+    /// <item>The base data comes from cbCustomer. A retail fuel sale without the buyer's VAT number is anonymous and has
+    /// no counterpart.</item>
     /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name);
     /// AADE validates its content.</item>
     /// <item>AADE rejects a counterpart without vatNumber, so an override that ends up without one fails with a clear error.</item>
     /// </list>
     /// </summary>
-    public static PartyType? CreateCounterpart(ReceiptRequest receiptRequest, InvoiceType effectiveInvoiceType)
+    public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
     {
-        var supportsCounterpartWithoutFuel = AADEMappings.SupportsCounterpart(effectiveInvoiceType);
-        if (!AADEMappings.SupportsCounterpart(effectiveInvoiceType, IsFuelInvoice(receiptRequest))
-            && !receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
+        var hasTransportInformation = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation);
+        if (!AADEMappings.SupportsCounterpart(effectiveInvoiceType, IsFuelInvoice(receiptRequest)) && !hasTransportInformation)
         {
             return null;
         }
 
-        var counterpart = receiptRequest.ContainsCustomerInfo() ? GetCounterPart(receiptRequest) : null;
-        if (counterpart != null && string.IsNullOrWhiteSpace(counterpart.vatNumber) && !supportsCounterpartWithoutFuel)
+        var customer = receiptRequest.GetCustomerOrNull();
+        var counterpart = customer != null ? MapCustomerToCounterpart(customer, hasTransportInformation) : null;
+        if (counterpart != null && string.IsNullOrWhiteSpace(counterpart.vatNumber) && !AADEMappings.SupportsCounterpart(effectiveInvoiceType))
         {
             counterpart = null;
         }
@@ -1747,30 +1747,21 @@ public class AADEFactory
     /// Maps cbCustomer to a counterpart. AADE forbids the name for counterparts from Greece (they are identified by
     /// their VAT number), except on documents with transport information.
     /// </summary>
-    public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
+    private static PartyType? MapCustomerToCounterpart(MiddlewareCustomer customer, bool hasTransportInformation)
     {
-        var customer = receiptRequest.GetCustomerOrNull();
-        if (customer == null)
-        {
-            return null;
-        }
-
         if (!CountryTypeMapper.TryParseCountryCode(customer.CustomerCountry ?? "", out var countryType))
         {
             return null;
         }
 
-        var vatNumber = GetAADEVAT(customer.CustomerVATId);
-        var isDomestic = countryType == CountryType.GR;
-
         var party = new PartyType
         {
-            vatNumber = vatNumber,
+            vatNumber = GetAADEVAT(customer.CustomerVATId),
             country = countryType,
             branch = 0,
         };
 
-        if (!isDomestic || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        if (countryType != CountryType.GR || hasTransportInformation)
         {
             party.name = customer.CustomerName;
         }
@@ -1783,7 +1774,7 @@ public class AADEFactory
                 postalCode = customer.CustomerZip,
                 city = customer.CustomerCity,
                 street = !string.IsNullOrEmpty(customer.CustomerStreet) ? customer.CustomerStreet : null,
-                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) ? "0" : null)
+                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : (hasTransportInformation ? "0" : null)
             };
         }
 
