@@ -210,6 +210,22 @@ public static class PosNetCommands
 
     public static PosNetCommand Scnt() => new("scnt");
 
+    /// <summary>The protected-memory document type of a receipt (paragon) for <see cref="Eclastdocnoget"/>.</summary>
+    public const int ReceiptDocumentType = 0;
+
+    /// <summary>
+    /// The number of the last document of a type in the protected memory (POT-I-DEV-37 p.102, <c>di</c>;
+    /// <c>di0</c> when there is none). One numbering across all document types, so it is not the receipt number.
+    /// </summary>
+    public static PosNetCommand Eclastdocnoget(int documentType)
+        => new("eclastdocnoget", [new("ty", documentType.ToString(CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The register's clock (POT-I-DEV-37 p.18): <c>tm</c> in ISO 8601 with offset, and <c>da</c> as
+    /// <c>yyyy-MM-dd;HH:mm</c> — the only field older firmware answers (POT-I-DEV-05).
+    /// </summary>
+    public static PosNetCommand Rtcget() => new("rtcget");
+
     /// <summary>The fiscal memory status — among it the PTU rate table as programmed on the register (<c>va..vg</c>).</summary>
     public static PosNetCommand Sfsk() => new("sfsk");
 
@@ -228,6 +244,26 @@ public static class PosNetCommands
     /// </summary>
     public static PosNetCommand Dailyrep(DateOnly date)
         => new("dailyrep", [new("da", date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The monthly report: a periodic report over the month of <paramref name="month"/> (spec p. 220).
+    /// The register only reads the year and month, but the date must still be a full valid date.
+    /// It reads fiscal memory and changes no counter, so it may be repeated.
+    /// </summary>
+    public static PosNetCommand Monthlyrep(DateOnly month)
+        => new("monthlyrep", [new("da", month.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// A periodic report over the daily reports between two dates, both included (spec p. 219). Like
+    /// the monthly report it only reads fiscal memory. Not to be confused with the settlement report
+    /// (raport rozliczeniowy), which ends the device's fiscal life and is never sent by this SCU.
+    /// </summary>
+    public static PosNetCommand Periodicrepbydates(DateOnly from, DateOnly to)
+        => new("periodicrepbydates",
+        [
+            new("fd", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            new("td", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+        ]);
 
     public static PosNetCommand Prncancel() => new("prncancel");
 }

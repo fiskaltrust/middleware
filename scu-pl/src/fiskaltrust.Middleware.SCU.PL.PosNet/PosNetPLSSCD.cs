@@ -20,9 +20,10 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet;
 /// <summary>
 /// IPLSSCD implementation driving a POSNET Online fiscal printer — the certified register owns
 /// numbering, the PTU table, reports and the CRK transmission; this SCU translates receipt cases
-/// into the register's commands: the trinit → trline → trpayment → trend flow for a sale, the goods
-/// return printout for a return, the daily report for a daily closing, and the status read behind
-/// the zero receipt. Periodic reports, non-fiscal forms and device setup are follow-ups.
+/// into the register's commands: the trinit → trline → trpayment → trend flow for a sale and the
+/// readback that anchors it (<see cref="PosNetReceiptReadback"/>), the goods return printout for a
+/// return, the daily report for a daily closing, the periodic reports for a monthly and a yearly
+/// closing, and the status read behind the zero receipt. Non-fiscal forms and device setup are follow-ups.
 /// </summary>
 public class PosNetPLSSCD : IPLSSCD, IDisposable
 {
@@ -31,6 +32,13 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// installed in Poland by law, so this is a property of the market, not of the deployment.
     /// </summary>
     private const string RegisterTimeZoneId = "Europe/Warsaw";
+
+    /// <summary>
+    /// The register's zone for reading its wall clock back after a receipt, resolved once. A host
+    /// without zone data yields null rather than an exception: by the time the clock is read the
+    /// receipt is printed, and a moment that cannot be told is left out instead of failing it.
+    /// </summary>
+    private static readonly TimeZoneInfo? s_registerZone = FindRegisterZone();
 
     private readonly PosNetClient _client;
     private readonly PosNetConfiguration _configuration;
@@ -119,9 +127,16 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
         }
-        else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012) || receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
+        else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012))
         {
-            throw new PLValidationException("Periodic reports (monthly/yearly closing) are not supported by the PosNet SCU yet — the daily report is (0x2011).");
+            await ExecutePeriodicReportAsync(response, PosNetCommands.Monthlyrep(ToRegisterDate(request.ReceiptRequest.cbReceiptMoment)));
+        }
+        else if (receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
+        {
+            // The register has no yearly report: the year is a periodic report from 1 January up to
+            // the day being closed, so a closing sent on 31 December covers the whole year.
+            var day = ToRegisterDate(request.ReceiptRequest.cbReceiptMoment);
+            await ExecutePeriodicReportAsync(response, PosNetCommands.Periodicrepbydates(new DateOnly(day.Year, 1, 1), day));
         }
 
         // Non-fiscal receipt cases pass through without device interaction — like the InMemory
@@ -140,8 +155,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         // The numer unikatowy is a legal element of the fiscal document, so the response carries
         // it like the InMemory SCU does. Reading it before trinit keeps the order safe: a register
-        // that cannot answer its status has not been asked to open a transaction either.
+        // that cannot answer its status has not been asked to open a transaction either. The same
+        // holds for the receipt counter the readback is checked against.
         await EnrichWithDeviceIdentityAsync(response);
+        var countersBefore = await PosNetReceiptReadback.ReadCountersAsync(_client);
 
         // The e-paragon binding goes out strictly before trinit: eparagonidznext binds the *next*
         // document, and a failed binding fails the sale while nothing has been printed yet. A
@@ -190,12 +207,38 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             throw;
         }
 
-        await TryReadFiscalDocumentNumberAsync(response);
+        var anchor = await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
+        if (anchor is not null)
+        {
+            EnrichWithReceiptAnchor(response, anchor);
+        }
 
         if (eDocumentId is { } documentId)
         {
             response.EnrichWithEDocumentId(documentId);
             await TryReadEDocumentDeliveryStateAsync(response, documentId);
+        }
+    }
+
+    /// <summary>
+    /// Signs what the register contributed to the receipt. The receipt number is the one printed
+    /// on the document, but it is no key on its own; the daily report, the device moment and the
+    /// protected-memory document number make it one (<see cref="PosNetReceiptAnchor"/>).
+    /// </summary>
+    private static void EnrichWithReceiptAnchor(ReceiptResponse response, PosNetReceiptAnchor anchor)
+    {
+        response.EnrichWithFiscalDocumentNumber(anchor.ReceiptNumber);
+        if (anchor.DailyReportNumber is { } dailyReportNumber)
+        {
+            response.AddSignatureItem(SignatureTypePL.CurrentDailyReportNumber, PLReceiptCases.CurrentDailyReportNumberCaption, dailyReportNumber.ToString(CultureInfo.InvariantCulture));
+        }
+        if (anchor.DocumentNumber is { } documentNumber)
+        {
+            response.AddSignatureItem(SignatureTypePL.ProtectedMemoryDocumentNumber, PLReceiptCases.ProtectedMemoryDocumentNumberCaption, documentNumber.ToString(CultureInfo.InvariantCulture));
+        }
+        if (anchor.DeviceMoment is { } deviceMoment)
+        {
+            response.AddSignatureItem(SignatureTypePL.DeviceMoment, PLReceiptCases.DeviceMomentCaption, deviceMoment);
         }
     }
 
@@ -341,7 +384,30 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     {
         await EnrichWithDeviceIdentityAsync(response);
         await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
-        await TryReadCounterAsync("rd", number => response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture)));
+        var reportsDone = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), counters => PosNetStatus.ReadNumber(counters, "rd"));
+        if (reportsDone is { } number)
+        {
+            response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    /// <summary>
+    /// Prints a periodic report for a monthly or yearly closing. The period is taken from the receipt
+    /// moment in the register's zone, as for the daily closing. A periodic report only reads fiscal
+    /// memory, so no report number is signed: unlike the daily report it advances no counter.
+    /// </summary>
+    private async Task ExecutePeriodicReportAsync(ReceiptResponse response, PosNetCommand report)
+    {
+        await _deviceLock.WaitAsync();
+        try
+        {
+            await EnrichWithDeviceIdentityAsync(response);
+            await _client.ExecuteAsync(report);
+        }
+        finally
+        {
+            _deviceLock.Release();
+        }
     }
 
     /// <summary>
@@ -402,29 +468,15 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
     }
 
-    /// <summary>
-    /// The fiscal document number is not part of the trend confirmation — it is read back from
-    /// the counter status (scnt, bt = last receipt number). The document is already printed at
-    /// this point, so a failing readback must not fail the receipt; the number is then simply
-    /// absent from the response.
-    /// </summary>
-    private Task TryReadFiscalDocumentNumberAsync(ReceiptResponse response)
-        => TryReadCounterAsync("bt", response.EnrichWithFiscalDocumentNumber);
-
-    private async Task TryReadCounterAsync(string counter, Action<long> report)
+    private static TimeZoneInfo? FindRegisterZone()
     {
         try
         {
-            var counters = await _client.ExecuteAsync(PosNetCommands.Scnt());
-            if (counters.Parameters.TryGetValue(counter, out var text)
-                && long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
-            {
-                report(number);
-            }
+            return TimeZoneInfo.FindSystemTimeZoneById(RegisterTimeZoneId);
         }
-        catch (PLSSCDException)
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            // scnt is read-only — swallowing an ambiguous or failed readback is safe.
+            return null;
         }
     }
 

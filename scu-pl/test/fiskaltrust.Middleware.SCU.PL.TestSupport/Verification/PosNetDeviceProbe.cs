@@ -1,3 +1,5 @@
+using fiskaltrust.Middleware.SCU.PL.Abstraction;
+using fiskaltrust.Middleware.SCU.PL.PosNet;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Client;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 using fiskaltrust.Middleware.SCU.PL.TestSupport.PosNetPrinter;
@@ -35,4 +37,17 @@ public sealed class PosNetDeviceProbe(PosNetClient client, CommandTranscript tra
     /// <summary>The transaction status (<c>strns</c>) — after a receipt, that receipt's values.</summary>
     public async Task<TransactionReading> ReadTransactionAsync()
         => TransactionReading.From(await ExecuteAsync("strns"));
+
+    /// <summary>
+    /// The PTU slots as the SCU resolves them: the pinned table where the configuration pins one,
+    /// otherwise the register's own (<c>sfsk</c>) — the footprint of a receipt has to be computed
+    /// against the same table the SCU sent its lines under.
+    /// </summary>
+    public async Task<PtuSlotResolver> ReadPtuSlotsAsync(PosNetConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return configuration.VatRateTable is { Count: > 0 } pinned
+            ? new PtuSlotResolver(pinned)
+            : new PtuSlotResolver(PosNetRateTable.Parse(await ExecuteAsync("sfsk")));
+    }
 }

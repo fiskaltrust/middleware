@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- A minimal Android app that hosts QueuePL against the POSNET SCU in-process, to show the Polish
+         middleware running on Android. It builds the cashbox exactly the way Test.Launcher.v2 does, by
+         linking that launcher's helpers rather than copying them. Storage is in-memory: there is no PL
+         SQLite storage yet, so every app start is a fresh queue that needs its initial operation. -->
+    <PropertyGroup>
+        <TargetFramework>net10.0-android</TargetFramework>
+        <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+        <OutputType>Exe</OutputType>
+        <LangVersion>Latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <ApplicationId>eu.fiskaltrust.middleware.pl.androidtesthost</ApplicationId>
+        <ApplicationTitle>PL TestHost</ApplicationTitle>
+        <ApplicationVersion>1</ApplicationVersion>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <RootNamespace>fiskaltrust.Middleware.PL.Android.TestHost</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
+        <ProjectReference Include="..\..\..\..\storage\src\fiskaltrust.storage.serialization\fiskaltrust.storage.serialization.csproj" />
+        <ProjectReference Include="..\..\..\..\queue\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+        <ProjectReference Include="..\..\..\..\queue\src\fiskaltrust.Middleware.Localization.QueuePL\fiskaltrust.Middleware.Localization.QueuePL.csproj" />
+        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.InMemory\fiskaltrust.Middleware.SCU.PL.InMemory.csproj" />
+        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
+        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet.Android\fiskaltrust.Middleware.SCU.PL.PosNet.Android.csproj" />
+        <ProjectReference Include="..\..\fiskaltrust.Middleware.SCU.PL.TestSupport\fiskaltrust.Middleware.SCU.PL.TestSupport.csproj" />
+    </ItemGroup>
+
+    <!-- The cashbox is built by the very code Test.Launcher.v2 runs on the desktop. -->
+    <PropertyGroup>
+        <TestLauncherDir>..\..\..\..\test\fiskaltrust.Middleware.Test.Launcher\src\fiskaltrust.Middleware.Test.Launcher.v2\</TestLauncherDir>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="$(TestLauncherDir)Helpers\CashBoxBuilder.cs" Link="Launcher\CashBoxBuilder.cs" />
+        <Compile Include="$(TestLauncherDir)Helpers\ChargeItemBuilder.cs" Link="Launcher\ChargeItemBuilder.cs" />
+        <Compile Include="$(TestLauncherDir)Helpers\PL\CashBoxBuilderPL.cs" Link="Launcher\CashBoxBuilderPL.cs" />
+        <Compile Include="$(TestLauncherDir)Helpers\PL\PLSSCDJsonWarper.cs" Link="Launcher\PLSSCDJsonWarper.cs" />
+        <Compile Include="$(TestLauncherDir)Extensions\InitTableExt.cs" Link="Launcher\InitTableExt.cs" />
+        <Compile Include="$(TestLauncherDir)Extensions\JsonWarpExt.cs" Link="Launcher\JsonWarpExt.cs" />
+        <AndroidAsset Include="$(TestLauncherDir)configuration\PL\cashbox-configuration-posnet.json" Link="Assets\cashbox-configuration-posnet.json" />
+        <AndroidAsset Include="..\..\fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest\BusinessCases\**\*.json" Link="Assets\BusinessCases\%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+</Project>
