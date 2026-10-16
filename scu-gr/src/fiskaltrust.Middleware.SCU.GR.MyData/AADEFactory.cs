@@ -502,7 +502,7 @@ public class AADEFactory
             ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
         }
 
-        // invoiceOverride.Counterpart is merged in CreateCounterpart.
+        // invoiceOverride.Counterpart is merged in GetCounterPart.
 
         // Plain passthrough: content is validated by AADE, not here. The XSD-required ints have no
         // "absent" form in the XML, so a missing value is rejected rather than sent as 0.
