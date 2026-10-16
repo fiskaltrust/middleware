@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net40;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net40;netstandard2.0;net10.0</TargetFrameworks>
     <Description>fiskaltrust.storage describes a common storage interface used for fiskaltrust.service and further fiskaltrust applications.</Description>
     <PackageTags>fiskaltrust storage interface</PackageTags>
   </PropertyGroup>

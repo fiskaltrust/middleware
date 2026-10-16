@@ -15,7 +15,7 @@ param(
     [string] $Code
 )
 
-$bin = Join-Path $PSScriptRoot '..\fiskaltrust.Middleware.SCU.PL.AcceptanceTest\bin\Debug\net8.0'
+$bin = Join-Path $PSScriptRoot '..\fiskaltrust.Middleware.SCU.PL.AcceptanceTest\bin\Debug\net10.0'
 if (-not (Test-Path (Join-Path $bin 'fiskaltrust.Middleware.SCU.PL.PosNet.dll'))) {
     throw "Build scu-pl/fiskaltrust.Middleware.SCU.PL.sln first; no assemblies under $bin."
 }

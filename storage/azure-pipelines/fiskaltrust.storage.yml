@@ -33,10 +33,10 @@ jobs:
         fetchDepth: 0
 
       - task: UseDotNet@2
-        displayName: "Use .NET 6 SDK"
+        displayName: "Use .NET 10 SDK"
         inputs:
           packageType: "sdk"
-          version: "6.x"
+          version: "10.x"
 
       - task: DotNetCoreCLI@2
         inputs:

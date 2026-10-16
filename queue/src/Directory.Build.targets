@@ -1,0 +1,8 @@
+<Project>
+    <!-- .NET 10 ships System.Linq.AsyncEnumerable in-box; System.Linq.Async 4.x conflicts with it (CS0121).
+         The 7.x packages are built to coexist with it (net461 builds keep 4.x, 7.x has no net461 asset). -->
+    <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
+        <PackageReference Update="System.Linq.Async" Version="7.0.1" />
+        <PackageReference Update="System.Interactive.Async" Version="7.0.1" />
+    </ItemGroup>
+</Project>
