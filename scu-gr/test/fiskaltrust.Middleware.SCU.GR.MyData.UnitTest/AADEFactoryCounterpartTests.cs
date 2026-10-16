@@ -378,13 +378,16 @@ public class AADEFactoryCounterpartTests
     }
 
     [Fact]
-    public void GetCounterPart_InvoiceWithCustomerWithoutVat_ReturnsNull()
+    public void GetCounterPart_InvoiceWithCustomerWithoutVat_KeepsCounterpartAsBefore()
     {
-        // AADE rejects a counterpart without vatNumber on every type (XML schema); without one AADE reports the missing
-        // counterpart instead ("Counterpart is mandatory for this invoice type"), verified in the sandbox.
+        // Unchanged behaviour on non-retail types: the customer is passed on and myDATA decides
+        // (e.g. a third-country buyer on 1.3 without VAT number raised no counterpart error in the sandbox).
         var request = CreateCounterpartRequest(InvoiceType.Item11, new MiddlewareCustomer { CustomerName = "Buyer", CustomerCountry = "AT" });
 
-        AADEFactory.GetCounterPart(request).Should().BeNull();
+        var counterpart = AADEFactory.GetCounterPart(request);
+
+        counterpart.Should().NotBeNull();
+        counterpart!.vatNumber.Should().BeNull();
     }
 
     [Fact]
