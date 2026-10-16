@@ -455,13 +455,15 @@ public class AADEFactoryCounterpartTests
     }
 
     [Fact]
-    public void GetCounterPart_OverrideWithoutAnyCountry_Throws()
+    public void GetCounterPart_OverrideWithoutCustomer_UsesOverrideAsIs()
     {
-        // PartyType.country cannot be empty and would silently default to AD, so this is the one local check.
-        var request = CreateCounterpartRequest(InvoiceType.Item11, new MiddlewareCustomer { CustomerVATId = "EL123456789" }, counterpartOverride: new { supplyAccountNo = "12345678901" });
+        // Without cbCustomer the caller provides all counterpart fields; nothing is assumed or validated locally.
+        var request = CreateCounterpartRequest(InvoiceType.Item11, null, counterpartOverride: new { supplyAccountNo = "12345678901" });
 
-        var act = () => AADEFactory.GetCounterPart(request);
+        var counterpart = AADEFactory.GetCounterPart(request);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*country cannot be determined*");
+        counterpart.Should().NotBeNull();
+        counterpart!.vatNumber.Should().BeNull();
+        counterpart.supplyAccountNo.Should().Be("12345678901");
     }
 }

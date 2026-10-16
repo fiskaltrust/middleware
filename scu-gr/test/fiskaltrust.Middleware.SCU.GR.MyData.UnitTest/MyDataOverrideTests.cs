@@ -3282,7 +3282,7 @@ public class MyDataOverrideTests
     }
 
     [Fact]
-    public void MapToInvoicesDoc_CounterpartOverrideWithoutAnyCountry_ShouldReturnError()
+    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomer_ShouldUseOverrideAsIs()
     {
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest(counterpartOverride: new { supplyAccountNo = "12345678901" });
@@ -3290,8 +3290,8 @@ public class MyDataOverrideTests
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
-        doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("country cannot be determined");
+        error.Should().BeNull();
+        doc!.invoice[0].counterpart.supplyAccountNo.Should().Be("12345678901");
     }
 
     [Fact]

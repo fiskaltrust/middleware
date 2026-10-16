@@ -1716,17 +1716,8 @@ public class AADEFactory
             return counterpart;
         }
 
-        // An explicit override always produces a counterpart; myDATA validates its content (e.g. a missing vatNumber).
-        if (counterpart == null)
-        {
-            // PartyType.country cannot be left empty and would otherwise silently default to AD.
-            if (!CountryTypeMapper.TryParseCountryCode(counterpartOverride.Country ?? "", out var country))
-            {
-                throw new ArgumentException("The counterpart country cannot be determined. Set cbCustomer.CustomerCountry or mydataoverride.invoice.counterpart.country.");
-            }
-            counterpart = new PartyType { country = country, branch = 0 };
-        }
-
+        // An explicit override always produces a counterpart. Without cbCustomer the caller provides all fields;
+        // myDATA validates the content (e.g. a missing vatNumber).
         ApplyPartyOverride(ref counterpart, counterpartOverride);
         return counterpart;
     }
