@@ -3276,7 +3276,7 @@ public class MyDataOverrideTests
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
         doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("requires the buyer's VAT number");
+        error!.Exception.Message.Should().Contain("requires the buyer in cbCustomer");
     }
 
     [Fact]
@@ -3289,11 +3289,11 @@ public class MyDataOverrideTests
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
         doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("requires the buyer's VAT number");
+        error!.Exception.Message.Should().Contain("requires the buyer in cbCustomer");
     }
 
     [Fact]
-    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomer_ShouldCreateCounterpartFromOverride()
+    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomer_ShouldReturnError()
     {
         var factory = CreateFactory();
         var request = CreateRetailFuelRequest(counterpartOverride: new { vatNumber = "987654321", country = "GR", supplyAccountNo = "12345678901" });
@@ -3301,24 +3301,8 @@ public class MyDataOverrideTests
 
         var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
 
-        error.Should().BeNull();
-        var counterpart = doc!.invoice[0].counterpart;
-        counterpart.vatNumber.Should().Be("987654321");
-        counterpart.country.Should().Be(CountryType.GR);
-        counterpart.supplyAccountNo.Should().Be("12345678901");
-    }
-
-    [Fact]
-    public void MapToInvoicesDoc_CounterpartOverrideWithoutCustomerAndCountry_ShouldReturnError()
-    {
-        var factory = CreateFactory();
-        var request = CreateRetailFuelRequest(counterpartOverride: new { vatNumber = "987654321" });
-        request.cbCustomer = null;
-
-        var (doc, error) = factory.MapToInvoicesDoc(request, CreateBasicReceiptResponse(request));
-
         doc.Should().BeNull();
-        error!.Exception.Message.Should().Contain("counterpart.country");
+        error!.Exception.Message.Should().Contain("requires the buyer in cbCustomer");
     }
 
     [Fact]

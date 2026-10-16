@@ -31,7 +31,7 @@ public class AADEFactory
 {
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
 
-    private const string CounterpartWithoutVatNumberError = "A counterpart override requires the buyer's VAT number (cbCustomer.CustomerVATId or mydataoverride.invoice.counterpart.vatNumber); AADE rejects a counterpart without vatNumber.";
+    private const string CounterpartWithoutVatNumberError = "A counterpart override requires the buyer in cbCustomer (CustomerVATId and CustomerCountry); AADE rejects a counterpart without vatNumber.";
 
     private static readonly JsonSerializerOptions _caseDataJsonOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -1697,7 +1697,8 @@ public class AADEFactory
     /// no counterpart.</item>
     /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name);
     /// AADE validates its content.</item>
-    /// <item>AADE rejects a counterpart without vatNumber, so an override that ends up without one fails with a clear error.</item>
+    /// <item>The buyer's VAT number always comes from cbCustomer; AADE rejects a counterpart without vatNumber, so an override
+    /// without cbCustomer.CustomerVATId/CustomerCountry fails with a clear error.</item>
     /// </list>
     /// </summary>
     public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
@@ -1722,24 +1723,13 @@ public class AADEFactory
             return counterpart;
         }
 
-        if (counterpart == null)
-        {
-            if (string.IsNullOrWhiteSpace(counterpartOverride.VatNumber))
-            {
-                throw new ArgumentException(CounterpartWithoutVatNumberError);
-            }
-            if (!CountryTypeMapper.TryParseCountryCode(counterpartOverride.Country ?? "", out var country))
-            {
-                throw new ArgumentException("A counterpart override without cbCustomer requires mydataoverride.invoice.counterpart.country.");
-            }
-            counterpart = new PartyType { country = country, branch = 0 };
-        }
-
-        ApplyPartyOverride(ref counterpart, counterpartOverride);
-        if (string.IsNullOrWhiteSpace(counterpart.vatNumber))
+        // The buyer always comes from cbCustomer; the override only adds to it.
+        if (counterpart == null || string.IsNullOrWhiteSpace(counterpart.vatNumber))
         {
             throw new ArgumentException(CounterpartWithoutVatNumberError);
         }
+
+        ApplyPartyOverride(ref counterpart, counterpartOverride);
         return counterpart;
     }
 

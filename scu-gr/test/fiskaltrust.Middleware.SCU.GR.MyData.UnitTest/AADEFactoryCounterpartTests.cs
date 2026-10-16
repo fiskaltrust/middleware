@@ -412,15 +412,14 @@ public class AADEFactoryCounterpartTests
     }
 
     [Fact]
-    public void GetCounterPart_OverrideWithoutCustomer_CreatesCounterpartFromOverride()
+    public void GetCounterPart_OverrideWithoutCustomer_Throws()
     {
+        // The buyer always comes from cbCustomer; the override cannot replace it.
         var request = CreateCounterpartRequest(InvoiceType.Item11, null, counterpartOverride: new { vatNumber = "987654321", country = "GR" });
 
-        var counterpart = AADEFactory.GetCounterPart(request);
+        var act = () => AADEFactory.GetCounterPart(request);
 
-        counterpart!.vatNumber.Should().Be("987654321");
-        counterpart.country.Should().Be(CountryType.GR);
-        counterpart.branch.Should().Be(0);
+        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer in cbCustomer*");
     }
 
     [Theory]
@@ -433,16 +432,16 @@ public class AADEFactoryCounterpartTests
 
         var act = () => AADEFactory.GetCounterPart(request);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer's VAT number*");
+        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer in cbCustomer*");
     }
 
     [Fact]
-    public void GetCounterPart_OverrideWithoutCustomerAndCountry_Throws()
+    public void GetCounterPart_OverrideWithCustomerWithoutCountry_Throws()
     {
-        var request = CreateCounterpartRequest(InvoiceType.Item11, null, counterpartOverride: new { vatNumber = "987654321" });
+        var request = CreateCounterpartRequest(InvoiceType.Item11, new MiddlewareCustomer { CustomerVATId = "EL123456789" }, counterpartOverride: new { supplyAccountNo = "12345678901" });
 
         var act = () => AADEFactory.GetCounterPart(request);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*counterpart.country*");
+        act.Should().Throw<ArgumentException>().WithMessage("*requires the buyer in cbCustomer*");
     }
 }
