@@ -275,13 +275,10 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        if (receiptRequest.ContainsCustomerInfo() && (AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation)))
+        var counterpart = GetCounterPart(receiptRequest);
+        if (counterpart != null)
         {
-            var counterpart = GetCounterPart(receiptRequest);
-            if (counterpart != null)
-            {
-                inv.counterpart = counterpart;
-            }
+            inv.counterpart = counterpart;
         }
 
         if (inv.invoiceHeader.invoiceType == InvoiceType.Item86)
@@ -442,6 +439,12 @@ public class AADEFactory
 
     }
 
+    private static bool IsFuelInvoice(ReceiptRequest receiptRequest)
+    {
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
+            && data?.GR?.MyDataOverride?.Invoice?.InvoiceHeader?.FuelInvoice == true;
+    }
+
     private static bool HasClassificationOverride(ChargeItem chargeItem)
     {
         if (chargeItem.ftChargeItemCaseData == null)
@@ -492,12 +495,7 @@ public class AADEFactory
             ApplyIssuerOverride(invoice.issuer, invoiceOverride.Issuer);
         }
 
-        if (invoiceOverride.Counterpart != null && invoice.counterpart != null)
-        {
-            var counterpart = invoice.counterpart;
-            ApplyPartyOverride(ref counterpart, invoiceOverride.Counterpart);
-            invoice.counterpart = counterpart;
-        }
+        // invoiceOverride.Counterpart is merged in GetCounterPart.
 
         // Plain passthrough: content is validated by AADE, not here. The XSD-required ints have no
         // "absent" form in the XML, so a missing value is rejected rather than sent as 0.
@@ -859,6 +857,21 @@ public class AADEFactory
         }
     }
 
+    /// <summary>
+    /// Maps an AADE fuel code (e.g. 30 = Diesel Θέρμανσης) to <see cref="FuelCodes"/>. The enum members are
+    /// named after the code (Item30), so a numeric cast would pick the member by position instead.
+    /// </summary>
+    private static FuelCodes GetFuelCode(int fuelCode)
+    {
+        if (!Enum.TryParse<FuelCodes>($"Item{fuelCode}", out var mapped) || !Enum.IsDefined(mapped))
+        {
+            throw new ArgumentException(
+                $"Invalid fuelCode override value '{fuelCode}'. " +
+                $"Allowed values: {string.Join(", ", Enum.GetNames<FuelCodes>().Select(n => n.Replace("Item", "")))}");
+        }
+        return mapped;
+    }
+
     public static void ApplyInvoiceDetailOverride(InvoiceRowType row, InvoiceRowTypeOverride detailOverride)
     {
         if (detailOverride.RecType.HasValue)
@@ -919,7 +932,7 @@ public class AADEFactory
         }
         if (detailOverride.FuelCode.HasValue)
         {
-            row.fuelCode = (FuelCodes) detailOverride.FuelCode.Value;
+            row.fuelCode = GetFuelCode(detailOverride.FuelCode.Value);
             row.fuelCodeSpecified = true;
         }
 
@@ -1348,6 +1361,7 @@ public class AADEFactory
         // 10.1/10.2 (Quantitative Receipt Notes) must emit the quantitative line fields
         // (itemDescr/quantity/measurementUnit) like the 9.3 movement family.
         var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
+        var isFuelInvoice = IsFuelInvoice(receiptRequest);
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -1377,6 +1391,15 @@ public class AADEFactory
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) || AADEMappings.IsQuantitativeReceiptNote(effectiveInvoiceType))
             {
+                invoiceRow.quantitySpecified = true;
+            }
+
+            if (isFuelInvoice)
+            {
+                // AADE requires a positive quantity on every line of a fuel document (error 230), together with a fuelCode
+                // (999 for other charges). The credit is expressed by the document type (e.g. 11.4), whatever sign the
+                // refund charge item carries.
+                invoiceRow.quantity = Math.Abs(invoiceRow.quantity);
                 invoiceRow.quantitySpecified = true;
             }
 
@@ -1655,30 +1678,64 @@ public class AADEFactory
         };
     }
 
+    /// <summary>
+    /// Builds the invoice counterpart (buyer). This is the only place that decides whether a counterpart is sent and what it contains:
+    /// <list type="number">
+    /// <item>AADE must allow a counterpart on the effective (post-override) invoice type: retail types (11.x) only on fuel
+    /// documents (see <see cref="AADEMappings.SupportsCounterpart"/>), or the receipt carries transport information.
+    /// Otherwise there is no counterpart and a counterpart override is ignored (AADE error 205).</item>
+    /// <item>The base data comes from cbCustomer and is passed on as-is; the caller only sends cbCustomer for an actual
+    /// buyer (e.g. not for an anonymous retail fuel sale).</item>
+    /// <item>mydataoverride.invoice.counterpart is merged on top and passed through as-is (e.g. supplyAccountNo or name).</item>
+    /// <item>An override always produces a counterpart; whether it is complete (e.g. has a vatNumber) is validated by myDATA,
+    /// the caller is responsible for sending correct data.</item>
+    /// </list>
+    /// </summary>
     public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
     {
-        var customer = receiptRequest.GetCustomerOrNull();
-        if (customer == null)
+        var effectiveInvoiceType = GetEffectiveInvoiceType(receiptRequest);
+        var hasTransportInformation = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation);
+        if (!AADEMappings.SupportsCounterpart(effectiveInvoiceType, IsFuelInvoice(receiptRequest)) && !hasTransportInformation)
         {
             return null;
         }
 
+        var customer = receiptRequest.GetCustomerOrNull();
+        var counterpart = customer != null ? MapCustomerToCounterpart(customer, hasTransportInformation) : null;
+
+        var counterpartOverride = receiptRequest.GetCounterpartOverride();
+        if (counterpartOverride == null)
+        {
+            return counterpart;
+        }
+
+        // An explicit override always produces a counterpart. Without cbCustomer the caller provides all fields;
+        // myDATA validates the content (e.g. a missing vatNumber). PartyType.country cannot be empty and would default
+        // to the first enum value (AD), so fall back to GR unless the override sets the country.
+        counterpart ??= new PartyType { country = CountryType.GR, branch = 0 };
+        ApplyPartyOverride(ref counterpart, counterpartOverride);
+        return counterpart;
+    }
+
+    /// <summary>
+    /// Maps cbCustomer to a counterpart. AADE forbids the name for counterparts from Greece (they are identified by
+    /// their VAT number), except on documents with transport information.
+    /// </summary>
+    private static PartyType? MapCustomerToCounterpart(MiddlewareCustomer customer, bool hasTransportInformation)
+    {
         if (!CountryTypeMapper.TryParseCountryCode(customer.CustomerCountry ?? "", out var countryType))
         {
             return null;
         }
 
-        var vatNumber = GetAADEVAT(customer.CustomerVATId);
-        var isDomestic = countryType == CountryType.GR;
-
         var party = new PartyType
         {
-            vatNumber = vatNumber,
+            vatNumber = GetAADEVAT(customer.CustomerVATId),
             country = countryType,
             branch = 0,
         };
 
-        if (!isDomestic || receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation))
+        if (countryType != CountryType.GR || hasTransportInformation)
         {
             party.name = customer.CustomerName;
         }
@@ -1691,7 +1748,7 @@ public class AADEFactory
                 postalCode = customer.CustomerZip,
                 city = customer.CustomerCity,
                 street = !string.IsNullOrEmpty(customer.CustomerStreet) ? customer.CustomerStreet : null,
-                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.HasTransportInformation) ? "0" : null)
+                number = !string.IsNullOrEmpty(customer.CustomerHouseNumber) ? customer.CustomerHouseNumber : (hasTransportInformation ? "0" : null)
             };
         }
 
