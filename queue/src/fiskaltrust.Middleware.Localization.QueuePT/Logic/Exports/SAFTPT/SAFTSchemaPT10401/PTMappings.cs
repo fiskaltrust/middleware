@@ -160,7 +160,7 @@ public static class PTMappings
         /// <summary>
         /// Certificate number assigned by the AT to the fiskaltrust.CloudCashBox. Used in production.
         /// </summary>
-        public const string SoftwareCertificateNumber = "3535";
+        public const string SoftwareCertificateNumber = "3083";
 
         /// <summary>
         /// Placeholder certificate number used in the sandbox environment, as required for non-productive documents.
