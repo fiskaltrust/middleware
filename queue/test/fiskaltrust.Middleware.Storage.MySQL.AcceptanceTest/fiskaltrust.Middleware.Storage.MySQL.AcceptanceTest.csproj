@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.14" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.MySQL\fiskaltrust.Middleware.Storage.MySQL.csproj" />
     <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AcceptanceTest\fiskaltrust.Middleware.Storage.AcceptanceTest.csproj" />
   </ItemGroup>

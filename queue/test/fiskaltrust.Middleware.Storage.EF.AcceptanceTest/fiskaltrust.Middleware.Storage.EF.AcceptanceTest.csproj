@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.14" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.EF\fiskaltrust.Middleware.Storage.EF.csproj" />
     <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AcceptanceTest\fiskaltrust.Middleware.Storage.AcceptanceTest.csproj" />
   </ItemGroup>
