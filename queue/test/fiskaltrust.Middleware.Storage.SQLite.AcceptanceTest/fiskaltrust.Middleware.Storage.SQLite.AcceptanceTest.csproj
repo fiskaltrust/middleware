@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.14" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.119" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
   </ItemGroup>
