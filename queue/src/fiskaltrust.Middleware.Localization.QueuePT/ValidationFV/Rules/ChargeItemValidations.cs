@@ -252,7 +252,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         .WithErrorCode("ZeroVatExemption");
 
                     chargeItem.RuleFor(x => x.ftChargeItemCaseData)
-                        .Must((item, _) => Math.Abs(item.VATRate) <= 0.001m || !TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out _))
+                        .Must((item, caseData) => Math.Abs(item.VATRate) <= 0.001m || !TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out _))
                         .WithMessage("ftChargeItemCaseData.PT.TaxExemptionCode is only allowed on charge items with VAT rate 0.")
                         .WithErrorCode("TaxExemptionCodeOnTaxedLine");
                 });
