@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -237,17 +238,23 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                                 return false;
 
-                            var exemptionCode = (TaxExemptionCodePT) (int) natureValue;
-                            return TaxExemptionDictionaryPT.TaxExemptionTable.ContainsKey(exemptionCode);
+                            return TaxExemptionResolver.TryResolve(item, out _);
                         })
                         .WithMessage(item =>
                         {
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                                 return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field.";
+                            if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out var overrideCode))
+                                return $"Unknown tax exemption code '{overrideCode}' in ftChargeItemCaseData.PT.TaxExemptionCode.";
                             return $"Unknown tax exemption code '0x{(int) natureValue:X4}'.";
                         })
                         .WithErrorCode("ZeroVatExemption");
+
+                    chargeItem.RuleFor(x => x.ftChargeItemCaseData)
+                        .Must((item, _) => Math.Abs(item.VATRate) <= 0.001m || !TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out _))
+                        .WithMessage("ftChargeItemCaseData.PT.TaxExemptionCode is only allowed on charge items with VAT rate 0.")
+                        .WithErrorCode("TaxExemptionCodeOnTaxedLine");
                 });
             });
         }

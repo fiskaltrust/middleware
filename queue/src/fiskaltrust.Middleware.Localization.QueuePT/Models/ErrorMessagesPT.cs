@@ -215,6 +215,12 @@ public static class ErrorMessagesPT
     public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) =>
         $"EEEE_cbChargeItems[{i}]: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
 
+    public static string EEEE_UnknownTaxExemptionCodeOverride(int i, string exemptionCode) =>
+        $"EEEE_cbChargeItems[{i}]: Unknown tax exemption code '{exemptionCode}' provided in ftChargeItemCaseData.PT.TaxExemptionCode. Please use a valid Portuguese tax exemption code (e.g. 'M06').";
+
+    public static string EEEE_TaxExemptionCodeOnTaxedLine(int i, string exemptionCode) =>
+        $"EEEE_cbChargeItems[{i}]: Tax exemption code '{exemptionCode}' in ftChargeItemCaseData.PT.TaxExemptionCode is only allowed when the VAT rate is 0%.";
+
     /// <summary>
     /// Error message for discount exceeding the article amount
     /// </summary>
