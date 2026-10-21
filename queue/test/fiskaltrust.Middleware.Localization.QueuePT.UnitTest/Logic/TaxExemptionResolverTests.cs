@@ -175,6 +175,75 @@ public class TaxExemptionResolverTests
         ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
     }
 
+    // ZeroVatRate (V=7), Delivery (S=1)
+    private const long ZeroVatRateM06 = 0x5054_2000_0000_0617;
+    private const long ZeroVatRateNoNature = 0x5054_2000_0000_0017;
+    // NormalVatRate (V=3), Delivery (S=1), NN 06
+    private const long NormalVatM06 = 0x5054_2000_0000_0613;
+
+    [Theory]
+    [InlineData(NotTaxableM06)]
+    [InlineData(ZeroVatRateM06)]
+    [InlineData(NormalVatM06)]
+    public void GetIVATAxCode_WithNatureOfVat_IgnoresVatCategory(long chargeItemCase)
+    {
+        PTMappings.GetIVATAxCode(CreateChargeItem(chargeItemCase)).Should().Be("ISE");
+    }
+
+    [Fact]
+    public void GetIVATAxCode_WithOverride_IgnoresVatCategory()
+    {
+        PTMappings.GetIVATAxCode(CreateChargeItem(ZeroVatRateNoNature, caseData: OverrideAsJsonElement("M06"))).Should().Be("ISE");
+    }
+
+    [Fact]
+    public void GetIVATAxCode_WithoutExemption_UsesVatCategory()
+    {
+        PTMappings.GetIVATAxCode(CreateChargeItem(NormalVat, vatRate: 23m)).Should().Be("NOR");
+    }
+
+    [Fact]
+    public void Validation_ZeroVatRateCategoryWithNatureOfVat_IsSupported()
+    {
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateM06));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_SupportedVatRates(request).Should().BeEmpty();
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validation_ZeroVatRateCategoryWithoutExemption_IsStillUnsupported()
+    {
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateNoNature));
+
+        var results = ChargeItemValidations.Validate_ChargeItems_VATRate_SupportedVatRates(request).ToList();
+
+        results.Should().ContainSingle();
+        results[0].Errors.Single().Code.Should().Be(PortugalValidationRules.UnsupportedVatRate.Code);
+    }
+
+    [Fact]
+    public void Validation_NormalVatCategoryWithNatureOfVatAndZeroRate_SkipsVatRateCategoryCheck()
+    {
+        var request = CreateRequest(CreateChargeItem(NormalVatM06));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_VatRateAndAmount(request).Should().BeEmpty();
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validation_TaxedLineWithNatureOfVat_Fails()
+    {
+        var request = CreateRequest(CreateChargeItem(NormalVatM06, vatRate: 23m));
+
+        var results = ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).ToList();
+
+        results.Should().ContainSingle();
+        var error = results[0].Errors.Single();
+        error.Code.Should().Be(PortugalValidationRules.TaxExemptionCodeOnTaxedLine.Code);
+        error.Field.Should().Be(PortugalValidationFields.ChargeItemsCase);
+    }
+
     private static ReceiptRequest CreateRequest(ChargeItem chargeItem) => new()
     {
         ftReceiptCase = ReceiptCase.InvoiceB2B0x1002.WithCountry("PT"),

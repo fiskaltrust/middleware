@@ -109,7 +109,7 @@ public static class PortugalValidationRules
         new("EEEE_UnknownTaxExemptionCode", "Nature of VAT exemption code must be valid.", PortugalValidationFields.ChargeItemsCase);
 
     public static readonly ValidationRuleDefinition TaxExemptionCodeOnTaxedLine =
-        new("EEEE_TaxExemptionCodeOnTaxedLine", "ftChargeItemCaseData.PT.TaxExemptionCode is only allowed on charge items with VAT rate 0.", PortugalValidationFields.ChargeItemsCaseData);
+        new("EEEE_TaxExemptionCodeOnTaxedLine", "A tax exemption code (nature of VAT or ftChargeItemCaseData.PT.TaxExemptionCode) is only allowed on charge items with VAT rate 0.", PortugalValidationFields.ChargeItemsCase);
 
     public static readonly ValidationRuleDefinition DiscountExceedsArticleAmount =
         new("EEEE_DiscountExceedsArticleAmount", "Discounts must not exceed the related article amount.", PortugalValidationFields.ChargeItems);

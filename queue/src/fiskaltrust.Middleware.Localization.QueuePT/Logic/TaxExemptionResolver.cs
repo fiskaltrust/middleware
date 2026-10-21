@@ -12,6 +12,13 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Logic;
 /// </summary>
 public static class TaxExemptionResolver
 {
+    /// <summary>
+    /// A charge item is exempt when it carries an exemption code, either in the nature of VAT (NN) or in ftChargeItemCaseData.PT.TaxExemptionCode.
+    /// For exempt charge items the VAT category (V) of ftChargeItemCase is ignored.
+    /// </summary>
+    public static bool IsExempt(ChargeItem chargeItem)
+        => chargeItem.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatPT.UsualVatApplies || TryGetTaxExemptionCodeOverride(chargeItem, out _);
+
     public static bool TryGetTaxExemptionCodeOverride(ChargeItem chargeItem, out string? taxExemptionCode)
     {
         taxExemptionCode = null;

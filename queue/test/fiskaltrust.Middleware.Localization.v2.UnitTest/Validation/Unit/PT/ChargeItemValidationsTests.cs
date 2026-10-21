@@ -532,6 +532,65 @@ public class PTChargeItemValidationsTests
     }
 
     [Fact]
+    public void ZeroVatExemption_TaxedLineWithNatureOfVat_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var chargeItem = ValidChargeItem();
+        chargeItem.ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0613L; // NormalVatRate with NN 06 (M06)
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [chargeItem],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
+            .WithErrorCode("TaxExemptionCodeOnTaxedLine");
+    }
+
+    [Fact]
+    public void SupportedVatRates_ZeroVatRateCaseWithNatureOfVat_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.SupportedVatRates();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0617L // ZeroVatRate with NN 06 (M06)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void VatRateCategory_NormalVatCaseWithNatureOfVatAndZeroRate_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.VatRateCategory();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0613L // NormalVatRate with NN 06 (M06), V is ignored
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
     public void ZeroVatExemption_TaxedLineWithTaxExemptionCodeOverride_ShouldFail()
     {
         var validator = new ChargeItemValidations.ZeroVatExemption();

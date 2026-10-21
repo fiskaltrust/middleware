@@ -146,8 +146,9 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
             {
                 RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
                 {
+                    // The VAT category is ignored for exempt charge items; their tax code is derived from the exemption code
                     chargeItem.RuleFor(x => x.ftChargeItemCase)
-                        .Must(ftCase => !_unsupported.Contains(ftCase.Vat()))
+                        .Must((item, ftCase) => !_unsupported.Contains(ftCase.Vat()) || TaxExemptionResolver.IsExempt(item))
                         .WithMessage("Unsupported VAT rate category. Portugal supports: DiscountedVatRate1 (6%), DiscountedVatRate2 (13%), NormalVatRate (23%), and NotTaxable (0%).")
                         .WithErrorCode("UnsupportedVatRate");
                 });
@@ -175,7 +176,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         .Must((item, vatRate) =>
                         {
                             var vatCategory = item.ftChargeItemCase.Vat();
-                            if (!_expectedRates.TryGetValue(vatCategory, out var expectedRate))
+                            // Exempt charge items must have VAT rate 0, which ZeroVatExemption checks independent of the VAT category
+                            if (!_expectedRates.TryGetValue(vatCategory, out var expectedRate) || TaxExemptionResolver.IsExempt(item))
                                 return true;
                             return Math.Abs(vatRate - expectedRate) <= 0.001m;
                         })
@@ -254,6 +256,11 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     chargeItem.RuleFor(x => x.ftChargeItemCaseData)
                         .Must((item, caseData) => Math.Abs(item.VATRate) <= 0.001m || !TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out _))
                         .WithMessage("ftChargeItemCaseData.PT.TaxExemptionCode is only allowed on charge items with VAT rate 0.")
+                        .WithErrorCode("TaxExemptionCodeOnTaxedLine");
+
+                    chargeItem.RuleFor(x => x.ftChargeItemCase)
+                        .Must((item, ftCase) => Math.Abs(item.VATRate) <= 0.001m || ftCase.NatureOfVat() == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
+                        .WithMessage(item => $"The nature of VAT (NN) 0x{(int) item.ftChargeItemCase.NatureOfVat():X4} sets a tax exemption code, which is only allowed on charge items with VAT rate 0.")
                         .WithErrorCode("TaxExemptionCodeOnTaxedLine");
                 });
             });
