@@ -393,7 +393,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     [Theory]
     [InlineData(typeof(PLDeviceOutcomeUnknownException))]
     [InlineData(typeof(DerivedDeviceOutcomeUnknownException))]
-    public async Task Receipt_ShouldCarryOutcomeUnknownState_WhenTheScuOutcomeIsUnknown(Type exceptionType)
+    public async Task Receipt_ShouldAskToCheckTheRegister_WhenTheScuOutcomeIsUnknown(Type exceptionType)
     {
         var sscd = new FakePLSSCD
         {
@@ -403,7 +403,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2003_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
         result.receiptResponse.ftSignatures.Should().Contain(s => s.Data.Contains("Do NOT resend blindly"));
         result.receiptResponse.ftSignatures.Should().NotContain(s => s.Data.Contains("Retry once the register"));
     }
@@ -420,14 +420,14 @@ public class DeviceUnreachableTests : ProcessorTestsBase
     }
 
     [Fact]
-    public async Task DailyClosing_ShouldCarryOutcomeUnknownState_AndWriteNoActionJournal_WhenTheOutcomeIsUnknown()
+    public async Task DailyClosing_ShouldCarryDeviceUnreachableState_AndWriteNoActionJournal_WhenTheOutcomeIsUnknown()
     {
         var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new PLDeviceOutcomeUnknownException("no answer to dailyrep") };
         var sut = new DailyOperationsCommandProcessorPL(sscd);
 
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2003_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
         // Whether the Z report ran is unknown, so the journal must not claim it did.
         result.actionJournals.Should().BeEmpty();
     }

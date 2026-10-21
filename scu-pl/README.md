@@ -37,9 +37,9 @@ This is the entry point for the whole Polish vertical: storage → `QueuePL` →
   (network exception types) plus name-based for the SCU packages' `PLDeviceUnreachableException`,
   walking the type hierarchy — QueuePL does not reference the SCU assemblies.
   **An unknown outcome** (the command reached the register, but no readable answer came back —
-  `PLDeviceOutcomeUnknownException`) becomes `StatePL.DeviceOutcomeUnknownError`, which keeps the
-  unreachable flag and adds its own: a document may have been printed, so the operator checks the
-  register before resending instead of retrying. See
+  `PLDeviceOutcomeUnknownException`) carries the same state, but its error message asks the
+  operator to check the register before resending instead of retrying — a document may have been
+  printed. See
   [`PLSSCDErrorHandling`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Processors/PLSSCDErrorHandling.cs).
 
 ### The POSNET SCU

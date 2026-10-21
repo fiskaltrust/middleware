@@ -46,11 +46,13 @@ public static class PLSSCDErrorHandling
         if (IsDeviceOutcomeUnknown(exception))
         {
             receiptResponse.SetReceiptResponseError($"The Polish fiscal register did not confirm the command — it may or may not have executed it, so a receipt or report may already have been printed. Do NOT resend blindly: check the register's last document first, and resend only if it was not issued — a resend would otherwise duplicate it. Details: {exception.Message}");
-            receiptResponse.ftState = (State)StatePL.DeviceOutcomeUnknownError;
-            return;
         }
-
-        receiptResponse.SetReceiptResponseError($"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}");
+        else
+        {
+            receiptResponse.SetReceiptResponseError($"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}");
+        }
+        // An unknown outcome shares the unreachable state: either way there is no confirmed
+        // fiscalization. Only the message differs, because the remedy does.
         receiptResponse.ftState = (State)StatePL.DeviceUnreachableError;
     }
 }

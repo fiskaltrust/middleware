@@ -25,8 +25,8 @@ public class PLDeviceUnreachableException : PLSSCDException
 /// cannot be attributed or read) — a fiscal document may have been printed. Legally it is the same
 /// as an unreachable register (no confirmed fiscalization — no sale), hence the base type; unlike
 /// an unreachable register it must not simply be retried, because a resend can print the document
-/// twice. It carries its own ftState flag on top of the unreachable one — see
-/// <c>StatePL.DeviceOutcomeUnknownError</c> — so the operator checks the register first.
+/// twice. It shares the unreachable ftState; the queue's error message tells the operator to check
+/// the register before resending.
 /// </summary>
 public class PLDeviceOutcomeUnknownException : PLDeviceUnreachableException
 {

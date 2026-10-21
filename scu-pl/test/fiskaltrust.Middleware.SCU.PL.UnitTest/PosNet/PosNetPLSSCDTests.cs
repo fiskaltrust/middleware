@@ -4,7 +4,6 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
-using fiskaltrust.Middleware.SCU.PL.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 using fiskaltrust.Middleware.SCU.PL.PosNet;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Client;
@@ -367,8 +366,7 @@ public class PosNetPLSSCDTests
         var act = () => sut.ProcessReceiptAsync(request);
 
         // The report may have been printed: the caller must see "check the register", not "retry".
-        var failure = (await act.Should().ThrowAsync<PLDeviceOutcomeUnknownException>()).Which;
-        PLStateMapper.Map(failure).Should().Be((State)StatePL.DeviceOutcomeUnknownError);
+        await act.Should().ThrowAsync<PLDeviceOutcomeUnknownException>();
     }
 
     [Fact]

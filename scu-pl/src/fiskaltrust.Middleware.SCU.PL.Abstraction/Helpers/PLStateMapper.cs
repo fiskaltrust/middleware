@@ -10,12 +10,10 @@ public static class PLStateMapper
     /// <summary>
     /// Maps an SCU failure to the PL-localized ftState. Device-unreachable failures get their own
     /// local flag so queues and monitoring can distinguish "no register — no legal sale" from
-    /// ordinary errors; an unknown outcome adds a flag of its own on top, because a document may
-    /// have been printed and a blind retry would duplicate it.
+    /// ordinary errors.
     /// </summary>
     public static State Map(Exception exception) => exception switch
     {
-        PLDeviceOutcomeUnknownException => (State)StatePL.DeviceOutcomeUnknownError,
         PLDeviceUnreachableException => (State)StatePL.DeviceUnreachableError,
         _ => (State)StatePL.Error,
     };
