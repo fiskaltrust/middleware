@@ -15,16 +15,25 @@ public static class PLSSCDErrorHandling
 {
     public static bool IsDeviceUnreachable(Exception exception)
         => exception is HttpRequestException or TaskCanceledException or SocketException
-            || IsPLDeviceUnreachableException(exception)
+            || IsOfType(exception, "PLDeviceUnreachableException")
             || (exception.InnerException is not null && IsDeviceUnreachable(exception.InnerException));
+
+    /// <summary>
+    /// The command reached the register but its outcome is unknown (the SCU packages'
+    /// PLDeviceOutcomeUnknownException, e.g. the PosNet SCU's ambiguous-response exception): the
+    /// register may have printed the document, so it must be checked before anything is resent.
+    /// </summary>
+    public static bool IsDeviceOutcomeUnknown(Exception exception)
+        => IsOfType(exception, "PLDeviceOutcomeUnknownException")
+            || (exception.InnerException is not null && IsDeviceOutcomeUnknown(exception.InnerException));
 
     // Walks the type hierarchy so SCU-specific subclasses (e.g. the PosNet SCU's
     // ambiguous-response exception) are recognized too.
-    private static bool IsPLDeviceUnreachableException(Exception exception)
+    private static bool IsOfType(Exception exception, string typeName)
     {
         for (var type = exception.GetType(); type is not null; type = type.BaseType)
         {
-            if (type.Name == "PLDeviceUnreachableException")
+            if (type.Name == typeName)
             {
                 return true;
             }
@@ -34,6 +43,13 @@ public static class PLSSCDErrorHandling
 
     public static void SetDeviceUnreachableError(this ReceiptResponse receiptResponse, Exception exception)
     {
+        if (IsDeviceOutcomeUnknown(exception))
+        {
+            receiptResponse.SetReceiptResponseError($"The Polish fiscal register did not confirm the command — it may or may not have executed it, so a receipt or report may already have been printed. Do NOT resend blindly: check the register's last document first, and resend only if it was not issued — a resend would otherwise duplicate it. Details: {exception.Message}");
+            receiptResponse.ftState = (State)StatePL.DeviceOutcomeUnknownError;
+            return;
+        }
+
         receiptResponse.SetReceiptResponseError($"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}");
         receiptResponse.ftState = (State)StatePL.DeviceUnreachableError;
     }

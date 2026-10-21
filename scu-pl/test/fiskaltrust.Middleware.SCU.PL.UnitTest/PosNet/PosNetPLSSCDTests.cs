@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 using fiskaltrust.Middleware.SCU.PL.PosNet;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Client;
@@ -262,6 +263,112 @@ public class PosNetPLSSCDTests
         // The ambiguous command is sent exactly once and nothing (not even a cancel) follows —
         // a blind retry or cleanup could duplicate or destroy a successfully printed document.
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment");
+    }
+
+    private static ProcessRequest CreateSaleWithFooterLinesRequest()
+    {
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCaseData = new { PL = new { printout = new { lines = new object[] { new { text = "Dziękujemy!" }, new { text = "Zapraszamy" } } } } };
+        return request;
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_SaleWithFooterLines_PrintsThemAfterTrend()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithFooterLinesRequest());
+
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
+    }
+
+    /// <summary>
+    /// After trend the receipt is fiscal. Whatever happens to an additional line — rejected,
+    /// unanswered, connection lost — failing the receipt would make the POS resend it and print a
+    /// second fiscal receipt, so the sale succeeds with the failure in the response.
+    /// </summary>
+    [Theory]
+    [InlineData("device error")]
+    [InlineData("ambiguous")]
+    [InlineData("unreachable")]
+    [InlineData("unreadable")]
+    public async Task ProcessReceiptAsync_FailedFooterLineAfterTrend_DoesNotFailTheFiscalReceipt(string failure)
+    {
+        var transport = FakePosNetTransport.Confirming();
+        switch (failure)
+        {
+            case "device error": transport.FailWithDeviceError("trftrln", 2000); break;
+            case "ambiguous": transport.FailAmbiguously("trftrln"); break;
+            case "unreachable": transport.FailUnreachable("trftrln"); break;
+            case "unreadable": transport.AnswerUnreadably("trftrln"); break;
+        }
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithFooterLinesRequest());
+
+        // No cancel (the receipt is closed) and no retry of the line; the footer is closed and the
+        // receipt is anchored as usual.
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+    }
+
+    [Theory]
+    [InlineData("device error")]
+    [InlineData("ambiguous")]
+    [InlineData("unreachable")]
+    public async Task ProcessReceiptAsync_FailedFooterCloseAfterTrend_DoesNotFailTheFiscalReceipt(string failure)
+    {
+        var transport = FakePosNetTransport.Confirming();
+        switch (failure)
+        {
+            case "device error": transport.FailWithDeviceError("trftrend", 2000); break;
+            case "ambiguous": transport.FailAmbiguously("trftrend"); break;
+            case "unreachable": transport.FailUnreachable("trftrend"); break;
+        }
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithFooterLinesRequest());
+
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+    }
+
+    /// <summary>
+    /// The register answered trend, so it most likely printed the receipt — an answer that cannot
+    /// be read is an unknown outcome, not a failure that could be resent safely.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_UnreadableAnswerToTrend_IsAnUnknownOutcome_AndSendsNothingFurther()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.AnswerUnreadably("trend");
+        var sut = CreateSut(transport);
+
+        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        await act.Should().ThrowAsync<PLDeviceOutcomeUnknownException>();
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_AmbiguousDailyReport_IsAnUnknownOutcome()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailAmbiguously("dailyrep");
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+
+        var act = () => sut.ProcessReceiptAsync(request);
+
+        // The report may have been printed: the caller must see "check the register", not "retry".
+        var failure = (await act.Should().ThrowAsync<PLDeviceOutcomeUnknownException>()).Which;
+        PLStateMapper.Map(failure).Should().Be((State)StatePL.DeviceOutcomeUnknownError);
     }
 
     [Fact]
@@ -738,6 +845,7 @@ public class PosNetPLSSCDTests
         private readonly Dictionary<string, Func<Exception>> _failures = [];
         private readonly Dictionary<string, int> _failFromOccurrence = [];
         private readonly Dictionary<string, string> _answers = [];
+        private readonly HashSet<string> _unreadable = [];
 
         public List<string> SentMnemonics { get; } = [];
 
@@ -777,6 +885,9 @@ public class PosNetPLSSCDTests
 
         public void FailUnreachable(string mnemonic)
             => _failures[mnemonic] = () => new PLDeviceUnreachableException("connection refused");
+
+        /// <summary>The register executes the command but its answer arrives corrupted (CRC mismatch).</summary>
+        public void AnswerUnreadably(string mnemonic) => _unreadable.Add(mnemonic);
 
         /// <summary>Fails a command from its <paramref name="occurrence"/>-th sending on (1-based) — scnt is sent before and after a sale.</summary>
         public void FailUnreachable(string mnemonic, int occurrence)
@@ -825,7 +936,12 @@ public class PosNetPLSSCDTests
                 "eparagonbufferget" => "eparagonbufferget\thd3054\tprN\tst1\t",
                 _ => $"{mnemonic}\t",
             };
-            return Task.FromResult(PosNetProtocolTests.EncodeResponse(responsePayload));
+            var responseFrame = PosNetProtocolTests.EncodeResponse(responsePayload);
+            if (_unreadable.Contains(mnemonic))
+            {
+                responseFrame[2] ^= 0xFF;
+            }
+            return Task.FromResult(responseFrame);
         }
 
         public void Dispose() { }

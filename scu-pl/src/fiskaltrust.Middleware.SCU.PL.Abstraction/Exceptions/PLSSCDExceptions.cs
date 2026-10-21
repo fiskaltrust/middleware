@@ -20,6 +20,20 @@ public class PLDeviceUnreachableException : PLSSCDException
     public PLDeviceUnreachableException(string message, Exception innerException) : base(message, innerException) { }
 }
 
+/// <summary>
+/// A command reached the register, but whether it was executed is unknown (no answer, or one that
+/// cannot be attributed or read) — a fiscal document may have been printed. Legally it is the same
+/// as an unreachable register (no confirmed fiscalization — no sale), hence the base type; unlike
+/// an unreachable register it must not simply be retried, because a resend can print the document
+/// twice. It carries its own ftState flag on top of the unreachable one — see
+/// <c>StatePL.DeviceOutcomeUnknownError</c> — so the operator checks the register first.
+/// </summary>
+public class PLDeviceOutcomeUnknownException : PLDeviceUnreachableException
+{
+    public PLDeviceOutcomeUnknownException(string message) : base(message) { }
+    public PLDeviceOutcomeUnknownException(string message, Exception innerException) : base(message, innerException) { }
+}
+
 /// <summary>The register rejected an operation with a device error code.</summary>
 public class PLDeviceErrorException : PLSSCDException
 {

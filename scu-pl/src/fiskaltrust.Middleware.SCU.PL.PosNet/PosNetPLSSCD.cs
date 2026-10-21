@@ -186,14 +186,16 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 executed++;
             }
         }
-        catch (PLDeviceErrorException exception) when (executed > trendIndex)
+        catch (PLSSCDException exception) when (executed > trendIndex)
         {
-            // The receipt is already fiscal — a rejected additional line must not fail it (the
-            // queue would otherwise record a failure for a document the register has issued). The
-            // footer is closed and the rejection travels in the response instead.
+            // The receipt is already fiscal — no failure of an additional line may fail it, be it
+            // a rejection, an ambiguous answer or a lost connection: the queue would otherwise
+            // record a failure for a document the register has issued, and a resend would print a
+            // second fiscal receipt. The footer is closed where possible and the failure travels
+            // in the response instead.
             await TryEndFooterAsync();
             response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Dodatkowe linie nie wydrukowane",
-                $"?{exception.ErrorCode}: {exception.Message}");
+                exception is PLDeviceErrorException deviceError ? $"?{deviceError.ErrorCode}: {deviceError.Message}" : exception.Message);
         }
         catch (PLDeviceErrorException)
         {
@@ -258,9 +260,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     }
 
     /// <summary>
-    /// Closes the additional-lines phase after a rejected line so the printout is finished. A
-    /// confirmed rejection of the close itself is swallowed (the original error is reported);
-    /// ambiguous or unreachable outcomes propagate — the printout state is then unknown.
+    /// Closes the additional-lines phase after a failed line so the printout is finished. It runs
+    /// after trend, so every failure of the close itself is swallowed (the original failure is
+    /// reported): trftrend cannot print a fiscal document, so sending it after an ambiguous line is
+    /// safe, and a footer left open is for the operator to see — not a reason to fail a fiscal receipt.
     /// </summary>
     private async Task TryEndFooterAsync()
     {
@@ -268,7 +271,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await _client.ExecuteAsync(PosNetCommands.Trftrend());
         }
-        catch (PLDeviceErrorException)
+        catch (PLSSCDException)
         {
         }
     }

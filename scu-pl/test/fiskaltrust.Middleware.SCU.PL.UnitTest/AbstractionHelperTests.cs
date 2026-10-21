@@ -81,6 +81,16 @@ public class PLStateMapperTests
         => PLStateMapper.Map(new PLDeviceUnreachableException("printer offline"))
             .Should().Be((State)0x504C_2001_EEEE_EEEE);
 
+    /// <summary>The unknown-outcome state keeps the unreachable flag, so callers checking it still see "no sale".</summary>
+    [Fact]
+    public void Map_ShouldFlagAnUnknownOutcome_OnTopOfDeviceUnreachable()
+    {
+        var state = (ulong)PLStateMapper.Map(new PLDeviceOutcomeUnknownException("no answer to trend"));
+
+        state.Should().Be(0x504C_2003_EEEE_EEEE);
+        (state & 0x0000_0001_0000_0000).Should().NotBe(0);
+    }
+
     [Fact]
     public void Map_ShouldReturnPlainError_ForOtherFailures()
         => PLStateMapper.Map(new PLDeviceErrorException(2005, "no transaction mode"))

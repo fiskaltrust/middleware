@@ -35,7 +35,11 @@ This is the entry point for the whole Polish vertical: storage → `QueuePL` →
   [`ReceiptValidatorPL`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Validation/ReceiptValidatorPL.cs).
 * **An unreachable register** becomes `StatePL.DeviceUnreachableError`. Detection is structural
   (network exception types) plus name-based for the SCU packages' `PLDeviceUnreachableException`,
-  walking the type hierarchy — QueuePL does not reference the SCU assemblies. See
+  walking the type hierarchy — QueuePL does not reference the SCU assemblies.
+  **An unknown outcome** (the command reached the register, but no readable answer came back —
+  `PLDeviceOutcomeUnknownException`) becomes `StatePL.DeviceOutcomeUnknownError`, which keeps the
+  unreachable flag and adds its own: a document may have been printed, so the operator checks the
+  register before resending instead of retrying. See
   [`PLSSCDErrorHandling`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Processors/PLSSCDErrorHandling.cs).
 
 ### The POSNET SCU

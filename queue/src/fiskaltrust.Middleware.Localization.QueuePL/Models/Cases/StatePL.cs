@@ -10,4 +10,10 @@ public enum StatePL : ulong
 {
     Error = 0x504C_2000_EEEE_EEEE,
     DeviceUnreachableError = 0x504C_2001_EEEE_EEEE,
+
+    /// <summary>
+    /// The register may have executed the command (e.g. printed the receipt) without confirming it.
+    /// Keeps the unreachable flag and adds its own: check the register before resending.
+    /// </summary>
+    DeviceOutcomeUnknownError = 0x504C_2003_EEEE_EEEE,
 }

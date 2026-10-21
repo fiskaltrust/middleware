@@ -25,6 +25,18 @@ internal class DerivedDeviceUnreachableException : PLDeviceUnreachableException
     public DerivedDeviceUnreachableException(string message) : base(message) { }
 }
 
+// Mirrors the SCU abstraction: an unknown outcome is an unreachable register as well.
+internal class PLDeviceOutcomeUnknownException : PLDeviceUnreachableException
+{
+    public PLDeviceOutcomeUnknownException(string message) : base(message) { }
+}
+
+// e.g. the PosNet SCU's ambiguous-response exception.
+internal class DerivedDeviceOutcomeUnknownException : PLDeviceOutcomeUnknownException
+{
+    public DerivedDeviceOutcomeUnknownException(string message) : base(message) { }
+}
+
 internal class FakePLSSCD : IPLSSCD
 {
     public int ProcessReceiptCalls { get; private set; }
@@ -372,6 +384,52 @@ public class DeviceUnreachableTests : ProcessorTestsBase
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
         ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+    }
+
+    /// <summary>
+    /// The register may have printed the receipt: the caller must be told to check it, not to retry
+    /// — a retry would print a second fiscal receipt.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(PLDeviceOutcomeUnknownException))]
+    [InlineData(typeof(DerivedDeviceOutcomeUnknownException))]
+    public async Task Receipt_ShouldCarryOutcomeUnknownState_WhenTheScuOutcomeIsUnknown(Type exceptionType)
+    {
+        var sscd = new FakePLSSCD
+        {
+            ThrowOnProcessReceipt = (Exception)Activator.CreateInstance(exceptionType, "no answer to trend")!,
+        };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2003_EEEE_EEEEUL);
+        result.receiptResponse.ftSignatures.Should().Contain(s => s.Data.Contains("Do NOT resend blindly"));
+        result.receiptResponse.ftSignatures.Should().NotContain(s => s.Data.Contains("Retry once the register"));
+    }
+
+    [Fact]
+    public async Task Receipt_ShouldTellTheCallerToRetry_WhenTheRegisterWasNotReached()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new PLDeviceUnreachableException("connection refused") };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        result.receiptResponse.ftSignatures.Should().Contain(s => s.Data.Contains("Retry once the register"));
+    }
+
+    [Fact]
+    public async Task DailyClosing_ShouldCarryOutcomeUnknownState_AndWriteNoActionJournal_WhenTheOutcomeIsUnknown()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new PLDeviceOutcomeUnknownException("no answer to dailyrep") };
+        var sut = new DailyOperationsCommandProcessorPL(sscd);
+
+        var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2003_EEEE_EEEEUL);
+        // Whether the Z report ran is unknown, so the journal must not claim it did.
+        result.actionJournals.Should().BeEmpty();
     }
 
     [Fact]
