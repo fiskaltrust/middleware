@@ -232,7 +232,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
         // Whether the register is fiscalized is unknown while it cannot be reached — the caller has
         // to see that this is a connectivity failure it can retry, not a wrong device state.
         storage.Activated.Should().BeFalse();
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
         result.actionJournals.Should().HaveCount(1);
     }
 
@@ -383,7 +383,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
     }
 
     /// <summary>
@@ -403,7 +403,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
         result.receiptResponse.ftSignatures.Should().Contain(s => s.Data.Contains("Do NOT resend blindly"));
         result.receiptResponse.ftSignatures.Should().NotContain(s => s.Data.Contains("Retry once the register"));
     }
@@ -427,7 +427,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
 
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
         // Whether the Z report ran is unknown, so the journal must not claim it did.
         result.actionJournals.Should().BeEmpty();
     }
@@ -451,7 +451,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
 
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
         // The action journal of a closing records that the report was printed and the counters
         // advanced — after an unreachable register it would claim a Z report that never ran.
         result.actionJournals.Should().BeEmpty();
@@ -465,7 +465,7 @@ public class DeviceUnreachableTests : ProcessorTestsBase
 
         var result = await sut.MonthlyClosing0x2012Async(CreateRequest(0x504C_2000_0000_2012));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
         result.actionJournals.Should().BeEmpty();
     }
 

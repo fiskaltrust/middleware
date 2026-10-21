@@ -1,13 +1,12 @@
 using System.Net.Sockets;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 
 /// <summary>
-/// Maps SCU communication failures to the PL device-unreachable ftState. Detection is structural
+/// Turns SCU communication failures into an error response that tells the caller what to do next
+/// (retry, or check the register first). The ftState is the plain error for now. Detection is structural
 /// (network-level exception types) plus name-based for the SCU packages' own
 /// PLDeviceUnreachableException — QueuePL deliberately does not reference the SCU assemblies.
 /// </summary>
@@ -51,8 +50,5 @@ public static class PLSSCDErrorHandling
         {
             receiptResponse.SetReceiptResponseError($"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}");
         }
-        // An unknown outcome shares the unreachable state: either way there is no confirmed
-        // fiscalization. Only the message differs, because the remedy does.
-        receiptResponse.ftState = (State)StatePL.DeviceUnreachableError;
     }
 }

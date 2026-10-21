@@ -74,25 +74,6 @@ public class PLDeviceInfoTests
     }
 }
 
-public class PLStateMapperTests
-{
-    [Fact]
-    public void Map_ShouldFlagDeviceUnreachable()
-        => PLStateMapper.Map(new PLDeviceUnreachableException("printer offline"))
-            .Should().Be((State)0x504C_2001_EEEE_EEEE);
-
-    /// <summary>An unknown outcome means no confirmed fiscalization either, so it shares the unreachable state.</summary>
-    [Fact]
-    public void Map_ShouldFlagAnUnknownOutcome_AsDeviceUnreachable()
-        => PLStateMapper.Map(new PLDeviceOutcomeUnknownException("no answer to trend"))
-            .Should().Be((State)0x504C_2001_EEEE_EEEE);
-
-    [Fact]
-    public void Map_ShouldReturnPlainError_ForOtherFailures()
-        => PLStateMapper.Map(new PLDeviceErrorException(2005, "no transaction mode"))
-            .Should().Be((State)0x504C_2000_EEEE_EEEE);
-}
-
 public class SignatureTypePLTests
 {
     [Fact]
