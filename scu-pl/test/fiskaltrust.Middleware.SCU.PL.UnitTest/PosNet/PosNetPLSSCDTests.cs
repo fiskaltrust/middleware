@@ -288,6 +288,7 @@ public class PosNetPLSSCDTests
     [InlineData("ambiguous")]
     [InlineData("unreachable")]
     [InlineData("unreadable")]
+    [InlineData("unexpected")]
     public async Task ProcessReceiptAsync_FailedFooterLineAfterTrend_DoesNotFailTheFiscalReceipt(string failure)
     {
         var transport = FakePosNetTransport.Confirming();
@@ -297,6 +298,7 @@ public class PosNetPLSSCDTests
             case "ambiguous": transport.FailAmbiguously("trftrln"); break;
             case "unreachable": transport.FailUnreachable("trftrln"); break;
             case "unreadable": transport.AnswerUnreadably("trftrln"); break;
+            case "unexpected": transport.FailUnexpectedly("trftrln"); break;
         }
         var sut = CreateSut(transport);
 
@@ -313,6 +315,7 @@ public class PosNetPLSSCDTests
     [InlineData("device error")]
     [InlineData("ambiguous")]
     [InlineData("unreachable")]
+    [InlineData("unexpected")]
     public async Task ProcessReceiptAsync_FailedFooterCloseAfterTrend_DoesNotFailTheFiscalReceipt(string failure)
     {
         var transport = FakePosNetTransport.Confirming();
@@ -321,6 +324,7 @@ public class PosNetPLSSCDTests
             case "device error": transport.FailWithDeviceError("trftrend", 2000); break;
             case "ambiguous": transport.FailAmbiguously("trftrend"); break;
             case "unreachable": transport.FailUnreachable("trftrend"); break;
+            case "unexpected": transport.FailUnexpectedly("trftrend"); break;
         }
         var sut = CreateSut(transport);
 
@@ -593,6 +597,61 @@ public class PosNetPLSSCDTests
         // a failure leaves the delivery state absent but keeps the eDokument id and the receipt.
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Identyfikator eDokumentu" && s.Data == "3054");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Status eDokumentu");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_RejectedFooterLineThenUnexpectedFailureClosingIt_DoesNotFailTheFiscalReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailWithDeviceError("trftrln", 2000);
+        transport.FailUnexpectedly("trftrend");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithFooterLinesRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+    }
+
+    /// <summary>
+    /// Every readback runs after the document is printed: no failure of one — anticipated or not —
+    /// may turn the issued document into an error response.
+    /// </summary>
+    [Theory]
+    [InlineData("eclastdocnoget")]
+    [InlineData("rtcget")]
+    [InlineData("eparagonbufferget")]
+    public async Task ProcessReceiptAsync_UnexpectedReadbackFailureAfterTrend_DoesNotFailTheReceipt(string mnemonic)
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailUnexpectedly(mnemonic);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Identyfikator eDokumentu");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_UnexpectedCounterReadAfterTheDailyReport_DoesNotFailTheClosing()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailUnexpectedly("scnt");
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        // The report is printed; only its number is not known.
+        transport.SentMnemonics.Should().Equal("scomm", "dailyrep", "scnt");
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer raportu dobowego");
     }
 
     [Fact]

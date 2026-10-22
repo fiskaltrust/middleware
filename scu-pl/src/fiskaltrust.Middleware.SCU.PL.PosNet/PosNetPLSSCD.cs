@@ -204,10 +204,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 executed++;
             }
         }
-        catch (PLSSCDException exception) when (executed > trendIndex)
+        catch (Exception exception) when (executed > trendIndex)
         {
             // The receipt is already fiscal — no failure of an additional line may fail it, be it
-            // a rejection, an ambiguous answer or a lost connection: the queue would otherwise
+            // a rejection, an ambiguous answer, a lost connection or one nobody anticipated: the queue would otherwise
             // record a failure for a document the register has issued, and a resend would print a
             // second fiscal receipt. The footer is closed where possible and the failure travels
             // in the response instead.
@@ -289,7 +289,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await _client.ExecuteAsync(PosNetCommands.Trftrend());
         }
-        catch (PLSSCDException)
+        catch (Exception)
         {
         }
     }
@@ -375,9 +375,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 : form;
             response.AddSignatureItem(SignatureTypePL.EDocumentDeliveryState, "Status eDokumentu", deliveryState);
         }
-        catch (PLSSCDException)
+        catch (Exception)
         {
-            // eparagonbufferget is read-only — swallowing an ambiguous or failed readback is safe.
+            // eparagonbufferget is read-only and runs after trend — swallowing any failed readback
+            // is safe, failing the receipt is not.
         }
     }
 
