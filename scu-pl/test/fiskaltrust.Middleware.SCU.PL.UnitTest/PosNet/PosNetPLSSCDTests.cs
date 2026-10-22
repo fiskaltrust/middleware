@@ -80,9 +80,8 @@ public class PosNetPLSSCDTests
         var request = CreateSaleRequest();
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0020_0001;
 
-        var act = () => sut.ProcessReceiptAsync(request);
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(request)).FailureMessage();
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -174,9 +173,8 @@ public class PosNetPLSSCDTests
         transport.FailUnreachable("scnt");
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        await act.Should().ThrowAsync<PLDeviceUnreachableException>();
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("could not be reached");
         transport.SentMnemonics.Should().Equal("scomm", "scnt");
     }
 
@@ -228,11 +226,10 @@ public class PosNetPLSSCDTests
         transport.FailAmbiguously("prncancel");
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
         // Whether the cancel reached the device is unknown, so the receipt must surface the
         // ambiguous/unreachable state rather than the (already handled) device error.
-        await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "prncancel");
     }
 
@@ -243,9 +240,8 @@ public class PosNetPLSSCDTests
         transport.FailWithDeviceError("trline", 382);
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(382);
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("error 382");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "prncancel");
     }
 
@@ -256,9 +252,8 @@ public class PosNetPLSSCDTests
         transport.FailAmbiguously("trpayment");
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
         // The ambiguous command is sent exactly once and nothing (not even a cancel) follows —
         // a blind retry or cleanup could duplicate or destroy a successfully printed document.
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment");
@@ -346,9 +341,8 @@ public class PosNetPLSSCDTests
         transport.AnswerUnreadably("trend");
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        await act.Should().ThrowAsync<PLDeviceOutcomeUnknownException>();
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend");
     }
 
@@ -363,10 +357,27 @@ public class PosNetPLSSCDTests
         request.ReceiptRequest.cbChargeItems = [];
         request.ReceiptRequest.cbPayItems = [];
 
-        var act = () => sut.ProcessReceiptAsync(request);
 
         // The report may have been printed: the caller must see "check the register", not "retry".
-        await act.Should().ThrowAsync<PLDeviceOutcomeUnknownException>();
+        (await sut.ProcessReceiptAsync(request)).FailureMessage().Should().Contain("Do NOT resend blindly");
+    }
+
+    /// <summary>
+    /// The SCU never throws: a queue — in-process or remote, where exception types do not survive —
+    /// reads every outcome off the response.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_UnexpectedFailure_ComesBackAsAnErrorResponse()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailUnexpectedly("trinit");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.FailureMessage().Should().Be("transport bug");
+        // Only the failure is reported — no identity or other signature of a document that was not issued.
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle();
     }
 
     [Fact]
@@ -376,9 +387,8 @@ public class PosNetPLSSCDTests
         transport.FailUnreachable("trinit");
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        await act.Should().ThrowAsync<PLDeviceUnreachableException>();
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("could not be reached");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit");
     }
 
@@ -388,9 +398,8 @@ public class PosNetPLSSCDTests
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateSaleRequest(amount: 9.99m, payment: 5.00m));
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(CreateSaleRequest(amount: 9.99m, payment: 5.00m))).FailureMessage();
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -402,9 +411,8 @@ public class PosNetPLSSCDTests
         var request = CreateSaleRequest();
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_1002;
 
-        var act = () => sut.ProcessReceiptAsync(request);
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(request)).FailureMessage();
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -539,13 +547,12 @@ public class PosNetPLSSCDTests
         transport.FailWithDeviceError("eparagonidznext", 2034);
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
 
         // ERR_NO_FISC_MODE gets the explaining message, and the rejected binding is the last frame
         // on the wire: no trinit was sent, so there is no transaction to cancel and no paper.
-        var thrown = await act.Should().ThrowAsync<PLDeviceErrorException>();
-        thrown.Which.ErrorCode.Should().Be(2034);
-        thrown.Which.Message.Should().Contain("not fiscalized").And.Contain("eDokument");
+        var failure = (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage();
+        failure.Should().Contain("error 2034");
+        failure.Should().Contain("not fiscalized").And.Contain("eDokument");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext");
     }
 
@@ -556,9 +563,8 @@ public class PosNetPLSSCDTests
         transport.FailWithDeviceError("eparagonidznext", 2004);
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
 
-        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2004);
+        (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage().Should().Contain("error 2004");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext");
     }
 
@@ -569,9 +575,8 @@ public class PosNetPLSSCDTests
         transport.FailAmbiguously("eparagonidznext");
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
 
-        await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
+        (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext");
     }
 
@@ -596,9 +601,8 @@ public class PosNetPLSSCDTests
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
 
-        var act = () => sut.ProcessReceiptAsync(CreateEReceiptSaleRequest(new string('A', 129)));
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest(new string('A', 129)))).FailureMessage();
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -639,9 +643,8 @@ public class PosNetPLSSCDTests
         var request = CreateSaleRequest(amount: 3.69m, payment: -3.69m);
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)(0x504C_2000_0000_0001UL | (ulong)ReceiptCaseFlags.Refund);
 
-        var act = () => sut.ProcessReceiptAsync(request);
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(request)).FailureMessage();
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -684,9 +687,8 @@ public class PosNetPLSSCDTests
         // NotTaxable resolves to the exempt slot, which the register does not report.
         request.ReceiptRequest.cbChargeItems[0].ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0018;
 
-        var act = () => sut.ProcessReceiptAsync(request);
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(request)).FailureMessage();
         transport.SentMnemonics.Should().Equal("sfsk");
     }
 
@@ -764,10 +766,9 @@ public class PosNetPLSSCDTests
         var request = CreateSaleRequest(amount: 10.00m, payment: 10.00m);
         request.ReceiptRequest.cbChargeItems[0].Quantity = 3m;
 
-        var act = () => sut.ProcessReceiptAsync(request);
 
         // 1000 gr over 3 units would print 3 × 333 gr = 999 gr next to a value of 1000 gr.
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await sut.ProcessReceiptAsync(request)).FailureMessage();
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -883,6 +884,10 @@ public class PosNetPLSSCDTests
 
         public void FailUnreachable(string mnemonic)
             => _failures[mnemonic] = () => new PLDeviceUnreachableException("connection refused");
+
+        /// <summary>A failure the SCU does not anticipate — not one of its own exception types.</summary>
+        public void FailUnexpectedly(string mnemonic)
+            => _failures[mnemonic] = () => new InvalidOperationException("transport bug");
 
         /// <summary>The register executes the command but its answer arrives corrupted (CRC mismatch).</summary>
         public void AnswerUnreadably(string mnemonic) => _unreadable.Add(mnemonic);

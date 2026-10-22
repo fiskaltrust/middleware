@@ -12,7 +12,7 @@ public class PLSSCDException : Exception
 /// <summary>
 /// The fiscal register could not be reached (offline printer, network failure, printer farm
 /// endpoint down). In Poland no working register legally means no sale (Art. 111(3) VAT Act),
-/// so the queue tells the caller to retry once the register is available.
+/// so the SCU's error response tells the caller to retry once the register is available.
 /// </summary>
 public class PLDeviceUnreachableException : PLSSCDException
 {
@@ -25,7 +25,7 @@ public class PLDeviceUnreachableException : PLSSCDException
 /// cannot be attributed or read) — a fiscal document may have been printed. Legally it is the same
 /// as an unreachable register (no confirmed fiscalization — no sale), hence the base type; unlike
 /// an unreachable register it must not simply be retried, because a resend can print the document
-/// twice — the queue's error message tells the operator to check the register before resending.
+/// twice — the SCU's error response tells the operator to check the register before resending.
 /// </summary>
 public class PLDeviceOutcomeUnknownException : PLDeviceUnreachableException
 {

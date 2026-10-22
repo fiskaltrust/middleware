@@ -5,50 +5,32 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 
 /// <summary>
-/// Turns SCU communication failures into an error response that tells the caller what to do next
-/// (retry, or check the register first). The ftState is the plain error for now. Detection is structural
-/// (network-level exception types) plus name-based for the SCU packages' own
-/// PLDeviceUnreachableException — QueuePL deliberately does not reference the SCU assemblies.
+/// The fallback for when the SCU itself cannot be talked to. A Polish SCU never throws — device
+/// failures come back as error responses it built itself — so what is left to handle here is the
+/// transport between queue and SCU (a remote SCU that is down or does not answer).
 /// </summary>
 public static class PLSSCDErrorHandling
 {
-    public static bool IsDeviceUnreachable(Exception exception)
+    public static bool IsScuCommunicationFailure(Exception exception)
         => exception is HttpRequestException or TaskCanceledException or SocketException
-            || IsOfType(exception, "PLDeviceUnreachableException")
-            || (exception.InnerException is not null && IsDeviceUnreachable(exception.InnerException));
+            || (exception.InnerException is not null && IsScuCommunicationFailure(exception.InnerException));
 
     /// <summary>
-    /// The command reached the register but its outcome is unknown (the SCU packages'
-    /// PLDeviceOutcomeUnknownException, e.g. the PosNet SCU's ambiguous-response exception): the
-    /// register may have printed the document, so it must be checked before anything is resent.
+    /// A refused connection means the request never reached the SCU, so it is safe to retry. Any
+    /// other transport failure (a timeout, a connection dropped mid-call) may have hit after the SCU
+    /// handed the receipt to the register — then a resend could print it twice.
     /// </summary>
-    public static bool IsDeviceOutcomeUnknown(Exception exception)
-        => IsOfType(exception, "PLDeviceOutcomeUnknownException")
-            || (exception.InnerException is not null && IsDeviceOutcomeUnknown(exception.InnerException));
-
-    // Walks the type hierarchy so SCU-specific subclasses (e.g. the PosNet SCU's
-    // ambiguous-response exception) are recognized too.
-    private static bool IsOfType(Exception exception, string typeName)
+    public static void SetScuCommunicationError(this ReceiptResponse receiptResponse, Exception exception)
     {
-        for (var type = exception.GetType(); type is not null; type = type.BaseType)
+        if (IsConnectionRefused(exception))
         {
-            if (type.Name == typeName)
-            {
-                return true;
-            }
+            receiptResponse.SetReceiptResponseError($"The Polish SCU could not be reached, so nothing was sent to the fiscal register. Retry once the SCU is available. Details: {exception.Message}");
+            return;
         }
-        return false;
+        receiptResponse.SetReceiptResponseError($"The connection to the Polish SCU failed while it was processing the request — the register may or may not have printed the document. Do NOT resend blindly: check the register's last document first, and resend only if it was not issued. Details: {exception.Message}");
     }
 
-    public static void SetDeviceUnreachableError(this ReceiptResponse receiptResponse, Exception exception)
-    {
-        if (IsDeviceOutcomeUnknown(exception))
-        {
-            receiptResponse.SetReceiptResponseError($"The Polish fiscal register did not confirm the command — it may or may not have executed it, so a receipt or report may already have been printed. Do NOT resend blindly: check the register's last document first, and resend only if it was not issued — a resend would otherwise duplicate it. Details: {exception.Message}");
-        }
-        else
-        {
-            receiptResponse.SetReceiptResponseError($"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}");
-        }
-    }
+    private static bool IsConnectionRefused(Exception exception)
+        => exception is SocketException { SocketErrorCode: SocketError.ConnectionRefused }
+            || (exception.InnerException is not null && IsConnectionRefused(exception.InnerException));
 }

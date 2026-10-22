@@ -33,13 +33,15 @@ This is the entry point for the whole Polish vertical: storage → `QueuePL` →
 * **Currency** is PLN, on the receipt and on every charge and pay item (rfcs/0705-queue-single-currency).
   The data format defaults to EUR, so a PosCreator has to set it — hence the explicit validation in
   [`ReceiptValidatorPL`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Validation/ReceiptValidatorPL.cs).
-* **An unreachable register** is a plain error (`…_EEEE_EEEE`, no PL-local error flags for now)
-  whose message tells the caller to retry once the register is available. Detection is structural
-  (network exception types) plus name-based for the SCU packages' `PLDeviceUnreachableException`,
-  walking the type hierarchy — QueuePL does not reference the SCU assemblies.
-  **An unknown outcome** (the command reached the register, but no readable answer came back —
-  `PLDeviceOutcomeUnknownException`) is a plain error as well, but its message asks the operator
-  to check the register before resending instead of retrying — a document may have been printed. See
+* **A Polish SCU never throws out of `ProcessReceiptAsync`.** Every failure comes back as an error
+  response — the plain error state (`…_EEEE_EEEE`, no PL-local error flags for now) with a `FAILURE`
+  signature that says what to do next ([`SetError`](src/fiskaltrust.Middleware.SCU.PL.Abstraction/Helpers/PLReceiptResponseExtensions.cs)):
+  an unreachable register is retried; an **unknown outcome** (the command reached the register, but
+  no readable answer came back — `PLDeviceOutcomeUnknownException`) is checked on the register
+  first, because a document may have been printed and a resend would duplicate it. QueuePL passes
+  these responses through and writes no closing journal for an error. What it still catches is the
+  transport to a remote SCU failing: a refused connection is retried, a timeout or a dropped
+  connection is treated like an unknown outcome. See
   [`PLSSCDErrorHandling`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Processors/PLSSCDErrorHandling.cs).
 
 ### The POSNET SCU

@@ -83,7 +83,25 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         return ToDeviceInfo(status, rateTable).ToPLSSCDInfo();
     }
 
+    /// <summary>
+    /// Never throws: every failure comes back as an error response (<see cref="PLReceiptResponseExtensions.SetError"/>),
+    /// so a queue reads the outcome off the response alone — also when this SCU runs remotely, where
+    /// exception types do not survive the transport.
+    /// </summary>
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    {
+        try
+        {
+            return await ProcessReceiptOnDeviceAsync(request);
+        }
+        catch (Exception exception)
+        {
+            request.ReceiptResponse.SetError(exception);
+            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
+        }
+    }
+
+    private async Task<ProcessResponse> ProcessReceiptOnDeviceAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.ftReceiptCase;
         var response = request.ReceiptResponse;
