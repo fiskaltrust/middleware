@@ -398,6 +398,14 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var current = await ReadLastEmittedDocStatusAsync(receiptReference);
+            if (current == null)
+            {
+                // A printer left outside the Registration State (Cipriani stays in the Z state after its closure)
+                // refuses this query. 1-088 returns it to the Registration State (protocol 7.00, p. 21); there no
+                // document can be open, so the reset cancels nothing.
+                await ResetPrinter(TimeSpan.FromMilliseconds(_configuration.RecoveryStatusQueryTimeoutMs));
+                current = await ReadLastEmittedDocStatusAsync(receiptReference);
+            }
             // Only a fiscal document is a usable baseline: the progressive number of a non-fiscal document
             // comes from a different counter, and comparing the two could report progress that never happened.
             if (current != null && current.IsFiscalDocument)
@@ -1003,11 +1011,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
     }
 
-    private async Task ResetPrinter()
+    private async Task ResetPrinter(TimeSpan? timeout = null)
     {
         var resetCommand = new PrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
         var xml = SoapSerializer.Serialize(resetCommand);
-        await _httpClient.SendCommandAsync(xml);
+        await _httpClient.SendCommandAsync(xml, timeout);
     }
 
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptResponse receiptResponse)

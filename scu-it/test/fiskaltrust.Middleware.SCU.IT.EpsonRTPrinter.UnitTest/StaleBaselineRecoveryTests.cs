@@ -98,6 +98,21 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             Assert.Equal(1, printer.StatusQueriesBeforeFirstSend);
         }
 
+        [Fact]
+        public async Task PrinterLeftInZState_IsResetSoTheBaselineCanBeReadAndTheLostDocumentRecovered()
+        {
+            // Cipriani, 15/09/2026: after its closure the printer stays in the Z state and refuses the
+            // last-document query, so the receipt ran without a baseline and ended in "unknown document state".
+            var printer = new ScriptedPrinter { InZStateUntilReset = true };
+            var sut = CreateSut(printer);
+
+            var response = await Sign(sut, "first-after-closure");
+
+            Assert.False(HasFailed(response), FailureData(response));
+            Assert.Equal("0003", DocNumber(response));
+            Assert.Equal(1, printer.Resets);
+        }
+
         private static bool HasFailed(ProcessResponse response) =>
             ((ulong) response.ReceiptResponse.ftState & 0xEEEE_EEEE) == 0xEEEE_EEEE;
 
@@ -156,6 +171,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             /// <summary>1-based index of the first send that actually puts a document on paper.</summary>
             public int FirstPrintingSend { get; set; } = 1;
 
+            /// <summary>Outside the Registration State the printer refuses the status read until a 1-088 reset.</summary>
+            public bool InZStateUntilReset { get; set; }
+
+            public int Resets { get; private set; }
+
             public int StatusQueries { get; private set; }
             public int Sends { get; private set; }
 
@@ -174,9 +194,21 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
             public Task<HttpResponseMessage> SendCommandAsync(string payload, TimeSpan? timeout = null)
             {
+                if (payload.Contains("resetPrinter"))
+                {
+                    Resets++;
+                    InZStateUntilReset = false;
+                    return Task.FromResult(Soap(SoapSerializer.Serialize(new PrinterCommandResponse { Success = true })));
+                }
+
                 if (payload.Contains(LastEmittedDocCommand))
                 {
                     StatusQueries++;
+                    if (InZStateUntilReset)
+                    {
+                        return Task.FromResult(Soap(SoapSerializer.Serialize(new PrinterCommandResponse { Success = false })));
+                    }
+
                     if (StatusQueries > StatusQueriesBeforeFailure)
                     {
                         throw new HttpRequestException("the printer could not be reached");
