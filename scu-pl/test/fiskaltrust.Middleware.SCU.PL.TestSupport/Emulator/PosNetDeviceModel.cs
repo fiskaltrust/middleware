@@ -504,6 +504,12 @@ public sealed class PosNetDeviceModel
 
     private string Ftrcfg(IReadOnlyDictionary<string, string> p)
     {
+        // A cashier name or register number longer than the field is refused, not truncated (measured
+        // on a POSNET: cn with 14 characters → ?10, PROTO_ERR_DATA_LENGTH).
+        if (p.TryGetValue("cc", out var cc) && cc.Length > 32 || p.TryGetValue("cn", out var cn) && cn.Length > 8)
+        {
+            return Error("ftrcfg", PosNetErrors.DataLength);
+        }
         if (p.TryGetValue("bc", out var bc))
         {
             if (bc.Length > 30)
@@ -698,6 +704,9 @@ public static class PosNetErrors
 
     /// <summary>2063 ERR_PAR — parameter error.</summary>
     public const int Parameter = 2063;
+
+    /// <summary>PROTO_ERR_DATA_LENGTH — a parameter longer than its field (POT-I-DEV-37 error list).</summary>
+    public const int DataLength = 10;
 
     /// <summary>2064 ERR_FTR_NO_HDR — no start of a printout or transaction (nothing to cancel).</summary>
     public const int NothingToCancel = 2064;

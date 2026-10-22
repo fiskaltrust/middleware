@@ -139,12 +139,14 @@ public static class PosNetCommands
     }
 
     /// <summary>
-    /// An additional line after the receipt (POT-I-DEV-37 p. 274): id 25 is the plain line without a
-    /// keyword; sw/sh double the character width/height. Only valid after a trend with fe0.
+    /// An additional line after the receipt (POT-I-DEV-37 pp. 371–373): id 25 is the plain line
+    /// without a keyword (text right-aligned behind a 15-character column), 0–40 are keyword lines
+    /// (the register's label left, the text right), 41 prints the text left-aligned in normal size;
+    /// sw/sh double the character width/height (not for 41). Only valid after a trend with fe0.
     /// </summary>
-    public static PosNetCommand Trftrln(string text, bool doubleWidth = false, bool doubleHeight = false)
+    public static PosNetCommand Trftrln(string text, bool doubleWidth = false, bool doubleHeight = false, int lineId = 25)
     {
-        var parameters = new List<KeyValuePair<string, string>> { new("id", "25"), new("na", text) };
+        var parameters = new List<KeyValuePair<string, string>> { new("id", lineId.ToString(CultureInfo.InvariantCulture)), new("na", text) };
         if (doubleWidth)
         {
             parameters.Add(new("sw", "1"));
@@ -174,18 +176,38 @@ public static class PosNetCommands
         ]);
 
     /// <summary>
-    /// The printout footer configuration for the next receipt (POT-I-DEV-37 p. 51): the 1D code
-    /// (<c>bc</c>, up to 30 characters) and where the prepared 2D code is printed (<c>bb</c>: 0 not
-    /// at all, 1 above, 2 under the 1D code). Without ca1/lb1 the settings hold until the next printout.
+    /// The printout footer configuration for the next receipt (POT-I-DEV-37 pp. 68–69): the cashier
+    /// name (<c>cc</c>, up to 32) and the register number (<c>cn</c>, up to 8) in the footer line,
+    /// the 1D code (<c>bc</c>, up to 30 characters), where the prepared 2D code is printed (<c>bb</c>:
+    /// 0 not at all, 1 above, 2 under the 1D code), and up to three info lines (<c>ln</c>, LF-separated,
+    /// formatting codes as in ftrinfoset). <c>ca0</c>/<c>lb0</c>: everything holds for the next printout
+    /// only. A value that is too long is refused by the register with error 10 (PROTO_ERR_DATA_LENGTH).
     /// </summary>
-    public static PosNetCommand Ftrcfg(string? barcode, int code2dPosition)
+    public static PosNetCommand Ftrcfg(string? barcode, int code2dPosition, string? cashier = null, string? register = null, IReadOnlyList<string>? infoLines = null)
     {
         var parameters = new List<KeyValuePair<string, string>>();
+        if (cashier is not null)
+        {
+            parameters.Add(new("cc", cashier));
+        }
+        if (register is not null)
+        {
+            parameters.Add(new("cn", register));
+        }
+        if (cashier is not null || register is not null)
+        {
+            parameters.Add(new("ca", "0"));
+        }
         if (barcode is not null)
         {
             parameters.Add(new("bc", barcode));
         }
         parameters.Add(new("bb", code2dPosition.ToString(CultureInfo.InvariantCulture)));
+        if (infoLines is { Count: > 0 })
+        {
+            parameters.Add(new("ln", string.Join("\n", infoLines)));
+            parameters.Add(new("lb", "0"));
+        }
         return new PosNetCommand("ftrcfg", parameters);
     }
 

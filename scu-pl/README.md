@@ -109,6 +109,25 @@ Notable mapping rules, all covered by unit tests:
   failed or unprovable readback leaves the values out rather than failing a receipt that is already
   printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
 
+* **The receipt footer** ([`PosNetPrintout`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetPrintout.cs), middleware#845).
+  Layout measured on a POSNET against a real H&M PL receipt:
+
+  | What | From | Register |
+  | --- | --- | --- |
+  | cashier in the footer line (`00008 #02 238689`) | `cbUser` (a string/number; a structured user object is left out) | `ftrcfg cc`, ≤ 32 |
+  | register number in the footer line | `cbTerminalID` | `ftrcfg cn`, ≤ 8 |
+  | barcode, QR code | `PL.printout.barcode` / `qrCode` | `ftrcfg bc/bb`, `qrcode` |
+  | key left, value right | `PL.printout.lines[]` with `label` (e.g. `itemCount`, `transactionNumber`) | `trftrln id0–40` |
+  | free text, left-aligned, normal size | `PL.printout.lines[]` with `align: "left"` | `trftrln id41` — the spec lists it without parameter, but the device prints the text |
+  | free text as before | `PL.printout.lines[]` with only `text` | `trftrln id25` — right-aligned behind a 15-character column |
+  | up to 3 info lines, optionally centred | `PL.printout.infoLines`, `infoLinesAlign: "center"` | `ftrcfg ln` (LF-separated, `&c`), `lb0` |
+
+  A value longer than its field is refused by the register with error 10 (`PROTO_ERR_DATA_LENGTH`),
+  not truncated. The SCU checks the limits itself and rejects the receipt with a validation error
+  naming the field (e.g. a `cbTerminalID` over 8 characters) before anything is sent: that is an
+  integration error the POS has to fix. The frame encoder carries LF as content (the protocol's line
+  separator in `ftrcfg ln`), and still refuses STX, ETX and TAB.
+
 #### Configuration
 
 The SCU takes its parameters from the cashbox configuration; see
@@ -140,7 +159,7 @@ naming the setting, not as a raw `JsonException`.
 | [`QueuePL.AcceptanceTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest) | 12 | nothing |
 
 ```powershell
-# the three SCU suites (390 tests)
+# the three SCU suites (410 tests)
 dotnet test scu-pl/fiskaltrust.Middleware.SCU.PL.sln
 
 # the two QueuePL suites (45 tests) — they live in the queue solution

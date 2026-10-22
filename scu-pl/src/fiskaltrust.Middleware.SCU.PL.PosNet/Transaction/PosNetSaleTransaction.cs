@@ -197,7 +197,7 @@ public class PosNetSaleTransaction
         _commands.Add(PosNetCommands.Trend(_totalGrosze, _paymentsGrosze, _changeGrosze, endFooter: footerLines.Count == 0));
         foreach (var line in footerLines)
         {
-            _commands.Add(PosNetCommands.Trftrln(line.Text, line.DoubleWidth, line.DoubleHeight));
+            _commands.Add(PosNetCommands.Trftrln(line.Text, line.DoubleWidth, line.DoubleHeight, line.LineId));
         }
         if (footerLines.Count > 0)
         {

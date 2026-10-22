@@ -197,7 +197,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // Footer codes (ftReceiptCaseData.PL.printout barcode/qrCode) are a printout configuration
         // for the receipt that follows. They go out before the e-receipt binding: a rejected
         // configuration then fails the sale with nothing armed and nothing printed.
-            if (printout is { HasFooterCodes: true })
+            if (printout is { HasFooterConfiguration: true })
             {
                 await ConfigureFooterCodesAsync(printout);
             }
@@ -321,10 +321,11 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     }
 
     /// <summary>
-    /// Sends the footer codes for the next receipt: the prepared 2D code (qrcode) and the footer
-    /// configuration (ftrcfg bc/bb). Both are valid until the next printout, i.e. for the receipt
-    /// this sale prints. Runs before the e-receipt binding and before trinit, so a rejection fails
-    /// the sale with nothing on the device.
+    /// Sends the printout configuration for the next receipt: the prepared 2D code (qrcode) and the
+    /// footer configuration (ftrcfg: cashier from cbUser, register from cbTerminalID, the codes and the
+    /// info lines). All of it is valid until the next printout, i.e. for the receipt this sale prints.
+    /// Runs before the e-receipt binding and before trinit, so a rejection fails the sale with nothing
+    /// on the device.
     /// </summary>
     private async Task ConfigureFooterCodesAsync(PosNetPrintout printout)
     {
@@ -332,7 +333,8 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await _client.ExecuteAsync(PosNetCommands.Qrcode(qrCode.Data, qrCode.PixelSize, qrCode.ErrorCorrection));
         }
-        await _client.ExecuteAsync(PosNetCommands.Ftrcfg(printout.Barcode, printout.QrCode is { } code ? (int)code.Position : 0));
+        await _client.ExecuteAsync(PosNetCommands.Ftrcfg(printout.Barcode, printout.QrCode is { } code ? (int)code.Position : 0,
+            printout.Cashier, printout.Register, printout.FormattedInfoLines));
     }
 
     /// <summary>

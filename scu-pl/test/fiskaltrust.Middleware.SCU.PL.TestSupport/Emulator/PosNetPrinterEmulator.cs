@@ -229,7 +229,10 @@ public sealed class PosNetPrinterEmulator : IDisposable
         if (_replaysACassette
             && (command.CommandId is "!sprn" or "!sdev"
                     && (!_replay.TryPeek(out var next) || !next.Command.StartsWith(command.CommandId, StringComparison.Ordinal))
-                || command.CommandId == "scnt" && _replay.TryPeek(out var following) && following.Command.StartsWith("dailyrep", StringComparison.Ordinal)))
+                || command.CommandId == "scnt" && _replay.TryPeek(out var following) && following.Command.StartsWith("dailyrep", StringComparison.Ordinal)
+                // The cashier/register footer configuration from cbUser/cbTerminalID (ftrcfg) is newer than
+                // the recordings too; it only configures the next printout's footer, not its fiscal content.
+                || command.CommandId == "ftrcfg" && (!_replay.TryPeek(out var upcoming) || !upcoming.Command.StartsWith("ftrcfg", StringComparison.Ordinal))))
         {
             return PosNetPayload.ToFrame(Model.Answer(command));
         }

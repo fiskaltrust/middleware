@@ -35,7 +35,9 @@ public static class PosNetFrame
             // a TAB would open an extra field (a different PTU slot, another amount) and an ETX
             // would end the frame. Free text is sanitized by PosNetText before it gets here; this
             // guard makes sure nothing reaches the device that would silently change the command.
-            if (PosNetText.ContainsFramingCharacter(parameter.Value))
+            // LF is content, not framing: the protocol separates lines with it (ftrinfoset tx, ftrcfg ln,
+            // hdrset — POT-I-DEV-37 p. 32). Only STX, ETX and TAB delimit a frame.
+            if (PosNetText.ContainsFramingCharacter(parameter.Value.Replace("\n", "")))
             {
                 throw new PosNetProtocolException(
                     $"The value of '{command.Mnemonic}' parameter '{parameter.Key}' contains a control character, which the POSNET protocol cannot transport as content.");

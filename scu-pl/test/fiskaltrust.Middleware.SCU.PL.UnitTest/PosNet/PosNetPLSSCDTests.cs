@@ -486,6 +486,37 @@ public class PosNetPLSSCDTests
         transport.SentMnemonics.Should().NotContain("dailyrep");
     }
 
+    [Fact]
+    public async Task ProcessReceiptAsync_SaleWithCashierAndRegister_ConfiguresTheFooterBeforeTheReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.cbUser = "238689";
+        request.ReceiptRequest.cbTerminalID = "02";
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "ftrcfg", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentPayloads.Single(p => p.StartsWith("ftrcfg")).Should().StartWith("ftrcfg	cc238689	cn02	ca0	bb0	#");
+    }
+
+    /// <summary>The register would refuse it with error 10; the SCU refuses it first, so nothing at all reaches the device.</summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_RegisterNumberTooLong_IsRejectedBeforeAnyFrameIsSent()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.cbTerminalID = "HM-PL0027-SSCO";
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        result.FailureMessage().Should().Contain("cbTerminalID 'HM-PL0027-SSCO' has 14 characters");
+        transport.SentMnemonics.Should().BeEmpty();
+    }
+
     private static ProcessRequest CreateSaleWithFooterLinesRequest()
     {
         var request = CreateSaleRequest();
