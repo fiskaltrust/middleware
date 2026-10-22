@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Client;
@@ -26,10 +25,11 @@ internal static class PosNetStatus
         {
             return read(await client.ExecuteAsync(command));
         }
-        catch (PLSSCDException)
+        catch (Exception)
         {
             // A failed or ambiguous status read leaves the register as it was; the value is
-            // simply not reported.
+            // simply not reported. Caught broadly on purpose: these reads run after a document
+            // is printed, and no failure of theirs, anticipated or not, may fail that document.
             return default;
         }
     }

@@ -42,6 +42,23 @@ public class PosNetClientTests
         failure.Message.Should().Contain("answered 'trend' to the command 'trinit'");
     }
 
+    /// <summary>
+    /// An answer that arrives corrupted still means the register received the command and most
+    /// likely executed it — for a trend that is a printed receipt, so it must not read as a failure.
+    /// </summary>
+    [Fact]
+    public async Task Execute_WhenTheAnswerCannotBeRead_IsAmbiguous_NotAProtocolFailure()
+    {
+        using var client = new PosNetClient(new ScriptedTransport("trend\t", corrupt: true));
+
+        var act = () => client.ExecuteAsync(PosNetCommands.Scnt());
+
+        var failure = (await act.Should().ThrowAsync<PosNetAmbiguousResponseException>()).Which;
+        failure.Should().BeAssignableTo<PLDeviceOutcomeUnknownException>();
+        failure.InnerException.Should().BeOfType<PosNetProtocolException>();
+        failure.Message.Should().Contain("answer to 'scnt' could not be read");
+    }
+
     /// <summary>An error answer names the command it rejects, so it must not be mistaken for a shift.</summary>
     [Fact]
     public async Task Execute_WhenTheDeviceRejectsTheCommand_IsADeviceError()
@@ -53,10 +70,17 @@ public class PosNetClientTests
         (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2000);
     }
 
-    private sealed class ScriptedTransport(string responsePayload) : IPosNetTransport
+    private sealed class ScriptedTransport(string responsePayload, bool corrupt = false) : IPosNetTransport
     {
         public Task<byte[]> SendReceiveAsync(byte[] frame, CancellationToken cancellationToken = default)
-            => Task.FromResult(PosNetProtocolTests.EncodeResponse(responsePayload));
+        {
+            var response = PosNetProtocolTests.EncodeResponse(responsePayload);
+            if (corrupt)
+            {
+                response[2] ^= 0xFF;
+            }
+            return Task.FromResult(response);
+        }
 
         public void Dispose() { }
     }

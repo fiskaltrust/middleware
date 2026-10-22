@@ -235,9 +235,8 @@ public class PosNetPLSSCDAcceptanceTests
     {
         using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("trline", 2005));
 
-        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2005);
+        (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale())).FailureMessage().Should().Contain("error 2005");
         // A scripted register has no pinned table, so the SCU reads it first.
         target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "prncancel");
         NoTransactionShouldBeOpen(target);
@@ -248,9 +247,8 @@ public class PosNetPLSSCDAcceptanceTests
     {
         using var target = PosNetTestTarget.Scripted(emulator => emulator.SwallowOn("trpayment"));
 
-        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        await act.Should().ThrowAsync<PosNetAmbiguousResponseException>();
+        (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale())).FailureMessage().Should().Contain("Do NOT resend blindly");
         // Exactly one trpayment and no cleanup afterwards: the device may have printed — the
         // operator must verify before anything is sent again (triple-print protection).
         target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment");
@@ -284,9 +282,8 @@ public class PosNetPLSSCDAcceptanceTests
     {
         using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("eparagonidznext", 2034));
 
-        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale());
 
-        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2034);
+        (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale())).FailureMessage().Should().Contain("error 2034");
         // The rejected binding is the last frame on the wire: no trinit, no line, no cancel —
         // nothing was sent to the device for this receipt after the failed bind.
         target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "eparagonidznext");
@@ -303,9 +300,8 @@ public class PosNetPLSSCDAcceptanceTests
     {
         using var target = PosNetTestTarget.Scripted(emulator => emulator.OmittingEDocumentIdOnBind());
 
-        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale());
 
-        await act.Should().ThrowAsync<PLSSCDException>();
+        (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale())).FailureMessage();
         // The armed binding is cleared and nothing is printed: no trinit ever goes out.
         target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "eparagonidznext", "eparagonidzcancel");
         NoTransactionShouldBeOpen(target);
@@ -404,9 +400,8 @@ public class PosNetPLSSCDAcceptanceTests
         using var target = PosNetTestTarget.Scripted(emulator => emulator.ErrorOn("ftrcfg", 2063));
         var request = PLReceiptExamples.PrintoutSale("KIDPRINTOUT02");
 
-        var act = () => target.Sut.ProcessReceiptAsync(request);
 
-        (await act.Should().ThrowAsync<PLDeviceErrorException>()).Which.ErrorCode.Should().Be(2063);
+        (await target.Sut.ProcessReceiptAsync(request)).FailureMessage().Should().Contain("error 2063");
         target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "qrcode", "ftrcfg");
         NoTransactionShouldBeOpen(target);
     }
@@ -427,9 +422,8 @@ public class PosNetPLSSCDAcceptanceTests
     {
         using var target = PosNetTestTarget.Scripted(unreachable: true);
 
-        var act = () => target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        await act.Should().ThrowAsync<PLDeviceUnreachableException>();
+        (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale())).FailureMessage().Should().Contain("could not be reached");
         target.SentMnemonics.Should().BeEmpty();
     }
 

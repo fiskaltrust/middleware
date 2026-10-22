@@ -83,7 +83,25 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         return ToDeviceInfo(status, rateTable).ToPLSSCDInfo();
     }
 
+    /// <summary>
+    /// Never throws: every failure comes back as an error response (<see cref="PLReceiptResponseExtensions.SetError"/>),
+    /// so a queue reads the outcome off the response alone — also when this SCU runs remotely, where
+    /// exception types do not survive the transport.
+    /// </summary>
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    {
+        try
+        {
+            return await ProcessReceiptOnDeviceAsync(request);
+        }
+        catch (Exception exception)
+        {
+            request.ReceiptResponse.SetError(exception);
+            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
+        }
+    }
+
+    private async Task<ProcessResponse> ProcessReceiptOnDeviceAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.ftReceiptCase;
         var response = request.ReceiptResponse;
@@ -186,14 +204,16 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 executed++;
             }
         }
-        catch (PLDeviceErrorException exception) when (executed > trendIndex)
+        catch (Exception exception) when (executed > trendIndex)
         {
-            // The receipt is already fiscal — a rejected additional line must not fail it (the
-            // queue would otherwise record a failure for a document the register has issued). The
-            // footer is closed and the rejection travels in the response instead.
+            // The receipt is already fiscal — no failure of an additional line may fail it, be it
+            // a rejection, an ambiguous answer, a lost connection or one nobody anticipated: the queue would otherwise
+            // record a failure for a document the register has issued, and a resend would print a
+            // second fiscal receipt. The footer is closed where possible and the failure travels
+            // in the response instead.
             await TryEndFooterAsync();
             response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Dodatkowe linie nie wydrukowane",
-                $"?{exception.ErrorCode}: {exception.Message}");
+                exception is PLDeviceErrorException deviceError ? $"?{deviceError.ErrorCode}: {deviceError.Message}" : exception.Message);
         }
         catch (PLDeviceErrorException)
         {
@@ -258,9 +278,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     }
 
     /// <summary>
-    /// Closes the additional-lines phase after a rejected line so the printout is finished. A
-    /// confirmed rejection of the close itself is swallowed (the original error is reported);
-    /// ambiguous or unreachable outcomes propagate — the printout state is then unknown.
+    /// Closes the additional-lines phase after a failed line so the printout is finished. It runs
+    /// after trend, so every failure of the close itself is swallowed (the original failure is
+    /// reported): trftrend cannot print a fiscal document, so sending it after an ambiguous line is
+    /// safe, and a footer left open is for the operator to see — not a reason to fail a fiscal receipt.
     /// </summary>
     private async Task TryEndFooterAsync()
     {
@@ -268,7 +289,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await _client.ExecuteAsync(PosNetCommands.Trftrend());
         }
-        catch (PLDeviceErrorException)
+        catch (Exception)
         {
         }
     }
@@ -354,9 +375,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 : form;
             response.AddSignatureItem(SignatureTypePL.EDocumentDeliveryState, "Status eDokumentu", deliveryState);
         }
-        catch (PLSSCDException)
+        catch (Exception)
         {
-            // eparagonbufferget is read-only — swallowing an ambiguous or failed readback is safe.
+            // eparagonbufferget is read-only and runs after trend — swallowing any failed readback
+            // is safe, failing the receipt is not.
         }
     }
 

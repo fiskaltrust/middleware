@@ -30,25 +30,15 @@ public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStoragePro
         {
             info = await _sscd.GetInfoAsync();
         }
-        catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
-        {
-            // Whether the register is fiscalized is unknown while it cannot be reached — the queue
-            // stays inactive, and the caller sees the device-unreachable state rather than a
-            // generic error, so retrying once the register is back is the obvious next step.
-            receiptResponse.SetDeviceUnreachableError(ex);
-            return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
-                queue, receiptRequest, receiptResponse,
-                $"The initial-operation receipt could not verify the register's fiscalization state: the register was not reachable. Details: {ex.Message}")]);
-        }
         catch (Exception ex)
         {
-            // The register answered, but not with a state: it rejected the status command, or the
-            // answer was not decodable. Either way the fiscalization state is unknown, which is the
-            // same conclusion as above and must reach the caller the same way — as a receipt
-            // response with an action journal, not as a raw exception out of the processor. Caught
-            // broadly on purpose: every failure here means "not verified", and an unverified
-            // register must not activate a queue.
-            var unverified = $"The initial-operation receipt could not verify the register's fiscalization state: the register did not report one. Details: {ex.Message}";
+            // GetInfoAsync has no response to carry an error state, so it still reports failure by
+            // throwing: the register (or the SCU) could not be reached, rejected the status command,
+            // or answered undecodably. Every one of them means the fiscalization state is unknown,
+            // and it reaches the caller as a receipt response with an action journal, not as a raw
+            // exception. Caught broadly on purpose: an unverified register must not activate a queue,
+            // and reading the status changes nothing on the register, so retrying is always safe.
+            var unverified = $"The initial-operation receipt could not verify the register's fiscalization state. Retry once the register is reachable. Details: {ex.Message}";
             receiptResponse.SetReceiptResponseError(unverified);
             return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
                 queue, receiptRequest, receiptResponse, unverified)]);
