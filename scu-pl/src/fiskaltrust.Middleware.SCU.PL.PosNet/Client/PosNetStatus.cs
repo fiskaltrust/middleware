@@ -18,6 +18,17 @@ internal static class PosNetStatus
                 ? number
                 : null;
 
+    /// <summary>A T/N (or 1/0) flag, or null when the register does not report it.</summary>
+    public static bool? ReadFlag(PosNetResponse status, string field)
+        => status.Parameters.TryGetValue(field, out var text)
+            ? text switch
+            {
+                "T" or "t" or "1" or "Y" or "y" => true,
+                "N" or "n" or "0" => false,
+                _ => null,
+            }
+            : null;
+
     /// <summary>Executes a status command and reads its answer, or yields the default when the read fails.</summary>
     public static async Task<T?> TryReadAsync<T>(PosNetClient client, PosNetCommand command, Func<PosNetResponse, T?> read)
     {

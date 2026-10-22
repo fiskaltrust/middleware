@@ -49,6 +49,15 @@ public sealed class PosNetDeviceModel
     /// <summary>Whether the register reports fiscal mode (<c>fsT</c>). A test device is typically not.</summary>
     public bool Fiscalized { get; set; } = true;
 
+    /// <summary>
+    /// The printing mechanism state <c>sprn</c> reports (POT-I-DEV-37 p. 390): 0 ready, 1 cover open,
+    /// 5 no paper, … — set it to put the SCU in front of a printer that cannot print.
+    /// </summary>
+    public int MechanismStatus { get; set; }
+
+    /// <summary>The device state <c>sdev</c> reports (p. 391): 0 ready, 3 waiting for the operator after an error.</summary>
+    public int DeviceStatus { get; set; }
+
     /// <summary>The numer unikatowy, in the shape a POSNET Online printer answers it.</summary>
     public string UniqueNumber { get; set; } = "ZBF 2101002392";
 
@@ -179,6 +188,8 @@ public sealed class PosNetDeviceModel
         return command.CommandId switch
         {
             "scomm" => $"scomm\tfs{Flag(Fiscalized)}\ttzN\tts{(TransactionOpen ? ReceiptDocumentType : 0)}\thrT\tnu{UniqueNumber}\ttdN\t",
+            "!sprn" or "sprn" => $"sprn\tpr{MechanismStatus}\t",
+            "!sdev" or "sdev" => $"sdev\tds{DeviceStatus}\tcpT\tqe{Flag(!TransactionOpen || DeviceStatus == 0)}\tpeN\ttl{(TransactionOpen ? 1 : 0)}\t",
             "scnt" => $"scnt\trd{DailyReportCounter}\thn{Printouts + 1}\tbn{CompletedReceipts}\tfn{Invoices}\tnu{UniqueNumber}\tbc{CanceledReceipts}\tbt{LastReceiptNumber}\tfc0\t",
             "stot" => Stot(),
             "strns" => Strns(),

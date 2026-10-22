@@ -24,6 +24,12 @@ public class PosNetConfiguration
     public int ReceiveTimeoutMs { get; set; } = 15_000;
 
     /// <summary>
+    /// The pause between two status reads while the SCU waits for a register that went silent after
+    /// <c>trend</c>. There is no limit on the wait itself — see <c>PosNetPLSSCD.ResolveSilentTrendAsync</c>.
+    /// </summary>
+    public int OutcomeResolutionPollIntervalMs { get; set; } = 1_000;
+
+    /// <summary>
     /// Line speed of a serial <see cref="DeviceUrl"/>. The printer's own default for its COM port is
     /// 115200; over USB (a CDC virtual COM port) the value is handed to the driver but does not
     /// limit the link. Data bits are fixed at 8 by the device.
@@ -99,6 +105,7 @@ public class PosNetConfiguration
         RequirePositiveTimeout(ConnectTimeoutMs, nameof(ConnectTimeoutMs));
         RequirePositiveTimeout(SendTimeoutMs, nameof(SendTimeoutMs));
         RequirePositiveTimeout(ReceiveTimeoutMs, nameof(ReceiveTimeoutMs));
+        RequirePositiveTimeout(OutcomeResolutionPollIntervalMs, nameof(OutcomeResolutionPollIntervalMs));
         switch (ParseDeviceAddress())
         {
             case PosNetDeviceAddress.Serial serial:

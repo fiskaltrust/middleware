@@ -56,9 +56,9 @@ Two properties of that protocol shape most of the code:
   what the POS should send instead — rather than letting the printer answer with a number.
 * **An answer only identifies itself by mnemonic.** There is no sequence number, so a late answer to
   a command that timed out can be mistaken for the next command's confirmation, shifting every answer
-  that follows. The client therefore checks that the mnemonic matches, and reports a mismatch as an
-  *ambiguous outcome* — the command was written, and what the register did with it is exactly what
-  the answer does not say.
+  that follows. The client therefore checks that the mnemonic matches (an asynchronous `!sprn`/`!sdev`
+  is answered under its plain mnemonic), and reports a mismatch as an *ambiguous outcome* — the
+  command was written, and what the register did with it is exactly what the answer does not say.
 
 Notable mapping rules, all covered by unit tests:
 
@@ -72,6 +72,26 @@ Notable mapping rules, all covered by unit tests:
   configured one, unless `VatRateTable` pins it deliberately (e.g. for a recording).
 * **The daily report** is dated from the receipt moment in `Europe/Warsaw`. A register stands in
   Poland by law, and a middleware host in UTC would otherwise close the wrong day around midnight.
+* **A sale is never reported as failed if the register will still issue it.** A POSNET accepts a whole
+  receipt even when it cannot print (cover open, no paper), holds the closed receipt and prints and
+  fiscalizes it the moment the fault is cleared — no command withdraws it. Measured on a real
+  printer: idle, it reports ready even with the cover open (`!sprn pr0`, `!sdev ds0 qeT`); only
+  while it holds the receipt does it report `pr5 ds3 qeN`. So the SCU:
+  * refuses a sale while the register is not idle (`!sprn`/`!sdev` before `trinit` and again before
+    `trend`) — the receipt is **not issued**;
+  * treats every failure before `trend` as **not issued** and cancels the open receipt — a receipt
+    only becomes fiscal when `trend` closes it;
+  * after a `trend` that was not confirmed, **waits without a time limit** until the register is idle
+    again and then decides from its completed-receipt counter (`scnt bn`): issued → the sale completes
+    normally, not issued → error. An error is never returned for a receipt the register still holds.
+
+  The `FAILURE` message of a refused sale says "The receipt was NOT issued", so the POS can resend
+  it. See `ResolveSilentTrendAsync` in [`PosNetPLSSCD`](src/fiskaltrust.Middleware.SCU.PL.PosNet/PosNetPLSSCD.cs).
+* **The zero receipt returns the printer's state** in `ftStateData.PL.PrinterStatus` (ready, the
+  problem in words, mechanism and device state, queue, paper near end, open transaction, fiscal and
+  read-only mode), like the Italian RT printer SCUs. It runs outside the device lock and only uses the
+  asynchronous status commands, so it answers while a sale waits for an open cover — that is how a POS
+  finds out why the sale is waiting. See [`PosNetPrinterState`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Client/PosNetPrinterState.cs).
 * **Every sale is anchored in the register.** The receipt number alone is no key, because a register
   with a daily counter repeats it every day. After `trend` the SCU therefore also reads the
   protected-memory document number (`eclastdocnoget ty0`), the register's clock (`rtcget`) and the
@@ -96,6 +116,7 @@ full set and the defaults.
 | `ConnectTimeoutMs`, `SendTimeoutMs`, `ReceiveTimeoutMs` | Must be positive; a command whose answer is never waited for would be reported as ambiguous on a register that answered |
 | `SerialBaudRate`, `SerialParity`, `SerialStopBits`, `SerialHandshake` | Serial line settings; the defaults are the device's own (115200 8N1, no flow control, which is what a USB virtual COM port needs). A `usbhost://` printer gets them as its CDC line coding; the handshake does not apply there |
 | `VatRateTable` | Empty by default — the register's own table is used |
+| `OutcomeResolutionPollIntervalMs` | Pause between two status reads while waiting for a register that went silent after `trend` (default 1000). There is no limit on the wait itself |
 
 Everything arrives from the Portal as strings, so numbers are read from strings and a cleared field
 reads as the device default. A parameter of the wrong shape is reported as a PL validation error
@@ -114,10 +135,10 @@ naming the setting, not as a raw `JsonException`.
 | [`QueuePL.AcceptanceTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest) | 12 | nothing |
 
 ```powershell
-# the three SCU suites (281 tests)
+# the three SCU suites (387 tests)
 dotnet test scu-pl/fiskaltrust.Middleware.SCU.PL.sln
 
-# the two QueuePL suites (37 tests) — they live in the queue solution
+# the two QueuePL suites (45 tests) — they live in the queue solution
 dotnet test queue/test/fiskaltrust.Middleware.Localization.QueuePL.UnitTest
 dotnet test queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest
 ```

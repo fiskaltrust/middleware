@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
@@ -49,7 +50,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
         result.ReceiptResponse.ftReceiptIdentification.Should().EndWith("85");
         // The numer unikatowy is a legal element of the fiscal document and identifies the register.
@@ -68,7 +69,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trnipset", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trnipset", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Single(p => p.StartsWith("trnipset")).Should().Contain("ni1234563218");
     }
 
@@ -161,7 +162,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
     }
@@ -219,7 +220,7 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_AmbiguousCancelAfterDeviceError_PropagatesTheAmbiguity()
+    public async Task ProcessReceiptAsync_DeviceErrorMidTransaction_WithAnUnansweredCancel_IsStillNotIssued()
     {
         var transport = FakePosNetTransport.Confirming();
         transport.FailWithDeviceError("trline", 382);
@@ -227,10 +228,10 @@ public class PosNetPLSSCDTests
         var sut = CreateSut(transport);
 
 
-        // Whether the cancel reached the device is unknown, so the receipt must surface the
-        // ambiguous/unreachable state rather than the (already handled) device error.
-        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "prncancel");
+        // Whether the cancel reached the device does not matter for the receipt: trend was never
+        // sent, and an open transaction cannot become a fiscal receipt on its own.
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("NOT issued").And.Contain("error 382");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "prncancel");
     }
 
     [Fact]
@@ -242,21 +243,185 @@ public class PosNetPLSSCDTests
 
 
         (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("error 382");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "prncancel");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "prncancel");
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_AmbiguousOutcome_IsNeverRetriedAndSendsNothingFurther()
+    public async Task ProcessReceiptAsync_AmbiguousOutcomeBeforeTrend_IsNotIssued_AndCancelsTheOpenReceipt()
     {
         var transport = FakePosNetTransport.Confirming();
         transport.FailAmbiguously("trpayment");
         var sut = CreateSut(transport);
 
 
-        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
-        // The ambiguous command is sent exactly once and nothing (not even a cancel) follows —
-        // a blind retry or cleanup could duplicate or destroy a successfully printed document.
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment");
+        // Before trend nothing can have been fiscalized, so the answer is definite.
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("NOT issued");
+        // The ambiguous command is never resent; the open receipt is canceled.
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "prncancel");
+    }
+
+    /// <summary>
+    /// A register with an open cover still accepts a whole receipt and prints it once the cover is
+    /// closed — fiscalized long after the sale was reported as failed. The sale is refused before
+    /// anything that could print is sent.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_CoverOpenBeforeTheSale_IsNotIssued_AndNothingThatCouldPrintIsSent()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 1);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.FailureMessage().Should().Contain("NOT issued").And.Contain("cover is open");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_PaperRunsOutWhileTheReceiptIsBuilt_CancelsBeforeTrend_AndIsNotIssued()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 5, fromCheck: 2);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.FailureMessage().Should().Contain("NOT issued").And.Contain("no paper");
+        // trend — the one command that fiscalizes — is never sent; the open receipt is canceled.
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "prncancel");
+    }
+
+    /// <summary>
+    /// The cover-open case seen on a real POSNET: trend went out, the register stayed silent and
+    /// printed the receipt later. The SCU waits for the register and reports what it did — here, the
+    /// receipt it issued — instead of an error for a document that exists.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_SilentTrendTheRegisterExecuted_IsReportedAsTheIssuedReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceTrend(executes: true);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        transport.SentMnemonics.Count(m => m == "trend").Should().Be(1, "trend is never resent");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_SilentTrendTheRegisterDidNotExecute_IsNotIssued_AndCancels()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceTrend(executes: false);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.FailureMessage().Should().Contain("NOT issued").And.Contain("no receipt was completed");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "!sprn", "!sdev", "scnt", "prncancel");
+    }
+
+    /// <summary>
+    /// What the real POSNET does with an open cover: trend is accepted, the register goes silent and
+    /// reports "no paper, waiting for the operator" with trend still queued — and prints the receipt
+    /// the moment the cover is closed. The SCU waits, however long, and then reports the receipt.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_SilentTrendWhileTheCoverIsOpen_WaitsUntilTheRegisterIsIdle_ThenReportsTheReceipt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceTrend(executes: true);
+        // Checks 1 and 2 are the readiness checks; from the third on the register is stuck for four polls.
+        transport.ReportFault(mechanism: 5, deviceStatus: 3, queueEmpty: false, fromCheck: 3, untilCheck: 6);
+        var configuration = new PosNetConfiguration
+        {
+            DeviceUrl = "tcp://localhost:6666",
+            VatRateTable = PosNetConfiguration.DefaultVatRateTable(),
+            OutcomeResolutionPollIntervalMs = 1,
+        };
+        var sut = new PosNetPLSSCD(configuration, new PosNetClient(transport));
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        // The counters are only read once the register is idle again — a held receipt has not updated them yet.
+        var afterTrend = transport.SentMnemonics.Skip(transport.SentMnemonics.IndexOf("trend") + 1).ToList();
+        afterTrend.IndexOf("scnt").Should().Be(afterTrend.Count(m => m == "!sprn") * 2, "every poll before it was a stuck !sprn/!sdev pair");
+        afterTrend.Count(m => m == "!sprn").Should().Be(5);
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_PrinterWaitingForTheOperatorBeforeTheSale_IsNotIssued()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 0, deviceStatus: 3);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.FailureMessage().Should().Contain("NOT issued").And.Contain("waiting for the operator");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev");
+    }
+
+    /// <summary>
+    /// A late answer to an earlier command arriving in place of the counter read: the outcome of that
+    /// read is unknown, but nothing that can print has been sent, so the sale is definitely not issued.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_UnansweredCounterReadBeforeTheSale_IsNotIssued()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailAmbiguously("scnt");
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.FailureMessage().Should().Contain("NOT issued");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ZeroReceipt_ReturnsThePrinterStateInFtStateData()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000;
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        printer.GetProperty("Ready").GetBoolean().Should().BeTrue();
+        printer.GetProperty("Mechanism").GetInt64().Should().Be(0);
+        printer.GetProperty("FiscalMode").GetBoolean().Should().BeTrue();
+        printer.GetProperty("UniqueDeviceNumber").GetString().Should().Be("ZBF 2101002392");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
+    }
+
+    /// <summary>A printer holding a receipt is not idle: its state is the answer, and the synchronous read that would queue behind the stuck command is not sent.</summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_ZeroReceiptWhileThePrinterIsStuck_ReportsTheProblem_WithoutQueueingBehindIt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 5, deviceStatus: 3, queueEmpty: false);
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000;
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        printer.GetProperty("Ready").GetBoolean().Should().BeFalse();
+        printer.GetProperty("Problem").GetString().Should().Contain("no paper");
+        printer.GetProperty("DeviceStatus").GetInt64().Should().Be(3);
+        printer.GetProperty("QueueEmpty").GetBoolean().Should().BeFalse();
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev");
     }
 
     private static ProcessRequest CreateSaleWithFooterLinesRequest()
@@ -274,7 +439,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleWithFooterLinesRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
     }
 
@@ -306,7 +471,7 @@ public class PosNetPLSSCDTests
 
         // No cancel (the receipt is closed) and no retry of the line; the footer is closed and the
         // receipt is anchored as usual.
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
     }
@@ -335,19 +500,21 @@ public class PosNetPLSSCDTests
     }
 
     /// <summary>
-    /// The register answered trend, so it most likely printed the receipt — an answer that cannot
-    /// be read is an unknown outcome, not a failure that could be resent safely.
+    /// The register answered trend, but the answer cannot be read. The SCU does not guess: it asks the
+    /// register's counters, which show the receipt was completed, and reports the sale as issued.
     /// </summary>
     [Fact]
-    public async Task ProcessReceiptAsync_UnreadableAnswerToTrend_IsAnUnknownOutcome_AndSendsNothingFurther()
+    public async Task ProcessReceiptAsync_UnreadableAnswerToTrend_IsResolvedFromTheCounters_AndCompletesTheSale()
     {
         var transport = FakePosNetTransport.Confirming();
         transport.AnswerUnreadably("trend");
         var sut = CreateSut(transport);
 
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend");
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "!sprn", "!sdev", "scnt", "eclastdocnoget", "rtcget", "scnt");
     }
 
     [Fact]
@@ -379,21 +546,21 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        result.FailureMessage().Should().Be("transport bug");
+        result.FailureMessage().Should().Contain("NOT issued").And.Contain("transport bug");
         // Only the failure is reported — no identity or other signature of a document that was not issued.
         result.ReceiptResponse.ftSignatures.Should().ContainSingle();
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_DeviceUnreachable_PropagatesWithoutCancel()
+    public async Task ProcessReceiptAsync_DeviceUnreachableAtTrinit_IsNotIssued_WithoutCancel()
     {
         var transport = FakePosNetTransport.Confirming();
         transport.FailUnreachable("trinit");
         var sut = CreateSut(transport);
 
 
-        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("could not be reached");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit");
+        (await sut.ProcessReceiptAsync(CreateSaleRequest())).FailureMessage().Should().Contain("NOT issued").And.Contain("connection refused");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit");
     }
 
     [Fact]
@@ -432,7 +599,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("scomm");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
     }
 
     [Fact]
@@ -527,7 +694,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt", "eparagonbufferget");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "eparagonidznext", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt", "eparagonbufferget");
         transport.SentPayloads.Single(p => p.StartsWith("eparagonidznext")).Should().Contain("idKID0123456789ABC");
         transport.SentPayloads.Single(p => p.StartsWith("eparagonbufferget")).Should().Contain("hd3054");
     }
@@ -557,7 +724,7 @@ public class PosNetPLSSCDTests
         var failure = (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage();
         failure.Should().Contain("error 2034");
         failure.Should().Contain("not fiscalized").And.Contain("eDokument");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "eparagonidznext");
     }
 
     [Fact]
@@ -569,7 +736,7 @@ public class PosNetPLSSCDTests
 
 
         (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage().Should().Contain("error 2004");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "eparagonidznext");
     }
 
     [Fact]
@@ -580,8 +747,8 @@ public class PosNetPLSSCDTests
         var sut = CreateSut(transport);
 
 
-        (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage().Should().Contain("Do NOT resend blindly");
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "eparagonidznext");
+        (await sut.ProcessReceiptAsync(CreateEReceiptSaleRequest())).FailureMessage().Should().Contain("NOT issued");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "eparagonidznext");
     }
 
     [Fact]
@@ -673,7 +840,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Identyfikator eDokumentu" || s.Caption == "Status eDokumentu");
     }
 
@@ -733,8 +900,8 @@ public class PosNetPLSSCDTests
 
         // Mapping needs the slots, so the table is read before anything else; identity and table are then reused.
         transport.SentMnemonics.Should().Equal(
-            "sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt",
-            "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+            "sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt",
+            "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
     }
 
     [Fact]
@@ -799,8 +966,8 @@ public class PosNetPLSSCDTests
         await sut.ProcessReceiptAsync(CreateSaleRequest());
 
         transport.SentMnemonics.Should().Equal(
-            "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt",
-            "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+            "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt",
+            "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
     }
 
     [Fact]
@@ -850,7 +1017,7 @@ public class PosNetPLSSCDTests
         // The queue passes discounts through (they do not make a document a return), and a register
         // has no position for one: it travels as the rabat of the line it follows. The line keeps
         // its own value (wa) and the receipt is settled with the discounted total.
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Single(p => p.StartsWith("trline")).Should().Contain("wa999").And.Contain("rd1").And.Contain("rw200");
         transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
     }
@@ -873,7 +1040,7 @@ public class PosNetPLSSCDTests
 
         // It cannot belong to a line, so it is a rabat od podsumy — sent after every line and
         // before the payments, which is where the register applies it.
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "trinit", "trline", "trdiscntsubtot", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trdiscntsubtot", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Single(p => p.StartsWith("trdiscntsubtot")).Should().Contain("rd1").And.Contain("rw200");
         transport.SentPayloads.Single(p => p.StartsWith("trend")).Should().Contain("to799");
     }
@@ -921,7 +1088,44 @@ public class PosNetPLSSCDTests
 
         private bool _anotherReceiptCanceledAfterTrend;
 
+        /// <summary>The fault !sprn/!sdev report: mechanism (1 cover open, 5 no paper) and device state (3 waiting for the operator).</summary>
+        private int _mechanismStatus;
+        private int _deviceStatus;
+        private bool _queueEmpty = true;
+
+        /// <summary>The state checks (1-based, one per !sprn) during which the fault is reported; before and after it the printer is idle.</summary>
+        private int _faultFrom = int.MaxValue;
+        private int _faultUntil = int.MaxValue;
+
+        /// <summary>
+        /// How trend behaves when it does not answer: null answers normally; true executes it (the
+        /// receipt is completed) and stays silent; false stays silent without executing it.
+        /// </summary>
+        private bool? _silentTrendExecutes;
+
         public static FakePosNetTransport Confirming() => new();
+
+        /// <summary>
+        /// The printer reports a fault from the <paramref name="fromCheck"/>-th state check on (one check
+        /// is one !sprn), up to and including <paramref name="untilCheck"/>; outside that it is idle.
+        /// </summary>
+        public void ReportFault(int mechanism, int deviceStatus = 0, bool queueEmpty = true, int fromCheck = 1, int untilCheck = int.MaxValue)
+        {
+            _mechanismStatus = mechanism;
+            _deviceStatus = deviceStatus;
+            _queueEmpty = queueEmpty;
+            _faultFrom = fromCheck;
+            _faultUntil = untilCheck;
+        }
+
+        private bool FaultNow()
+        {
+            var check = SentMnemonics.Count(m => m == "!sprn");
+            return check >= _faultFrom && check <= _faultUntil;
+        }
+
+        /// <summary>trend is not answered; <paramref name="executes"/> says whether the register still completed the receipt.</summary>
+        public void SilenceTrend(bool executes) => _silentTrendExecutes = executes;
 
         /// <summary>Answers the status read with a specific payload — device firmwares differ.</summary>
         public void AnswerScommWith(string payload) => _scommResponse = payload;
@@ -976,10 +1180,31 @@ public class PosNetPLSSCDTests
                 throw exception;
             }
 
+            if (mnemonic == "trend" && _silentTrendExecutes is { } executes)
+            {
+                if (executes)
+                {
+                    _completedReceipts++;
+                }
+                throw new PosNetAmbiguousResponseException("no response within the receive timeout");
+            }
+
             if (mnemonic == "trend")
             {
                 _completedReceipts += _anotherReceiptAfterTrend ? 2 : 1;
                 _canceledReceipts += _anotherReceiptCanceledAfterTrend ? 1 : 0;
+            }
+
+            // Asynchronous commands are answered under their plain mnemonic.
+            if (mnemonic == "!sprn")
+            {
+                return Task.FromResult(PosNetProtocolTests.EncodeResponse($"sprn\tpr{(FaultNow() ? _mechanismStatus : 0)}\t"));
+            }
+            if (mnemonic == "!sdev")
+            {
+                var faulty = SentMnemonics.Count(m => m == "!sprn") >= _faultFrom && SentMnemonics.Count(m => m == "!sprn") <= _faultUntil;
+                return Task.FromResult(PosNetProtocolTests.EncodeResponse(
+                    $"sdev\tds{(faulty ? _deviceStatus : 0)}\tcpT\tqe{(faulty && !_queueEmpty ? "N" : "T")}\tpeN\ttl0\t"));
             }
 
             var responsePayload = _answers.TryGetValue(mnemonic, out var answer) ? answer : mnemonic switch

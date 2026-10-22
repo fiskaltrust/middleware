@@ -76,7 +76,8 @@ public class PosNetClient : IDisposable
     /// </summary>
     private static void RequireAnswerTo(PosNetCommand command, PosNetResponse response)
     {
-        if (!string.Equals(response.CommandId, command.Mnemonic, StringComparison.Ordinal))
+        // An asynchronous command ('!' prefix, POT-I-DEV-37 p. 16: sprn, sdev) is answered under its plain mnemonic.
+        if (!string.Equals(response.CommandId, command.Mnemonic.TrimStart('!'), StringComparison.Ordinal))
         {
             throw new PosNetAmbiguousResponseException(
                 $"The POSNET printer answered '{response.CommandId}' to the command '{command.Mnemonic}' — the answer belongs to an earlier command, so the outcome of this one is unknown. Verify the device before retrying.");

@@ -265,5 +265,14 @@ public static class PosNetCommands
             new("td", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
         ]);
 
+    /// <summary>The mechanism status in asynchronous mode: answered at once, even while a print blocks the queue (p. 16).</summary>
+    public static PosNetCommand SprnAsync() => new("!sprn");
+
+    /// <summary>
+    /// The general status in asynchronous mode (p. 16, 391): <c>ds</c> 0 ready / 3 waiting for the
+    /// operator after an error, <c>qe</c> whether the command queue is empty.
+    /// </summary>
+    public static PosNetCommand SdevAsync() => new("!sdev");
+
     public static PosNetCommand Prncancel() => new("prncancel");
 }

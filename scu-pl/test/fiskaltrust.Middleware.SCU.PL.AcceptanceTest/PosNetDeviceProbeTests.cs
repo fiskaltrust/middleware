@@ -27,7 +27,7 @@ public class PosNetDeviceProbeTests
         var ptuSlots = await target.Probe.ReadPtuSlotsAsync(target.Configuration);
 
         // The probe's reads are on the wire but are not the SCU's commands.
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "trinit", "trline", "trpayment", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         var expected = FiscalFootprint.Of(request.ReceiptRequest, ptuSlots);
         FootprintComparer.Compare(expected, transaction, before, after, FiscalDocumentNumber.Of(result.ReceiptResponse)).Should().BeEmpty();
     }
