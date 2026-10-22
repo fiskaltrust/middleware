@@ -400,9 +400,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             var current = await ReadLastEmittedDocStatusAsync(receiptReference);
             if (current == null)
             {
-                // A printer left outside the Registration State (a closure from its keyboard leaves it in the Z state)
-                // refuses this query. 1-088 returns it to the Registration State (protocol 7.00, p. 21); there no
-                // document can be open, so the reset cancels nothing.
+                // No answer, whatever the cause. A printer left outside the Registration State refuses this query (a
+                // closure from its keyboard leaves it in the Z state); 1-088 returns it there from any state (protocol
+                // 7.00, p. 21). FpMate sends the same reset before the receipt that follows, so this one cancels
+                // nothing that receipt would not; a silent printer costs at most one more status-query timeout.
                 await ResetPrinter(TimeSpan.FromMilliseconds(_configuration.RecoveryStatusQueryTimeoutMs));
                 current = await ReadLastEmittedDocStatusAsync(receiptReference);
             }
