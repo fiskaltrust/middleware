@@ -424,6 +424,68 @@ public class PosNetPLSSCDTests
         transport.SentMnemonics.Should().Equal("!sprn", "!sdev");
     }
 
+    private static ProcessRequest CreateDailyClosingRequest()
+    {
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
+        request.ReceiptRequest.cbReceiptMoment = new DateTime(2026, 9, 8, 10, 0, 0, DateTimeKind.Utc);
+        request.ReceiptRequest.cbChargeItems = [];
+        request.ReceiptRequest.cbPayItems = [];
+        return request;
+    }
+
+    private static PosNetPLSSCD CreateQuicklyPollingSut(FakePosNetTransport transport) => new(new PosNetConfiguration
+    {
+        DeviceUrl = "tcp://localhost:6666",
+        VatRateTable = PosNetConfiguration.DefaultVatRateTable(),
+        OutcomeResolutionPollIntervalMs = 1,
+    }, new PosNetClient(transport));
+
+    /// <summary>
+    /// The daily report is held like a receipt: a POSNET that cannot print it prints it once the fault
+    /// is cleared. The SCU waits for the register and reports the report it printed.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_SilentDailyReportWhileTheCoverIsOpen_WaitsAndReportsThePrintedReport()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceDailyReport(executes: true);
+        transport.ReportFault(mechanism: 5, deviceStatus: 3, queueEmpty: false, fromCheck: 2, untilCheck: 5);
+        var sut = CreateQuicklyPollingSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateDailyClosingRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Which.Data.Should().Be("13");
+        transport.SentMnemonics.Count(m => m == "dailyrep").Should().Be(1, "dailyrep is never resent");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_SilentDailyReportTheRegisterDidNotPrint_IsNotIssued()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceDailyReport(executes: false);
+        var sut = CreateQuicklyPollingSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateDailyClosingRequest());
+
+        result.FailureMessage().Should().Contain("daily report was NOT issued").And.Contain("no report was printed");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "dailyrep", "!sprn", "!sdev", "scnt");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_DailyClosingWhilePrinterWaitsForTheOperator_IsNotIssued_AndDailyrepIsNeverSent()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 5, deviceStatus: 3);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateDailyClosingRequest());
+
+        result.FailureMessage().Should().Contain("daily report was NOT issued").And.Contain("no paper");
+        transport.SentMnemonics.Should().NotContain("dailyrep");
+    }
+
     private static ProcessRequest CreateSaleWithFooterLinesRequest()
     {
         var request = CreateSaleRequest();
@@ -518,7 +580,7 @@ public class PosNetPLSSCDTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_AmbiguousDailyReport_IsAnUnknownOutcome()
+    public async Task ProcessReceiptAsync_AmbiguousDailyReport_IsSettledFromTheCounters()
     {
         var transport = FakePosNetTransport.Confirming();
         transport.FailAmbiguously("dailyrep");
@@ -529,8 +591,8 @@ public class PosNetPLSSCDTests
         request.ReceiptRequest.cbPayItems = [];
 
 
-        // The report may have been printed: the caller must see "check the register", not "retry".
-        (await sut.ProcessReceiptAsync(request)).FailureMessage().Should().Contain("Do NOT resend blindly");
+        // The register is asked once it is idle again: its counters show no report, so the answer is definite.
+        (await sut.ProcessReceiptAsync(request)).FailureMessage().Should().Contain("daily report was NOT issued");
     }
 
     /// <summary>
@@ -615,11 +677,11 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("scomm", "dailyrep", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "dailyrep", "scnt");
         // The register validates the date against its own clock, so the day closed is the receipt
         // moment in Warsaw time — 12:00 CEST on the 8th here — not the host's local day.
         transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-08\t");
-        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Which.Data.Should().Be("12");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Which.Data.Should().Be("13");
     }
 
     [Fact]
@@ -806,7 +868,8 @@ public class PosNetPLSSCDTests
     public async Task ProcessReceiptAsync_UnexpectedCounterReadAfterTheDailyReport_DoesNotFailTheClosing()
     {
         var transport = FakePosNetTransport.Confirming();
-        transport.FailUnexpectedly("scnt");
+        // The second scnt — the first is the baseline read before the report.
+        transport.FailUnexpectedly("scnt", occurrence: 2);
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
         request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2011;
@@ -816,7 +879,7 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         // The report is printed; only its number is not known.
-        transport.SentMnemonics.Should().Equal("scomm", "dailyrep", "scnt");
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "dailyrep", "scnt");
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer raportu dobowego");
     }
@@ -1103,6 +1166,13 @@ public class PosNetPLSSCDTests
         /// </summary>
         private bool? _silentTrendExecutes;
 
+        /// <summary>Like <see cref="_silentTrendExecutes"/>, for dailyrep: true prints the report and stays silent.</summary>
+        private bool? _silentDailyReportExecutes;
+
+        /// <summary>Daily reports in fiscal memory (rd) and printouts (hn); a daily report advances both.</summary>
+        private int _dailyReports = 12;
+        private int _printouts = 140;
+
         public static FakePosNetTransport Confirming() => new();
 
         /// <summary>
@@ -1126,6 +1196,9 @@ public class PosNetPLSSCDTests
 
         /// <summary>trend is not answered; <paramref name="executes"/> says whether the register still completed the receipt.</summary>
         public void SilenceTrend(bool executes) => _silentTrendExecutes = executes;
+
+        /// <summary>dailyrep is not answered; <paramref name="executes"/> says whether the register still printed the report.</summary>
+        public void SilenceDailyReport(bool executes) => _silentDailyReportExecutes = executes;
 
         /// <summary>Answers the status read with a specific payload — device firmwares differ.</summary>
         public void AnswerScommWith(string payload) => _scommResponse = payload;
@@ -1151,6 +1224,13 @@ public class PosNetPLSSCDTests
         /// <summary>A failure the SCU does not anticipate — not one of its own exception types.</summary>
         public void FailUnexpectedly(string mnemonic)
             => _failures[mnemonic] = () => new InvalidOperationException("transport bug");
+
+        /// <summary>Fails a command unexpectedly from its <paramref name="occurrence"/>-th sending on (1-based).</summary>
+        public void FailUnexpectedly(string mnemonic, int occurrence)
+        {
+            FailUnexpectedly(mnemonic);
+            _failFromOccurrence[mnemonic] = occurrence;
+        }
 
         /// <summary>The register executes the command but its answer arrives corrupted (CRC mismatch).</summary>
         public void AnswerUnreadably(string mnemonic) => _unreadable.Add(mnemonic);
@@ -1178,6 +1258,22 @@ public class PosNetPLSSCDTests
                     return Task.FromResult(PosNetProtocolTests.EncodeResponse($"{mnemonic}\t?{deviceError.ErrorCode}\t"));
                 }
                 throw exception;
+            }
+
+            if (mnemonic == "dailyrep" && _silentDailyReportExecutes is { } reportExecutes)
+            {
+                if (reportExecutes)
+                {
+                    _dailyReports++;
+                    _printouts++;
+                }
+                throw new PosNetAmbiguousResponseException("no response within the receive timeout");
+            }
+
+            if (mnemonic == "dailyrep")
+            {
+                _dailyReports++;
+                _printouts++;
             }
 
             if (mnemonic == "trend" && _silentTrendExecutes is { } executes)
@@ -1211,7 +1307,7 @@ public class PosNetPLSSCDTests
             {
                 // The T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them.
                 "scomm" => _scommResponse,
-                "scnt" => $"scnt\trd12\tbn{_completedReceipts}\tbc{_canceledReceipts}\tbt{_completedReceipts + _canceledReceipts}\tfn3\t",
+                "scnt" => $"scnt\trd{_dailyReports}\thn{_printouts}\tbn{_completedReceipts}\tbc{_canceledReceipts}\tbt{_completedReceipts + _canceledReceipts}\tfn3\t",
                 // One protected-memory sequence across all document types, ahead of the receipt number.
                 "eclastdocnoget" => $"eclastdocnoget\tdi{_completedReceipts + 11}\t",
                 "rtcget" => "rtcget\tda2026-09-08;17:54\ttm2026-09-08T17:54:51+02:00\t",

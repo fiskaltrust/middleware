@@ -138,7 +138,15 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
         else if (receiptCase.IsCase(ReceiptCase.DailyClosing0x2011))
         {
-            await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
+            await _deviceLock.WaitAsync();
+            try
+            {
+                await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
+            }
+            finally
+            {
+                _deviceLock.Release();
+            }
         }
         else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012))
         {
@@ -452,10 +460,41 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// middleware host in UTC would otherwise close the wrong day for every closing between
     /// midnight and the zone's offset.
     /// </summary>
+    /// <remarks>
+    /// The daily report is fiscal like a receipt — it writes the day into fiscal memory — and a POSNET
+    /// holds it like a receipt: sent to a printer that cannot print, it is printed and written the
+    /// moment the fault is cleared. So it gets the same guarantee: refused unless the register is idle,
+    /// and an unanswered dailyrep is settled from the register's counters once it is idle again
+    /// (<see cref="ResolveSilentDailyReportAsync"/>), however long that takes.
+    /// </remarks>
     private async Task ExecuteDailyClosingAsync(ReceiptRequest request, ReceiptResponse response)
     {
-        await EnrichWithDeviceIdentityAsync(response);
-        await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
+        PosNetResponse countersBefore;
+        try
+        {
+            await EnrichWithDeviceIdentityAsync(response);
+            countersBefore = await _client.ExecuteAsync(PosNetCommands.Scnt());
+            await RequirePrinterReadyAsync("before the daily report", "daily report");
+        }
+        catch (PLDeviceOutcomeUnknownException exception)
+        {
+            throw new PosNetReceiptNotIssuedException($"the register did not answer before the daily report was requested: {exception.Message}", exception, "daily report");
+        }
+
+        try
+        {
+            await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
+        }
+        catch (PLDeviceErrorException)
+        {
+            // A confirmed refusal (wrong day, a second zero report in fiscal mode): nothing was printed.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            await ResolveSilentDailyReportAsync(countersBefore, exception);
+        }
+
         var reportsDone = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), counters => PosNetStatus.ReadNumber(counters, "rd"));
         if (reportsDone is { } number)
         {
@@ -532,12 +571,12 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// open cover once it tries to print, which is why a silent trend is still settled from the
     /// register's counters (<see cref="ResolveSilentTrendAsync"/>).
     /// </summary>
-    private async Task RequirePrinterReadyAsync(string stage)
+    private async Task RequirePrinterReadyAsync(string stage, string document = "receipt")
     {
         var state = await PosNetPrinterState.ReadAsync(_client);
         if (state.DescribeProblem() is { } problem)
         {
-            throw new PosNetReceiptNotIssuedException($"the printer is not ready {stage}: {problem}.");
+            throw new PosNetReceiptNotIssuedException($"the printer is not ready {stage}: {problem}.", document: document);
         }
     }
 
@@ -594,29 +633,68 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// </summary>
     private async Task ResolveSilentTrendAsync(PosNetReceiptCounters before, Exception trendFailure)
     {
+        var counters = await WaitUntilIdleAsync();
+        if (PosNetStatus.ReadNumber(counters, "bn") is { } completedNow && before.CompletedReceipts is { } completedBefore)
+        {
+            if (completedNow > completedBefore)
+            {
+                return;
+            }
+            await TryCancelAsync();
+            throw new PosNetReceiptNotIssuedException(
+                $"the register did not confirm closing the receipt ({trendFailure.Message}), and once it was idle again its counters showed that no receipt was completed.", trendFailure);
+        }
+        // Without a baseline the counters cannot tell; the register itself is idle, so the receipt is
+        // either done or not coming — the one case left for the operator.
+        throw new PLDeviceOutcomeUnknownException(
+            $"The register did not confirm closing the receipt ({trendFailure.Message}) and does not report a completed-receipt counter to settle it with.", trendFailure);
+    }
+
+    /// <summary>
+    /// Settles a dailyrep that was sent but not confirmed, like <see cref="ResolveSilentTrendAsync"/>
+    /// settles a receipt: once the register is idle again, a daily report it printed shows in its
+    /// counters — <c>rd</c> (daily reports in fiscal memory) on a fiscalized register, <c>hn</c> (every
+    /// printout, the only one that moves on a register in training mode). Measured on a POSNET: a
+    /// daily report advances both, e.g. <c>rd3 hn54</c> → <c>rd4 hn55</c>.
+    /// </summary>
+    private async Task ResolveSilentDailyReportAsync(PosNetResponse before, Exception reportFailure)
+    {
+        var after = await WaitUntilIdleAsync();
+        var known = false;
+        foreach (var counter in new[] { "rd", "hn" })
+        {
+            if (PosNetStatus.ReadNumber(before, counter) is { } then && PosNetStatus.ReadNumber(after, counter) is { } now)
+            {
+                if (now > then)
+                {
+                    return;
+                }
+                known = true;
+            }
+        }
+        if (known)
+        {
+            throw new PosNetReceiptNotIssuedException(
+                $"the register did not confirm the daily report ({reportFailure.Message}), and once it was idle again its counters showed that no report was printed.", reportFailure, "daily report");
+        }
+        throw new PLDeviceOutcomeUnknownException(
+            $"The register did not confirm the daily report ({reportFailure.Message}) and does not report the counters to settle it with.", reportFailure);
+    }
+
+    /// <summary>
+    /// Waits — without a time limit, see <see cref="ResolveSilentTrendAsync"/> — until the register is
+    /// idle (<see cref="PosNetPrinterState.IsIdle"/>: nothing held, nothing queued) and its counters can
+    /// be read, and returns them. A register answers a synchronous read only after everything sent
+    /// before it, so counters read while it is idle are final.
+    /// </summary>
+    private async Task<PosNetResponse> WaitUntilIdleAsync()
+    {
         while (true)
         {
             var state = await PosNetPrinterState.ReadAsync(_client);
-            if (state.IsIdle)
+            if (state.IsIdle && await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), status => status) is { } counters)
             {
-                var completed = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), status => PosNetStatus.ReadNumber(status, "bn"));
-                if (completed is { } completedNow && before.CompletedReceipts is { } completedBefore)
-                {
-                    if (completedNow > completedBefore)
-                    {
-                        return;
-                    }
-                    await TryCancelAsync();
-                    throw new PosNetReceiptNotIssuedException(
-                        $"the register did not confirm closing the receipt ({trendFailure.Message}), and once it was idle again its counters showed that no receipt was completed.", trendFailure);
-                }
-                if (before.CompletedReceipts is null)
-                {
-                    // Without a baseline the counters cannot tell; the register itself is idle, so the
-                    // receipt is either done or not coming — the one case left for the operator.
-                    throw new PLDeviceOutcomeUnknownException(
-                        $"The register did not confirm closing the receipt ({trendFailure.Message}) and does not report a completed-receipt counter to settle it with.", trendFailure);
-                }
+                return counters;
             }
             await Task.Delay(_configuration.OutcomeResolutionPollIntervalMs);
         }

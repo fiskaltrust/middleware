@@ -221,12 +221,15 @@ public sealed class PosNetPrinterEmulator : IDisposable
             return PosNetPayload.ToFrame($"{command.CommandId}\t?{scriptedError}\t");
         }
 
-        // The asynchronous state reads (!sprn, !sdev) were added after the cassettes were recorded. It is read-only — it
+        // The asynchronous state reads (!sprn, !sdev) and the counter baseline before a daily report
+        // (scnt) were added after the cassettes were recorded. It is read-only — it
         // cannot change the register or anything a recording is evidence of — so where a recording
         // does not hold it, the model answers it (ready, unless a test sets otherwise) and the replay
         // continues with the command after it. Re-recording against a printer replaces these answers.
-        if (_replaysACassette && command.CommandId is "!sprn" or "!sdev"
-            && (!_replay.TryPeek(out var next) || !next.Command.StartsWith(command.CommandId, StringComparison.Ordinal)))
+        if (_replaysACassette
+            && (command.CommandId is "!sprn" or "!sdev"
+                    && (!_replay.TryPeek(out var next) || !next.Command.StartsWith(command.CommandId, StringComparison.Ordinal))
+                || command.CommandId == "scnt" && _replay.TryPeek(out var following) && following.Command.StartsWith("dailyrep", StringComparison.Ordinal)))
         {
             return PosNetPayload.ToFrame(Model.Answer(command));
         }

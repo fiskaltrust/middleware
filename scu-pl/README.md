@@ -85,8 +85,13 @@ Notable mapping rules, all covered by unit tests:
     again and then decides from its completed-receipt counter (`scnt bn`): issued → the sale completes
     normally, not issued → error. An error is never returned for a receipt the register still holds.
 
-  The `FAILURE` message of a refused sale says "The receipt was NOT issued", so the POS can resend
-  it. See `ResolveSilentTrendAsync` in [`PosNetPLSSCD`](src/fiskaltrust.Middleware.SCU.PL.PosNet/PosNetPLSSCD.cs).
+  The **daily report** gets the same guarantee — it is held and printed later like a receipt: refused
+  unless the register is idle, and an unanswered `dailyrep` is settled once the register is idle again
+  from `scnt rd` (fiscal memory) or `scnt hn` (every printout — the one that moves on a register in
+  training mode), read before and after.
+
+  The `FAILURE` message of a refused sale says "The receipt was NOT issued" ("The daily report was NOT
+  issued" for a closing), so the POS can resend it. See `ResolveSilentTrendAsync` in [`PosNetPLSSCD`](src/fiskaltrust.Middleware.SCU.PL.PosNet/PosNetPLSSCD.cs).
 * **The zero receipt returns the printer's state** in `ftStateData.PL.PrinterStatus` (ready, the
   problem in words, mechanism and device state, queue, paper near end, open transaction, fiscal and
   read-only mode), like the Italian RT printer SCUs. It runs outside the device lock and only uses the
@@ -135,7 +140,7 @@ naming the setting, not as a raw `JsonException`.
 | [`QueuePL.AcceptanceTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest) | 12 | nothing |
 
 ```powershell
-# the three SCU suites (387 tests)
+# the three SCU suites (390 tests)
 dotnet test scu-pl/fiskaltrust.Middleware.SCU.PL.sln
 
 # the two QueuePL suites (45 tests) — they live in the queue solution
