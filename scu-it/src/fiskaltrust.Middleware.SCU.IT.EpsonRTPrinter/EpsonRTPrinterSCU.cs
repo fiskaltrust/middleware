@@ -400,7 +400,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             var current = await ReadLastEmittedDocStatusAsync(receiptReference);
             if (current == null)
             {
-                // A printer left outside the Registration State (Cipriani stays in the Z state after its closure)
+                // A printer left outside the Registration State (a closure from its keyboard leaves it in the Z state)
                 // refuses this query. 1-088 returns it to the Registration State (protocol 7.00, p. 21); there no
                 // document can be open, so the reset cancels nothing.
                 await ResetPrinter(TimeSpan.FromMilliseconds(_configuration.RecoveryStatusQueryTimeoutMs));

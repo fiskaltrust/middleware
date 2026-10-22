@@ -101,8 +101,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         [Fact]
         public async Task PrinterLeftInZState_IsResetSoTheBaselineCanBeReadAndTheLostDocumentRecovered()
         {
-            // Cipriani, 15/09/2026: after its closure the printer stays in the Z state and refuses the
-            // last-document query, so the receipt ran without a baseline and ended in "unknown document state".
+            // A closure from the printer's keyboard leaves it in the Z state, where it refuses the last-document
+            // query; without a reset the receipt runs without a baseline and ends in "unknown document state".
             var printer = new ScriptedPrinter { InZStateUntilReset = true };
             var sut = CreateSut(printer);
 
