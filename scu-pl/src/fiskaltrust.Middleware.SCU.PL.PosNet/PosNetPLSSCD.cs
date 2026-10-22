@@ -172,6 +172,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // is the one read the mapping needs before it can refuse a receipt.
         var eReceiptCustomerId = PosNetReceiptMapper.GetEReceiptCustomerId(request);
         var printout = PosNetPrintoutReader.Read(request);
+        var paymentSlips = PosNetPaymentSlip.Read(request);
         var commands = PosNetReceiptMapper.MapSale(request, await GetPtuSlotResolverAsync());
 
         // The numer unikatowy is a legal element of the fiscal document, so the response carries
@@ -295,6 +296,35 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             response.EnrichWithEDocumentId(documentId);
             await TryReadEDocumentDeliveryStateAsync(response, documentId);
+        }
+
+        foreach (var slip in paymentSlips)
+        {
+            await PrintPaymentSlipAsync(slip, response);
+        }
+    }
+
+    /// <summary>
+    /// Prints a payment slip as a non-fiscal super-form after the receipt. The receipt is already
+    /// fiscal, so a rejected slip must not fail it: the printout is cancelled and the rejection
+    /// travels in the response, as a rejected footer line does.
+    /// </summary>
+    private async Task PrintPaymentSlipAsync(PosNetPaymentSlip slip, ReceiptResponse response)
+    {
+        try
+        {
+            await _client.ExecuteAsync(PosNetCommands.Formstart(PosNetPaymentSlip.SuperForm, PosNetPaymentSlip.CardPaymentHeader));
+            foreach (var line in slip.Lines)
+            {
+                await _client.ExecuteAsync(PosNetCommands.Formformattedline(PosNetPaymentSlip.SuperForm, PosNetPaymentSlip.ToFormLine(line)));
+            }
+            await _client.ExecuteAsync(PosNetCommands.Formend(PosNetPaymentSlip.SuperForm));
+        }
+        catch (Exception exception)
+        {
+            await TryCancelAsync();
+            response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Potwierdzenie płatności nie wydrukowane",
+                exception is PLDeviceErrorException deviceError ? $"?{deviceError.ErrorCode}: {deviceError.Message}" : exception.Message);
         }
     }
 
