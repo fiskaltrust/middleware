@@ -10,8 +10,8 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 /// The payment slip of a pay item, as the general additional-lines contract carries it in
 /// <c>ftPayItemCaseData</c>: <c>Receipt</c> (from the POS System API pay endpoint) or
 /// <c>cbPayItemLines</c> (filled by the POS); <c>Receipt</c> wins when both are present. On a POSNET
-/// register it is printed after the fiscal receipt as a non-fiscal super-form. Which header the
-/// slip should carry is still open (middleware#844).
+/// register it is printed after the fiscal receipt as a non-fiscal super-form headed
+/// "Potwierdzenie płatności kartą", with the receipt's cashier and register in its footer.
 /// </summary>
 public sealed record PosNetPaymentSlip(IReadOnlyList<string> Lines)
 {
@@ -19,10 +19,11 @@ public sealed record PosNetPaymentSlip(IReadOnlyList<string> Lines)
     public const int SuperForm = 200;
 
     /// <summary>
-    /// Header 53 of the super-form; a POSNET Thermal prints it as "Wymiana środków płatności".
-    /// Whether another header ("Pokwitowanie") fits a card slip better is open (middleware#844).
+    /// Header 52 of the super-form, "Potwierdzenie płatności kartą" (POT-I-DEV-37 v6403 p. 263; the
+    /// same number in v4484). 53 next to it is "Wymiana środków płatności", which a POSNET Thermal
+    /// printed when that header was used here.
     /// </summary>
-    public const int CardPaymentHeader = 53;
+    public const int CardPaymentHeader = 52;
 
     /// <summary>Printable characters per super-form line (formformattedline s1).</summary>
     public const int MaxLineLength = 56;

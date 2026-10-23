@@ -300,19 +300,25 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         foreach (var slip in paymentSlips)
         {
-            await PrintPaymentSlipAsync(slip, response);
+            await PrintPaymentSlipAsync(slip, printout, response);
         }
     }
 
     /// <summary>
     /// Prints a payment slip as a non-fiscal super-form after the receipt. The receipt is already
     /// fiscal, so a rejected slip must not fail it: the printout is cancelled and the rejection
-    /// travels in the response, as a rejected footer line does.
+    /// travels in the response, as a rejected footer line does. The cashier and register of the
+    /// receipt are sent again first: ftrcfg with ca0 holds them for the next printout only, which was
+    /// the receipt, and the slip's footer would otherwise show the register's default (#001 KIEROWNIK).
     /// </summary>
-    private async Task PrintPaymentSlipAsync(PosNetPaymentSlip slip, ReceiptResponse response)
+    private async Task PrintPaymentSlipAsync(PosNetPaymentSlip slip, PosNetPrintout? printout, ReceiptResponse response)
     {
         try
         {
+            if (printout is { Cashier: not null } or { Register: not null })
+            {
+                await _client.ExecuteAsync(PosNetCommands.Ftrcfg(null, 0, printout.Cashier, printout.Register));
+            }
             await _client.ExecuteAsync(PosNetCommands.Formstart(PosNetPaymentSlip.SuperForm, PosNetPaymentSlip.CardPaymentHeader));
             foreach (var line in slip.Lines)
             {

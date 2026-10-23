@@ -550,6 +550,52 @@ public class PosNetPLSSCDTests
         return request;
     }
 
+    private static ProcessRequest CreateSaleWithCardSlipRequest()
+    {
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.cbUser = "238689";
+        request.ReceiptRequest.cbTerminalID = "02";
+        request.ReceiptRequest.cbPayItems[0].ftPayItemCaseData = new { cbPayItemLines = new[] { "CARDHOLDER COPY", "APPROVED" } };
+        return request;
+    }
+
+    /// <summary>
+    /// The card slip follows the fiscal receipt as super-form 200 headed "Potwierdzenie płatności kartą"
+    /// (header 52). The cashier and register go out again right before it: ftrcfg ca0 held them for the
+    /// receipt only, and the slip's footer would otherwise show the register's defaults.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_SaleWithCardSlip_PrintsItAfterTheReceipt_WithTheReceiptsCashierAndRegister()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithCardSlipRequest());
+
+        transport.SentMnemonics.SkipWhile(m => m != "trend").Should().Equal(
+            "trend", "eclastdocnoget", "rtcget", "scnt", "ftrcfg", "formstart", "formformattedline", "formformattedline", "formend");
+        var slipPayloads = transport.SentPayloads.SkipWhile(p => !p.StartsWith("trend")).ToList();
+        slipPayloads.Should().Contain(p => p.StartsWith("ftrcfg\tcc238689\tcn02\tca0\t"));
+        slipPayloads.Should().Contain(p => p.StartsWith("formstart\tfn200\tfh52\t"));
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_RejectedCardSlip_KeepsTheFiscalReceipt_AndSaysNotToResendIt()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.FailWithDeviceError("formformattedline", 2000);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithCardSlipRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Potwierdzenie płatności nie wydrukowane")
+            .Which.Data.Should().StartWith("?2000").And.EndWith("The fiscal receipt was issued: do not send it again.");
+        transport.SentMnemonics.Last().Should().Be("prncancel");
+    }
+
     [Fact]
     public async Task ProcessReceiptAsync_SaleWithFooterLines_PrintsThemAfterTrend()
     {

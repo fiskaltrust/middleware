@@ -86,7 +86,7 @@ public class PosNetPaymentSlipTests
     public void TheSlip_IsASuperFormPrintout()
     {
         PosNetCommands.Formstart(PosNetPaymentSlip.SuperForm, PosNetPaymentSlip.CardPaymentHeader).Parameters
-            .Should().Equal(KV("fn", "200"), KV("fh", "53"));
+            .Should().Equal(KV("fn", "200"), KV("fh", "52"));
         PosNetCommands.Formformattedline(PosNetPaymentSlip.SuperForm, "APPROVED").Parameters
             .Should().Equal(KV("s1", "APPROVED"), KV("fn", "200"));
         PosNetCommands.Formend(PosNetPaymentSlip.SuperForm).Parameters.Should().ContainSingle().Which.Should().Be(KV("fn", "200"));
