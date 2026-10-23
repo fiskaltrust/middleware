@@ -1,40 +1,36 @@
 using System.Net.Sockets;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueuePL.Models;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 
 /// <summary>
-/// Maps SCU communication failures to the PL device-unreachable ftState. Detection is structural
-/// (network-level exception types) plus name-based for the SCU packages' own
-/// PLDeviceUnreachableException — QueuePL deliberately does not reference the SCU assemblies.
+/// The fallback for when the SCU itself cannot be talked to. A Polish SCU never throws — device
+/// failures come back as error responses it built itself — so what is left to handle here is the
+/// transport between queue and SCU (a remote SCU that is down or does not answer).
 /// </summary>
 public static class PLSSCDErrorHandling
 {
-    public static bool IsDeviceUnreachable(Exception exception)
+    public static bool IsScuCommunicationFailure(Exception exception)
         => exception is HttpRequestException or TaskCanceledException or SocketException
-            || IsPLDeviceUnreachableException(exception)
-            || (exception.InnerException is not null && IsDeviceUnreachable(exception.InnerException));
+            || (exception.InnerException is not null && IsScuCommunicationFailure(exception.InnerException));
 
-    // Walks the type hierarchy so SCU-specific subclasses (e.g. the PosNet SCU's
-    // ambiguous-response exception) are recognized too.
-    private static bool IsPLDeviceUnreachableException(Exception exception)
+    /// <summary>
+    /// A refused connection means the request never reached the SCU, so it is safe to retry. Any
+    /// other transport failure (a timeout, a connection dropped mid-call) may have hit after the SCU
+    /// handed the receipt to the register — then a resend could print it twice.
+    /// </summary>
+    public static void SetScuCommunicationError(this ReceiptResponse receiptResponse, Exception exception)
     {
-        for (var type = exception.GetType(); type is not null; type = type.BaseType)
+        if (IsConnectionRefused(exception))
         {
-            if (type.Name == "PLDeviceUnreachableException")
-            {
-                return true;
-            }
+            receiptResponse.SetReceiptResponseError($"The Polish SCU could not be reached, so nothing was sent to the fiscal register. Retry once the SCU is available. Details: {exception.Message}");
+            return;
         }
-        return false;
+        receiptResponse.SetReceiptResponseError($"The connection to the Polish SCU failed while it was processing the request — the register may or may not have printed the document. Do NOT resend blindly: check the register's last document first, and resend only if it was not issued. Details: {exception.Message}");
     }
 
-    public static void SetDeviceUnreachableError(this ReceiptResponse receiptResponse, Exception exception)
-    {
-        receiptResponse.SetReceiptResponseError($"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}");
-        receiptResponse.ftState = (State)StatePL.DeviceUnreachableError;
-    }
+    private static bool IsConnectionRefused(Exception exception)
+        => exception is SocketException { SocketErrorCode: SocketError.ConnectionRefused }
+            || (exception.InnerException is not null && IsConnectionRefused(exception.InnerException));
 }

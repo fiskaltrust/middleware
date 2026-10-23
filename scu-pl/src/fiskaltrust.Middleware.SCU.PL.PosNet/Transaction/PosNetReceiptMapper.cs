@@ -136,10 +136,17 @@ public static class PosNetReceiptMapper
             transaction.AddPayment(ToPaymentType(payItem.ftPayItemCase), amountGrosze, isChange, PosNetText.ToField(payItem.Description, MaxPaymentNameLength));
         }
 
-        // Additional lines the POS asked for (ftReceiptCaseData.PL.printout.lines) close the
-        // receipt with trend fe0 and follow it; the footer codes of the same request are a printout
-        // configuration the SCU sends before trinit (see PosNetPLSSCD).
-        return transaction.End(PosNetPrintoutReader.Read(request)?.Lines ?? []);
+        // Additional lines close the receipt with trend fe0 and follow it, inside the fiscal receipt:
+        // the PL printout lines (ftReceiptCaseData.PL.printout.lines), then the general receipt lines
+        // and payment slips (PosNetAdditionalLines). The footer codes of the same request are a
+        // printout configuration the SCU sends before trinit (see PosNetPLSSCD).
+        var footerLines = (PosNetPrintoutReader.Read(request)?.Lines ?? []).Concat(PosNetAdditionalLines.Read(request)).ToList();
+        if (footerLines.Count > PosNetPrintoutReader.MaxLines)
+        {
+            throw new PLValidationException(
+                $"The receipt has {footerLines.Count} additional lines (printout lines, cbReceiptLines and payment slips together) — a POSNET register prints at most {PosNetPrintoutReader.MaxLines} after a receipt.");
+        }
+        return transaction.End(footerLines);
     }
 
     /// <summary>A command this receipt will send for a charge item, in the order the POS sent it.</summary>

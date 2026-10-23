@@ -139,12 +139,14 @@ public static class PosNetCommands
     }
 
     /// <summary>
-    /// An additional line after the receipt (POT-I-DEV-37 p. 274): id 25 is the plain line without a
-    /// keyword; sw/sh double the character width/height. Only valid after a trend with fe0.
+    /// An additional line after the receipt (POT-I-DEV-37 pp. 371–373): id 25 is the plain line
+    /// without a keyword (text right-aligned behind a 15-character column), 0–40 are keyword lines
+    /// (the register's label left, the text right), 41 prints the text left-aligned in normal size;
+    /// sw/sh double the character width/height (not for 41). Only valid after a trend with fe0.
     /// </summary>
-    public static PosNetCommand Trftrln(string text, bool doubleWidth = false, bool doubleHeight = false)
+    public static PosNetCommand Trftrln(string text, bool doubleWidth = false, bool doubleHeight = false, int lineId = 25)
     {
-        var parameters = new List<KeyValuePair<string, string>> { new("id", "25"), new("na", text) };
+        var parameters = new List<KeyValuePair<string, string>> { new("id", lineId.ToString(CultureInfo.InvariantCulture)), new("na", text) };
         if (doubleWidth)
         {
             parameters.Add(new("sw", "1"));
@@ -174,18 +176,38 @@ public static class PosNetCommands
         ]);
 
     /// <summary>
-    /// The printout footer configuration for the next receipt (POT-I-DEV-37 p. 51): the 1D code
-    /// (<c>bc</c>, up to 30 characters) and where the prepared 2D code is printed (<c>bb</c>: 0 not
-    /// at all, 1 above, 2 under the 1D code). Without ca1/lb1 the settings hold until the next printout.
+    /// The printout footer configuration for the next receipt (POT-I-DEV-37 pp. 68–69): the cashier
+    /// name (<c>cc</c>, up to 32) and the register number (<c>cn</c>, up to 8) in the footer line,
+    /// the 1D code (<c>bc</c>, up to 30 characters), where the prepared 2D code is printed (<c>bb</c>:
+    /// 0 not at all, 1 above, 2 under the 1D code), and up to three info lines (<c>ln</c>, LF-separated,
+    /// formatting codes as in ftrinfoset). <c>ca0</c>/<c>lb0</c>: everything holds for the next printout
+    /// only. A value that is too long is refused by the register with error 10 (PROTO_ERR_DATA_LENGTH).
     /// </summary>
-    public static PosNetCommand Ftrcfg(string? barcode, int code2dPosition)
+    public static PosNetCommand Ftrcfg(string? barcode, int code2dPosition, string? cashier = null, string? register = null, IReadOnlyList<string>? infoLines = null)
     {
         var parameters = new List<KeyValuePair<string, string>>();
+        if (cashier is not null)
+        {
+            parameters.Add(new("cc", cashier));
+        }
+        if (register is not null)
+        {
+            parameters.Add(new("cn", register));
+        }
+        if (cashier is not null || register is not null)
+        {
+            parameters.Add(new("ca", "0"));
+        }
         if (barcode is not null)
         {
             parameters.Add(new("bc", barcode));
         }
         parameters.Add(new("bb", code2dPosition.ToString(CultureInfo.InvariantCulture)));
+        if (infoLines is { Count: > 0 })
+        {
+            parameters.Add(new("ln", string.Join("\n", infoLines)));
+            parameters.Add(new("lb", "0"));
+        }
         return new PosNetCommand("ftrcfg", parameters);
     }
 
@@ -210,6 +232,22 @@ public static class PosNetCommands
 
     public static PosNetCommand Scnt() => new("scnt");
 
+    /// <summary>The protected-memory document type of a receipt (paragon) for <see cref="Eclastdocnoget"/>.</summary>
+    public const int ReceiptDocumentType = 0;
+
+    /// <summary>
+    /// The number of the last document of a type in the protected memory (POT-I-DEV-37 p.102, <c>di</c>;
+    /// <c>di0</c> when there is none). One numbering across all document types, so it is not the receipt number.
+    /// </summary>
+    public static PosNetCommand Eclastdocnoget(int documentType)
+        => new("eclastdocnoget", [new("ty", documentType.ToString(CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The register's clock (POT-I-DEV-37 p.18): <c>tm</c> in ISO 8601 with offset, and <c>da</c> as
+    /// <c>yyyy-MM-dd;HH:mm</c> — the only field older firmware answers (POT-I-DEV-05).
+    /// </summary>
+    public static PosNetCommand Rtcget() => new("rtcget");
+
     /// <summary>The fiscal memory status — among it the PTU rate table as programmed on the register (<c>va..vg</c>).</summary>
     public static PosNetCommand Sfsk() => new("sfsk");
 
@@ -228,6 +266,35 @@ public static class PosNetCommands
     /// </summary>
     public static PosNetCommand Dailyrep(DateOnly date)
         => new("dailyrep", [new("da", date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// The monthly report: a periodic report over the month of <paramref name="month"/> (spec p. 220).
+    /// The register only reads the year and month, but the date must still be a full valid date.
+    /// It reads fiscal memory and changes no counter, so it may be repeated.
+    /// </summary>
+    public static PosNetCommand Monthlyrep(DateOnly month)
+        => new("monthlyrep", [new("da", month.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))]);
+
+    /// <summary>
+    /// A periodic report over the daily reports between two dates, both included (spec p. 219). Like
+    /// the monthly report it only reads fiscal memory. Not to be confused with the settlement report
+    /// (raport rozliczeniowy), which ends the device's fiscal life and is never sent by this SCU.
+    /// </summary>
+    public static PosNetCommand Periodicrepbydates(DateOnly from, DateOnly to)
+        => new("periodicrepbydates",
+        [
+            new("fd", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            new("td", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+        ]);
+
+    /// <summary>The mechanism status in asynchronous mode: answered at once, even while a print blocks the queue (p. 16).</summary>
+    public static PosNetCommand SprnAsync() => new("!sprn");
+
+    /// <summary>
+    /// The general status in asynchronous mode (p. 16, 391): <c>ds</c> 0 ready / 3 waiting for the
+    /// operator after an error, <c>qe</c> whether the command queue is empty.
+    /// </summary>
+    public static PosNetCommand SdevAsync() => new("!sdev");
 
     public static PosNetCommand Prncancel() => new("prncancel");
 }

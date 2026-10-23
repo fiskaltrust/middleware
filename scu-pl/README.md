@@ -33,9 +33,15 @@ This is the entry point for the whole Polish vertical: storage → `QueuePL` →
 * **Currency** is PLN, on the receipt and on every charge and pay item (rfcs/0705-queue-single-currency).
   The data format defaults to EUR, so a PosCreator has to set it — hence the explicit validation in
   [`ReceiptValidatorPL`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Validation/ReceiptValidatorPL.cs).
-* **An unreachable register** becomes `StatePL.DeviceUnreachableError`. Detection is structural
-  (network exception types) plus name-based for the SCU packages' `PLDeviceUnreachableException`,
-  walking the type hierarchy — QueuePL does not reference the SCU assemblies. See
+* **A Polish SCU never throws out of `ProcessReceiptAsync`.** Every failure comes back as an error
+  response — the plain error state (`…_EEEE_EEEE`, no PL-local error flags for now) with a `FAILURE`
+  signature that says what to do next ([`SetError`](src/fiskaltrust.Middleware.SCU.PL.Abstraction/Helpers/PLReceiptResponseExtensions.cs)):
+  an unreachable register is retried; an **unknown outcome** (the command reached the register, but
+  no readable answer came back — `PLDeviceOutcomeUnknownException`) is checked on the register
+  first, because a document may have been printed and a resend would duplicate it. QueuePL passes
+  these responses through and writes no closing journal for an error. What it still catches is the
+  transport to a remote SCU failing: a refused connection is retried, a timeout or a dropped
+  connection is treated like an unknown outcome. See
   [`PLSSCDErrorHandling`](../queue/src/fiskaltrust.Middleware.Localization.QueuePL/Processors/PLSSCDErrorHandling.cs).
 
 ### The POSNET SCU
@@ -50,9 +56,9 @@ Two properties of that protocol shape most of the code:
   what the POS should send instead — rather than letting the printer answer with a number.
 * **An answer only identifies itself by mnemonic.** There is no sequence number, so a late answer to
   a command that timed out can be mistaken for the next command's confirmation, shifting every answer
-  that follows. The client therefore checks that the mnemonic matches, and reports a mismatch as an
-  *ambiguous outcome* — the command was written, and what the register did with it is exactly what
-  the answer does not say.
+  that follows. The client therefore checks that the mnemonic matches (an asynchronous `!sprn`/`!sdev`
+  is answered under its plain mnemonic), and reports a mismatch as an *ambiguous outcome* — the
+  command was written, and what the register did with it is exactly what the answer does not say.
 
 Notable mapping rules, all covered by unit tests:
 
@@ -66,6 +72,81 @@ Notable mapping rules, all covered by unit tests:
   configured one, unless `VatRateTable` pins it deliberately (e.g. for a recording).
 * **The daily report** is dated from the receipt moment in `Europe/Warsaw`. A register stands in
   Poland by law, and a middleware host in UTC would otherwise close the wrong day around midnight.
+* **A sale is never reported as failed if the register will still issue it.** A POSNET accepts a whole
+  receipt even when it cannot print (cover open, no paper), holds the closed receipt and prints and
+  fiscalizes it the moment the fault is cleared — no command withdraws it. Measured on a real
+  printer: idle, it reports ready even with the cover open (`!sprn pr0`, `!sdev ds0 qeT`); only
+  while it holds the receipt does it report `pr5 ds3 qeN`. So the SCU:
+  * refuses a sale while the register is not idle (`!sprn`/`!sdev` before `trinit` and again before
+    `trend`) — the receipt is **not issued**;
+  * treats every failure before `trend` as **not issued** and cancels the open receipt — a receipt
+    only becomes fiscal when `trend` closes it;
+  * after a `trend` that was not confirmed, **waits without a time limit** until the register is idle
+    again and then decides from its completed-receipt counter (`scnt bn`): issued → the sale completes
+    normally, not issued → error. An error is never returned for a receipt the register still holds.
+
+  The **daily report** gets the same guarantee — it is held and printed later like a receipt: refused
+  unless the register is idle, and an unanswered `dailyrep` is settled once the register is idle again
+  from `scnt rd` (fiscal memory) or `scnt hn` (every printout — the one that moves on a register in
+  training mode), read before and after.
+
+  The `FAILURE` message of a refused sale says "The receipt was NOT issued" ("The daily report was NOT
+  issued" for a closing), so the POS can resend it. See `ResolveSilentTrendAsync` in [`PosNetPLSSCD`](src/fiskaltrust.Middleware.SCU.PL.PosNet/PosNetPLSSCD.cs).
+* **The zero receipt returns the printer's state** in `ftStateData.PL.PrinterStatus` (ready, the
+  problem in words, mechanism and device state, queue, paper near end, open transaction, fiscal and
+  read-only mode), like the Italian RT printer SCUs. It runs outside the device lock and only uses the
+  asynchronous status commands, so it answers while a sale waits for an open cover — that is how a POS
+  finds out why the sale is waiting. See [`PosNetPrinterState`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Client/PosNetPrinterState.cs).
+* **Every sale is anchored in the register.** The receipt number alone is no key, because a register
+  with a daily counter repeats it every day. After `trend` the SCU therefore also reads the
+  protected-memory document number (`eclastdocnoget ty0`), the register's clock (`rtcget`) and the
+  daily report the receipt is booked into (`scnt.rd + 1`, signed as `CurrentDailyReportNumber`, not
+  as the closing's `ZReportNumber`), and signs each of them. Status commands describe the *last*
+  document, not this one, so the receipt counters are read before `trinit` and again as the last
+  readback. Only if the register completed exactly one receipt (`bn`) and numbered exactly one (`bt`,
+  which a receipt canceled elsewhere also advances) does the SCU sign anything. The clock is signed
+  only with a known offset: `tm` must state it, and `da` is read as Warsaw time, to the minute. A
+  readback the register could not answer (connection lost after `trend` — measured by pulling the
+  USB cable during the footer lines) is **waited for without a time limit** and read again once the
+  register is idle, so a cut never costs a fiscal receipt its number. An unprovable readback from a
+  register that answers (another document came in between) leaves the values out rather than
+  failing a receipt that is already printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
+
+  Anything that fails after `trend` (additional lines, payment slips) is reported as
+  `AdditionalPrintoutNotPrinted` ending in "The fiscal receipt was issued: do not send it again."
+
+* **The receipt footer** ([`PosNetPrintout`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetPrintout.cs), middleware#845).
+  Layout measured on a POSNET against a real H&M PL receipt:
+
+  | What | From | Register |
+  | --- | --- | --- |
+  | cashier in the footer line (`00008 #02 238689`) | `cbUser` (a string/number; a structured user object is left out) | `ftrcfg cc`, ≤ 32 |
+  | register number in the footer line | `cbTerminalID` | `ftrcfg cn`, ≤ 8 |
+  | barcode, QR code | `PL.printout.barcode` / `qrCode` | `ftrcfg bc/bb`, `qrcode` |
+  | key left, value right | `PL.printout.lines[]` with `label` (e.g. `itemCount`, `transactionNumber`) | `trftrln id0–40` |
+  | free text, left-aligned, normal size | `PL.printout.lines[]` with `align: "left"` | `trftrln id41` — the spec lists it without parameter, but the device prints the text |
+  | free text as before | `PL.printout.lines[]` with only `text` | `trftrln id25` — right-aligned behind a 15-character column |
+  | up to 3 info lines, optionally centred | `PL.printout.infoLines`, `infoLinesAlign: "center"` | `ftrcfg ln` (LF-separated, `&c`), `lb0` |
+  | lines for the whole receipt (general [additional lines](https://docs.fiskaltrust.eu/docs/poscreators/middleware-doc/general/cash-register-integration/additional-lines)) | `ftReceiptCaseData.cbReceiptLines` | `trftrln id41`, after the `PL.printout.lines` |
+  | payment slip (card terminal receipt), per pay item | `ftPayItemCaseData.Receipt`, else `cbPayItemLines` | `trftrln id41`, after the receipt lines, in pay item order |
+
+  **Payment slips print inside the fiscal receipt** ([`PosNetAdditionalLines`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetAdditionalLines.cs),
+  middleware#844), not as a non-fiscal document of their own: a super-form slip (`formstart fn200`)
+  took a header number of its own (the "nr" top right, `scnt hn`) and was cut off from the receipt;
+  `ftrcfg fe=3`, which should print a non-fiscal document straight under the receipt, still printed
+  it with its own header and cut on a POSNET Thermal. As additional lines, receipt and slip are one
+  document, one number, one cut (measured: `hn` +1). Each entry is one line of up to 56 characters
+  (80 mm paper; a register set to 40 characters per line refuses longer ones), an entry with line
+  breaks is split, an empty one prints as an empty line, and `&` is printed literally. The
+  register prints at most 60 lines after a receipt, `printout.lines`, `cbReceiptLines` and slips
+  together; more are rejected before anything is sent. The info lines and the barcode always print
+  last, below the slip.
+
+  A value longer than its field is refused by the register with error 10 (`PROTO_ERR_DATA_LENGTH`),
+  not truncated. The SCU checks the limits itself and rejects the receipt with a validation error
+  naming the field (e.g. a `cbTerminalID` over 8 characters) before anything is sent: that is an
+  integration error the POS has to fix. The frame encoder carries LF as content (the protocol's line
+  separator in `ftrcfg ln`), and still refuses STX, ETX and TAB.
 
 #### Configuration
 
@@ -75,10 +156,11 @@ full set and the defaults.
 
 | Parameter | Meaning |
 | --- | --- |
-| `DeviceUrl` | `tcp://192.168.1.50:6666` (or `host:port`), or `serial://COM9` / `usb://COM9` / `/dev/ttyACM0` |
+| `DeviceUrl` | `tcp://192.168.1.50:6666` (or `host:port`), or `serial://COM9` / `usb://COM9` / `/dev/ttyACM0`, or `usbhost://1424:10B0` (vendor:product id, hex) for a USB printer the host opens itself — on Android, see below |
 | `ConnectTimeoutMs`, `SendTimeoutMs`, `ReceiveTimeoutMs` | Must be positive; a command whose answer is never waited for would be reported as ambiguous on a register that answered |
-| `SerialBaudRate`, `SerialParity`, `SerialStopBits`, `SerialHandshake` | Serial line settings; the defaults are the device's own (115200 8N1, no flow control, which is what a USB virtual COM port needs) |
+| `SerialBaudRate`, `SerialParity`, `SerialStopBits`, `SerialHandshake` | Serial line settings; the defaults are the device's own (115200 8N1, no flow control, which is what a USB virtual COM port needs). A `usbhost://` printer gets them as its CDC line coding; the handshake does not apply there |
 | `VatRateTable` | Empty by default — the register's own table is used |
+| `OutcomeResolutionPollIntervalMs` | Pause between two status reads while waiting for a register that went silent after `trend` (default 1000). There is no limit on the wait itself |
 
 Everything arrives from the Portal as strings, so numbers are read from strings and a cleared field
 reads as the device default. A parameter of the wrong shape is reported as a PL validation error
@@ -86,21 +168,21 @@ naming the setting, not as a raw `JsonException`.
 
 ## Tests
 
-294 tests, all runnable without hardware.
+318 tests, all runnable without hardware.
 
 | Suite | Count | Needs |
 | --- | --- | --- |
-| [`SCU.PL.UnitTest`](test/fiskaltrust.Middleware.SCU.PL.UnitTest) | 204 | nothing |
+| [`SCU.PL.UnitTest`](test/fiskaltrust.Middleware.SCU.PL.UnitTest) | 228 | nothing |
 | [`SCU.PL.AcceptanceTest`](test/fiskaltrust.Middleware.SCU.PL.AcceptanceTest) | 39 | the in-process printer emulator |
 | [`SCU.PL.EndToEnd.AcceptanceTest`](test/fiskaltrust.Middleware.SCU.PL.EndToEnd.AcceptanceTest) | 14 | recorded cassettes, or a real register when `SCU_PL_POSNET_DEVICE_URL` is set |
 | [`QueuePL.UnitTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.UnitTest) | 25 | nothing |
 | [`QueuePL.AcceptanceTest`](../queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest) | 12 | nothing |
 
 ```powershell
-# the three SCU suites (257 tests)
+# the three SCU suites (410 tests)
 dotnet test scu-pl/fiskaltrust.Middleware.SCU.PL.sln
 
-# the two QueuePL suites (37 tests) — they live in the queue solution
+# the two QueuePL suites (45 tests) — they live in the queue solution
 dotnet test queue/test/fiskaltrust.Middleware.Localization.QueuePL.UnitTest
 dotnet test queue/test/fiskaltrust.Middleware.Localization.QueuePL.AcceptanceTest
 ```
@@ -123,6 +205,30 @@ hosts the middleware from a cashbox configuration — in-memory SCU or a real pr
 end-to-end suite's business cases over HTTP, so a printout is one POST away. Its
 [README](../test/fiskaltrust.Middleware.Test.Launcher/src/fiskaltrust.Middleware.Test.Launcher.v2/README.md#poland)
 has the Polish recipes. The v1 launcher cannot host `QueuePL` (net461 vs. net8.0) and says so.
+
+### On Android
+
+The fiskaltrust Android launcher hosts `QueuePL` and the PosNet SCU in-process, and it **owns the USB
+driver**: Android gives an app no serial port, so a `usbhost://1424:10B0` printer is opened through
+the Android USB host API by the launcher (link, interface claiming, line coding, USB permission). The
+SCU stays one package, `SCU.PL.PosNet`, and only speaks the POSNET protocol over the link it is given
+([`IPosNetUsbHostLinkFactory`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transport/IPosNetUsbHostLink.cs),
+registered by the host). The protocol side —
+[`UsbHostPosNetTransport`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transport/UsbHostPosNetTransport.cs)
+— is platform-neutral and unit-tested. USB is tested with the launcher on a POSNET Thermal over USB-OTG.
+
+[`PL.Android.TestHost`](test/Manual/fiskaltrust.Middleware.PL.Android.TestHost) runs `QueuePL` with
+the PosNet SCU over the network (`tcp://…`, also from the Android emulator), built by the same
+`CashBoxBuilderPL` the desktop launcher uses, with one button per business case.
+
+```powershell
+# with an emulator or a device attached (adb devices)
+dotnet build scu-pl/test/Manual/fiskaltrust.Middleware.PL.Android.TestHost -f net10.0-android -t:Run
+adb logcat -s PLTestHost
+```
+
+The Android test host is not in the solution: building it needs the .NET `android` workload, which
+the test job does not install; CI builds it in a job of its own.
 
 ---
 

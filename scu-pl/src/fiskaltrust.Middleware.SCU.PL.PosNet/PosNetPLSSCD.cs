@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -20,9 +22,10 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet;
 /// <summary>
 /// IPLSSCD implementation driving a POSNET Online fiscal printer — the certified register owns
 /// numbering, the PTU table, reports and the CRK transmission; this SCU translates receipt cases
-/// into the register's commands: the trinit → trline → trpayment → trend flow for a sale, the goods
-/// return printout for a return, the daily report for a daily closing, and the status read behind
-/// the zero receipt. Periodic reports, non-fiscal forms and device setup are follow-ups.
+/// into the register's commands: the trinit → trline → trpayment → trend flow for a sale and the
+/// readback that anchors it (<see cref="PosNetReceiptReadback"/>), the goods return printout for a
+/// return, the daily report for a daily closing, the periodic reports for a monthly and a yearly
+/// closing, and the status read behind the zero receipt. Non-fiscal forms and device setup are follow-ups.
 /// </summary>
 public class PosNetPLSSCD : IPLSSCD, IDisposable
 {
@@ -31,6 +34,13 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// installed in Poland by law, so this is a property of the market, not of the deployment.
     /// </summary>
     private const string RegisterTimeZoneId = "Europe/Warsaw";
+
+    /// <summary>
+    /// The register's zone for reading its wall clock back after a receipt, resolved once. A host
+    /// without zone data yields null rather than an exception: by the time the clock is read the
+    /// receipt is printed, and a moment that cannot be told is left out instead of failing it.
+    /// </summary>
+    private static readonly TimeZoneInfo? s_registerZone = FindRegisterZone();
 
     private readonly PosNetClient _client;
     private readonly PosNetConfiguration _configuration;
@@ -75,7 +85,25 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         return ToDeviceInfo(status, rateTable).ToPLSSCDInfo();
     }
 
+    /// <summary>
+    /// Never throws: every failure comes back as an error response (<see cref="PLReceiptResponseExtensions.SetError"/>),
+    /// so a queue reads the outcome off the response alone — also when this SCU runs remotely, where
+    /// exception types do not survive the transport.
+    /// </summary>
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    {
+        try
+        {
+            return await ProcessReceiptOnDeviceAsync(request);
+        }
+        catch (Exception exception)
+        {
+            request.ReceiptResponse.SetError(exception);
+            return new ProcessResponse { ReceiptResponse = request.ReceiptResponse };
+        }
+    }
+
+    private async Task<ProcessResponse> ProcessReceiptOnDeviceAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.ftReceiptCase;
         var response = request.ReceiptResponse;
@@ -103,25 +131,33 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
         else if (receiptCase.IsCase(ReceiptCase.ZeroReceipt0x2000))
         {
-            // The zero receipt is the operator's connectivity/state probe: one status read must
-            // succeed. The printer state itself is returned via GetInfoAsync.
+            // Deliberately outside the device lock: the zero receipt is how a POS sees why a sale is
+            // waiting (a receipt held by an open cover), and that sale holds the lock until the
+            // register has decided. The asynchronous reads it uses cannot disturb a running sequence.
+            await ReportPrinterStateAsync(response);
+        }
+        else if (receiptCase.IsCase(ReceiptCase.DailyClosing0x2011))
+        {
             await _deviceLock.WaitAsync();
             try
             {
-                await _client.ExecuteAsync(PosNetCommands.Scomm());
+                await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
             }
             finally
             {
                 _deviceLock.Release();
             }
         }
-        else if (receiptCase.IsCase(ReceiptCase.DailyClosing0x2011))
+        else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012))
         {
-            await ExecuteDailyClosingAsync(request.ReceiptRequest, response);
+            await ExecutePeriodicReportAsync(response, PosNetCommands.Monthlyrep(ToRegisterDate(request.ReceiptRequest.cbReceiptMoment)));
         }
-        else if (receiptCase.IsCase(ReceiptCase.MonthlyClosing0x2012) || receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
+        else if (receiptCase.IsCase(ReceiptCase.YearlyClosing0x2013))
         {
-            throw new PLValidationException("Periodic reports (monthly/yearly closing) are not supported by the PosNet SCU yet — the daily report is (0x2011).");
+            // The register has no yearly report: the year is a periodic report from 1 January up to
+            // the day being closed, so a closing sent on 31 December covers the whole year.
+            var day = ToRegisterDate(request.ReceiptRequest.cbReceiptMoment);
+            await ExecutePeriodicReportAsync(response, PosNetCommands.Periodicrepbydates(new DateOnly(day.Year, 1, 1), day));
         }
 
         // Non-fiscal receipt cases pass through without device interaction — like the InMemory
@@ -140,8 +176,19 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
 
         // The numer unikatowy is a legal element of the fiscal document, so the response carries
         // it like the InMemory SCU does. Reading it before trinit keeps the order safe: a register
-        // that cannot answer its status has not been asked to open a transaction either.
-        await EnrichWithDeviceIdentityAsync(response);
+        // that cannot answer its status has not been asked to open a transaction either. The same
+        // holds for the receipt counter the readback is checked against.
+        PosNetReceiptCounters countersBefore;
+        uint? eDocumentId;
+        try
+        {
+            await EnrichWithDeviceIdentityAsync(response);
+            countersBefore = await PosNetReceiptReadback.ReadCountersAsync(_client);
+
+            // A register that is not idle — a fault it already knows about, an operator prompt, an
+            // earlier receipt still waiting in its queue — would hold this receipt too and fiscalize it
+            // whenever the fault is cleared, long after the caller was told the sale failed.
+            await RequirePrinterReadyAsync("before the receipt was opened");
 
         // The e-paragon binding goes out strictly before trinit: eparagonidznext binds the *next*
         // document, and a failed binding fails the sale while nothing has been printed yet. A
@@ -150,47 +197,99 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // Footer codes (ftReceiptCaseData.PL.printout barcode/qrCode) are a printout configuration
         // for the receipt that follows. They go out before the e-receipt binding: a rejected
         // configuration then fails the sale with nothing armed and nothing printed.
-        if (printout is { HasFooterCodes: true })
-        {
-            await ConfigureFooterCodesAsync(printout);
-        }
+            if (printout is { HasFooterConfiguration: true })
+            {
+                await ConfigureFooterCodesAsync(printout);
+            }
 
-        var eDocumentId = eReceiptCustomerId is null ? (uint?)null : await BindEReceiptAsync(eReceiptCustomerId);
+            eDocumentId = eReceiptCustomerId is null ? null : await BindEReceiptAsync(eReceiptCustomerId);
+        }
+        catch (PLDeviceOutcomeUnknownException exception)
+        {
+            // Nothing that can print has been sent yet (no trinit), so an unanswered command here —
+            // e.g. a late answer to an earlier command arriving in its place — cannot have issued a
+            // receipt: the outcome of the sale is known even though the command's is not.
+            throw new PosNetReceiptNotIssuedException($"the register did not answer before the receipt was opened: {exception.Message}", exception);
+        }
 
         // Everything up to and including trend is the fiscal transaction; what follows (trftrln …
         // trftrend) is the additional-lines phase of an already closed receipt.
         var trendIndex = IndexOf(commands, "trend");
         var executed = 0;
+
+        // Phase 1 — the open transaction, up to the last command before trend. A receipt only becomes
+        // fiscal when trend closes it, so whatever fails here, the receipt was not issued: the open
+        // transaction is canceled where the register still listens, and a transaction the register
+        // could not be told to cancel stays open without a trend — it can never close itself.
         try
         {
-            foreach (var command in commands)
+            for (; executed < trendIndex; executed++)
             {
-                await _client.ExecuteAsync(command);
-                executed++;
+                await _client.ExecuteAsync(commands[executed]);
+            }
+            // The cover can be opened while the receipt is being built: checked again right before
+            // the one command that fiscalizes, for the same reason as before trinit.
+            if (trendIndex < commands.Count)
+            {
+                await RequirePrinterReadyAsync("before the receipt was closed");
             }
         }
-        catch (PLDeviceErrorException exception) when (executed > trendIndex)
+        catch (Exception exception)
         {
-            // The receipt is already fiscal — a rejected additional line must not fail it (the
-            // queue would otherwise record a failure for a document the register has issued). The
-            // footer is closed and the rejection travels in the response instead.
-            await TryEndFooterAsync();
-            response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Dodatkowe linie nie wydrukowane",
-                $"?{exception.ErrorCode}: {exception.Message}");
-        }
-        catch (PLDeviceErrorException)
-        {
-            // The device rejected a command mid-transaction with a definite answer, so the
-            // transaction is safely cancellable. After an ambiguous or unreachable outcome
-            // nothing more is sent — the device state must be verified by the operator first.
             if (executed > 0)
             {
-                await CancelAsync();
+                await TryCancelAsync();
             }
-            throw;
+            throw exception as PosNetReceiptNotIssuedException
+                ?? new PosNetReceiptNotIssuedException($"the sale failed before the receipt was closed: {exception.Message}", exception);
         }
 
-        await TryReadFiscalDocumentNumberAsync(response);
+        // Phase 2 — trend. A confirmed rejection means the register did not close the receipt; any
+        // other failure means it may have, possibly only later (the receipt waits in the printer until
+        // it can print), so the outcome is read off the register's counters before anything is reported.
+        if (trendIndex < commands.Count)
+        {
+            try
+            {
+                await _client.ExecuteAsync(commands[trendIndex]);
+            }
+            catch (PLDeviceErrorException exception)
+            {
+                await TryCancelAsync();
+                throw new PosNetReceiptNotIssuedException($"the register refused to close the receipt: {exception.Message}", exception);
+            }
+            catch (Exception exception)
+            {
+                await ResolveSilentTrendAsync(countersBefore, exception);
+            }
+            executed = trendIndex + 1;
+        }
+
+        // Phase 3 — the additional lines of the closed, fiscal receipt.
+        try
+        {
+            for (; executed < commands.Count; executed++)
+            {
+                await _client.ExecuteAsync(commands[executed]);
+            }
+        }
+        catch (Exception exception)
+        {
+            // The receipt is already fiscal — no failure of an additional line may fail it, be it
+            // a rejection, an ambiguous answer, a lost connection or one nobody anticipated: the queue would otherwise
+            // record a failure for a document the register has issued, and a resend would print a
+            // second fiscal receipt. The footer is closed where possible and the failure travels
+            // in the response instead.
+            await TryEndFooterAsync();
+            response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Dodatkowe linie nie wydrukowane",
+                DescribeFailureAfterReceipt("the additional lines were not printed", exception));
+        }
+
+        var anchor = await ReadReceiptAnchorAsync(countersBefore);
+        if (anchor is not null)
+        {
+            EnrichWithReceiptAnchor(response, anchor);
+        }
 
         if (eDocumentId is { } documentId)
         {
@@ -200,10 +299,75 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     }
 
     /// <summary>
-    /// Sends the footer codes for the next receipt: the prepared 2D code (qrcode) and the footer
-    /// configuration (ftrcfg bc/bb). Both are valid until the next printout, i.e. for the receipt
-    /// this sale prints. Runs before the e-receipt binding and before trinit, so a rejection fails
-    /// the sale with nothing on the device.
+    /// Reads the anchor of the receipt just closed. The receipt is fiscal by now, so a readback the
+    /// register could not answer — the connection dropped after trend, measured on a POSNET over USB by
+    /// pulling the cable during the footer lines — is not given up on: the SCU waits, without a time
+    /// limit like <see cref="ResolveSilentTrendAsync"/>, until the register is idle and reads it again.
+    /// A fiscal receipt reported without its number could not be told apart from the next one.
+    /// There is nothing to wait for without a baseline from before trinit (the anchor can never be
+    /// proven), nor when the register answers and is idle: then its counters are final, and a missing
+    /// anchor means another document came in between, which the readback refuses to guess about.
+    /// </summary>
+    private async Task<PosNetReceiptAnchor?> ReadReceiptAnchorAsync(PosNetReceiptCounters countersBefore)
+    {
+        var anchor = await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
+        if (anchor is not null || countersBefore.CompletedReceipts is null || countersBefore.LastReceiptNumber is null)
+        {
+            return anchor;
+        }
+        if (await PosNetPrinterState.ReadAsync(_client) is { Answered: true, IsIdle: true })
+        {
+            return anchor;
+        }
+        await WaitUntilIdleAsync();
+        return await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
+    }
+
+    /// <summary>
+    /// The response text for something that failed after trend. It leads with what failed and ends with
+    /// the one fact the caller must act on: the receipt itself was issued, so it must not be sent again.
+    /// The transport's own wording ("verify the device before retrying") is meant for a command whose
+    /// outcome is open and would invite exactly the resend that prints a second fiscal receipt.
+    /// </summary>
+    private static string DescribeFailureAfterReceipt(string what, Exception exception)
+    {
+        var cause = exception switch
+        {
+            PLDeviceErrorException deviceError => $"?{deviceError.ErrorCode}: {deviceError.Message}",
+            PLDeviceUnreachableException => "the printer stopped answering or was disconnected",
+            _ => exception.Message,
+        };
+        return $"{cause} — {what}. The fiscal receipt was issued: do not send it again.";
+    }
+
+    /// <summary>
+    /// Signs what the register contributed to the receipt. The receipt number is the one printed
+    /// on the document, but it is no key on its own; the daily report, the device moment and the
+    /// protected-memory document number make it one (<see cref="PosNetReceiptAnchor"/>).
+    /// </summary>
+    private static void EnrichWithReceiptAnchor(ReceiptResponse response, PosNetReceiptAnchor anchor)
+    {
+        response.EnrichWithFiscalDocumentNumber(anchor.ReceiptNumber);
+        if (anchor.DailyReportNumber is { } dailyReportNumber)
+        {
+            response.AddSignatureItem(SignatureTypePL.CurrentDailyReportNumber, PLReceiptCases.CurrentDailyReportNumberCaption, dailyReportNumber.ToString(CultureInfo.InvariantCulture));
+        }
+        if (anchor.DocumentNumber is { } documentNumber)
+        {
+            response.AddSignatureItem(SignatureTypePL.ProtectedMemoryDocumentNumber, PLReceiptCases.ProtectedMemoryDocumentNumberCaption, documentNumber.ToString(CultureInfo.InvariantCulture));
+        }
+        if (anchor.DeviceMoment is { } deviceMoment)
+        {
+            response.AddSignatureItem(SignatureTypePL.DeviceMoment, PLReceiptCases.DeviceMomentCaption, deviceMoment);
+        }
+    }
+
+    /// <summary>
+    /// Sends the printout configuration for the next receipt: the prepared 2D code (qrcode) and the
+    /// footer configuration (ftrcfg: cashier from cbUser, register from cbTerminalID, the codes and the
+    /// info lines). All of it is valid until the next printout, i.e. for the receipt this sale prints.
+    /// Runs before the e-receipt binding and before trinit, so a rejection fails the sale with nothing
+    /// on the device.
     /// </summary>
     private async Task ConfigureFooterCodesAsync(PosNetPrintout printout)
     {
@@ -211,13 +375,15 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await _client.ExecuteAsync(PosNetCommands.Qrcode(qrCode.Data, qrCode.PixelSize, qrCode.ErrorCorrection));
         }
-        await _client.ExecuteAsync(PosNetCommands.Ftrcfg(printout.Barcode, printout.QrCode is { } code ? (int)code.Position : 0));
+        await _client.ExecuteAsync(PosNetCommands.Ftrcfg(printout.Barcode, printout.QrCode is { } code ? (int)code.Position : 0,
+            printout.Cashier, printout.Register, printout.FormattedInfoLines));
     }
 
     /// <summary>
-    /// Closes the additional-lines phase after a rejected line so the printout is finished. A
-    /// confirmed rejection of the close itself is swallowed (the original error is reported);
-    /// ambiguous or unreachable outcomes propagate — the printout state is then unknown.
+    /// Closes the additional-lines phase after a failed line so the printout is finished. It runs
+    /// after trend, so every failure of the close itself is swallowed (the original failure is
+    /// reported): trftrend cannot print a fiscal document, so sending it after an ambiguous line is
+    /// safe, and a footer left open is for the operator to see — not a reason to fail a fiscal receipt.
     /// </summary>
     private async Task TryEndFooterAsync()
     {
@@ -225,7 +391,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await _client.ExecuteAsync(PosNetCommands.Trftrend());
         }
-        catch (PLDeviceErrorException)
+        catch (Exception)
         {
         }
     }
@@ -311,9 +477,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                 : form;
             response.AddSignatureItem(SignatureTypePL.EDocumentDeliveryState, "Status eDokumentu", deliveryState);
         }
-        catch (PLSSCDException)
+        catch (Exception)
         {
-            // eparagonbufferget is read-only — swallowing an ambiguous or failed readback is safe.
+            // eparagonbufferget is read-only and runs after trend — swallowing any failed readback
+            // is safe, failing the receipt is not.
         }
     }
 
@@ -337,11 +504,65 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// middleware host in UTC would otherwise close the wrong day for every closing between
     /// midnight and the zone's offset.
     /// </summary>
+    /// <remarks>
+    /// The daily report is fiscal like a receipt — it writes the day into fiscal memory — and a POSNET
+    /// holds it like a receipt: sent to a printer that cannot print, it is printed and written the
+    /// moment the fault is cleared. So it gets the same guarantee: refused unless the register is idle,
+    /// and an unanswered dailyrep is settled from the register's counters once it is idle again
+    /// (<see cref="ResolveSilentDailyReportAsync"/>), however long that takes.
+    /// </remarks>
     private async Task ExecuteDailyClosingAsync(ReceiptRequest request, ReceiptResponse response)
     {
-        await EnrichWithDeviceIdentityAsync(response);
-        await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
-        await TryReadCounterAsync("rd", number => response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture)));
+        PosNetResponse countersBefore;
+        try
+        {
+            await EnrichWithDeviceIdentityAsync(response);
+            countersBefore = await _client.ExecuteAsync(PosNetCommands.Scnt());
+            await RequirePrinterReadyAsync("before the daily report", "daily report");
+        }
+        catch (PLDeviceOutcomeUnknownException exception)
+        {
+            throw new PosNetReceiptNotIssuedException($"the register did not answer before the daily report was requested: {exception.Message}", exception, "daily report");
+        }
+
+        try
+        {
+            await _client.ExecuteAsync(PosNetCommands.Dailyrep(ToRegisterDate(request.cbReceiptMoment)));
+        }
+        catch (PLDeviceErrorException)
+        {
+            // A confirmed refusal (wrong day, a second zero report in fiscal mode): nothing was printed.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            await ResolveSilentDailyReportAsync(countersBefore, exception);
+        }
+
+        var reportsDone = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), counters => PosNetStatus.ReadNumber(counters, "rd"));
+        if (reportsDone is { } number)
+        {
+            response.AddSignatureItem(SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, number.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    /// <summary>
+    /// Prints a periodic report for a monthly or yearly closing. The period is taken from the receipt
+    /// moment in the register's zone, as for the daily closing. A periodic report only reads fiscal
+    /// memory, so no report number is signed: unlike the daily report it advances no counter.
+    /// </summary>
+    private async Task ExecutePeriodicReportAsync(ReceiptResponse response, PosNetCommand report)
+    {
+        await _deviceLock.WaitAsync();
+        try
+        {
+            await EnrichWithDeviceIdentityAsync(response);
+            await _client.ExecuteAsync(report);
+        }
+        finally
+        {
+            _deviceLock.Release();
+        }
     }
 
     /// <summary>
@@ -387,44 +608,168 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         return _rateTable = PosNetRateTable.Parse(await _client.ExecuteAsync(PosNetCommands.Sfsk()));
     }
 
-    private async Task CancelAsync()
+    /// <summary>
+    /// Refuses the sale unless the register is idle: mechanism ready, no operator prompt, every earlier
+    /// command executed (<see cref="PosNetPrinterState"/>). The check runs before trend, so refusing is
+    /// final — the receipt has not been issued. It cannot see everything: a POSNET only notices an
+    /// open cover once it tries to print, which is why a silent trend is still settled from the
+    /// register's counters (<see cref="ResolveSilentTrendAsync"/>).
+    /// </summary>
+    private async Task RequirePrinterReadyAsync(string stage, string document = "receipt")
+    {
+        var state = await PosNetPrinterState.ReadAsync(_client);
+        if (state.DescribeProblem() is { } problem)
+        {
+            throw new PosNetReceiptNotIssuedException($"the printer is not ready {stage}: {problem}.", document: document);
+        }
+    }
+
+    /// <summary>
+    /// The zero receipt's answer: the printer's live state in <c>ftStateData</c> (<c>PL.PrinterStatus</c>),
+    /// like the Italian RT printer SCUs return theirs. A register that is not ready does not fail the
+    /// zero receipt — the state is the answer; only a register that does not answer at all does.
+    /// Fiscal mode and read-only mode come from scomm, a synchronous read, which is only sent to an
+    /// idle register: behind a stuck command it would wait for that command.
+    /// </summary>
+    private async Task ReportPrinterStateAsync(ReceiptResponse response)
+    {
+        var state = await PosNetPrinterState.ReadAsync(_client);
+        if (!state.Answered)
+        {
+            throw new PLDeviceUnreachableException("The POSNET printer did not answer its status (!sprn, !sdev).");
+        }
+
+        var status = state.IsIdle ? await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer) : null;
+        response.ftStateData = JsonSerializer.SerializeToElement(new
+        {
+            PL = new
+            {
+                PrinterStatus = new
+                {
+                    Ready = state.IsIdle,
+                    Problem = state.DescribeProblem(),
+                    state.Mechanism,
+                    MechanismText = PosNetPrinterState.DescribeMechanism(state.Mechanism),
+                    state.DeviceStatus,
+                    DeviceStatusText = PosNetPrinterState.DescribeDeviceStatus(state.DeviceStatus),
+                    state.QueueEmpty,
+                    state.PaperNearEnd,
+                    TransactionOpen = state.TransactionResources is null ? (bool?)null : state.TransactionResources != 0,
+                    FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
+                    ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
+                    UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
+                },
+            },
+        });
+    }
+
+    /// <summary>
+    /// Settles a trend that was sent but not confirmed. A POSNET accepts trend even when it cannot
+    /// print — cover open, no paper — holds the closed receipt and prints and fiscalizes it the moment
+    /// the fault is cleared, however long that takes; no command withdraws it. So the SCU never answers
+    /// before the register has: it watches the asynchronous state until the register is idle again,
+    /// then its completed-receipt counter (<c>scnt bn</c>) says for certain whether the receipt exists.
+    /// Returns when it does, so the sale completes like any other; throws
+    /// <see cref="PosNetReceiptNotIssuedException"/> when it does not. There is deliberately no time
+    /// limit: any answer given while the register still holds the receipt could be wrong, and an error
+    /// for a receipt that is printed later is a duplicate waiting to happen. While it waits, the zero
+    /// receipt reports what the register is waiting for.
+    /// </summary>
+    private async Task ResolveSilentTrendAsync(PosNetReceiptCounters before, Exception trendFailure)
+    {
+        var counters = await WaitUntilIdleAsync();
+        if (PosNetStatus.ReadNumber(counters, "bn") is { } completedNow && before.CompletedReceipts is { } completedBefore)
+        {
+            if (completedNow > completedBefore)
+            {
+                return;
+            }
+            await TryCancelAsync();
+            throw new PosNetReceiptNotIssuedException(
+                $"the register did not confirm closing the receipt ({trendFailure.Message}), and once it was idle again its counters showed that no receipt was completed.", trendFailure);
+        }
+        // Without a baseline the counters cannot tell; the register itself is idle, so the receipt is
+        // either done or not coming — the one case left for the operator.
+        throw new PLDeviceOutcomeUnknownException(
+            $"The register did not confirm closing the receipt ({trendFailure.Message}) and does not report a completed-receipt counter to settle it with.", trendFailure);
+    }
+
+    /// <summary>
+    /// Settles a dailyrep that was sent but not confirmed, like <see cref="ResolveSilentTrendAsync"/>
+    /// settles a receipt: once the register is idle again, a daily report it printed shows in its
+    /// counters — <c>rd</c> (daily reports in fiscal memory) on a fiscalized register, <c>hn</c> (every
+    /// printout, the only one that moves on a register in training mode). Measured on a POSNET: a
+    /// daily report advances both, e.g. <c>rd3 hn54</c> → <c>rd4 hn55</c>.
+    /// </summary>
+    private async Task ResolveSilentDailyReportAsync(PosNetResponse before, Exception reportFailure)
+    {
+        var after = await WaitUntilIdleAsync();
+        var known = false;
+        foreach (var counter in new[] { "rd", "hn" })
+        {
+            if (PosNetStatus.ReadNumber(before, counter) is { } then && PosNetStatus.ReadNumber(after, counter) is { } now)
+            {
+                if (now > then)
+                {
+                    return;
+                }
+                known = true;
+            }
+        }
+        if (known)
+        {
+            throw new PosNetReceiptNotIssuedException(
+                $"the register did not confirm the daily report ({reportFailure.Message}), and once it was idle again its counters showed that no report was printed.", reportFailure, "daily report");
+        }
+        throw new PLDeviceOutcomeUnknownException(
+            $"The register did not confirm the daily report ({reportFailure.Message}) and does not report the counters to settle it with.", reportFailure);
+    }
+
+    /// <summary>
+    /// Waits — without a time limit, see <see cref="ResolveSilentTrendAsync"/> — until the register is
+    /// idle (<see cref="PosNetPrinterState.IsIdle"/>: nothing held, nothing queued) and its counters can
+    /// be read, and returns them. A register answers a synchronous read only after everything sent
+    /// before it, so counters read while it is idle are final.
+    /// </summary>
+    private async Task<PosNetResponse> WaitUntilIdleAsync()
+    {
+        while (true)
+        {
+            var state = await PosNetPrinterState.ReadAsync(_client);
+            if (state.IsIdle && await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scnt(), status => status) is { } counters)
+            {
+                return counters;
+            }
+            await Task.Delay(_configuration.OutcomeResolutionPollIntervalMs);
+        }
+    }
+
+    /// <summary>
+    /// Cancels the open transaction where the register still listens. Never throws: it only runs on
+    /// the way to reporting a failure, before trend or after the register's counters showed that
+    /// trend issued nothing — a transaction it cannot cancel stays open without a trend, and an open
+    /// transaction never becomes a fiscal receipt on its own.
+    /// </summary>
+    private async Task TryCancelAsync()
     {
         try
         {
             await _client.ExecuteAsync(PosNetCommands.Prncancel());
         }
-        catch (PLDeviceErrorException)
+        catch (Exception)
         {
-            // A confirmed rejection of the cancel (e.g. no open transaction) leaves the device
-            // in a known state — the original error stays the reported failure. Ambiguous or
-            // unreachable outcomes of the cancel itself must propagate instead: whether the
-            // transaction is still open is then unknown and the operator has to verify.
         }
     }
 
-    /// <summary>
-    /// The fiscal document number is not part of the trend confirmation — it is read back from
-    /// the counter status (scnt, bt = last receipt number). The document is already printed at
-    /// this point, so a failing readback must not fail the receipt; the number is then simply
-    /// absent from the response.
-    /// </summary>
-    private Task TryReadFiscalDocumentNumberAsync(ReceiptResponse response)
-        => TryReadCounterAsync("bt", response.EnrichWithFiscalDocumentNumber);
-
-    private async Task TryReadCounterAsync(string counter, Action<long> report)
+    private static TimeZoneInfo? FindRegisterZone()
     {
         try
         {
-            var counters = await _client.ExecuteAsync(PosNetCommands.Scnt());
-            if (counters.Parameters.TryGetValue(counter, out var text)
-                && long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
-            {
-                report(number);
-            }
+            return TimeZoneInfo.FindSystemTimeZoneById(RegisterTimeZoneId);
         }
-        catch (PLSSCDException)
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            // scnt is read-only — swallowing an ambiguous or failed readback is safe.
+            return null;
         }
     }
 

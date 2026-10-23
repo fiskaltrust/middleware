@@ -11,12 +11,15 @@ namespace fiskaltrust.Middleware.Localization.QueuePL.Processors;
 /// <summary>
 /// Registers/deregisters the queue. There is no device-fiscalization command: fiscalizing a Polish
 /// register is a certified-technician (serwis) act, so the initial-operation receipt only verifies
-/// via GetInfo that the connected register reports itself as fiscalized.
+/// via GetInfo that the connected register reports itself as fiscalized. In sandbox a register that
+/// reports itself as not fiscalized is accepted too, so integrations can be tested on demo hardware;
+/// a register whose state cannot be read is refused either way.
 /// </summary>
-public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStorageProvider localizedQueueStorageProvider) : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStorageProvider localizedQueueStorageProvider, bool isSandbox = false) : ILifecycleCommandProcessor
 {
     private readonly IPLSSCD _sscd = sscd;
     private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider = localizedQueueStorageProvider;
+    private readonly bool _isSandbox = isSandbox;
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
@@ -27,31 +30,22 @@ public class LifecycleCommandProcessorPL(IPLSSCD sscd, ILocalizedQueueStoragePro
         {
             info = await _sscd.GetInfoAsync();
         }
-        catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
-        {
-            // Whether the register is fiscalized is unknown while it cannot be reached — the queue
-            // stays inactive, and the caller sees the device-unreachable state rather than a
-            // generic error, so retrying once the register is back is the obvious next step.
-            receiptResponse.SetDeviceUnreachableError(ex);
-            return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
-                queue, receiptRequest, receiptResponse,
-                $"The initial-operation receipt could not verify the register's fiscalization state: the register was not reachable. Details: {ex.Message}")]);
-        }
         catch (Exception ex)
         {
-            // The register answered, but not with a state: it rejected the status command, or the
-            // answer was not decodable. Either way the fiscalization state is unknown, which is the
-            // same conclusion as above and must reach the caller the same way — as a receipt
-            // response with an action journal, not as a raw exception out of the processor. Caught
-            // broadly on purpose: every failure here means "not verified", and an unverified
-            // register must not activate a queue.
-            var unverified = $"The initial-operation receipt could not verify the register's fiscalization state: the register did not report one. Details: {ex.Message}";
+            // GetInfoAsync has no response to carry an error state, so it still reports failure by
+            // throwing: the register (or the SCU) could not be reached, rejected the status command,
+            // or answered undecodably. Every one of them means the fiscalization state is unknown,
+            // and it reaches the caller as a receipt response with an action journal, not as a raw
+            // exception. Caught broadly on purpose: an unverified register must not activate a queue,
+            // and reading the status changes nothing on the register, so retrying is always safe.
+            var unverified = $"The initial-operation receipt could not verify the register's fiscalization state. Retry once the register is reachable. Details: {ex.Message}";
             receiptResponse.SetReceiptResponseError(unverified);
             return new ProcessCommandResponse(receiptResponse, [ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(
                 queue, receiptRequest, receiptResponse, unverified)]);
         }
 
-        if (!PLSSCDInfoHelper.IsFiscalized(info))
+        var acceptedInSandbox = _isSandbox && PLSSCDInfoHelper.IsNonFiscal(info);
+        if (!PLSSCDInfoHelper.IsFiscalized(info) && !acceptedInSandbox)
         {
             var message = $"The connected register does not report FiscalizationState 'Fiscalized'. A Polish register must be fiscalized by an authorized serwis before the queue can start operating.";
             receiptResponse.SetReceiptResponseError(message);

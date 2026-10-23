@@ -1,7 +1,9 @@
+using System;
 using System.Globalization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
+using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Models;
 
 namespace fiskaltrust.Middleware.SCU.PL.Abstraction.Helpers;
@@ -42,6 +44,33 @@ public static class PLReceiptResponseExtensions
     /// </summary>
     public static void EnrichWithEDocumentId(this ReceiptResponse response, uint eDocumentId)
         => response.AddSignatureItem(SignatureTypePL.EDocumentId, "Identyfikator eDokumentu", eDocumentId.ToString(CultureInfo.InvariantCulture));
+
+    /// <summary>
+    /// Turns an SCU failure into the error response the SCU returns — a Polish SCU never throws out
+    /// of ProcessReceiptAsync, so a queue (in-process or remote) reads the outcome off the response
+    /// alone. The ftState is the plain error for now; the FAILURE signature says what to do next,
+    /// because the remedy differs: an unreachable register is retried, an unknown outcome is checked
+    /// on the register first (a document may have been printed, a resend would duplicate it).
+    /// </summary>
+    public static void SetError(this ReceiptResponse response, Exception exception)
+    {
+        response.ftState = response.ftState.WithState(State.Error);
+        response.ftSignatures = [];
+        response.ftSignatures.Add(new SignatureItem
+        {
+            Caption = "FAILURE",
+            Data = DescribeFailure(exception),
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = response.ftState.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
+        });
+    }
+
+    private static string DescribeFailure(Exception exception) => exception switch
+    {
+        PLDeviceOutcomeUnknownException => $"The Polish fiscal register did not confirm the command — it may or may not have executed it, so a receipt or report may already have been printed. Do NOT resend blindly: check the register's last document first, and resend only if it was not issued — a resend would otherwise duplicate it. Details: {exception.Message}",
+        PLDeviceUnreachableException => $"The Polish fiscal register could not be reached — without a working register no sale may legally be recorded (Art. 111(3) VAT Act). Retry once the register (or its reserve) is available. Details: {exception.Message}",
+        _ => exception.Message,
+    };
 
     public static void EnrichWithFiscalDocumentNumber(this ReceiptResponse response, long fiscalDocumentNumber)
     {

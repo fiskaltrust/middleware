@@ -1,3 +1,4 @@
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.pl;
 using fiskaltrust.Middleware.Localization.QueuePL.Factories;
 using fiskaltrust.Middleware.Localization.v2;
@@ -39,11 +40,12 @@ public class DailyOperationsCommandProcessorPL(IPLSSCD sscd) : IDailyOperationsC
     public async Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request) => (await SubmitAsync(request)).Response;
 
     /// <summary>
-    /// Hands the receipt to the register and reports whether it got there. The action journal of a
-    /// closing is the audit record that the report was printed and the counters advanced — writing
-    /// it after an unreachable register would claim a Z report that never ran.
+    /// Hands the receipt to the register and reports whether it confirmed it. The action journal of
+    /// a closing is the audit record that the report was printed and the counters advanced — writing
+    /// it after an error response (or an SCU that could not be reached) would claim a report that
+    /// never ran, or that is not known to have run.
     /// </summary>
-    private async Task<(ProcessCommandResponse Response, bool Submitted)> SubmitAsync(ProcessCommandRequest request)
+    private async Task<(ProcessCommandResponse Response, bool Confirmed)> SubmitAsync(ProcessCommandRequest request)
     {
         try
         {
@@ -52,11 +54,11 @@ public class DailyOperationsCommandProcessorPL(IPLSSCD sscd) : IDailyOperationsC
                 ReceiptRequest = request.ReceiptRequest,
                 ReceiptResponse = request.ReceiptResponse,
             });
-            return (new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>()), true);
+            return (new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>()), !response.ReceiptResponse.ftState.IsState(State.Error));
         }
-        catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
+        catch (Exception ex) when (PLSSCDErrorHandling.IsScuCommunicationFailure(ex))
         {
-            request.ReceiptResponse.SetDeviceUnreachableError(ex);
+            request.ReceiptResponse.SetScuCommunicationError(ex);
             return (new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()), false);
         }
     }

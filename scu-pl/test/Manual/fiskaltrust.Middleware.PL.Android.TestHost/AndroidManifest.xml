@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="PL TestHost" android:allowBackup="false" />
+    <!-- tcp:// reaches the POSNET over the network; USB is the Android launcher's. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>
