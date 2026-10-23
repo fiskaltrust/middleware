@@ -111,6 +111,20 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             Assert.False(HasFailed(response), FailureData(response));
             Assert.Equal("0003", DocNumber(response));
             Assert.Equal(1, printer.Resets);
+            Assert.Equal(2, printer.StatusQueriesBeforeFirstSend);
+        }
+
+        [Fact]
+        public async Task PrinterLeftInZState_WhenTheResetTimesOut_SkipsTheSecondReadAndRefusesToGuess()
+        {
+            var printer = new ScriptedPrinter { InZStateUntilReset = true, ResetTimesOut = true };
+            var sut = CreateSut(printer);
+
+            var response = await Sign(sut, "first-after-closure");
+
+            Assert.Equal(EpsonRTPrinterSCU.UnknownDocumentStateError, FailureData(response));
+            Assert.Equal(1, printer.Resets);
+            Assert.Equal(1, printer.StatusQueriesBeforeFirstSend);
         }
 
         private static bool HasFailed(ProcessResponse response) =>
@@ -176,12 +190,16 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
             public int Resets { get; private set; }
 
+            /// <summary>The 1-088 reset is not answered within its timeout.</summary>
+            public bool ResetTimesOut { get; set; }
+
             public int StatusQueries { get; private set; }
             public int Sends { get; private set; }
 
             /// <summary>
-            /// Status reads answered before the first send. A receipt that re-reads its baseline shows 1
-            /// here; one that reuses a cached baseline shows 0.
+            /// Status reads asked before the first send, refused ones included. A receipt that re-reads its
+            /// baseline shows 1 here, 2 when a refused read was followed by a reset and a second read; one that
+            /// reuses a cached baseline shows 0.
             /// </summary>
             public int StatusQueriesBeforeFirstSend { get; private set; }
 
@@ -197,6 +215,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
                 if (payload.Contains("resetPrinter"))
                 {
                     Resets++;
+                    if (ResetTimesOut)
+                    {
+                        throw new TaskCanceledException("The reset was not answered.");
+                    }
                     InZStateUntilReset = false;
                     return Task.FromResult(Soap(SoapSerializer.Serialize(new PrinterCommandResponse { Success = true })));
                 }
