@@ -7,8 +7,8 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transport;
 /// The raw byte pipe to a POSNET printer that the host application opened itself over USB — the
 /// platform-specific half of <see cref="UsbHostPosNetTransport"/>. The transport owns everything the
 /// protocol cares about (framing, deadlines, what counts as delivered); a link only moves bytes, so
-/// a platform needs nothing but this to drive the printer (on Android:
-/// <c>fiskaltrust.Middleware.SCU.PL.PosNet.Android</c>).
+/// a platform needs nothing but this to drive the printer. The USB driver itself belongs to the
+/// host: on Android the fiskaltrust Android launcher implements it with the USB host API.
 /// </summary>
 /// <remarks>
 /// Failures are reported as <see cref="IOException"/> — or <see cref="UnauthorizedAccessException"/>

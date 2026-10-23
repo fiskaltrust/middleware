@@ -81,7 +81,7 @@ jobs:
         run: dotnet workload install android
         shell: pwsh
 
-      # The test host references SCU.PL.PosNet.Android, so this builds both.
+      # The test host builds the PosNet SCU for Android (the USB driver itself lives in the Android launcher).
       - name: Build
         run: dotnet build scu-pl/test/Manual/fiskaltrust.Middleware.PL.Android.TestHost -f net10.0-android --configuration Debug
         shell: pwsh

@@ -1,11 +1,8 @@
 using System.Text.Json;
 using Android.Content.PM;
-using Android.Hardware.Usb;
 using Android.Util;
 using Android.Views;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.SCU.PL.PosNet;
-using fiskaltrust.Middleware.SCU.PL.PosNet.Android;
 using fiskaltrust.Middleware.SCU.PL.TestSupport;
 using fiskaltrust.Middleware.Test.Launcher.v2.Helpers;
 using fiskaltrust.storage.serialization.V0;
@@ -19,20 +16,16 @@ namespace fiskaltrust.Middleware.PL.Android.TestHost;
 /// <remarks>
 /// The queue lives in memory, so after every app start (or address change) the initial operation
 /// has to go first — until then the queue is inactive and forwards nothing to the printer.
-/// Every receipt sent to a fiscalized printer is a real fiscal document.
+/// Every receipt sent to a fiscalized printer is a real fiscal document. Only the network address
+/// (tcp://) is supported here: the USB driver is owned by the host application, and on Android that is
+/// the fiskaltrust Android launcher, where usbhost:// is tested.
 /// </remarks>
 // No action bar: from Android 15 on, apps draw edge-to-edge and the bar would cover the first rows.
-// Plugging the printer in opens the app, and accepting that prompt grants the USB permission.
 [Activity(Label = "PL TestHost", MainLauncher = true, Exported = true, LaunchMode = LaunchMode.SingleTop, Theme = "@android:style/Theme.Material.Light.NoActionBar")]
-[IntentFilter([UsbManager.ActionUsbDeviceAttached])]
-[MetaData(UsbManager.ActionUsbDeviceAttached, Resource = "@xml/device_filter")]
 public class MainActivity : Activity
 {
     private const string LogTag = "PLTestHost";
     private const string DefaultDeviceUrl = "tcp://192.168.178.58:6666";
-
-    /// <summary>The POSNET printer's own USB ids — the same device that shows up as COM9 on Windows.</summary>
-    private const string UsbDeviceUrl = "usbhost://1424:10B0";
 
     private EditText _deviceUrl = null!;
     private TextView _output = null!;
@@ -54,11 +47,6 @@ public class MainActivity : Activity
         _deviceUrl.SetSingleLine(true);
         layout.AddView(_deviceUrl);
 
-        var addresses = new LinearLayout(this) { Orientation = Orientation.Horizontal };
-        AddAddressButton(addresses, "LAN", DefaultDeviceUrl);
-        AddAddressButton(addresses, "USB", UsbDeviceUrl);
-        layout.AddView(addresses);
-
         AddButton(layout, "Echo", EchoAsync);
         AddButton(layout, "Inbetriebnahme", () => SignSampleAsync("SignRequestLifecycle_InitialOperation/initial-operation.json"));
         AddButton(layout, "Barverkauf", () => SignSampleAsync("SignRequestReceipt_CashSaleReceipt/cash-sale.json"));
@@ -70,13 +58,6 @@ public class MainActivity : Activity
         layout.AddView(scroll);
 
         SetContentView(layout);
-    }
-
-    private void AddAddressButton(LinearLayout layout, string text, string deviceUrl)
-    {
-        var button = new Button(this) { Text = text };
-        button.Click += (_, _) => _deviceUrl.Text = deviceUrl;
-        layout.AddView(button, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
     }
 
     private void AddButton(LinearLayout layout, string text, Func<Task> action)
@@ -145,18 +126,8 @@ public class MainActivity : Activity
         var scuConfiguration = configuration.ftSignaturCreationDevices.Single();
         scuConfiguration.Configuration["DeviceUrl"] = deviceUrl;
 
-        // Without the permission the SCU still builds, and reports the printer as unreachable at
-        // the first command — asked here, the user sees why.
-        if (PosNetDeviceAddress.Parse(deviceUrl) is PosNetDeviceAddress.UsbHost usb)
-        {
-            var granted = await PosNetUsbPermission.RequestAsync(this, usb);
-            Write(granted ? $"USB-Zugriff auf {usb} erteilt." : $"Kein USB-Zugriff auf {usb}: nicht angesteckt oder abgelehnt.");
-        }
-
-        // The previous cashbox lets go of the printer first — over USB its interface stays claimed
-        // otherwise, and the new one could not open it.
         ReleaseMiddleware();
-        _cashBox = new CashBoxBuilderPL { ConfigureScuServices = services => services.AddPosNetAndroidUsbHost(this) };
+        _cashBox = new CashBoxBuilderPL();
         _builder = new CashBoxBuilder(_cashBox, queueConfiguration, scuConfiguration, configuration.ftCashBoxId, Guid.NewGuid());
         _middleware = await Task.Run(_builder.Build);
         _builtForDeviceUrl = deviceUrl;

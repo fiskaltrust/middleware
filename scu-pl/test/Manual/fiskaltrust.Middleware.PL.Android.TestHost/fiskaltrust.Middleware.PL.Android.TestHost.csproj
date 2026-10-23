@@ -31,7 +31,6 @@
         <ProjectReference Include="..\..\..\..\queue\src\fiskaltrust.Middleware.Localization.QueuePL\fiskaltrust.Middleware.Localization.QueuePL.csproj" />
         <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.InMemory\fiskaltrust.Middleware.SCU.PL.InMemory.csproj" />
         <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet\fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />
-        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.PL.PosNet.Android\fiskaltrust.Middleware.SCU.PL.PosNet.Android.csproj" />
         <ProjectReference Include="..\..\fiskaltrust.Middleware.SCU.PL.TestSupport\fiskaltrust.Middleware.SCU.PL.TestSupport.csproj" />
     </ItemGroup>
 

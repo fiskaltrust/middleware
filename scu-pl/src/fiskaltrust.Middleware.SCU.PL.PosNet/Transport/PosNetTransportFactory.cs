@@ -15,8 +15,8 @@ public static class PosNetTransportFactory
     /// </summary>
     /// <param name="usbHostLinks">
     /// The platform's way to open a USB device itself, needed only for a <c>usbhost://</c> address.
-    /// The SCU cannot bring one of its own: the USB host API is the platform's (on Android:
-    /// <c>fiskaltrust.Middleware.SCU.PL.PosNet.Android</c>), so the host registers it.
+    /// The SCU cannot bring one of its own: the USB host API is the platform's, so the host owns the
+    /// driver and registers it (the fiskaltrust Android launcher does).
     /// </param>
     public static IPosNetTransport Create(PosNetConfiguration configuration, IPosNetUsbHostLinkFactory? usbHostLinks = null) => configuration.ParseDeviceAddress() switch
     {
@@ -24,7 +24,7 @@ public static class PosNetTransportFactory
         PosNetDeviceAddress.Serial serial => new SerialPosNetTransport(serial, configuration),
         PosNetDeviceAddress.UsbHost usb when usbHostLinks is not null => new UsbHostPosNetTransport(usb, configuration, usbHostLinks),
         PosNetDeviceAddress.UsbHost usb => throw new NotSupportedException(
-            $"The device address '{usb}' is opened by the host application over USB, and this host registers no {nameof(IPosNetUsbHostLinkFactory)} — on Android, add fiskaltrust.Middleware.SCU.PL.PosNet.Android; elsewhere, use serial:// with the printer's COM port."),
+            $"The device address '{usb}' is opened by the host application over USB, and this host registers no {nameof(IPosNetUsbHostLinkFactory)} — on Android, run it in the fiskaltrust Android launcher; elsewhere, use serial:// with the printer's COM port."),
         var other => throw new NotSupportedException($"No transport for the device address '{other}'."),
     };
 }

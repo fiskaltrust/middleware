@@ -194,21 +194,18 @@ has the Polish recipes. The v1 launcher cannot host `QueuePL` (net461 vs. net8.0
 
 ### On Android
 
-The production Android launcher is a legacy Xamarin.Android app that cannot reference the net8.0
-PL packages, so Android is exercised with a test host of its own:
-[`PL.Android.TestHost`](test/Manual/fiskaltrust.Middleware.PL.Android.TestHost) runs `QueuePL` with
-the PosNet SCU in-process (in-memory storage — there is no PL SQLite storage yet), built by the same
-`CashBoxBuilderPL` the desktop launcher uses, with one button per business case.
+The fiskaltrust Android launcher hosts `QueuePL` and the PosNet SCU in-process, and it **owns the USB
+driver**: Android gives an app no serial port, so a `usbhost://1424:10B0` printer is opened through
+the Android USB host API by the launcher (link, interface claiming, line coding, USB permission). The
+SCU stays one package, `SCU.PL.PosNet`, and only speaks the POSNET protocol over the link it is given
+([`IPosNetUsbHostLinkFactory`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transport/IPosNetUsbHostLink.cs),
+registered by the host). The protocol side —
+[`UsbHostPosNetTransport`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transport/UsbHostPosNetTransport.cs)
+— is platform-neutral and unit-tested. USB is tested with the launcher on a POSNET Thermal over USB-OTG.
 
-- **Over the network**, `tcp://…` works unchanged, also from the Android emulator.
-- **Over USB**, Android gives an app no serial port, so the printer is opened through the USB host
-  API: `usbhost://1424:10B0` and
-  [`SCU.PL.PosNet.Android`](src/fiskaltrust.Middleware.SCU.PL.PosNet.Android), which a host adds
-  with `services.AddPosNetAndroidUsbHost(context)`. The protocol side —
-  [`UsbHostPosNetTransport`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transport/UsbHostPosNetTransport.cs)
-  — is platform-neutral and unit-tested; the Android link only moves bytes. It needs a physical
-  device with USB-OTG — the emulator cannot pass a USB device through on Windows — and has not yet
-  been run against a printer.
+[`PL.Android.TestHost`](test/Manual/fiskaltrust.Middleware.PL.Android.TestHost) runs `QueuePL` with
+the PosNet SCU over the network (`tcp://…`, also from the Android emulator), built by the same
+`CashBoxBuilderPL` the desktop launcher uses, with one button per business case.
 
 ```powershell
 # with an emulator or a device attached (adb devices)
@@ -216,8 +213,8 @@ dotnet build scu-pl/test/Manual/fiskaltrust.Middleware.PL.Android.TestHost -f ne
 adb logcat -s PLTestHost
 ```
 
-The Android projects are not in the solution: building them needs the .NET `android` workload,
-which CI does not install.
+The Android test host is not in the solution: building it needs the .NET `android` workload, which
+the test job does not install; CI builds it in a job of its own.
 
 ---
 
