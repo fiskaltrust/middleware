@@ -1,0 +1,37 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "fr-b2b-invoice",
+  "cbReceiptMoment": "2026-08-04T11:00:00Z",
+  "cbCustomer": {
+    "CustomerName": "Societe Exemple SARL",
+    "CustomerVATId": "FR12345678901",
+    "CustomerStreet": "1 rue de la Paix",
+    "CustomerZip": "75002",
+    "CustomerCity": "Paris",
+    "CustomerCountry": "FR"
+  },
+  "cbChargeItems": [
+    {
+      "Quantity": 2,
+      "Description": "Prestation de service",
+      "Amount": 240.00,
+      "VATRate": 20,
+      "ftChargeItemCase": 5067147715117318147,
+      "Currency": "EUR"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Virement",
+      "Amount": 240.00,
+      "ftPayItemCase": 5067147715117318148,
+      "Currency": "EUR"
+    }
+  ],
+  "cbReceiptAmount": 240.00,
+  "ftReceiptCase": 5067147715117322242,
+  "Currency": "EUR"
+}

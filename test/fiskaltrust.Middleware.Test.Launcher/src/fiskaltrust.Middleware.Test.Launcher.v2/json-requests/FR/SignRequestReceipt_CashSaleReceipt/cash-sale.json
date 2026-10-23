@@ -1,0 +1,29 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "fr-cash-sale",
+  "cbReceiptMoment": "2026-08-04T10:00:00Z",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Description": "Cafe expresso",
+      "Amount": 2.40,
+      "VATRate": 10,
+      "ftChargeItemCase": 5067147715117318148,
+      "Currency": "EUR"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Especes",
+      "Amount": 2.40,
+      "ftPayItemCase": 5067147715117318145,
+      "Currency": "EUR"
+    }
+  ],
+  "cbReceiptAmount": 2.40,
+  "ftReceiptCase": 5067147715117318145,
+  "Currency": "EUR"
+}
