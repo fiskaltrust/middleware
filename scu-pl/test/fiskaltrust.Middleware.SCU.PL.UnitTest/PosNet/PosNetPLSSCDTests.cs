@@ -162,9 +162,35 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
 
-        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        // The register still answers its state and is idle, so the failed guard is final: no waiting.
+        transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt", "!sprn", "!sdev");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+    }
+
+    /// <summary>
+    /// The connection drops after trend, during the footer lines (measured on a POSNET over USB by
+    /// pulling the cable): the receipt is fiscal, so the SCU waits until the register is back and idle,
+    /// then reads the receipt's numbers — a fiscal receipt is never reported without them because of a
+    /// cut. The footer failure is reported, with the instruction not to send the receipt again.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_ConnectionLostAfterTrend_WaitsForTheRegister_AndStillReportsTheReceiptNumber()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.Disconnect(atMnemonic: "trftrln", commands: 12);
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithFooterLinesRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted)
+            .Which.Data.Should().Be("the printer stopped answering or was disconnected — the additional lines were not printed. The fiscal receipt was issued: do not send it again.");
+        // Nothing that prints was sent again: one trend, no prncancel.
+        transport.SentMnemonics.Count(m => m == "trend").Should().Be(1);
+        transport.SentMnemonics.Should().NotContain("prncancel");
     }
 
     [Fact]
@@ -1263,6 +1289,19 @@ public class PosNetPLSSCDTests
             _failFromOccurrence[mnemonic] = occurrence;
         }
 
+        /// <summary>
+        /// The connection drops at the first <paramref name="atMnemonic"/>: it and the next commands, up to
+        /// <paramref name="commands"/> in all, fail as a dropped connection does; then the register is back.
+        /// </summary>
+        public void Disconnect(string atMnemonic, int commands)
+        {
+            _disconnectAt = atMnemonic;
+            _disconnectedCommands = commands;
+        }
+
+        private string? _disconnectAt;
+        private int _disconnectedCommands;
+
         /// <summary>The register executes the command but its answer arrives corrupted (CRC mismatch).</summary>
         public void AnswerUnreadably(string mnemonic) => _unreadable.Add(mnemonic);
 
@@ -1279,6 +1318,16 @@ public class PosNetPLSSCDTests
             var mnemonic = payload.Split('\t')[0];
             SentMnemonics.Add(mnemonic);
             SentPayloads.Add(payload);
+
+            if (_disconnectAt == mnemonic)
+            {
+                _disconnectAt = null;
+            }
+            if (_disconnectAt is null && _disconnectedCommands > 0)
+            {
+                _disconnectedCommands--;
+                throw new PosNetAmbiguousResponseException("Reading from the printer failed.");
+            }
 
             var armed = !_failFromOccurrence.TryGetValue(mnemonic, out var from) || SentMnemonics.Count(m => m == mnemonic) >= from;
             if (armed && _failures.TryGetValue(mnemonic, out var failure))

@@ -106,8 +106,14 @@ Notable mapping rules, all covered by unit tests:
   readback. Only if the register completed exactly one receipt (`bn`) and numbered exactly one (`bt`,
   which a receipt canceled elsewhere also advances) does the SCU sign anything. The clock is signed
   only with a known offset: `tm` must state it, and `da` is read as Warsaw time, to the minute. A
-  failed or unprovable readback leaves the values out rather than failing a receipt that is already
-  printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
+  readback the register could not answer (connection lost after `trend` — measured by pulling the
+  USB cable during the footer lines) is **waited for without a time limit** and read again once the
+  register is idle, so a cut never costs a fiscal receipt its number. An unprovable readback from a
+  register that answers (another document came in between) leaves the values out rather than
+  failing a receipt that is already printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
+
+  Anything that fails after `trend` (footer lines, payment slip) is reported as
+  `AdditionalPrintoutNotPrinted` ending in "The fiscal receipt was issued: do not send it again."
 
 * **The receipt footer** ([`PosNetPrintout`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetPrintout.cs), middleware#845).
   Layout measured on a POSNET against a real H&M PL receipt:

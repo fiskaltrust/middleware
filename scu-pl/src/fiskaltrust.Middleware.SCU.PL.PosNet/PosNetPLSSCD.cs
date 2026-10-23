@@ -283,10 +283,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             // in the response instead.
             await TryEndFooterAsync();
             response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Dodatkowe linie nie wydrukowane",
-                exception is PLDeviceErrorException deviceError ? $"?{deviceError.ErrorCode}: {deviceError.Message}" : exception.Message);
+                DescribeFailureAfterReceipt("the additional lines were not printed", exception));
         }
 
-        var anchor = await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
+        var anchor = await ReadReceiptAnchorAsync(countersBefore);
         if (anchor is not null)
         {
             EnrichWithReceiptAnchor(response, anchor);
@@ -324,8 +324,50 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             await TryCancelAsync();
             response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Potwierdzenie płatności nie wydrukowane",
-                exception is PLDeviceErrorException deviceError ? $"?{deviceError.ErrorCode}: {deviceError.Message}" : exception.Message);
+                DescribeFailureAfterReceipt("the payment slip was not printed", exception));
         }
+    }
+
+    /// <summary>
+    /// Reads the anchor of the receipt just closed. The receipt is fiscal by now, so a readback the
+    /// register could not answer — the connection dropped after trend, measured on a POSNET over USB by
+    /// pulling the cable during the footer lines — is not given up on: the SCU waits, without a time
+    /// limit like <see cref="ResolveSilentTrendAsync"/>, until the register is idle and reads it again.
+    /// A fiscal receipt reported without its number could not be told apart from the next one.
+    /// There is nothing to wait for without a baseline from before trinit (the anchor can never be
+    /// proven), nor when the register answers and is idle: then its counters are final, and a missing
+    /// anchor means another document came in between, which the readback refuses to guess about.
+    /// </summary>
+    private async Task<PosNetReceiptAnchor?> ReadReceiptAnchorAsync(PosNetReceiptCounters countersBefore)
+    {
+        var anchor = await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
+        if (anchor is not null || countersBefore.CompletedReceipts is null || countersBefore.LastReceiptNumber is null)
+        {
+            return anchor;
+        }
+        if (await PosNetPrinterState.ReadAsync(_client) is { Answered: true, IsIdle: true })
+        {
+            return anchor;
+        }
+        await WaitUntilIdleAsync();
+        return await PosNetReceiptReadback.ReadAsync(_client, countersBefore, s_registerZone);
+    }
+
+    /// <summary>
+    /// The response text for something that failed after trend. It leads with what failed and ends with
+    /// the one fact the caller must act on: the receipt itself was issued, so it must not be sent again.
+    /// The transport's own wording ("verify the device before retrying") is meant for a command whose
+    /// outcome is open and would invite exactly the resend that prints a second fiscal receipt.
+    /// </summary>
+    private static string DescribeFailureAfterReceipt(string what, Exception exception)
+    {
+        var cause = exception switch
+        {
+            PLDeviceErrorException deviceError => $"?{deviceError.ErrorCode}: {deviceError.Message}",
+            PLDeviceUnreachableException => "the printer stopped answering or was disconnected",
+            _ => exception.Message,
+        };
+        return $"{cause} — {what}. The fiscal receipt was issued: do not send it again.";
     }
 
     /// <summary>
