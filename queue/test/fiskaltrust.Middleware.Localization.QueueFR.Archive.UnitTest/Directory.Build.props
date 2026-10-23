@@ -1,0 +1,7 @@
+<Project>
+    <!--
+      Skips queue/test/Directory.Build.props and queue/src/Directory.Build.props: the archive package has
+      no dependency on fiskaltrust.interface or fiskaltrust.storage, and neither have its tests.
+    -->
+    <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props" />
+</Project>
