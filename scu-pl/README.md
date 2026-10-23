@@ -112,7 +112,7 @@ Notable mapping rules, all covered by unit tests:
   register that answers (another document came in between) leaves the values out rather than
   failing a receipt that is already printed. See [`PosNetReceiptReadback`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetReceiptReadback.cs).
 
-  Anything that fails after `trend` (footer lines, payment slip) is reported as
+  Anything that fails after `trend` (additional lines, payment slips) is reported as
   `AdditionalPrintoutNotPrinted` ending in "The fiscal receipt was issued: do not send it again."
 
 * **The receipt footer** ([`PosNetPrintout`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetPrintout.cs), middleware#845).
@@ -127,6 +127,20 @@ Notable mapping rules, all covered by unit tests:
   | free text, left-aligned, normal size | `PL.printout.lines[]` with `align: "left"` | `trftrln id41` — the spec lists it without parameter, but the device prints the text |
   | free text as before | `PL.printout.lines[]` with only `text` | `trftrln id25` — right-aligned behind a 15-character column |
   | up to 3 info lines, optionally centred | `PL.printout.infoLines`, `infoLinesAlign: "center"` | `ftrcfg ln` (LF-separated, `&c`), `lb0` |
+  | lines for the whole receipt (general [additional lines](https://docs.fiskaltrust.eu/docs/poscreators/middleware-doc/general/cash-register-integration/additional-lines)) | `ftReceiptCaseData.cbReceiptLines` | `trftrln id41`, after the `PL.printout.lines` |
+  | payment slip (card terminal receipt), per pay item | `ftPayItemCaseData.Receipt`, else `cbPayItemLines` | `trftrln id41`, after the receipt lines, in pay item order |
+
+  **Payment slips print inside the fiscal receipt** ([`PosNetAdditionalLines`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetAdditionalLines.cs),
+  middleware#844), not as a non-fiscal document of their own: a super-form slip (`formstart fn200`)
+  took a header number of its own (the "nr" top right, `scnt hn`) and was cut off from the receipt;
+  `ftrcfg fe=3`, which should print a non-fiscal document straight under the receipt, still printed
+  it with its own header and cut on a POSNET Thermal. As additional lines, receipt and slip are one
+  document, one number, one cut (measured: `hn` +1). Each entry is one line of up to 56 characters
+  (80 mm paper; a register set to 40 characters per line refuses longer ones), an entry with line
+  breaks is split, an empty one prints as an empty line, and `&` is printed literally. The
+  register prints at most 60 lines after a receipt, `printout.lines`, `cbReceiptLines` and slips
+  together; more are rejected before anything is sent. The info lines and the barcode always print
+  last, below the slip.
 
   A value longer than its field is refused by the register with error 10 (`PROTO_ERR_DATA_LENGTH`),
   not truncated. The SCU checks the limits itself and rejects the receipt with a validation error

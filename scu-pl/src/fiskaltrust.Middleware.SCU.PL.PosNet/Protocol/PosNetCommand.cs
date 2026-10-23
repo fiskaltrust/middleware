@@ -296,16 +296,5 @@ public static class PosNetCommands
     /// </summary>
     public static PosNetCommand SdevAsync() => new("!sdev");
 
-    /// <summary>Starts a non-fiscal printout (formatka) — fn 200 is the super-form, fh the header line (POT-I-DEV-37 p. 236).</summary>
-    public static PosNetCommand Formstart(int form, int header)
-        => new("formstart", [new("fn", form.ToString(CultureInfo.InvariantCulture)), new("fh", header.ToString(CultureInfo.InvariantCulture))]);
-
-    /// <summary>A free, formatted line of the super-form: up to 56 printable characters, formatting codes as in hdrset (p. 240).</summary>
-    public static PosNetCommand Formformattedline(int form, string text)
-        => new("formformattedline", [new("s1", text), new("fn", form.ToString(CultureInfo.InvariantCulture))]);
-
-    /// <summary>Ends a non-fiscal printout (p. 246).</summary>
-    public static PosNetCommand Formend(int form) => new("formend", [new("fn", form.ToString(CultureInfo.InvariantCulture))]);
-
     public static PosNetCommand Prncancel() => new("prncancel");
 }

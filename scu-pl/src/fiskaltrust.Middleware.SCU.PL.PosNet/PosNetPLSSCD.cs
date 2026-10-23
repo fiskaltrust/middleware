@@ -172,7 +172,6 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         // is the one read the mapping needs before it can refuse a receipt.
         var eReceiptCustomerId = PosNetReceiptMapper.GetEReceiptCustomerId(request);
         var printout = PosNetPrintoutReader.Read(request);
-        var paymentSlips = PosNetPaymentSlip.Read(request);
         var commands = PosNetReceiptMapper.MapSale(request, await GetPtuSlotResolverAsync());
 
         // The numer unikatowy is a legal element of the fiscal document, so the response carries
@@ -296,41 +295,6 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             response.EnrichWithEDocumentId(documentId);
             await TryReadEDocumentDeliveryStateAsync(response, documentId);
-        }
-
-        foreach (var slip in paymentSlips)
-        {
-            await PrintPaymentSlipAsync(slip, printout, response);
-        }
-    }
-
-    /// <summary>
-    /// Prints a payment slip as a non-fiscal super-form after the receipt. The receipt is already
-    /// fiscal, so a rejected slip must not fail it: the printout is cancelled and the rejection
-    /// travels in the response, as a rejected footer line does. The cashier and register of the
-    /// receipt are sent again first: ftrcfg with ca0 holds them for the next printout only, which was
-    /// the receipt, and the slip's footer would otherwise show the register's default (#001 KIEROWNIK).
-    /// </summary>
-    private async Task PrintPaymentSlipAsync(PosNetPaymentSlip slip, PosNetPrintout? printout, ReceiptResponse response)
-    {
-        try
-        {
-            if (printout is { Cashier: not null } or { Register: not null })
-            {
-                await _client.ExecuteAsync(PosNetCommands.Ftrcfg(null, 0, printout.Cashier, printout.Register));
-            }
-            await _client.ExecuteAsync(PosNetCommands.Formstart(PosNetPaymentSlip.SuperForm, PosNetPaymentSlip.CardPaymentHeader));
-            foreach (var line in slip.Lines)
-            {
-                await _client.ExecuteAsync(PosNetCommands.Formformattedline(PosNetPaymentSlip.SuperForm, PosNetPaymentSlip.ToFormLine(line)));
-            }
-            await _client.ExecuteAsync(PosNetCommands.Formend(PosNetPaymentSlip.SuperForm));
-        }
-        catch (Exception exception)
-        {
-            await TryCancelAsync();
-            response.AddSignatureItem(SignatureTypePL.AdditionalPrintoutNotPrinted, "Potwierdzenie płatności nie wydrukowane",
-                DescribeFailureAfterReceipt("the payment slip was not printed", exception));
         }
     }
 

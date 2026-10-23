@@ -144,7 +144,7 @@ public class PosNetPLSSCDTests
     {
         var transport = FakePosNetTransport.Confirming();
         // Parsed on its own, tm would take the host's zone; da is the register's wall clock.
-        transport.Answer("rtcget", "rtcget\tda2026-10-09;11:49\ttm2026-10-09T11:49:13\t");
+        transport.Answer("rtcget", "rtcget	da2026-10-09;11:49	tm2026-10-09T11:49:13	");
         var sut = CreateSut(transport);
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
@@ -223,7 +223,7 @@ public class PosNetPLSSCDTests
     public async Task ProcessReceiptAsync_DocumentNotFoundInTheProtectedMemory_SignsNoDocumentNumber()
     {
         var transport = FakePosNetTransport.Confirming();
-        transport.Answer("eclastdocnoget", "eclastdocnoget\tdi0\t");
+        transport.Answer("eclastdocnoget", "eclastdocnoget	di0	");
         var sut = CreateSut(transport);
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
@@ -236,7 +236,7 @@ public class PosNetPLSSCDTests
     {
         var transport = FakePosNetTransport.Confirming();
         // POT-I-DEV-05 firmware answers rtcget with da only; winter time here, so +01:00.
-        transport.Answer("rtcget", "rtcget\tda2026-01-15;9:05\t");
+        transport.Answer("rtcget", "rtcget	da2026-01-15;9:05	");
         var sut = CreateSut(transport);
 
         var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
@@ -550,50 +550,48 @@ public class PosNetPLSSCDTests
         return request;
     }
 
-    private static ProcessRequest CreateSaleWithCardSlipRequest()
+    private static ProcessRequest CreateSaleWithReceiptLinesAndCardSlipRequest()
     {
         var request = CreateSaleRequest();
-        request.ReceiptRequest.cbUser = "238689";
-        request.ReceiptRequest.cbTerminalID = "02";
-        request.ReceiptRequest.cbPayItems[0].ftPayItemCaseData = new { cbPayItemLines = new[] { "CARDHOLDER COPY", "APPROVED" } };
+        request.ReceiptRequest.ftReceiptCaseData = new { cbReceiptLines = new[] { "Thank you, H&M" } };
+        request.ReceiptRequest.cbPayItems[0].ftPayItemCaseData = new { cbPayItemLines = new[] { "CARDHOLDER COPY", "", "APPROVED" } };
         return request;
     }
 
     /// <summary>
-    /// The card slip follows the fiscal receipt as super-form 200 headed "Potwierdzenie płatności kartą"
-    /// (header 52). The cashier and register go out again right before it: ftrcfg ca0 held them for the
-    /// receipt only, and the slip's footer would otherwise show the register's defaults.
+    /// The general additional lines print inside the fiscal receipt as left-aligned additional lines
+    /// (trftrln id41) — the receipt lines, then the card slip — so receipt and slip are one document
+    /// with one header number and no cut between them.
     /// </summary>
     [Fact]
-    public async Task ProcessReceiptAsync_SaleWithCardSlip_PrintsItAfterTheReceipt_WithTheReceiptsCashierAndRegister()
+    public async Task ProcessReceiptAsync_ReceiptLinesAndCardSlip_PrintInsideTheReceipt()
     {
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
 
-        var result = await sut.ProcessReceiptAsync(CreateSaleWithCardSlipRequest());
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithReceiptLinesAndCardSlipRequest());
 
         transport.SentMnemonics.SkipWhile(m => m != "trend").Should().Equal(
-            "trend", "eclastdocnoget", "rtcget", "scnt", "ftrcfg", "formstart", "formformattedline", "formformattedline", "formend");
-        var slipPayloads = transport.SentPayloads.SkipWhile(p => !p.StartsWith("trend")).ToList();
-        slipPayloads.Should().Contain(p => p.StartsWith("ftrcfg\tcc238689\tcn02\tca0\t"));
-        slipPayloads.Should().Contain(p => p.StartsWith("formstart\tfn200\tfh52\t"));
+            "trend", "trftrln", "trftrln", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        transport.SentPayloads.Where(p => p.StartsWith("trftrln")).Select(p => p[..p.LastIndexOf('#')]).Should().Equal(
+            "trftrln\tid41\tnaThank you, H&&M\t", "trftrln\tid41\tnaCARDHOLDER COPY\t", "trftrln\tid41\tna \t", "trftrln\tid41\tnaAPPROVED\t");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_RejectedCardSlip_KeepsTheFiscalReceipt_AndSaysNotToResendIt()
+    public async Task ProcessReceiptAsync_RejectedCardSlipLine_KeepsTheFiscalReceipt_AndSaysNotToResendIt()
     {
         var transport = FakePosNetTransport.Confirming();
-        transport.FailWithDeviceError("formformattedline", 2000);
+        transport.FailWithDeviceError("trftrln", 2000);
         var sut = CreateSut(transport);
 
-        var result = await sut.ProcessReceiptAsync(CreateSaleWithCardSlipRequest());
+        var result = await sut.ProcessReceiptAsync(CreateSaleWithReceiptLinesAndCardSlipRequest());
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer dokumentu fiskalnego" && s.Data == "85");
-        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Potwierdzenie płatności nie wydrukowane")
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Dodatkowe linie nie wydrukowane")
             .Which.Data.Should().StartWith("?2000").And.EndWith("The fiscal receipt was issued: do not send it again.");
-        transport.SentMnemonics.Last().Should().Be("prncancel");
+        transport.SentMnemonics.Should().NotContain("prncancel");
     }
 
     [Fact]
@@ -783,7 +781,7 @@ public class PosNetPLSSCDTests
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "dailyrep", "scnt");
         // The register validates the date against its own clock, so the day closed is the receipt
         // moment in Warsaw time — 12:00 CEST on the 8th here — not the host's local day.
-        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-08\t");
+        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep	da2026-09-08	");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Numer raportu dobowego").Which.Data.Should().Be("13");
     }
 
@@ -802,7 +800,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep\tda2026-09-09\t");
+        transport.SentPayloads.Single(p => p.StartsWith("dailyrep")).Should().StartWith("dailyrep	da2026-09-09	");
     }
 
     [Fact]
@@ -820,7 +818,7 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         transport.SentMnemonics.Should().Equal("scomm", "monthlyrep");
-        transport.SentPayloads.Single(p => p.StartsWith("monthlyrep")).Should().StartWith("monthlyrep\tda2026-10-01\t");
+        transport.SentPayloads.Single(p => p.StartsWith("monthlyrep")).Should().StartWith("monthlyrep	da2026-10-01	");
         // A periodic report advances no counter, so it signs no report number.
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer raportu dobowego");
     }
@@ -841,7 +839,7 @@ public class PosNetPLSSCDTests
         // The register has no yearly report — and the settlement report (raport rozliczeniowy) would
         // end its fiscal life — so the year is a plain periodic report by dates.
         transport.SentMnemonics.Should().Equal("scomm", "periodicrepbydates");
-        transport.SentPayloads.Single(p => p.StartsWith("periodicrepbydates")).Should().StartWith("periodicrepbydates\tfd2026-01-01\ttd2026-12-31\t");
+        transport.SentPayloads.Single(p => p.StartsWith("periodicrepbydates")).Should().StartWith("periodicrepbydates	fd2026-01-01	td2026-12-31	");
     }
 
     private static ProcessRequest CreateEReceiptSaleRequest(string eReceiptCustomerId = "KID0123456789ABC")
@@ -1021,7 +1019,7 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         transport.SentMnemonics.Should().Equal("scomm", "stocash");
-        transport.SentPayloads.Single(p => p.StartsWith("stocash")).Should().StartWith("stocash\tkw369\t");
+        transport.SentPayloads.Single(p => p.StartsWith("stocash")).Should().StartWith("stocash	kw369	");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Numer dokumentu fiskalnego");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Zwrot towaru (wydruk niefiskalny)").Which.Data.Should().Be("3.69");
         result.ReceiptResponse.ftCashBoxIdentification.Should().Be("ZBF 2101002392");
@@ -1105,12 +1103,12 @@ public class PosNetPLSSCDTests
     /// a fiscalized register reported as NonFiscal can never activate a PL queue.
     /// </summary>
     [Theory]
-    [InlineData("scomm\tfsT\ttzN\tts0\thrT\ttdN\t", PLFiscalizationState.Fiscalized)]
-    [InlineData("scomm\tfsN\ttzN\tts0\thrT\ttdN\t", PLFiscalizationState.NonFiscal)]
-    [InlineData("scomm\tfs1\ttz1\tts0\thr1\t", PLFiscalizationState.Fiscalized)]
-    [InlineData("scomm\tfs0\ttz1\tts0\thr1\t", PLFiscalizationState.NonFiscal)]
-    [InlineData("scomm\ttzN\tts0\thrT\t", PLFiscalizationState.Unknown)]
-    [InlineData("scomm\tfsX\ttzN\tts0\thrT\t", PLFiscalizationState.Unknown)]
+    [InlineData("scomm	fsT	tzN	ts0	hrT	tdN	", PLFiscalizationState.Fiscalized)]
+    [InlineData("scomm	fsN	tzN	ts0	hrT	tdN	", PLFiscalizationState.NonFiscal)]
+    [InlineData("scomm	fs1	tz1	ts0	hr1	", PLFiscalizationState.Fiscalized)]
+    [InlineData("scomm	fs0	tz1	ts0	hr1	", PLFiscalizationState.NonFiscal)]
+    [InlineData("scomm	tzN	ts0	hrT	", PLFiscalizationState.Unknown)]
+    [InlineData("scomm	fsX	tzN	ts0	hrT	", PLFiscalizationState.Unknown)]
     public async Task GetInfoAsync_ReadsTheStatusFlagsOfARealPrinter(string status, PLFiscalizationState expected)
     {
         var transport = FakePosNetTransport.Confirming();
@@ -1217,14 +1215,14 @@ public class PosNetPLSSCDTests
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
-        request.ReceiptRequest.cbChargeItems[0].Description = "Candies\tvt0\tpr1";
+        request.ReceiptRequest.cbChargeItems[0].Description = "Candies	vt0	pr1";
 
         await sut.ProcessReceiptAsync(request);
 
         // One vt and one pr, and the name travels as text: a TAB inside a value would otherwise
         // open further protocol fields and silently change the PTU slot and the price.
         var trline = transport.SentPayloads.Single(p => p.StartsWith("trline"));
-        trline.Should().StartWith("trline\tnaCandies vt0 pr1\tvt1\tpr999\t#");
+        trline.Should().StartWith("trline	naCandies vt0 pr1	vt1	pr999	#");
     }
 
     /// <summary>
@@ -1242,7 +1240,7 @@ public class PosNetPLSSCDTests
 
         public List<string> SentPayloads { get; } = [];
 
-        private string _scommResponse = "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t";
+        private string _scommResponse = "scomm	fsT	tzN	ts0	hrT	nuZBF 2101002392	tdN	";
 
         /// <summary>Completed receipts of the day (bn = bt); every confirmed trend completes one.</summary>
         private int _completedReceipts = 84;
@@ -1361,7 +1359,7 @@ public class PosNetPLSSCDTests
         public Task<byte[]> SendReceiveAsync(byte[] frame, CancellationToken cancellationToken = default)
         {
             var payload = Encoding.ASCII.GetString(frame, 1, frame.Length - 2);
-            var mnemonic = payload.Split('\t')[0];
+            var mnemonic = payload.Split('	')[0];
             SentMnemonics.Add(mnemonic);
             SentPayloads.Add(payload);
 
@@ -1381,7 +1379,7 @@ public class PosNetPLSSCDTests
                 var exception = failure();
                 if (exception is ExpectedDeviceError deviceError)
                 {
-                    return Task.FromResult(PosNetProtocolTests.EncodeResponse($"{mnemonic}\t?{deviceError.ErrorCode}\t"));
+                    return Task.FromResult(PosNetProtocolTests.EncodeResponse($"{mnemonic}	?{deviceError.ErrorCode}	"));
                 }
                 throw exception;
             }
@@ -1420,30 +1418,30 @@ public class PosNetPLSSCDTests
             // Asynchronous commands are answered under their plain mnemonic.
             if (mnemonic == "!sprn")
             {
-                return Task.FromResult(PosNetProtocolTests.EncodeResponse($"sprn\tpr{(FaultNow() ? _mechanismStatus : 0)}\t"));
+                return Task.FromResult(PosNetProtocolTests.EncodeResponse($"sprn	pr{(FaultNow() ? _mechanismStatus : 0)}	"));
             }
             if (mnemonic == "!sdev")
             {
                 var faulty = SentMnemonics.Count(m => m == "!sprn") >= _faultFrom && SentMnemonics.Count(m => m == "!sprn") <= _faultUntil;
                 return Task.FromResult(PosNetProtocolTests.EncodeResponse(
-                    $"sdev\tds{(faulty ? _deviceStatus : 0)}\tcpT\tqe{(faulty && !_queueEmpty ? "N" : "T")}\tpeN\ttl0\t"));
+                    $"sdev	ds{(faulty ? _deviceStatus : 0)}	cpT	qe{(faulty && !_queueEmpty ? "N" : "T")}	peN	tl0	"));
             }
 
             var responsePayload = _answers.TryGetValue(mnemonic, out var answer) ? answer : mnemonic switch
             {
                 // The T/N flags and the numer unikatowy in the shape a POSNET Online printer answers them.
                 "scomm" => _scommResponse,
-                "scnt" => $"scnt\trd{_dailyReports}\thn{_printouts}\tbn{_completedReceipts}\tbc{_canceledReceipts}\tbt{_completedReceipts + _canceledReceipts}\tfn3\t",
+                "scnt" => $"scnt	rd{_dailyReports}	hn{_printouts}	bn{_completedReceipts}	bc{_canceledReceipts}	bt{_completedReceipts + _canceledReceipts}	fn3	",
                 // One protected-memory sequence across all document types, ahead of the receipt number.
-                "eclastdocnoget" => $"eclastdocnoget\tdi{_completedReceipts + 11}\t",
-                "rtcget" => "rtcget\tda2026-09-08;17:54\ttm2026-09-08T17:54:51+02:00\t",
+                "eclastdocnoget" => $"eclastdocnoget	di{_completedReceipts + 11}	",
+                "rtcget" => "rtcget	da2026-09-08;17:54	tm2026-09-08T17:54:51+02:00	",
                 // The rate table as the office printer reports it after fiscalization: E–G not in use.
-                "sfsk" => "sfsk\tfsT\tcl0\trd12\tvt1\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\trw2026-09-03;16:54\tnuZBF 2101002392\t",
+                "sfsk" => "sfsk	fsT	cl0	rd12	vt1	va23,00	vb8,00	vc5,00	vd0,00	ve101,00	vf101,00	vg101,00	rw2026-09-03;16:54	nuZBF 2101002392	",
                 // The e-paragon binding confirms with the unique eDokument id; the buffer record
                 // reports an electronic document (prN = no paper) that reached the hub (st1).
-                "eparagonidznext" => "eparagonidznext\tha3054\t",
-                "eparagonbufferget" => "eparagonbufferget\thd3054\tprN\tst1\t",
-                _ => $"{mnemonic}\t",
+                "eparagonidznext" => "eparagonidznext	ha3054	",
+                "eparagonbufferget" => "eparagonbufferget	hd3054	prN	st1	",
+                _ => $"{mnemonic}	",
             };
             var responseFrame = PosNetProtocolTests.EncodeResponse(responsePayload);
             if (_unreadable.Contains(mnemonic))
