@@ -21,6 +21,8 @@
     <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.v2/fiskaltrust.Middleware.Localization.v2.csproj" />
 
     <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.QueueES/fiskaltrust.Middleware.Localization.QueueES.csproj" />
+    <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.QueueIT/fiskaltrust.Middleware.Localization.QueueIT.csproj" />
+    <ProjectReference Include="../../../../scu-it/src/fiskaltrust.Middleware.SCU.IT.CustomRTServer/fiskaltrust.Middleware.SCU.IT.CustomRTServer.csproj" />
     <ProjectReference Include="../../../../queue/src/fiskaltrust.Middleware.Localization.QueuePL/fiskaltrust.Middleware.Localization.QueuePL.csproj" />
     <ProjectReference Include="../../../../scu-pl/src/fiskaltrust.Middleware.SCU.PL.InMemory/fiskaltrust.Middleware.SCU.PL.InMemory.csproj" />
     <ProjectReference Include="../../../../scu-pl/src/fiskaltrust.Middleware.SCU.PL.PosNet/fiskaltrust.Middleware.SCU.PL.PosNet.csproj" />

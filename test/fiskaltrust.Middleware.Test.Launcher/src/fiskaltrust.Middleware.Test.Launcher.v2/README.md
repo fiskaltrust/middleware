@@ -14,7 +14,7 @@ cover the usual combinations for F5.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `MW_MARKET` | `PL` | `ES` or `PL` |
+| `MW_MARKET` | `PL` | `ES`, `IT` or `PL` |
 | `MW_QUEUE_CONFIGURATION` | the cashbox configuration, else `queue-configuration[-pl].json` | queue package configuration file, overriding it |
 | `MW_SCU_CONFIGURATION` | the cashbox configuration, else `scu-configuration-{bizkaia,pl-inmemory}.json` | SCU package configuration file, overriding it |
 | `MW_HOST_URL` | — | set to serve over HTTP instead of running the scripted sequence |
@@ -69,6 +69,29 @@ SCU yet.
 
 ```sh
 MW_MARKET=ES dotnet run
+```
+
+### Italy
+
+```sh
+# Custom RT Server, HTTP host
+MW_MARKET=IT MW_SCU_CONFIGURATION=scu-configuration-it.json MW_HOST_URL=http://localhost:1500 dotnet run
+```
+
+The Italian queue runs on the v2 stream but talks to an RT device through the ifPOS.v1 `IITSSCD`
+contract, the only one the Italian SCUs implement; the queue translates at that boundary. The SCU
+file names the package and its parameters, e.g. for the Custom RT Server:
+
+```json
+{
+  "Package": "fiskaltrust.Middleware.SCU.IT.CustomRTServer",
+  "Configuration": {
+    "ServerUrl": "...",
+    "Username": "...",
+    "Password": "...",
+    "RTServerHttpTimeoutInMs": 60000
+  }
+}
 ```
 
 ## Endpoints
