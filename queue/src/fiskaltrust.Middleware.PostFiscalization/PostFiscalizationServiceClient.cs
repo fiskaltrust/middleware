@@ -19,6 +19,7 @@ namespace fiskaltrust.Middleware.PostFiscalization;
 /// <item>The timeout bounds each attempt and is enforced with a <see cref="CancellationToken"/>, so the request is actually cancelled.</item>
 /// <item>Retries happen on timeout, 5xx and connection-level failures only. A 4xx or a malformed body is a deliberate answer and is never retried.</item>
 /// <item>Any outcome other than a 2xx with a well-formed body surfaces as a <see cref="PostFiscalizationServiceException"/>.</item>
+/// <item>Redirects are never followed: a 3xx is a failed call. Following one would re-send the cashbox headers, access token included, to whatever host the redirect names.</item>
 /// </list>
 /// </summary>
 public sealed class PostFiscalizationServiceClient : IEInvoicingService, IEReportingService, IDisposable
@@ -48,7 +49,14 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
     private readonly string _accessToken;
 
     public PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, bool isSandbox, Guid cashBoxId, string accessToken, ILogger logger)
-        : this(service, configuration, isSandbox, cashBoxId, accessToken, logger, new HttpClient()) { }
+        : this(service, configuration, isSandbox, cashBoxId, accessToken, logger, new HttpClient(CreateDefaultHandler())) { }
+
+    /// <summary>
+    /// The handler of the production client. Automatic redirects are off: <see cref="HttpClient"/> re-sends custom
+    /// headers, so following a 3xx would disclose the cashbox access token to whatever host the redirect names, which
+    /// the endpoint validation never saw. A 3xx is handled like any other non-2xx answer, as a failed call.
+    /// </summary>
+    public static HttpClientHandler CreateDefaultHandler() => new() { AllowAutoRedirect = false };
 
     /// <summary>Constructor for tests, which inject a stub <see cref="HttpMessageHandler"/>.</summary>
     public PostFiscalizationServiceClient(PostFiscalizationService service, PostFiscalizationServiceConfiguration configuration, bool isSandbox, Guid cashBoxId, string accessToken, ILogger logger, HttpMessageHandler handler)

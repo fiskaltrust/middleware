@@ -190,6 +190,27 @@ public class PostFiscalizationServiceClientTests
     }
 
     [Fact]
+    public void TheProductionHandler_DoesNotFollowRedirects()
+    {
+        // Following a redirect would re-send x-cashbox-accesstoken to whatever host a 3xx names, possibly another origin than the validated endpoint.
+        using var handler = PostFiscalizationServiceClient.CreateDefaultHandler();
+
+        handler.AllowAutoRedirect.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TreatsARedirect_AsAFailedCall_WithoutRetrying()
+    {
+        var handler = StubHandler.Returning(() => new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = new Uri("https://elsewhere.example.com/v2/einvoicing/validate") } });
+        using var client = CreateClient(handler, maxRetries: 3);
+
+        var exception = await Assert.ThrowsAsync<PostFiscalizationServiceException>(() => client.ValidateReceiptAsync(new ValidateRequest { ReceiptRequest = Request() }));
+
+        handler.Requests.Should().ContainSingle("a redirect is a final answer, not a transient failure, and is never followed");
+        exception.Message.Should().StartWith("HTTP 302");
+    }
+
+    [Fact]
     public async Task DoesNotRetry_OnMalformedBody()
     {
         var handler = StubHandler.Returning(() => Json(HttpStatusCode.OK, "<html>not json</html>"));
