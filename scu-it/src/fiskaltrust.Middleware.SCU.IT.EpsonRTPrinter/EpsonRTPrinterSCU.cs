@@ -398,6 +398,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var current = await ReadLastEmittedDocStatusAsync(receiptReference);
+            if (current == null)
+            {
+                // No answer, whatever the cause. A printer left outside the Registration State refuses this query (a
+                // closure from its keyboard leaves it in the Z state); 1-088 returns it there from any state (protocol
+                // 7.00, p. 21). FpMate sends the same reset before the receipt that follows, so this one cancels
+                // nothing that receipt would not.
+                await ResetPrinter(TimeSpan.FromMilliseconds(_configuration.RecoveryStatusQueryTimeoutMs));
+                current = await ReadLastEmittedDocStatusAsync(receiptReference);
+            }
             // Only a fiscal document is a usable baseline: the progressive number of a non-fiscal document
             // comes from a different counter, and comparing the two could report progress that never happened.
             if (current != null && current.IsFiscalDocument)
@@ -1003,11 +1012,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
     }
 
-    private async Task ResetPrinter()
+    private async Task ResetPrinter(TimeSpan? timeout = null)
     {
         var resetCommand = new PrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
         var xml = SoapSerializer.Serialize(resetCommand);
-        await _httpClient.SendCommandAsync(xml);
+        await _httpClient.SendCommandAsync(xml, timeout);
     }
 
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptResponse receiptResponse)

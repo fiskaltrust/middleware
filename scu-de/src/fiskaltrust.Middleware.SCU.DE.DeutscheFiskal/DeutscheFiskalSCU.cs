@@ -245,7 +245,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 }
                 await StartFccIfNotRunning();
 
-                var clients = await _fccAdminApiProvider.GetClientsAsync();
+                var clients = await GetActiveClientsAsync();
                 var startedTransactions = await _fccErsApiProvider.GetStartedTransactionsAsync(clients.Select(x => x.ClientId));
                 var fccInfo = await _fccAdminApiProvider.GetFccInfoAsync();
                 var tssDetails = await _fccAdminApiProvider.GetTssDetailsAsync();
@@ -301,6 +301,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
         }
 
+        private async Task<List<ClientResponseDto>> GetActiveClientsAsync()
+        {
+            var clients = await _fccAdminApiProvider.GetClientsAsync();
+            var removedClients = clients.Where(x => x.IsRemoved).Select(x => x.ClientId).ToList();
+            if (removedClients.Any())
+            {
+                _logger.LogDebug("Ignoring clients that were removed from the FCC: {RemovedClientIds}", string.Join(", ", removedClients));
+            }
+
+            return clients.Where(x => !x.IsRemoved).ToList();
+        }
+
         private string GetCertificationIdentification()
         {
             if (_configuration.DisplayCertificationIdAddition && !string.IsNullOrEmpty(_configuration.CertificationIdAddition))
@@ -316,7 +328,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             try
             {
                 await StartFccIfNotRunning();
-                var preexistingClients = await _fccAdminApiProvider.GetClientsAsync();
+                var preexistingClients = await GetActiveClientsAsync();
 
                 if (preexistingClients.Any(x => x.ClientId == request.ClientId))
                 {
@@ -330,7 +342,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 await _fccAdminApiProvider.CreateClientAsync(request.ClientId);
                 return new RegisterClientIdResponse
                 {
-                    ClientIds = (await _fccAdminApiProvider.GetClientsAsync()).Select(x => x.ClientId)
+                    ClientIds = (await GetActiveClientsAsync()).Select(x => x.ClientId)
                 };
             }
             catch (FiskalCloudException ex) when (ex.ErrorType == DeutscheFiskalConstants.ErrorTypes.InvalidRegistrationKey)
@@ -358,7 +370,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             try
             {
                 await StartFccIfNotRunning();
-                var existingClients = await _fccAdminApiProvider.GetClientsAsync();
+                var existingClients = await GetActiveClientsAsync();
 
                 if (existingClients.Any(x => x.ClientId == request.ClientId))
                 {
@@ -367,7 +379,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 return new UnregisterClientIdResponse
                 {
-                    ClientIds = (await _fccAdminApiProvider.GetClientsAsync()).Select(x => x.ClientId)
+                    ClientIds = (await GetActiveClientsAsync()).Select(x => x.ClientId)
                 };
             }
             catch (Exception ex)

@@ -441,7 +441,7 @@ public class PortugalReceiptCalculationsTests
         qrCode.Should().Contain("G:NC 20241210001*"); // UniqueIdentificationOfTheDocument - everything after #
         qrCode.Should().Contain("H:0-1*"); // ATCUD
         qrCode.Should().Contain("Q:TESTHASH123*"); // Hash
-        qrCode.Should().Contain("R:3535*"); // SoftwareCertificateNumber
+        qrCode.Should().Contain("R:3083*"); // SoftwareCertificateNumber
         qrCode.Should().Contain($"S:qiid={response.ftQueueItemID}"); // OtherInformation
     }
 
@@ -460,12 +460,12 @@ public class PortugalReceiptCalculationsTests
         var sandboxQrCode = PortugalReceiptCalculations.CreateQRCode(qrCodeHash, issuerTIN, numberSeries, request, response, sandbox: true);
 
         // Assert
-        productionQrCode.Should().Contain("R:3535*");
+        productionQrCode.Should().Contain("R:3083*");
         sandboxQrCode.Should().Contain("R:9999*");
     }
 
     [Theory]
-    [InlineData(false, "3535")]
+    [InlineData(false, "3083")]
     [InlineData(true, "9999")]
     public void AddCertificateSignature_ShouldUseCertificateNumberOfEnvironment(bool sandbox, string expectedCertificateNumber)
     {
