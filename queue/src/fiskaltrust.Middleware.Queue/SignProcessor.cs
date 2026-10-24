@@ -186,6 +186,7 @@ namespace fiskaltrust.Middleware.Queue
                 ReceiptResponse receiptResponse;
                 List<ftActionJournal> countrySpecificActionJournals;
                 Exception exception = null;
+                var queueWasOperational = IsOperational(queue);
                 try
                 {
                     (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
@@ -220,12 +221,15 @@ namespace fiskaltrust.Middleware.Queue
                 actionjournals.AddRange(countrySpecificActionJournals);
 
                 // RFC 712, phase 3: the services that act on this receipt get the fully fiscalized response, only when
-                // fiscalization succeeded. The receipt journal decision below is based on this fiscalization outcome, not
-                // on the final ftState: a finalize failure marks a fiscalized receipt with the error state, that receipt
-                // is journaled like any other fiscalized receipt, and it is returned rather than thrown (there is no
-                // processor exception to rethrow).
+                // fiscalization succeeded: the market processor produced a non-error response on an operational queue.
+                // The markets' queue-state early exits answer with a non-error response and fiscalize nothing, so they
+                // skip this phase (see IsQueueNotOperationalAnswer). The receipt journal decision below keeps its policy
+                // and is based on the error state only: a finalize failure marks a fiscalized receipt with the error
+                // state, that receipt is journaled like any other fiscalized receipt, and it is returned rather than
+                // thrown (there is no processor exception to rethrow).
                 var fiscalizationSucceeded = !receiptResponse.IsError();
-                if (fiscalizationSucceeded)
+                var fiscalized = fiscalizationSucceeded && !IsQueueNotOperationalAnswer(receiptResponse, queueWasOperational, IsOperational(queue));
+                if (fiscalized)
                 {
                     receiptResponse = await FinalizeAsync(v2Request, receiptResponse, queueItem, preflight, actionjournals).ConfigureAwait(false);
                 }
@@ -280,6 +284,24 @@ namespace fiskaltrust.Middleware.Queue
                 await _countrySpecificSignProcessor.FinalTaskAsync(queue, queueItem, data, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
             }
         }
+
+        /// <summary>The v1 flag every market sets on the answer to a receipt its queue cannot process (bit 0 of <c>ftState</c>).</summary>
+        private const long SecurityMechanismDeactivatedFlag = 0x0000_0000_0000_0001;
+
+        /// <summary>A queue that has been activated and not deactivated since: the only state in which the market processors fiscalize.</summary>
+        private static bool IsOperational(ftQueue queue) => queue.StartMoment.HasValue && !queue.StopMoment.HasValue;
+
+        /// <summary>
+        /// RFC 712: whether the market processor answered the receipt with its "queue not operational" early exit (IT's
+        /// queue-state checks, DE's and AT's DisabledQueueReceiptCommand, FR's queue-state validation), a non-error
+        /// response that only carries the security-mechanism-deactivated flag. Nothing is fiscalized then, so the finalize
+        /// phase must not run. The flag alone cannot tell, because the out-of-operation receipt carries it too and is
+        /// fiscalized; that receipt is processed on an operational queue. So the early exit is recognized by the flag
+        /// together with the queue state: not operational when the receipt arrived, and not made operational by it (the
+        /// initial-operation receipt does that, and is fiscalized).
+        /// </summary>
+        private static bool IsQueueNotOperationalAnswer(ReceiptResponse receiptResponse, bool queueWasOperational, bool queueIsOperational)
+            => (receiptResponse.ftState & SecurityMechanismDeactivatedFlag) == SecurityMechanismDeactivatedFlag && !queueWasOperational && !queueIsOperational;
 
         /// <summary>
         /// Converts the v1 request to the v2 contract and runs the preflight. A receipt that cannot be converted cannot be

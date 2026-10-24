@@ -434,6 +434,8 @@ if (!preflight.Accepted)
 
 **Finalize**, after the country processing returned and before the sandbox signature is appended and `FinishQueueItem` persists the response:
 
+The phase runs only when fiscalization succeeded: the market processor produced a non-error response on an operational queue. The queue-state early exits, which answer a receipt on a queue that is not yet activated or already deactivated with a non-error response carrying only the security-mechanism-deactivated flag, fiscalize nothing and skip this phase; the receipt journal policy for them is unchanged. The flag alone does not tell, because the out-of-operation receipt carries it too and is fiscalized: the v2 stack tracks the two early exits explicitly, the legacy stack recognizes the markets' early exit by the flag together with a queue that was not operational when the receipt arrived and was not made operational by it (the initial-operation receipt is).
+
 ```cs
 (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
 actionjournals.AddRange(countrySpecificActionJournals);

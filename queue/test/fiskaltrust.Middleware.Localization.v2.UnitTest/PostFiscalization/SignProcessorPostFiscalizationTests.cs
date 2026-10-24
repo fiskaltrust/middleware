@@ -26,6 +26,8 @@ public class SignProcessorPostFiscalizationTests
     {
         public Guid QueueId { get; } = Guid.NewGuid();
         public Guid CashBoxId { get; } = Guid.NewGuid();
+        /// <summary>The queue as the configuration repository returns it; operational unless a test says otherwise.</summary>
+        public ftQueue Queue { get; }
         public Mock<IMiddlewareQueueItemRepository> QueueItemRepository { get; } = new();
         public List<ftQueueItem> PersistedQueueItems { get; } = [];
         public List<ftActionJournal> ActionJournals { get; } = [];
@@ -34,11 +36,9 @@ public class SignProcessorPostFiscalizationTests
         public Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse, List<ftActionJournal>)>> CountryProcessor { get; set; }
             = (_, response, _, _) => Task.FromResult((response, new List<ftActionJournal>()));
 
-        public SignProcessor Create(FakePostFiscalizationService? eInvoicing, FakePostFiscalizationService? eReporting, bool sandbox = false)
+        public Harness()
         {
-            var storageProvider = new Mock<IStorageProvider>();
-            var configurationRepository = new Mock<IConfigurationRepository>();
-            configurationRepository.Setup(x => x.GetQueueAsync(QueueId)).ReturnsAsync(new ftQueue
+            Queue = new ftQueue
             {
                 ftQueueId = QueueId,
                 ftCashBoxId = CashBoxId,
@@ -46,7 +46,14 @@ public class SignProcessorPostFiscalizationTests
                 StartMoment = DateTime.MinValue,
                 StopMoment = null,
                 CountryCode = "EU",
-            });
+            };
+        }
+
+        public SignProcessor Create(FakePostFiscalizationService? eInvoicing, FakePostFiscalizationService? eReporting, bool sandbox = false)
+        {
+            var storageProvider = new Mock<IStorageProvider>();
+            var configurationRepository = new Mock<IConfigurationRepository>();
+            configurationRepository.Setup(x => x.GetQueueAsync(QueueId)).ReturnsAsync(Queue);
             var actionJournalRepository = new Mock<IMiddlewareActionJournalRepository>();
             actionJournalRepository.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Callback<ftActionJournal>(ActionJournals.Add).Returns(Task.CompletedTask);
             var receiptJournalRepository = new Mock<IMiddlewareReceiptJournalRepository>();
@@ -98,6 +105,67 @@ public class SignProcessorPostFiscalizationTests
         returned.ftSignatures.Add(Signature(caption, data));
         return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
     };
+
+    [Theory]
+    [InlineData(false, false)] // never activated
+    [InlineData(true, true)]   // deactivated
+    public async Task ReceiptsOnAQueueThatIsNotOperational_AreNotFinalized_ButKeepTheirReceiptJournal(bool started, bool stopped)
+    {
+        var harness = new Harness();
+        harness.Queue.StartMoment = started ? DateTime.UtcNow.AddDays(-1) : null;
+        harness.Queue.StopMoment = stopped ? DateTime.UtcNow.AddHours(-1) : null;
+        var eReporting = FakePostFiscalizationService.Applying();
+        var processor = harness.Create(null, eReporting);
+
+        var response = await processor.ProcessAsync(harness.Request((ReceiptCase) 0x4752_2000_0000_0001));
+
+        harness.CountryProcessorCalls.Should().Be(0, "the queue-state early exit answers before the market processor");
+        response!.ftState.IsState(State.Error).Should().BeFalse();
+        response.ftState.IsFlag(StateFlags.SecurityMechanismDeactivated).Should().BeTrue();
+        eReporting.ProcessCalls.Should().BeEmpty("nothing was fiscalized, so there is nothing to report");
+        response.ftStateData.Should().BeNull("no finalize phase ran, so no outcome is written");
+        harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+    }
+
+    [Fact]
+    public async Task TheInitialOperationReceipt_MakesTheQueueOperational_AndIsFinalized()
+    {
+        var harness = new Harness();
+        harness.Queue.StartMoment = null;
+        harness.CountryProcessor = (_, response, queue, _) =>
+        {
+            queue.StartMoment = DateTime.UtcNow;
+            return Task.FromResult((response, new List<ftActionJournal>()));
+        };
+        var eReporting = FakePostFiscalizationService.Applying();
+        var processor = harness.Create(null, eReporting);
+
+        var response = await processor.ProcessAsync(harness.Request((ReceiptCase) 0x4752_2000_0000_4001));
+
+        harness.CountryProcessorCalls.Should().Be(1);
+        eReporting.ProcessCalls.Should().ContainSingle();
+        MiddlewareStateData.FromReceiptResponse(response!)!.PostFiscalization!.EReporting.Should().Be(PostFiscalizationStateData.Ok);
+    }
+
+    [Fact]
+    public async Task TheOutOfOperationReceipt_IsFinalized_AlthoughItCarriesTheDeactivatedFlag()
+    {
+        var harness = new Harness();
+        harness.CountryProcessor = (_, response, queue, _) =>
+        {
+            queue.StopMoment = DateTime.UtcNow;
+            response.MarkAsDisabled();
+            return Task.FromResult((response, new List<ftActionJournal>()));
+        };
+        var eReporting = FakePostFiscalizationService.Applying();
+        var processor = harness.Create(null, eReporting);
+
+        var response = await processor.ProcessAsync(harness.Request((ReceiptCase) 0x4752_2000_0000_4002));
+
+        eReporting.ProcessCalls.Should().ContainSingle("the out-of-operation receipt is fiscalized on the still operational queue");
+        response!.ftState.IsFlag(StateFlags.SecurityMechanismDeactivated).Should().BeTrue();
+        MiddlewareStateData.FromReceiptResponse(response)!.PostFiscalization!.EReporting.Should().Be(PostFiscalizationStateData.Ok);
+    }
 
     [Fact]
     public async Task PreflightRejection_RefusesTheReceipt_WithoutQueueItemFiscalizationOrReceiptJournal()

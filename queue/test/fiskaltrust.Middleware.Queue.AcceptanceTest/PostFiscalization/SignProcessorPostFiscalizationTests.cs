@@ -307,6 +307,73 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             response.ftStateData.Should().Contain("\"EInvoicing\":\"ok\"");
         }
 
+        private const long SecurityMechanismDeactivatedFlag = 0x0000_0000_0000_0001L;
+
+        [Theory]
+        [InlineData(false, false)] // never activated
+        [InlineData(true, true)]   // deactivated
+        public async Task ReceiptsOnAQueueThatIsNotOperational_AreNotFinalized_ButKeepTheirReceiptJournal(bool started, bool stopped)
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = started ? DateTime.UtcNow.AddDays(-1) : (DateTime?) null;
+            harness.Queue.StopMoment = stopped ? DateTime.UtcNow.AddHours(-1) : (DateTime?) null;
+            var eReporting = new FakePostFiscalizationService();
+            // The market's early exit: a non-error response carrying only the deactivated flag, nothing fiscalized.
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = ItSuccessState | SecurityMechanismDeactivatedFlag;
+                response.ftSignatures = new SignaturItem[0];
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(ItPosReceiptCase));
+
+            eReporting.ProcessCalls.Should().BeEmpty("nothing was fiscalized, so there is nothing to report");
+            response.ftState.Should().Be(ItSuccessState | SecurityMechanismDeactivatedFlag);
+            response.ftStateData.Should().NotContain("PostFiscalization");
+            harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+        }
+
+        [Fact]
+        public async Task TheInitialOperationReceipt_MakesTheQueueOperational_AndIsFinalized()
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = null;
+            var eReporting = new FakePostFiscalizationService();
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                harness.Queue.StartMoment = DateTime.UtcNow;
+                return harness.Fiscalized(request, queueItem);
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(0x4954_0000_0000_4001L));
+
+            eReporting.ProcessCalls.Should().ContainSingle();
+            response.ftStateData.Should().Contain("\"EReporting\":\"ok\"");
+        }
+
+        [Fact]
+        public async Task TheOutOfOperationReceipt_IsFinalized_AlthoughItCarriesTheDeactivatedFlag()
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = DateTime.UtcNow.AddDays(-1);
+            var eReporting = new FakePostFiscalizationService();
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                harness.Queue.StopMoment = DateTime.UtcNow;
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = ItSuccessState | SecurityMechanismDeactivatedFlag;
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(0x4954_0000_0000_4002L));
+
+            eReporting.ProcessCalls.Should().ContainSingle("the out-of-operation receipt is fiscalized on the still operational queue");
+            response.ftStateData.Should().Contain("\"EReporting\":\"ok\"");
+            response.ftState.Should().Be(ItSuccessState | SecurityMechanismDeactivatedFlag);
+        }
+
         [Fact]
         public async Task NotApplicableServices_LeaveTheReceiptUntouched_ButRecordTheOutcome()
         {
