@@ -708,6 +708,68 @@ public class PostFiscalizationProcessorTests
     }
 
     [Fact]
+    public async Task FinalizeAsync_RestoresStateDataMembersAServiceRemoved_WhenItReturnsADifferentObject()
+    {
+        var previous = new Receipt { Request = Request(), Response = new ReceiptResponse { ftReceiptIdentification = "ft0#" } };
+        var eInvoicing = new FakePostFiscalizationService
+        {
+            OnProcess = request =>
+            {
+                var returned = RoundTrip(request.ReceiptResponse);
+                // A JSON object, so the non-object guard lets it pass, but without the members the middleware wrote.
+                returned.ftStateData = JsonSerializer.Deserialize<JsonElement>("""{ "EInvoice": { "Id": "urn:1" } }""");
+                returned.ftSignatures.Add(Signature("einvoice-id", "urn:1"));
+                return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
+            },
+        };
+        var processor = Processor(eInvoicing, null);
+        var queueItem = QueueItem();
+        var journals = new List<ftActionJournal>();
+
+        var preflight = await processor.ValidateAsync(Request());
+        var finalized = await processor.FinalizeAsync(Request(), Fiscalized(queueItem, new MiddlewareStateData { PreviousReceiptReference = [previous] }), queueItem, preflight, journals);
+
+        var stateData = finalized.ftStateData.Should().BeOfType<MiddlewareStateData>().Subject;
+        stateData.PreviousReceiptReference.Should().ContainSingle("the PT SAF-T export resolves referenced documents from this member");
+        stateData.ExtraData.Should().ContainKey("EInvoice", "what the service added is kept");
+        stateData.PostFiscalization!.EInvoicing.Should().Be(PostFiscalizationStateData.Ok);
+        finalized.ftSignatures.Should().Contain(signature => signature.Caption == "einvoice-id");
+        var journal = journals.Should().ContainSingle().Subject;
+        journal.Type.Should().Be("einvoicing-contract-violation");
+        journal.Message.Should().Contain("'ftPreviousReceiptReference'");
+        journal.DataJson.Should().Contain("ftPreviousReceiptReference");
+    }
+
+    [Fact]
+    public async Task FinalizeAsync_KeepsStateDataMembersAServiceAdds_WithoutAJournalEntry()
+    {
+        var previous = new Receipt { Request = Request(), Response = new ReceiptResponse { ftReceiptIdentification = "ft0#" } };
+        var eInvoicing = new FakePostFiscalizationService
+        {
+            OnProcess = request =>
+            {
+                var returned = RoundTrip(request.ReceiptResponse);
+                var stateData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(((JsonElement) returned.ftStateData!).GetRawText())!;
+                stateData["EInvoice"] = JsonSerializer.SerializeToElement(new { Id = "urn:1" });
+                returned.ftStateData = JsonSerializer.SerializeToElement(stateData);
+                return Task.FromResult(new ProcessResponse { ReceiptResponse = returned });
+            },
+        };
+        var processor = Processor(eInvoicing, null);
+        var queueItem = QueueItem();
+        var journals = new List<ftActionJournal>();
+
+        var preflight = await processor.ValidateAsync(Request());
+        var finalized = await processor.FinalizeAsync(Request(), Fiscalized(queueItem, new MiddlewareStateData { PreviousReceiptReference = [previous] }), queueItem, preflight, journals);
+
+        var stateData = finalized.ftStateData.Should().BeOfType<MiddlewareStateData>().Subject;
+        stateData.PreviousReceiptReference.Should().ContainSingle();
+        stateData.ExtraData.Should().ContainKey("EInvoice");
+        stateData.PostFiscalization!.EInvoicing.Should().Be(PostFiscalizationStateData.Ok);
+        journals.Should().BeEmpty("adding members is what the contract allows");
+    }
+
+    [Fact]
     public async Task FinalizeAsync_RestoresStateDataAServiceDropped()
     {
         var eReporting = new FakePostFiscalizationService

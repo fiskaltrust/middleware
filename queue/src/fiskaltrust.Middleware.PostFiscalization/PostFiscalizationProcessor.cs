@@ -375,16 +375,33 @@ public class PostFiscalizationProcessor
     /// the state data or replaced it with something that is not a JSON object, the state data from before the call is
     /// restored so that neither the previous receipt references nor the market sections are lost.
     /// </summary>
+    /// <summary>
+    /// A service may add to <c>ftStateData</c>, never take away from it: the members the middleware and the market wrote
+    /// are what later processing relies on (<c>ftPreviousReceiptReference</c> is what the PT SAF-T export resolves
+    /// referenced documents from). State data a service dropped or replaced with a non-object is restored as a whole;
+    /// members missing from an object it returned are restored one by one, next to whatever the service added.
+    /// </summary>
     private void RestoreDroppedStateData(PostFiscalizationService service, ReceiptResponse before, ReceiptResponse after, ftQueueItem queueItem, List<ftActionJournal> actionJournals)
     {
         string? problem = null;
+        List<string>? restoredMembers = null;
         if (after.ftStateData is null && before.ftStateData is not null)
         {
             problem = "dropped the existing ftStateData";
+            after.ftStateData = before.ftStateData;
         }
         else if (after.ftStateData is not null && !IsJsonObject(after.ftStateData))
         {
             problem = "returned ftStateData that is not a JSON object";
+            after.ftStateData = before.ftStateData;
+        }
+        else if (before.ftStateData is not null && after.ftStateData is not null && IsJsonObject(before.ftStateData))
+        {
+            restoredMembers = RestoreRemovedStateDataMembers(before, after);
+            if (restoredMembers.Count > 0)
+            {
+                problem = $"removed the ftStateData member(s) {string.Join(", ", restoredMembers.Select(name => $"'{name}'"))}";
+            }
         }
 
         if (problem is null)
@@ -392,10 +409,46 @@ public class PostFiscalizationProcessor
             return;
         }
 
-        after.ftStateData = before.ftStateData;
-        var message = $"The {service.DisplayName()} service {problem} of queue item {queueItem.ftQueueItemId}; the state data from before the call was restored.";
+        var restoration = restoredMembers is null ? "the state data from before the call was restored" : "they were restored from the state data before the call, next to what the service added";
+        var message = $"The {service.DisplayName()} service {problem} of queue item {queueItem.ftQueueItemId}; {restoration}.";
         _logger.LogWarning(message);
-        actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-contract-violation", message, new { service = service.Key(), problem }));
+        actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{service.Key()}-contract-violation", message, new { service = service.Key(), problem, restoredMembers }));
+    }
+
+    /// <summary>
+    /// Adds every top-level member of the state data from before the call that the returned object lacks, and returns the
+    /// names of the members added. Members the service changed are left as returned: changing its own section is the
+    /// service's business, and the middleware-owned outcome section is written after all services returned.
+    /// </summary>
+    private static List<string> RestoreRemovedStateDataMembers(ReceiptResponse before, ReceiptResponse after)
+    {
+        var original = ToJsonElement(before.ftStateData);
+        var returned = ToJsonElement(after.ftStateData);
+        if (original.ValueKind != JsonValueKind.Object || returned.ValueKind != JsonValueKind.Object)
+        {
+            return new List<string>();
+        }
+
+        var present = new HashSet<string>(returned.EnumerateObject().Select(property => property.Name), StringComparer.Ordinal);
+        var missing = original.EnumerateObject().Where(property => !present.Contains(property.Name)).ToList();
+        if (missing.Count == 0)
+        {
+            return new List<string>();
+        }
+
+        var merged = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var property in returned.EnumerateObject())
+        {
+            merged[property.Name] = property.Value;
+        }
+
+        foreach (var property in missing)
+        {
+            merged[property.Name] = property.Value;
+        }
+
+        after.ftStateData = JsonSerializer.SerializeToElement(merged, _journalSerializerOptions);
+        return missing.Select(property => property.Name).ToList();
     }
 
     private static bool IsJsonObject(object stateData) => stateData switch
