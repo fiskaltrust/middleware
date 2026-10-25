@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             // every processed receipt carries signature items; for AT that is the outcome itself
             var signed = new ReceiptResponse { ftState = ftState, ftSignatures = new[] { new SignaturItem { Caption = "signature", Data = "...", ftSignatureFormat = 1, ftSignatureType = 1 } } };
 
-            LegacyFiscalizationOutcome.IsFiscalized(country, signed, queueWasOperational, queueIsOperational).Should().Be(expected);
+            LegacyFiscalizationOutcome.IsFiscalized(country, PosReceipt(country), signed, queueWasOperational, queueIsOperational).Should().Be(expected);
         }
 
         [Theory]
@@ -58,16 +58,39 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
         [InlineData(0x4154_0000_0000_0001L, false, false)] // the disabled-queue answer is unsigned as well
         public void IsFiscalized_TreatsAnUnsignedAtAnswerAsNotFiscalized(long ftState, bool queueWasOperational, bool queueIsOperational)
         {
-            LegacyFiscalizationOutcome.IsFiscalized("AT", new ReceiptResponse { ftState = ftState, ftSignatures = new SignaturItem[0] }, queueWasOperational, queueIsOperational).Should().BeFalse();
-            LegacyFiscalizationOutcome.IsFiscalized("AT", new ReceiptResponse { ftState = ftState, ftSignatures = null }, queueWasOperational, queueIsOperational).Should().BeFalse();
+            LegacyFiscalizationOutcome.IsFiscalized("AT", 0x4154_0000_0000_0001L, new ReceiptResponse { ftState = ftState, ftSignatures = new SignaturItem[0] }, queueWasOperational, queueIsOperational).Should().BeFalse();
+            LegacyFiscalizationOutcome.IsFiscalized("AT", 0x4154_0000_0000_0001L, new ReceiptResponse { ftState = ftState, ftSignatures = null }, queueWasOperational, queueIsOperational).Should().BeFalse();
         }
 
         [Fact]
         public void IsFiscalized_DoesNotNeedSignaturesOutsideAt()
         {
-            LegacyFiscalizationOutcome.IsFiscalized("DE", new ReceiptResponse { ftState = 0x4445_0000_0000_0000L, ftSignatures = new SignaturItem[0] }, true, true).Should().BeTrue();
-            LegacyFiscalizationOutcome.IsFiscalized("IT", new ReceiptResponse { ftState = 0x4954_2000_0000_0000L, ftSignatures = null }, true, true).Should().BeTrue();
+            LegacyFiscalizationOutcome.IsFiscalized("DE", 0x4445_0000_0000_0001L, new ReceiptResponse { ftState = 0x4445_0000_0000_0000L, ftSignatures = new SignaturItem[0] }, true, true).Should().BeTrue();
+            LegacyFiscalizationOutcome.IsFiscalized("IT", 0x4954_2000_0000_0001L, new ReceiptResponse { ftState = 0x4954_2000_0000_0000L, ftSignatures = null }, true, true).Should().BeTrue();
         }
+
+        [Theory]
+        [InlineData(false, true, true)]   // on a new queue the request registers the TCR and makes the queue operational
+        [InlineData(true, true, false)]   // repeated on an activated queue: answered with the plain success state only
+        [InlineData(false, false, false)] // repeated on a deactivated queue: the same
+        public void IsFiscalized_TellsMeInitialOperationByTheQueueStateItLeavesBehind(bool queueWasOperational, bool queueIsOperational, bool expected)
+        {
+            var answer = new ReceiptResponse { ftState = 0x4D45_0000_0000_0000L, ftSignatures = new SignaturItem[0] };
+
+            LegacyFiscalizationOutcome.IsFiscalized("ME", 0x4D45_0000_0000_0003L, answer, queueWasOperational, queueIsOperational).Should().Be(expected);
+            LegacyFiscalizationOutcome.IsFiscalized("ME", 0x4D45_0000_0000_0001L, answer, queueWasOperational, queueIsOperational).Should().BeTrue("a POS receipt is judged by its state only");
+        }
+
+        /// <summary>A POS receipt of the market, which no rule singles out.</summary>
+        private static long PosReceipt(string country) => country?.ToUpperInvariant() switch
+        {
+            "DE" => 0x4445_0000_0000_0001L,
+            "AT" => 0x4154_0000_0000_0001L,
+            "FR" => 0x4652_0000_0000_0001L,
+            "IT" => 0x4954_2000_0000_0001L,
+            "ME" => 0x4D45_0000_0000_0001L,
+            _ => 0x0000_0000_0000_0001L,
+        };
 
         [Fact]
         public void IsOperational_RequiresAStartAndNoStop()

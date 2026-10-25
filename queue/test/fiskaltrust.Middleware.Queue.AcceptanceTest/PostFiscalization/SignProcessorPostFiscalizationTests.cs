@@ -386,6 +386,52 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
         }
 
+        [Theory]
+        [InlineData(true, false)] // already activated
+        [InlineData(true, true)]  // deactivated
+        public async Task ARepeatedMeInitialOperation_IsAnsweredWithoutProcessing_AndNotFinalized(bool started, bool stopped)
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = started ? DateTime.UtcNow.AddDays(-1) : (DateTime?) null;
+            harness.Queue.StopMoment = stopped ? DateTime.UtcNow.AddHours(-1) : (DateTime?) null;
+            var eReporting = new FakePostFiscalizationService();
+            // ME answers the repeated request with the plain success state, no signatures and an action journal entry.
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = 0x4D45_0000_0000_0000L;
+                response.ftSignatures = new SignaturItem[0];
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(0x4D45_0000_0000_0003L));
+
+            eReporting.ProcessCalls.Should().BeEmpty("the request was rejected, the TCR was not registered");
+            response.ftState.Should().Be(0x4D45_0000_0000_0000L);
+            response.ftStateData.Should().NotContain("PostFiscalization");
+            harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+        }
+
+        [Fact]
+        public async Task TheMeInitialOperationThatRegistersTheTcr_IsFinalized()
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = null;
+            var eReporting = new FakePostFiscalizationService();
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                harness.Queue.StartMoment = DateTime.UtcNow;
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = 0x4D45_0000_0000_0000L;
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(0x4D45_0000_0000_0003L));
+
+            eReporting.ProcessCalls.Should().ContainSingle();
+            response.ftStateData.Should().Contain("\"EReporting\":\"ok\"");
+        }
+
         [Fact]
         public async Task ASignedAtReceipt_IsFinalized()
         {

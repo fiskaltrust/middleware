@@ -228,7 +228,7 @@ namespace fiskaltrust.Middleware.Queue
                 // fiscalized receipt with the error state, that receipt is journaled like any other fiscalized receipt,
                 // and it is returned rather than thrown (there is no processor exception to rethrow).
                 var fiscalizationSucceeded = !receiptResponse.IsError();
-                var fiscalized = LegacyFiscalizationOutcome.IsFiscalized(queueItem.country, receiptResponse, queueWasOperational, LegacyFiscalizationOutcome.IsOperational(queue));
+                var fiscalized = LegacyFiscalizationOutcome.IsFiscalized(queueItem.country, data.ftReceiptCase, receiptResponse, queueWasOperational, LegacyFiscalizationOutcome.IsOperational(queue));
                 if (fiscalized)
                 {
                     receiptResponse = await FinalizeAsync(v2Request, receiptResponse, queueItem, preflight, actionjournals).ConfigureAwait(false);

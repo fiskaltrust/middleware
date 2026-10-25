@@ -13,7 +13,8 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
     /// only for fiscalized receipts. Anything else a market returns with a non-error state is a fiscalized receipt,
     /// including the modes in which a market records receipts although its security mechanism failed (SSCD failed
     /// mode, late signing) and the informational flags of AT, DE and FR. AT is the one market whose non-fiscalizing
-    /// answers carry no state at all; there the signature items tell. The receipt journal policy, which the markets'
+    /// answers carry no state at all; there the signature items tell, and ME's repeated initial-operation request is
+    /// told by the queue state it leaves behind. The receipt journal policy, which the markets'
     /// answers shaped long before this, is not affected by this predicate.
     /// </summary>
     public static class LegacyFiscalizationOutcome
@@ -30,13 +31,17 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
         /// <summary>ME: the whole low 32 bits of a receipt that was not processed, as <c>SetStateToError</c> writes them (error, cash deposit outstanding, invoice already received).</summary>
         public static readonly IReadOnlyCollection<long> MeNotProcessedStates = new[] { 3L, 4L, 5L };
 
+        /// <summary>The initial-operation receipt case of the v1 markets, in the low 16 bits of <c>ftReceiptCase</c>.</summary>
+        public const long InitialOperationReceiptCase = 0x0003;
+
         /// <summary>A queue that has been activated and not deactivated since: the only state in which the market processors fiscalize.</summary>
         public static bool IsOperational(ftQueue queue) => queue.StartMoment.HasValue && !queue.StopMoment.HasValue;
 
         /// <param name="country">The market that answered, as the queue item records it.</param>
+        /// <param name="ftReceiptCase">The receipt case of the request, as the POS sent it.</param>
         /// <param name="queueWasOperational">Whether the queue was operational when the receipt arrived.</param>
         /// <param name="queueIsOperational">Whether the queue is operational after the market processor returned.</param>
-        public static bool IsFiscalized(string country, ReceiptResponse receiptResponse, bool queueWasOperational, bool queueIsOperational)
+        public static bool IsFiscalized(string country, long ftReceiptCase, ReceiptResponse receiptResponse, bool queueWasOperational, bool queueIsOperational)
         {
             var state = receiptResponse.ftState & 0xFFFF_FFFF;
             if (state == ErrorState)
@@ -64,7 +69,20 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
                 case "DE":
                     return (state & DeScuSwitchInProgressFlag) == 0;
                 case "ME":
-                    return !MeNotProcessedStates.Contains(state);
+                    if (MeNotProcessedStates.Contains(state))
+                    {
+                        return false;
+                    }
+
+                    // ME answers a repeated initial-operation request on an activated or deactivated queue with the plain
+                    // success state and an action journal entry only; the one it processes registers the TCR and makes
+                    // the queue operational.
+                    if ((ftReceiptCase & 0xFFFF) == InitialOperationReceiptCase)
+                    {
+                        return !queueWasOperational && queueIsOperational;
+                    }
+
+                    return true;
                 default:
                     // FR and IT answer without fiscalizing only on a queue that is not operational.
                     return true;
