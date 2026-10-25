@@ -488,26 +488,42 @@ public class PostFiscalizationProcessor
             EReporting = ToStateValue(eReporting),
         };
 
+        var (stateData, uninterpretable) = WithOutcome(response.ftStateData, outcome);
+        response.ftStateData = stateData;
+        if (uninterpretable is not null)
+        {
+            var message = UninterpretableStateDataMessage(queueItem);
+            _logger.LogError(uninterpretable, message);
+            actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityError, "postfiscalization-statedata", message, new { outcome, error = uninterpretable.ToString() }));
+        }
+    }
+
+    /// <summary>
+    /// The state data to persist once the outcome section is known: the existing state data with the section merged in.
+    /// When the existing data is not something the middleware can merge into, the section must still be persisted,
+    /// because without <c>FiscalizationSucceeded</c> a receipt whose finalize call failed would look unfiscalized to
+    /// <c>IsFiscalized()</c> and become unreferenceable; the original data is then preserved under
+    /// <see cref="OriginalStateDataKey"/> next to the section, and the error explaining why is returned for the journal.
+    /// The legacy stack uses this for its own recovery path as well.
+    /// </summary>
+    public static (MiddlewareStateData stateData, Exception? uninterpretable) WithOutcome(object? existingStateData, PostFiscalizationStateData outcome)
+    {
         try
         {
-            var stateData = ToMiddlewareStateData(response.ftStateData);
+            var stateData = ToMiddlewareStateData(existingStateData);
             stateData.PostFiscalization = outcome;
-            response.ftStateData = stateData;
+            return (stateData, null);
         }
         catch (Exception ex)
         {
-            // The existing state data is not something the middleware can merge into. The middleware-owned section must
-            // still be persisted, because without FiscalizationSucceeded a receipt whose finalize call failed would look
-            // unfiscalized to IsFiscalized() and become unreferenceable. The original data is preserved under its own key.
             var wrapped = new MiddlewareStateData { PostFiscalization = outcome };
-            wrapped.ExtraData[OriginalStateDataKey] = ToJsonElement(response.ftStateData);
-            response.ftStateData = wrapped;
-
-            var message = $"The existing ftStateData of queue item {queueItem.ftQueueItemId} could not be interpreted as an object; it was preserved under '{OriginalStateDataKey}' next to the PostFiscalization outcome.";
-            _logger.LogError(ex, message);
-            actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityError, "postfiscalization-statedata", message, new { outcome, error = ex.ToString() }));
+            wrapped.ExtraData[OriginalStateDataKey] = ToJsonElement(existingStateData);
+            return (wrapped, ex);
         }
     }
+
+    public static string UninterpretableStateDataMessage(ftQueueItem queueItem)
+        => $"The existing ftStateData of queue item {queueItem.ftQueueItemId} could not be interpreted as an object; it was preserved under '{OriginalStateDataKey}' next to the PostFiscalization outcome.";
 
     private static JsonElement ToJsonElement(object? value)
     {
@@ -530,7 +546,8 @@ public class PostFiscalizationProcessor
         _ => JsonSerializer.Deserialize<MiddlewareStateData>(JsonSerializer.Serialize(stateData)) ?? new MiddlewareStateData(),
     };
 
-    private static string ToStateValue(PostFiscalizationServiceOutcome outcome) => outcome switch
+    /// <summary>The <c>ftStateData.PostFiscalization</c> value for a service outcome; anything but disabled, not-applicable and ok is a failure.</summary>
+    public static string ToStateValue(PostFiscalizationServiceOutcome outcome) => outcome switch
     {
         PostFiscalizationServiceOutcome.Disabled => PostFiscalizationStateData.Disabled,
         PostFiscalizationServiceOutcome.NotApplicable => PostFiscalizationStateData.NotApplicable,

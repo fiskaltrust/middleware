@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.PostFiscalization;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Queue.Extensions;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.Queue.PostFiscalization;
@@ -186,7 +187,7 @@ namespace fiskaltrust.Middleware.Queue
                 ReceiptResponse receiptResponse;
                 List<ftActionJournal> countrySpecificActionJournals;
                 Exception exception = null;
-                var queueWasOperational = IsOperational(queue);
+                var queueWasOperational = LegacyFiscalizationOutcome.IsOperational(queue);
                 try
                 {
                     (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
@@ -221,14 +222,13 @@ namespace fiskaltrust.Middleware.Queue
                 actionjournals.AddRange(countrySpecificActionJournals);
 
                 // RFC 712, phase 3: the services that act on this receipt get the fully fiscalized response, only when
-                // fiscalization succeeded: the market processor produced a non-error response on an operational queue.
-                // The markets' queue-state early exits answer with a non-error response and fiscalize nothing, so they
-                // skip this phase (see IsQueueNotOperationalAnswer). The receipt journal decision below keeps its policy
-                // and is based on the error state only: a finalize failure marks a fiscalized receipt with the error
-                // state, that receipt is journaled like any other fiscalized receipt, and it is returned rather than
-                // thrown (there is no processor exception to rethrow).
+                // fiscalization succeeded: the market processor produced a non-error response and did not answer with
+                // one of the non-fiscalizing answers of its market (see LegacyFiscalizationOutcome). The receipt journal
+                // decision below keeps its policy and is based on the error state only: a finalize failure marks a
+                // fiscalized receipt with the error state, that receipt is journaled like any other fiscalized receipt,
+                // and it is returned rather than thrown (there is no processor exception to rethrow).
                 var fiscalizationSucceeded = !receiptResponse.IsError();
-                var fiscalized = fiscalizationSucceeded && !IsQueueNotOperationalAnswer(receiptResponse, queueWasOperational, IsOperational(queue));
+                var fiscalized = LegacyFiscalizationOutcome.IsFiscalized(queueItem.country, receiptResponse, queueWasOperational, LegacyFiscalizationOutcome.IsOperational(queue));
                 if (fiscalized)
                 {
                     receiptResponse = await FinalizeAsync(v2Request, receiptResponse, queueItem, preflight, actionjournals).ConfigureAwait(false);
@@ -285,23 +285,9 @@ namespace fiskaltrust.Middleware.Queue
             }
         }
 
-        /// <summary>The v1 flag every market sets on the answer to a receipt its queue cannot process (bit 0 of <c>ftState</c>).</summary>
-        private const long SecurityMechanismDeactivatedFlag = 0x0000_0000_0000_0001;
-
-        /// <summary>A queue that has been activated and not deactivated since: the only state in which the market processors fiscalize.</summary>
-        private static bool IsOperational(ftQueue queue) => queue.StartMoment.HasValue && !queue.StopMoment.HasValue;
-
-        /// <summary>
-        /// RFC 712: whether the market processor answered the receipt with its "queue not operational" early exit (IT's
-        /// queue-state checks, DE's and AT's DisabledQueueReceiptCommand, FR's queue-state validation), a non-error
-        /// response that only carries the security-mechanism-deactivated flag. Nothing is fiscalized then, so the finalize
-        /// phase must not run. The flag alone cannot tell, because the out-of-operation receipt carries it too and is
-        /// fiscalized; that receipt is processed on an operational queue. So the early exit is recognized by the flag
-        /// together with the queue state: not operational when the receipt arrived, and not made operational by it (the
-        /// initial-operation receipt does that, and is fiscalized).
-        /// </summary>
-        private static bool IsQueueNotOperationalAnswer(ReceiptResponse receiptResponse, bool queueWasOperational, bool queueIsOperational)
-            => (receiptResponse.ftState & SecurityMechanismDeactivatedFlag) == SecurityMechanismDeactivatedFlag && !queueWasOperational && !queueIsOperational;
+        /// <summary>The persisted outcome of a service when the mapping failed: a service that applied never got the receipt, the others keep their preflight outcome.</summary>
+        private static string RecoveryOutcome(PostFiscalizationServiceOutcome preflightOutcome)
+            => preflightOutcome == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationStateData.Failed : PostFiscalizationProcessor.ToStateValue(preflightOutcome);
 
         /// <summary>
         /// Converts the v1 request to the v2 contract and runs the preflight. A receipt that cannot be converted cannot be
@@ -449,6 +435,36 @@ namespace fiskaltrust.Middleware.Queue
                     Message = $"{reason} (queue item {queueItem.ftQueueItemId})",
                     DataJson = JsonConvert.SerializeObject(new { service = service.Key(), phase = "process", reason, detail = ex.ToString() })
                 });
+
+                // The receipt is fiscalized, and the persisted outcome section must say so: without FiscalizationSucceeded
+                // the v1 IsFiscalized() would treat it as a failed receipt and a later refund, void or reprint would lose
+                // its references. A service that applied did not get the receipt (or its answer could not be merged back),
+                // so its outcome is failed; the others keep their preflight outcome.
+                var outcome = new PostFiscalizationStateData
+                {
+                    FiscalizationSucceeded = true,
+                    EInvoicing = RecoveryOutcome(preflight.EInvoicing),
+                    EReporting = RecoveryOutcome(preflight.EReporting),
+                };
+                var (stateData, uninterpretable) = PostFiscalizationProcessor.WithOutcome(receiptResponse.ftStateData, outcome);
+                receiptResponse.ftStateData = PostFiscalizationMapper.StateDataToString(stateData);
+                if (uninterpretable != null)
+                {
+                    var message = PostFiscalizationProcessor.UninterpretableStateDataMessage(queueItem);
+                    _logger.LogError(uninterpretable, message);
+                    actionJournals.Add(new ftActionJournal
+                    {
+                        ftActionJournalId = Guid.NewGuid(),
+                        ftQueueId = queueItem.ftQueueId,
+                        ftQueueItemId = queueItem.ftQueueItemId,
+                        Moment = DateTime.UtcNow,
+                        Priority = 0x10,
+                        Type = "postfiscalization-statedata",
+                        Message = message,
+                        DataJson = JsonConvert.SerializeObject(new { outcome, error = uninterpretable.ToString() })
+                    });
+                }
+
                 return receiptResponse;
             }
         }

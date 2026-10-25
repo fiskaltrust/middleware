@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -333,6 +334,61 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             response.ftState.Should().Be(ItSuccessState | SecurityMechanismDeactivatedFlag);
             response.ftStateData.Should().NotContain("PostFiscalization");
             harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+        }
+
+        [Theory]
+        [InlineData(0x4445_0000_0000_0001L, 0x4445_0000_0000_0100L)] // DE: an SCU switch is in progress, the receipt was not signed
+        [InlineData(0x4D45_0000_0000_0001L, 0x4D45_0000_0000_0004L)] // ME: the cash deposit of the day is outstanding, the receipt was not processed
+        [InlineData(0x4D45_0000_0000_0001L, 0x4D45_0000_0000_0005L)] // ME: the cbReceiptReference was already used, the receipt was not processed
+        public async Task NonFiscalizingAnswersOnAnOperationalQueue_AreNotFinalized_ButKeepTheirReceiptJournal(long receiptCase, long answerState)
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = DateTime.UtcNow.AddDays(-1);
+            var eReporting = new FakePostFiscalizationService();
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = answerState;
+                response.ftSignatures = new SignaturItem[0];
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(receiptCase));
+
+            eReporting.ProcessCalls.Should().BeEmpty("nothing was fiscalized, so there is nothing to report");
+            response.ftState.Should().Be(answerState);
+            response.ftStateData.Should().NotContain("PostFiscalization");
+            harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+        }
+
+        [Fact]
+        public async Task AMappingFailure_MarksTheReceiptAsFailed_ButPersistsTheFiscalizationMarker()
+        {
+            // The IT processor fiscalized the receipt, but its response cannot be converted to the v2 contract (a signature
+            // type the v2 contract cannot represent), so no service gets it. The error state and the failed signature say so;
+            // the persisted outcome must still carry FiscalizationSucceeded, or a later refund, void or reprint would lose
+            // the RT document references.
+            var harness = new Harness();
+            var eInvoicing = new FakePostFiscalizationService();
+            var sut = harness.Create(eInvoicing, null, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftSignatures = response.ftSignatures.Concat(new[] { new SignaturItem { Caption = "unrepresentable", Data = "x", ftSignatureFormat = 1, ftSignatureType = -1L } }).ToArray();
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request());
+
+            eInvoicing.ValidateCalls.Should().ContainSingle();
+            eInvoicing.ProcessCalls.Should().BeEmpty();
+            (response.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+            response.ftSignatures.Select(signature => signature.Caption).Should().Equal("rt-document", "unrepresentable", "einvoicing-failed");
+            response.ftSignatures.Last().Data.Should().Contain("could not be converted between the v1 and the v2 contract");
+            response.ftStateData.Should().Contain("\"FiscalizationSucceeded\":true").And.Contain("\"EInvoicing\":\"failed\"").And.Contain("\"EReporting\":\"disabled\"");
+            response.ftStateData.Should().Contain("\"IT\"", "the market's own state data is kept");
+            response.IsFiscalized().Should().BeTrue("the v1 predicate reads the marker");
+            harness.ReceiptJournals.Should().ContainSingle();
+            harness.ActionJournals.Should().Contain(journal => journal.Type == "einvoicing-failed");
         }
 
         [Fact]
