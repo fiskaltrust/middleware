@@ -12,7 +12,8 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
     /// code, and the error state marks a failed one. Those answers are listed here per market, so the finalize phase runs
     /// only for fiscalized receipts. Anything else a market returns with a non-error state is a fiscalized receipt,
     /// including the modes in which a market records receipts although its security mechanism failed (SSCD failed
-    /// mode, late signing) and the informational flags of AT, DE and FR. The receipt journal policy, which the markets'
+    /// mode, late signing) and the informational flags of AT, DE and FR. AT is the one market whose non-fiscalizing
+    /// answers carry no state at all; there the signature items tell. The receipt journal policy, which the markets'
     /// answers shaped long before this, is not affected by this predicate.
     /// </summary>
     public static class LegacyFiscalizationOutcome
@@ -54,12 +55,18 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
 
             switch (country?.ToUpperInvariant())
             {
+                case "AT":
+                    // AT signs every receipt it processes, in SSCD failed mode included (the "Sicherheitseinrichtung
+                    // ausgefallen" QR code), so the signature items are its explicit outcome. The lifecycle commands
+                    // (initial operation, out of operation, monthly and yearly closing) answer a request that carries
+                    // charge or pay items with the unsigned default response and an action journal entry only.
+                    return receiptResponse.ftSignatures != null && receiptResponse.ftSignatures.Length > 0;
                 case "DE":
                     return (state & DeScuSwitchInProgressFlag) == 0;
                 case "ME":
                     return !MeNotProcessedStates.Contains(state);
                 default:
-                    // AT, FR and IT answer without fiscalizing only on a queue that is not operational.
+                    // FR and IT answer without fiscalizing only on a queue that is not operational.
                     return true;
             }
         }

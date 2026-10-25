@@ -46,7 +46,27 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
         [InlineData(null, 0x0000_0000_0000_0000L, true, true, true)]
         public void IsFiscalized_KnowsTheNonFiscalizingAnswersOfEveryMarket(string country, long ftState, bool queueWasOperational, bool queueIsOperational, bool expected)
         {
-            LegacyFiscalizationOutcome.IsFiscalized(country, new ReceiptResponse { ftState = ftState }, queueWasOperational, queueIsOperational).Should().Be(expected);
+            // every processed receipt carries signature items; for AT that is the outcome itself
+            var signed = new ReceiptResponse { ftState = ftState, ftSignatures = new[] { new SignaturItem { Caption = "signature", Data = "...", ftSignatureFormat = 1, ftSignatureType = 1 } } };
+
+            LegacyFiscalizationOutcome.IsFiscalized(country, signed, queueWasOperational, queueIsOperational).Should().Be(expected);
+        }
+
+        [Theory]
+        [InlineData(0x4154_0000_0000_0000L, true, true)]  // a lifecycle request with charge or pay items: the unsigned default response
+        [InlineData(0x4154_0000_0000_0000L, false, true)] // the same for an initial-operation request on a new queue
+        [InlineData(0x4154_0000_0000_0001L, false, false)] // the disabled-queue answer is unsigned as well
+        public void IsFiscalized_TreatsAnUnsignedAtAnswerAsNotFiscalized(long ftState, bool queueWasOperational, bool queueIsOperational)
+        {
+            LegacyFiscalizationOutcome.IsFiscalized("AT", new ReceiptResponse { ftState = ftState, ftSignatures = new SignaturItem[0] }, queueWasOperational, queueIsOperational).Should().BeFalse();
+            LegacyFiscalizationOutcome.IsFiscalized("AT", new ReceiptResponse { ftState = ftState, ftSignatures = null }, queueWasOperational, queueIsOperational).Should().BeFalse();
+        }
+
+        [Fact]
+        public void IsFiscalized_DoesNotNeedSignaturesOutsideAt()
+        {
+            LegacyFiscalizationOutcome.IsFiscalized("DE", new ReceiptResponse { ftState = 0x4445_0000_0000_0000L, ftSignatures = new SignaturItem[0] }, true, true).Should().BeTrue();
+            LegacyFiscalizationOutcome.IsFiscalized("IT", new ReceiptResponse { ftState = 0x4954_2000_0000_0000L, ftSignatures = null }, true, true).Should().BeTrue();
         }
 
         [Fact]

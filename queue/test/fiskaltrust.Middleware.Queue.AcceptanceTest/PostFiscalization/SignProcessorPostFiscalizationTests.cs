@@ -361,6 +361,51 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
         }
 
+        [Theory]
+        [InlineData(0x4154_0000_0000_0003L)] // AT initial operation
+        [InlineData(0x4154_0000_0000_0004L)] // AT out of operation
+        public async Task AtLifecycleRequestsWithItems_AreAnsweredUnsigned_AndNotFinalized(long receiptCase)
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = DateTime.UtcNow.AddDays(-1);
+            var eReporting = new FakePostFiscalizationService();
+            // AT's lifecycle commands answer a request that carries charge or pay items with the unsigned default response.
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = 0x4154_0000_0000_0000L;
+                response.ftSignatures = new SignaturItem[0];
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(receiptCase));
+
+            eReporting.ProcessCalls.Should().BeEmpty("the request was rejected, nothing was signed");
+            response.ftState.Should().Be(0x4154_0000_0000_0000L);
+            response.ftStateData.Should().NotContain("PostFiscalization");
+            harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+        }
+
+        [Fact]
+        public async Task ASignedAtReceipt_IsFinalized()
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = DateTime.UtcNow.AddDays(-1);
+            var eReporting = new FakePostFiscalizationService();
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftState = 0x4154_0000_0000_0002L; // SSCD failed mode: still signed, with the failure QR code
+                response.ftSignatures = new[] { new SignaturItem { Caption = "Sicherheitseinrichtung ausgefallen", Data = "...", ftSignatureFormat = 3, ftSignatureType = 0x4154_0000_0000_0001L } };
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(0x4154_0000_0000_0001L));
+
+            eReporting.ProcessCalls.Should().ContainSingle();
+            response.ftStateData.Should().Contain("\"EReporting\":\"ok\"");
+        }
+
         [Fact]
         public async Task AMappingFailure_MarksTheReceiptAsFailed_ButPersistsTheFiscalizationMarker()
         {
