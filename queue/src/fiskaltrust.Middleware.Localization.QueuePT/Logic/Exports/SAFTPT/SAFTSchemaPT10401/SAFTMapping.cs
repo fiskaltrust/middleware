@@ -148,7 +148,9 @@ public class SaftExporter
     public AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
         var receipts = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
-        receipts = receipts.Where(x => x.receiptRequest != null && x.receiptResponse != null && x.receiptResponse.ftState.IsState(State.Success)).ToList();
+        // RFC 712: an invoice whose eInvoicing/eReporting finalize call failed carries the error state although it was
+        // fiscalized; IsFiscalized() reads the FiscalizationSucceeded marker, so the statutory export keeps it.
+        receipts = receipts.Where(x => x.receiptRequest != null && x.receiptResponse != null && x.receiptResponse.IsFiscalized()).ToList();
         if (to < 0)
         {
             receipts = receipts.Take(-to).ToList();

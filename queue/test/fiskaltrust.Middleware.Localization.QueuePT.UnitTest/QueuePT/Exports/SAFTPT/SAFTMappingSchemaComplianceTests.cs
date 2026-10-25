@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic;
 using fiskaltrust.Middleware.Localization.QueuePT.Logic.Exports.SAFTPT.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
@@ -89,6 +90,41 @@ public class SAFTMappingSchemaComplianceTests
         auditFile.Header.StartDate.Should().Be(new DateTime(now.Year, now.Month, 1));
         auditFile.Header.EndDate.Should().Be(new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)));
     }
+
+    [Fact]
+    public void QueueItemExport_KeepsInvoicesWhoseFinalizeCallFailedAfterFiscalization_AndDropsFailedOnes()
+    {
+        // RFC 712: a finalize failure marks a fiscalized invoice with the error state; FiscalizationSucceeded tells it apart
+        // from an invoice that was never fiscalized, which the statutory export must leave out.
+        var exporter = CreateExporter();
+        var (fiscalizedRequest, fiscalizedResponse) = CreateInvoice("ftD#FT ft20250a62/1", new DateTime(2026, 9, 10, 10, 0, 0, DateTimeKind.Utc));
+        var (finalizeFailedRequest, finalizeFailedResponse) = CreateInvoice("ftD#FT ft20250a62/2", new DateTime(2026, 9, 10, 11, 0, 0, DateTimeKind.Utc));
+        finalizeFailedResponse.ftState = finalizeFailedResponse.ftState.WithState(State.Error);
+        finalizeFailedResponse.ftStateData = new MiddlewareStateData { PostFiscalization = new PostFiscalizationStateData { FiscalizationSucceeded = true, EInvoicing = PostFiscalizationStateData.Failed } };
+        var (failedRequest, failedResponse) = CreateInvoice("ftD#FT ft20250a62/3", new DateTime(2026, 9, 10, 12, 0, 0, DateTimeKind.Utc));
+        failedResponse.ftState = failedResponse.ftState.WithState(State.Error);
+        var queueItems = new List<ftQueueItem>
+        {
+            QueueItem(fiscalizedRequest, fiscalizedResponse),
+            QueueItem(finalizeFailedRequest, finalizeFailedResponse),
+            QueueItem(failedRequest, failedResponse),
+        };
+
+        var auditFile = exporter.CreateAuditFile(_accountMasterData, queueItems, 0);
+
+        var invoiceNumbers = auditFile.SourceDocuments.SalesInvoices.Invoice.Select(invoice => invoice.InvoiceNo).ToList();
+        invoiceNumbers.Should().HaveCount(2);
+        invoiceNumbers.Should().Contain(number => number.EndsWith("/1")).And.Contain(number => number.EndsWith("/2"), "the finalize failure does not undo the fiscalization");
+        invoiceNumbers.Should().NotContain(number => number.EndsWith("/3"), "an invoice that was never fiscalized is not exported");
+    }
+
+    private static ftQueueItem QueueItem(ReceiptRequest request, ReceiptResponse response) => new()
+    {
+        ftQueueItemId = Guid.NewGuid(),
+        cbReceiptReference = request.cbReceiptReference,
+        request = System.Text.Json.JsonSerializer.Serialize(request),
+        response = System.Text.Json.JsonSerializer.Serialize(response),
+    };
 
     private static SaftExporter CreateExporter()
     {
