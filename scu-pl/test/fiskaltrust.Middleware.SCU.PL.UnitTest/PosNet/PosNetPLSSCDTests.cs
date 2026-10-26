@@ -426,7 +426,9 @@ public class PosNetPLSSCDTests
         printer.GetProperty("Mechanism").GetInt64().Should().Be(0);
         printer.GetProperty("FiscalMode").GetBoolean().Should().BeTrue();
         printer.GetProperty("UniqueDeviceNumber").GetString().Should().Be("ZBF 2101002392");
-        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
+        printer.GetProperty("DeviceType").GetString().Should().Be("POSNET THERMAL HD ONLINE");
+        printer.GetProperty("SoftwareVersion").GetString().Should().Be("21.01");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm", "getrealid");
     }
 
     /// <summary>A printer holding a receipt is not idle: its state is the answer, and the synchronous read that would queue behind the stuck command is not sent.</summary>
@@ -762,7 +764,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm", "getrealid");
     }
 
     [Fact]
@@ -1435,6 +1437,8 @@ public class PosNetPLSSCDTests
                 // One protected-memory sequence across all document types, ahead of the receipt number.
                 "eclastdocnoget" => $"eclastdocnoget	di{_completedReceipts + 11}	",
                 "rtcget" => "rtcget	da2026-09-08;17:54	tm2026-09-08T17:54:51+02:00	",
+                // The factory identity, as getrealid answers it on a POSNET Thermal HD Online.
+                "getrealid" => "getrealid	nmPOSNET THERMAL HD ONLINE	vr21.01	nuZBF 2101002392	",
                 // The rate table as the office printer reports it after fiscalization: E–G not in use.
                 "sfsk" => "sfsk	fsT	cl0	rd12	vt1	va23,00	vb8,00	vc5,00	vd0,00	ve101,00	vf101,00	vg101,00	rw2026-09-03;16:54	nuZBF 2101002392	",
                 // The e-paragon binding confirms with the unique eDokument id; the buffer record

@@ -628,8 +628,9 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// The zero receipt's answer: the printer's live state in <c>ftStateData</c> (<c>PL.PrinterStatus</c>),
     /// like the Italian RT printer SCUs return theirs. A register that is not ready does not fail the
     /// zero receipt — the state is the answer; only a register that does not answer at all does.
-    /// Fiscal mode and read-only mode come from scomm, a synchronous read, which is only sent to an
-    /// idle register: behind a stuck command it would wait for that command.
+    /// Fiscal mode and read-only mode come from scomm, the factory device type and software version
+    /// from getrealid — synchronous reads, which are only sent to an idle register: behind a stuck
+    /// command they would wait for that command.
     /// </summary>
     private async Task ReportPrinterStateAsync(ReceiptResponse response)
     {
@@ -640,6 +641,7 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
 
         var status = state.IsIdle ? await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer) : null;
+        var identity = state.IsIdle ? await PosNetStatus.TryReadAsync(_client, PosNetCommands.Getrealid(), answer => answer) : null;
         response.ftStateData = JsonSerializer.SerializeToElement(new
         {
             PL = new
@@ -658,10 +660,15 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                     FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
                     ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
                     UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
+                    DeviceType = ReadText(identity, "nm"),
+                    SoftwareVersion = ReadText(identity, "vr"),
                 },
             },
         });
     }
+
+    private static string? ReadText(PosNetResponse? response, string key)
+        => response is not null && response.Parameters.TryGetValue(key, out var value) && value.Trim().Length > 0 ? value.Trim() : null;
 
     /// <summary>
     /// Settles a trend that was sent but not confirmed. A POSNET accepts trend even when it cannot

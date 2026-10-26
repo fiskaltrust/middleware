@@ -198,7 +198,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.ZeroReceipt());
 
-        target.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
+        target.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm", "getrealid");
     }
 
     [Fact]

@@ -189,6 +189,7 @@ public sealed class PosNetDeviceModel
         {
             "scomm" => $"scomm\tfs{Flag(Fiscalized)}\ttzN\tts{(TransactionOpen ? ReceiptDocumentType : 0)}\thrT\tnu{UniqueNumber}\ttdN\t",
             "!sprn" or "sprn" => $"sprn\tpr{MechanismStatus}\t",
+            "getrealid" => $"getrealid\tnmPOSNET THERMAL HD ONLINE\tvr21.01\tnu{UniqueNumber}\t",
             "!sdev" or "sdev" => $"sdev\tds{DeviceStatus}\tcpT\tqe{Flag(!TransactionOpen || DeviceStatus == 0)}\tpeN\ttl{(TransactionOpen ? 1 : 0)}\t",
             "scnt" => $"scnt\trd{DailyReportCounter}\thn{Printouts + 1}\tbn{CompletedReceipts}\tfn{Invoices}\tnu{UniqueNumber}\tbc{CanceledReceipts}\tbt{LastReceiptNumber}\tfc0\t",
             "stot" => Stot(),
