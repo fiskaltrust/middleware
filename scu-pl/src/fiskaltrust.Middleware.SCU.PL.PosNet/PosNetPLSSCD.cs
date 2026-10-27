@@ -649,7 +649,14 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             try
             {
-                if ((await PosNetPrinterState.ReadAsync(_client)).IsIdle)
+                // The fresher state is the answer too: a fault that appeared since the first read must
+                // not be reported as "ready". Only a refresh that got no answer keeps the first snapshot.
+                var refreshed = await PosNetPrinterState.ReadAsync(_client);
+                if (refreshed.Answered)
+                {
+                    state = refreshed;
+                }
+                if (refreshed.IsIdle)
                 {
                     status = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer);
                     identity = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Getrealid(), answer => answer);

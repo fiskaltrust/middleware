@@ -458,6 +458,28 @@ public class PosNetPLSSCDTests
     /// sent while no sale holds the lock: here the sale waits for the register's counters after a silent
     /// trend, and the zero receipt returns the asynchronous state without them.
     /// </summary>
+    /// <summary>
+    /// The printer goes into a fault between the zero receipt's two state reads: the response reports the
+    /// fresh state — not ready, with the problem — and the synchronous reads are not sent.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_ZeroReceiptWhenAFaultAppearsBetweenTheStateReads_ReportsTheFreshState()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 1, fromCheck: 2);
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000;
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        printer.GetProperty("Ready").GetBoolean().Should().BeFalse();
+        printer.GetProperty("Problem").ValueKind.Should().Be(JsonValueKind.String);
+        printer.GetProperty("Mechanism").GetInt64().Should().Be(1);
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev");
+    }
+
     [Fact]
     public async Task ProcessReceiptAsync_ZeroReceiptWhileASaleHoldsThePrinter_SkipsTheSynchronousReads()
     {
