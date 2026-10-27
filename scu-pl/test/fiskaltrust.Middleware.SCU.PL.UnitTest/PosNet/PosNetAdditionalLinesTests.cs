@@ -74,6 +74,18 @@ public class PosNetAdditionalLinesTests
         act.Should().Throw<PLValidationException>().WithMessage("*payment slip of 'Mastercard'*has 57 characters*at most 56*");
     }
 
+    [Theory]
+    [InlineData("AUTH	123")]
+    [InlineData("APPROVED")]
+    public void ALineWithAControlCharacter_IsRejectedBeforeAnyCommandIsBuilt(string line)
+    {
+        var receiptLines = () => PosNetAdditionalLines.Read(Sale(new { cbReceiptLines = new[] { line } }));
+        var slip = () => PosNetAdditionalLines.Read(Sale(null, new { cbPayItemLines = new[] { line } }));
+
+        receiptLines.Should().Throw<PLValidationException>().WithMessage("*control character*");
+        slip.Should().Throw<PLValidationException>().WithMessage("*payment slip*control character*");
+    }
+
     [Fact]
     public void MoreAdditionalLinesThanTheRegisterPrints_AreRejected_CountingPrintoutReceiptAndSlipLines()
     {

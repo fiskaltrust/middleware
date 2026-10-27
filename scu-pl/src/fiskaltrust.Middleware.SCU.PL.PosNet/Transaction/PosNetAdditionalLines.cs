@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.PL.PosNet.Protocol;
 
 namespace fiskaltrust.Middleware.SCU.PL.PosNet.Transaction;
 
@@ -47,9 +48,18 @@ public static class PosNetAdditionalLines
     private static IEnumerable<string> Lines(List<string>? entries, string source)
     {
         var lines = (entries ?? []).SelectMany(entry => entry.Replace("\r\n", "\n").Split('\n')).ToList();
-        foreach (var line in lines.Where(l => l.Length > MaxLineLength))
+        foreach (var line in lines)
         {
-            throw new PLValidationException($"The line '{line}' in {source} has {line.Length} characters — a POSNET register prints at most {MaxLineLength} per line (80 mm paper; 40 on 57 mm).");
+            if (line.Length > MaxLineLength)
+            {
+                throw new PLValidationException($"The line '{line}' in {source} has {line.Length} characters — a POSNET register prints at most {MaxLineLength} per line (80 mm paper; 40 on 57 mm).");
+            }
+            // These lines are printed after the receipt is fiscal, so a character the protocol cannot carry
+            // has to be refused here, before anything is sent — not when its command is encoded.
+            if (PosNetText.ContainsFramingCharacter(line))
+            {
+                throw new PLValidationException($"The line '{line}' in {source} contains a control character, which a POSNET register cannot print.");
+            }
         }
         return lines;
     }
