@@ -309,7 +309,10 @@ public static class PosNetPrintoutReader
             {
                 throw new PLValidationException($"The additional line '{text}' contains a protocol framing character.");
             }
-            lines.Add(new PosNetFooterLine(text, line.DoubleWidth ?? false, line.DoubleHeight ?? false, LineIdOf(line, text)));
+            var lineId = LineIdOf(line, text);
+            // A left-aligned line (id41) reads '&' as a formatting code, like the info lines: a literal one is doubled.
+            lines.Add(new PosNetFooterLine(lineId == PosNetFooterLine.LeftAlignedLineId ? text.Replace("&", "&&") : text,
+                line.DoubleWidth ?? false, line.DoubleHeight ?? false, lineId));
         }
 
         var infoLines = new List<string>();

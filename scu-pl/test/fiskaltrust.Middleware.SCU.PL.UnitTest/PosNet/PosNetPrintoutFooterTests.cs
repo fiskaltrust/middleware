@@ -57,6 +57,14 @@ public class PosNetPrintoutFooterTests
         lines[1].Parameters.Should().Equal(KV("id", "25"), KV("na", "Dziękujemy!"));
     }
 
+    [Fact]
+    public void ALeftAlignedLine_PrintsALiteralAmpersand()
+    {
+        var commands = Map(Sale(Printout(new { lines = new object[] { new { text = "H&M Member", align = "left" } } })));
+
+        commands.Single(c => c.Mnemonic == "trftrln").Parameters.Should().Equal(KV("id", "41"), KV("na", "H&&M Member"));
+    }
+
     public static TheoryData<object, string> LinesTheRegisterCannotPrint => new()
     {
         { new { lines = new object[] { new { label = "loyaltyLevel", text = "Gold" } } }, "is not a POSNET keyword line" },
