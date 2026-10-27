@@ -428,7 +428,7 @@ public class PosNetPLSSCDTests
         printer.GetProperty("UniqueDeviceNumber").GetString().Should().Be("ZBF 2101002392");
         printer.GetProperty("DeviceType").GetString().Should().Be("POSNET THERMAL HD ONLINE");
         printer.GetProperty("SoftwareVersion").GetString().Should().Be("21.01");
-        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm", "getrealid");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev", "scomm", "getrealid");
     }
 
     /// <summary>A printer holding a receipt is not idle: its state is the answer, and the synchronous read that would queue behind the stuck command is not sent.</summary>
@@ -450,6 +450,46 @@ public class PosNetPLSSCDTests
         printer.GetProperty("DeviceStatus").GetInt64().Should().Be(3);
         printer.GetProperty("QueueEmpty").GetBoolean().Should().BeFalse();
         transport.SentMnemonics.Should().Equal("!sprn", "!sdev");
+    }
+
+    /// <summary>
+    /// The zero receipt runs outside the device lock, so it answers while a sale waits for the printer.
+    /// Its synchronous reads (scomm, getrealid) would wait behind that sale's commands, so they are only
+    /// sent while no sale holds the lock: here the sale waits for the register's counters after a silent
+    /// trend, and the zero receipt returns the asynchronous state without them.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_ZeroReceiptWhileASaleHoldsThePrinter_SkipsTheSynchronousReads()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceTrend(executes: true);
+        transport.FailUnreachable("scnt", occurrence: 2);
+        var sut = CreateSut(transport);
+
+        var sale = sut.ProcessReceiptAsync(CreateSaleRequest());
+        var waited = TimeSpan.Zero;
+        while (transport.CountSent("scnt") < 3)
+        {
+            waited.Should().BeLessThan(TimeSpan.FromSeconds(10), "the sale should be waiting for the register's counters");
+            await Task.Delay(10);
+            waited += TimeSpan.FromMilliseconds(10);
+        }
+        var zeroReceipt = CreateSaleRequest();
+        zeroReceipt.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000;
+        zeroReceipt.ReceiptRequest.cbChargeItems = [];
+        zeroReceipt.ReceiptRequest.cbPayItems = [];
+
+        var result = await sut.ProcessReceiptAsync(zeroReceipt);
+
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        printer.GetProperty("Ready").GetBoolean().Should().BeTrue();
+        printer.GetProperty("FiscalMode").ValueKind.Should().Be(JsonValueKind.Null);
+        printer.GetProperty("DeviceType").ValueKind.Should().Be(JsonValueKind.Null);
+        transport.CountSent("getrealid").Should().Be(0);
+        transport.CountSent("scomm").Should().Be(1, "only the sale reads scomm, before its receipt");
+
+        transport.Recover("scnt");
+        (await sale).ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
     }
 
     private static ProcessRequest CreateDailyClosingRequest()
@@ -764,7 +804,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm", "getrealid");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev", "scomm", "getrealid");
     }
 
     [Fact]
@@ -1358,7 +1398,36 @@ public class PosNetPLSSCDTests
             _failFromOccurrence[mnemonic] = occurrence;
         }
 
+        private readonly object _sync = new();
+
+        /// <summary>How many times a command was sent — safe to call while another task still talks to the printer.</summary>
+        public int CountSent(string mnemonic)
+        {
+            lock (_sync)
+            {
+                return SentMnemonics.Count(m => m == mnemonic);
+            }
+        }
+
+        /// <summary>A command armed to fail answers normally again from now on.</summary>
+        public void Recover(string mnemonic)
+        {
+            lock (_sync)
+            {
+                _failures.Remove(mnemonic);
+            }
+        }
+
+        /// <summary>One command at a time, as on the wire — tests may run a zero receipt next to a waiting sale.</summary>
         public Task<byte[]> SendReceiveAsync(byte[] frame, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                return SendReceive(frame);
+            }
+        }
+
+        private Task<byte[]> SendReceive(byte[] frame)
         {
             var payload = Encoding.ASCII.GetString(frame, 1, frame.Length - 2);
             var mnemonic = payload.Split('	')[0];

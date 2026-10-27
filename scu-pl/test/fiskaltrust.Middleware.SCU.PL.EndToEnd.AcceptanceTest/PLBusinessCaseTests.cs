@@ -163,7 +163,7 @@ public class PLBusinessCaseTests
         var response = await harness.SignAsync(TestProject.BusinessCase("SignRequestReceipt_ZeroReceipt"));
 
         ((ulong)response.ftState & ErrorStateMask).Should().NotBe(ErrorState);
-        harness.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm", "getrealid");
+        harness.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev", "scomm", "getrealid");
     }
 
     [Fact]

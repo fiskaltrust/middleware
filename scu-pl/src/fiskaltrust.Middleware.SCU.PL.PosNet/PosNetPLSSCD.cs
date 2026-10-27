@@ -629,8 +629,11 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// like the Italian RT printer SCUs return theirs. A register that is not ready does not fail the
     /// zero receipt — the state is the answer; only a register that does not answer at all does.
     /// Fiscal mode and read-only mode come from scomm, the factory device type and software version
-    /// from getrealid — synchronous reads, which are only sent to an idle register: behind a stuck
-    /// command they would wait for that command.
+    /// from getrealid — synchronous reads, which wait behind any command sent before them. They are
+    /// only sent while no sale or closing holds the device lock — taken without waiting, as the zero
+    /// receipt must not wait for a sale — and the register is still idle once the lock is held: the
+    /// first state read runs outside the lock, so a sale may have started since. Otherwise those
+    /// fields stay null and the asynchronous state is the whole answer.
     /// </summary>
     private async Task ReportPrinterStateAsync(ReceiptResponse response)
     {
@@ -640,8 +643,23 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             throw new PLDeviceUnreachableException("The POSNET printer did not answer its status (!sprn, !sdev).");
         }
 
-        var status = state.IsIdle ? await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer) : null;
-        var identity = state.IsIdle ? await PosNetStatus.TryReadAsync(_client, PosNetCommands.Getrealid(), answer => answer) : null;
+        PosNetResponse? status = null;
+        PosNetResponse? identity = null;
+        if (state.IsIdle && await _deviceLock.WaitAsync(0))
+        {
+            try
+            {
+                if ((await PosNetPrinterState.ReadAsync(_client)).IsIdle)
+                {
+                    status = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer);
+                    identity = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Getrealid(), answer => answer);
+                }
+            }
+            finally
+            {
+                _deviceLock.Release();
+            }
+        }
         response.ftStateData = JsonSerializer.SerializeToElement(new
         {
             PL = new
