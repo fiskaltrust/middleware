@@ -21,7 +21,9 @@ namespace fiskaltrust.Middleware.PL.Android.TestHost;
 /// the fiskaltrust Android launcher, where usbhost:// is tested.
 /// </remarks>
 // No action bar: from Android 15 on, apps draw edge-to-edge and the bar would cover the first rows.
-[Activity(Label = "PL TestHost", MainLauncher = true, Exported = true, LaunchMode = LaunchMode.SingleTop, Theme = "@android:style/Theme.Material.Light.NoActionBar")]
+// Rotation and screen-size changes do not recreate the activity, so they never tear down a running sale.
+[Activity(Label = "PL TestHost", MainLauncher = true, Exported = true, LaunchMode = LaunchMode.SingleTop, Theme = "@android:style/Theme.Material.Light.NoActionBar",
+    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize)]
 public class MainActivity : Activity
 {
     private const string LogTag = "PLTestHost";
@@ -40,6 +42,9 @@ public class MainActivity : Activity
     /// Every click runs on the UI thread, so a flag is enough.
     /// </summary>
     private bool _busy;
+
+    /// <summary>The action that is running, so the activity's end can wait for it before releasing the printer.</summary>
+    private Task? _running;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -80,7 +85,8 @@ public class MainActivity : Activity
             _busy = true;
             try
             {
-                await action();
+                _running = action();
+                await _running;
             }
             catch (Exception ex)
             {
@@ -89,6 +95,7 @@ public class MainActivity : Activity
             finally
             {
                 _busy = false;
+                _running = null;
             }
         };
         layout.AddView(button);
@@ -158,7 +165,16 @@ public class MainActivity : Activity
 
     protected override void OnDestroy()
     {
-        ReleaseMiddleware();
+        // A sale or a cashbox build still running keeps its SCU and printer connection until it is done;
+        // releasing them now could cut off a fiscal receipt the printer is already issuing.
+        if (_running is { IsCompleted: false } running)
+        {
+            _ = running.ContinueWith(_ => ReleaseMiddleware(), TaskScheduler.Default);
+        }
+        else
+        {
+            ReleaseMiddleware();
+        }
         base.OnDestroy();
     }
 
