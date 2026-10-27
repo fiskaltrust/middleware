@@ -110,12 +110,23 @@ public sealed class UsbHostPosNetTransport : IPosNetTransport
         return _link;
     }
 
+    /// <summary>
+    /// Discards whatever the device sent before this command, so a late answer is never read as the
+    /// answer to it. A device that keeps sending beyond the drain budget leaves unread input behind,
+    /// which could pass for this command's answer — the command is then not sent at all, and the
+    /// failure is reported like an unreachable device (nothing was written, so a retry is safe).
+    /// </summary>
     private static void Drain(IPosNetUsbHostLink link)
     {
         var chunk = new byte[256];
-        for (var reads = 0; reads < MaxDrainReads && link.Read(chunk, DrainReadTimeoutMs) > 0; reads++)
+        for (var reads = 0; reads < MaxDrainReads; reads++)
         {
+            if (link.Read(chunk, DrainReadTimeoutMs) == 0)
+            {
+                return;
+            }
         }
+        throw new IOException($"The printer kept sending data after {MaxDrainReads} reads; stale input could not be cleared before the command.");
     }
 
     private byte[] ReadFrame(IPosNetUsbHostLink link, CancellationToken cancellationToken)

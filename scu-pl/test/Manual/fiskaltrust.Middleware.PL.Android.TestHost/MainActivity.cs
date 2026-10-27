@@ -34,6 +34,13 @@ public class MainActivity : Activity
     private MiddlewareMethods? _middleware;
     private string? _builtForDeviceUrl;
 
+    /// <summary>
+    /// One action at a time across all buttons: a second action could otherwise rebuild the cashbox for
+    /// another address — and dispose the SCU and its printer connection — while a sale is still running.
+    /// Every click runs on the UI thread, so a flag is enough.
+    /// </summary>
+    private bool _busy;
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
@@ -65,7 +72,12 @@ public class MainActivity : Activity
         var button = new Button(this) { Text = text };
         button.Click += async (_, _) =>
         {
-            button.Enabled = false;
+            if (_busy)
+            {
+                Write($"{text}: bitte warten, eine andere Aktion läuft noch.");
+                return;
+            }
+            _busy = true;
             try
             {
                 await action();
@@ -76,7 +88,7 @@ public class MainActivity : Activity
             }
             finally
             {
-                button.Enabled = true;
+                _busy = false;
             }
         };
         layout.AddView(button);

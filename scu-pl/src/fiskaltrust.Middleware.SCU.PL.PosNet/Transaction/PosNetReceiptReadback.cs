@@ -26,7 +26,9 @@ public sealed record PosNetReceiptAnchor(long ReceiptNumber, long? DailyReportNu
 /// <summary>The receipt counters before <c>trinit</c>: the baseline the readback is checked against.</summary>
 /// <param name="CompletedReceipts">Correctly completed receipts (<c>scnt.bn</c>).</param>
 /// <param name="LastReceiptNumber">The last receipt number (<c>scnt.bt</c>), which canceled receipts advance as well.</param>
-public sealed record PosNetReceiptCounters(long? CompletedReceipts, long? LastReceiptNumber);
+/// <param name="DailyReports">The daily reports printed (<c>scnt.rd</c>). A daily report resets <c>bn</c> and <c>bt</c>,
+/// so without it a day closed in between, followed by another receipt, would match the guard again.</param>
+public sealed record PosNetReceiptCounters(long? CompletedReceipts, long? LastReceiptNumber, long? DailyReports = null);
 
 /// <summary>
 /// Reads back the anchor of a receipt (<see cref="PosNetReceiptAnchor"/>). The protocol only pulls:
@@ -34,7 +36,7 @@ public sealed record PosNetReceiptCounters(long? CompletedReceipts, long? LastRe
 /// <em>last</em> document rather than this one — so a receipt printed in between over another
 /// interface would silently lend this one its numbers. The receipt counters guard against that:
 /// they are read before <c>trinit</c> and again as the last readback, and only a register that
-/// completed exactly one receipt (<c>bn</c>) and numbered exactly one (<c>bt</c>, which a receipt
+/// closed no day (<c>rd</c>, as a daily report resets the receipt counters), completed exactly one receipt (<c>bn</c>) and numbered exactly one (<c>bt</c>, which a receipt
 /// canceled elsewhere advances too) proves that every number read in between belongs to this receipt.
 /// </summary>
 /// <remarks>
@@ -57,7 +59,7 @@ public static class PosNetReceiptReadback
     public static async Task<PosNetReceiptCounters> ReadCountersAsync(PosNetClient client)
     {
         var counters = await client.ExecuteAsync(PosNetCommands.Scnt());
-        return new PosNetReceiptCounters(PosNetStatus.ReadNumber(counters, "bn"), PosNetStatus.ReadNumber(counters, "bt"));
+        return new PosNetReceiptCounters(PosNetStatus.ReadNumber(counters, "bn"), PosNetStatus.ReadNumber(counters, "bt"), PosNetStatus.ReadNumber(counters, "rd"));
     }
 
     /// <summary>
@@ -74,6 +76,7 @@ public static class PosNetReceiptReadback
         if (counters is null
             || before.CompletedReceipts is not { } completedBefore
             || before.LastReceiptNumber is not { } numberBefore
+            || (before.DailyReports is { } reportsBefore && PosNetStatus.ReadNumber(counters, "rd") != reportsBefore)
             || PosNetStatus.ReadNumber(counters, "bn") != completedBefore + 1
             || PosNetStatus.ReadNumber(counters, "bt") is not { } receiptNumber
             || receiptNumber != numberBefore + 1)

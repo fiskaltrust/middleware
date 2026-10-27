@@ -104,6 +104,26 @@ public class PosNetPLSSCDTests
         signatures.Should().ContainSingle(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.DeviceMoment).Which.Data.Should().Be("2026-09-08T17:54:51+02:00");
     }
 
+    /// <summary>
+    /// A daily report resets the receipt counters, so a day closed elsewhere right after this receipt,
+    /// followed by another receipt, would leave the counters exactly at baseline + 1. The daily report
+    /// counter is part of the guard: the receipt is left unanchored rather than given another's numbers.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_DayClosedElsewhereBeforeTheReadback_LeavesTheReceiptUnanchored()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.CloseTheDayAfterTrend();
+        var sut = CreateSut(transport);
+
+        var result = await sut.ProcessReceiptAsync(CreateSaleRequest());
+
+        result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s =>
+            (ulong)s.ftSignatureType == (ulong)SignatureTypePL.FiscalDocumentNumber
+            || (ulong)s.ftSignatureType == (ulong)SignatureTypePL.ProtectedMemoryDocumentNumber);
+    }
+
     [Fact]
     public async Task ProcessReceiptAsync_AnotherReceiptCompletedBeforeTheReadback_LeavesTheReceiptUnanchored()
     {
@@ -1310,6 +1330,15 @@ public class PosNetPLSSCDTests
         /// <summary>Another interface completes a receipt right after this one, before the readback.</summary>
         public void CompleteAnotherReceiptAfterTrend() => _anotherReceiptAfterTrend = true;
 
+        /// <summary>
+        /// Another interface closes the day right after this receipt and prints the first receipt of the
+        /// next day before the readback: the receipt counters then match the baseline + 1 by coincidence
+        /// (a daily report resets them), only the daily report counter tells.
+        /// </summary>
+        public void CloseTheDayAfterTrend() => _dayClosedAfterTrend = true;
+
+        private bool _dayClosedAfterTrend;
+
         /// <summary>Another interface opens and cancels a receipt right after this one, before the readback.</summary>
         public void CancelAnotherReceiptAfterTrend() => _anotherReceiptCanceledAfterTrend = true;
 
@@ -1412,6 +1441,7 @@ public class PosNetPLSSCDTests
             if (mnemonic == "trend")
             {
                 _completedReceipts += _anotherReceiptAfterTrend ? 2 : 1;
+                _dailyReports += _dayClosedAfterTrend ? 1 : 0;
                 _canceledReceipts += _anotherReceiptCanceledAfterTrend ? 1 : 0;
             }
 

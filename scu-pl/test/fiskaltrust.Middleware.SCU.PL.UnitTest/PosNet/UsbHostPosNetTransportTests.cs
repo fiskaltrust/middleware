@@ -200,6 +200,28 @@ public class UsbHostPosNetTransportTests
         links.Link.Written.Should().HaveCount(1, "the second frame never went out");
     }
 
+    /// <summary>
+    /// A device that keeps sending beyond the drain budget leaves input unread, which could pass for the
+    /// next command's answer. The command is not sent; nothing was written, so the device is reported as
+    /// unreachable (safe to retry), not as an ambiguous outcome.
+    /// </summary>
+    [Fact]
+    public async Task SendReceive_WhenStaleInputDoesNotStop_DoesNotSend_AndIsDeviceUnreachable()
+    {
+        var links = new ScriptedLinkFactory { Answer = () => [s_answer] };
+        using var transport = Create(links);
+        await transport.SendReceiveAsync(PosNetFrame.Encode(PosNetCommands.Scomm()));
+        for (var i = 0; i < 100; i++)
+        {
+            links.Link!.Pending.Enqueue([0x02, (byte)'x', 0x03]);
+        }
+
+        var act = () => transport.SendReceiveAsync(PosNetFrame.Encode(PosNetCommands.Scomm()));
+
+        (await act.Should().ThrowAsync<PLDeviceUnreachableException>()).Which.Should().BeOfType<PLDeviceUnreachableException>();
+        links.Link!.Written.Should().HaveCount(1, "the second frame never went out");
+    }
+
     [Fact]
     public async Task SendReceive_WhenWritingFails_IsAmbiguous()
     {
