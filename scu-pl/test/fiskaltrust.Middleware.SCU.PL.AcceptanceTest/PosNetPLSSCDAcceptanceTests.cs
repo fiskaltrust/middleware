@@ -414,6 +414,45 @@ public class PosNetPLSSCDAcceptanceTests
         NoTransactionShouldBeOpen(target);
     }
 
+    /// <summary>
+    /// A card slip with lines of the full 80 mm width (56 characters) prints inside the fiscal receipt,
+    /// after the receipt lines, as on the tested POSNET THERMAL XL2 ONLINE.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task SaleWithReceiptLinesAndA56CharacterSlip_PrintsThemInsideTheReceipt()
+    {
+        using var target = PosNetTestTarget.Scripted(_ => { });
+        var slipLine = "|Card" + new string(' ', 42) + "****9999|";
+        var request = PLReceiptExamples.CashSale();
+        request.ReceiptRequest.ftReceiptCaseData = new { cbReceiptLines = new[] { "Thank you" } };
+        request.ReceiptRequest.cbPayItems[0].ftPayItemCaseData = new { cbPayItemLines = new[] { slipLine } };
+
+        var result = await target.Sut.ProcessReceiptAsync(request);
+
+        slipLine.Length.Should().Be(56);
+        result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Dodatkowe linie nie wydrukowane");
+        target.Emulator!.Model.LastFooterLines.Should().Equal("Thank you", slipLine);
+        DocumentNumberOf(result).Should().BePositive();
+    }
+
+    /// <summary>
+    /// A printer set to 57 mm paper (40 characters) refuses a 56-character slip line after the receipt is
+    /// fiscal: the receipt is kept and the response says the lines were not printed.
+    /// </summary>
+    [EmulatorOnlyFact]
+    public async Task SaleWithA56CharacterSlip_OnA57mmPrinter_KeepsTheReceipt_AndReportsTheLines()
+    {
+        using var target = PosNetTestTarget.Scripted(emulator => emulator.Model.CharactersPerLine = 40);
+        var request = PLReceiptExamples.CashSale();
+        request.ReceiptRequest.cbPayItems[0].ftPayItemCaseData = new { cbPayItemLines = new[] { new string('x', 56) } };
+
+        var result = await target.Sut.ProcessReceiptAsync(request);
+
+        result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Dodatkowe linie nie wydrukowane");
+        DocumentNumberOf(result).Should().BePositive();
+        NoTransactionShouldBeOpen(target);
+    }
+
     /// <summary>A rejected footer configuration fails the sale before anything is printed or bound.</summary>
     [EmulatorOnlyFact]
     public async Task PrintoutSale_WhenTheFooterConfigurationIsRejected_FailsBeforeAnythingIsPrinted()

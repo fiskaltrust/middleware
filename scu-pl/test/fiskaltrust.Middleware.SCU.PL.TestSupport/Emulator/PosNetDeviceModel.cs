@@ -164,6 +164,12 @@ public sealed class PosNetDeviceModel
     /// <summary>The additional lines (trftrln na) printed after the last receipt.</summary>
     public IReadOnlyList<string> LastFooterLines => _footerLines;
 
+    /// <summary>
+    /// Characters per printed line: 56 on 80 mm paper (as on the POSNET THERMAL XL2 ONLINE the receipts
+    /// were tested on), 40 on 57 mm paper. A longer additional line (trftrln na) is refused.
+    /// </summary>
+    public int CharactersPerLine { get; set; } = 56;
+
     /// <summary>The 1D code (ftrcfg bc) printed in the footer of the last receipt, if any.</summary>
     public string? LastReceiptBarcode { get; private set; }
 
@@ -545,7 +551,7 @@ public sealed class PosNetDeviceModel
             return Error("trftrln", PosNetErrors.Parameter);
         }
         var text = p.TryGetValue("na", out var na) ? na : "";
-        if (text.Length > 40)
+        if (text.Length > CharactersPerLine)
         {
             return Error("trftrln", PosNetErrors.Parameter);
         }
