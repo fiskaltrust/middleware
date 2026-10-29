@@ -769,4 +769,56 @@ public class PTChargeItemValidationsTests
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
     }
+
+    [Theory]
+    [InlineData(0x9900L, 0x0600L)]
+    [InlineData(0x0600L, 0x9900L)]
+    public void DiscountVatRateAndCaseAlignment_NotSubjectMismatch_ShouldFail(long mainNatureOfVat, long discountNatureOfVat)
+    {
+        var validator = new ChargeItemValidations.DiscountVatRateAndCaseAlignment();
+        var request = CreateZeroVatRequestWithDiscount(mainNatureOfVat, discountNatureOfVat);
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[1]")
+            .WithErrorCode("DiscountVatRateOrCaseMismatch");
+    }
+
+    [Theory]
+    [InlineData(0x9900L, 0x9900L)]
+    [InlineData(0x0600L, 0x1600L)]
+    public void DiscountVatRateAndCaseAlignment_SameNotSubjectClassification_ShouldPass(long mainNatureOfVat, long discountNatureOfVat)
+    {
+        var validator = new ChargeItemValidations.DiscountVatRateAndCaseAlignment();
+        var request = CreateZeroVatRequestWithDiscount(mainNatureOfVat, discountNatureOfVat);
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    private static ReceiptRequest CreateZeroVatRequestWithDiscount(long mainNatureOfVat, long discountNatureOfVat)
+    {
+        var baseCase = ChargeItemCase.NotTaxable.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery);
+        return new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Description = "Main Item",
+                    VATRate = 0m,
+                    Amount = 100m,
+                    Quantity = 1m,
+                    ftChargeItemCase = (ChargeItemCase) ((long) baseCase | mainNatureOfVat)
+                },
+                new ChargeItem
+                {
+                    Description = "Discount",
+                    VATRate = 0m,
+                    Amount = -10m,
+                    Quantity = 1m,
+                    ftChargeItemCase = ((ChargeItemCase) ((long) baseCase | discountNatureOfVat)).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount)
+                }
+            ],
+            cbPayItems = []
+        };
+    }
 }

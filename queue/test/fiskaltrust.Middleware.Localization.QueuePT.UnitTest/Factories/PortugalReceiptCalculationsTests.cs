@@ -544,6 +544,38 @@ public class PortugalReceiptCalculationsTests
     }
 
     [Fact]
+    public void CreateVatFreeQRCode_ShouldReportNotSubjectItemsInFieldL_AndExemptItemsInFieldI2()
+    {
+        var request = CreateTestReceiptRequest();
+        request.cbChargeItems =
+        [
+            new ChargeItem
+            {
+                Position = 1,
+                Description = "Not subject",
+                Amount = 30.00m,
+                VATRate = 0m,
+                Quantity = 1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918 // M99
+            },
+            new ChargeItem
+            {
+                Position = 2,
+                Description = "Exempt",
+                Amount = 20.00m,
+                VATRate = 0m,
+                Quantity = 1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0618 // M06
+            }
+        ];
+        var response = CreateTestReceiptResponse("ft8Y9#RG 20241210004");
+
+        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode("RGHASH012", "111222333", CreateTestNumberSeries("789"), request, response, sandbox: false);
+
+        qrCode.Should().Contain("I1:0*I2:20.00*L:30.00*N:0.00*O:50.00*");
+    }
+
+    [Fact]
     public void CreateInvoiceQRCode_ShouldGenerateQRCodeWithCorrectUniqueIdentification()
     {
         // Arrange

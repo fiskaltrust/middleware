@@ -297,6 +297,28 @@ public class TaxExemptionResolverTests
     }
 
     [Theory]
+    [InlineData(NotTaxableM99, NotTaxableM06)]
+    [InlineData(NotTaxableM06, NotTaxableM99)]
+    public void Validation_DiscountWithDifferentNotSubjectClassification_Fails(long mainCase, long discountCase)
+    {
+        var request = CreateRequest(
+            CreateChargeItem(mainCase),
+            new ChargeItem
+            {
+                Position = 2,
+                Description = "Discount",
+                Quantity = 1,
+                Amount = -10,
+                VATRate = 0,
+                ftChargeItemCase = ((ChargeItemCase) discountCase).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount)
+            });
+
+        ChargeItemValidations.Validate_ChargeItems_DiscountVatRateAndCaseAlignment(request)
+            .Should().ContainSingle()
+            .Which.Errors.Should().ContainSingle(x => x.Code == PortugalValidationRules.DiscountVatRateOrCaseMismatch.Code);
+    }
+
+    [Theory]
     [InlineData(NotTaxableM06, "ISE")]
     [InlineData(NormalVat, "NOR")]
     public void OtherCodes_StayVat(long chargeItemCase, string expectedTaxCode)
@@ -350,10 +372,10 @@ public class TaxExemptionResolverTests
         error.Field.Should().Be(PortugalValidationFields.ChargeItemsCase);
     }
 
-    private static ReceiptRequest CreateRequest(ChargeItem chargeItem) => new()
+    private static ReceiptRequest CreateRequest(params ChargeItem[] chargeItems) => new()
     {
         ftReceiptCase = ReceiptCase.InvoiceB2B0x1002.WithCountry("PT"),
-        cbChargeItems = [chargeItem],
+        cbChargeItems = [.. chargeItems],
         cbPayItems = []
     };
 }

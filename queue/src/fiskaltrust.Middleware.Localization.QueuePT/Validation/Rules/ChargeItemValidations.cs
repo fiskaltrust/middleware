@@ -577,12 +577,28 @@ public static class ChargeItemValidations
                 var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
                 var vatCaseMismatch = modifierVatCase != mainVatCase;
 
+                var rule = PortugalValidationRules.DiscountVatRateOrCaseMismatch;
+
+                // SAF-T reports the modifier on the line of its main item, so both must share the tax type (IVA or NS)
+                var mainNotSubject = TaxExemptionResolver.IsNotSubject(mainItem);
+                if (!vatRateMismatch && !vatCaseMismatch && mainNotSubject != TaxExemptionResolver.IsNotSubject(modifier))
+                {
+                    yield return ValidationResult.Failed(new ValidationError(
+                        ErrorMessagesPT.EEEE_DiscountNotSubjectMismatch(mainItemIndex, modifierIndex, mainNotSubject),
+                        rule.Code,
+                        rule.Field,
+                        modifierIndex
+                    )
+                    .WithContext("MainItemIndex", mainItemIndex)
+                    .WithContext("ModifierIndex", modifierIndex));
+                    continue;
+                }
+
                 if (!vatRateMismatch && !vatCaseMismatch)
                 {
                     continue;
                 }
 
-                var rule = PortugalValidationRules.DiscountVatRateOrCaseMismatch;
                 yield return ValidationResult.Failed(new ValidationError(
                     ErrorMessagesPT.EEEE_DiscountVatRateOrCaseMismatch(mainItemIndex, modifierIndex, mainVatRate, modifier.VATRate, mainVatCase, modifierVatCase),
                     rule.Code,

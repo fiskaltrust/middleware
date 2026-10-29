@@ -125,6 +125,13 @@ public static class ErrorMessagesPT
         $"EEEE_Discount/extra cbChargeItems[{discountIndex}] must use the same VAT rate ({mainVatRate}%) and VAT case '{mainVatCase}' as its related line item cbChargeItems[{mainItemIndex}], but VAT rate is {discountVatRate}% and VAT case is '{discountVatCase}'.";
 
     /// <summary>
+    /// Error message for discounts/extras that are not subject to VAT (M99) while their related line item is, or vice versa
+    /// </summary>
+    public static string EEEE_DiscountNotSubjectMismatch(int mainItemIndex, int discountIndex, bool mainNotSubject) =>
+        $"EEEE_Discount/extra cbChargeItems[{discountIndex}] must use the same tax exemption code as its related line item cbChargeItems[{mainItemIndex}]: " +
+        (mainNotSubject ? "the line item is not subject to VAT (M99) but the discount/extra is not." : "the discount/extra is not subject to VAT (M99) but the line item is not.");
+
+    /// <summary>
     /// Error message for negative quantity in non-refund receipts
     /// </summary>
     public static string EEEE_NegativeQuantityNotAllowed(int index, decimal quantity) =>

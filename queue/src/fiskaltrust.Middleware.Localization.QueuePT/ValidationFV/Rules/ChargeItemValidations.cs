@@ -410,6 +410,18 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 var modifierIndex = request.cbChargeItems.IndexOf(modifier);
                                 var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
                                 var vatCaseMismatch = modifierVatCase != mainVatCase;
+                                // SAF-T reports the modifier on the line of its main item, so both must share the tax type (IVA or NS)
+                                var mainNotSubject = TaxExemptionResolver.IsNotSubject(mainItem);
+                                if (!vatRateMismatch && !vatCaseMismatch && mainNotSubject != TaxExemptionResolver.IsNotSubject(modifier))
+                                {
+                                    context.AddFailure(new ValidationFailure(
+                                        $"cbChargeItems[{modifierIndex}]",
+                                        mainNotSubject
+                                            ? $"Main item at index {mainItemIndex} is not subject to VAT (M99) but discount/extra at index {modifierIndex} is not."
+                                            : $"Discount/extra at index {modifierIndex} is not subject to VAT (M99) but main item at index {mainItemIndex} is not.")
+                                    { ErrorCode = "DiscountVatRateOrCaseMismatch" });
+                                    continue;
+                                }
                                 if (!vatRateMismatch && !vatCaseMismatch)
                                     continue;
                                 context.AddFailure(new ValidationFailure(
