@@ -162,6 +162,52 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
         }
 
         [Fact]
+        public void ToV2_PreservesHighPrecisionDecimals_InEmbeddedJson()
+        {
+            // What the POS put into the v1 JSON strings reaches the service digit for digit: the embedded v2 original, the
+            // item case data and the state data are not rounded through a double on the way.
+            var v1 = new ReceiptRequest
+            {
+                ftReceiptCase = 0x4445_0000_0000_0001L,
+                ftReceiptCaseData = "{\"DE\":{},\"v2ReceiptRequest\":{\"ftReceiptCase\":4919373352344227842,\"cbChargeItems\":[{\"Quantity\":0.1234567890123456789,\"Amount\":12.345678901234567890123,\"Description\":\"Precise\"}]}}",
+                cbChargeItems = new[] { new ChargeItem { Amount = 12.5m, Quantity = 1, Description = "Item", ftChargeItemCase = 0x4445_0000_0000_0001L, ftChargeItemCaseData = "{\"Weight\":0.1234567890123456789,\"Count\":12345678901234567890}" } },
+                cbPayItems = new PayItem[0],
+            };
+
+            var request = PostFiscalizationMapper.ToV2(v1);
+
+            var embeddedItem = ((JsonElement) request.ftReceiptCaseData!).GetProperty("v2ReceiptRequest").GetProperty("cbChargeItems")[0];
+            embeddedItem.GetProperty("Quantity").GetRawText().Should().Be("0.1234567890123456789");
+            embeddedItem.GetProperty("Amount").GetRawText().Should().Be("12.345678901234567890123");
+            var itemCaseData = (JsonElement) request.cbChargeItems[0].ftChargeItemCaseData!;
+            itemCaseData.GetProperty("Weight").GetRawText().Should().Be("0.1234567890123456789");
+            itemCaseData.GetProperty("Count").GetRawText().Should().Be("12345678901234567890", "an integer beyond long is kept as well");
+            JsonSerializer.Serialize(request.ftReceiptCaseData).Should().Contain("0.1234567890123456789", "this is what the service receives");
+
+            var response = PostFiscalizationMapper.ToV2(new ReceiptResponse { ftState = 0x4445_0000_0000_0000L, ftStateData = "{\"Precise\":0.1234567890123456789}" });
+            ((JsonElement) response.ftStateData!).GetProperty("Precise").GetRawText().Should().Be("0.1234567890123456789");
+        }
+
+        [Fact]
+        public void ToV2_KeepsDateLikeStrings_AndNumbersBeyondDecimalRange_InEmbeddedJson()
+        {
+            var v1 = new ReceiptRequest
+            {
+                ftReceiptCase = 0x4445_0000_0000_0001L,
+                ftReceiptCaseData = "{\"IssuedAt\":\"2026-09-22T10:15:30.1234567+02:00\",\"Day\":\"2026-09-22\",\"Huge\":1e30,\"Tiny\":1e-30}",
+                cbChargeItems = new ChargeItem[0],
+                cbPayItems = new PayItem[0],
+            };
+
+            var caseData = (JsonElement) PostFiscalizationMapper.ToV2(v1).ftReceiptCaseData!;
+
+            caseData.GetProperty("IssuedAt").GetString().Should().Be("2026-09-22T10:15:30.1234567+02:00", "a date-like string is not turned into a date and back");
+            caseData.GetProperty("Day").GetString().Should().Be("2026-09-22");
+            caseData.GetProperty("Huge").GetDouble().Should().Be(1e30, "a number the decimal type cannot hold is still carried");
+            caseData.GetProperty("Tiny").GetDouble().Should().Be(1e-30);
+        }
+
+        [Fact]
         public void StateDataToString_CoversEveryShape()
         {
             PostFiscalizationMapper.StateDataToString(null).Should().BeNull();

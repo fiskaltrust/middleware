@@ -149,11 +149,47 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
 
             try
             {
-                json[name] = JToken.Parse(text);
+                json[name] = ParseEmbeddedJson(text);
             }
             catch (Newtonsoft.Json.JsonException)
             {
                 // Not JSON after all: the service gets the string, exactly as the POS sent it.
+            }
+        }
+
+        /// <summary>
+        /// Parses an embedded JSON document without altering its values. Newtonsoft reads fractional numbers as doubles
+        /// and date-like strings as dates by default, which would change a quantity like 0.1234567890123456789 or an
+        /// offset timestamp on the way to the service; here numbers are read as decimals and strings stay strings. A
+        /// number outside the decimal range is read as a double, since that is the only way to carry it at all.
+        /// </summary>
+        private static JToken ParseEmbeddedJson(string text)
+        {
+            try
+            {
+                return ParseEmbeddedJson(text, Newtonsoft.Json.FloatParseHandling.Decimal);
+            }
+            catch (Newtonsoft.Json.JsonReaderException)
+            {
+                return ParseEmbeddedJson(text, Newtonsoft.Json.FloatParseHandling.Double);
+            }
+        }
+
+        private static JToken ParseEmbeddedJson(string text, Newtonsoft.Json.FloatParseHandling floatParseHandling)
+        {
+            using (var reader = new Newtonsoft.Json.JsonTextReader(new System.IO.StringReader(text))
+            {
+                FloatParseHandling = floatParseHandling,
+                DateParseHandling = Newtonsoft.Json.DateParseHandling.None,
+            })
+            {
+                var token = JToken.ReadFrom(reader);
+                if (reader.Read())
+                {
+                    throw new Newtonsoft.Json.JsonReaderException("Additional text found after the JSON document.");
+                }
+
+                return token;
             }
         }
 
