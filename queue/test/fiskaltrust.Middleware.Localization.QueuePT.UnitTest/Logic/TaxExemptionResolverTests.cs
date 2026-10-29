@@ -19,6 +19,8 @@ public class TaxExemptionResolverTests
     private const long NotTaxableNature30 = 0x5054_2000_0000_3018;
     private const long NotTaxableNature80 = 0x5054_2000_0000_8018;
     private const long NormalVat = 0x5054_2000_0000_0013;
+    // ZeroVatRate (V=7), Delivery (S=1), NN 80: the case an override is sent with
+    private const long ZeroVatRateNature80 = 0x5054_2000_0000_8017;
 
     private static ChargeItem CreateChargeItem(long chargeItemCase, decimal vatRate = 0m, object? caseData = null) => new()
     {
@@ -126,9 +128,24 @@ public class TaxExemptionResolverTests
     public void Validation_ZeroVatWithValidOverrideAndGeneralNatureOfVat_Passes()
     {
         // NN 0x80 (Excluded) is not an M-code, the override provides the exact code
-        var request = CreateRequest(CreateChargeItem(NotTaxableNature80, caseData: OverrideAsJsonElement("M99")));
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateNature80, caseData: OverrideAsJsonElement("M99")));
 
         ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
+        ChargeItemValidations.Validate_ChargeItems_VATRate_SupportedVatRates(request).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(NotTaxableNature80)]
+    [InlineData(0x5054_2000_0000_8013)]
+    public void Validation_ZeroVatWithOverrideAndOtherVatCategoryThanZeroRate_Fails(long chargeItemCase)
+    {
+        // With an override NN does not carry the exemption code, so the 0 % must come from V = 7
+        var request = CreateRequest(CreateChargeItem(chargeItemCase, caseData: OverrideAsJsonElement("M99")));
+
+        var results = ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).ToList();
+
+        results.Should().ContainSingle();
+        results[0].Errors.Single().Code.Should().Be(PortugalValidationRules.TaxExemptionCodeRequiresZeroVatRate.Code);
     }
 
     [Fact]

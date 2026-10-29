@@ -499,7 +499,7 @@ public class PTChargeItemValidationsTests
                 VATRate = 0m,
                 Amount = 10m,
                 Quantity = 1m,
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_8018L,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_8017L,
                 ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M99" } }""")
             }],
             cbPayItems = []
@@ -521,7 +521,7 @@ public class PTChargeItemValidationsTests
                 VATRate = 0m,
                 Amount = 10m,
                 Quantity = 1m,
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0718L,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0717L,
                 ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M03" } }""")
             }],
             cbPayItems = []
@@ -529,6 +529,29 @@ public class PTChargeItemValidationsTests
         var result = validator.TestValidate(request);
         result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
             .WithErrorCode("ZeroVatExemption");
+    }
+
+    [Fact]
+    public void ZeroVatExemption_TaxExemptionCodeOverrideWithNotTaxableCase_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_8018L, // NotTaxable: with an override, V must be 7
+                ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M99" } }""")
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
+            .WithErrorCode("TaxExemptionCodeRequiresZeroVatRate");
     }
 
     [Fact]

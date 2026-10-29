@@ -258,6 +258,12 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         .WithMessage("ftChargeItemCaseData.PT.TaxExemptionCode is only allowed on charge items with VAT rate 0.")
                         .WithErrorCode("TaxExemptionCodeOnTaxedLine");
 
+                    // With an override, NN does not carry the exemption code, so the 0 % must come from the VAT category
+                    chargeItem.RuleFor(x => x.ftChargeItemCase)
+                        .Must((item, ftCase) => ftCase.Vat() == ChargeItemCase.ZeroVatRate || !TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out _))
+                        .WithMessage(item => $"When ftChargeItemCaseData.PT.TaxExemptionCode is set, ftChargeItemCase must use the zero VAT rate (V = 7), but uses '{item.ftChargeItemCase.Vat()}'.")
+                        .WithErrorCode("TaxExemptionCodeRequiresZeroVatRate");
+
                     chargeItem.RuleFor(x => x.ftChargeItemCase)
                         .Must((item, ftCase) => Math.Abs(item.VATRate) <= 0.001m || ftCase.NatureOfVat() == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                         .WithMessage(item => $"The nature of VAT (NN) 0x{(int) item.ftChargeItemCase.NatureOfVat():X4} sets a tax exemption code, which is only allowed on charge items with VAT rate 0.")

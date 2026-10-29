@@ -479,6 +479,19 @@ public static class ChargeItemValidations
                           .WithContext("VATRate", chargeItem.VATRate)
                           .WithContext("TaxExemptionCode", overrideCode!));
                     }
+                    else if (chargeItem.ftChargeItemCase.Vat() != ChargeItemCase.ZeroVatRate)
+                    {
+                        // With an override, NN does not carry the exemption code, so the 0 % must come from the VAT category
+                        var rule = PortugalValidationRules.TaxExemptionCodeRequiresZeroVatRate;
+                        yield return ValidationResult.Failed(new ValidationError(
+                              ErrorMessagesPT.EEEE_TaxExemptionCodeRequiresZeroVatRate(i, chargeItem.ftChargeItemCase.Vat()),
+                              rule.Code,
+                              rule.Field,
+                              i
+                          )
+                          .WithContext("VatRateCategory", chargeItem.ftChargeItemCase.Vat().ToString())
+                          .WithContext("TaxExemptionCode", overrideCode!));
+                    }
                 }
                 else
                 {
