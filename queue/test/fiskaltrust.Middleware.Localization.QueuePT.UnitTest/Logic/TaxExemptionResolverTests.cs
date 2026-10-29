@@ -191,7 +191,7 @@ public class TaxExemptionResolverTests
         var request = CreateRequest(chargeItem);
         var response = new ReceiptResponse { ftReceiptIdentification = "ft1#FT ft2026/1" };
 
-        var line = SAFTMapping.GetLine(request, response, (chargeItem, new List<ChargeItem>()));
+        var line = SaftExporter.GetLine(request, response, (chargeItem, new List<ChargeItem>()));
 
         line.Tax.TaxCode.Should().Be("ISE");
         line.TaxExemptionCode.Should().Be("M06");
