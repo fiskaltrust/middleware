@@ -221,6 +221,9 @@ public static class ErrorMessagesPT
     public static string EEEE_TaxExemptionCodeOnTaxedLine(int i, string exemptionCode) =>
         $"EEEE_cbChargeItems[{i}]: Tax exemption code '{exemptionCode}' in ftChargeItemCaseData.PT.TaxExemptionCode is only allowed when the VAT rate is 0%.";
 
+    public static string EEEE_TaxExemptionCodeRequiresZeroVatRate(int i, ChargeItemCase vatRateCategory) =>
+        $"EEEE_cbChargeItems[{i}]: When ftChargeItemCaseData.PT.TaxExemptionCode is set, ftChargeItemCase must use the zero VAT rate (V = 7), but uses '{vatRateCategory}'.";
+
     public static string EEEE_NatureOfVatOnTaxedLine(int i, int natureOfVat) =>
         $"EEEE_cbChargeItems[{i}]: The nature of VAT (NN) 0x{natureOfVat:X4} sets a tax exemption code, which is only allowed when the VAT rate is 0%. Use NN 00 for charge items with VAT.";
 
