@@ -73,7 +73,7 @@ public class SAFTMappingSchemaComplianceTests
             Description = "Not subject item",
             Amount = 50m,
             VATRate = 0m,
-            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918 // NN 99 = M99
+            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
         });
         receipt.Item1.cbPayItems[0].Amount = 150m;
 

@@ -91,7 +91,7 @@ public static class PTMappings
     public static string GetTaxType(ChargeItem chargeItem) => TaxExemptionResolver.IsNotSubject(chargeItem) ? "NS" : "IVA";
 
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
-    public static string GetIVATAxCode(ChargeItem chargeItem) => TaxExemptionResolver.IsNotSubject(chargeItem) ? "NS" : TaxExemptionResolver.IsExempt(chargeItem) ? "ISE" : chargeItem.ftChargeItemCase.Vat() switch
+    public static string GetIVATAxCode(ChargeItem chargeItem) => TaxExemptionResolver.IsExempt(chargeItem) ? "ISE" : chargeItem.ftChargeItemCase.Vat() switch
     {
         ChargeItemCase.UnknownService => throw new NotImplementedException("There is no unkown rate in Portugal"),
         ChargeItemCase.DiscountedVatRate1 => "RED",
@@ -101,7 +101,7 @@ public static class PTMappings
         ChargeItemCase.SuperReducedVatRate2 => throw new NotImplementedException("There is no super-reduced-2 rate in Portugal"),
         ChargeItemCase.ParkingVatRate => throw new NotImplementedException("There is no parking vat rate in Portugal"),
         ChargeItemCase.ZeroVatRate => throw new NotImplementedException("There is no zero rate in Portugal"),
-        ChargeItemCase.NotTaxable => "ISE",
+        ChargeItemCase.NotTaxable => "NS",
         ChargeItemCase c => throw new NotImplementedException($"The given tax scheme 0x{c:X} is not supported in Portugal"),
     };
 

@@ -258,17 +258,13 @@ public class TaxExemptionResolverTests
         PTMappings.GetIVATAxCode(CreateChargeItem(NormalVat, vatRate: 23m)).Should().Be("NOR");
     }
 
-    // NotTaxable (V=8), Delivery (S=1), NN 99 (M99 - não sujeito ou não tributado)
+    // NotTaxable (V=8), Delivery (S=1), NN 99 (M99 as exemption code)
     private const long NotTaxableM99 = 0x5054_2000_0000_9918;
-    // ZeroVatRate (V=7), Delivery (S=1), NN 99
-    private const long ZeroVatRateM99 = 0x5054_2000_0000_9917;
 
-    [Theory]
-    [InlineData(NotTaxableM99)]
-    [InlineData(ZeroVatRateM99)]
-    public void M99_IsMappedToNotSubject(long chargeItemCase)
+    [Fact]
+    public void NotTaxableWithoutExemptionCode_IsMappedToNotSubject()
     {
-        var chargeItem = CreateChargeItem(chargeItemCase);
+        var chargeItem = CreateChargeItem(NotTaxableNoNature);
 
         TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeTrue();
         PTMappings.GetTaxType(chargeItem).Should().Be("NS");
@@ -277,28 +273,49 @@ public class TaxExemptionResolverTests
         PTMappings.GetTaxExemptionReason(chargeItem).Should().Be("Não sujeito ou não tributado");
     }
 
-    [Fact]
-    public void M99Override_IsMappedToNotSubject()
+    [Theory]
+    [InlineData(NotTaxableM99, "M99")]
+    [InlineData(NotTaxableM06, "M06")]
+    public void NotTaxableWithNatureOfVat_IsMappedToExempt(long chargeItemCase, string expectedCode)
     {
-        var chargeItem = CreateChargeItem(NotTaxableM06, caseData: OverrideAsJsonElement("M99"));
+        var chargeItem = CreateChargeItem(chargeItemCase);
 
-        PTMappings.GetTaxType(chargeItem).Should().Be("NS");
-        PTMappings.GetIVATAxCode(chargeItem).Should().Be("NS");
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
+        PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("ISE");
+        PTMappings.GetTaxExemptionCode(chargeItem).Should().Be(expectedCode);
     }
 
     [Fact]
-    public void OverrideOfM99_IsMappedToExempt()
+    public void NotTaxableWithOverride_IsMappedToExempt()
     {
-        var chargeItem = CreateChargeItem(NotTaxableM99, caseData: OverrideAsJsonElement("M06"));
+        var chargeItem = CreateChargeItem(NotTaxableNoNature, caseData: OverrideAsJsonElement("M99"));
 
         TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
         PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
         PTMappings.GetIVATAxCode(chargeItem).Should().Be("ISE");
     }
 
+    [Fact]
+    public void Validation_NotTaxableWithoutNatureOfVat_Passes()
+    {
+        var request = CreateRequest(CreateChargeItem(NotTaxableNoNature));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validation_ZeroVatRateWithoutNatureOfVat_StillFails()
+    {
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateNoNature));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request)
+            .SelectMany(x => x.Errors).Should().ContainSingle(x => x.Code == PortugalValidationRules.ZeroVatRateMissingNature.Code);
+    }
+
     [Theory]
-    [InlineData(NotTaxableM99, NotTaxableM06)]
-    [InlineData(NotTaxableM06, NotTaxableM99)]
+    [InlineData(NotTaxableNoNature, NotTaxableM06)]
+    [InlineData(NotTaxableM06, NotTaxableNoNature)]
     public void Validation_DiscountWithDifferentNotSubjectClassification_Fails(long mainCase, long discountCase)
     {
         var request = CreateRequest(

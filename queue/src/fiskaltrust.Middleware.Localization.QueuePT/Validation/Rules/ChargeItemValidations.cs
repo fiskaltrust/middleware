@@ -480,9 +480,14 @@ public static class ChargeItemValidations
                           .WithContext("TaxExemptionCode", overrideCode!));
                     }
                 }
-                // UsualVatApplies (0x0000) is not valid for zero VAT rate without an override
+                // Without an exemption code, 0 % is only valid for charge items not subject to VAT (V = 8)
                 else if (natureOfVat == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                 {
+                    if (TaxExemptionResolver.IsNotSubject(chargeItem))
+                    {
+                        continue;
+                    }
+
                     var rule = PortugalValidationRules.ZeroVatRateMissingNature;
                     yield return ValidationResult.Failed(new ValidationError(
                         ErrorMessagesPT.EEEE_ZeroVatRateMissingNature(i),

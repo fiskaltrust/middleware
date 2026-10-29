@@ -815,7 +815,7 @@ public class SaftExporter
             {
                 line.SettlementAmount = netAmountModifiers;
             }
-            if (TaxExemptionResolver.IsExempt(chargeItemData))
+            if (TaxExemptionResolver.IsExempt(chargeItemData) || TaxExemptionResolver.IsNotSubject(chargeItemData))
             {
                 line.TaxExemptionReason = PTMappings.GetTaxExemptionReason(chargeItemData);
                 line.TaxExemptionCode = PTMappings.GetTaxExemptionCode(chargeItemData);

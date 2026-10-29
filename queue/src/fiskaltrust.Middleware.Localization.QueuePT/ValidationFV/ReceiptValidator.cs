@@ -28,8 +28,9 @@ public class ReceiptValidator : MarketValidator
         _refundValidator = refundValidator;
     }
 
-    // With ftChargeItemCaseData.PT.TaxExemptionCode the exemption code is given explicitly and the 0 % by V = 7, so no nature of VAT is needed
-    protected override Func<ChargeItem, bool>? ZeroVatRateNatureNotRequired => chargeItem => TaxExemptionResolver.TryGetTaxExemptionCodeOverride(chargeItem, out _);
+    // With ftChargeItemCaseData.PT.TaxExemptionCode the exemption code is given explicitly and the 0 % by V = 7, so no nature of VAT is needed.
+    // Charge items not subject to VAT (V = 8 without exemption code) need no nature of VAT either.
+    protected override Func<ChargeItem, bool>? ZeroVatRateNatureNotRequired => chargeItem => TaxExemptionResolver.TryGetTaxExemptionCodeOverride(chargeItem, out _) || TaxExemptionResolver.IsNotSubject(chargeItem);
 
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null)
     {

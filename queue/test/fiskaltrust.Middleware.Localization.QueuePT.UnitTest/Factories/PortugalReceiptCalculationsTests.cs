@@ -488,7 +488,7 @@ public class PortugalReceiptCalculationsTests
             Amount = 30.00m,
             VATRate = 0m,
             Quantity = 1,
-            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918 // M99
+            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
         });
         request.cbChargeItems.Add(new ChargeItem
         {
@@ -524,7 +524,7 @@ public class PortugalReceiptCalculationsTests
                 Amount = -100.00m,
                 VATRate = 0m,
                 Quantity = -1,
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918 // M99
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
             },
             new ChargeItem
             {
@@ -533,7 +533,7 @@ public class PortugalReceiptCalculationsTests
                 Amount = 10.00m,
                 VATRate = 0m,
                 Quantity = 1,
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_9918 // M99, discount
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0018 // NotTaxable without exemption code, discount
             }
         ];
         var response = CreateTestReceiptResponse("ft5B1#NC 20241210001");
@@ -556,7 +556,7 @@ public class PortugalReceiptCalculationsTests
                 Amount = 30.00m,
                 VATRate = 0m,
                 Quantity = 1,
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918 // M99
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
             },
             new ChargeItem
             {

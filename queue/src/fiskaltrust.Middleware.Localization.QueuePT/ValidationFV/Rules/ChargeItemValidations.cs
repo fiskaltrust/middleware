@@ -241,8 +241,9 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 return TaxExemptionResolver.TryResolve(item, out _);
 
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
+                            // Without an exemption code, 0 % is only valid for charge items not subject to VAT (V = 8)
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
-                                return false;
+                                return TaxExemptionResolver.IsNotSubject(item);
 
                             return TaxExemptionResolver.TryResolve(item, out _);
                         })
@@ -252,7 +253,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 return $"Unknown tax exemption code '{overrideCode}' in ftChargeItemCaseData.PT.TaxExemptionCode.";
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
-                                return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field.";
+                                return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field, unless the VAT category is NotTaxable (V = 8).";
                             return $"Unknown tax exemption code '0x{(int) natureValue:X4}'.";
                         })
                         .WithErrorCode("ZeroVatExemption");
@@ -417,8 +418,8 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                     context.AddFailure(new ValidationFailure(
                                         $"cbChargeItems[{modifierIndex}]",
                                         mainNotSubject
-                                            ? $"Main item at index {mainItemIndex} is not subject to VAT (M99) but discount/extra at index {modifierIndex} is not."
-                                            : $"Discount/extra at index {modifierIndex} is not subject to VAT (M99) but main item at index {mainItemIndex} is not.")
+                                            ? $"Main item at index {mainItemIndex} is not subject to VAT (V = 8 without exemption code) but discount/extra at index {modifierIndex} is not."
+                                            : $"Discount/extra at index {modifierIndex} is not subject to VAT (V = 8 without exemption code) but main item at index {mainItemIndex} is not.")
                                     { ErrorCode = "DiscountVatRateOrCaseMismatch" });
                                     continue;
                                 }

@@ -452,13 +452,35 @@ public class PTChargeItemValidationsTests
                 VATRate = 0m,
                 Amount = 10m,
                 Quantity = 1m,
-                ftChargeItemCase = ChargeItemCase.NotTaxable.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+                ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
             }],
             cbPayItems = []
         };
         var result = validator.TestValidate(request);
         result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
             .WithErrorCode("ZeroVatExemption");
+    }
+
+    [Fact]
+    public void ZeroVatExemption_NotTaxableWithoutExemption_ShouldPass()
+    {
+        // NotTaxable (V = 8) without exemption code: not subject to VAT (SAF-T NS)
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = ChargeItemCase.NotTaxable.WithCountry("PT").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]
@@ -771,8 +793,8 @@ public class PTChargeItemValidationsTests
     }
 
     [Theory]
-    [InlineData(0x9900L, 0x0600L)]
-    [InlineData(0x0600L, 0x9900L)]
+    [InlineData(0x0000L, 0x0600L)]
+    [InlineData(0x0600L, 0x0000L)]
     public void DiscountVatRateAndCaseAlignment_NotSubjectMismatch_ShouldFail(long mainNatureOfVat, long discountNatureOfVat)
     {
         var validator = new ChargeItemValidations.DiscountVatRateAndCaseAlignment();
@@ -783,7 +805,7 @@ public class PTChargeItemValidationsTests
     }
 
     [Theory]
-    [InlineData(0x9900L, 0x9900L)]
+    [InlineData(0x0000L, 0x0000L)]
     [InlineData(0x0600L, 0x1600L)]
     public void DiscountVatRateAndCaseAlignment_SameNotSubjectClassification_ShouldPass(long mainNatureOfVat, long discountNatureOfVat)
     {
