@@ -241,8 +241,9 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 return TaxExemptionResolver.TryResolve(item, out _);
 
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
+                            // Without an exemption code, 0 % is only valid for charge items not subject to VAT (V = 8)
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
-                                return false;
+                                return TaxExemptionResolver.IsNotSubject(item);
 
                             return TaxExemptionResolver.TryResolve(item, out _);
                         })
@@ -252,7 +253,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 return $"Unknown tax exemption code '{overrideCode}' in ftChargeItemCaseData.PT.TaxExemptionCode.";
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
-                                return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field.";
+                                return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field, unless the VAT category is NotTaxable (V = 8).";
                             return $"Unknown tax exemption code '0x{(int) natureValue:X4}'.";
                         })
                         .WithErrorCode("ZeroVatExemption");
@@ -410,6 +411,18 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                                 var modifierIndex = request.cbChargeItems.IndexOf(modifier);
                                 var vatRateMismatch = Math.Abs(modifier.VATRate - mainVatRate) > 0.001m;
                                 var vatCaseMismatch = modifierVatCase != mainVatCase;
+                                // SAF-T reports the modifier on the line of its main item, so both must share the tax type (IVA or NS)
+                                var mainNotSubject = TaxExemptionResolver.IsNotSubject(mainItem);
+                                if (!vatRateMismatch && !vatCaseMismatch && mainNotSubject != TaxExemptionResolver.IsNotSubject(modifier))
+                                {
+                                    context.AddFailure(new ValidationFailure(
+                                        $"cbChargeItems[{modifierIndex}]",
+                                        mainNotSubject
+                                            ? $"Main item at index {mainItemIndex} is not subject to VAT (V = 8 without exemption code) but discount/extra at index {modifierIndex} is not."
+                                            : $"Discount/extra at index {modifierIndex} is not subject to VAT (V = 8 without exemption code) but main item at index {mainItemIndex} is not.")
+                                    { ErrorCode = "DiscountVatRateOrCaseMismatch" });
+                                    continue;
+                                }
                                 if (!vatRateMismatch && !vatCaseMismatch)
                                     continue;
                                 context.AddFailure(new ValidationFailure(

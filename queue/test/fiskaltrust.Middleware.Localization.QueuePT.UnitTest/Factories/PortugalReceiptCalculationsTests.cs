@@ -478,6 +478,104 @@ public class PortugalReceiptCalculationsTests
     }
 
     [Fact]
+    public void CreateQRCode_ShouldReportNotSubjectItemsInFieldL_AndExemptItemsInFieldI2()
+    {
+        var request = CreateTestReceiptRequest();
+        request.cbChargeItems.Add(new ChargeItem
+        {
+            Position = 3,
+            Description = "Not subject",
+            Amount = 30.00m,
+            VATRate = 0m,
+            Quantity = 1,
+            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
+        });
+        request.cbChargeItems.Add(new ChargeItem
+        {
+            Position = 4,
+            Description = "Exempt",
+            Amount = 20.00m,
+            VATRate = 0m,
+            Quantity = 1,
+            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0618 // M06
+        });
+        var response = CreateTestReceiptResponse("ft7A2#FT 20241210002/1");
+
+        var qrCode = PortugalReceiptCalculations.CreateQRCode("INVHASH456", "987654321", CreateTestNumberSeries("123"), request, response, sandbox: false);
+        var creditNoteQrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode("INVHASH456", "987654321", CreateTestNumberSeries("123"), request, response, sandbox: false);
+
+        foreach (var code in new[] { qrCode, creditNoteQrCode })
+        {
+            code.Should().Contain("I2:20.00*");
+            code.Should().Contain("L:30.00*N:26.00*O:200.00*");
+        }
+    }
+
+    [Fact]
+    public void CreateCreditNoteQRCode_ShouldNetReversedDiscountsOfNotSubjectItemsInFieldL()
+    {
+        var request = CreateTestReceiptRequest();
+        request.cbChargeItems =
+        [
+            new ChargeItem
+            {
+                Position = 1,
+                Description = "Not subject",
+                Amount = -100.00m,
+                VATRate = 0m,
+                Quantity = -1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
+            },
+            new ChargeItem
+            {
+                Position = 2,
+                Description = "Discount",
+                Amount = 10.00m,
+                VATRate = 0m,
+                Quantity = 1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0018 // NotTaxable without exemption code, discount
+            }
+        ];
+        var response = CreateTestReceiptResponse("ft5B1#NC 20241210001");
+
+        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode("TESTHASH123", "123456789", CreateTestNumberSeries("0"), request, response, sandbox: false);
+
+        qrCode.Should().Contain("L:90.00*");
+    }
+
+    [Fact]
+    public void CreateVatFreeQRCode_ShouldReportNotSubjectItemsInFieldL_AndExemptItemsInFieldI2()
+    {
+        var request = CreateTestReceiptRequest();
+        request.cbChargeItems =
+        [
+            new ChargeItem
+            {
+                Position = 1,
+                Description = "Not subject",
+                Amount = 30.00m,
+                VATRate = 0m,
+                Quantity = 1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
+            },
+            new ChargeItem
+            {
+                Position = 2,
+                Description = "Exempt",
+                Amount = 20.00m,
+                VATRate = 0m,
+                Quantity = 1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0618 // M06
+            }
+        ];
+        var response = CreateTestReceiptResponse("ft8Y9#RG 20241210004");
+
+        var qrCode = PortugalReceiptCalculations.CreateVatFreeQRCode("RGHASH012", "111222333", CreateTestNumberSeries("789"), request, response, sandbox: false);
+
+        qrCode.Should().Contain("I1:0*I2:20.00*L:30.00*N:0.00*O:50.00*");
+    }
+
+    [Fact]
     public void CreateInvoiceQRCode_ShouldGenerateQRCodeWithCorrectUniqueIdentification()
     {
         // Arrange

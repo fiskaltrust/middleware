@@ -125,6 +125,13 @@ public static class ErrorMessagesPT
         $"EEEE_Discount/extra cbChargeItems[{discountIndex}] must use the same VAT rate ({mainVatRate}%) and VAT case '{mainVatCase}' as its related line item cbChargeItems[{mainItemIndex}], but VAT rate is {discountVatRate}% and VAT case is '{discountVatCase}'.";
 
     /// <summary>
+    /// Error message for discounts/extras that are not subject to VAT while their related line item is, or vice versa
+    /// </summary>
+    public static string EEEE_DiscountNotSubjectMismatch(int mainItemIndex, int discountIndex, bool mainNotSubject) =>
+        $"EEEE_Discount/extra cbChargeItems[{discountIndex}] must use the same tax exemption code as its related line item cbChargeItems[{mainItemIndex}]: " +
+        (mainNotSubject ? "the line item is not subject to VAT (V = 8 without exemption code) but the discount/extra is not." : "the discount/extra is not subject to VAT (V = 8 without exemption code) but the line item is not.");
+
+    /// <summary>
     /// Error message for negative quantity in non-refund receipts
     /// </summary>
     public static string EEEE_NegativeQuantityNotAllowed(int index, decimal quantity) =>
@@ -210,7 +217,7 @@ public static class ErrorMessagesPT
     /// Error message for missing nature of VAT (exempt reason) when VAT rate is 0
     /// </summary>
     public static string EEEE_ZeroVatRateMissingNature(int index) =>
-        $"EEEE_cbChargeItems[{index}]: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field. ";
+        $"EEEE_cbChargeItems[{index}]: When VAT rate is 0%, a valid tax exemption reason must be specified via the Nature of VAT (NN) field, unless the charge item is not subject to VAT (VAT category NotTaxable, V = 8).";
 
     public static string EEEE_UnknownTaxExemptionCode(int i, Constants.TaxExemptionCode exemptionCode) =>
         $"EEEE_cbChargeItems[{i}]: Unknown tax exemption code '{exemptionCode}' provided. Please use a valid Portuguese tax exemption code.";
