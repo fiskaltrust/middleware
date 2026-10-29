@@ -283,6 +283,37 @@ public class ChargeItemValidationsTests
     }
 
     [Fact]
+    public void ZeroVatRateMustHaveNature_ZeroVatWithoutNatureButNotRequiredByMarket_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.ZeroVatRateMustHaveNature(chargeItem => chargeItem.Description == "Exempt elsewhere");
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("PT"),
+            cbChargeItems = [
+                new ChargeItem
+                {
+                    Description = "Exempt elsewhere",
+                    VATRate = 0m,
+                    Amount = 10m,
+                    ftChargeItemCase = ChargeItemCase.ZeroVatRate.WithCountry("PT")
+                },
+                new ChargeItem
+                {
+                    Description = "Item",
+                    VATRate = 0m,
+                    Amount = 10m,
+                    ftChargeItemCase = ChargeItemCase.ZeroVatRate.WithCountry("PT")
+                }
+            ],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase");
+        result.ShouldHaveValidationErrorFor("cbChargeItems[1].ftChargeItemCase")
+            .WithErrorCode("ZeroVatRateMissingNature");
+    }
+
+    [Fact]
     public void ZeroVatRateMustHaveNature_ZeroVatWithNatureSet_ShouldPass()
     {
         var validator = new ChargeItemValidations.ZeroVatRateMustHaveNature();

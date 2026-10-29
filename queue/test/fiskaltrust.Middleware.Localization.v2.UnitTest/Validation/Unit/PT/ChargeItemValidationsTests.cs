@@ -1,3 +1,4 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
@@ -482,6 +483,173 @@ public class PTChargeItemValidationsTests
         };
         var result = validator.TestValidate(request);
         result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void ZeroVatExemption_ZeroRateWithValidTaxExemptionCodeOverride_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        // NN 0x80 (Excluded) is no M-code on its own, the override provides the exact code
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_8017L,
+                ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M99" } }""")
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void ZeroVatExemption_ZeroRateWithUnknownTaxExemptionCodeOverride_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0717L,
+                ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M03" } }""")
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].VATRate")
+            .WithErrorCode("ZeroVatExemption");
+    }
+
+    [Fact]
+    public void ZeroVatExemption_TaxExemptionCodeOverrideWithoutNatureOfVat_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0017L, // ZeroVatRate, NN 00: the code comes from the override
+                ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M06" } }""")
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void ZeroVatExemption_TaxExemptionCodeOverrideWithNotTaxableCase_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_8018L, // NotTaxable: with an override, V must be 7
+                ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M99" } }""")
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
+            .WithErrorCode("TaxExemptionCodeRequiresZeroVatRate");
+    }
+
+    [Fact]
+    public void ZeroVatExemption_TaxedLineWithNatureOfVat_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var chargeItem = ValidChargeItem();
+        chargeItem.ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0613L; // NormalVatRate with NN 06 (M06)
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [chargeItem],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCase")
+            .WithErrorCode("TaxExemptionCodeOnTaxedLine");
+    }
+
+    [Fact]
+    public void SupportedVatRates_ZeroVatRateCaseWithNatureOfVat_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.SupportedVatRates();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0617L // ZeroVatRate with NN 06 (M06)
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void VatRateCategory_NormalVatCaseWithNatureOfVatAndZeroRate_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.VatRateCategory();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0613L // NormalVatRate with NN 06 (M06), V is ignored
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void ZeroVatExemption_TaxedLineWithTaxExemptionCodeOverride_ShouldFail()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var chargeItem = ValidChargeItem();
+        chargeItem.ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M06" } }""");
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [chargeItem],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldHaveValidationErrorFor("cbChargeItems[0].ftChargeItemCaseData")
+            .WithErrorCode("TaxExemptionCodeOnTaxedLine");
     }
 
     // ─── DiscountOrExtraNotPositive ─────────────────────────────────────────────

@@ -89,7 +89,7 @@ public static class PTMappings
     }
 
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
-    public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
+    public static string GetIVATAxCode(ChargeItem chargeItem) => TaxExemptionResolver.IsExempt(chargeItem) ? "ISE" : chargeItem.ftChargeItemCase.Vat() switch
     {
         ChargeItemCase.UnknownService => throw new NotImplementedException("There is no unkown rate in Portugal"),
         ChargeItemCase.DiscountedVatRate1 => "RED",
@@ -103,26 +103,9 @@ public static class PTMappings
         ChargeItemCase c => throw new NotImplementedException($"The given tax scheme 0x{c:X} is not supported in Portugal"),
     };
 
-    public static string GetTaxExemptionCode(ChargeItem chargeItem)
-    {
-        var taxExemptCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-        if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
-        {
-            return Constants.TaxExemptionDictionary.TaxExemptionTable[((Constants.TaxExemptionCode) taxExemptCode)].Code;
-        }
-        return "";
-    }
+    public static string GetTaxExemptionCode(ChargeItem chargeItem) => TaxExemptionResolver.GetTaxExemptionInfo(chargeItem)?.Code ?? "";
 
-    public static string GetTaxExemptionReason(ChargeItem chargeItem)
-    {
-        var taxExemptCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-        if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) taxExemptCode))
-        {
-            return Constants.TaxExemptionDictionary.TaxExemptionTable[((Constants.TaxExemptionCode) taxExemptCode)].Mention;
-        }
-        return "";
-
-    }
+    public static string GetTaxExemptionReason(ChargeItem chargeItem) => TaxExemptionResolver.GetTaxExemptionInfo(chargeItem)?.Mention ?? "";
 
     public static string GetPaymentMecahnism(PayItem payItem) => payItem.ftPayItemCase.Case() switch
     {

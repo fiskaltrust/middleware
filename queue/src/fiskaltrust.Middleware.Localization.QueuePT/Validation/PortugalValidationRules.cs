@@ -18,6 +18,7 @@ public static class PortugalValidationFields
     public static readonly string ChargeItemsQuantity = $"{nameof(ReceiptRequest.cbChargeItems)}.{nameof(ChargeItem.Quantity)}";
     public static readonly string ChargeItemsVatAmount = $"{nameof(ReceiptRequest.cbChargeItems)}.{nameof(ChargeItem.VATAmount)}";
     public static readonly string ChargeItemsCase = $"{nameof(ReceiptRequest.cbChargeItems)}.{nameof(ChargeItem.ftChargeItemCase)}";
+    public static readonly string ChargeItemsCaseData = $"{nameof(ReceiptRequest.cbChargeItems)}.{nameof(ChargeItem.ftChargeItemCaseData)}";
     public static readonly string PreviousReceiptReference = nameof(ReceiptRequest.cbPreviousReceiptReference);
     public static readonly string ReceiptMoment = nameof(ReceiptRequest.cbReceiptMoment);
     public static readonly string ReceiptMomentAndFtReceiptMoment = $"{nameof(ReceiptRequest.cbReceiptMoment)},{nameof(ReceiptResponse.ftReceiptMoment)}";
@@ -106,6 +107,12 @@ public static class PortugalValidationRules
 
     public static readonly ValidationRuleDefinition UnknownTaxExemptionCode =
         new("EEEE_UnknownTaxExemptionCode", "Nature of VAT exemption code must be valid.", PortugalValidationFields.ChargeItemsCase);
+
+    public static readonly ValidationRuleDefinition TaxExemptionCodeRequiresZeroVatRate =
+        new("EEEE_TaxExemptionCodeRequiresZeroVatRate", "Charge items with ftChargeItemCaseData.PT.TaxExemptionCode must use the zero VAT rate (V = 7) in ftChargeItemCase.", PortugalValidationFields.ChargeItemsCase);
+
+    public static readonly ValidationRuleDefinition TaxExemptionCodeOnTaxedLine =
+        new("EEEE_TaxExemptionCodeOnTaxedLine", "A tax exemption code (nature of VAT or ftChargeItemCaseData.PT.TaxExemptionCode) is only allowed on charge items with VAT rate 0.", PortugalValidationFields.ChargeItemsCase);
 
     public static readonly ValidationRuleDefinition DiscountExceedsArticleAmount =
         new("EEEE_DiscountExceedsArticleAmount", "Discounts must not exceed the related article amount.", PortugalValidationFields.ChargeItems);
@@ -254,6 +261,8 @@ public static class PortugalValidationRules
         NegativeAmountNotAllowed,
         ZeroVatRateMissingNature,
         UnknownTaxExemptionCode,
+        TaxExemptionCodeOnTaxedLine,
+        TaxExemptionCodeRequiresZeroVatRate,
         DiscountExceedsArticleAmount,
         UserTooShort,
         InvalidUserStructure,

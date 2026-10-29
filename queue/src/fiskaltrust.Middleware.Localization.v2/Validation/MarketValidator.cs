@@ -22,8 +22,13 @@ public class MarketValidator : IMarketValidator
     {
         yield return new GlobalValidations.ReceiptValidations(_receiptReferenceProvider, queue);
         yield return new GlobalValidations.PayItemValidations(queue);
-        yield return new GlobalValidations.ChargeItemValidations(queue);
+        yield return new GlobalValidations.ChargeItemValidations(queue, ZeroVatRateNatureNotRequired);
     }
+
+    /// <summary>
+    /// Zero VAT rate charge items for which the market does not require a nature of VAT. By default, every zero VAT rate charge item requires one.
+    /// </summary>
+    protected virtual Func<ChargeItem, bool>? ZeroVatRateNatureNotRequired => null;
 
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null) => [];
 
