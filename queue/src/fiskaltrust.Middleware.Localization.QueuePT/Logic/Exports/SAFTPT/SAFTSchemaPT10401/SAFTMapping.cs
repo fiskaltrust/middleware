@@ -340,6 +340,14 @@ public class SaftExporter
                     Description = "Taxa Reduzida",
                     TaxPercentage = 6.000000m,
                 },
+                new TaxTableEntry
+                {
+                    TaxType = "NS",
+                    TaxCountryRegion = "PT",
+                    TaxCode = "NS",
+                    Description = "Nao sujeicao",
+                    TaxPercentage = 0.000000m,
+                },
 
 
 
@@ -720,7 +728,7 @@ public class SaftExporter
             var chargeItemData = chargeItem.chargeItem;
             var tax = new Tax
             {
-                TaxType = "IVA", // one of IVA => vat; IS => stamp duty; NS => Not subject to VAT or Stamp Duty.
+                TaxType = PTMappings.GetTaxType(chargeItemData), // one of IVA => vat; IS => stamp duty; NS => Not subject to VAT or Stamp Duty.
                 TaxCountryRegion = "PT", // will depend on the location of the taxpayer.. autonomous regions madeira and azores
                 TaxCode = PTMappings.GetIVATAxCode(chargeItemData),
                 TaxPercentage = Helpers.CreateMonetaryValue(chargeItemData.VATRate)

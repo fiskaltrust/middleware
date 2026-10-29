@@ -202,6 +202,56 @@ public class TaxExemptionResolverTests
         PTMappings.GetIVATAxCode(CreateChargeItem(NormalVat, vatRate: 23m)).Should().Be("NOR");
     }
 
+    // NotTaxable (V=8), Delivery (S=1), NN 99 (M99 - não sujeito ou não tributado)
+    private const long NotTaxableM99 = 0x5054_2000_0000_9918;
+    // ZeroVatRate (V=7), Delivery (S=1), NN 99
+    private const long ZeroVatRateM99 = 0x5054_2000_0000_9917;
+
+    [Theory]
+    [InlineData(NotTaxableM99)]
+    [InlineData(ZeroVatRateM99)]
+    public void M99_IsMappedToNotSubject(long chargeItemCase)
+    {
+        var chargeItem = CreateChargeItem(chargeItemCase);
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeTrue();
+        PTMappings.GetTaxType(chargeItem).Should().Be("NS");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("NS");
+        PTMappings.GetTaxExemptionCode(chargeItem).Should().Be("M99");
+        PTMappings.GetTaxExemptionReason(chargeItem).Should().Be("Não sujeito ou não tributado");
+    }
+
+    [Fact]
+    public void M99Override_IsMappedToNotSubject()
+    {
+        var chargeItem = CreateChargeItem(NotTaxableM06, caseData: OverrideAsJsonElement("M99"));
+
+        PTMappings.GetTaxType(chargeItem).Should().Be("NS");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("NS");
+    }
+
+    [Fact]
+    public void OverrideOfM99_IsMappedToExempt()
+    {
+        var chargeItem = CreateChargeItem(NotTaxableM99, caseData: OverrideAsJsonElement("M06"));
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
+        PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("ISE");
+    }
+
+    [Theory]
+    [InlineData(NotTaxableM06, "ISE")]
+    [InlineData(NormalVat, "NOR")]
+    public void OtherCodes_StayVat(long chargeItemCase, string expectedTaxCode)
+    {
+        var chargeItem = CreateChargeItem(chargeItemCase, vatRate: chargeItemCase == NormalVat ? 23m : 0m);
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
+        PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be(expectedTaxCode);
+    }
+
     [Fact]
     public void Validation_ZeroVatRateCategoryWithNatureOfVat_IsSupported()
     {

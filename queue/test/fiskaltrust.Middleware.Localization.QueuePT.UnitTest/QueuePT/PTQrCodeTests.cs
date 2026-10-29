@@ -85,6 +85,46 @@ public class PTQrCodeTests
     }
 
     [Fact]
+    public void GenerateQRCode_ShouldIncludeNonSubjectField_AfterVATFields()
+    {
+        var qrCode = _qrCode;
+        qrCode.TaxableBasisOfVAT_ExemptRate = 10.00m;
+        qrCode.TaxableBasisOfVAT_StandardRate = 80.00m;
+        qrCode.TotalVAT_StandardRate = 20.00m;
+        qrCode.NonSubjectOrNonTaxableInVAT = 1000.00m;
+
+        var expected = "A:123456789*"
+                     + "B:999999990*"
+                     + "C:PT*"
+                     + "D:FT*"
+                     + "E:N*"
+                     + "F:20241008*"
+                     + "G:FT20241008001*"
+                     + "H:0*"
+                     + "I1:PT*"
+                     + "I2:10.00*"
+                     + "I7:80.00*"
+                     + "I8:20.00*"
+                     + "L:1000.00*"
+                     + "N:23.34*"
+                     + "O:100.34*"
+                     + "Q:HASH1234*"
+                     + "R:CERT12345*"
+                     + "S:Payment via IBAN;ATM Ref. 123456";
+
+        qrCode.GenerateQRCode().Should().Be(expected);
+    }
+
+    [Fact]
+    public void GenerateQRCode_ShouldOmitNonSubjectField_WhenZero()
+    {
+        var qrCode = _qrCode;
+        qrCode.NonSubjectOrNonTaxableInVAT = 0m;
+
+        qrCode.GenerateQRCode().Should().NotContain("L:");
+    }
+
+    [Fact]
     public void GenerateQRCode_ShouldNotIncludeOptionalFields_WhenNull()
     {
         var qrCode = _qrCode;

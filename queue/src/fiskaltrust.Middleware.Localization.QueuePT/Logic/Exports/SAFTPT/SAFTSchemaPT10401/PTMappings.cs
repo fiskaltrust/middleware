@@ -88,8 +88,10 @@ public static class PTMappings
         public const string Cancelled = "A";
     }
 
+    public static string GetTaxType(ChargeItem chargeItem) => TaxExemptionResolver.IsNotSubject(chargeItem) ? "NS" : "IVA";
+
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
-    public static string GetIVATAxCode(ChargeItem chargeItem) => TaxExemptionResolver.IsExempt(chargeItem) ? "ISE" : chargeItem.ftChargeItemCase.Vat() switch
+    public static string GetIVATAxCode(ChargeItem chargeItem) => TaxExemptionResolver.IsNotSubject(chargeItem) ? "NS" : TaxExemptionResolver.IsExempt(chargeItem) ? "ISE" : chargeItem.ftChargeItemCase.Vat() switch
     {
         ChargeItemCase.UnknownService => throw new NotImplementedException("There is no unkown rate in Portugal"),
         ChargeItemCase.DiscountedVatRate1 => "RED",

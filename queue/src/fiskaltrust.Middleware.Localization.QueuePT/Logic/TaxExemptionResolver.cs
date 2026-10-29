@@ -19,6 +19,13 @@ public static class TaxExemptionResolver
     public static bool IsExempt(ChargeItem chargeItem)
         => chargeItem.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatPT.UsualVatApplies || TryGetTaxExemptionCodeOverride(chargeItem, out _);
 
+    /// <summary>
+    /// A charge item is not subject to VAT (SAF-T TaxType/TaxCode "NS") when its exemption code is M99 ("Não sujeito ou não tributado"),
+    /// the only code the AT defines for non-subject operations. All other exemption codes are VAT exemptions (TaxCode "ISE").
+    /// </summary>
+    public static bool IsNotSubject(ChargeItem chargeItem)
+        => TryResolve(chargeItem, out var taxExemptionCode) && taxExemptionCode == Constants.TaxExemptionCode.M99;
+
     public static bool TryGetTaxExemptionCodeOverride(ChargeItem chargeItem, out string? taxExemptionCode)
     {
         taxExemptionCode = null;

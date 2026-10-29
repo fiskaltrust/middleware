@@ -32,6 +32,7 @@ public static class PortugalReceiptCalculations
         var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
         var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
+        var notSubjectChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NS").ToList();
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
@@ -66,6 +67,7 @@ public static class PortugalReceiptCalculations
             TotalVAT_IntermediateRate = intermediateChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
             TaxableBasisOfVAT_StandardRate = normalChargeItems.Sum(x => Math.Abs(x.Amount) - Math.Abs(x.VATAmount ?? 0.0m)),
             TotalVAT_StandardRate = normalChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
+            NonSubjectOrNonTaxableInVAT = notSubjectChargeItems.Sum(x => Math.Abs(x.Amount)),
             TotalTaxes = request.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
@@ -82,6 +84,7 @@ public static class PortugalReceiptCalculations
         var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
         var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
+        var notSubjectChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NS").ToList();
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
@@ -117,6 +120,7 @@ public static class PortugalReceiptCalculations
             TotalVAT_IntermediateRate = intermediateChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             TaxableBasisOfVAT_StandardRate = normalChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_StandardRate = normalChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+            NonSubjectOrNonTaxableInVAT = notSubjectChargeItems.Sum(x => x.Amount),
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
@@ -133,6 +137,7 @@ public static class PortugalReceiptCalculations
         var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
         var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
+        var notSubjectChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NS").ToList();
 
         var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
@@ -165,6 +170,7 @@ public static class PortugalReceiptCalculations
             TotalVAT_IntermediateRate = intermediateChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             TaxableBasisOfVAT_StandardRate = normalChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_StandardRate = normalChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+            NonSubjectOrNonTaxableInVAT = notSubjectChargeItems.Sum(x => x.Amount),
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
