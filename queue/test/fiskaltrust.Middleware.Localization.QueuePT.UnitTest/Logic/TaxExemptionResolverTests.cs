@@ -116,6 +116,20 @@ public class TaxExemptionResolverTests
         PTMappings.GetTaxExemptionReason(chargeItem).Should().Be("Isento artigo 15.º do CIVA");
     }
 
+    [Theory]
+    [InlineData("M44", "IVA – Regras específicas - artigo 6.º")]
+    [InlineData("M45", "IVA – regime transfronteiriço de isenção")]
+    [InlineData("M46", "IVA – e-TaxFree")]
+    public void PTMappings_WithOverride_SupportsNewExemptionCodes(string code, string mention)
+    {
+        var chargeItem = CreateChargeItem(ZeroVatRateNoNature, caseData: OverrideAsJsonElement(code));
+
+        TaxExemptionResolver.TryResolve(chargeItem, out _).Should().BeTrue();
+        PTMappings.GetTaxExemptionCode(chargeItem).Should().Be(code);
+        PTMappings.GetTaxExemptionReason(chargeItem).Should().Be(mention);
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(CreateRequest(chargeItem)).Should().BeEmpty();
+    }
+
     [Fact]
     public void PTMappings_WithoutOverride_ReturnsCodeFromNatureOfVat()
     {
