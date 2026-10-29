@@ -236,6 +236,10 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                             if (Math.Abs(vatRate) > 0.001m)
                                 return true;
 
+                            // With an override, NN is not evaluated
+                            if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out _))
+                                return TaxExemptionResolver.TryResolve(item, out _);
+
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                                 return false;
@@ -244,11 +248,11 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                         })
                         .WithMessage(item =>
                         {
+                            if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out var overrideCode))
+                                return $"Unknown tax exemption code '{overrideCode}' in ftChargeItemCaseData.PT.TaxExemptionCode.";
                             var natureValue = item.ftChargeItemCase.NatureOfVat();
                             if (natureValue == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
                                 return "Zero VAT rate requires a valid tax exemption reason via the Nature of VAT field.";
-                            if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(item, out var overrideCode))
-                                return $"Unknown tax exemption code '{overrideCode}' in ftChargeItemCaseData.PT.TaxExemptionCode.";
                             return $"Unknown tax exemption code '0x{(int) natureValue:X4}'.";
                         })
                         .WithErrorCode("ZeroVatExemption");

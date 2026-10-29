@@ -451,21 +451,8 @@ public static class ChargeItemValidations
                 // Check if a valid nature of VAT is specified
                 var natureOfVat = chargeItem.ftChargeItemCase.NatureOfVat();
 
-                // UsualVatApplies (0x0000) is not valid for zero VAT rate
-                if (natureOfVat == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
-                {
-                    var rule = PortugalValidationRules.ZeroVatRateMissingNature;
-                    yield return ValidationResult.Failed(new ValidationError(
-                        ErrorMessagesPT.EEEE_ZeroVatRateMissingNature(i),
-                        rule.Code,
-                        rule.Field,
-                        i
-                    )
-                    .WithContext("VATRate", chargeItem.VATRate)
-                    .WithContext("NatureOfVat", natureOfVat.ToString())
-                    .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
-                }
-                else if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(chargeItem, out var overrideCode))
+                // With an override, the exemption code comes from ftChargeItemCaseData and the 0 % from V = 7; NN is not evaluated
+                if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(chargeItem, out var overrideCode))
                 {
                     if (!TaxExemptionResolver.TryResolve(chargeItem, out _))
                     {
@@ -492,6 +479,20 @@ public static class ChargeItemValidations
                           .WithContext("VatRateCategory", chargeItem.ftChargeItemCase.Vat().ToString())
                           .WithContext("TaxExemptionCode", overrideCode!));
                     }
+                }
+                // UsualVatApplies (0x0000) is not valid for zero VAT rate without an override
+                else if (natureOfVat == ChargeItemCaseNatureOfVatPT.UsualVatApplies)
+                {
+                    var rule = PortugalValidationRules.ZeroVatRateMissingNature;
+                    yield return ValidationResult.Failed(new ValidationError(
+                        ErrorMessagesPT.EEEE_ZeroVatRateMissingNature(i),
+                        rule.Code,
+                        rule.Field,
+                        i
+                    )
+                    .WithContext("VATRate", chargeItem.VATRate)
+                    .WithContext("NatureOfVat", natureOfVat.ToString())
+                    .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
                 }
                 else
                 {

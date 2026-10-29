@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
@@ -163,14 +164,38 @@ public class TaxExemptionResolverTests
     }
 
     [Fact]
-    public void Validation_ZeroVatWithOverrideButWithoutNatureOfVat_Fails()
+    public void Validation_ZeroVatWithOverrideWithoutNatureOfVat_Passes()
     {
-        var request = CreateRequest(CreateChargeItem(NotTaxableNoNature, caseData: OverrideAsJsonElement("M06")));
+        // With an override, NN is not needed: the code comes from the override, the 0 % from V = 7
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateNoNature, caseData: OverrideAsJsonElement("M06")));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
+        ChargeItemValidations.Validate_ChargeItems_VATRate_SupportedVatRates(request).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validation_ZeroVatWithoutOverrideAndWithoutNatureOfVat_StillFails()
+    {
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateNoNature));
 
         var results = ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).ToList();
 
         results.Should().ContainSingle();
         results[0].Errors.Single().Code.Should().Be(PortugalValidationRules.ZeroVatRateMissingNature.Code);
+    }
+
+    [Fact]
+    public void SAFTLine_WithOverrideWithoutNatureOfVat_ContainsTaxExemption()
+    {
+        var chargeItem = CreateChargeItem(ZeroVatRateNoNature, caseData: OverrideAsJsonElement("M06"));
+        var request = CreateRequest(chargeItem);
+        var response = new ReceiptResponse { ftReceiptIdentification = "ft1#FT ft2026/1" };
+
+        var line = SAFTMapping.GetLine(request, response, (chargeItem, new List<ChargeItem>()));
+
+        line.Tax.TaxCode.Should().Be("ISE");
+        line.TaxExemptionCode.Should().Be("M06");
+        line.TaxExemptionReason.Should().Be("Isento artigo 15.º do CIVA");
     }
 
     [Fact]

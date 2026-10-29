@@ -532,6 +532,28 @@ public class PTChargeItemValidationsTests
     }
 
     [Fact]
+    public void ZeroVatExemption_TaxExemptionCodeOverrideWithoutNatureOfVat_ShouldPass()
+    {
+        var validator = new ChargeItemValidations.ZeroVatExemption();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = PtReceiptCase,
+            cbChargeItems = [new ChargeItem
+            {
+                Description = "Item",
+                VATRate = 0m,
+                Amount = 10m,
+                Quantity = 1m,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0017L, // ZeroVatRate, NN 00: the code comes from the override
+                ftChargeItemCaseData = JsonSerializer.Deserialize<JsonElement>("""{ "PT": { "TaxExemptionCode": "M06" } }""")
+            }],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
     public void ZeroVatExemption_TaxExemptionCodeOverrideWithNotTaxableCase_ShouldFail()
     {
         var validator = new ChargeItemValidations.ZeroVatExemption();
