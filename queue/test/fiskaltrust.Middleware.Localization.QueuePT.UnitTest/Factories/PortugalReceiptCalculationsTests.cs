@@ -512,6 +512,38 @@ public class PortugalReceiptCalculationsTests
     }
 
     [Fact]
+    public void CreateCreditNoteQRCode_ShouldNetReversedDiscountsOfNotSubjectItemsInFieldL()
+    {
+        var request = CreateTestReceiptRequest();
+        request.cbChargeItems =
+        [
+            new ChargeItem
+            {
+                Position = 1,
+                Description = "Not subject",
+                Amount = -100.00m,
+                VATRate = 0m,
+                Quantity = -1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_9918 // M99
+            },
+            new ChargeItem
+            {
+                Position = 2,
+                Description = "Discount",
+                Amount = 10.00m,
+                VATRate = 0m,
+                Quantity = 1,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_9918 // M99, discount
+            }
+        ];
+        var response = CreateTestReceiptResponse("ft5B1#NC 20241210001");
+
+        var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode("TESTHASH123", "123456789", CreateTestNumberSeries("0"), request, response, sandbox: false);
+
+        qrCode.Should().Contain("L:90.00*");
+    }
+
+    [Fact]
     public void CreateInvoiceQRCode_ShouldGenerateQRCodeWithCorrectUniqueIdentification()
     {
         // Arrange

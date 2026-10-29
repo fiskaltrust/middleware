@@ -67,7 +67,7 @@ public static class PortugalReceiptCalculations
             TotalVAT_IntermediateRate = intermediateChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
             TaxableBasisOfVAT_StandardRate = normalChargeItems.Sum(x => Math.Abs(x.Amount) - Math.Abs(x.VATAmount ?? 0.0m)),
             TotalVAT_StandardRate = normalChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
-            NonSubjectOrNonTaxableInVAT = notSubjectChargeItems.Sum(x => Math.Abs(x.Amount)),
+            NonSubjectOrNonTaxableInVAT = Math.Abs(notSubjectChargeItems.Sum(x => x.Amount)),
             TotalTaxes = request.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
