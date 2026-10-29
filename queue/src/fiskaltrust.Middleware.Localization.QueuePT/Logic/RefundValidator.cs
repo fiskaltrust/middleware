@@ -577,7 +577,10 @@ public class RefundValidator
                 var request = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
                 var response = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
 
-                if (response == null || !response.ftState.IsState(State.Success))
+                // RFC 712: a partial refund whose eInvoicing/eReporting finalize call failed carries the error state although it
+                // was fiscalized; IsFiscalized() reads the FiscalizationSucceeded marker, so it still counts against the
+                // amount that is left to refund. A refund that was never fiscalized refunded nothing.
+                if (response == null || !response.IsFiscalized())
                 {
                     continue;
                 }

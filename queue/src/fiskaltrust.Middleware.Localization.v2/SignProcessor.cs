@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -7,12 +8,18 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.PostFiscalization;
 using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
 public class SignProcessor : ISignProcessor
 {
+    private static readonly JsonSerializerOptions _journalSerializerOptions = new()
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     private readonly ILogger<SignProcessor> _logger;
     private readonly Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> _processRequest;
     private readonly AsyncLazy<string> _cashBoxIdentification;
@@ -21,13 +28,15 @@ public class SignProcessor : ISignProcessor
     private readonly bool _isSandbox;
     private readonly IQueueStorageProvider _queueStorageProvider;
     private readonly int _receiptRequestMode = 0;
+    private readonly PostFiscalizationProcessor _postFiscalizationProcessor;
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
         IQueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         AsyncLazy<string> cashBoxIdentification,
-        MiddlewareConfiguration configuration)
+        MiddlewareConfiguration configuration,
+        PostFiscalizationProcessor postFiscalizationProcessor)
     {
         _logger = logger;
         _processRequest = processRequest;
@@ -37,6 +46,7 @@ public class SignProcessor : ISignProcessor
         _isSandbox = configuration.IsSandbox;
         _queueStorageProvider = queueStorageProvider;
         _receiptRequestMode = configuration.ReceiptRequestMode;
+        _postFiscalizationProcessor = postFiscalizationProcessor;
     }
 
     public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
@@ -60,7 +70,7 @@ public class SignProcessor : ISignProcessor
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await _queueStorageProvider.CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        receiptResponseFound = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(foundQueueItem.response);
+                        receiptResponseFound = JsonSerializer.Deserialize<ReceiptResponse>(foundQueueItem.response);
                     }
                 }
                 catch (Exception x)
@@ -73,6 +83,7 @@ public class SignProcessor : ISignProcessor
 
                 if (receiptResponseFound != null)
                 {
+                    // Replays return the persisted response; neither preflight nor finalize runs again.
                     return receiptResponseFound;
                 }
                 else
@@ -88,6 +99,16 @@ public class SignProcessor : ISignProcessor
                     }
                 }
             }
+
+            // RFC 712, phase 1: the configured eInvoicing/eReporting services validate the receipt before any bookkeeping
+            // that produces a fiscal record. A rejection or an unreachable service refuses the receipt: no queue item, no
+            // fiscal record, no receipt journal, so the POS can correct and resend it as a new transaction.
+            var preflight = await _postFiscalizationProcessor.ValidateAsync(receiptRequest).ConfigureAwait(false);
+            if (!preflight.Accepted)
+            {
+                return await RejectBeforeFiscalizationAsync(receiptRequest, preflight.Rejection!).ConfigureAwait(false);
+            }
+
             var actionjournals = new List<ftActionJournal>();
             try
             {
@@ -97,9 +118,10 @@ public class SignProcessor : ISignProcessor
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
 
                 List<ftActionJournal> countrySpecificActionJournals;
+                var queueOperational = true;
                 try
                 {
-                    (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
+                    (receiptResponse, countrySpecificActionJournals, queueOperational) = await ProcessCoreAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
                     actionjournals.AddRange(countrySpecificActionJournals);
                 }
                 catch (Exception e)
@@ -115,6 +137,20 @@ public class SignProcessor : ISignProcessor
                         Data = e.ToString()
                     });
                 }
+
+                // RFC 712, phase 3: the services that act on this receipt get the fully fiscalized response, only when
+                // fiscalization succeeded: the market processor produced a non-error response on an operational queue.
+                // The queue-state early exits (queue not activated, queue disabled) answer with a non-error response and
+                // fiscalize nothing, so they skip this phase. The receipt journal decision below keeps its policy and is
+                // based on the error state only: a finalize failure marks a fiscalized receipt with the error state, and
+                // that receipt is journaled like any other fiscalized receipt.
+                var fiscalizationSucceeded = !receiptResponse.ftState.IsState(State.Error);
+                var fiscalized = fiscalizationSucceeded && queueOperational;
+                if (fiscalized)
+                {
+                    receiptResponse = await _postFiscalizationProcessor.FinalizeAsync(receiptRequest, receiptResponse, queueItem, preflight, actionjournals).ConfigureAwait(false);
+                }
+
                 if (_isSandbox)
                 {
                     receiptResponse.AddSignatureItem(SignatureFactory.CreateSandboxSignature(_queueId));
@@ -122,23 +158,16 @@ public class SignProcessor : ISignProcessor
 
                 await _queueStorageProvider.FinishQueueItem(queueItem, receiptResponse);
 
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{receiptRequest.ftReceiptCase:X}");
-                System.Diagnostics.Activity.Current?.AddTag("possystem.id", receiptRequest.ftPosSystemId);
-                System.Diagnostics.Activity.Current?.AddTag("queue.id", _queueId);
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", receiptRequest.cbReceiptReference);
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference);
+                AddActivityTags(receiptRequest, receiptResponse);
 
-                if (receiptResponse.ftState.IsState(State.Error))
+                if (!fiscalizationSucceeded)
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await _queueStorageProvider.CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId);
                     return receiptResponse;
                 }
-                else
-                {
-                    _ = await _queueStorageProvider.InsertReceiptJournal(queueItem, receiptRequest);
-                }
+
+                _ = await _queueStorageProvider.InsertReceiptJournal(queueItem, receiptRequest);
                 return receiptResponse;
             }
             finally
@@ -173,23 +202,106 @@ public class SignProcessor : ISignProcessor
         };
     }
 
+    /// <summary>
+    /// RFC 712: a configured eInvoicing/eReporting service declined the receipt, or could not be reached, in the preflight.
+    /// Nothing is fiscalized and no queue item exists, so the response carries no queue item id and, following the
+    /// middleware convention for responses without a queue item, the Fail state (0xFFFF_FFFF) rather than the Error
+    /// state (0xEEEE_EEEE) a processed-but-failed receipt carries. The POS gets that response with a signature naming
+    /// the reason, and an action journal entry records the technical detail. Whether rejected receipts should get a
+    /// queue item after all is an open decision recorded in the RFC.
+    /// </summary>
+    private async Task<ReceiptResponse> RejectBeforeFiscalizationAsync(ReceiptRequest receiptRequest, PostFiscalizationRejection rejection)
+    {
+        var queue = await _queueStorageProvider.GetQueueAsync().ConfigureAwait(false);
+        var receiptResponse = new ReceiptResponse
+        {
+            ftCashBoxID = receiptRequest.ftCashBoxID,
+            ftQueueID = _queueId,
+            ftQueueItemID = Guid.Empty,
+            ftQueueRow = 0,
+            cbTerminalID = receiptRequest.cbTerminalID,
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftCashBoxIdentification = await _cashBoxIdentification,
+            ftReceiptMoment = DateTime.UtcNow,
+            ftState = State.Success.WithCountry(queue.CountryCode?.ToUpper()).WithVersion(0x2).WithState(State.Fail),
+            ftReceiptIdentification = "",
+        };
+        receiptResponse.AddSignatureItem(_postFiscalizationProcessor.CreateFailureSignature(receiptRequest, rejection.Caption, rejection.Reason));
+        if (_isSandbox)
+        {
+            receiptResponse.AddSignatureItem(SignatureFactory.CreateSandboxSignature(_queueId));
+        }
+
+        var message = $"Receipt \"{receiptRequest.cbReceiptReference}\" was refused before fiscalization by the {rejection.Service.DisplayName()} service ({rejection.Caption}): {rejection.Reason}";
+        _logger.LogWarning(message);
+        await _queueStorageProvider.CreateActionJournalAsync(new ftActionJournal
+        {
+            ftActionJournalId = Guid.NewGuid(),
+            ftQueueId = _queueId,
+            ftQueueItemId = Guid.Empty,
+            Moment = DateTime.UtcNow,
+            Priority = 0x10,
+            Type = rejection.Caption,
+            Message = message,
+            DataJson = JsonSerializer.Serialize(new
+            {
+                service = rejection.Service.Key(),
+                phase = "validate",
+                outcome = rejection.Outcome.ToTagValue(),
+                reason = rejection.Reason,
+                detail = rejection.Detail,
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                cbTerminalID = receiptRequest.cbTerminalID,
+                ftReceiptCase = $"0x{receiptRequest.ftReceiptCase:X}",
+            }, _journalSerializerOptions),
+        }).ConfigureAwait(false);
+
+        AddActivityTags(receiptRequest, receiptResponse);
+        return receiptResponse;
+    }
+
+    private void AddActivityTags(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    {
+        System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
+        System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{receiptRequest.ftReceiptCase:X}");
+        System.Diagnostics.Activity.Current?.AddTag("possystem.id", receiptRequest.ftPosSystemId);
+        System.Diagnostics.Activity.Current?.AddTag("queue.id", _queueId);
+        System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbReceiptReference", receiptRequest.cbReceiptReference);
+        System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.cbPreviousReceiptReference", receiptRequest.cbPreviousReceiptReference);
+    }
+
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+    {
+        var (response, actionJournals, _) = await ProcessCoreAsync(request, receiptResponse, queueItem).ConfigureAwait(false);
+        return (response, actionJournals);
+    }
+
+    /// <summary>
+    /// The queue-state checks and the market processor. <c>queueOperational</c> is false for the two early exits that
+    /// answer a receipt on a queue that is not operational, not yet activated or already deactivated, with a non-error
+    /// response carrying only the security-mechanism-deactivated flag: nothing is fiscalized then, so the RFC 712
+    /// finalize phase must not run. The flag alone cannot tell, because the market processors also set it on the
+    /// out-of-operation receipt, which is fiscalized. Every other response comes from the market processor.
+    /// </summary>
+    private async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool queueOperational)> ProcessCoreAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
     {
         var queue = await _queueStorageProvider.GetQueueAsync();
         if (queue.IsDeactivated())
         {
-            return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
+            var (disabled, disabledJournals) = ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
+            return (disabled, disabledJournals, false);
         }
 
         if (request.ftReceiptCase.IsCase(ReceiptCase.InitialOperationReceipt0x4001) && !queue.IsNew())
         {
             receiptResponse.SetReceiptResponseError("The queue is already operational. It is not allowed to send another InitOperation Receipt");
-            return (receiptResponse, new List<ftActionJournal>());
+            return (receiptResponse, new List<ftActionJournal>(), true);
         }
 
         if (!request.ftReceiptCase.IsCase(ReceiptCase.InitialOperationReceipt0x4001) && queue.IsNew())
         {
-            return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
+            var (notActive, notActiveJournals) = ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
+            return (notActive, notActiveJournals, false);
         }
 
         if (queue.CountryCode != "GR")
@@ -198,21 +310,21 @@ public class SignProcessor : ISignProcessor
             if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {
                 receiptResponse.SetReceiptResponseError("Refunding a receipt is only supported with single references.");
-                return (receiptResponse, new List<ftActionJournal>());
+                return (receiptResponse, new List<ftActionJournal>(), true);
             }
 
             // Remove validation once we enable the global validations
             if (request.IsPartialRefundReceipt() && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {
                 receiptResponse.SetReceiptResponseError("Partial refunding a receipt is only supported with single references.");
-                return (receiptResponse, new List<ftActionJournal>());
+                return (receiptResponse, new List<ftActionJournal>(), true);
             }
 
             // Remove validation once we enable the global validations
             if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) && request.cbPreviousReceiptReference is not null && request.cbPreviousReceiptReference.IsGroup)
             {
                 receiptResponse.SetReceiptResponseError("Voiding a receipt is only supported with single references.");
-                return (receiptResponse, new List<ftActionJournal>());
+                return (receiptResponse, new List<ftActionJournal>(), true);
             }
 
             // Remove validation once we enable the global validations
@@ -220,7 +332,7 @@ public class SignProcessor : ISignProcessor
             if (receiptReferences.IsErr)
             {
                 receiptResponse.SetReceiptResponseError(receiptReferences.ErrValue!);
-                return (receiptResponse, new List<ftActionJournal>());
+                return (receiptResponse, new List<ftActionJournal>(), true);
             }
 
             if (receiptReferences.OkValue is not null)
@@ -232,7 +344,8 @@ public class SignProcessor : ISignProcessor
             }
         }
 
-        return await _processRequest(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
+        var (processed, processedJournals) = await _processRequest(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
+        return (processed, processedJournals, true);
     }
 
     private (ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals) ReturnWithQueueIsNotActive(ftQueue queue, ReceiptResponse receiptResponse, ftQueueItem queueItem)

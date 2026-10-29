@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
@@ -32,7 +33,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             await foreach (var existingQueueItem in queueItems)
             {  
                 var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
-                if ((referencedResponse.ftState & 0xEEEE_EEEE) == 0xEEEE_EEEE)
+                // RFC 712: a referenced receipt whose eInvoicing/eReporting finalize call failed carries the error state
+                // although its RT document exists; only a receipt that was never fiscalized has no references to offer.
+                if (!referencedResponse.IsFiscalized())
                 {
                     continue;
                 }
