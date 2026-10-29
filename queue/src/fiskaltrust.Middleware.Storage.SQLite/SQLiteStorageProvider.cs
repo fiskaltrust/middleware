@@ -16,6 +16,7 @@ using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories.ME;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -41,6 +42,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
     private readonly IMiddlewareQueueItemRepository _queueItemRepository;
     private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
+    private readonly IMiddlewareJournalITRepository _journalITRepository;
     private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;
     private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
     private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
@@ -65,6 +67,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
         _actionJournalRepository = new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile);
         _queueItemRepository = new SQLiteQueueItemRepository(_connectionFactory, _sqliteFile);
         _receiptJournalRepository = new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile);
+        _journalITRepository = new SQLiteJournalITRepository(_connectionFactory, _sqliteFile);
         _accountMasterDataRepository = new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile);
         _outletMasterDataRepository = new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile);
         _posSystemMasterDataRepository = new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile);
@@ -81,6 +84,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => CreateAsyncLazy(_receiptJournalRepository);
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => CreateAsyncLazy(_accountMasterDataRepository);
     public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => throw new NotImplementedException();
+    public AsyncLazy<IMiddlewareJournalITRepository> CreateMiddlewareJournalITRepository() => CreateAsyncLazy(_journalITRepository);
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => CreateAsyncLazy(_outletMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => CreateAsyncLazy(_posSystemMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => CreateAsyncLazy(_agencyMasterDataRepository);
