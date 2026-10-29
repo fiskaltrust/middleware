@@ -224,7 +224,8 @@ public static class ChargeItemValidations
             var chargeItem = request.cbChargeItems[i];
             var vatRate = chargeItem.ftChargeItemCase.Vat();
 
-            if (unsupportedVatRates.Contains(vatRate))
+            // The VAT category is ignored for exempt charge items; their tax code is derived from the exemption code
+            if (unsupportedVatRates.Contains(vatRate) && !TaxExemptionResolver.IsExempt(chargeItem))
             {
                 var rule = PortugalValidationRules.UnsupportedVatRate;
                 yield return ValidationResult.Failed(new ValidationError(
@@ -303,7 +304,8 @@ public static class ChargeItemValidations
             var chargeItem = request.cbChargeItems[i];
             var vatRateCategory = chargeItem.ftChargeItemCase.Vat();
 
-            if (!expectedVatRates.ContainsKey(vatRateCategory))
+            // Exempt charge items must have VAT rate 0, which Validate_ChargeItems_VATRate_ZeroVatRateNature checks independent of the VAT category
+            if (!expectedVatRates.ContainsKey(vatRateCategory) || TaxExemptionResolver.IsExempt(chargeItem))
             {
                 continue;
             }
@@ -463,13 +465,25 @@ public static class ChargeItemValidations
                     .WithContext("NatureOfVat", natureOfVat.ToString())
                     .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
                 }
+                else if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(chargeItem, out var overrideCode))
+                {
+                    if (!TaxExemptionResolver.TryResolve(chargeItem, out _))
+                    {
+                        var rule = PortugalValidationRules.UnknownTaxExemptionCode;
+                        yield return ValidationResult.Failed(new ValidationError(
+                              ErrorMessagesPT.EEEE_UnknownTaxExemptionCodeOverride(i, overrideCode!),
+                              rule.Code,
+                              PortugalValidationFields.ChargeItemsCaseData,
+                              i
+                          )
+                          .WithContext("VATRate", chargeItem.VATRate)
+                          .WithContext("TaxExemptionCode", overrideCode!));
+                    }
+                }
                 else
                 {
                     var exemptionCode = (int) chargeItem.ftChargeItemCase.NatureOfVat();
-                    if (Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) exemptionCode))
-                    {
-                    }
-                    else
+                    if (!Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey((Constants.TaxExemptionCode) exemptionCode))
                     {
                         var rule = PortugalValidationRules.UnknownTaxExemptionCode;
                         yield return ValidationResult.Failed(new ValidationError(
@@ -484,6 +498,31 @@ public static class ChargeItemValidations
                           .WithContext("ExemptionCode", exemptionCode.ToString()));
                     }
                 }
+            }
+            else if (TaxExemptionResolver.TryGetTaxExemptionCodeOverride(chargeItem, out var taxedLineOverrideCode))
+            {
+                var rule = PortugalValidationRules.TaxExemptionCodeOnTaxedLine;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_TaxExemptionCodeOnTaxedLine(i, taxedLineOverrideCode!),
+                    rule.Code,
+                    PortugalValidationFields.ChargeItemsCaseData,
+                    i
+                )
+                .WithContext("VATRate", chargeItem.VATRate)
+                .WithContext("TaxExemptionCode", taxedLineOverrideCode!));
+            }
+            else if (chargeItem.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatPT.UsualVatApplies)
+            {
+                var natureOfVat = chargeItem.ftChargeItemCase.NatureOfVat();
+                var rule = PortugalValidationRules.TaxExemptionCodeOnTaxedLine;
+                yield return ValidationResult.Failed(new ValidationError(
+                    ErrorMessagesPT.EEEE_NatureOfVatOnTaxedLine(i, (int) natureOfVat),
+                    rule.Code,
+                    PortugalValidationFields.ChargeItemsCase,
+                    i
+                )
+                .WithContext("VATRate", chargeItem.VATRate)
+                .WithContext("NatureOfVatValue", $"0x{(int) natureOfVat:X4}"));
             }
         }
     }
