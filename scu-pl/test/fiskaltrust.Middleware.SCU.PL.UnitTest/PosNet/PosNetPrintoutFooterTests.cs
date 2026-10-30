@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.PL.UnitTest.PosNet;
 /// The receipt footer beyond the plain additional lines (middleware#845): the register's keyword
 /// lines, left-aligned lines, the info lines, and the cashier and register taken from cbUser and
 /// cbTerminalID — what is read, what the register's limits reject before any frame is sent, and the
-/// commands it becomes. Layout measured on a POSNET (Thermal family) against a real H&amp;M PL receipt.
+/// commands it becomes. Layout measured on a POSNET (Thermal family) against a real retail receipt.
 /// </summary>
 public class PosNetPrintoutFooterTests
 {
@@ -60,9 +60,9 @@ public class PosNetPrintoutFooterTests
     [Fact]
     public void ALeftAlignedLine_PrintsALiteralAmpersand()
     {
-        var commands = Map(Sale(Printout(new { lines = new object[] { new { text = "H&M Member", align = "left" } } })));
+        var commands = Map(Sale(Printout(new { lines = new object[] { new { text = "A&B Member", align = "left" } } })));
 
-        commands.Single(c => c.Mnemonic == "trftrln").Parameters.Should().Equal(KV("id", "41"), KV("na", "H&&M Member"));
+        commands.Single(c => c.Mnemonic == "trftrln").Parameters.Should().Equal(KV("id", "41"), KV("na", "A&&B Member"));
     }
 
     public static TheoryData<object, string> LinesTheRegisterCannotPrint => new()
@@ -98,10 +98,10 @@ public class PosNetPrintoutFooterTests
     [Fact]
     public void TheCashierAndTheRegister_ComeFromCbUserAndCbTerminalId_AlsoWithoutAPrintoutRequest()
     {
-        var printout = PosNetPrintoutReader.Read(Sale(user: "238689", terminal: "02"));
+        var printout = PosNetPrintoutReader.Read(Sale(user: "123456", terminal: "02"));
 
         printout.Should().NotBeNull();
-        printout!.Cashier.Should().Be("238689");
+        printout!.Cashier.Should().Be("123456");
         printout.Register.Should().Be("02");
         printout.Lines.Should().BeEmpty();
         printout.HasFooterConfiguration.Should().BeTrue();
@@ -121,11 +121,11 @@ public class PosNetPrintoutFooterTests
 
     /// <summary>
     /// A POSNET refuses a register number over 8 characters with error 10 instead of truncating it
-    /// (measured with H&amp;M's real cbTerminalID "HM-PL0027-SSCO"). That is an integration error: it is
+    /// (measured with a 14-character cbTerminalID such as "SHOP-PL01-SSCO"). That is an integration error: it is
     /// rejected here, naming the field, before anything is sent.
     /// </summary>
     [Theory]
-    [InlineData(null, "HM-PL0027-SSCO", "cbTerminalID 'HM-PL0027-SSCO' has 14 characters*at most 8*")]
+    [InlineData(null, "SHOP-PL01-SSCO", "cbTerminalID 'SHOP-PL01-SSCO' has 14 characters*at most 8*")]
     [InlineData("A cashier name longer than thirty-two", "02", "cbUser 'A cashier name longer than thirty-two' has 37 characters*at most 32*")]
     public void ACashierOrRegisterTheRegisterCannotPrint_IsAnIntegrationError(string? user, string terminal, string expectedMessage)
     {
@@ -137,11 +137,11 @@ public class PosNetPrintoutFooterTests
     [Fact]
     public void TheFooterConfiguration_CarriesCashierRegisterCodesAndInfoLines_ForTheNextPrintoutOnly()
     {
-        var command = PosNetCommands.Ftrcfg("20260930004000200016", 0, "238689", "02", ["&cZwrot lub wymiana", "&cw ciągu 30 dni."]);
+        var command = PosNetCommands.Ftrcfg("20260930000100200016", 0, "123456", "02", ["&cZwrot lub wymiana", "&cw ciągu 30 dni."]);
 
         command.Parameters.Should().Equal(
-            KV("cc", "238689"), KV("cn", "02"), KV("ca", "0"),
-            KV("bc", "20260930004000200016"), KV("bb", "0"),
+            KV("cc", "123456"), KV("cn", "02"), KV("ca", "0"),
+            KV("bc", "20260930000100200016"), KV("bb", "0"),
             KV("ln", "&cZwrot lub wymiana\n&cw ciągu 30 dni."), KV("lb", "0"));
     }
 
