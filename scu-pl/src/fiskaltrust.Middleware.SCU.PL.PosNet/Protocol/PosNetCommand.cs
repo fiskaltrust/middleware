@@ -230,6 +230,12 @@ public static class PosNetCommands
 
     public static PosNetCommand Scomm() => new("scomm");
 
+    /// <summary>
+    /// The factory device type (nm), software version (vr) and unique number (nu) — read-only, and unlike
+    /// sid not the programmed (emulated) identity (POT-I-DEV-37 "getrealid").
+    /// </summary>
+    public static PosNetCommand Getrealid() => new("getrealid");
+
     public static PosNetCommand Scnt() => new("scnt");
 
     /// <summary>The protected-memory document type of a receipt (paragon) for <see cref="Eclastdocnoget"/>.</summary>

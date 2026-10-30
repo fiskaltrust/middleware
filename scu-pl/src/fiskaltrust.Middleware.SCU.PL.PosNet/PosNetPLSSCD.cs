@@ -625,11 +625,17 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     }
 
     /// <summary>
-    /// The zero receipt's answer: the printer's live state in <c>ftStateData</c> (<c>PL.PrinterStatus</c>),
-    /// like the Italian RT printer SCUs return theirs. A register that is not ready does not fail the
+    /// The zero receipt's answer: the printer's live state in <c>ftStateData</c> (<c>PL.PosNet.PrinterStatus</c>),
+    /// like the Italian RT printer SCUs return theirs. The <c>PosNet</c> level names the device family: the
+    /// fields are POSNET's, and an SCU for another register would report its own under its own name rather
+    /// than reuse this shape. A register that is not ready does not fail the
     /// zero receipt — the state is the answer; only a register that does not answer at all does.
-    /// Fiscal mode and read-only mode come from scomm, a synchronous read, which is only sent to an
-    /// idle register: behind a stuck command it would wait for that command.
+    /// Fiscal mode and read-only mode come from scomm, the factory device type and software version
+    /// from getrealid — synchronous reads, which wait behind any command sent before them. They are
+    /// only sent while no sale or closing holds the device lock — taken without waiting, as the zero
+    /// receipt must not wait for a sale — and the register is still idle once the lock is held: the
+    /// first state read runs outside the lock, so a sale may have started since. Otherwise those
+    /// fields stay null and the asynchronous state is the whole answer.
     /// </summary>
     private async Task ReportPrinterStateAsync(ReceiptResponse response)
     {
@@ -639,29 +645,60 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             throw new PLDeviceUnreachableException("The POSNET printer did not answer its status (!sprn, !sdev).");
         }
 
-        var status = state.IsIdle ? await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer) : null;
+        PosNetResponse? status = null;
+        PosNetResponse? identity = null;
+        if (state.IsIdle && await _deviceLock.WaitAsync(0))
+        {
+            try
+            {
+                // The fresher state is the answer too: a fault that appeared since the first read must
+                // not be reported as "ready". Only a refresh that got no answer keeps the first snapshot.
+                var refreshed = await PosNetPrinterState.ReadAsync(_client);
+                if (refreshed.Answered)
+                {
+                    state = refreshed;
+                }
+                if (refreshed.IsIdle)
+                {
+                    status = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Scomm(), answer => answer);
+                    identity = await PosNetStatus.TryReadAsync(_client, PosNetCommands.Getrealid(), answer => answer);
+                }
+            }
+            finally
+            {
+                _deviceLock.Release();
+            }
+        }
         response.ftStateData = JsonSerializer.SerializeToElement(new
         {
             PL = new
             {
-                PrinterStatus = new
+                PosNet = new
                 {
-                    Ready = state.IsIdle,
-                    Problem = state.DescribeProblem(),
-                    state.Mechanism,
-                    MechanismText = PosNetPrinterState.DescribeMechanism(state.Mechanism),
-                    state.DeviceStatus,
-                    DeviceStatusText = PosNetPrinterState.DescribeDeviceStatus(state.DeviceStatus),
-                    state.QueueEmpty,
-                    state.PaperNearEnd,
-                    TransactionOpen = state.TransactionResources is null ? (bool?)null : state.TransactionResources != 0,
-                    FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
-                    ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
-                    UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
+                    PrinterStatus = new
+                    {
+                        Ready = state.IsIdle,
+                        Problem = state.DescribeProblem(),
+                        state.Mechanism,
+                        MechanismText = PosNetPrinterState.DescribeMechanism(state.Mechanism),
+                        state.DeviceStatus,
+                        DeviceStatusText = PosNetPrinterState.DescribeDeviceStatus(state.DeviceStatus),
+                        state.QueueEmpty,
+                        state.PaperNearEnd,
+                        TransactionOpen = state.TransactionResources is null ? (bool?)null : state.TransactionResources != 0,
+                        FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
+                        ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
+                        UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
+                        DeviceType = ReadText(identity, "nm"),
+                        SoftwareVersion = ReadText(identity, "vr"),
+                    },
                 },
             },
         });
     }
+
+    private static string? ReadText(PosNetResponse? response, string key)
+        => response is not null && response.Parameters.TryGetValue(key, out var value) && value.Trim().Length > 0 ? value.Trim() : null;
 
     /// <summary>
     /// Settles a trend that was sent but not confirmed. A POSNET accepts trend even when it cannot

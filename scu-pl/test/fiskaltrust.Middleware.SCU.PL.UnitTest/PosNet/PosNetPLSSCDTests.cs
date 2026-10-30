@@ -441,12 +441,14 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
-        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
         printer.GetProperty("Ready").GetBoolean().Should().BeTrue();
         printer.GetProperty("Mechanism").GetInt64().Should().Be(0);
         printer.GetProperty("FiscalMode").GetBoolean().Should().BeTrue();
         printer.GetProperty("UniqueDeviceNumber").GetString().Should().Be("ZBF 2101002392");
-        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
+        printer.GetProperty("DeviceType").GetString().Should().Be("POSNET THERMAL HD ONLINE");
+        printer.GetProperty("SoftwareVersion").GetString().Should().Be("21.01");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev", "scomm", "getrealid");
     }
 
     /// <summary>A printer holding a receipt is not idle: its state is the answer, and the synchronous read that would queue behind the stuck command is not sent.</summary>
@@ -462,12 +464,74 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
-        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
         printer.GetProperty("Ready").GetBoolean().Should().BeFalse();
         printer.GetProperty("Problem").GetString().Should().Contain("no paper");
         printer.GetProperty("DeviceStatus").GetInt64().Should().Be(3);
         printer.GetProperty("QueueEmpty").GetBoolean().Should().BeFalse();
         transport.SentMnemonics.Should().Equal("!sprn", "!sdev");
+    }
+
+    /// <summary>
+    /// The zero receipt runs outside the device lock, so it answers while a sale waits for the printer.
+    /// Its synchronous reads (scomm, getrealid) would wait behind that sale's commands, so they are only
+    /// sent while no sale holds the lock: here the sale waits for the register's counters after a silent
+    /// trend, and the zero receipt returns the asynchronous state without them.
+    /// </summary>
+    /// <summary>
+    /// The printer goes into a fault between the zero receipt's two state reads: the response reports the
+    /// fresh state — not ready, with the problem — and the synchronous reads are not sent.
+    /// </summary>
+    [Fact]
+    public async Task ProcessReceiptAsync_ZeroReceiptWhenAFaultAppearsBetweenTheStateReads_ReportsTheFreshState()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.ReportFault(mechanism: 1, fromCheck: 2);
+        var sut = CreateSut(transport);
+        var request = CreateSaleRequest();
+        request.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000;
+
+        var result = await sut.ProcessReceiptAsync(request);
+
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
+        printer.GetProperty("Ready").GetBoolean().Should().BeFalse();
+        printer.GetProperty("Problem").ValueKind.Should().Be(JsonValueKind.String);
+        printer.GetProperty("Mechanism").GetInt64().Should().Be(1);
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ZeroReceiptWhileASaleHoldsThePrinter_SkipsTheSynchronousReads()
+    {
+        var transport = FakePosNetTransport.Confirming();
+        transport.SilenceTrend(executes: true);
+        transport.FailUnreachable("scnt", occurrence: 2);
+        var sut = CreateSut(transport);
+
+        var sale = sut.ProcessReceiptAsync(CreateSaleRequest());
+        var waited = TimeSpan.Zero;
+        while (transport.CountSent("scnt") < 3)
+        {
+            waited.Should().BeLessThan(TimeSpan.FromSeconds(10), "the sale should be waiting for the register's counters");
+            await Task.Delay(10);
+            waited += TimeSpan.FromMilliseconds(10);
+        }
+        var zeroReceipt = CreateSaleRequest();
+        zeroReceipt.ReceiptRequest.ftReceiptCase = (ReceiptCase)0x504C_2000_0000_2000;
+        zeroReceipt.ReceiptRequest.cbChargeItems = [];
+        zeroReceipt.ReceiptRequest.cbPayItems = [];
+
+        var result = await sut.ProcessReceiptAsync(zeroReceipt);
+
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
+        printer.GetProperty("Ready").GetBoolean().Should().BeTrue();
+        printer.GetProperty("FiscalMode").ValueKind.Should().Be(JsonValueKind.Null);
+        printer.GetProperty("DeviceType").ValueKind.Should().Be(JsonValueKind.Null);
+        transport.CountSent("getrealid").Should().Be(0);
+        transport.CountSent("scomm").Should().Be(1, "only the sale reads scomm, before its receipt");
+
+        transport.Recover("scnt");
+        (await sale).ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
     }
 
     private static ProcessRequest CreateDailyClosingRequest()
@@ -782,7 +846,7 @@ public class PosNetPLSSCDTests
 
         await sut.ProcessReceiptAsync(request);
 
-        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "scomm");
+        transport.SentMnemonics.Should().Equal("!sprn", "!sdev", "!sprn", "!sdev", "scomm", "getrealid");
     }
 
     [Fact]
@@ -1385,7 +1449,36 @@ public class PosNetPLSSCDTests
             _failFromOccurrence[mnemonic] = occurrence;
         }
 
+        private readonly object _sync = new();
+
+        /// <summary>How many times a command was sent — safe to call while another task still talks to the printer.</summary>
+        public int CountSent(string mnemonic)
+        {
+            lock (_sync)
+            {
+                return SentMnemonics.Count(m => m == mnemonic);
+            }
+        }
+
+        /// <summary>A command armed to fail answers normally again from now on.</summary>
+        public void Recover(string mnemonic)
+        {
+            lock (_sync)
+            {
+                _failures.Remove(mnemonic);
+            }
+        }
+
+        /// <summary>One command at a time, as on the wire — tests may run a zero receipt next to a waiting sale.</summary>
         public Task<byte[]> SendReceiveAsync(byte[] frame, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                return SendReceive(frame);
+            }
+        }
+
+        private Task<byte[]> SendReceive(byte[] frame)
         {
             var payload = Encoding.ASCII.GetString(frame, 1, frame.Length - 2);
             var mnemonic = payload.Split('	')[0];
@@ -1465,6 +1558,8 @@ public class PosNetPLSSCDTests
                 // One protected-memory sequence across all document types, ahead of the receipt number.
                 "eclastdocnoget" => $"eclastdocnoget	di{_completedReceipts + 11}	",
                 "rtcget" => "rtcget	da2026-09-08;17:54	tm2026-09-08T17:54:51+02:00	",
+                // The factory identity, as getrealid answers it on a POSNET Thermal HD Online.
+                "getrealid" => "getrealid	nmPOSNET THERMAL HD ONLINE	vr21.01	nuZBF 2101002392	",
                 // The rate table as the office printer reports it after fiscalization: E–G not in use.
                 "sfsk" => "sfsk	fsT	cl0	rd12	vt1	va23,00	vb8,00	vc5,00	vd0,00	ve101,00	vf101,00	vg101,00	rw2026-09-03;16:54	nuZBF 2101002392	",
                 // The e-paragon binding confirms with the unique eDokument id; the buffer record

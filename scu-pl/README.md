@@ -92,11 +92,14 @@ Notable mapping rules, all covered by unit tests:
 
   The `FAILURE` message of a refused sale says "The receipt was NOT issued" ("The daily report was NOT
   issued" for a closing), so the POS can resend it. See `ResolveSilentTrendAsync` in [`PosNetPLSSCD`](src/fiskaltrust.Middleware.SCU.PL.PosNet/PosNetPLSSCD.cs).
-* **The zero receipt returns the printer's state** in `ftStateData.PL.PrinterStatus` (ready, the
+* **The zero receipt returns the printer's state** in `ftStateData.PL.PosNet.PrinterStatus` (ready, the
   problem in words, mechanism and device state, queue, paper near end, open transaction, fiscal and
-  read-only mode), like the Italian RT printer SCUs. It runs outside the device lock and only uses the
-  asynchronous status commands, so it answers while a sale waits for an open cover — that is how a POS
-  finds out why the sale is waiting. See [`PosNetPrinterState`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Client/PosNetPrinterState.cs).
+  read-only mode, unique number, and the factory device type and software version from `getrealid`),
+  like the Italian RT printer SCUs. It runs outside the device lock and only uses the asynchronous
+  status commands, so it answers while a sale waits for an open cover — that is how a POS finds out
+  why the sale is waiting. The synchronous reads (`scomm`, `getrealid`) are only sent while no sale
+  or closing holds the device lock (taken without waiting) and the printer is still idle; otherwise
+  those fields stay empty. See [`PosNetPrinterState`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Client/PosNetPrinterState.cs).
 * **Every sale is anchored in the register.** The receipt number alone is no key, because a register
   with a daily counter repeats it every day. After `trend` the SCU therefore also reads the
   protected-memory document number (`eclastdocnoget ty0`), the register's clock (`rtcget`) and the
