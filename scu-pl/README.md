@@ -92,7 +92,7 @@ Notable mapping rules, all covered by unit tests:
 
   The `FAILURE` message of a refused sale says "The receipt was NOT issued" ("The daily report was NOT
   issued" for a closing), so the POS can resend it. See `ResolveSilentTrendAsync` in [`PosNetPLSSCD`](src/fiskaltrust.Middleware.SCU.PL.PosNet/PosNetPLSSCD.cs).
-* **The zero receipt returns the printer's state** in `ftStateData.PL.PrinterStatus` (ready, the
+* **The zero receipt returns the printer's state** in `ftStateData.PL.PosNet.PrinterStatus` (ready, the
   problem in words, mechanism and device state, queue, paper near end, open transaction, fiscal and
   read-only mode, unique number, and the factory device type and software version from `getrealid`),
   like the Italian RT printer SCUs. It runs outside the device lock and only uses the asynchronous

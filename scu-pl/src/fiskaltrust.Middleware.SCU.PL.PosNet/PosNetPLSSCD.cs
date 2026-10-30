@@ -625,8 +625,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     }
 
     /// <summary>
-    /// The zero receipt's answer: the printer's live state in <c>ftStateData</c> (<c>PL.PrinterStatus</c>),
-    /// like the Italian RT printer SCUs return theirs. A register that is not ready does not fail the
+    /// The zero receipt's answer: the printer's live state in <c>ftStateData</c> (<c>PL.PosNet.PrinterStatus</c>),
+    /// like the Italian RT printer SCUs return theirs. The <c>PosNet</c> level names the device family: the
+    /// fields are POSNET's, and an SCU for another register would report its own under its own name rather
+    /// than reuse this shape. A register that is not ready does not fail the
     /// zero receipt — the state is the answer; only a register that does not answer at all does.
     /// Fiscal mode and read-only mode come from scomm, the factory device type and software version
     /// from getrealid — synchronous reads, which wait behind any command sent before them. They are
@@ -671,22 +673,25 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         {
             PL = new
             {
-                PrinterStatus = new
+                PosNet = new
                 {
-                    Ready = state.IsIdle,
-                    Problem = state.DescribeProblem(),
-                    state.Mechanism,
-                    MechanismText = PosNetPrinterState.DescribeMechanism(state.Mechanism),
-                    state.DeviceStatus,
-                    DeviceStatusText = PosNetPrinterState.DescribeDeviceStatus(state.DeviceStatus),
-                    state.QueueEmpty,
-                    state.PaperNearEnd,
-                    TransactionOpen = state.TransactionResources is null ? (bool?)null : state.TransactionResources != 0,
-                    FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
-                    ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
-                    UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
-                    DeviceType = ReadText(identity, "nm"),
-                    SoftwareVersion = ReadText(identity, "vr"),
+                    PrinterStatus = new
+                    {
+                        Ready = state.IsIdle,
+                        Problem = state.DescribeProblem(),
+                        state.Mechanism,
+                        MechanismText = PosNetPrinterState.DescribeMechanism(state.Mechanism),
+                        state.DeviceStatus,
+                        DeviceStatusText = PosNetPrinterState.DescribeDeviceStatus(state.DeviceStatus),
+                        state.QueueEmpty,
+                        state.PaperNearEnd,
+                        TransactionOpen = state.TransactionResources is null ? (bool?)null : state.TransactionResources != 0,
+                        FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
+                        ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
+                        UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
+                        DeviceType = ReadText(identity, "nm"),
+                        SoftwareVersion = ReadText(identity, "vr"),
+                    },
                 },
             },
         });

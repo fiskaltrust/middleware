@@ -421,7 +421,7 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
-        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
         printer.GetProperty("Ready").GetBoolean().Should().BeTrue();
         printer.GetProperty("Mechanism").GetInt64().Should().Be(0);
         printer.GetProperty("FiscalMode").GetBoolean().Should().BeTrue();
@@ -444,7 +444,7 @@ public class PosNetPLSSCDTests
         var result = await sut.ProcessReceiptAsync(request);
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
-        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
         printer.GetProperty("Ready").GetBoolean().Should().BeFalse();
         printer.GetProperty("Problem").GetString().Should().Contain("no paper");
         printer.GetProperty("DeviceStatus").GetInt64().Should().Be(3);
@@ -473,7 +473,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(request);
 
-        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
         printer.GetProperty("Ready").GetBoolean().Should().BeFalse();
         printer.GetProperty("Problem").ValueKind.Should().Be(JsonValueKind.String);
         printer.GetProperty("Mechanism").GetInt64().Should().Be(1);
@@ -503,7 +503,7 @@ public class PosNetPLSSCDTests
 
         var result = await sut.ProcessReceiptAsync(zeroReceipt);
 
-        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PrinterStatus");
+        var printer = ((JsonElement)result.ReceiptResponse.ftStateData!).GetProperty("PL").GetProperty("PosNet").GetProperty("PrinterStatus");
         printer.GetProperty("Ready").GetBoolean().Should().BeTrue();
         printer.GetProperty("FiscalMode").ValueKind.Should().Be(JsonValueKind.Null);
         printer.GetProperty("DeviceType").ValueKind.Should().Be(JsonValueKind.Null);
