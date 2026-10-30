@@ -19,6 +19,7 @@ public sealed class PosNetPrinterEmulator : IDisposable
     private readonly CancellationTokenSource _shutdown = new();
     private readonly ConcurrentDictionary<string, int> _errorOn = new();
     private readonly ConcurrentDictionary<string, byte> _swallowOn = new();
+    private readonly ConcurrentDictionary<string, byte> _executeSilentlyOn = new();
     private readonly ConcurrentQueue<CassetteExchange> _replay = new();
     private readonly ConcurrentQueue<string> _replayFaults = new();
     private readonly bool _replaysACassette;
@@ -68,6 +69,16 @@ public sealed class PosNetPrinterEmulator : IDisposable
     public PosNetPrinterEmulator ErrorOn(string mnemonic, int errorCode)
     {
         _errorOn[mnemonic] = errorCode;
+        return this;
+    }
+
+    /// <summary>
+    /// Executes the given command on the model but does not answer it — a register that went silent
+    /// after doing its work, like one that closes a receipt and then waits for its cover.
+    /// </summary>
+    public PosNetPrinterEmulator ExecuteSilentlyOn(string mnemonic)
+    {
+        _executeSilentlyOn[mnemonic] = 1;
         return this;
     }
 
@@ -199,9 +210,33 @@ public sealed class PosNetPrinterEmulator : IDisposable
             return null;
         }
 
+        if (_executeSilentlyOn.TryRemove(command.CommandId, out _))
+        {
+            Model.Answer(command);
+            return null;
+        }
+
         if (_errorOn.TryGetValue(command.CommandId, out var scriptedError))
         {
             return PosNetPayload.ToFrame($"{command.CommandId}\t?{scriptedError}\t");
+        }
+
+        // The asynchronous state reads (!sprn, !sdev) and the counter baseline before a daily report
+        // (scnt) were added after the cassettes were recorded. It is read-only — it
+        // cannot change the register or anything a recording is evidence of — so where a recording
+        // does not hold it, the model answers it (ready, unless a test sets otherwise) and the replay
+        // continues with the command after it. Re-recording against a printer replaces these answers.
+        if (_replaysACassette
+            && (command.CommandId is "!sprn" or "!sdev"
+                    && (!_replay.TryPeek(out var next) || !next.Command.StartsWith(command.CommandId, StringComparison.Ordinal))
+                || command.CommandId == "scnt" && _replay.TryPeek(out var following) && following.Command.StartsWith("dailyrep", StringComparison.Ordinal)
+                // The cashier/register footer configuration from cbUser/cbTerminalID (ftrcfg) is newer than
+                // the recordings too; it only configures the next printout's footer, not its fiscal content.
+                || command.CommandId == "ftrcfg" && (!_replay.TryPeek(out var upcoming) || !upcoming.Command.StartsWith("ftrcfg", StringComparison.Ordinal))
+                // The factory identity read on the zero receipt (getrealid) is newer too, and read-only.
+                || command.CommandId == "getrealid" && (!_replay.TryPeek(out var queued) || !queued.Command.StartsWith("getrealid", StringComparison.Ordinal))))
+        {
+            return PosNetPayload.ToFrame(Model.Answer(command));
         }
 
         if (_replay.TryDequeue(out var recorded))

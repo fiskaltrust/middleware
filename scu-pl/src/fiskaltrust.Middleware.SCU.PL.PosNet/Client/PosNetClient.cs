@@ -10,8 +10,8 @@ namespace fiskaltrust.Middleware.SCU.PL.PosNet.Client;
 /// <summary>
 /// Executes single POSNET commands over the transport, implementing the three-outcome model:
 /// a confirmed response is returned, a confirmed error (<c>?nnnn</c>) throws
-/// <see cref="PLDeviceErrorException"/>, and an ambiguous outcome propagates as
-/// <see cref="PosNetAmbiguousResponseException"/>. There is deliberately no retry at any level —
+/// <see cref="PLDeviceErrorException"/>, and an ambiguous outcome — no answer, an unreadable one,
+/// or one to another command — propagates as <see cref="PosNetAmbiguousResponseException"/>. There is deliberately no retry at any level —
 /// resending after an ambiguous outcome can duplicate fiscal printouts.
 /// </summary>
 public class PosNetClient : IDisposable
@@ -31,7 +31,7 @@ public class PosNetClient : IDisposable
         try
         {
             var responseFrame = await _transport.SendReceiveAsync(frame, cancellationToken);
-            var response = PosNetFrame.Decode(responseFrame);
+            var response = Decode(command, responseFrame);
             if (response.IsError)
             {
                 var code = response.ErrorCode ?? -1;
@@ -47,6 +47,25 @@ public class PosNetClient : IDisposable
     }
 
     /// <summary>
+    /// An answer that arrived but cannot be read (bad CRC, broken framing) says nothing about what
+    /// the register did with the command it was sent for — the register did answer, so it most
+    /// likely executed it. That is an ambiguous outcome, not a failure: reported as a plain error,
+    /// a trend that printed its receipt would be resent and printed twice.
+    /// </summary>
+    private static PosNetResponse Decode(PosNetCommand command, byte[] responseFrame)
+    {
+        try
+        {
+            return PosNetFrame.Decode(responseFrame);
+        }
+        catch (PosNetProtocolException exception)
+        {
+            throw new PosNetAmbiguousResponseException(
+                $"The POSNET printer's answer to '{command.Mnemonic}' could not be read ({exception.Message}) — the command may or may not have been executed. Verify the device before retrying.", exception);
+        }
+    }
+
+    /// <summary>
     /// A POSNET answer repeats the mnemonic of the command it answers, and that is the only thing
     /// tying the two together on the wire. It is checked because a frame can outlive the command it
     /// belongs to: over serial, the late answer to a command that timed out can arrive after the
@@ -57,7 +76,8 @@ public class PosNetClient : IDisposable
     /// </summary>
     private static void RequireAnswerTo(PosNetCommand command, PosNetResponse response)
     {
-        if (!string.Equals(response.CommandId, command.Mnemonic, StringComparison.Ordinal))
+        // An asynchronous command ('!' prefix, POT-I-DEV-37 p. 16: sprn, sdev) is answered under its plain mnemonic.
+        if (!string.Equals(response.CommandId, command.Mnemonic.TrimStart('!'), StringComparison.Ordinal))
         {
             throw new PosNetAmbiguousResponseException(
                 $"The POSNET printer answered '{response.CommandId}' to the command '{command.Mnemonic}' — the answer belongs to an earlier command, so the outcome of this one is unknown. Verify the device before retrying.");

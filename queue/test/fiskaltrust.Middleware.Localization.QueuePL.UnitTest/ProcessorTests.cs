@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -13,16 +14,10 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePL.UnitTest;
 
+// Stands in for the SCU abstraction's exception, which GetInfoAsync may still throw.
 internal class PLDeviceUnreachableException : Exception
 {
     public PLDeviceUnreachableException(string message) : base(message) { }
-}
-
-// SCU packages subclass their unreachable exception (e.g. the PosNet SCU's ambiguous-response
-// exception) — the name-based detection must walk the type hierarchy.
-internal class DerivedDeviceUnreachableException : PLDeviceUnreachableException
-{
-    public DerivedDeviceUnreachableException(string message) : base(message) { }
 }
 
 internal class FakePLSSCD : IPLSSCD
@@ -30,6 +25,9 @@ internal class FakePLSSCD : IPLSSCD
     public int ProcessReceiptCalls { get; private set; }
     public bool Fiscalized { get; set; } = true;
     public Exception? ThrowOnProcessReceipt { get; set; }
+
+    /// <summary>When set, the SCU answers with an error response carrying this message — how a PL SCU reports failures.</summary>
+    public string? ErrorMessage { get; set; }
 
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
@@ -56,6 +54,10 @@ internal class FakePLSSCD : IPLSSCD
         if (ThrowOnProcessReceipt is not null)
         {
             throw ThrowOnProcessReceipt;
+        }
+        if (ErrorMessage is not null)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(ErrorMessage);
         }
         return Task.FromResult(new ProcessResponse { ReceiptResponse = request.ReceiptResponse });
     }
@@ -137,6 +139,41 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
         ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
     }
 
+    [Fact]
+    public async Task InitialOperation_ShouldActivateQueue_WhenDeviceIsNotFiscalizedInSandbox()
+    {
+        var sscd = new FakePLSSCD { Fiscalized = false };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage, isSandbox: true);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        storage.Activated.Should().BeTrue();
+        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypePL.InitialOperationReceipt));
+    }
+
+    /// <summary>
+    /// Sandbox only relaxes an explicit "not fiscalized": a state the queue cannot read is still
+    /// unverified, so a broken or misbehaving SCU is caught in sandbox just as in production.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"FiscalizationState":"NonFiscal"}""")]
+    [InlineData("""{"FiscalizationState":0}""")]
+    [InlineData("""{"FiscalizationState":3}""")]
+    [InlineData("{}")]
+    [InlineData("not json at all")]
+    public async Task InitialOperation_ShouldFailInSandbox_WhenTheDeviceDoesNotReportNonFiscal(string infoData)
+    {
+        var sscd = new FakePLSSCD { InfoOverride = new PLSSCDInfo { InfoData = infoData } };
+        var storage = new FakeLocalizedQueueStorageProvider();
+        var sut = new LifecycleCommandProcessorPL(sscd, storage, isSandbox: true);
+
+        var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
+
+        storage.Activated.Should().BeFalse();
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+    }
+
     /// <summary>
     /// The queue reads FiscalizationState out of the InfoData blob as a JSON number. Anything it
     /// cannot read that way — a string-encoded enum, a missing property, a malformed blob — must
@@ -174,7 +211,7 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
     }
 
     [Fact]
-    public async Task InitialOperation_ShouldCarryDeviceUnreachableState_WhenTheRegisterCannotBeRead()
+    public async Task InitialOperation_ShouldFail_WhenTheRegisterCannotBeRead()
     {
         var sscd = new FakePLSSCD { ThrowOnGetInfo = new PLDeviceUnreachableException("printer offline") };
         var storage = new FakeLocalizedQueueStorageProvider();
@@ -182,10 +219,10 @@ public class LifecycleCommandProcessorPLTests : ProcessorTestsBase
 
         var result = await sut.InitialOperationReceipt0x4001Async(CreateRequest(0x504C_2000_0000_4001));
 
-        // Whether the register is fiscalized is unknown while it cannot be reached — the caller has
-        // to see that this is a connectivity failure it can retry, not a wrong device state.
+        // GetInfoAsync still reports failure by throwing: whether the register is fiscalized is
+        // unknown, so the queue stays inactive and the caller gets an error response, not an exception.
         storage.Activated.Should().BeFalse();
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
         result.actionJournals.Should().HaveCount(1);
     }
 
@@ -314,65 +351,43 @@ public class ReceiptCommandProcessorPLTests : ProcessorTestsBase
     }
 }
 
-public class DeviceUnreachableTests : ProcessorTestsBase
+/// <summary>
+/// The SCU reports device failures as error responses it built itself; the queue passes them on as
+/// they are and must not record a closing for a report that did not run.
+/// </summary>
+public class ScuErrorResponseTests : ProcessorTestsBase
 {
     private static List<ChargeItem> SingleItem() => new()
     {
         new() { Amount = 10m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0003 },
     };
 
-    [Theory]
-    [InlineData(typeof(HttpRequestException))]
-    [InlineData(typeof(TaskCanceledException))]
-    [InlineData(typeof(PLDeviceUnreachableException))]
-    [InlineData(typeof(DerivedDeviceUnreachableException))]
-    public async Task Receipt_ShouldCarryDeviceUnreachableState_WhenScuIsUnreachable(Type exceptionType)
+    [Fact]
+    public async Task Receipt_ShouldPassTheScuErrorResponseThrough()
     {
-        var sscd = new FakePLSSCD
-        {
-            ThrowOnProcessReceipt = (Exception)Activator.CreateInstance(exceptionType, "printer offline")!,
-        };
+        var sscd = new FakePLSSCD { ErrorMessage = "Do NOT resend blindly: check the register's last document first." };
         var sut = new ReceiptCommandProcessorPL(sscd);
 
         var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
 
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
+        result.receiptResponse.ftSignatures.Should().ContainSingle().Which.Data.Should().Be("Do NOT resend blindly: check the register's last document first.");
     }
 
-    [Fact]
-    public async Task Receipt_ShouldLetOtherScuFailuresBubble()
+    [Theory]
+    [InlineData(0x504C_2000_0000_2011)]
+    [InlineData(0x504C_2000_0000_2012)]
+    public async Task Closing_ShouldNotWriteAnActionJournal_WhenTheScuReturnsAnError(ulong receiptCase)
     {
-        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new InvalidOperationException("device error 2005") };
-        var sut = new ReceiptCommandProcessorPL(sscd);
+        var sut = new DailyOperationsCommandProcessorPL(new FakePLSSCD { ErrorMessage = "no answer to dailyrep" });
 
-        var act = () => sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+        var result = receiptCase == 0x504C_2000_0000_2011
+            ? await sut.DailyClosing0x2011Async(CreateRequest(receiptCase))
+            : await sut.MonthlyClosing0x2012Async(CreateRequest(receiptCase));
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    [Fact]
-    public async Task DailyClosing_ShouldCarryDeviceUnreachableState_WhenScuIsUnreachable()
-    {
-        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") };
-        var sut = new DailyOperationsCommandProcessorPL(sscd);
-
-        var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
-
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        ((ulong)result.receiptResponse.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
         // The action journal of a closing records that the report was printed and the counters
-        // advanced — after an unreachable register it would claim a Z report that never ran.
-        result.actionJournals.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task MonthlyClosing_ShouldNotWriteAnActionJournal_WhenScuIsUnreachable()
-    {
-        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") };
-        var sut = new DailyOperationsCommandProcessorPL(sscd);
-
-        var result = await sut.MonthlyClosing0x2012Async(CreateRequest(0x504C_2000_0000_2012));
-
-        ((ulong)result.receiptResponse.ftState).Should().Be(0x504C_2001_EEEE_EEEEUL);
+        // advanced — after an error response it would claim a report that is not known to have run.
         result.actionJournals.Should().BeEmpty();
     }
 
@@ -384,6 +399,71 @@ public class DeviceUnreachableTests : ProcessorTestsBase
         var result = await sut.DailyClosing0x2011Async(CreateRequest(0x504C_2000_0000_2011));
 
         result.actionJournals.Should().ContainSingle().Which.Message.Should().Contain("Daily-Closing");
+    }
+}
+
+/// <summary>What is left for the queue to catch: the transport to a (remote) SCU failing.</summary>
+public class ScuCommunicationFailureTests : ProcessorTestsBase
+{
+    private static List<ChargeItem> SingleItem() => new()
+    {
+        new() { Amount = 10m, ftChargeItemCase = (ChargeItemCase)0x504C_2000_0000_0003 },
+    };
+
+    [Fact]
+    public async Task Receipt_ShouldTellTheCallerToRetry_WhenTheScuRefusedTheConnection()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused", new SocketException((int)SocketError.ConnectionRefused)) };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
+        result.receiptResponse.ftSignatures.Should().ContainSingle().Which.Data.Should().Contain("Retry once the SCU is available");
+    }
+
+    /// <summary>
+    /// A timeout or a dropped connection may hit after the SCU handed the receipt to the register —
+    /// the caller must check the register instead of retrying into a second fiscal receipt.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(HttpRequestException))]
+    [InlineData(typeof(TaskCanceledException))]
+    public async Task Receipt_ShouldAskToCheckTheRegister_WhenTheConnectionToTheScuFailedMidCall(Type exceptionType)
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = (Exception)Activator.CreateInstance(exceptionType, "timeout")! };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var result = await sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
+        result.receiptResponse.ftSignatures.Should().ContainSingle().Which.Data.Should().Contain("Do NOT resend blindly").And.NotContain("Retry once");
+    }
+
+    [Fact]
+    public async Task Receipt_ShouldLetOtherFailuresBubble()
+    {
+        var sscd = new FakePLSSCD { ThrowOnProcessReceipt = new InvalidOperationException("bug") };
+        var sut = new ReceiptCommandProcessorPL(sscd);
+
+        var act = () => sut.PointOfSaleReceipt0x0001Async(CreateRequest(0x504C_2000_0000_0001, SingleItem()));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Theory]
+    [InlineData(0x504C_2000_0000_2011)]
+    [InlineData(0x504C_2000_0000_2012)]
+    public async Task Closing_ShouldNotWriteAnActionJournal_WhenTheScuCannotBeReached(ulong receiptCase)
+    {
+        var sut = new DailyOperationsCommandProcessorPL(new FakePLSSCD { ThrowOnProcessReceipt = new HttpRequestException("connection refused") });
+
+        var result = receiptCase == 0x504C_2000_0000_2011
+            ? await sut.DailyClosing0x2011Async(CreateRequest(receiptCase))
+            : await sut.MonthlyClosing0x2012Async(CreateRequest(receiptCase));
+
+        ((ulong)result.receiptResponse.ftState).Should().Be(0xEEEE_EEEEUL);
+        result.actionJournals.Should().BeEmpty();
     }
 }
 

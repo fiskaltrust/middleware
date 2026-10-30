@@ -49,6 +49,8 @@ public class ReceiptCommandProcessorPL(IPLSSCD sscd) : IReceiptCommandProcessor
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
+        // The SCU returns device failures as error responses, which pass through as they are; only a
+        // failure to talk to the SCU itself is left to catch.
         try
         {
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -58,9 +60,9 @@ public class ReceiptCommandProcessorPL(IPLSSCD sscd) : IReceiptCommandProcessor
             });
             return new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>());
         }
-        catch (Exception ex) when (PLSSCDErrorHandling.IsDeviceUnreachable(ex))
+        catch (Exception ex) when (PLSSCDErrorHandling.IsScuCommunicationFailure(ex))
         {
-            request.ReceiptResponse.SetDeviceUnreachableError(ex);
+            request.ReceiptResponse.SetScuCommunicationError(ex);
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
     }

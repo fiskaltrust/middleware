@@ -12,7 +12,8 @@ public class PosNetConfiguration
     /// <summary>
     /// The printer address — see <see cref="PosNetDeviceAddress"/> for the accepted forms:
     /// <c>tcp://192.168.1.50:6666</c> (or plain <c>host:port</c>) for the network interface,
-    /// <c>serial://COM9</c> / <c>usb://COM9</c> / <c>/dev/ttyACM0</c> for the USB or COM interface.
+    /// <c>serial://COM9</c> / <c>usb://COM9</c> / <c>/dev/ttyACM0</c> for the USB or COM interface,
+    /// <c>usbhost://1424:10B0</c> for the USB interface opened by the host itself (Android).
     /// </summary>
     public string DeviceUrl { get; set; } = "";
 
@@ -21,6 +22,12 @@ public class PosNetConfiguration
     public int SendTimeoutMs { get; set; } = 5_000;
 
     public int ReceiveTimeoutMs { get; set; } = 15_000;
+
+    /// <summary>
+    /// The pause between two status reads while the SCU waits for a register that went silent after
+    /// <c>trend</c>. There is no limit on the wait itself — see <c>PosNetPLSSCD.ResolveSilentTrendAsync</c>.
+    /// </summary>
+    public int OutcomeResolutionPollIntervalMs { get; set; } = 1_000;
 
     /// <summary>
     /// Line speed of a serial <see cref="DeviceUrl"/>. The printer's own default for its COM port is
@@ -98,9 +105,16 @@ public class PosNetConfiguration
         RequirePositiveTimeout(ConnectTimeoutMs, nameof(ConnectTimeoutMs));
         RequirePositiveTimeout(SendTimeoutMs, nameof(SendTimeoutMs));
         RequirePositiveTimeout(ReceiveTimeoutMs, nameof(ReceiveTimeoutMs));
-        if (ParseDeviceAddress() is PosNetDeviceAddress.Serial serial)
+        RequirePositiveTimeout(OutcomeResolutionPollIntervalMs, nameof(OutcomeResolutionPollIntervalMs));
+        switch (ParseDeviceAddress())
         {
-            PosNetSerialSettings.From(serial, this);
+            case PosNetDeviceAddress.Serial serial:
+                PosNetSerialSettings.From(serial, this);
+                break;
+            case PosNetDeviceAddress.UsbHost:
+                // The serial settings reach a USB device as its line coding.
+                CdcLineCoding.From(this);
+                break;
         }
     }
 

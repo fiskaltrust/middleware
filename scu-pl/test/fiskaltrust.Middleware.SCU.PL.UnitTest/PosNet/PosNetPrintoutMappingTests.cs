@@ -49,7 +49,7 @@ public class PosNetPrintoutMappingTests
         printout!.Barcode.Should().Be("1234567890");
         printout.QrCode.Should().BeEquivalentTo(new PosNetQrCode("https://example.test/r/1", 2, 0, PosNetCode2dPosition.Below));
         printout.Lines.Should().Equal(new PosNetFooterLine("Dziękujemy!", true, false), new PosNetFooterLine("Zapraszamy ponownie", false, false));
-        printout.HasFooterCodes.Should().BeTrue();
+        printout.HasFooterConfiguration.Should().BeTrue();
     }
 
     [Fact]
