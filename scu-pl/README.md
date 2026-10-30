@@ -119,11 +119,11 @@ Notable mapping rules, all covered by unit tests:
   `AdditionalPrintoutNotPrinted` ending in "The fiscal receipt was issued: do not send it again."
 
 * **The receipt footer** ([`PosNetPrintout`](src/fiskaltrust.Middleware.SCU.PL.PosNet/Transaction/PosNetPrintout.cs), middleware#845).
-  Layout measured on a POSNET against a real H&M PL receipt:
+  Layout measured on a POSNET against a real retail receipt:
 
   | What | From | Register |
   | --- | --- | --- |
-  | cashier in the footer line (`00008 #02 238689`) | `cbUser` (a string/number; a structured user object is left out) | `ftrcfg cc`, ≤ 32 |
+  | cashier in the footer line (`00008 #02 123456`) | `cbUser` (a string/number; a structured user object is left out) | `ftrcfg cc`, ≤ 32 |
   | register number in the footer line | `cbTerminalID` | `ftrcfg cn`, ≤ 8 |
   | barcode, QR code | `PL.printout.barcode` / `qrCode` | `ftrcfg bc/bb`, `qrcode` |
   | key left, value right | `PL.printout.lines[]` with `label` (e.g. `itemCount`, `transactionNumber`) | `trftrln id0–40` |

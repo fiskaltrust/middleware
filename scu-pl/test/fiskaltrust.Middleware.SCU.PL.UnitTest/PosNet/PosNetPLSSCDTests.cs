@@ -602,14 +602,14 @@ public class PosNetPLSSCDTests
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
-        request.ReceiptRequest.cbUser = "238689";
+        request.ReceiptRequest.cbUser = "123456";
         request.ReceiptRequest.cbTerminalID = "02";
 
         var result = await sut.ProcessReceiptAsync(request);
 
         result.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
         transport.SentMnemonics.Should().Equal("scomm", "scnt", "!sprn", "!sdev", "ftrcfg", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
-        transport.SentPayloads.Single(p => p.StartsWith("ftrcfg")).Should().StartWith("ftrcfg	cc238689	cn02	ca0	bb0	#");
+        transport.SentPayloads.Single(p => p.StartsWith("ftrcfg")).Should().StartWith("ftrcfg	cc123456	cn02	ca0	bb0	#");
     }
 
     /// <summary>The register would refuse it with error 10; the SCU refuses it first, so nothing at all reaches the device.</summary>
@@ -619,11 +619,11 @@ public class PosNetPLSSCDTests
         var transport = FakePosNetTransport.Confirming();
         var sut = CreateSut(transport);
         var request = CreateSaleRequest();
-        request.ReceiptRequest.cbTerminalID = "HM-PL0027-SSCO";
+        request.ReceiptRequest.cbTerminalID = "SHOP-PL01-SSCO";
 
         var result = await sut.ProcessReceiptAsync(request);
 
-        result.FailureMessage().Should().Contain("cbTerminalID 'HM-PL0027-SSCO' has 14 characters");
+        result.FailureMessage().Should().Contain("cbTerminalID 'SHOP-PL01-SSCO' has 14 characters");
         transport.SentMnemonics.Should().BeEmpty();
     }
 
@@ -637,7 +637,7 @@ public class PosNetPLSSCDTests
     private static ProcessRequest CreateSaleWithReceiptLinesAndCardSlipRequest()
     {
         var request = CreateSaleRequest();
-        request.ReceiptRequest.ftReceiptCaseData = new { cbReceiptLines = new[] { "Thank you, H&M" } };
+        request.ReceiptRequest.ftReceiptCaseData = new { cbReceiptLines = new[] { "Thank you, A&B" } };
         request.ReceiptRequest.cbPayItems[0].ftPayItemCaseData = new { cbPayItemLines = new[] { "CARDHOLDER COPY", "", "APPROVED" } };
         return request;
     }
@@ -658,7 +658,7 @@ public class PosNetPLSSCDTests
         transport.SentMnemonics.SkipWhile(m => m != "trend").Should().Equal(
             "trend", "trftrln", "trftrln", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
         transport.SentPayloads.Where(p => p.StartsWith("trftrln")).Select(p => p[..p.LastIndexOf('#')]).Should().Equal(
-            "trftrln\tid41\tnaThank you, H&&M\t", "trftrln\tid41\tnaCARDHOLDER COPY\t", "trftrln\tid41\tna \t", "trftrln\tid41\tnaAPPROVED\t");
+            "trftrln\tid41\tnaThank you, A&&B\t", "trftrln\tid41\tnaCARDHOLDER COPY\t", "trftrln\tid41\tna \t", "trftrln\tid41\tnaAPPROVED\t");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => (ulong)s.ftSignatureType == (ulong)SignatureTypePL.AdditionalPrintoutNotPrinted);
     }
 

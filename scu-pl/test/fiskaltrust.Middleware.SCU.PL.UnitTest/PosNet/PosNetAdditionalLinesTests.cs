@@ -60,7 +60,7 @@ public class PosNetAdditionalLinesTests
 
     [Fact]
     public void ALiteralAmpersand_IsDoubled_AsTheLeftAlignedLineReadsFormattingCodes()
-        => Texts(Sale(new { cbReceiptLines = new[] { "H&M" } })).Should().Equal("H&&M");
+        => Texts(Sale(new { cbReceiptLines = new[] { "A&B" } })).Should().Equal("A&&B");
 
     [Fact]
     public void WithoutAdditionalLines_NothingIsAdded()
