@@ -45,6 +45,9 @@ internal class InfoCertReceiptPayload
 
     [JsonPropertyName("currency")] public string Currency { get; set; } = "EUR";
 
+    /// <summary>The reprint number of a copy (R13 ENC-DUP-PRN-NUM, market-fr#235); omitted on every other receipt.</summary>
+    [JsonPropertyName("copyNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? CopyNumber { get; set; }
+
     [JsonPropertyName("totalizer")] public decimal Totalizer { get; set; }
 
     [JsonPropertyName("ciNormal")] public decimal CINormal { get; set; }

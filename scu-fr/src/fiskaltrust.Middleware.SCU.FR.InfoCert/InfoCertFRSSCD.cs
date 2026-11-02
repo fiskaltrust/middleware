@@ -81,6 +81,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             ReceiptMoment = response.ftReceiptMoment,
             ReceiptCase = (long) receiptRequest.ftReceiptCase,
             Currency = receiptRequest.Currency.ToString(),
+            CopyNumber = request.CopyNumber,
             Totalizer = totals.Totalizer,
             CINormal = totals.CINormal,
             CIReduced1 = totals.CIReduced1,

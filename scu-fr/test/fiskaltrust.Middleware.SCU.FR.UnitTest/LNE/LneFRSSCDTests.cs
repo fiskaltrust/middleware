@@ -260,6 +260,23 @@ public class LneFRSSCDTests
     }
 
     [Fact]
+    public async Task CopyNumber_IsSignedAfterTheReceiptCase()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+        var copy = FRTestData.Request();
+        copy.CopyNumber = 2;
+
+        var (copied, _) = await sut.ProcessReceiptAsync(copy, null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // ... request hash, cashbox, receipt id, moment, receipt case, then the copy number.
+        DataSetOf(copied).Split('|')[13].Should().Be("2");
+        DataSetOf(ticket).Split('|')[13].Should().BeEmpty("only a copy has a reprint number");
+    }
+
+    [Fact]
     public async Task RequestHash_ThatCannotBeComputed_ReturnsTheFailureInsteadOfThrowing()
     {
         var (privateKey, key) = FRTestData.CreateKey();

@@ -29,6 +29,13 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
             .Must((request, payItem) => payItem.Currency == request.Currency)
             .WithMessage((request, payItem) => $"Pay item '{payItem.Description}' has currency '{payItem.Currency}' but the receipt currency is '{request.Currency}'.")
             .WithErrorCode("CurrencyMustMatchMarket");
+
+        // market-fr#235: a duplicate is numbered per copied receipt, so it has to name exactly one.
+        RuleFor(x => x.cbPreviousReceiptReference)
+            .Must(reference => reference is not null && reference.IsSingle && !string.IsNullOrWhiteSpace(reference.SingleValue))
+            .When(x => x.ftReceiptCase.Case() == ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)
+            .WithMessage("A copy (0x3010) must reference the receipt it copies in cbPreviousReceiptReference, as a single reference.")
+            .WithErrorCode("CopyRequiresPreviousReceiptReference");
     }
 }
 

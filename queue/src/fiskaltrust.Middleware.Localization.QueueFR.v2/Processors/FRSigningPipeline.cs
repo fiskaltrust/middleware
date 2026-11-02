@@ -24,7 +24,7 @@ public class FRSigningPipeline
         _chains = chains;
     }
 
-    public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null)
+    public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null, int? copyNumber = null)
         => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals) =>
         {
             var receiptResponse = request.ReceiptResponse;
@@ -56,6 +56,7 @@ public class FRSigningPipeline
                     ReceiptResponse = receiptResponse,
                     PeriodTotals = periodTotals,
                     ChainCounter = chain.Numerator,
+                    CopyNumber = copyNumber,
                 }, chain.LastSignature).ConfigureAwait(false);
             }
             catch (Exception ex)

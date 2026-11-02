@@ -1,6 +1,11 @@
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
+using ScuSignatureTypeFR = fiskaltrust.Middleware.SCU.FR.Abstraction.Cases.SignatureTypeFR;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
@@ -12,10 +17,16 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
 {
     private readonly FRSigningPipeline _pipeline;
+    private readonly AsyncLazy<IJournalFRCopyPayloadRepository> _copies;
 
-    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline)
+    // Counting the earlier copies, signing and recording the new one must not interleave with
+    // another copy, or two copies of the same receipt would get the same number.
+    private readonly SemaphoreSlim _copyLock = new(1, 1);
+
+    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies)
     {
         _pipeline = pipeline;
+        _copies = copies;
     }
 
     public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
@@ -31,9 +42,51 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
 
     public Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
+    /// <summary>
+    /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235).
+    /// The count comes from the copy journal ftJournalFRCopyPayload, one row per issued copy, which
+    /// v1.2 writes too - so a half-migrated queue keeps counting the copies v1 issued. The number is
+    /// signed by the SCU and printed as "n. Duplicata de reference", as in v1.2.
+    /// </summary>
+    public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
     {
-        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateDuplicateSignature(request.ReceiptRequest.cbPreviousReceiptReference?.ToString()));
-        return _pipeline.SignAsync(request);
+        // ReceiptValidatorFR has made sure there is exactly one reference.
+        var copiedReceiptReference = request.ReceiptRequest.cbPreviousReceiptReference!.SingleValue!;
+        var copies = await _copies;
+
+        await _copyLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var copyNumber = await copies.GetCountOfCopiesAsync(copiedReceiptReference).ConfigureAwait(false) + 1;
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateDuplicateSignature(copiedReceiptReference, copyNumber));
+
+            var response = await _pipeline.SignAsync(request, copyNumber: copyNumber).ConfigureAwait(false);
+            if (FRSigningPipeline.Succeeded(response))
+            {
+                await copies.InsertAsync(CopyPayload(response.receiptResponse, copiedReceiptReference)).ConfigureAwait(false);
+            }
+
+            return response;
+        }
+        finally
+        {
+            _copyLock.Release();
+        }
     }
+
+    private static ftJournalFRCopyPayload CopyPayload(ReceiptResponse response, string copiedReceiptReference) => new()
+    {
+        QueueId = response.ftQueueID,
+        QueueItemId = response.ftQueueItemID,
+        CashBoxIdentification = response.ftCashBoxIdentification,
+        ReceiptId = response.ftReceiptIdentification,
+        ReceiptMoment = response.ftReceiptMoment,
+        CopiedReceiptReference = copiedReceiptReference,
+        Siret = SignatureData(response, ScuSignatureTypeFR.Siret),
+        CertificateSerialNumber = SignatureData(response, ScuSignatureTypeFR.CertificateSerialNumber),
+    };
+
+    /// <summary>The SIRET and certificate items are written by the SCU, so their types are the SCU's.</summary>
+    private static string? SignatureData(ReceiptResponse response, ScuSignatureTypeFR type)
+        => response.ftSignatures?.FirstOrDefault(x => ((long) x.ftSignatureType & 0xFFFF) == ((long) type & 0xFFFF))?.Data;
 }

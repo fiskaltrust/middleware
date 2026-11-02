@@ -1,6 +1,8 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
@@ -75,14 +77,14 @@ public class ProcessorTests
     public async Task CopyReceipt_IsMarkedAsDuplicateAndGoesIntoItsOwnChain()
     {
         var (pipeline, sscd) = CreatePipeline();
-        var sut = new ProtocolCommandProcessorFR(pipeline);
+        var sut = new ProtocolCommandProcessorFR(pipeline, new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new InMemoryJournalFRCopyPayloadRepository())));
         var request = CommandRequest(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010);
         request.ReceiptRequest.cbPreviousReceiptReference = "receipt-1";
 
         var response = await sut.CopyReceiptPrintExistingReceipt0x3010Async(request);
 
         response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D1");
-        response.receiptResponse.ftSignatures.Should().Contain(x => x.Caption == "Duplicata" && x.Data.Contains("receipt-1"));
+        response.receiptResponse.ftSignatures.Should().Contain(x => x.Caption == "Duplicata" && x.Data == "1. Duplicata de receipt-1");
         sscd.Calls.Should().ContainSingle();
     }
 
@@ -225,6 +227,24 @@ public class ProcessorTests
         var result = await sut.ValidateAsync(request, new ftQueue());
 
         result.Errors.Should().Contain(x => x.ErrorCode == "CurrencyMustMatchMarket");
+    }
+
+    [Fact]
+    public async Task ReceiptValidatorFR_RejectsACopyWithoutAPreviousReceiptReference()
+    {
+        var repository = new Mock<IMiddlewareQueueItemRepository>();
+        var sut = new ReceiptValidatorFR(new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.CopyReceiptPrintExistingReceipt0x3010.WithCountry("FR"),
+            Currency = Currency.EUR,
+            cbChargeItems = [],
+            cbPayItems = [],
+        };
+
+        var result = await sut.ValidateAsync(request, new ftQueue());
+
+        result.Errors.Should().Contain(x => x.ErrorCode == "CopyRequiresPreviousReceiptReference", "market-fr#235, as v1.2 did");
     }
 
     [Fact]
