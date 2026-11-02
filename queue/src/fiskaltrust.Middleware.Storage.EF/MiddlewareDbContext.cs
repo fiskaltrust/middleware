@@ -133,6 +133,7 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftQueueFR>().Ignore(x => x.MLastSignature);
             modelBuilder.Entity<ftQueueFR>().Ignore(x => x.YLastSignature);
             modelBuilder.Entity<ftQueueFR>().Ignore(x => x.PendingScuSwitch);
+            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.DayOpenedMoment);
 
             modelBuilder.Entity<ftQueueME>().ToTable(nameof(ftQueueME));
             modelBuilder.Entity<ftQueueME>().HasKey(x => x.ftQueueMEId, x => x.IsClustered(false));

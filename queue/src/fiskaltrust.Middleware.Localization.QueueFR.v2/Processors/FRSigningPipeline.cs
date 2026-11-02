@@ -39,6 +39,14 @@ public class FRSigningPipeline
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
 
+            // market-fr#177: the switch is maintenance done outside business hours, after the daily
+            // closing, so the outgoing SCU signs the closing of every day it signed receipts of.
+            if (request.ReceiptRequest.ftReceiptCase.Case() == ReceiptCase.InitSCUSwitch0x4011 && totals.DayOpenedMoment is { } dayOpened)
+            {
+                receiptResponse.SetReceiptResponseError($"The day is not closed: receipts have been counted into it since {dayOpened:O}. Send the daily closing (0x2011) before the init-SCU-switch receipt (0x4011).");
+                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            }
+
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
 
             // A closing attests the turnover accumulated up to it; the closing request itself

@@ -79,7 +79,7 @@ public abstract class FRScenarioTests
 
     /// <summary>
     /// Starts the queue against the shared storage, as a restart with a reconfigured SCU does: the
-    /// fiscal state is rebuilt from the stored queue items.
+    /// fiscal state is read back from the stored ftQueueFR (market-fr ADR 0012).
     /// </summary>
     private Func<string, Task<string>> Start(IFRSSCD scu)
         => new QueueFRBootstrapper(_queueId, _loggerFactory, _configuration, scu, _storageProvider).RegisterForSign();
@@ -88,6 +88,8 @@ public abstract class FRScenarioTests
     public async Task ScuSwitch_ContinuesTheChainUnderTheIncomingScu()
     {
         await SignAsync(CashSale());
+        var refusedInit = await SignAsync(Request(ReceiptCase.InitSCUSwitch0x4011));
+        await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
         var init = await SignAsync(Request(ReceiptCase.InitSCUSwitch0x4011));
         var refusedSale = await SignAsync(CashSale());
 
@@ -95,8 +97,9 @@ public abstract class FRScenarioTests
         var finish = await SignAsync(Request(ReceiptCase.FinishSCUSwitch0x4012));
         var sale = await SignAsync(CashSale());
 
+        refusedInit.ftState.IsState(State.Error).Should().BeTrue("the switch starts only once the day is closed (market-fr#177)");
         init.ftState.IsState(State.Error).Should().BeFalse();
-        init.ftReceiptIdentification.Should().EndWith("E1");
+        init.ftReceiptIdentification.Should().EndWith("E1", "the refused init consumed no number");
         refusedSale.ftState.IsState(State.Error).Should().BeTrue("nothing may be signed between 0x4011 and 0x4012");
         finish.ftState.IsState(State.Error).Should().BeFalse();
         finish.ftReceiptIdentification.Should().EndWith("E2", "the switch neither closes nor restarts the technical chain (ADR 0002)");

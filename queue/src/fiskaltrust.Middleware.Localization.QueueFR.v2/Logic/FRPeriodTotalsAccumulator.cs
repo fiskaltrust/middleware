@@ -36,6 +36,8 @@ public class FRPeriodTotalsAccumulator
             return;
         }
 
+        _queueFR.DayOpenedMoment ??= request.cbReceiptMoment;
+
         var totals = FRTotalsCalculator.From(request);
         foreach (var period in _closablePeriods)
         {
@@ -43,6 +45,12 @@ public class FRPeriodTotalsAccumulator
         }
         AddTo(chain == FRReceiptChain.Ticket ? FRQueueFRColumns.TicketTotalsPrefix : FRQueueFRColumns.InvoiceTotalsPrefix, totals);
     }
+
+    /// <summary>
+    /// The moment of the first receipt counted into the day since the last daily closing; null
+    /// while the day is closed. An SCU switch may only start on a closed day (market-fr#177).
+    /// </summary>
+    public DateTime? DayOpenedMoment => _queueFR.DayOpenedMoment;
 
     /// <summary>The totals a closing of <paramref name="period"/> reports, plus the perpetual total.</summary>
     public FRPeriodTotals Snapshot(FRTotalsPeriod period) => new()
@@ -58,6 +66,11 @@ public class FRPeriodTotalsAccumulator
         if (period != FRTotalsPeriod.Perpetual)
         {
             _queueFR.SetTotals(FRQueueFRColumns.TotalsPrefix(period), new FRTotals());
+        }
+
+        if (period == FRTotalsPeriod.Day)
+        {
+            _queueFR.DayOpenedMoment = null;
         }
     }
 

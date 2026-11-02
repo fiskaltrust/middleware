@@ -58,6 +58,36 @@ public class ScuSwitchTests
     }
 
     [Fact]
+    public async Task InitScuSwitch_WhileTheDayIsOpen_IsRefused()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+        await new ReceiptCommandProcessorFR(pipeline).PointOfSaleReceipt0x0001Async(CommandRequest(ReceiptCase.PointOfSaleReceipt0x0001));
+
+        var response = await Lifecycle(sscd, pipeline).InitSCUSwitch0x4011Async(CommandRequest(ReceiptCase.InitSCUSwitch0x4011));
+
+        IsError(response).Should().BeTrue("the switch is maintenance done after the daily closing; there is no force flag");
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#", "a refused init consumes no number");
+        response.actionJournals.Should().BeEmpty();
+        sscd.Calls.Should().ContainSingle("only the ticket was signed");
+        (await pipeline.Chains.GetPendingScuSwitchAsync()).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task InitScuSwitch_AfterTheDailyClosing_IsSigned()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+        await new ReceiptCommandProcessorFR(pipeline).PointOfSaleReceipt0x0001Async(CommandRequest(ReceiptCase.PointOfSaleReceipt0x0001));
+        await new DailyOperationsCommandProcessorFR(pipeline).DailyClosing0x2011Async(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        var response = await Lifecycle(sscd, pipeline).InitSCUSwitch0x4011Async(CommandRequest(ReceiptCase.InitSCUSwitch0x4011));
+
+        IsError(response).Should().BeFalse();
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E1");
+    }
+
+    [Fact]
     public async Task WhileASwitchIsPending_EveryOtherSignedReceiptIsRefused()
     {
         var sscd = new FakeFRSSCD();

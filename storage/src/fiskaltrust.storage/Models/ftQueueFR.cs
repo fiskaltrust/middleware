@@ -886,6 +886,11 @@ namespace fiskaltrust.storage.V0
         /// </summary>
         public string PendingScuSwitch { get; set; }
 
+        /// <summary>
+        /// Moment of the first receipt counted into the day since the last daily closing; null while the day is closed
+        /// </summary>
+        public DateTime? DayOpenedMoment { get; set; }
+
         #endregion
 
         #region Late Signing
