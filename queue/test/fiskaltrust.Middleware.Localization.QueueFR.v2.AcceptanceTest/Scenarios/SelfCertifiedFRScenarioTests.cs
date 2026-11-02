@@ -22,12 +22,13 @@ public class SelfCertifiedFRScenarioTests : FRScenarioTests
     }
 
     /// <summary>
-    /// The self-certified SCU, like LNE, prints no total items: the totals are field 12 of the
-    /// signed data set, as <c>period,current totalizer,...,perpetual totalizer,...</c> (11 amounts each).
+    /// The self-certified SCU, like LNE, prints no total items: the totals are the fifth field from
+    /// the end of the signed data set, as <c>period,current totalizer,...,perpetual totalizer,...</c>
+    /// (11 amounts each).
     /// </summary>
     protected override (string? Day, string? Perpetual) TotalsOf(ReceiptResponse closing)
     {
-        var totals = SignatureOf(closing, SignatureTypeFR.Information)!.Split('|')[11].Split(',');
+        var totals = SignatureOf(closing, SignatureTypeFR.Information)!.Split('|')[^5].Split(',');
         totals[0].Should().Be("Day");
         return (totals[1], totals[12]);
     }

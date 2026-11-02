@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.FR.SelfCertified;
 
@@ -33,6 +34,21 @@ public class SelfCertifiedConfiguration
 
     public string SoftwareVersion { get; set; } = "";
 
+    /// <summary>Issuer claim: RCS registration, e.g. "RCS Nanterre B 642036065" (SOC-RCS, market-fr#141).</summary>
+    public string? Rcs { get; set; }
+
+    /// <summary>Issuer claim: NAF/APE code (SOC-NAF).</summary>
+    public string? Naf { get; set; }
+
+    /// <summary>Issuer claim: legal form and share capital, e.g. "SAS, au capital de 500000 EUR" (SOC-TYPE, SOC-CAPITAL).</summary>
+    public string? LegalForm { get; set; }
+
+    /// <summary>Issuer claim: <c>debits</c> or <c>receipts</c> (SOC-REF-REGTVA, BT-8).</summary>
+    public string? VatOption { get; set; }
+
+    /// <summary>Issuer claim: electronic address, <c>SIREN</c> or <c>SIREN_XXX</c> under scheme 0225 (BT-34).</summary>
+    public string? ElectronicAddress { get; set; }
+
     public static SelfCertifiedConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
         var serialized = JsonSerializer.Serialize(configuration);
@@ -48,6 +64,12 @@ public class SelfCertifiedConfiguration
         {
             throw new FRValidationException("The self-certified SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
         }
+
+        FRIssuerClaims.ValidateVatOption("self-certified", result.VatOption);
+        FRIssuerClaims.RejectCharacter("self-certified", nameof(Rcs), result.Rcs, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
+        FRIssuerClaims.RejectCharacter("self-certified", nameof(Naf), result.Naf, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
+        FRIssuerClaims.RejectCharacter("self-certified", nameof(LegalForm), result.LegalForm, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
+        FRIssuerClaims.RejectCharacter("self-certified", nameof(ElectronicAddress), result.ElectronicAddress, Signing.SelfCertifiedDataSetBuilder.FieldSeparator);
 
         return result;
     }
