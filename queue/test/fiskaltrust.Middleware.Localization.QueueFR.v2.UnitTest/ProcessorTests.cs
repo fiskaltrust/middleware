@@ -176,16 +176,6 @@ public class ProcessorTests
     }
 
     [Fact]
-    public void JournalProcessorFR_RefusesFrenchJournalTypesInsteadOfReturningAnEmptyFile()
-    {
-        var sut = new JournalProcessorFR();
-
-        var act = () => sut.ProcessAsync(new JournalRequest { ftJournalType = (JournalType) 0x4652_2000_0000_0001 });
-
-        act.Should().Throw<NotImplementedException>().WithMessage("*not implemented*");
-    }
-
-    [Fact]
     public async Task ReceiptValidatorFR_RejectsAnyCurrencyButEuro()
     {
         var repository = new Mock<IMiddlewareQueueItemRepository>();

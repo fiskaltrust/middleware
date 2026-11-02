@@ -2,7 +2,9 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
@@ -46,16 +48,43 @@ public class JournalTypeFRTests
         journalType.IsType(JournalTypeFR.Log).Should().BeFalse();
     }
 
-    [Theory]
-    [MemberData(nameof(AllJournalTypesFR))]
-    public void JournalProcessorFR_RefusesEveryKnownFrenchJournalAsNotImplemented(JournalTypeFR journalTypeFR)
+    [Fact]
+    public void JournalProcessorFR_RefusesTheArchiveJournalUntilArchiveReceiptsExist()
     {
-        var sut = new JournalProcessorFR();
+        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = JournalTypeFR.Archive.As<JournalType>() });
 
-        var act = () => sut.ProcessAsync(new JournalRequest { ftJournalType = journalTypeFR.As<JournalType>() });
-
-        act.Should().Throw<NotImplementedException>().WithMessage($"*({journalTypeFR})*not implemented*");
+        act.Should().Throw<NotSupportedException>().WithMessage("*does not sign archive receipts yet*");
     }
+
+    [Fact]
+    public void JournalProcessorFR_RefusesTheArchiveExportWithoutAnArchiveSigner()
+    {
+        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = JournalTypeFR.ArchiveExport.As<JournalType>() });
+
+        act.Should().Throw<NotSupportedException>().WithMessage("*needs an archive signer*");
+    }
+
+    [Theory]
+    [InlineData(JournalTypeFR.Ticket, "text/csv")]
+    [InlineData(JournalTypeFR.GrandTotal, "text/csv")]
+    [InlineData(JournalTypeFR.Training, "text/csv")]
+    [InlineData(JournalTypeFR.StatusInformation, "application/json")]
+    public void JournalProcessorFR_AnswersTheGroupJournalsAndTheStatus(JournalTypeFR journalTypeFR, string mediaType)
+    {
+        var (contentType, _) = Sut().ProcessAsync(new JournalRequest { ftJournalType = journalTypeFR.As<JournalType>() });
+
+        contentType.MediaType.Should().Be(mediaType);
+    }
+
+    [Fact]
+    public void JournalProcessorFR_RejectsANegativeTo()
+    {
+        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = JournalTypeFR.Ticket.As<JournalType>(), To = -10 });
+
+        act.Should().Throw<ArgumentException>().WithMessage("*negative To*");
+    }
+
+    private static JournalProcessorFR Sut() => new(Guid.NewGuid(), Mock.Of<IStorageProvider>());
 
     [Theory]
     [InlineData(0x4652_2000_0000_0005)]
@@ -64,7 +93,7 @@ public class JournalTypeFRTests
     [InlineData(0x4652_2000_0000_0011)]
     public void JournalProcessorFR_RejectsUnknownFrenchJournalCodes(long ftJournalType)
     {
-        var sut = new JournalProcessorFR();
+        var sut = Sut();
 
         var act = () => sut.ProcessAsync(new JournalRequest { ftJournalType = (JournalType) ftJournalType });
 
@@ -74,20 +103,10 @@ public class JournalTypeFRTests
     [Fact]
     public void JournalProcessorFR_RejectsAnotherCountrysJournalType()
     {
-        var sut = new JournalProcessorFR();
+        var sut = Sut();
 
         var act = () => sut.ProcessAsync(new JournalRequest { ftJournalType = (JournalType) 0x4154_0000_0000_0001 });
 
         act.Should().Throw<ArgumentException>().WithMessage("*not a French journal type*");
-    }
-
-    public static TheoryData<JournalTypeFR> AllJournalTypesFR()
-    {
-        var data = new TheoryData<JournalTypeFR>();
-        foreach (var value in Enum.GetValues<JournalTypeFR>())
-        {
-            data.Add(value);
-        }
-        return data;
     }
 }
