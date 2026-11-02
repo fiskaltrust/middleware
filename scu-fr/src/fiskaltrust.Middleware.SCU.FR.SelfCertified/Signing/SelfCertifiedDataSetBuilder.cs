@@ -24,19 +24,28 @@ namespace fiskaltrust.Middleware.SCU.FR.SelfCertified.Signing;
 /// </remarks>
 internal static class SelfCertifiedDataSetBuilder
 {
-    /// <summary>Field separator. Never appears in the values, which are all identifiers, numbers or moments.</summary>
+    /// <summary>Field separator. Never appears in the values: identifiers, numbers and moments, and issuer claims that <see cref="SelfCertifiedConfiguration"/> rejects when they contain it.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, string siret, string certificateSerialNumber, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, SelfCertifiedConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, string? requestHash = null)
     {
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
 
         var fields = new List<string>
         {
-            siret,
+            configuration.Siret,
+            // market-fr#141: the issuer claims, at fixed positions after the SIRET and empty when
+            // not configured, so the data set keeps one shape. The SIREN is the SIRET's first nine digits.
+            configuration.Rcs ?? "",
+            configuration.Naf ?? "",
+            configuration.LegalForm ?? "",
+            configuration.VatOption ?? "",
+            configuration.ElectronicAddress ?? "",
             response.ftQueueID.ToString(),
             response.ftQueueItemID.ToString(),
+            // market-fr#225: the stored request's hash, as the queue computed it; empty without one.
+            requestHash ?? "",
             response.ftCashBoxIdentification ?? "",
             response.ftReceiptIdentification ?? "",
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
@@ -46,7 +55,7 @@ internal static class SelfCertifiedDataSetBuilder
             VatBreakdown(chargeItems),
             PaymentBreakdown(payItems),
             PeriodTotals(periodTotals),
-            certificateSerialNumber,
+            configuration.CertificateSerialNumber,
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
             // signature, verbatim as its signature field stores it.
             chainCounter.ToString(CultureInfo.InvariantCulture),

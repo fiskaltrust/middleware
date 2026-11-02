@@ -77,19 +77,64 @@ public class SelfCertifiedFRSSCDTests
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
-        using var sut = new SelfCertifiedFRSSCD(Configuration(privateKey));
+        var configuration = Configuration(privateKey);
+        configuration.Rcs = "RCS Nanterre B 642036065";
+        configuration.Naf = "6201Z";
+        configuration.LegalForm = "SAS, au capital de 500000 EUR";
+        configuration.VatOption = "debits";
+        configuration.ElectronicAddress = "642036065";
+        using var sut = new SelfCertifiedFRSSCD(configuration);
         using var lne = new LneFRSSCD(new LneConfiguration
         {
             Siret = FRTestData.Siret,
             PrivateKey = privateKey,
             CertificateSerialNumber = "CERT-4711",
             LneCertificateNumber = "LNE-2026-042",
+            Rcs = configuration.Rcs,
+            Naf = configuration.Naf,
+            LegalForm = configuration.LegalForm,
+            VatOption = configuration.VatOption,
+            ElectronicAddress = configuration.ElectronicAddress,
         });
+        ProcessRequest Request()
+        {
+            var request = FRTestData.Request(3);
+            request.RequestHash = "q1w2e3+/=";
+            return request;
+        }
 
-        var (selfCertified, _) = await sut.ProcessReceiptAsync(FRTestData.Request(3), "previous-signature");
-        var (certified, _) = await lne.ProcessReceiptAsync(FRTestData.Request(3), "previous-signature");
+        var (selfCertified, _) = await sut.ProcessReceiptAsync(Request(), "previous-signature");
+        var (certified, _) = await lne.ProcessReceiptAsync(Request(), "previous-signature");
 
         DataSetOf(selfCertified).Should().Be(DataSetOf(certified), "market-fr#176: same data set and signing as LNE");
+    }
+
+    [Fact]
+    public void FromConfiguration_ReadsTheIssuerClaimsLikeLne()
+    {
+        var configuration = SelfCertifiedConfiguration.FromConfiguration(new Dictionary<string, object>
+        {
+            ["Siret"] = FRTestData.Siret,
+            ["PrivateKey"] = "key",
+            ["Rcs"] = "RCS Paris B 1",
+            ["VatOption"] = "receipts",
+        });
+
+        configuration.Rcs.Should().Be("RCS Paris B 1");
+        configuration.VatOption.Should().Be("receipts");
+    }
+
+    [Fact]
+    public void FromConfiguration_RejectsAnIssuerClaimContainingTheFieldSeparator()
+    {
+        var act = () => SelfCertifiedConfiguration.FromConfiguration(new Dictionary<string, object>
+        {
+            ["Siret"] = FRTestData.Siret,
+            ["PrivateKey"] = "key",
+            ["LegalForm"] = "SAS | 1 EUR",
+        });
+
+        act.Should().Throw<FRValidationException>();
     }
 
     [Fact]
