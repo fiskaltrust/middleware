@@ -33,7 +33,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
-        var pipeline = new FRSigningPipeline(frSSCD, new FRChainStateProvider(queueItemRepository));
+        var pipeline = new FRSigningPipeline(frSSCD, new FRChainStateProvider(storageProvider.CreateConfigurationRepository(), id));
 
         // FR launches with enforcing validation: the v2 localization has no legacy integrations to
         // stay compatible with, and the queue currency rule (EUR, rfcs/0705-queue-single-currency)

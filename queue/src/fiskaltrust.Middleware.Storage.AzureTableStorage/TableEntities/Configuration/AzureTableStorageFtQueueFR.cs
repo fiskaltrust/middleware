@@ -4,6 +4,23 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
 {
     public class AzureTableStorageFtQueueFR : BaseTableEntity
     {
+        public long ENumerator { get; set; }
+        public long SNumerator { get; set; }
+        public long ZNumerator { get; set; }
+        public long MNumerator { get; set; }
+        public long YNumerator { get; set; }
+        public string TLastSignature { get; set; }
+        public string PLastSignature { get; set; }
+        public string ILastSignature { get; set; }
+        public string BLastSignature { get; set; }
+        public string LLastSignature { get; set; }
+        public string CLastSignature { get; set; }
+        public string XLastSignature { get; set; }
+        public string ELastSignature { get; set; }
+        public string SLastSignature { get; set; }
+        public string ZLastSignature { get; set; }
+        public string MLastSignature { get; set; }
+        public string YLastSignature { get; set; }
         public double BCITotalReducedS { get; set; }
         public double BCITotalReduced2 { get; set; }
         public double BCITotalReduced1 { get; set; }

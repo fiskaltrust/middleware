@@ -1,58 +1,68 @@
-using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.ifPOS.v2.fr;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
-using FRChaining = fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRChaining;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 
-/// <summary>The position of one FR receipt chain: its numerator and the signature of its last entry.</summary>
+/// <summary>
+/// The position of one FR receipt chain: its numerator and the signature of its last entry, read
+/// from and written to the queue's ftQueueFR (market-fr ADR 0012).
+/// </summary>
 public class FRChainState
 {
-    public FRChainState(FRReceiptChain chain)
+    private readonly ftQueueFR _queueFR;
+
+    public FRChainState(FRReceiptChain chain) : this(chain, new ftQueueFR()) { }
+
+    public FRChainState(FRReceiptChain chain, ftQueueFR queueFR)
     {
         Chain = chain;
+        _queueFR = queueFR;
     }
 
     public FRReceiptChain Chain { get; }
 
     public string Identifier => Chain.Identifier();
 
-    public long Numerator { get; set; }
+    public long Numerator
+    {
+        get => _queueFR.GetNumerator(Chain);
+        set => _queueFR.SetNumerator(Chain, value);
+    }
 
     /// <summary>
     /// The Base64Url signature of the chain's last entry, which the next entry covers (ADR 0001);
     /// null while the chain has no signed entry yet.
     /// </summary>
-    public string? LastSignature { get; set; }
+    public string? LastSignature
+    {
+        get => _queueFR.GetLastSignature(Chain);
+        set => _queueFR.SetLastSignature(Chain, value);
+    }
 }
 
 /// <summary>
 /// Keeps the fiscal state of the French queue: the position of every receipt chain and the
-/// accumulated totals of every period. The state is reconstructed from the queue items on first
-/// use - the same approach QueuePT takes - so no v1 storage column has to be shared between the
-/// two French localizations.
+/// accumulated totals of every period. The state is persisted in the queue's ftQueueFR and read
+/// once, on first use (market-fr ADR 0012); it is never rebuilt from the queue items, whose
+/// number only grows.
 /// </summary>
 public class FRChainStateProvider
 {
-    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
-    private readonly Dictionary<FRReceiptChain, FRChainState> _chains = new();
-    private readonly FRPeriodTotalsAccumulator _totals = new();
+    private readonly AsyncLazy<IConfigurationRepository> _configurationRepository;
+    private readonly Guid _queueId;
     private readonly SemaphoreSlim _lock = new(1, 1);
-    private bool _loaded;
+    private ftQueueFR? _queueFR;
 
-    public FRChainStateProvider(AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository)
+    public FRChainStateProvider(AsyncLazy<IConfigurationRepository> configurationRepository, Guid queueId)
     {
-        _queueItemRepository = queueItemRepository;
+        _configurationRepository = configurationRepository;
+        _queueId = queueId;
     }
 
     /// <summary>
     /// Runs <paramref name="operation"/> against the chain the request belongs to and the period
-    /// totals, loading both from storage on the first call. The state is held for the whole
+    /// totals, and stores them once the chain has advanced. The state is held for the whole
     /// operation: an NF525 chain is strictly sequential, so numbering, signing and advancing the
     /// signature must not interleave with another receipt of the same chain.
     /// </summary>
@@ -61,86 +71,35 @@ public class FRChainStateProvider
         await _lock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (!_loaded)
+            var repository = await _configurationRepository;
+            _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+
+            var state = new FRChainState(request.ResolveChain(), _queueFR);
+            var numeratorBefore = state.Numerator;
+            T result;
+            try
             {
-                await LoadAsync().ConfigureAwait(false);
-                _loaded = true;
+                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR)).ConfigureAwait(false);
+            }
+            catch
+            {
+                // The operation may have moved the state before it failed; the stored state is
+                // the one that matches the signed entries.
+                _queueFR = null;
+                throw;
             }
 
-            var chain = request.ResolveChain();
-            if (!_chains.TryGetValue(chain, out var state))
+            // A chain only advances once its entry is signed; a failed signature rolls back.
+            if (state.Numerator != numeratorBefore)
             {
-                state = new FRChainState(chain);
-                _chains[chain] = state;
+                await repository.InsertOrUpdateQueueFRAsync(_queueFR).ConfigureAwait(false);
             }
 
-            return await operation(state, _totals).ConfigureAwait(false);
+            return result;
         }
         finally
         {
             _lock.Release();
-        }
-    }
-
-    private async Task LoadAsync()
-    {
-        foreach (var chain in Enum.GetValues<FRReceiptChain>())
-        {
-            _chains[chain] = new FRChainState(chain);
-        }
-
-        // Every period starts open and is closed as soon as its closing receipt is reached, so
-        // walking backwards accumulates exactly the receipts since each period's last closing.
-        var openPeriods = new HashSet<FRTotalsPeriod>(Enum.GetValues<FRTotalsPeriod>());
-
-        var queueItems = (await (await _queueItemRepository).GetAsync().ConfigureAwait(false))
-            .OrderByDescending(x => x.ftQueueRow)
-            .ToList();
-
-        foreach (var queueItem in queueItems)
-        {
-            if (string.IsNullOrEmpty(queueItem.request) || string.IsNullOrEmpty(queueItem.response))
-            {
-                continue;
-            }
-
-            ReceiptRequest? request;
-            ReceiptResponse? response;
-            try
-            {
-                request = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
-                response = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
-            }
-            catch (JsonException)
-            {
-                continue;
-            }
-
-            if (request is null || response is null || !response.ftState.IsState(State.Success))
-            {
-                continue;
-            }
-
-            var state = _chains[request.ResolveChain()];
-            if (state.Numerator == 0)
-            {
-                // Queue items are walked newest first, so the first hit per chain is its last entry.
-                var numerator = ReceiptIdentificationHelper.ReadNumerator(response.ftReceiptIdentification, state.Identifier);
-                if (numerator is not null)
-                {
-                    state.Numerator = numerator.Value;
-                    var signature = response.ftSignatures?.FirstOrDefault(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature))?.Data;
-                    state.LastSignature = string.IsNullOrEmpty(signature) ? null : FRChaining.ChainedSignatureOf(signature);
-                }
-            }
-
-            _totals.AddToOpenPeriods(request, openPeriods);
-
-            var closedPeriod = FRPeriodTotalsAccumulator.PeriodOf(request);
-            if (closedPeriod is not null)
-            {
-                openPeriods.Remove(closedPeriod.Value);
-            }
         }
     }
 }
