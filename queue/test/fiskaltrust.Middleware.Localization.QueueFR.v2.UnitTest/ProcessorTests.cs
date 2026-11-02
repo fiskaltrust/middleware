@@ -20,9 +20,7 @@ public class ProcessorTests
     private static (FRSigningPipeline pipeline, FakeFRSSCD sscd) CreatePipeline()
     {
         var sscd = new FakeFRSSCD();
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        repository.Setup(x => x.GetAsync()).ReturnsAsync(Array.Empty<ftQueueItem>());
-        return (new FRSigningPipeline(sscd, new FRChainStateProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)))), sscd);
+        return (new FRSigningPipeline(sscd, new StoredChainState().Provider()), sscd);
     }
 
     private static ProcessCommandRequest CommandRequest(ReceiptCase receiptCase)

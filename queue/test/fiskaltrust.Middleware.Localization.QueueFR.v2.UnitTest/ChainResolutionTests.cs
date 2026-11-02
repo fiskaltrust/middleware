@@ -49,20 +49,14 @@ public class ChainResolutionTests
         identifiers.Should().OnlyHaveUniqueItems("two chains sharing a letter would make their numbering indistinguishable");
     }
 
-    [Theory]
-    [InlineData("T", 42L)]
-    [InlineData("Z", 1L)]
-    public void ReadNumerator_RoundTripsWhatAppendChainIdentificationWrote(string identifier, long numerator)
+    [Fact]
+    public void AppendChainIdentification_WritesTheChainLetterAndNumber()
     {
-        var chain = new FRChainState(Enum.GetValues<FRReceiptChain>().First(x => x.Identifier() == identifier)) { Numerator = numerator };
+        var chain = new FRChainState(FRReceiptChain.DailyClosing) { Numerator = 42 };
         var response = new ReceiptResponse { ftReceiptIdentification = "ft123#" };
 
         ReceiptIdentificationHelper.AppendChainIdentification(response, chain);
 
-        ReceiptIdentificationHelper.ReadNumerator(response.ftReceiptIdentification, identifier).Should().Be(numerator);
+        response.ftReceiptIdentification.Should().Be("ft123#Z42");
     }
-
-    [Fact]
-    public void ReadNumerator_ForAnotherChain_ReturnsNull()
-        => ReceiptIdentificationHelper.ReadNumerator("ft123#T42", "Z").Should().BeNull();
 }
