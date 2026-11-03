@@ -218,7 +218,7 @@ public class JournalProcessorFR : IJournalProcessor
         // writes in the same order. A misordered pair would leave PreviousSignature empty, never wrong.
         await foreach (var queueItem in repository.GetEntriesOnOrAfterTimeStampAsync(0).ConfigureAwait(false))
         {
-            var entry = ArchiveEntry.TryCreate(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response, queueItem.requestHash);
+            var entry = ArchiveEntry.TryCreate(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response);
             if (entry is null)
             {
                 if (rejectV1 && period.Contains(queueItem.ftQueueMoment) && IsV1Entry(queueItem))

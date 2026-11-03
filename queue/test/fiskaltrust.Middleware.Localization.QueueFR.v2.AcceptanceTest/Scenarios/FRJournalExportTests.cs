@@ -72,6 +72,7 @@ public class FRJournalExportTests : IDisposable
         rows[1]["PreviousSignature"].Should().Be(ChainedSignature(first));
         rows[1]["Siret"].Should().Be(second.ftSignatures.First(x => x.ftSignatureType.IsType((SignatureTypeFR) 0x4652_2000_0000_0009)).Data, "the SIRET the SCU signed");
         rows[1]["ftCashBoxIdentification"].Should().Be("cashbox-fr");
+        rows[1]["RequestHash"].Should().BeEmpty("the in-memory SCU signs no canonical request value (ADR 0013), and the export never computes one");
     }
 
     [Fact]
