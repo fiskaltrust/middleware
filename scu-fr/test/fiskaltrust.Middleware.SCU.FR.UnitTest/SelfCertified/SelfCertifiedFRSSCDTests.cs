@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.LNE;
 using fiskaltrust.Middleware.SCU.FR.SelfCertified;
@@ -96,10 +97,12 @@ public class SelfCertifiedFRSSCDTests
             VatOption = configuration.VatOption,
             ElectronicAddress = configuration.ElectronicAddress,
         });
+        // One ReceiptRequest for both: the signed request hash covers its random ftCashBoxID.
+        var receiptRequest = FRTestData.Request(3).ReceiptRequest;
         ProcessRequest Request()
         {
             var request = FRTestData.Request(3);
-            request.RequestHash = "q1w2e3+/=";
+            request.ReceiptRequest = receiptRequest;
             return request;
         }
 
@@ -107,6 +110,7 @@ public class SelfCertifiedFRSSCDTests
         var (certified, _) = await lne.ProcessReceiptAsync(Request(), "previous-signature");
 
         DataSetOf(selfCertified).Should().Be(DataSetOf(certified), "market-fr#176: same data set and signing as LNE");
+        DataSetOf(selfCertified).Split('|')[8].Should().Be(FRCanonicalRequest.SignedField(receiptRequest), "the request hash in its canonical form (ADR 0013)");
     }
 
     [Fact]
@@ -174,8 +178,10 @@ public class SelfCertifiedFRSSCDTests
         using var _ = key;
         using var sut = new SelfCertifiedFRSSCD(Configuration(privateKey));
 
-        var invariant = await DataSetUnderCulture(sut, CultureInfo.InvariantCulture);
-        var french = await DataSetUnderCulture(sut, new CultureInfo("fr-FR"));
+        // One ReceiptRequest for both: the signed request hash covers its random ftCashBoxID.
+        var receiptRequest = FRTestData.Request().ReceiptRequest;
+        var invariant = await DataSetUnderCulture(sut, CultureInfo.InvariantCulture, receiptRequest);
+        var french = await DataSetUnderCulture(sut, new CultureInfo("fr-FR"), receiptRequest);
 
         french.Should().Be(invariant);
         invariant.Should().Contain("17.50");
@@ -262,13 +268,15 @@ public class SelfCertifiedFRSSCDTests
     private static string SignatureOf(ProcessResponse response, SignatureTypeFR type)
         => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(type)).Data;
 
-    private static async Task<string> DataSetUnderCulture(SelfCertifiedFRSSCD sut, CultureInfo culture)
+    private static async Task<string> DataSetUnderCulture(SelfCertifiedFRSSCD sut, CultureInfo culture, fiskaltrust.ifPOS.v2.ReceiptRequest receiptRequest)
     {
         var previous = Thread.CurrentThread.CurrentCulture;
         Thread.CurrentThread.CurrentCulture = culture;
         try
         {
-            var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+            var request = FRTestData.Request();
+            request.ReceiptRequest = receiptRequest;
+            var (response, _) = await sut.ProcessReceiptAsync(request, null);
             return DataSetOf(response);
         }
         finally

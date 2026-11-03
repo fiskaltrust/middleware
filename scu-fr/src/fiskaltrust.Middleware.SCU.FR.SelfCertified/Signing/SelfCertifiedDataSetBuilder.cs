@@ -27,7 +27,7 @@ internal static class SelfCertifiedDataSetBuilder
     /// <summary>Field separator. Never appears in the values: identifiers, numbers and moments, and issuer claims that <see cref="SelfCertifiedConfiguration"/> rejects when they contain it.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, SelfCertifiedConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, string? requestHash = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, SelfCertifiedConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null)
     {
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
@@ -45,7 +45,7 @@ internal static class SelfCertifiedDataSetBuilder
             response.ftQueueID.ToString(),
             response.ftQueueItemID.ToString(),
             // market-fr#225: the stored request's hash, as the queue computed it; empty without one.
-            requestHash ?? "",
+            FRCanonicalRequest.SignedField(request),
             response.ftCashBoxIdentification ?? "",
             response.ftReceiptIdentification ?? "",
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
@@ -59,7 +59,7 @@ internal static class SelfCertifiedDataSetBuilder
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
             // signature, verbatim as its signature field stores it.
             chainCounter.ToString(CultureInfo.InvariantCulture),
-            FRChaining.Flag(previousSignature),
+            FRChaining.Flag(previousSignature).ToCode(),
             previousSignature ?? "",
         };
 
