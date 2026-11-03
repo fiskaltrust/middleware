@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.LNE.Models;
 using fiskaltrust.Middleware.SCU.FR.LNE.Signing;
@@ -49,20 +48,24 @@ public class LneFRSSCD : IFRSSCD, IDisposable
 
     public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
+        try
+        {
+            return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The LNE signature could not be created for receipt {request.ReceiptRequest?.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry. {ex.Message}"));
+        }
+    }
+
+    private (ProcessResponse response, string signature) SignReceipt(ProcessRequest request, string? previousSignature)
+    {
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
         var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration.Siret, _configuration.CertificateSerialNumber, request.ChainCounter, previousSignature, request.PeriodTotals);
 
-        string signature;
-        try
-        {
-            signature = _signatureCreator.Sign(dataSet);
-        }
-        catch (Exception ex) when (ex is not FRSSCDException)
-        {
-            throw new FRSigningUnavailableException($"The LNE signature could not be created for receipt {receiptRequest.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry.", ex);
-        }
+        var signature = _signatureCreator.Sign(dataSet);
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
         response.AddSignatureItem(SignatureTypeFR.Information, "Donnees signees", dataSet);
@@ -70,7 +73,7 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Certification", $"{CertificationBody} {_configuration.LneCertificateNumber}".TrimEnd());
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
+        return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
     public Task<FRSigningCertificate> GetSigningCertificateAsync()

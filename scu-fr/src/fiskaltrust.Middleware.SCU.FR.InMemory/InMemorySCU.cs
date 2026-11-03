@@ -45,6 +45,18 @@ public class InMemorySCU : IFRSSCD, IDisposable
 
     public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
+        try
+        {
+            return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The in-memory signature could not be created: {ex.Message}"));
+        }
+    }
+
+    private (ProcessResponse response, string signature) SignReceipt(ProcessRequest request, string? previousSignature)
+    {
         foreach (var validator in _validators)
         {
             validator(request);
@@ -75,7 +87,7 @@ public class InMemorySCU : IFRSSCD, IDisposable
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _certificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _siret);
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
+        return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
     /// <summary>The accumulated totals a closing attests, folded into the signed data set.</summary>

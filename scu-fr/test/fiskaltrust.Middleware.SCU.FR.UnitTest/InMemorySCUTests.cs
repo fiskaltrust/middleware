@@ -58,6 +58,17 @@ public class InMemorySCUTests
         info.InfoData.Should().Contain("\"SignatureCreationDataAvailable\":true");
     }
 
+    [Fact]
+    public async Task ProcessReceiptAsync_WhenTheKeyIsGone_ReturnsTheFailureInsteadOfThrowing()
+    {
+        var sut = new InMemorySCU();
+        sut.Dispose();
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        FRTestData.ShouldBeASigningFailure(response, signature);
+    }
+
     private static string SignatureData(ProcessResponse response, SignatureTypeFR type)
         => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(type)).Data;
 }

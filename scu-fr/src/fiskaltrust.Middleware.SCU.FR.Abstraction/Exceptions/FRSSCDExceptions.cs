@@ -2,22 +2,14 @@ using System;
 
 namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 
-/// <summary>Base type for all failures raised by French SCUs.</summary>
+/// <summary>
+/// Base type for the failures French SCUs raise while starting up. Once running, an SCU reports a
+/// failure in its response instead (see <c>FRReceiptResponseExtensions.ToSigningFailure</c>).
+/// </summary>
 public class FRSSCDException : Exception
 {
     public FRSSCDException(string message) : base(message) { }
     public FRSSCDException(string message, Exception innerException) : base(message, innerException) { }
-}
-
-/// <summary>
-/// The signature could not be created — the private key is unavailable, the certificate expired,
-/// or a remote signing endpoint is unreachable. An unsigned receipt breaks the NF525 chain, so
-/// this failure carries its own ftState flag; see <c>StateFR.SigningUnavailableError</c>.
-/// </summary>
-public class FRSigningUnavailableException : FRSSCDException
-{
-    public FRSigningUnavailableException(string message) : base(message) { }
-    public FRSigningUnavailableException(string message, Exception innerException) : base(message, innerException) { }
 }
 
 /// <summary>The configured signature creation data is unusable (bad key material, wrong curve, …).</summary>

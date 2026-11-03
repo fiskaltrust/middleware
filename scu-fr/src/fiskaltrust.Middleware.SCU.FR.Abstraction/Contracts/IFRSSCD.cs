@@ -42,7 +42,10 @@ public interface IFRSSCD
     /// </param>
     /// <returns>
     /// The signed response and this entry's own Base64Url signature, which the next entry of the
-    /// chain covers.
+    /// chain covers. A failure is never thrown: the SCU may run in the queue's process or behind
+    /// REST, and only the response reaches the queue the same way in both. An unsigned receipt
+    /// comes back with ftState <c>0x4652_2001_EEEE_EEEE</c> (<c>StateFR.SigningUnavailableError</c>),
+    /// the reason in a FAILURE signature item and an empty signature.
     /// </returns>
     Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature);
 
