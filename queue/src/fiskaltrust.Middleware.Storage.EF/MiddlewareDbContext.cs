@@ -114,24 +114,6 @@ namespace fiskaltrust.Middleware.Storage.EF
 
             modelBuilder.Entity<ftQueueFR>().ToTable(nameof(ftQueueFR));
             modelBuilder.Entity<ftQueueFR>().HasKey(x => x.ftQueueFRId, x => x.IsClustered(false));
-            // The QueueFR.v2 columns (market-fr ADR 0012) live in Azure Table storage only, where v2 queues run.
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.ENumerator);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.SNumerator);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.ZNumerator);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.MNumerator);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.YNumerator);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.TLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.PLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.ILastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.BLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.LLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.CLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.XLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.ELastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.SLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.ZLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.MLastSignature);
-            modelBuilder.Entity<ftQueueFR>().Ignore(x => x.YLastSignature);
 
             modelBuilder.Entity<ftQueueME>().ToTable(nameof(ftQueueME));
             modelBuilder.Entity<ftQueueME>().HasKey(x => x.ftQueueMEId, x => x.IsClustered(false));
