@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using FluentAssertions;
 
 namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
@@ -68,4 +70,17 @@ public static class FRTestData
         ftState = (State) 0x4652_2000_0000_0000,
         ftSignatures = new List<SignatureItem>(),
     };
+
+    /// <summary>
+    /// Asserts the SCU reported a failed signature the only way it may: in its response, with the
+    /// signing-unavailable ftState, the reason in a FAILURE item and no chain signature.
+    /// </summary>
+    public static void ShouldBeASigningFailure(ProcessResponse response, string signature)
+    {
+        response.ReceiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        response.ReceiptResponse.ftSignatures.Should().ContainSingle()
+            .Which.Caption.Should().Be("FAILURE");
+        response.ReceiptResponse.ftSignatures.Single().Data.Should().Contain("could not be created");
+        signature.Should().BeEmpty("an unsigned receipt gives the chain nothing to continue from");
+    }
 }

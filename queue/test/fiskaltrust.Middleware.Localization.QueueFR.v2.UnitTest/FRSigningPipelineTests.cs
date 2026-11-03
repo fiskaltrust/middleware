@@ -117,28 +117,62 @@ public class FRSigningPipelineTests
     [Fact]
     public async Task SignAsync_WhenSigningFails_DoesNotConsumeAChainNumber()
     {
-        var sscd = new FakeFRSSCD { ThrowOnProcess = () => new FRSigningUnavailableException() };
+        var sscd = new FakeFRSSCD { FailWith = "private key unavailable" };
         var pipeline = CreatePipeline(sscd);
 
         var failed = await pipeline.SignAsync(CommandRequest());
 
         failed.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
         failed.receiptResponse.ftReceiptIdentification.Should().Be("ft1#", "no document was issued, so no number was used");
+        failed.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE")
+            .Which.Data.Should().Contain("private key unavailable", "the SCU's reason reaches the POS");
 
-        sscd.ThrowOnProcess = null;
+        sscd.FailWith = null;
         var recovered = await pipeline.SignAsync(CommandRequest());
         recovered.receiptResponse.ftReceiptIdentification.Should().Be("ft1#T1", "NF525 requires the national numbering to be gapless");
+        sscd.Calls.Last().previousSignature.Should().BeNull("the failed call returned no signature to chain on");
     }
 
     [Fact]
-    public async Task SignAsync_PropagatesFailuresThatAreNotSigningFailures()
+    public async Task SignAsync_ReadsTheFailureFromTheScusResponse_NotFromItsOwnObject()
     {
-        var sscd = new FakeFRSSCD { ThrowOnProcess = () => new InvalidOperationException("boom") };
+        // An SCU behind REST (signing.fiskaltrust.fr) answers with a copy of the receipt response.
+        var sscd = new FakeFRSSCD { FailWith = "private key unavailable", FailsOverJson = true };
         var pipeline = CreatePipeline(sscd);
 
-        var act = () => pipeline.SignAsync(CommandRequest());
+        var failed = await pipeline.SignAsync(CommandRequest());
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        failed.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        failed.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        failed.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE")
+            .Which.Data.Should().Contain("private key unavailable");
+    }
+
+    public static TheoryData<Exception> CallFailures => new()
+    {
+        new HttpRequestException("connection refused"),
+        new TaskCanceledException("timeout"),
+        new InvalidOperationException("boom"),
+    };
+
+    [Theory]
+    [MemberData(nameof(CallFailures))]
+    public async Task SignAsync_WhenTheScuCallThrows_ReportsTheSameErrorWithoutConsumingANumber(Exception failure)
+    {
+        // An SCU behind REST may not answer at all; whatever the exception, the receipt is unsigned.
+        var sscd = new FakeFRSSCD { ThrowOnProcess = () => failure };
+        var pipeline = CreatePipeline(sscd);
+
+        var failed = await pipeline.SignAsync(CommandRequest());
+
+        failed.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        failed.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        failed.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE")
+            .Which.Data.Should().Contain(failure.Message);
+
+        sscd.ThrowOnProcess = null;
+        var recovered = await pipeline.SignAsync(CommandRequest());
+        recovered.receiptResponse.ftReceiptIdentification.Should().Be("ft1#T1");
     }
 
     [Fact]
@@ -177,13 +211,4 @@ public class FRSigningPipelineTests
             ],
         }),
     };
-
-    /// <summary>
-    /// Named exactly like the SCU packages' exception: the queue recognizes signing failures by
-    /// type name instead of referencing an SCU assembly, and this test pins that contract.
-    /// </summary>
-    private class FRSigningUnavailableException : Exception
-    {
-        public FRSigningUnavailableException() : base("signing unavailable") { }
-    }
 }

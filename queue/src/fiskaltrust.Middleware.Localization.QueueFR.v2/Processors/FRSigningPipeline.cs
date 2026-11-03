@@ -37,34 +37,48 @@ public class FRSigningPipeline
             ReceiptIdentificationHelper.AppendChainIdentification(receiptResponse, chain);
             FRTypeOfServiceCalculator.Apply(request.ReceiptRequest, receiptResponse);
 
+            ProcessResponse response;
+            string signature;
             try
             {
-                var (response, signature) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+                (response, signature) = await _sscd.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request.ReceiptRequest,
                     ReceiptResponse = receiptResponse,
                     PeriodTotals = periodTotals,
                     ChainCounter = chain.Numerator,
                 }, chain.LastSignature).ConfigureAwait(false);
-
-                chain.LastSignature = signature;
-                totals.Add(request.ReceiptRequest);
-
-                if (closingPeriod is not null)
-                {
-                    totals.Reset(closingPeriod.Value);
-                }
-
-                return new ProcessCommandResponse(response.ReceiptResponse, actionJournals ?? new List<ftActionJournal>());
             }
-            catch (Exception ex) when (FRSSCDErrorHandling.IsSigningUnavailable(ex))
+            catch (Exception ex)
             {
-                // No document was issued, so neither the number nor the period may move - NF525
-                // requires the national numbering of every chain to be gapless, and an unsigned
-                // closing must leave the period open so it can be retried.
+                // The SCU reports its own failures in the response; an exception means no answer
+                // came back at all - the SCU unreachable, the transport failing.
+                return Unsigned(ex.Message);
+            }
+
+            if (FRSSCDErrorHandling.IsError(response.ReceiptResponse))
+            {
+                return Unsigned(FRSSCDErrorHandling.Reason(response.ReceiptResponse));
+            }
+
+            chain.LastSignature = signature;
+            totals.Add(request.ReceiptRequest);
+
+            if (closingPeriod is not null)
+            {
+                totals.Reset(closingPeriod.Value);
+            }
+
+            return new ProcessCommandResponse(response.ReceiptResponse, actionJournals ?? new List<ftActionJournal>());
+
+            // No document was issued, so neither the number nor the period may move - NF525
+            // requires the national numbering of every chain to be gapless, and an unsigned
+            // closing must leave the period open so it can be retried.
+            ProcessCommandResponse Unsigned(string reason)
+            {
                 chain.Numerator--;
                 receiptResponse.ftReceiptIdentification = identificationBeforeSigning;
-                receiptResponse.SetSigningUnavailableError(ex);
+                receiptResponse.SetSigningUnavailableError(reason);
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         });

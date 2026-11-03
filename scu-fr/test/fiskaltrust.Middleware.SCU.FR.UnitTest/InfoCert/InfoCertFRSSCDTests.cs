@@ -115,6 +115,19 @@ public class InfoCertFRSSCDTests
     }
 
     [Fact]
+    public async Task ProcessReceiptAsync_WhenTheKeyIsGone_ReturnsTheFailureInsteadOfThrowing()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var sut = new InfoCertFRSSCD(Configuration(privateKey));
+        sut.Dispose();
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        FRTestData.ShouldBeASigningFailure(response, signature);
+    }
+
+    [Fact]
     public void Constructor_WithUnreadableKey_ThrowsCertificateException()
     {
         var act = () => new InfoCertFRSSCD(Configuration(Convert.ToBase64String(new byte[] { 1, 2, 3 })));
