@@ -156,9 +156,10 @@ namespace fiskaltrust.Middleware.Queue
             // fiscalizing it, so the services are not asked about it.
             PostFiscalizationPreflight preflight;
             ifPOS.v2.ReceiptRequest v2Request;
-            if (LegacyOperationalReceiptCases.MayBeFiscalized(queue, ReceiptRequestHelper.GetCountry(data, queue.CountryCode), data.ftReceiptCase))
+            var country = ReceiptRequestHelper.GetCountry(data, queue.CountryCode);
+            if (LegacyOperationalReceiptCases.MayBeFiscalized(queue, country, data.ftReceiptCase))
             {
-                (preflight, v2Request) = await PreflightAsync(data).ConfigureAwait(false);
+                (preflight, v2Request) = await PreflightAsync(data, LegacyOperationalReceiptCases.IsOperationalReceipt(country, data.ftReceiptCase)).ConfigureAwait(false);
             }
             else
             {
@@ -311,7 +312,7 @@ namespace fiskaltrust.Middleware.Queue
         /// Converts the v1 request to the v2 contract and runs the preflight. A receipt that cannot be converted cannot be
         /// presented to the services, so it is refused before fiscalization like a transport failure.
         /// </summary>
-        private async Task<(PostFiscalizationPreflight preflight, ifPOS.v2.ReceiptRequest request)> PreflightAsync(ReceiptRequest data)
+        private async Task<(PostFiscalizationPreflight preflight, ifPOS.v2.ReceiptRequest request)> PreflightAsync(ReceiptRequest data, bool operationalReceipt)
         {
             if (!_postFiscalizationProcessor.IsEnabled)
             {
@@ -335,7 +336,7 @@ namespace fiskaltrust.Middleware.Queue
                 return (new PostFiscalizationPreflight(eInvoicing, eReporting, rejection), null);
             }
 
-            return (await _postFiscalizationProcessor.ValidateAsync(v2Request).ConfigureAwait(false), v2Request);
+            return (await _postFiscalizationProcessor.ValidateAsync(v2Request, operationalReceipt).ConfigureAwait(false), v2Request);
         }
 
         /// <summary>

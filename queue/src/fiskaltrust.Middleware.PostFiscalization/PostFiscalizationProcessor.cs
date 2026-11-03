@@ -165,7 +165,9 @@ public class PostFiscalizationProcessor
     /// Must run before any bookkeeping that produces a fiscal record. A rejection, or a transport or protocol
     /// failure, refuses the receipt: nothing is fiscalized and the POS can correct and resend.
     /// </summary>
-    public async Task<PostFiscalizationPreflight> ValidateAsync(ReceiptRequest receiptRequest)
+    /// <param name="receiptRequest">The receipt, in the v2 contract.</param>
+    /// <param name="operationalReceipt">Whether the receipt keeps the queue operable (a lifecycle or zero receipt), when the caller knows better than the filter; the legacy stack resolves the market from the request and the queue, which the request alone may not tell.</param>
+    public async Task<PostFiscalizationPreflight> ValidateAsync(ReceiptRequest receiptRequest, bool? operationalReceipt = null)
     {
         if (!IsEnabled)
         {
@@ -173,6 +175,7 @@ public class PostFiscalizationProcessor
             return PostFiscalizationPreflight.Disabled;
         }
 
+        var operational = operationalReceipt ?? _operationalReceiptFilter(receiptRequest);
         var tolerated = new List<PostFiscalizationRejection>();
         PostFiscalizationServiceOutcome eInvoicing;
         PostFiscalizationRejection? rejection;
@@ -184,13 +187,13 @@ public class PostFiscalizationProcessor
         }
         else
         {
-            (eInvoicing, rejection) = await PreflightAsync(PostFiscalizationService.EInvoicing, _eInvoicingService is null ? null : _eInvoicingService.ValidateReceiptAsync, receiptRequest, tolerated).ConfigureAwait(false);
+            (eInvoicing, rejection) = await PreflightAsync(PostFiscalizationService.EInvoicing, _eInvoicingService is null ? null : _eInvoicingService.ValidateReceiptAsync, receiptRequest, operational, tolerated).ConfigureAwait(false);
         }
 
         var eReporting = _eReportingService is null ? PostFiscalizationServiceOutcome.Disabled : PostFiscalizationServiceOutcome.Skipped;
         if (rejection is null)
         {
-            (eReporting, rejection) = await PreflightAsync(PostFiscalizationService.EReporting, _eReportingService is null ? null : _eReportingService.ValidateReceiptAsync, receiptRequest, tolerated).ConfigureAwait(false);
+            (eReporting, rejection) = await PreflightAsync(PostFiscalizationService.EReporting, _eReportingService is null ? null : _eReportingService.ValidateReceiptAsync, receiptRequest, operational, tolerated).ConfigureAwait(false);
         }
 
         SetActivityTags(eInvoicing, eReporting);
@@ -259,7 +262,7 @@ public class PostFiscalizationProcessor
         Data = data,
     };
 
-    private async Task<(PostFiscalizationServiceOutcome outcome, PostFiscalizationRejection? rejection)> PreflightAsync(PostFiscalizationService service, Func<ValidateRequest, Task<ValidateResponse>>? validate, ReceiptRequest receiptRequest, List<PostFiscalizationRejection> tolerated)
+    private async Task<(PostFiscalizationServiceOutcome outcome, PostFiscalizationRejection? rejection)> PreflightAsync(PostFiscalizationService service, Func<ValidateRequest, Task<ValidateResponse>>? validate, ReceiptRequest receiptRequest, bool operationalReceipt, List<PostFiscalizationRejection> tolerated)
     {
         if (validate is null)
         {
@@ -291,7 +294,7 @@ public class PostFiscalizationProcessor
             // Unreachable, timeout, non-2xx, malformed body or a middleware-side bug: the queue cannot know whether the
             // receipt is invoiceable, and refusing before fiscalization is the safe direction.
             var (reason, detail) = Describe(ex);
-            if (_operationalReceiptFilter(receiptRequest))
+            if (operationalReceipt)
             {
                 // Except for the receipts that keep the queue operable: refusing a lifecycle or zero receipt while a
                 // service is down would stop the operator from activating, closing or decommissioning the queue, and

@@ -34,7 +34,11 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
             ["IT"] = 0x4001,
         };
 
-        /// <summary>The processor's filter for the legacy stack, applied to the request mapped to the v2 contract.</summary>
+        /// <summary>
+        /// The processor's default filter for the legacy stack, applied to the request mapped to the v2 contract. It can
+        /// only read the market from the receipt case; the sign processor resolves the market from the request and the
+        /// queue (a countryless case belongs to the queue's market) and passes the classification to the preflight itself.
+        /// </summary>
         public static bool IsOperationalReceipt(V2.ReceiptRequest request)
         {
             var ftReceiptCase = unchecked((long) request.ftReceiptCase);

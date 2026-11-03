@@ -34,6 +34,15 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
         /// <summary>The initial-operation receipt case of the v1 markets, in the low 16 bits of <c>ftReceiptCase</c>.</summary>
         public const long InitialOperationReceiptCase = 0x0003;
 
+        /// <summary>
+        /// IT: the receipt cases the market processor answers untouched, without the SCU and without a fiscal document:
+        /// the SCU switch (0x4011, 0x4012), the one-receipt and shift-closing daily operations (0x2001, 0x2010) and the
+        /// protocol receipts (0x3001 to 0x3004). Invoices (0x1000 to 0x1003) get no RT document either, but they are what
+        /// the eInvoicing service exists for, and the POS receipts without an RT document (0x0002 to 0x0004) are business
+        /// receipts a service may report; both stay fiscalized.
+        /// </summary>
+        public static readonly IReadOnlyCollection<long> ItNoOperationCases = new[] { 0x4011L, 0x4012L, 0x2001L, 0x2010L, 0x3001L, 0x3002L, 0x3003L, 0x3004L };
+
         /// <summary>A queue that has been activated and not deactivated since: the only state in which the market processors fiscalize.</summary>
         public static bool IsOperational(ftQueue queue) => queue.StartMoment.HasValue && !queue.StopMoment.HasValue;
 
@@ -83,8 +92,10 @@ namespace fiskaltrust.Middleware.Queue.PostFiscalization
                     }
 
                     return true;
+                case "IT":
+                    return !ItNoOperationCases.Contains(ftReceiptCase & 0xFFFF);
                 default:
-                    // FR and IT answer without fiscalizing only on a queue that is not operational.
+                    // FR answers without fiscalizing only on a queue that is not operational.
                     return true;
             }
         }

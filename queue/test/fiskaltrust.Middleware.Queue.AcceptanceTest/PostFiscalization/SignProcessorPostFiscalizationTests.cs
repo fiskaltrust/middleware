@@ -518,6 +518,54 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             response.ftStateData.Should().Contain("\"EReporting\":\"not-applicable\"");
         }
 
+        [Theory]
+        [InlineData(0x4954_2000_0000_4011L)] // init SCU switch
+        [InlineData(0x4954_2000_0000_4012L)] // finish SCU switch
+        public async Task ItSwitchReceipts_AreAnsweredUntouched_AndNotFinalized(long receiptCase)
+        {
+            var harness = new Harness();
+            var eReporting = new FakePostFiscalizationService();
+            // IT answers the SCU switch receipts untouched: success state, no signatures, no fiscal document.
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                var response = harness.Fiscalized(request, queueItem);
+                response.ftSignatures = new SignaturItem[0];
+                return response;
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(receiptCase));
+
+            eReporting.ProcessCalls.Should().BeEmpty("nothing was fiscalized, so there is nothing to report");
+            response.ftState.Should().Be(ItSuccessState);
+            response.ftStateData.Should().NotContain("PostFiscalization");
+            harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
+        }
+
+        [Theory]
+        [InlineData(0x0000_2000_0000_2000L)] // a countryless zero receipt on an IT queue
+        [InlineData(0x0000_2000_0000_4001L)] // a countryless initial operation on an IT queue
+        public async Task AnUnreachableService_DoesNotRefuseACountrylessOperationalReceipt_OnAnItQueue(long receiptCase)
+        {
+            var harness = new Harness();
+            harness.Queue.CountryCode = "IT";
+            if ((receiptCase & 0xFFFF) == 0x4001)
+            {
+                harness.Queue.StartMoment = null;
+            }
+            var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+            var sut = harness.Create(null, eReporting, (request, queueItem) =>
+            {
+                harness.Queue.StartMoment ??= DateTime.UtcNow;
+                return harness.Fiscalized(request, queueItem);
+            });
+
+            var response = await sut.ProcessAsync(harness.Request(receiptCase));
+
+            response.ftState.Should().Be(ItSuccessState, "the market is the queue's, so the receipt is an operational receipt that an outage must not refuse");
+            harness.ReceiptJournals.Should().ContainSingle();
+            harness.ActionJournals.Should().Contain(journal => journal.Type == "ereporting-unreachable");
+        }
+
         [Fact]
         public async Task AnUnreachableService_StillRefusesABusinessReceipt()
         {

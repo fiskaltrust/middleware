@@ -92,6 +92,25 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             _ => 0x0000_0000_0000_0001L,
         };
 
+        [Theory]
+        [InlineData(0x4954_2000_0000_4011L, false)] // init SCU switch: answered untouched
+        [InlineData(0x4954_2000_0000_4012L, false)] // finish SCU switch: answered untouched
+        [InlineData(0x4954_2000_0000_2001L, false)] // one receipt: answered untouched
+        [InlineData(0x4954_2000_0000_2010L, false)] // shift closing: answered untouched
+        [InlineData(0x4954_2000_0000_3001L, false)] // technical event: answered untouched
+        [InlineData(0x4954_2000_0000_3004L, false)] // order: answered untouched
+        [InlineData(0x4954_2000_0000_4001L, true)]  // initial operation: processed
+        [InlineData(0x4954_2000_0000_2000L, true)]  // zero receipt: processed
+        [InlineData(0x4954_2000_0000_1001L, true)]  // B2C invoice: no RT document, but what eInvoicing is for
+        [InlineData(0x4954_2000_0000_0001L, true)]  // POS receipt: processed
+        [InlineData(0x4954_2000_0000_0004L, true)]  // e-commerce: no RT document, a business receipt a service may report
+        public void IsFiscalized_TreatsTheItNoOperationCasesAsNotFiscalized(long ftReceiptCase, bool expected)
+        {
+            var answer = new ReceiptResponse { ftState = 0x4954_2000_0000_0000L, ftSignatures = new SignaturItem[0] };
+
+            LegacyFiscalizationOutcome.IsFiscalized("IT", ftReceiptCase, answer, true, true).Should().Be(expected);
+        }
+
         [Fact]
         public void IsOperational_RequiresAStartAndNoStop()
         {
