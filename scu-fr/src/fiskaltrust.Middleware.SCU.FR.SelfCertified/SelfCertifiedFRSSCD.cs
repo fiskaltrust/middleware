@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.SelfCertified.Models;
 using fiskaltrust.Middleware.SCU.FR.SelfCertified.Signing;
@@ -50,27 +49,31 @@ public class SelfCertifiedFRSSCD : IFRSSCD, IDisposable
 
     public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
+        try
+        {
+            return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The self-certified signature could not be created for receipt {request.ReceiptRequest?.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry. {ex.Message}"));
+        }
+    }
+
+    private (ProcessResponse response, string signature) SignReceipt(ProcessRequest request, string? previousSignature)
+    {
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
         var dataSet = SelfCertifiedDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, request.RequestHash);
 
-        string signature;
-        try
-        {
-            signature = _signatureCreator.Sign(dataSet);
-        }
-        catch (Exception ex) when (ex is not FRSSCDException)
-        {
-            throw new FRSigningUnavailableException($"The self-certified signature could not be created for receipt {receiptRequest.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry.", ex);
-        }
+        var signature = _signatureCreator.Sign(dataSet);
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
         response.AddSignatureItem(SignatureTypeFR.Information, "Donnees signees", dataSet);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, signature));
+        return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
     public void Dispose() => _signatureCreator.Dispose();

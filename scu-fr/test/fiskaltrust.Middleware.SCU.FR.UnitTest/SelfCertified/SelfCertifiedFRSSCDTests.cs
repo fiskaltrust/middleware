@@ -110,6 +110,19 @@ public class SelfCertifiedFRSSCDTests
     }
 
     [Fact]
+    public async Task ProcessReceiptAsync_WhenTheKeyIsGone_ReturnsTheFailureInsteadOfThrowing()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var sut = new SelfCertifiedFRSSCD(Configuration(privateKey));
+        sut.Dispose();
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        FRTestData.ShouldBeASigningFailure(response, signature);
+    }
+
+    [Fact]
     public void FromConfiguration_ReadsTheIssuerClaimsLikeLne()
     {
         var configuration = SelfCertifiedConfiguration.FromConfiguration(new Dictionary<string, object>
