@@ -31,6 +31,7 @@ public class FRJournalExportTests : IDisposable
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly Func<string, Task<(System.Net.Mime.ContentType contentType, PipeReader reader)>> _journal;
     private readonly InMemorySCU _scu = new();
+    private readonly InMemoryLocalizationStorageProvider _storageProvider;
 
     public FRJournalExportTests()
     {
@@ -46,6 +47,7 @@ public class FRJournalExportTests : IDisposable
 
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var storageProvider = new InMemoryLocalizationStorageProvider(_queueId, configuration, loggerFactory);
+        _storageProvider = storageProvider;
         var bootstrapper = new QueueFRBootstrapper(_queueId, loggerFactory, configuration, _scu, storageProvider);
         _signProcessor = bootstrapper.RegisterForSign();
         _journal = bootstrapper.RegisterForJournal();
@@ -132,6 +134,24 @@ public class FRJournalExportTests : IDisposable
         using var scuKey = new X509Certificate2(Convert.FromBase64String((await _scu.GetSigningCertificateAsync()).CertificateBase64)).GetECDsaPublicKey()!;
         archiveCertificate.GetECDsaPublicKey()!.ExportSubjectPublicKeyInfo().Should().Equal(scuKey.ExportSubjectPublicKeyInfo(), "the queue's SCU signs a locally exported archive (ADR 0007 amendment)");
         sub.Entries.Should().Contain(e => e.Name == "scu_INMEMORY_0001_v2.cer", "the SCU certificate also checks the entries it signed");
+    }
+
+    [Fact]
+    public async Task ArchiveExport_CarriesTheStoredRequestVerbatim()
+    {
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        var sale = await SignAsync(CashSale());
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        var repository = await _storageProvider.CreateMiddlewareQueueItemRepository();
+        var stored = (await repository.GetAsync()).Single(q => q.ftQueueItemId == sale.ftQueueItemID);
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var sub = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
+        var lines = Encoding.UTF8.GetString(ReadEntry(sub, "requests.jsonl")).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        using var line = JsonDocument.Parse(lines.Single());
+        line.RootElement.GetProperty("ftQueueItemID").GetString().Should().Be(sale.ftQueueItemID.ToString("D"));
+        line.RootElement.GetProperty("request").GetString().Should().Be(stored.request, "a verifier recomputes the request hash from the stored bytes (archive-v2 section 9)");
     }
 
     [Fact]
