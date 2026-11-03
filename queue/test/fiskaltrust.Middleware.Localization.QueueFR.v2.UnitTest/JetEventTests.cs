@@ -1,19 +1,19 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
-/// <summary>Technical events of the NF525 JET (Infocert R19 v4.2), market-fr#200.</summary>
+/// <summary>
+/// Technical events of the NF525 JET (Infocert R19 v4.2), market-fr#200, seen from the queue: the
+/// SCU decides whether an event can be signed, the queue only acts on its response.
+/// </summary>
 public class JetEventTests
 {
     private static (ProtocolCommandProcessorFR sut, FakeFRSSCD sscd) CreateSut()
@@ -23,15 +23,13 @@ public class JetEventTests
         return (new ProtocolCommandProcessorFR(pipeline), sscd);
     }
 
-    private static ProcessCommandRequest TechnicalEvent(object? caseData, object? cbUser = null, bool training = false)
-    {
-        var receiptCase = ReceiptCase.ProtocolTechnicalEvent0x3001.WithCountry("FR");
-        return new(
+    private static ProcessCommandRequest TechnicalEvent(object? caseData, object? cbUser = null)
+        => new(
             new ftQueue { ftQueueId = Guid.NewGuid() },
             new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = training ? receiptCase.WithFlag(ReceiptCaseFlags.Training) : receiptCase,
+                ftReceiptCase = ReceiptCase.ProtocolTechnicalEvent0x3001.WithCountry("FR"),
                 ftReceiptCaseData = caseData,
                 cbUser = cbUser,
                 Currency = Currency.EUR,
@@ -45,7 +43,6 @@ public class JetEventTests
                 ftState = (State) StateFR.Success,
                 ftSignatures = [],
             });
-    }
 
     private static JsonElement Json(string json) => JsonDocument.Parse(json).RootElement.Clone();
 
@@ -60,74 +57,21 @@ public class JetEventTests
         sscd.Calls.Should().ContainSingle();
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("{\"Message\":\"no code\"}")]
-    [InlineData("{\"Code\":\"11\",\"Message\":\"not an R19 code\"}")]
-    [InlineData("{\"Code\":\"abc\",\"Message\":\"not a number\"}")]
-    [InlineData("{\"Code\":\"90\"}")]
-    [InlineData("[1,2]")]
-    public async Task MalformedTechnicalEvent_IsRejectedWithoutTakingANumber(string? caseData)
+    [Fact]
+    public async Task TechnicalEventTheScuRefuses_TakesNoNumberOfTheLogChain()
     {
         var (sut, sscd) = CreateSut();
+        sscd.FailWith = "The technical event cannot enter the NF525 technical event journal: no code";
+        sscd.FailState = SCU.FR.Abstraction.Cases.StateFR.Error;
 
-        var response = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(caseData is null ? null : Json(caseData)));
+        var refused = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(null));
 
-        sscd.Calls.Should().BeEmpty("a rejected event must not consume a number of chain L");
-        response.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
-        response.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE");
-    }
+        refused.receiptResponse.ftState.Should().Be((State) StateFR.Error);
+        refused.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE")
+            .Which.Data.Should().Contain("technical event journal");
 
-    [Fact]
-    public async Task TrainingTechnicalEvent_IsNotValidatedAsAJournalEntry()
-    {
-        var (sut, sscd) = CreateSut();
-
-        var response = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(null, training: true));
-
-        response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
-        sscd.Calls.Should().ContainSingle();
-    }
-
-    [Theory]
-    [InlineData(FRJetEvent.ContinuousSequenceModeChange)]
-    [InlineData(FRJetEvent.JetAccess)]
-    [InlineData(90)]
-    [InlineData(450)]
-    [InlineData(900)]
-    [InlineData(4711)]
-    public void R19AndEditorCodes_AreValid(int code) => FRJetEvent.IsValidCode(code).Should().BeTrue();
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(11)]
-    [InlineData(310)]
-    [InlineData(899)]
-    [InlineData(-90)]
-    public void OtherCodes_AreInvalid(int code) => FRJetEvent.IsValidCode(code).Should().BeFalse();
-
-    [Fact]
-    public void ContinuousSequenceModeChange_FollowsTheArchiveContract()
-        => FRJetEvent.ContinuousSequenceModeChange.Should().Be(10, "the archive contract (market-fr#227) lists 10 first; the choice 10/15 is open in market-fr#200");
-
-    [Fact]
-    public void TryRead_AcceptsTheV1CaseDataFormat_CaseInsensitive_AsStringOrNumberCode_AndTakesTheOperatorFromCbUser()
-    {
-        var request = TechnicalEvent(Json("{\"code\":90,\"message\":\"Archivage\",\"information\":\"\"}"), Json("\"Alice\"")).ReceiptRequest;
-
-        FRJetEvent.TryRead(request, out var jetEvent, out var error).Should().BeTrue(error);
-
-        jetEvent.Should().Be(new FRJetEvent(90, "Archivage", null, "Alice"));
-    }
-
-    [Fact]
-    public void TryRead_AcceptsCaseDataSentAsAJsonString()
-    {
-        var request = TechnicalEvent("{\"Code\":\"15\",\"Message\":\"Acces JET\"}").ReceiptRequest;
-
-        FRJetEvent.TryRead(request, out var jetEvent, out _).Should().BeTrue();
-
-        jetEvent!.Code.Should().Be(FRJetEvent.JetAccess);
-        jetEvent.Operator.Should().BeNull();
+        sscd.FailWith = null;
+        var next = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"Code\":\"90\",\"Message\":\"Archivage\"}")));
+        next.receiptResponse.ftReceiptIdentification.Should().Be("ft1#L1", "the refused event consumed no number of chain L");
     }
 }

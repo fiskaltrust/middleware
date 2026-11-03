@@ -2,7 +2,7 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
+namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 /// <summary>
 /// A technical event of the NF525 technical event journal (JET, Infocert R19 v4.2), as the POS
@@ -10,10 +10,10 @@ namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 /// event code, its label and the optional contextual information, in the format v1.3 already used
 /// and TaxAuditorTool reads: <c>{"Code":"90","Message":"…","Information":"…"}</c>, property names
 /// case-insensitive (market-fr#42 was closed without introducing <c>JET-*</c> names). The operator
-/// is <c>cbUser</c>. Shared by the queue (which validates the code) and the SCUs (which sign the
-/// event's R19 content), market-fr#200.
+/// is <c>cbUser</c>. The InfoCert SCU alone reads it: it refuses a malformed event and signs a
+/// valid event's R19 content (market-fr#200). The queue does not look into the event.
 /// </summary>
-public sealed record FRJetEvent(int Code, string Label, string? Information, string? Operator)
+internal sealed record InfoCertJetEvent(int Code, string Label, string? Information, string? Operator)
 {
     /// <summary>
     /// The event code for a change of the continuous-sequence mode. R19 v4 gave code 10 this
@@ -55,7 +55,7 @@ public sealed record FRJetEvent(int Code, string Label, string? Information, str
     /// Reads the JET event from the receipt. Fails with a reason when the case data is missing,
     /// not an object, or has no valid R19 code; the label is mandatory too (JET-EVT-LIB).
     /// </summary>
-    public static bool TryRead(ReceiptRequest request, out FRJetEvent? jetEvent, out string? error)
+    public static bool TryRead(ReceiptRequest request, out InfoCertJetEvent? jetEvent, out string? error)
     {
         jetEvent = null;
         var root = AsObject(request.ftReceiptCaseData);
@@ -85,7 +85,7 @@ public sealed record FRJetEvent(int Code, string Label, string? Information, str
             return false;
         }
 
-        jetEvent = new FRJetEvent(code, label, NullIfEmpty(Property(root.Value, "Information")), OperatorOf(request.cbUser));
+        jetEvent = new InfoCertJetEvent(code, label, NullIfEmpty(Property(root.Value, "Information")), OperatorOf(request.cbUser));
         error = null;
         return true;
     }

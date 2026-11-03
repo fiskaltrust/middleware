@@ -65,6 +65,14 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
+        // A technical event is an entry of the JET (R19 v4.2): an event without a valid R19 or
+        // editor code and a label cannot be signed as one, so it is refused before it takes a
+        // number of chain L (market-fr#200).
+        if (InfoCertJetEvent.IsJetEvent(receiptRequest) && !InfoCertJetEvent.TryRead(receiptRequest, out _, out var jetError))
+        {
+            return response.ToSigningFailure($"The technical event cannot enter the NF525 technical event journal: {jetError}", StateFR.Error);
+        }
+
         var totals = InfoCertTotals.From(receiptRequest);
         var payload = new InfoCertReceiptPayload
         {
