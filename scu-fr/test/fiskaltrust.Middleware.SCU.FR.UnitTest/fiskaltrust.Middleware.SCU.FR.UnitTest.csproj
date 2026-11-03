@@ -25,4 +25,8 @@
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.FR.LNE\fiskaltrust.Middleware.SCU.FR.LNE.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

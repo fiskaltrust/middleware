@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.LNE;
 using FluentAssertions;
@@ -101,10 +102,12 @@ public class LneFRSSCDTests
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
         using var sut = new LneFRSSCD(Configuration(privateKey));
+        // One request for both runs: its cash box id is random and the request hash covers it.
+        var receiptRequest = FRTestData.CashSaleRequest();
 
-        var invariant = await DataSetUnderCulture(sut, CultureInfo.InvariantCulture);
+        var invariant = await DataSetUnderCulture(sut, CultureInfo.InvariantCulture, receiptRequest);
         // fr-FR writes decimals with a comma and would silently change every signed amount.
-        var french = await DataSetUnderCulture(sut, new CultureInfo("fr-FR"));
+        var french = await DataSetUnderCulture(sut, new CultureInfo("fr-FR"), receiptRequest);
 
         french.Should().Be(invariant);
         invariant.Should().Contain("17.50");
@@ -223,6 +226,34 @@ public class LneFRSSCDTests
     }
 
     [Fact]
+    public async Task RequestHash_IsTheCanonicalRequestHashAfterTheQueueItemId()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+        var request = FRTestData.Request();
+
+        var (response, _) = await sut.ProcessReceiptAsync(request, null);
+
+        // siret, five issuer claims, queue id, queue item id, then the request hash (ADR 0013).
+        DataSetOf(response).Split('|')[8].Should().Be(FRCanonicalRequest.SignedField(request.ReceiptRequest)).And.StartWith("1:");
+    }
+
+    [Fact]
+    public async Task RequestHash_ThatCannotBeComputed_ReturnsTheFailureInsteadOfThrowing()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+        var request = FRTestData.Request();
+        request.ReceiptRequest.cbReceiptReference = "lone \ud800 surrogate";
+
+        var (response, signature) = await sut.ProcessReceiptAsync(request, null);
+
+        FRTestData.ShouldBeASigningFailure(response, signature);
+    }
+
+    [Fact]
     public void FromConfiguration_WithAnUnknownVatOption_IsRejected()
     {
         var act = () => LneConfiguration.FromConfiguration(new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["VatOption"] = "monthly" });
@@ -247,13 +278,15 @@ public class LneFRSSCDTests
         configuration.VatOption.Should().Be("receipts");
     }
 
-    private static async Task<string> DataSetUnderCulture(LneFRSSCD sut, CultureInfo culture)
+    private static async Task<string> DataSetUnderCulture(LneFRSSCD sut, CultureInfo culture, fiskaltrust.ifPOS.v2.ReceiptRequest receiptRequest)
     {
         var previous = Thread.CurrentThread.CurrentCulture;
         Thread.CurrentThread.CurrentCulture = culture;
         try
         {
-            var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+            var request = FRTestData.Request();
+            request.ReceiptRequest = receiptRequest;
+            var (response, _) = await sut.ProcessReceiptAsync(request, null);
             return response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
         }
         finally
