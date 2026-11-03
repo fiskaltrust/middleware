@@ -103,11 +103,14 @@ public class SAFTMappingSchemaComplianceTests
         finalizeFailedResponse.ftStateData = new MiddlewareStateData { PostFiscalization = new PostFiscalizationStateData { FiscalizationSucceeded = true, EInvoicing = PostFiscalizationStateData.Failed } };
         var (failedRequest, failedResponse) = CreateInvoice("ftD#FT ft20250a62/3", new DateTime(2026, 9, 10, 12, 0, 0, DateTimeKind.Utc));
         failedResponse.ftState = failedResponse.ftState.WithState(State.Error);
+        var (disabledRequest, disabledResponse) = CreateInvoice("ftD#FT ft20250a62/4", new DateTime(2026, 9, 10, 13, 0, 0, DateTimeKind.Utc));
+        disabledResponse.ftState = disabledResponse.ftState.WithFlag(StateFlags.SecurityMechanismDeactivated); // the queue-state early exit: nothing fiscalized
         var queueItems = new List<ftQueueItem>
         {
             QueueItem(fiscalizedRequest, fiscalizedResponse),
             QueueItem(finalizeFailedRequest, finalizeFailedResponse),
             QueueItem(failedRequest, failedResponse),
+            QueueItem(disabledRequest, disabledResponse),
         };
 
         var auditFile = exporter.CreateAuditFile(_accountMasterData, queueItems, 0);
@@ -116,6 +119,7 @@ public class SAFTMappingSchemaComplianceTests
         invoiceNumbers.Should().HaveCount(2);
         invoiceNumbers.Should().Contain(number => number.EndsWith("/1")).And.Contain(number => number.EndsWith("/2"), "the finalize failure does not undo the fiscalization");
         invoiceNumbers.Should().NotContain(number => number.EndsWith("/3"), "an invoice that was never fiscalized is not exported");
+        invoiceNumbers.Should().NotContain(number => number.EndsWith("/4"), "a flagged answer was never exported before either");
     }
 
     private static ftQueueItem QueueItem(ReceiptRequest request, ReceiptResponse response) => new()

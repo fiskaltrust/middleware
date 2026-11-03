@@ -57,18 +57,37 @@ public static class ReceiptResponseHelper
     }
 
     /// <summary>
-    /// Whether a persisted receipt exists fiscally. True when <c>ftState</c> is not an error state, or when the persisted
-    /// <c>PostFiscalization.FiscalizationSucceeded</c> is true: a receipt whose eInvoicing/eReporting finalize call failed
-    /// (RFC 712) carries the error state although the SCU created a fiscal record. Every lookup that needs to know
-    /// whether a persisted receipt is fiscalized must use this predicate instead of testing <c>ftState</c> directly.
+    /// Whether a persisted receipt exists fiscally. True when <c>ftState</c> is neither the error nor the fail state, or
+    /// when the persisted <c>PostFiscalization.FiscalizationSucceeded</c> is true: a receipt whose eInvoicing/eReporting
+    /// finalize call failed (RFC 712) carries the error state although the SCU created a fiscal record. This is the
+    /// generalization of testing <c>!ftState.IsState(State.Error)</c>, which the receipt-reference lookups do; a lookup
+    /// that tested <c>ftState.IsState(State.Success)</c> uses <see cref="IsSuccessfullyFiscalized"/> instead. Every lookup
+    /// that needs to know whether a persisted receipt is fiscalized must use one of the two instead of testing
+    /// <c>ftState</c> directly.
     /// </summary>
     public static bool IsFiscalized(this ReceiptResponse receiptResponse)
     {
         if (!receiptResponse.ftState.IsState(State.Error))
         {
-            return true;
+            return !receiptResponse.ftState.IsState(State.Fail);
         }
 
+        return HasFiscalizationSucceededMarker(receiptResponse);
+    }
+
+    /// <summary>
+    /// Whether a persisted receipt was fiscalized with the plain success state: <c>ftState</c> is <see cref="State.Success"/>
+    /// with no flag set, or it is the error state of a finalize failure (RFC 712) next to the FiscalizationSucceeded
+    /// marker. This is the generalization of testing <c>ftState.IsState(State.Success)</c>, which the PT read paths
+    /// (SAF-T export, document status, refund history) do: a receipt answered on a queue that is not operational carries
+    /// the security-mechanism-deactivated flag and stays excluded, as it was before.
+    /// </summary>
+    public static bool IsSuccessfullyFiscalized(this ReceiptResponse receiptResponse)
+        => receiptResponse.ftState.IsState(State.Success)
+           || (receiptResponse.ftState.IsState(State.Error) && HasFiscalizationSucceededMarker(receiptResponse));
+
+    private static bool HasFiscalizationSucceededMarker(ReceiptResponse receiptResponse)
+    {
         try
         {
             return MiddlewareStateData.FromReceiptResponse(receiptResponse)?.PostFiscalization?.FiscalizationSucceeded == true;

@@ -149,8 +149,9 @@ public class SaftExporter
     {
         var receipts = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
         // RFC 712: an invoice whose eInvoicing/eReporting finalize call failed carries the error state although it was
-        // fiscalized; IsFiscalized() reads the FiscalizationSucceeded marker, so the statutory export keeps it.
-        receipts = receipts.Where(x => x.receiptRequest != null && x.receiptResponse != null && x.receiptResponse.IsFiscalized()).ToList();
+        // fiscalized; IsSuccessfullyFiscalized() reads the FiscalizationSucceeded marker next to the plain success state
+        // this export always required, so the statutory export keeps it and still leaves out flagged answers.
+        receipts = receipts.Where(x => x.receiptRequest != null && x.receiptResponse != null && x.receiptResponse.IsSuccessfullyFiscalized()).ToList();
         if (to < 0)
         {
             receipts = receipts.Take(-to).ToList();

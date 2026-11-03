@@ -93,9 +93,10 @@ public class DocumentStatusProvider
                 }
 
                 // RFC 712: a void or refund whose eInvoicing/eReporting finalize call failed carries the error state although it
-                // was fiscalized; IsFiscalized() reads the FiscalizationSucceeded marker, so the document it references is
-                // still reported as cancelled or refunded. A document that was never fiscalized references nothing.
-                if (!referencedResponse.IsFiscalized())
+                // was fiscalized; IsSuccessfullyFiscalized() reads the FiscalizationSucceeded marker next to the plain success
+                // state this lookup always required, so the document it references is still reported as cancelled or
+                // refunded. A document that was never fiscalized, or was answered with a flag, references nothing.
+                if (!referencedResponse.IsSuccessfullyFiscalized())
                 {
                     continue;
                 }

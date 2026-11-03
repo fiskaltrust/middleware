@@ -407,6 +407,22 @@ public class MiddlewareStorageHelpersTests
         result.ftSignatures.Should().NotContain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
     }
 
+    [Fact]
+    public async Task LoadReceiptReferencesToResponse_SkipsAReferencedReceipt_InTheFailState()
+    {
+        var cbPreviousReceiptReference = Guid.NewGuid().ToString();
+        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem>
+        {
+            new ftQueueItem { cbTerminalID = "", response = JsonConvert.SerializeObject(new ReceiptResponse { ftState = 0x4954_2000_FFFF_FFFF, ftSignatures = ReferenceSignatures().ToArray() }) }
+        }.ToAsyncEnumerable());
+        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest { cbPreviousReceiptReference = cbPreviousReceiptReference }, new ReceiptResponse { ftSignatures = new SignaturItem[0] }, new ftQueueItem());
+
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
+
+        result.ftSignatures.Should().NotContain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber), "the old mask matched the fail state as well");
+    }
+
     private static List<SignaturItem> ReferenceSignatures() => new List<SignaturItem>
     {
         new SignaturItem { Caption = "<doc-number>", Data = "1239", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber },

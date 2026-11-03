@@ -50,6 +50,20 @@ public class RefundValidatorFinalizeFailureTests
         error.Should().BeNull("the first refund refunded nothing");
     }
 
+    [Fact]
+    public async Task APartialRefundAnsweredOnAQueueThatIsNotOperational_DoesNotCountAgainstTheRefundableAmount()
+    {
+        var sale = Sale("S-1", 100m);
+        var firstRefund = PartialRefund("R-1", sale, 60m);
+        var (_, firstRefundResponse) = Fiscalized("ftD#NC ft20250a63/1");
+        firstRefundResponse.ftState = firstRefundResponse.ftState.WithFlag(StateFlags.SecurityMechanismDeactivated); // the queue-state early exit: nothing fiscalized
+        var validator = Validator(QueueItem(sale, Fiscalized("ftD#FT ft20250a62/1").response), QueueItem(firstRefund, firstRefundResponse));
+
+        var error = await validator.ValidatePartialRefundAsync(PartialRefund("R-2", sale, 60m), sale, "S-1");
+
+        error.Should().BeNull("a flagged answer never counted before either");
+    }
+
     private static RefundValidator Validator(params ftQueueItem[] queueItems)
     {
         var repository = new Mock<IMiddlewareQueueItemRepository>();

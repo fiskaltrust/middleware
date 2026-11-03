@@ -49,6 +49,19 @@ public class DocumentStatusProviderFinalizeFailureTests
         status.Status.Should().Be(DocumentStatus.NotReferenced);
     }
 
+    [Fact]
+    public async Task AVoidAnsweredOnAQueueThatIsNotOperational_DoesNotCancelTheInvoiceItReferences()
+    {
+        var (invoiceRequest, invoiceResponse) = Document("ftD#FT ft20250a62/1", InvoiceCase, new DateTime(2026, 9, 10, 10, 0, 0, DateTimeKind.Utc));
+        var (voidRequest, voidResponse) = Document("ftD#NC ft20250a63/1", VoidCase, new DateTime(2026, 9, 10, 11, 0, 0, DateTimeKind.Utc), previousReceiptReference: invoiceRequest.cbReceiptReference);
+        voidResponse.ftState = voidResponse.ftState.WithFlag(StateFlags.SecurityMechanismDeactivated); // the queue-state early exit: nothing fiscalized
+        var provider = Provider(QueueItem(invoiceRequest, invoiceResponse), QueueItem(voidRequest, voidResponse));
+
+        var status = await provider.GetDocumentStatusStateAsync((invoiceRequest, invoiceResponse));
+
+        status.Status.Should().Be(DocumentStatus.NotReferenced, "a flagged answer was never a reference before either");
+    }
+
     private static DocumentStatusProvider Provider(params ftQueueItem[] queueItems)
     {
         var repository = new Mock<IMiddlewareQueueItemRepository>();
