@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.QueueFR.Archive.Packaging;
+using fiskaltrust.Middleware.Journal.FR.Archive.Packaging;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.SCU.FR.InMemory;

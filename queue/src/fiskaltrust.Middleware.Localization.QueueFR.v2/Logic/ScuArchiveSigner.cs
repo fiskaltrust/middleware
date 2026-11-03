@@ -1,6 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2.fr;
-using fiskaltrust.Middleware.Localization.QueueFR.Archive.Signing;
+using fiskaltrust.Middleware.Journal.FR.Archive.Signing;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 

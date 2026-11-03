@@ -1,7 +1,7 @@
 using System.IO.Pipelines;
 using System.Net.Mime;
 using fiskaltrust.ifPOS.v2.fr;
-using fiskaltrust.Middleware.Localization.QueueFR.Archive.Signing;
+using fiskaltrust.Middleware.Journal.FR.Archive.Signing;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Validation;

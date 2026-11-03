@@ -17,7 +17,7 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage\fiskaltrust.Middleware.Storage.csproj" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueFR.Archive\fiskaltrust.Middleware.Localization.QueueFR.Archive.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Journal.FR.Archive\fiskaltrust.Middleware.Journal.FR.Archive.csproj" />
     </ItemGroup>
 
     <!--
