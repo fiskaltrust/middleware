@@ -28,16 +28,16 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             "\"ftChargeItemCaseData\":{\"FR\":{\"DiscountCode\":\"D1\",\"a/b\":[1,null]}}}]," +
             "\"cbPayItems\":[{\"Position\":1,\"Description\":\"Cash\",\"Amount\":4.40,\"ftPayItemCase\":" + (0x4652_2000_0008_0001L) + "}]" + extra + "}";
 
-        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2) =>
+        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "") =>
             "{\"ftQueueID\":\"" + QueueId + "\",\"ftCashBoxIdentification\":\"cashbox-fr\",\"ftReceiptIdentification\":\"" + identification + "\"," +
             "\"ftReceiptMoment\":\"2026-03-01T10:00:01.4560000Z\",\"ftState\":" + state + ",\"ftSignatures\":[" +
-            Item(0x0001, signature, signatureFormatNibble) + "," + Item(0x0002, serial, signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + "]}";
+            Item(0x0001, signature, signatureFormatNibble) + "," + Item(0x0002, serial, signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
 
         private static string Item(long type, string data, long nibble) =>
             "{\"ftSignatureFormat\":1,\"ftSignatureType\":" + (0x4652_0000_0000_0000L | (nibble << 44) | type) + ",\"Caption\":\"x\",\"Data\":\"" + data + "\"}";
 
         internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001)
-            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial), "aGFzaA==")!;
+            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial))!;
 
         private static async Task<string> Write(ICsvFileDefinition<ArchiveEntry> file, params ArchiveEntry[] entries)
         {
@@ -80,12 +80,39 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public void RequestHash_IsTheCanonicalRequestFieldOfTheSignedDataSet()
+        {
+            // An LNE data set ("Donnees signees", an information item): SIRET, issuer claims, queue and queue item
+            // ids, then the canonical request field (ADR 0013), never recomputed by the archive.
+            const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
+            var dataSet = string.Join("|", "12345678901234", "", "", "", "", "", QueueId, Guid.Empty, signedField, "cashbox-fr", "ft1#T1", "2026-03-01T10:00:01.4560000Z", "4652200000000001", "EUR", "4.40", "13:4.40", "1:4.40", "", "SERIAL-1", "1", "0", "");
+            var lne = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "t1", extraItems: "," + Item(0x0000, dataSet, 2)))!;
+            var infoCert = Entry("ft1#T1", "h.p.t1", 1);
+
+            lne.RequestHash.Should().Be(signedField);
+            infoCert.RequestHash.Should().BeNull("the InfoCert SCU signs no request hash");
+        }
+
+        [Fact]
+        public async Task JournalFile_WritesTheSignedRequestHash()
+        {
+            const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
+            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "t1", extraItems: "," + Item(0x0000, "12345678901234|" + signedField + "|x", 2)))!;
+
+            var csv = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.Journals.Single(j => j.Letter == "T")), entry);
+
+            var lines = csv.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            var column = Array.IndexOf(lines[0].Split(';'), "RequestHash");
+            lines[1].Split(';')[column].Should().Be(signedField);
+        }
+
+        [Fact]
         public void TryCreate_SkipsErrorResponsesV1EntriesAndUnsignedOnes()
         {
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", state: 0x4652_2000_EEEE_EEEE), null).Should().BeNull("an error response is no chain entry");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", signatureFormatNibble: 0), null).Should().BeNull("v1 signature types have no v2 format nibble");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), null, null).Should().BeNull("no response yet");
-            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), "not json", null).Should().BeNull();
+            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", state: 0x4652_2000_EEEE_EEEE)).Should().BeNull("an error response is no chain entry");
+            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "s", signatureFormatNibble: 0)).Should().BeNull("v1 signature types have no v2 format nibble");
+            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), null).Should().BeNull("no response yet");
+            ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), "not json").Should().BeNull();
         }
 
         [Fact]
@@ -151,7 +178,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var lines = tickets.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             lines.Should().HaveCount(2);
             lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;CertificateSerialNumber;Training;Signature");
-            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;aGFzaA==;12345678901234;SERIAL-1;false;h.p.t1");
+            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;false;h.p.t1");
             grandTotals.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
                 .Should().Equal(new[] { "Z", "E" }, "the closing and technical chains replace G (ADR 0002)");
         }
@@ -192,7 +219,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task CaseData_KeepsTheBoundariesOfPreviousReceiptReferences()
         {
             // The journal column joins with commas, so ["a,b","c"] and ["a","b,c"] read the same there.
-            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"), null)!;
+            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"))!;
 
             var caseData = await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.CaseDataFileName), entry);
 
