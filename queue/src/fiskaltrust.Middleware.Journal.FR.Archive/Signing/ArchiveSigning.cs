@@ -51,6 +51,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Signing
             {
                 throw new ArgumentException("The archive signing certificate must have an RSA or ECDSA key.", nameof(certificateWithPrivateKey));
             }
+            if (_ecdsa is not null && !ArchiveSignatureVerifier.IsP256(_ecdsa))
+            {
+                throw new ArgumentException("An ECDSA archive signing certificate must use the NIST P-256 curve (ES256).", nameof(certificateWithPrivateKey));
+            }
             SignatureAlgorithm = _rsa is not null ? ArchiveSignatureAlgorithms.RS256 : ArchiveSignatureAlgorithms.ES256;
             Certificate = new X509Certificate2(certificateWithPrivateKey.RawData);
         }
@@ -71,6 +75,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Signing
 
     public static class ArchiveSignatureVerifier
     {
+        private const string P256Oid = "1.2.840.10045.3.1.7";
+
+        /// <summary>The ES256 signature length: r and s of P-256, 32 bytes each (IEEE P1363).</summary>
+        private const int ES256SignatureLength = 64;
+
         public static bool Verify(X509Certificate2 certificate, string signatureAlgorithm, byte[] sha256, byte[] signature)
         {
             if (certificate is null) throw new ArgumentNullException(nameof(certificate));
@@ -86,11 +95,24 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Signing
                 case ArchiveSignatureAlgorithms.ES256:
                     using (var ecdsa = certificate.GetECDsaPublicKey())
                     {
-                        return ecdsa is not null && ecdsa.VerifyHash(sha256, signature);
+                        return ecdsa is not null && signature.Length == ES256SignatureLength && IsP256(ecdsa) && ecdsa.VerifyHash(sha256, signature);
                     }
                 default:
                     return false;
             }
+        }
+
+        /// <summary>ES256 is ECDSA on NIST P-256 only; a P-384 or P-521 key would be mislabelled.</summary>
+        internal static bool IsP256(ECDsa key)
+        {
+            var curve = key.ExportParameters(false).Curve;
+            if (curve.Oid?.Value == P256Oid)
+            {
+                return true;
+            }
+            // Windows CNG may name the curve without its OID.
+            var name = curve.Oid?.FriendlyName;
+            return name == "nistP256" || name == "ECDSA_P256" || name == "secp256r1";
         }
 
         internal static void CheckHash(byte[] sha256)

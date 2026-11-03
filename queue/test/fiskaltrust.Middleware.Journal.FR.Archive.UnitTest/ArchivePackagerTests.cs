@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         private static readonly DateTime GeneratedAt = new DateTime(2026, 10, 12, 9, 30, 0, DateTimeKind.Utc).AddTicks(42);
         private static readonly ArchivePeriod Year2024 = new ArchivePeriod(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
-        private static MainArchive<TestRecord> TwoSubArchives()
+        internal static MainArchive<TestRecord> TwoSubArchives()
         {
             var records = new[]
             {
@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             return ArchiveSplitter.Split(records, r => r.Moment, r => r.Key, Year2024).Single();
         }
 
-        private static async Task<byte[]> Package(MainArchive<TestRecord> archive, X509Certificate2 certificate)
+        internal static async Task<byte[]> Package(MainArchive<TestRecord> archive, X509Certificate2 certificate)
         {
             var packager = new ArchivePackager<TestRecord>(
                 new[] { TestFixtures.Writer(ArchiveFormatVersion.V1), TestFixtures.Writer(ArchiveFormatVersion.V2) },
@@ -191,7 +191,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public void An_invalid_siret_is_rejected()
             => FluentActions.Invoking(() => new ArchiveMetadata("1234", GeneratedAt)).Should().Throw<ArgumentException>();
 
-        private static byte[] ReadEntry(byte[] zipBytes, string name)
+        internal static byte[] ReadEntry(byte[] zipBytes, string name)
         {
             using var zip = new ZipArchive(new MemoryStream(zipBytes), ZipArchiveMode.Read);
             using var entry = zip.GetEntry(name)!.Open();
@@ -200,7 +200,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             return buffer.ToArray();
         }
 
-        private static byte[] ReplaceEntry(byte[] zipBytes, string name, Func<byte[], byte[]> change)
+        internal static byte[] ReplaceEntry(byte[] zipBytes, string name, Func<byte[], byte[]> change)
         {
             using var source = new ZipArchive(new MemoryStream(zipBytes), ZipArchiveMode.Read);
             using var output = new MemoryStream();

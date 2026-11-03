@@ -109,6 +109,21 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public void Linker_ChainsABareSignatureWhole()
+        {
+            // LNE and the in-memory SCU store the bare Base64Url signature they also return to the queue as
+            // the chain value; InfoCert stores the JWS and returns its signature segment (ADR 0001).
+            var t1 = Entry("ft1#T1", "lne-sig-1", 1);
+            var t2 = Entry("ft2#T2", "lne-sig-2", 2);
+            var linker = new ArchiveChainLinker();
+
+            linker.Link(t1);
+            linker.Link(t2);
+
+            t2.PreviousSignature.Should().Be("lne-sig-1");
+        }
+
+        [Fact]
         public void Linker_LeavesThePreviousSignatureEmptyWhenThePreviousEntryWasNotSeen()
         {
             var t5 = Entry("ft9#T5", "t5", 9);
@@ -171,6 +186,23 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
                 "ChargeItem;1;ftChargeItemCaseData;/FR/a~1b;array;",
                 "ChargeItem;1;ftChargeItemCaseData;/FR/a~1b/0;number;1",
                 "ChargeItem;1;ftChargeItemCaseData;/FR/a~1b/1;null;");
+        }
+
+        [Fact]
+        public async Task CaseData_KeepsTheBoundariesOfPreviousReceiptReferences()
+        {
+            // The journal column joins with commas, so ["a,b","c"] and ["a","b,c"] read the same there.
+            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(extra: ",\"cbPreviousReceiptReference\":[\"a,b\",\"c\"]"), Response("ft1#T1", "t1"), null)!;
+
+            var caseData = await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.CaseDataFileName), entry);
+
+            var rows = caseData.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => string.Join(";", l.Split(';').Skip(2))).ToList();
+            rows.Should().Contain(new[]
+            {
+                "Receipt;;cbPreviousReceiptReference;;array;",
+                "Receipt;;cbPreviousReceiptReference;/0;string;a,b",
+                "Receipt;;cbPreviousReceiptReference;/1;string;c",
+            });
         }
 
         [Fact]

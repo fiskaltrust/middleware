@@ -38,7 +38,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     /// </summary>
     public static class CaseData
     {
-        private static readonly string[] ReceiptFields = { "ftReceiptCaseData", "cbCustomer", "cbUser", "cbArea", "cbSettlement" };
+        // cbPreviousReceiptReference too: the journal column joins an array with commas, which loses the
+        // boundaries of references that contain one.
+        private static readonly string[] ReceiptFields = { "ftReceiptCaseData", "cbCustomer", "cbUser", "cbArea", "cbSettlement", "cbPreviousReceiptReference" };
 
         public static IEnumerable<CaseDataRow> Rows(ArchiveEntry entry)
         {
