@@ -156,6 +156,40 @@ public class ScuSwitchTests
     }
 
     [Fact]
+    public async Task InitScuSwitch_WhenTheOutgoingScuReportsAFailure_RecordsNoSwitch()
+    {
+        var sscd = new FakeFRSSCD { CertificateSerialNumber = "OLD", FailWith = "private key unavailable" };
+        var pipeline = CreatePipeline(sscd);
+
+        var response = await Lifecycle(sscd, pipeline).InitSCUSwitch0x4011Async(CommandRequest(ReceiptCase.InitSCUSwitch0x4011));
+
+        response.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        (await pipeline.Chains.GetPendingScuSwitchAsync()).Should().BeNull("an unsigned 0x4011 starts no switch, so the queue keeps signing");
+    }
+
+    [Fact]
+    public async Task FinishScuSwitch_WhenTheIncomingScuReportsAFailure_StaysPendingForTheRetry()
+    {
+        var outgoing = new FakeFRSSCD { CertificateSerialNumber = "OLD" };
+        var pipeline = CreatePipeline(outgoing);
+        await Lifecycle(outgoing, pipeline).InitSCUSwitch0x4011Async(CommandRequest(ReceiptCase.InitSCUSwitch0x4011));
+
+        var incoming = new FakeFRSSCD { CertificateSerialNumber = "NEW", FailWith = "private key unavailable" };
+        var incomingPipeline = new FRSigningPipeline(incoming, pipeline.Chains);
+        var failed = await Lifecycle(incoming, incomingPipeline).FinishSCUSwitch0x4012Async(CommandRequest(ReceiptCase.FinishSCUSwitch0x4012));
+
+        failed.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        (await pipeline.Chains.GetPendingScuSwitchAsync()).Should().NotBeNull("the switch finishes only with a signed 0x4012");
+
+        incoming.FailWith = null;
+        var retried = await Lifecycle(incoming, incomingPipeline).FinishSCUSwitch0x4012Async(CommandRequest(ReceiptCase.FinishSCUSwitch0x4012));
+
+        IsError(retried).Should().BeFalse();
+        retried.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E2", "the failed attempt consumed no number");
+        incoming.Calls.Last().previousSignature.Should().Be("sig-1");
+    }
+
+    [Fact]
     public async Task FinishScuSwitch_ChainsOnTheOutgoingScusLastSignatureAndReopensTheQueue()
     {
         var outgoing = new FakeFRSSCD { CertificateSerialNumber = "OLD" };
