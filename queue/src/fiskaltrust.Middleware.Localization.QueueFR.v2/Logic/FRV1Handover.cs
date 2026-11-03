@@ -1,3 +1,4 @@
+using System.Globalization;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.storage.V0;
 
@@ -8,37 +9,90 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// state in the same columns (market-fr ADR 0012), so the chain counters and the ticket and
 /// invoice totals carry over as they stand. What differs is how the periods accumulate: v1 adds a
 /// sale to the shift and the day only, and rolls the day into the month at the daily closing and
-/// the month into the year at the monthly closing; v2 adds every sale to every period. The open
-/// lower periods are therefore folded into the higher ones once, at the cut.
+/// the month into the year at the monthly closing; v2 adds every sale to every period.
 /// </summary>
 /// <remarks>
+/// <para>
+/// A half migration starts only after the daily closing of the last v1 day (market-fr#192): it is
+/// maintenance done outside business hours, like the SCU switch, so the v2 queue never inherits an
+/// open v1 day and the v1 SCU signs the closing of every day it signed receipts of. The only open
+/// period left to fold at the cut is then the month, into the year.
+/// </para>
+/// <para>
 /// The migration receipt that calls this, and the signed migration event that records each v1
 /// chain's last hash and counter, are part of the migration itself (market-fr#192).
+/// </para>
 /// </remarks>
 public static class FRV1Handover
 {
     /// <summary>
-    /// Applies the handover to <paramref name="queueFR"/>. Must run exactly once, before the first
-    /// v2 entry: a second run would count the open day twice.
+    /// Applies the handover to <paramref name="queueFR"/>, or refuses it while the last v1 day is
+    /// open. Must run exactly once, before the first v2 entry: a second run would count the open
+    /// month twice.
     /// </summary>
+    /// <param name="lastV1DayEntryMoment">
+    /// The queue moment (<c>ftQueueItem.ftQueueMoment</c>, UTC) of the last v1 receipt that counted
+    /// into the day totals, or null if v1 issued none. A day can net to zero (a sale and its
+    /// refund), so the day totals alone cannot show that it is closed.
+    /// </param>
     /// <param name="lastV1Signatures">
     /// The Base64Url signature of each chain's last v1 entry that v1 storage still holds. A chain
     /// without one starts its v2 chaining fresh, and the migration event carries the link.
     /// </param>
-    public static void Apply(ftQueueFR queueFR, IReadOnlyDictionary<FRReceiptChain, string>? lastV1Signatures = null)
+    /// <returns>
+    /// Null once the handover is applied; otherwise why it is refused, with
+    /// <paramref name="queueFR"/> left unchanged.
+    /// </returns>
+    public static string? Apply(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment, IReadOnlyDictionary<FRReceiptChain, string>? lastV1Signatures = null)
     {
-        var day = queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Day));
+        var refusal = OpenDayRefusal(queueFR, lastV1DayEntryMoment);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
         var month = queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Month));
         var year = queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Year));
 
-        month.Add(day);
         year.Add(month);
-        queueFR.SetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Month), month);
         queueFR.SetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Year), year);
 
         foreach (var (chain, signature) in lastV1Signatures ?? new Dictionary<FRReceiptChain, string>())
         {
             queueFR.SetLastSignature(chain, signature);
         }
+
+        return null;
     }
+
+    private static string? OpenDayRefusal(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment)
+    {
+        var lastClosing = queueFR.GLastDayMoment;
+        var day = queueFR.GetTotals(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Day));
+
+        string? why = null;
+        if (!IsZero(day))
+        {
+            why = $"its day totals hold {day.Totalizer.ToString("0.00", CultureInfo.InvariantCulture)} since {LastClosing(lastClosing)}";
+        }
+        else if (lastV1DayEntryMoment is { } entry && (lastClosing is null || entry > lastClosing))
+        {
+            why = $"a receipt was counted into the day at {entry.ToString("u", CultureInfo.InvariantCulture)}, after {LastClosing(lastClosing)}";
+        }
+
+        return why is null
+            ? null
+            : $"The v1 queue's last day is not closed: {why}. A half migration to v2 starts only after the daily closing (0x2011) of the last v1 day, so that the v2 queue never inherits an open v1 day. Send the daily closing on the v1 queue, then migrate.";
+    }
+
+    private static bool IsZero(FRTotals totals)
+        => new[]
+        {
+            totals.Totalizer, totals.CINormal, totals.CIReduced1, totals.CIReduced2, totals.CIReducedS, totals.CIZero, totals.CIUnknown,
+            totals.PICash, totals.PINonCash, totals.PIInternal, totals.PIUnknown,
+        }.All(x => x == 0m);
+
+    private static string LastClosing(DateTime? lastClosing) => lastClosing is { } moment
+        ? $"the last daily closing at {moment.ToString("u", CultureInfo.InvariantCulture)}"
+        : "the queue started, as it never had a daily closing";
 }
