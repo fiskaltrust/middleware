@@ -203,8 +203,46 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
 
             caseData.GetProperty("IssuedAt").GetString().Should().Be("2026-09-22T10:15:30.1234567+02:00", "a date-like string is not turned into a date and back");
             caseData.GetProperty("Day").GetString().Should().Be("2026-09-22");
-            caseData.GetProperty("Huge").GetDouble().Should().Be(1e30, "a number the decimal type cannot hold is still carried");
-            caseData.GetProperty("Tiny").GetDouble().Should().Be(1e-30);
+            caseData.GetProperty("Huge").GetRawText().Should().Be("1e30", "a number the decimal type cannot hold is carried as its text");
+            caseData.GetProperty("Tiny").GetRawText().Should().Be("1e-30");
+        }
+
+        [Fact]
+        public void ToV2_KeepsHighPrecisionDecimals_NextToNumbersBeyondDecimalRange_InTheSameEmbeddedDocument()
+        {
+            // The embedded document is written verbatim, so one number beyond the decimal range does not cost the others their digits.
+            var v1 = new ReceiptRequest
+            {
+                ftReceiptCase = 0x4445_0000_0000_0001L,
+                ftReceiptCaseData = "{\"Quantity\":0.1234567890123456789,\"Huge\":1e30,\"Beyond\":1e400}",
+                cbChargeItems = new ChargeItem[0],
+                cbPayItems = new PayItem[0],
+            };
+
+            var request = PostFiscalizationMapper.ToV2(v1);
+
+            var caseData = (JsonElement) request.ftReceiptCaseData!;
+            caseData.GetProperty("Quantity").GetRawText().Should().Be("0.1234567890123456789");
+            caseData.GetProperty("Huge").GetRawText().Should().Be("1e30");
+            caseData.GetProperty("Beyond").GetRawText().Should().Be("1e400", "even a number no numeric type can hold is carried as its text");
+            JsonSerializer.Serialize(request.ftReceiptCaseData).Should().Be("{\"Quantity\":0.1234567890123456789,\"Huge\":1e30,\"Beyond\":1e400}", "this is what the service receives");
+        }
+
+        [Fact]
+        public void ToV2_LeavesAStringThatIsNotJson_AsItIs()
+        {
+            var v1 = new ReceiptRequest
+            {
+                ftReceiptCase = 0x4445_0000_0000_0001L,
+                ftReceiptCaseData = "{not json",
+                cbChargeItems = new ChargeItem[0],
+                cbPayItems = new PayItem[0],
+            };
+
+            var caseData = (JsonElement) PostFiscalizationMapper.ToV2(v1).ftReceiptCaseData!;
+
+            caseData.ValueKind.Should().Be(JsonValueKind.String);
+            caseData.GetString().Should().Be("{not json", "the service gets the string exactly as the POS sent it");
         }
 
         [Fact]
