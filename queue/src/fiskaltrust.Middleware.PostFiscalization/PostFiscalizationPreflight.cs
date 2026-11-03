@@ -1,20 +1,26 @@
-﻿namespace fiskaltrust.Middleware.PostFiscalization;
+﻿using System;
+using System.Collections.Generic;
+
+namespace fiskaltrust.Middleware.PostFiscalization;
 
 /// <summary>
 /// Result of the preflight phase, carried from the preflight seam to the finalize seam of the sign processor. When
 /// <see cref="Accepted"/> is false the receipt must not be fiscalized and <see cref="Rejection"/> names the service
-/// and the reason.
+/// and the reason. <see cref="ToleratedFailures"/> lists the services that could not be reached for an operational
+/// receipt (a lifecycle or zero receipt): such a receipt is fiscalized without them, and the finalize phase journals
+/// the outage.
 /// </summary>
 public sealed class PostFiscalizationPreflight
 {
     /// <summary>Both sections are not configured: the mechanism is a no-op for this queue.</summary>
     public static PostFiscalizationPreflight Disabled { get; } = new(PostFiscalizationServiceOutcome.Disabled, PostFiscalizationServiceOutcome.Disabled, null);
 
-    public PostFiscalizationPreflight(PostFiscalizationServiceOutcome eInvoicing, PostFiscalizationServiceOutcome eReporting, PostFiscalizationRejection? rejection)
+    public PostFiscalizationPreflight(PostFiscalizationServiceOutcome eInvoicing, PostFiscalizationServiceOutcome eReporting, PostFiscalizationRejection? rejection, IReadOnlyList<PostFiscalizationRejection>? toleratedFailures = null)
     {
         EInvoicing = eInvoicing;
         EReporting = eReporting;
         Rejection = rejection;
+        ToleratedFailures = toleratedFailures ?? Array.Empty<PostFiscalizationRejection>();
     }
 
     public PostFiscalizationServiceOutcome EInvoicing { get; }
@@ -22,6 +28,9 @@ public sealed class PostFiscalizationPreflight
     public PostFiscalizationServiceOutcome EReporting { get; }
 
     public PostFiscalizationRejection? Rejection { get; }
+
+    /// <summary>The services that could not be reached for an operational receipt, which is fiscalized without them.</summary>
+    public IReadOnlyList<PostFiscalizationRejection> ToleratedFailures { get; }
 
     public bool Accepted => Rejection is null;
 

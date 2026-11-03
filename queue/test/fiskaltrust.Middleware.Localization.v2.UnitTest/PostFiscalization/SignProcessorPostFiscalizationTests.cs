@@ -122,6 +122,7 @@ public class SignProcessorPostFiscalizationTests
         harness.CountryProcessorCalls.Should().Be(0, "the queue-state early exit answers before the market processor");
         response!.ftState.IsState(State.Error).Should().BeFalse();
         response.ftState.IsFlag(StateFlags.SecurityMechanismDeactivated).Should().BeTrue();
+        eReporting.ValidateCalls.Should().BeEmpty("the services are not asked about a receipt that will not be fiscalized");
         eReporting.ProcessCalls.Should().BeEmpty("nothing was fiscalized, so there is nothing to report");
         response.ftStateData.Should().BeNull("no finalize phase ran, so no outcome is written");
         harness.ReceiptJournals.Should().ContainSingle("the receipt journal policy for these answers is unchanged");
@@ -143,8 +144,40 @@ public class SignProcessorPostFiscalizationTests
         var response = await processor.ProcessAsync(harness.Request((ReceiptCase) 0x4752_2000_0000_4001));
 
         harness.CountryProcessorCalls.Should().Be(1);
+        eReporting.ValidateCalls.Should().ContainSingle("the activation receipt of a new queue is the one receipt presented to the services before the queue is operational");
         eReporting.ProcessCalls.Should().ContainSingle();
         MiddlewareStateData.FromReceiptResponse(response!)!.PostFiscalization!.EReporting.Should().Be(PostFiscalizationStateData.Ok);
+    }
+
+    [Fact]
+    public async Task AnUnreachableService_DoesNotRefuseAnOperationalReceipt()
+    {
+        var harness = new Harness();
+        var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+        var processor = harness.Create(null, eReporting);
+
+        var response = await processor.ProcessAsync(harness.Request((ReceiptCase) 0x4752_2000_0000_2000)); // zero receipt
+
+        response!.ftState.IsState(State.Fail).Should().BeFalse("an outage must not stop the operator from running the queue's lifecycle");
+        response.ftState.IsState(State.Error).Should().BeFalse();
+        harness.CountryProcessorCalls.Should().Be(1);
+        harness.ReceiptJournals.Should().ContainSingle();
+        harness.ActionJournals.Should().Contain(journal => journal.Type == "ereporting-unreachable");
+        MiddlewareStateData.FromReceiptResponse(response)!.PostFiscalization!.EReporting.Should().Be(PostFiscalizationStateData.NotApplicable);
+    }
+
+    [Fact]
+    public async Task AnUnreachableService_StillRefusesABusinessReceipt()
+    {
+        var harness = new Harness();
+        var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+        var processor = harness.Create(null, eReporting);
+
+        var response = await processor.ProcessAsync(harness.Request());
+
+        response!.ftState.IsState(State.Fail).Should().BeTrue();
+        harness.CountryProcessorCalls.Should().Be(0);
+        harness.ReceiptJournals.Should().BeEmpty();
     }
 
     [Fact]

@@ -20,12 +20,14 @@ namespace fiskaltrust.Middleware.PostFiscalization;
 /// <item>Retries happen on timeout, 5xx and connection-level failures only. A 4xx or a malformed body is a deliberate answer and is never retried.</item>
 /// <item>Any outcome other than a 2xx with a well-formed body surfaces as a <see cref="PostFiscalizationServiceException"/>.</item>
 /// <item>Redirects are never followed: a 3xx is a failed call. Following one would re-send the cashbox headers, access token included, to whatever host the redirect names.</item>
+/// <item>Every <c>/process</c> call carries <c>Idempotency-Key</c> = the <c>ftQueueItemID</c>; a retry re-sends the byte-identical request with the same key, and a service must answer a repeat from its record rather than submit the receipt twice.</item>
 /// </list>
 /// </summary>
 public sealed class PostFiscalizationServiceClient : IEInvoicingService, IEReportingService, IDisposable
 {
     public const string CashBoxIdHeader = "x-cashbox-id";
     public const string AccessTokenHeader = "x-cashbox-accesstoken";
+    public const string IdempotencyKeyHeader = "Idempotency-Key";
     private const int _detailExcerptLength = 2000;
 
     private static readonly JsonSerializerOptions _serializerOptions = new()
@@ -85,13 +87,17 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
 
     public Uri ProcessUri => _processUri;
 
-    public Task<ValidateResponse> ValidateReceiptAsync(ValidateRequest request) => SendAsync<ValidateRequest, ValidateResponse>(_validateUri, request);
+    public Task<ValidateResponse> ValidateReceiptAsync(ValidateRequest request) => SendAsync<ValidateRequest, ValidateResponse>(_validateUri, request, idempotencyKey: null);
 
-    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => SendAsync<ProcessRequest, ProcessResponse>(_processUri, request);
+    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => SendAsync<ProcessRequest, ProcessResponse>(_processUri, request, IdempotencyKey(request));
+
+    /// <summary>The finalize call is a side-effecting submission; the queue item id identifies it across retries.</summary>
+    private static string? IdempotencyKey(ProcessRequest request)
+        => request.ReceiptResponse?.ftQueueItemID is { } queueItemId && queueItemId != Guid.Empty ? queueItemId.ToString() : null;
 
     public void Dispose() => _httpClient.Dispose();
 
-    private async Task<TResponse> SendAsync<TRequest, TResponse>(Uri uri, TRequest body)
+    private async Task<TResponse> SendAsync<TRequest, TResponse>(Uri uri, TRequest body, string? idempotencyKey)
     {
         var payload = JsonSerializer.SerializeToUtf8Bytes(body, _serializerOptions);
         var attempts = _maxRetries + 1;
@@ -106,6 +112,10 @@ public sealed class PostFiscalizationServiceClient : IEInvoicingService, IERepor
             request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             request.Headers.TryAddWithoutValidation(CashBoxIdHeader, _cashBoxId);
             request.Headers.TryAddWithoutValidation(AccessTokenHeader, _accessToken);
+            if (idempotencyKey is not null)
+            {
+                request.Headers.TryAddWithoutValidation(IdempotencyKeyHeader, idempotencyKey);
+            }
 
             using var timeout = new CancellationTokenSource(_timeout);
             try

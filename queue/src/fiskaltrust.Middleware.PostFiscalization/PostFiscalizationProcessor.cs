@@ -46,6 +46,7 @@ public class PostFiscalizationProcessor
     private readonly IEReportingService? _eReportingService;
     private readonly Func<ReceiptRequest, SignatureType> _failureSignatureType;
     private readonly Func<ReceiptRequest, bool> _eInvoicingReceiptFilter;
+    private readonly Func<ReceiptRequest, bool> _operationalReceiptFilter;
 
     /// <summary>
     /// Builds the processor from the queue configuration. Validates the configuration and resolves the cashbox
@@ -57,12 +58,14 @@ public class PostFiscalizationProcessor
     /// <param name="isSandbox">Whether the queue is a sandbox queue; known services are then called at their sandbox endpoint.</param>
     /// <param name="failureSignatureType">How the <c>ftSignatureType</c> of failure signatures is derived from the request. Defaults to the v2 rule; the legacy stack passes its own convention.</param>
     /// <param name="eInvoicingReceiptFilter">Which receipts the eInvoicing service is called for at all. Defaults to <see cref="IsInvoiceDocument"/>; a market can pass an allow list of its own receipt cases.</param>
+    /// <param name="operationalReceiptFilter">Which receipts keep the queue operable (lifecycle and zero receipts) and are therefore fiscalized even when a service cannot be reached in the preflight. Defaults to <see cref="IsOperationalReceipt"/>; the legacy stack passes its per-market receipt cases.</param>
     /// <exception cref="PostFiscalizationConfigurationException">A configured section is invalid or the access token is missing.</exception>
-    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, PostFiscalizationConfiguration configuration, Guid cashBoxId, Dictionary<string, object>? queueConfiguration, bool isSandbox, Func<ReceiptRequest, SignatureType>? failureSignatureType = null, Func<ReceiptRequest, bool>? eInvoicingReceiptFilter = null)
+    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, PostFiscalizationConfiguration configuration, Guid cashBoxId, Dictionary<string, object>? queueConfiguration, bool isSandbox, Func<ReceiptRequest, SignatureType>? failureSignatureType = null, Func<ReceiptRequest, bool>? eInvoicingReceiptFilter = null, Func<ReceiptRequest, bool>? operationalReceiptFilter = null)
     {
         _logger = logger;
         _failureSignatureType = failureSignatureType ?? DefaultFailureSignatureType;
         _eInvoicingReceiptFilter = eInvoicingReceiptFilter ?? IsInvoiceDocument;
+        _operationalReceiptFilter = operationalReceiptFilter ?? IsOperationalReceipt;
         ValidateAtStartup(configuration, queueConfiguration);
         if (!configuration.IsEnabled)
         {
@@ -86,14 +89,33 @@ public class PostFiscalizationProcessor
     }
 
     /// <summary>Builds the processor from service instances. Pass <c>null</c> for a service that is not configured.</summary>
-    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, IEInvoicingService? eInvoicingService, IEReportingService? eReportingService, Func<ReceiptRequest, SignatureType>? failureSignatureType = null, Func<ReceiptRequest, bool>? eInvoicingReceiptFilter = null)
+    public PostFiscalizationProcessor(ILogger<PostFiscalizationProcessor> logger, IEInvoicingService? eInvoicingService, IEReportingService? eReportingService, Func<ReceiptRequest, SignatureType>? failureSignatureType = null, Func<ReceiptRequest, bool>? eInvoicingReceiptFilter = null, Func<ReceiptRequest, bool>? operationalReceiptFilter = null)
     {
         _logger = logger;
         _eInvoicingService = eInvoicingService;
         _eReportingService = eReportingService;
         _failureSignatureType = failureSignatureType ?? DefaultFailureSignatureType;
         _eInvoicingReceiptFilter = eInvoicingReceiptFilter ?? IsInvoiceDocument;
+        _operationalReceiptFilter = operationalReceiptFilter ?? IsOperationalReceipt;
     }
+
+    /// <summary>
+    /// The receipts that keep a queue operable and are never invoices: lifecycle receipts (initial operation, out of
+    /// operation, closings) and daily-operation receipts (zero receipts, daily closings), recognized by the <c>0x4000</c>
+    /// and <c>0x2000</c> type nibbles of <c>ftReceiptCase</c>. An unreachable service does not refuse them in the
+    /// preflight, so an outage cannot stop the operator from activating, closing or decommissioning a queue.
+    /// </summary>
+    public static bool IsOperationalReceipt(ReceiptRequest receiptRequest)
+        => receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Lifecycle) || receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.DailyOperations);
+
+    /// <summary>
+    /// The preflight result for a receipt the queue will not fiscalize (a receipt on a queue that is not operational):
+    /// the services are not asked, and the configured ones are not applicable for it.
+    /// </summary>
+    public PostFiscalizationPreflight NotApplicablePreflight() => new(
+        _eInvoicingService is null ? PostFiscalizationServiceOutcome.Disabled : PostFiscalizationServiceOutcome.NotApplicable,
+        _eReportingService is null ? PostFiscalizationServiceOutcome.Disabled : PostFiscalizationServiceOutcome.NotApplicable,
+        null);
 
     /// <summary>
     /// The receipts the eInvoicing service is called for: invoice document types, recognized by the <c>0x1000</c> type
@@ -151,6 +173,7 @@ public class PostFiscalizationProcessor
             return PostFiscalizationPreflight.Disabled;
         }
 
+        var tolerated = new List<PostFiscalizationRejection>();
         PostFiscalizationServiceOutcome eInvoicing;
         PostFiscalizationRejection? rejection;
         if (_eInvoicingService is not null && !_eInvoicingReceiptFilter(receiptRequest))
@@ -161,17 +184,17 @@ public class PostFiscalizationProcessor
         }
         else
         {
-            (eInvoicing, rejection) = await PreflightAsync(PostFiscalizationService.EInvoicing, _eInvoicingService is null ? null : _eInvoicingService.ValidateReceiptAsync, receiptRequest).ConfigureAwait(false);
+            (eInvoicing, rejection) = await PreflightAsync(PostFiscalizationService.EInvoicing, _eInvoicingService is null ? null : _eInvoicingService.ValidateReceiptAsync, receiptRequest, tolerated).ConfigureAwait(false);
         }
 
         var eReporting = _eReportingService is null ? PostFiscalizationServiceOutcome.Disabled : PostFiscalizationServiceOutcome.Skipped;
         if (rejection is null)
         {
-            (eReporting, rejection) = await PreflightAsync(PostFiscalizationService.EReporting, _eReportingService is null ? null : _eReportingService.ValidateReceiptAsync, receiptRequest).ConfigureAwait(false);
+            (eReporting, rejection) = await PreflightAsync(PostFiscalizationService.EReporting, _eReportingService is null ? null : _eReportingService.ValidateReceiptAsync, receiptRequest, tolerated).ConfigureAwait(false);
         }
 
         SetActivityTags(eInvoicing, eReporting);
-        return new PostFiscalizationPreflight(eInvoicing, eReporting, rejection);
+        return new PostFiscalizationPreflight(eInvoicing, eReporting, rejection, tolerated);
     }
 
     /// <summary>
@@ -186,6 +209,13 @@ public class PostFiscalizationProcessor
         if (!IsEnabled)
         {
             return receiptResponse;
+        }
+
+        foreach (var outage in preflight.ToleratedFailures)
+        {
+            var message = $"{outage.Service.DisplayName()} could not validate receipt {queueItem.cbReceiptReference} (queue item {queueItem.ftQueueItemId}): {outage.Reason}. The receipt keeps the queue operable and was fiscalized without the service.";
+            _logger.LogWarning(message);
+            actionJournals.Add(CreateActionJournal(queueItem, _actionJournalPriorityWarning, $"{outage.Service.Key()}-unreachable", message, new { service = outage.Service.Key(), phase = "validate", reason = outage.Reason, detail = outage.Detail }));
         }
 
         var current = receiptResponse;
@@ -229,7 +259,7 @@ public class PostFiscalizationProcessor
         Data = data,
     };
 
-    private async Task<(PostFiscalizationServiceOutcome outcome, PostFiscalizationRejection? rejection)> PreflightAsync(PostFiscalizationService service, Func<ValidateRequest, Task<ValidateResponse>>? validate, ReceiptRequest receiptRequest)
+    private async Task<(PostFiscalizationServiceOutcome outcome, PostFiscalizationRejection? rejection)> PreflightAsync(PostFiscalizationService service, Func<ValidateRequest, Task<ValidateResponse>>? validate, ReceiptRequest receiptRequest, List<PostFiscalizationRejection> tolerated)
     {
         if (validate is null)
         {
@@ -261,6 +291,17 @@ public class PostFiscalizationProcessor
             // Unreachable, timeout, non-2xx, malformed body or a middleware-side bug: the queue cannot know whether the
             // receipt is invoiceable, and refusing before fiscalization is the safe direction.
             var (reason, detail) = Describe(ex);
+            if (_operationalReceiptFilter(receiptRequest))
+            {
+                // Except for the receipts that keep the queue operable: refusing a lifecycle or zero receipt while a
+                // service is down would stop the operator from activating, closing or decommissioning the queue, and
+                // such a receipt is never an invoice. The service is not applicable for it; the finalize phase journals
+                // the outage next to the fiscalized receipt.
+                _logger.LogWarning(ex, "{Service} validate call failed for operational receipt {ReceiptReference}; the receipt is fiscalized without the service.", service.DisplayName(), receiptRequest.cbReceiptReference);
+                tolerated.Add(new PostFiscalizationRejection(service, PostFiscalizationServiceOutcome.Failed, $"{service.DisplayName()} validate call failed: {reason}", detail));
+                return (PostFiscalizationServiceOutcome.NotApplicable, null);
+            }
+
             _logger.LogError(ex, "{Service} validate call failed for receipt {ReceiptReference}; the receipt is refused before fiscalization.", service.DisplayName(), receiptRequest.cbReceiptReference);
             return (PostFiscalizationServiceOutcome.Failed, new PostFiscalizationRejection(service, PostFiscalizationServiceOutcome.Failed, $"{service.DisplayName()} validate call failed: {reason}", detail));
         }

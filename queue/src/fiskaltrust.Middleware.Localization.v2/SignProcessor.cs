@@ -102,8 +102,15 @@ public class SignProcessor : ISignProcessor
 
             // RFC 712, phase 1: the configured eInvoicing/eReporting services validate the receipt before any bookkeeping
             // that produces a fiscal record. A rejection or an unreachable service refuses the receipt: no queue item, no
-            // fiscal record, no receipt journal, so the POS can correct and resend it as a new transaction.
-            var preflight = await _postFiscalizationProcessor.ValidateAsync(receiptRequest).ConfigureAwait(false);
+            // fiscal record, no receipt journal, so the POS can correct and resend it as a new transaction. The preflight
+            // only runs for a receipt the queue will fiscalize: on an operational queue, or the initial-operation receipt
+            // of a new queue. The queue-state early exits in ProcessFiscalizationAsync fiscalize nothing, so the services
+            // are not asked about those receipts.
+            var queueState = await _queueStorageProvider.GetQueueAsync().ConfigureAwait(false);
+            var mayBeFiscalized = !queueState.IsDeactivated() && (!queueState.IsNew() || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InitialOperationReceipt0x4001));
+            var preflight = mayBeFiscalized
+                ? await _postFiscalizationProcessor.ValidateAsync(receiptRequest).ConfigureAwait(false)
+                : _postFiscalizationProcessor.NotApplicablePreflight();
             if (!preflight.Accepted)
             {
                 return await RejectBeforeFiscalizationAsync(receiptRequest, preflight.Rejection!).ConfigureAwait(false);
@@ -121,7 +128,7 @@ public class SignProcessor : ISignProcessor
                 var queueOperational = true;
                 try
                 {
-                    (receiptResponse, countrySpecificActionJournals, queueOperational) = await ProcessCoreAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
+                    (receiptResponse, countrySpecificActionJournals, queueOperational) = await ProcessFiscalizationAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
                     actionjournals.AddRange(countrySpecificActionJournals);
                 }
                 catch (Exception e)
@@ -272,7 +279,7 @@ public class SignProcessor : ISignProcessor
 
     public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
     {
-        var (response, actionJournals, _) = await ProcessCoreAsync(request, receiptResponse, queueItem).ConfigureAwait(false);
+        var (response, actionJournals, _) = await ProcessFiscalizationAsync(request, receiptResponse, queueItem).ConfigureAwait(false);
         return (response, actionJournals);
     }
 
@@ -283,7 +290,7 @@ public class SignProcessor : ISignProcessor
     /// finalize phase must not run. The flag alone cannot tell, because the market processors also set it on the
     /// out-of-operation receipt, which is fiscalized. Every other response comes from the market processor.
     /// </summary>
-    private async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool queueOperational)> ProcessCoreAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+    private async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool queueOperational)> ProcessFiscalizationAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
     {
         var queue = await _queueStorageProvider.GetQueueAsync();
         if (queue.IsDeactivated())

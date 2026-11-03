@@ -83,6 +83,7 @@ public class PostFiscalizationServiceClientTests
         request.Uri.Should().Be(new Uri("https://einvoicing.example.com/v2/validate"));
         request.Headers[PostFiscalizationServiceClient.CashBoxIdHeader].Should().Be(_cashBoxId.ToString());
         request.Headers[PostFiscalizationServiceClient.AccessTokenHeader].Should().Be(_accessToken);
+        request.Headers.Should().NotContainKey(PostFiscalizationServiceClient.IdempotencyKeyHeader, "nothing identifies a receipt before it has a queue item, and the preflight has no side effects");
         request.ContentType.Should().StartWith("application/json");
         using var body = JsonDocument.Parse(request.Body);
         body.RootElement.GetProperty("ReceiptRequest").GetProperty("cbReceiptReference").GetString().Should().Be("R-2026-0001");
@@ -109,6 +110,7 @@ public class PostFiscalizationServiceClientTests
         response.ReceiptResponse.ftSignatures.Should().ContainSingle(signature => signature.Caption == "einvoice-id" && signature.Data == "urn:peppol:1");
         var request = handler.Requests.Should().ContainSingle().Subject;
         request.Uri.Should().Be(new Uri("https://einvoicing.example.com/v2/process"));
+        request.Headers[PostFiscalizationServiceClient.IdempotencyKeyHeader].Should().Be(queueItemId.ToString(), "the finalize call is a side-effecting submission that a service must dedupe on");
         using var body = JsonDocument.Parse(request.Body);
         body.RootElement.GetProperty("ReceiptRequest").GetProperty("cbReceiptReference").GetString().Should().Be("R-2026-0001");
         body.RootElement.GetProperty("ReceiptResponse").GetProperty("ftQueueItemID").GetGuid().Should().Be(queueItemId);
@@ -174,6 +176,22 @@ public class PostFiscalizationServiceClientTests
         handler.Requests.Should().HaveCount(3);
         exception.Message.Should().Contain("HTTP 500").And.Contain("after 3 attempts");
         exception.Detail.Should().Contain("database is down");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ResendsTheSameIdempotencyKey_OnRetry()
+    {
+        var queueItemId = Guid.NewGuid();
+        var handler = StubHandler.Returning(
+            () => Json(HttpStatusCode.ServiceUnavailable, """{ "error": "claim in progress" }"""),
+            () => Json(HttpStatusCode.OK, $$"""{ "ReceiptResponse": { "ftQueueItemID": "{{queueItemId}}" } }"""));
+        using var client = CreateClient(handler, maxRetries: 1);
+
+        await client.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = Request(), ReceiptResponse = new ReceiptResponse { ftQueueItemID = queueItemId } });
+
+        handler.Requests.Should().HaveCount(2);
+        handler.Requests.Select(request => request.Headers[PostFiscalizationServiceClient.IdempotencyKeyHeader]).Should().OnlyContain(key => key == queueItemId.ToString());
+        handler.Requests.Select(request => request.Body).Distinct().Should().ContainSingle("a retry re-sends the byte-identical request");
     }
 
     [Fact]

@@ -507,6 +507,56 @@ public class PostFiscalizationProcessorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ToleratesAnUnreachableService_ForAnOperationalReceipt()
+    {
+        // An outage must not stop the operator from activating, closing or decommissioning the queue: a lifecycle or zero
+        // receipt is fiscalized without the service, which is journaled next to the receipt.
+        var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+        var processor = Processor(null, eReporting);
+        var request = Request();
+        request.ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_4001; // initial operation
+
+        var preflight = await processor.ValidateAsync(request);
+
+        preflight.Accepted.Should().BeTrue();
+        preflight.EReporting.Should().Be(PostFiscalizationServiceOutcome.NotApplicable);
+        preflight.ToleratedFailures.Should().ContainSingle().Which.Service.Should().Be(PostFiscalizationService.EReporting);
+
+        var queueItem = QueueItem();
+        var journals = new List<ftActionJournal>();
+        var finalized = await processor.FinalizeAsync(request, Fiscalized(queueItem), queueItem, preflight, journals);
+
+        eReporting.ProcessCalls.Should().BeEmpty();
+        finalized.ftState.IsState(State.Error).Should().BeFalse();
+        journals.Should().ContainSingle().Which.Type.Should().Be("ereporting-unreachable");
+        Outcome(finalized).EReporting.Should().Be(PostFiscalizationStateData.NotApplicable);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_StillRefusesAnUnreachableService_ForABusinessReceipt()
+    {
+        var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+        var processor = Processor(null, eReporting);
+
+        var preflight = await processor.ValidateAsync(Request());
+
+        preflight.Accepted.Should().BeFalse("the queue cannot know whether the receipt is reportable, and refusing before fiscalization is the safe direction");
+        preflight.Rejection!.Outcome.Should().Be(PostFiscalizationServiceOutcome.Failed);
+        preflight.ToleratedFailures.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void NotApplicablePreflight_NamesTheConfiguredServices()
+    {
+        var preflight = Processor(FakePostFiscalizationService.Applying(), null).NotApplicablePreflight();
+
+        preflight.Accepted.Should().BeTrue();
+        preflight.EInvoicing.Should().Be(PostFiscalizationServiceOutcome.NotApplicable);
+        preflight.EReporting.Should().Be(PostFiscalizationServiceOutcome.Disabled);
+        preflight.ToleratedFailures.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task FinalizeAsync_TreatsANullAnswerAsAFailure()
     {
         var eReporting = new FakePostFiscalizationService { OnProcess = _ => Task.FromResult<ProcessResponse>(null!) };
