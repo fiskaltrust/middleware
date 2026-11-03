@@ -114,12 +114,17 @@ namespace fiskaltrust.Middleware.Queue
                         var message = $"Queue {_middlewareConfiguration.QueueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        // RFC 712: a replay returns whatever was persisted for this cbReceiptReference, error state included.
-                        // A POS recovering from a failed eInvoicing/eReporting finalize call needs the fiscalized-but-failed
-                        // response; on a queue without such services an error response still means the receipt was not
-                        // fiscalized, so resending it stays the correct reaction, the response now just carries the reason.
-                        // (This generalizes the earlier rule that only v2 and IT replays returned the error response.)
-                        return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        // Returning null for errored responses is only valid for v1; v2 (and IT fallback) requests return the error response.
+                        // RFC 712: a receipt whose eInvoicing/eReporting finalize call failed after fiscalization carries the error
+                        // state next to the FiscalizationSucceeded marker; its persisted response is what the POS needs to recover,
+                        // so it is returned on every market. A genuinely failed v1 receipt still replays as null, which tells the
+                        // POS to resend it.
+                        if (response.IsError() && !data.IsV2() && ReceiptRequestHelper.GetCountry(data, queue.CountryCode) != "IT" && !response.IsFiscalized())
+                        {
+                            return null;
+                        }
+                        return response;
                     }
                 }
                 catch (Exception x)
@@ -146,7 +151,20 @@ namespace fiskaltrust.Middleware.Queue
             // RFC 712, phase 1 (legacy backport): the configured eInvoicing/eReporting services validate the receipt before
             // any bookkeeping that produces a fiscal record. A rejection or an unreachable service refuses the receipt: no
             // queue item, no fiscal record, no receipt journal, so the POS can correct and resend it as a new transaction.
-            var (preflight, v2Request) = await PreflightAsync(data).ConfigureAwait(false);
+            // The preflight only runs for a receipt the market may fiscalize: on an operational queue, or the activation
+            // receipt of a new queue. The markets answer every other receipt on a queue that is not operational without
+            // fiscalizing it, so the services are not asked about it.
+            PostFiscalizationPreflight preflight;
+            ifPOS.v2.ReceiptRequest v2Request;
+            if (LegacyOperationalReceiptCases.MayBeFiscalized(queue, ReceiptRequestHelper.GetCountry(data, queue.CountryCode), data.ftReceiptCase))
+            {
+                (preflight, v2Request) = await PreflightAsync(data).ConfigureAwait(false);
+            }
+            else
+            {
+                preflight = _postFiscalizationProcessor.NotApplicablePreflight();
+                v2Request = null;
+            }
             if (!preflight.Accepted)
             {
                 return await RejectBeforeFiscalizationAsync(queue, data, preflight.Rejection).ConfigureAwait(false);
@@ -398,32 +416,91 @@ namespace fiskaltrust.Middleware.Queue
                 return receiptResponse;
             }
 
+            // Three steps, each failing on its own terms. A conversion failure means no service was reached; an unexpected
+            // failure of the phase itself leaves the outcome unknown; a failure to merge the result back comes after the
+            // services answered and must not undo what they did.
+            ifPOS.v2.ReceiptResponse v2Response;
             try
             {
-                var v2Response = PostFiscalizationMapper.ToV2(receiptResponse);
-                var finalized = await _postFiscalizationProcessor.FinalizeAsync(v2Request, v2Response, queueItem, preflight, actionJournals).ConfigureAwait(false);
-                PostFiscalizationMapper.MergeIntoV1(receiptResponse, finalized);
-                return receiptResponse;
+                v2Response = PostFiscalizationMapper.ToV2(receiptResponse);
             }
             catch (Exception ex)
             {
-                var service = preflight.EInvoicing == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationService.EInvoicing
-                    : preflight.EReporting == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationService.EReporting
-                    : _postFiscalizationProcessor.FirstConfiguredService.Value;
-                var reason = $"{service.DisplayName()} process call failed after fiscalization: the receipt could not be converted between the v1 and the v2 contract: {ex.Message}";
-                _logger.LogError(ex, "Post-fiscalization mapping failed for queue item {QueueItemId}; the receipt is fiscalized and is marked as failed.", queueItem.ftQueueItemId);
+                return MarkFailedWithoutServiceAnswer(v2Request, receiptResponse, queueItem, preflight, actionJournals, "the receipt could not be converted to the v2 contract", ex);
+            }
 
-                receiptResponse.ftState = PostFiscalizationMapper.LegacyErrorState(receiptResponse.ftState);
-                receiptResponse.ftSignatures = (receiptResponse.ftSignatures ?? new SignaturItem[0]).Concat(new[]
+            ifPOS.v2.ReceiptResponse finalized;
+            try
+            {
+                finalized = await _postFiscalizationProcessor.FinalizeAsync(v2Request, v2Response, queueItem, preflight, actionJournals).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                return MarkFailedWithoutServiceAnswer(v2Request, receiptResponse, queueItem, preflight, actionJournals, "the finalize phase failed unexpectedly", ex);
+            }
+
+            try
+            {
+                PostFiscalizationMapper.MergeIntoV1(receiptResponse, finalized);
+            }
+            catch (Exception ex)
+            {
+                MergeBestEffort(receiptResponse, finalized, queueItem, actionJournals, ex);
+            }
+
+            return receiptResponse;
+        }
+
+        /// <summary>
+        /// The receipt is fiscalized but no service answered for it: it is marked as failed with the failing service's
+        /// signature, and the persisted outcome section still carries <c>FiscalizationSucceeded</c>, because without the
+        /// marker the v1 <c>IsFiscalized()</c> would treat it as a failed receipt and a later refund, void or reprint would
+        /// lose its references. A service that applied did not get the receipt, so its outcome is failed; the others keep
+        /// their preflight outcome.
+        /// </summary>
+        private ReceiptResponse MarkFailedWithoutServiceAnswer(ifPOS.v2.ReceiptRequest v2Request, ReceiptResponse receiptResponse, ftQueueItem queueItem, PostFiscalizationPreflight preflight, List<ftActionJournal> actionJournals, string cause, Exception ex)
+        {
+            var service = preflight.EInvoicing == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationService.EInvoicing
+                : preflight.EReporting == PostFiscalizationServiceOutcome.Applies ? PostFiscalizationService.EReporting
+                : _postFiscalizationProcessor.FirstConfiguredService.Value;
+            var reason = $"{service.DisplayName()} process call failed after fiscalization: {cause}: {ex.Message}";
+            _logger.LogError(ex, "Post-fiscalization failed for queue item {QueueItemId} before any service answered; the receipt is fiscalized and is marked as failed.", queueItem.ftQueueItemId);
+
+            receiptResponse.ftState = PostFiscalizationMapper.LegacyErrorState(receiptResponse.ftState);
+            receiptResponse.ftSignatures = (receiptResponse.ftSignatures ?? new SignaturItem[0]).Concat(new[]
+            {
+                new SignaturItem
                 {
-                    new SignaturItem
-                    {
-                        ftSignatureFormat = 0x1,
-                        ftSignatureType = PostFiscalizationMapper.LegacyFailureSignatureType(unchecked((long) v2Request.ftReceiptCase)),
-                        Caption = service.FailedCaption(),
-                        Data = reason
-                    }
-                }).ToArray();
+                    ftSignatureFormat = 0x1,
+                    ftSignatureType = PostFiscalizationMapper.LegacyFailureSignatureType(unchecked((long) v2Request.ftReceiptCase)),
+                    Caption = service.FailedCaption(),
+                    Data = reason
+                }
+            }).ToArray();
+            actionJournals.Add(new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queueItem.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                Moment = DateTime.UtcNow,
+                Priority = 0x10,
+                Type = service.FailedCaption(),
+                Message = $"{reason} (queue item {queueItem.ftQueueItemId})",
+                DataJson = JsonConvert.SerializeObject(new { service = service.Key(), phase = "process", reason, detail = ex.ToString() })
+            });
+
+            var outcome = new PostFiscalizationStateData
+            {
+                FiscalizationSucceeded = true,
+                EInvoicing = RecoveryOutcome(preflight.EInvoicing),
+                EReporting = RecoveryOutcome(preflight.EReporting),
+            };
+            var (stateData, uninterpretable) = PostFiscalizationProcessor.WithOutcome(receiptResponse.ftStateData, outcome);
+            receiptResponse.ftStateData = PostFiscalizationMapper.StateDataToString(stateData);
+            if (uninterpretable != null)
+            {
+                var message = PostFiscalizationProcessor.UninterpretableStateDataMessage(queueItem);
+                _logger.LogError(uninterpretable, message);
                 actionJournals.Add(new ftActionJournal
                 {
                     ftActionJournalId = Guid.NewGuid(),
@@ -431,42 +508,62 @@ namespace fiskaltrust.Middleware.Queue
                     ftQueueItemId = queueItem.ftQueueItemId,
                     Moment = DateTime.UtcNow,
                     Priority = 0x10,
-                    Type = service.FailedCaption(),
-                    Message = $"{reason} (queue item {queueItem.ftQueueItemId})",
-                    DataJson = JsonConvert.SerializeObject(new { service = service.Key(), phase = "process", reason, detail = ex.ToString() })
+                    Type = "postfiscalization-statedata",
+                    Message = message,
+                    DataJson = JsonConvert.SerializeObject(new { outcome, error = uninterpretable.ToString() })
                 });
-
-                // The receipt is fiscalized, and the persisted outcome section must say so: without FiscalizationSucceeded
-                // the v1 IsFiscalized() would treat it as a failed receipt and a later refund, void or reprint would lose
-                // its references. A service that applied did not get the receipt (or its answer could not be merged back),
-                // so its outcome is failed; the others keep their preflight outcome.
-                var outcome = new PostFiscalizationStateData
-                {
-                    FiscalizationSucceeded = true,
-                    EInvoicing = RecoveryOutcome(preflight.EInvoicing),
-                    EReporting = RecoveryOutcome(preflight.EReporting),
-                };
-                var (stateData, uninterpretable) = PostFiscalizationProcessor.WithOutcome(receiptResponse.ftStateData, outcome);
-                receiptResponse.ftStateData = PostFiscalizationMapper.StateDataToString(stateData);
-                if (uninterpretable != null)
-                {
-                    var message = PostFiscalizationProcessor.UninterpretableStateDataMessage(queueItem);
-                    _logger.LogError(uninterpretable, message);
-                    actionJournals.Add(new ftActionJournal
-                    {
-                        ftActionJournalId = Guid.NewGuid(),
-                        ftQueueId = queueItem.ftQueueId,
-                        ftQueueItemId = queueItem.ftQueueItemId,
-                        Moment = DateTime.UtcNow,
-                        Priority = 0x10,
-                        Type = "postfiscalization-statedata",
-                        Message = message,
-                        DataJson = JsonConvert.SerializeObject(new { outcome, error = uninterpretable.ToString() })
-                    });
-                }
-
-                return receiptResponse;
             }
+
+            return receiptResponse;
+        }
+
+        /// <summary>
+        /// The services answered and their outcome stands: when the result cannot be merged back as a whole, it is merged
+        /// field by field, and whatever cannot be merged is journaled rather than turned into a failure that would invite
+        /// a resubmission of a receipt the services already have.
+        /// </summary>
+        private void MergeBestEffort(ReceiptResponse target, ifPOS.v2.ReceiptResponse source, ftQueueItem queueItem, List<ftActionJournal> actionJournals, Exception mergeError)
+        {
+            var leftOut = new List<string>();
+            target.ftState = unchecked((long) (ulong) source.ftState);
+
+            var signatures = new List<SignaturItem>();
+            foreach (var signature in source.ftSignatures ?? new List<ifPOS.v2.SignatureItem>())
+            {
+                try
+                {
+                    signatures.Add(PostFiscalizationMapper.ToV1(signature));
+                }
+                catch (Exception ex)
+                {
+                    leftOut.Add($"signature '{signature?.Caption}': {ex.Message}");
+                }
+            }
+            target.ftSignatures = signatures.ToArray();
+
+            try
+            {
+                target.ftStateData = PostFiscalizationMapper.StateDataToString(source.ftStateData);
+            }
+            catch (Exception ex)
+            {
+                leftOut.Add($"state data: {ex.Message}"); // the v1 state data from before the call stays
+            }
+
+            var message = $"The eInvoicing/eReporting result of queue item {queueItem.ftQueueItemId} could not be merged back onto the v1 response as a whole ({mergeError.Message}); it was merged field by field"
+                + (leftOut.Count == 0 ? "." : $", leaving out: {string.Join("; ", leftOut)}.");
+            _logger.LogError(mergeError, message);
+            actionJournals.Add(new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queueItem.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                Moment = DateTime.UtcNow,
+                Priority = 0x10,
+                Type = "postfiscalization-merge",
+                Message = message,
+                DataJson = JsonConvert.SerializeObject(new { error = mergeError.ToString(), leftOut })
+            });
         }
 
         private async Task<ftQueueItem> GetExistingQueueItemOrNullAsync(ReceiptRequest data)

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -43,7 +42,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
 
             public Harness()
             {
-                Queue = new ftQueue { ftCashBoxId = CashBoxId, ftQueueId = QueueId, ftCurrentRow = 1 };
+                // an operational queue, activated a day ago; a test sets StartMoment / StopMoment itself to model another state
+                Queue = new ftQueue { ftCashBoxId = CashBoxId, ftQueueId = QueueId, ftCurrentRow = 1, StartMoment = DateTime.UtcNow.AddDays(-1) };
                 Configuration = new MiddlewareConfiguration { QueueId = QueueId, CashBoxId = CashBoxId, ProcessingVersion = "test" };
             }
 
@@ -100,7 +100,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
                         .Returns<ReceiptRequest, ftQueue, ftQueueItem>((request, _, queueItem) => Task.FromResult((countryResponse(request, queueItem), new List<ftActionJournal>())));
                 }
 
-                var processor = new PostFiscalizationProcessor(Mock.Of<ILogger<PostFiscalizationProcessor>>(), eInvoicing, eReporting, PostFiscalizationMapper.LegacyFailureSignatureType, LegacyInvoiceReceiptCases.IsInvoiceDocument);
+                var processor = new PostFiscalizationProcessor(Mock.Of<ILogger<PostFiscalizationProcessor>>(), eInvoicing, eReporting, PostFiscalizationMapper.LegacyFailureSignatureType, LegacyInvoiceReceiptCases.IsInvoiceDocument, LegacyOperationalReceiptCases.IsOperationalReceipt);
                 return new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, CountryProcessor.Object, Configuration, processor);
             }
         }
@@ -330,6 +330,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
 
             var response = await sut.ProcessAsync(harness.Request(ItPosReceiptCase));
 
+            eReporting.ValidateCalls.Should().BeEmpty("the services are not asked about a receipt that will not be fiscalized");
             eReporting.ProcessCalls.Should().BeEmpty("nothing was fiscalized, so there is nothing to report");
             response.ftState.Should().Be(ItSuccessState | SecurityMechanismDeactivatedFlag);
             response.ftStateData.Should().NotContain("PostFiscalization");
@@ -474,7 +475,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
             eInvoicing.ProcessCalls.Should().BeEmpty();
             (response.ftState & 0xFFFF_FFFF).Should().Be(0xEEEE_EEEE);
             response.ftSignatures.Select(signature => signature.Caption).Should().Equal("rt-document", "unrepresentable", "einvoicing-failed");
-            response.ftSignatures.Last().Data.Should().Contain("could not be converted between the v1 and the v2 contract");
+            response.ftSignatures.Last().Data.Should().Contain("could not be converted to the v2 contract");
             response.ftStateData.Should().Contain("\"FiscalizationSucceeded\":true").And.Contain("\"EInvoicing\":\"failed\"").And.Contain("\"EReporting\":\"disabled\"");
             response.ftStateData.Should().Contain("\"IT\"", "the market's own state data is kept");
             response.IsFiscalized().Should().BeTrue("the v1 predicate reads the marker");
@@ -496,8 +497,39 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest.PostFiscalization
 
             var response = await sut.ProcessAsync(harness.Request(0x4954_0000_0000_4001L));
 
+            eReporting.ValidateCalls.Should().ContainSingle("the activation receipt of a new queue is the one receipt presented to the services before the queue is operational");
             eReporting.ProcessCalls.Should().ContainSingle();
             response.ftStateData.Should().Contain("\"EReporting\":\"ok\"");
+        }
+
+        [Fact]
+        public async Task AnUnreachableService_DoesNotRefuseAnOperationalReceipt()
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = DateTime.UtcNow.AddDays(-1);
+            var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+            var sut = harness.Create(null, eReporting, (request, queueItem) => harness.Fiscalized(request, queueItem));
+
+            var response = await sut.ProcessAsync(harness.Request(0x4954_2000_0000_2000L)); // zero receipt
+
+            response.ftState.Should().Be(ItSuccessState, "an outage must not stop the operator from running the queue's lifecycle");
+            harness.ReceiptJournals.Should().ContainSingle();
+            harness.ActionJournals.Should().Contain(journal => journal.Type == "ereporting-unreachable");
+            response.ftStateData.Should().Contain("\"EReporting\":\"not-applicable\"");
+        }
+
+        [Fact]
+        public async Task AnUnreachableService_StillRefusesABusinessReceipt()
+        {
+            var harness = new Harness();
+            harness.Queue.StartMoment = DateTime.UtcNow.AddDays(-1);
+            var eReporting = new FakePostFiscalizationService { OnValidate = _ => throw new PostFiscalizationServiceException("unreachable after 2 attempt(s): Connection refused") };
+            var sut = harness.Create(null, eReporting, (request, queueItem) => harness.Fiscalized(request, queueItem));
+
+            var response = await sut.ProcessAsync(harness.Request(ItPosReceiptCase));
+
+            (response.ftState & 0xFFFF_FFFF).Should().Be(0xFFFF_FFFF);
+            harness.ReceiptJournals.Should().BeEmpty();
         }
 
         [Fact]

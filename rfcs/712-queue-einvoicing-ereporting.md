@@ -598,6 +598,7 @@ The **finalize failure** path does not port as-is. Two legacy behaviors break th
 
 - The `ReceiptRequested` path deserializes the persisted response and, when it is an error, **returns `null`** (lines 112–115) instead of the response. A POS that hit a finalize failure has no way to retrieve the fiscalized-but-failed receipt.
 - For non-v2 requests the legacy processor **rethrows the original exception** on an error state rather than returning an error response (lines 231–234), so the failure reaches the POS as a transport fault, not as a `ReceiptResponse` carrying `ftState` and the failure signature.
+- A v1 replay (`ReceiptRequested`) of a receipt in the error state returns `null` on AT, DE, FR and ME, which tells the POS to resend; only v2 and IT replays return the persisted error response. The backport keeps that rule and generalizes it by the marker: a receipt whose finalize call failed after fiscalization carries `FiscalizationSucceeded = true`, and its persisted response is returned on every market, because a POS that resent it would create a second fiscal record. A queue without eInvoicing/eReporting never persists the marker, so its replays are unchanged.
 
 The decision is to **fix the legacy processor** rather than weaken the guarantee on legacy queues. Two narrow changes in `fiskaltrust.Middleware.Queue.SignProcessor`:
 

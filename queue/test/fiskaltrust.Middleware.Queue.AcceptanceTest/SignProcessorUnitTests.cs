@@ -166,12 +166,9 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             queueItemRepository.Verify();
         }
         [Fact]
-        public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnThePersistedErrorResponse()
+        public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnNull()
         {
-            // RFC 712 (legacy backport): a replay returns whatever was persisted, error state included. A POS recovering
-            // from a failed eInvoicing/eReporting finalize call needs the fiscalized-but-failed response; on a queue
-            // without such services an error response still means the receipt was not fiscalized, so resending it
-            // stays correct. Previously the replay returned null here.
+            // A genuinely failed v1 receipt replays as null, which tells the POS to resend it; RFC 712 leaves this alone.
             var (request, configuration, queueItemRepository, configurationRepository) = SetupTestEnvironment(
             ftReceiptCase: 0x0000800000000000L, // V1 tagging
             ftState: 0xEEEE_EEEE,
@@ -180,8 +177,27 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var sut = CreateSignProcessor(queueItemRepository, configuration, configurationRepository);
 
             var response = await sut.ProcessAsync(request);
+            response.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task RequestPreviousReceipt_WithV1RequestAndFinalizeFailedReceipt_ShouldReturnThePersistedResponse()
+        {
+            // RFC 712 (legacy backport): a receipt whose eInvoicing/eReporting finalize call failed after fiscalization
+            // carries the error state next to the FiscalizationSucceeded marker; a POS recovering from it needs that
+            // response, not a null that would make it resend an already fiscalized receipt.
+            var (request, configuration, queueItemRepository, configurationRepository) = SetupTestEnvironment(
+            ftReceiptCase: 0x0000800000000000L, // V1 tagging
+            ftState: 0xEEEE_EEEE,
+            countryCode: "DE",
+            ftStateData: "{\"PostFiscalization\":{\"FiscalizationSucceeded\":true,\"EInvoicing\":\"failed\",\"EReporting\":\"disabled\"}}");
+
+            var sut = CreateSignProcessor(queueItemRepository, configuration, configurationRepository);
+
+            var response = await sut.ProcessAsync(request);
             response.Should().NotBeNull();
             response.ftState.Should().Be(0xEEEE_EEEE);
+            response.ftStateData.Should().Contain("\"FiscalizationSucceeded\":true");
         }
      
         [Fact]
@@ -328,7 +344,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             response.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE);
         }
 
-        private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo, IConfigurationRepository configurationRepository) SetupTestEnvironment(long ftReceiptCase, long ftState, string countryCode)
+        private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo, IConfigurationRepository configurationRepository) SetupTestEnvironment(long ftReceiptCase, long ftState, string countryCode, string ftStateData = null)
         {
             var queueId = Guid.NewGuid();
             var cashboxId = Guid.NewGuid();
@@ -342,7 +358,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 cbReceiptReference = "MycbReceiptReference"
             };
 
-            var responseObject = new ReceiptResponse { ftState = ftState };
+            var responseObject = new ReceiptResponse { ftState = ftState, ftStateData = ftStateData };
 
             var queueItem = new ftQueueItem
             {
