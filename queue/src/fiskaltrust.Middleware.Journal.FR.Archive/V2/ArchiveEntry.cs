@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
@@ -19,16 +20,20 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private const long ReceiptSignatureType = 0x0001;
         private const long CertificateSerialNumberType = 0x0002;
         private const long SiretType = 0x0009;
+        private const long InformationType = 0x0000;
+
+        // FRCanonicalRequest.SignedField: the canonical-form version, a colon, the padded Base64 SHA-256 (ADR 0013).
+        private static readonly Regex SignedRequestHashField = new Regex("^[0-9]+:[A-Za-z0-9+/]{43}=$", RegexOptions.CultureInvariant);
         private const long TrainingFlag = 0x0000_0000_0002_0000;
 
-        private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string? requestHash, string rawRequest, JsonElement request, JsonElement response,
+        private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string rawRequest, JsonElement request, JsonElement response,
             string chain, long chainCounter, string signature)
         {
             RawRequest = rawRequest;
             QueueItemId = queueItemId;
             QueueId = queueId;
             QueueRow = queueRow;
-            RequestHash = string.IsNullOrEmpty(requestHash) ? null : requestHash;
+            RequestHash = SignedRequestHash(response);
             Request = request;
             Response = response;
             Chain = chain;
@@ -48,7 +53,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         public long QueueRow { get; }
 
-        /// <summary><c>ftQueueItem.requestHash</c> as stored, never recomputed (ADR 0010).</summary>
+        /// <summary>
+        /// The canonical request value the SCU signed, <c>1:&lt;Base64 SHA-256&gt;</c> (ADR 0013), read from
+        /// the signed data set the response carries; never recomputed here. Null when the SCU signs none
+        /// (InfoCert). A verifier recomputes it from <see cref="RawRequest"/> and compares.
+        /// </summary>
         public string? RequestHash { get; }
 
         /// <summary>The ReceiptRequest as the queue stored it.</summary>
@@ -102,7 +111,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// an error response, a v1 entry (whose signature items lack the v2 format nibble), or a response
         /// without a receipt signature.
         /// </summary>
-        public static ArchiveEntry? TryCreate(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response, string? requestHash)
+        public static ArchiveEntry? TryCreate(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response)
         {
             if (string.IsNullOrEmpty(request) || string.IsNullOrEmpty(response))
             {
@@ -142,7 +151,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 return null;
             }
 
-            return new ArchiveEntry(queueItemId, queueId, queueRow, requestHash, request!, requestJson, responseJson, chain, counter, signature!);
+            return new ArchiveEntry(queueItemId, queueId, queueRow, request!, requestJson, responseJson, chain, counter, signature!);
         }
 
         /// <summary>
@@ -181,14 +190,33 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private static bool IsErrorState(long state) => (state & 0xFFFF_FFFF) is 0xEEEE_EEEE or 0xFFFF_FFFF;
 
         /// <summary>
+        /// The request field of the LNE data set ("Donnees signees", an information item). The data set is
+        /// '|'-separated and holds exactly one field of the <c>version:hash</c> shape.
+        /// </summary>
+        private static string? SignedRequestHash(JsonElement response)
+        {
+            foreach (var dataSet in SignatureItems(response, InformationType))
+            {
+                var field = dataSet?.Split('|').FirstOrDefault(f => SignedRequestHashField.IsMatch(f));
+                if (field is not null)
+                {
+                    return field;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
         /// The data of the first FR v2 signature item of the given type (low word). The v2 format nibble
         /// (<c>0xCCCC_2…</c>) tells a v2 item from a v1 one, whose types are <c>0x4652_0000_…</c>.
         /// </summary>
-        internal static string? SignatureData(JsonElement response, long type)
+        internal static string? SignatureData(JsonElement response, long type) => SignatureItems(response, type).FirstOrDefault();
+
+        private static IEnumerable<string?> SignatureItems(JsonElement response, long type)
         {
             if (!response.TryGetProperty("ftSignatures", out var signatures) || signatures.ValueKind != JsonValueKind.Array)
             {
-                return null;
+                yield break;
             }
             foreach (var item in signatures.EnumerateArray())
             {
@@ -200,9 +228,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 {
                     continue;
                 }
-                return String(item, "Data");
+                yield return String(item, "Data");
             }
-            return null;
         }
 
         internal static IEnumerable<JsonElement> Array(JsonElement element, string name)

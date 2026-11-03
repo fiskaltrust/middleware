@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             "\"cbChargeItems\":[{\"Amount\":1.234567890123456789012,\"Description\":\"Caf\\u00e9 <crème>\\n\\\"x\\\"\",\"Position\":1}]}";
 
         private static ArchiveEntry Entry(string request, long row = 1)
-            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, request, ArchiveV2FilesTests.Response($"ft{row}#T{row}", $"t{row}"), null)!;
+            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, request, ArchiveV2FilesTests.Response($"ft{row}#T{row}", $"t{row}"))!;
 
         private static async Task<string> Write(params ArchiveEntry[] entries)
         {
