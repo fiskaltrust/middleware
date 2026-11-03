@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                 if (bucket.Groups.Count > 0)
                 {
                     result.Add(new MainArchive<TRecord>(slices[i], bucket.Groups.Select(g => g.ToSubArchive(slices[i])).ToList()));
-                    lastKeySeen = bucket.Groups[bucket.Groups.Count - 1].Key;
+                    lastKeySeen = bucket.LastKey;
                     continue;
                 }
 
@@ -129,6 +129,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
 
             public List<Group<TRecord>> Groups { get; } = new List<Group<TRecord>>();
 
+            /// <summary>
+            /// The key of the last record added. Not the last group: groups keep the order of each key's
+            /// first record, so with certificates A, B, A the last group is B.
+            /// </summary>
+            public SubArchiveKey? LastKey { get; private set; }
+
             public void Add(SubArchiveKey key, TRecord record, DateTime moment)
             {
                 if (key is null)
@@ -142,6 +148,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                     Groups.Add(group);
                 }
                 group.Add(record, moment);
+                LastKey = key;
             }
         }
 

@@ -88,6 +88,18 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public void An_empty_year_takes_the_key_of_the_last_record_not_of_the_last_sub_archive()
+        {
+            // Certificates AAAA -> BBBB -> AAAA: the sub-archives are AAAA, BBBB, but the chain ended on AAAA.
+            var archives = Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2026, 1, 1)), null,
+                TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"), TestRecord.At(2024, 11, 1, "AAAA"));
+
+            archives[0].SubArchives.Select(s => s.Key.CertificateSerialNumber).Should().Equal("AAAA", "BBBB");
+            archives[1].IsEmpty.Should().BeTrue();
+            archives[1].SubArchives.Single().Key.CertificateSerialNumber.Should().Be("AAAA");
+        }
+
+        [Fact]
         public void A_certificate_or_format_switch_splits_the_year_into_sub_archives_in_chain_order()
         {
             var records = new[]

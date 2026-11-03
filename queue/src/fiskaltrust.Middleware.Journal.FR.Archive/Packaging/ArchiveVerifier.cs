@@ -36,10 +36,25 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 
     /// <summary>
     /// Checks an archive written by <see cref="ArchivePackager{TRecord}"/>: the manifest signature, every
-    /// file's hash and signature, that no file is unlisted, and the same for each sub-archive.
+    /// file's hash and signature, that no file is unlisted, and the same for each sub-archive. A tampered or
+    /// malformed archive is reported in <see cref="ArchiveVerificationResult.Errors"/>, never thrown.
     /// </summary>
+    /// <remarks>
+    /// Files are hashed from their streams, and a sub-archive is read through a seekable copy that stays in
+    /// memory up to <see cref="DefaultInMemorySubArchiveLimit"/> and goes to a temporary file above it, so an
+    /// annual archive does not have to fit in memory.
+    /// </remarks>
     public static class ArchiveVerifier
     {
+        /// <summary>The largest sub-archive verified in memory; a larger one is copied to a temporary file.</summary>
+        public const long DefaultInMemorySubArchiveLimit = 16 * 1024 * 1024;
+
+        /// <summary>Lowered by tests to reach the temporary-file path without a 16 MB archive.</summary>
+        internal static long InMemorySubArchiveLimit = DefaultInMemorySubArchiveLimit;
+
+        /// <summary>manifest.json, manifest.sig and the certificate are read whole; nothing legitimate comes near this.</summary>
+        private const long SmallFileLimit = 1024 * 1024;
+
         public static ArchiveVerificationResult Verify(Stream archive)
         {
             if (archive is null) throw new ArgumentNullException(nameof(archive));
@@ -62,6 +77,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 
             using (zip)
             {
+                var duplicates = zip.Entries.GroupBy(e => e.FullName, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+                if (duplicates.Count > 0)
+                {
+                    result.Errors.AddRange(duplicates.Select(name => $"{name} appears more than once in the zip"));
+                    return result;
+                }
                 var entries = zip.Entries.ToDictionary(e => e.FullName, StringComparer.Ordinal);
                 if (!entries.TryGetValue(ArchivePackager<object>.ManifestFileName, out var manifestEntry)
                     || !entries.TryGetValue(ArchivePackager<object>.ManifestSignatureFileName, out var signatureEntry))
@@ -70,7 +91,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     return result;
                 }
 
-                var manifestBytes = ReadAll(manifestEntry);
+                if (!TryReadSmall(manifestEntry, result, out var manifestBytes))
+                {
+                    return result;
+                }
                 ArchiveManifest manifest;
                 try
                 {
@@ -79,6 +103,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                 catch (Exception e) when (e is System.Text.Json.JsonException || e is NotSupportedException)
                 {
                     result.Errors.Add($"manifest.json unreadable ({e.Message})");
+                    return result;
+                }
+                var structureErrors = StructureErrors(manifest).ToList();
+                if (structureErrors.Count > 0)
+                {
+                    result.Errors.AddRange(structureErrors);
                     return result;
                 }
                 result.Manifest = manifest;
@@ -92,15 +122,31 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     result.Errors.Add($"signing certificate {manifest.SigningCertificate.FileName} missing");
                     return result;
                 }
-                var certificateBytes = ReadAll(certificateEntry);
-                var certificate = new X509Certificate2(certificateBytes);
+                if (!TryReadSmall(certificateEntry, result, out var certificateBytes))
+                {
+                    return result;
+                }
+                X509Certificate2 certificate;
+                try
+                {
+                    certificate = new X509Certificate2(certificateBytes);
+                }
+                catch (CryptographicException e)
+                {
+                    result.Errors.Add($"signing certificate {manifest.SigningCertificate.FileName} unreadable ({e.Message})");
+                    return result;
+                }
                 result.SigningCertificate = certificate;
                 if (Convert.ToBase64String(Sha256(certificateBytes)) != manifest.SigningCertificate.Sha256Thumbprint)
                 {
                     result.Errors.Add("signing certificate does not match the manifest thumbprint");
                 }
 
-                if (!Verify(certificate, manifest.SignatureAlgorithm, Sha256(manifestBytes), ReadBase64(signatureEntry)))
+                if (!TryReadSmall(signatureEntry, result, out var signatureBytes))
+                {
+                    return result;
+                }
+                if (!Verify(certificate, manifest.SignatureAlgorithm, Sha256(manifestBytes), FromBase64(Encoding.ASCII.GetString(signatureBytes).Trim())))
                 {
                     result.Errors.Add("manifest signature invalid");
                 }
@@ -114,11 +160,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                         result.Errors.Add($"{file.Name} listed but missing");
                         continue;
                     }
-                    var content = ReadAll(entry);
-                    var hash = Sha256(content);
-                    if (content.LongLength != file.Size)
+                    var (hash, size) = HashEntry(entry);
+                    if (size != file.Size)
                     {
-                        result.Errors.Add($"{file.Name} size {content.LongLength}, manifest says {file.Size}");
+                        result.Errors.Add($"{file.Name} size {size}, manifest says {file.Size}");
                     }
                     if (Convert.ToBase64String(hash) != file.Hash)
                     {
@@ -141,8 +186,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                         result.Errors.Add($"sub-archive {subArchive.FileName} is not a listed file");
                         continue;
                     }
-                    using var buffer = new MemoryStream(ReadAll(entry));
-                    var sub = Verify(buffer, subArchive.FileName, ArchiveManifest.SubKind);
+                    using var backing = SeekableCopy(entry);
+                    var sub = Verify(backing, subArchive.FileName, ArchiveManifest.SubKind);
                     if (sub.Manifest is not null
                         && (sub.Manifest.CertificateSerialNumber != subArchive.CertificateSerialNumber || sub.Manifest.FormatVersion != subArchive.FormatVersion
                             || sub.Manifest.PeriodStart != manifest.PeriodStart || sub.Manifest.PeriodEnd != manifest.PeriodEnd || sub.Manifest.Siret != manifest.Siret))
@@ -153,6 +198,49 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                 }
             }
             return result;
+        }
+
+        /// <summary>
+        /// What the verifier relies on. Nullable annotations do not stop a tampered manifest from carrying
+        /// <c>null</c>, so each value is checked before it is used.
+        /// </summary>
+        private static IEnumerable<string> StructureErrors(ArchiveManifest manifest)
+        {
+            if (manifest.SigningCertificate is null)
+            {
+                yield return "manifest has no signingCertificate";
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(manifest.SigningCertificate.FileName)) yield return "manifest signingCertificate has no fileName";
+                if (manifest.SigningCertificate.Sha256Thumbprint is null) yield return "manifest signingCertificate has no sha256Thumbprint";
+            }
+            if (manifest.SignatureAlgorithm is null) yield return "manifest has no signatureAlgorithm";
+            if (manifest.Files is null)
+            {
+                yield return "manifest has no files";
+            }
+            else
+            {
+                for (var i = 0; i < manifest.Files.Count; i++)
+                {
+                    var file = manifest.Files[i];
+                    if (file is null || string.IsNullOrEmpty(file.Name) || file.Hash is null || file.Signature is null)
+                    {
+                        yield return $"manifest file {i} lacks its name, hash or signature";
+                    }
+                }
+            }
+            if (manifest.SubArchives is not null)
+            {
+                for (var i = 0; i < manifest.SubArchives.Count; i++)
+                {
+                    if (manifest.SubArchives[i] is null || string.IsNullOrEmpty(manifest.SubArchives[i].FileName))
+                    {
+                        yield return $"manifest sub-archive {i} has no fileName";
+                    }
+                }
+            }
         }
 
         private static bool Verify(X509Certificate2 certificate, string algorithm, byte[] hash, byte[]? signature)
@@ -167,15 +255,48 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
             }
         }
 
-        private static byte[] ReadAll(ZipArchiveEntry entry)
+        private static bool TryReadSmall(ZipArchiveEntry entry, ArchiveVerificationResult result, out byte[] content)
         {
+            content = Array.Empty<byte>();
+            if (entry.Length > SmallFileLimit)
+            {
+                result.Errors.Add($"{entry.FullName} is {entry.Length} bytes, more than a manifest, signature or certificate holds");
+                return false;
+            }
             using var stream = entry.Open();
             using var buffer = new MemoryStream();
             stream.CopyTo(buffer);
-            return buffer.ToArray();
+            content = buffer.ToArray();
+            return true;
         }
 
-        private static byte[]? ReadBase64(ZipArchiveEntry entry) => FromBase64(Encoding.ASCII.GetString(ReadAll(entry)).Trim());
+        private static (byte[] Hash, long Size) HashEntry(ZipArchiveEntry entry)
+        {
+            using var stream = entry.Open();
+            using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            var buffer = new byte[81920];
+            long size = 0;
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                sha256.AppendData(buffer, 0, read);
+                size += read;
+            }
+            return (sha256.GetHashAndReset(), size);
+        }
+
+        private static Stream SeekableCopy(ZipArchiveEntry entry)
+        {
+            Stream backing = entry.Length <= InMemorySubArchiveLimit
+                ? new MemoryStream()
+                : new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
+            using (var stream = entry.Open())
+            {
+                stream.CopyTo(backing);
+            }
+            backing.Position = 0;
+            return backing;
+        }
 
         private static byte[]? FromBase64(string value)
         {
