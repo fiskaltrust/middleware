@@ -25,6 +25,9 @@ public class FakeFRSSCD : IFRSSCD
     /// </summary>
     public bool FailsOverJson { get; set; }
 
+    /// <summary>The state <see cref="FailWith"/> reports: signing unavailable unless set.</summary>
+    public SCU.FR.Abstraction.Cases.StateFR FailState { get; set; } = SCU.FR.Abstraction.Cases.StateFR.SigningUnavailableError;
+
     public Func<Exception>? ThrowOnProcess { get; set; }
 
     public ProcessRequest? LastRequest { get; private set; }
@@ -51,7 +54,7 @@ public class FakeFRSSCD : IFRSSCD
         if (FailWith is not null)
         {
             var response = FailsOverJson ? JsonSerializer.Deserialize<ReceiptResponse>(JsonSerializer.Serialize(request.ReceiptResponse))! : request.ReceiptResponse;
-            return Task.FromResult(response.ToSigningFailure(FailWith));
+            return Task.FromResult(response.ToSigningFailure(FailWith, FailState));
         }
 
         var signature = $"sig-{++_calls}";

@@ -16,9 +16,21 @@ public static class FRSSCDErrorHandling
 {
     public static bool IsError(ReceiptResponse scuResponse) => scuResponse.ftState.IsState(State.Error);
 
+    /// <summary>
+    /// True when the SCU could sign but refused this receipt (<see cref="StateFR.Error"/>), e.g. a
+    /// request it cannot accept, rather than reporting that signing is unavailable.
+    /// </summary>
+    public static bool IsRefusal(ReceiptResponse scuResponse) => scuResponse.ftState == (State) StateFR.Error;
+
     public static string Reason(ReceiptResponse scuResponse)
         => scuResponse.ftSignatures?.FirstOrDefault(x => x.Caption == "FAILURE")?.Data
             ?? $"the SCU returned ftState 0x{(ulong) scuResponse.ftState:X}";
+
+    public static void SetRefusedError(this ReceiptResponse receiptResponse, string reason)
+    {
+        receiptResponse.SetReceiptResponseError($"The signature creation unit refused to sign the receipt: {reason}");
+        receiptResponse.ftState = (State) StateFR.Error;
+    }
 
     public static void SetSigningUnavailableError(this ReceiptResponse receiptResponse, string reason)
     {

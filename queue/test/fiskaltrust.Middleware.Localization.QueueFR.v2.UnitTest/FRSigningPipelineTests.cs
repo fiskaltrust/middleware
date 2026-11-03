@@ -148,6 +148,20 @@ public class FRSigningPipelineTests
             .Which.Data.Should().Contain("private key unavailable");
     }
 
+    [Fact]
+    public async Task SignAsync_WhenTheScuRefusesTheReceipt_ReportsARefusalWithoutConsumingANumber()
+    {
+        var sscd = new FakeFRSSCD { FailWith = "unknown event code", FailState = SCU.FR.Abstraction.Cases.StateFR.Error };
+        var pipeline = CreatePipeline(sscd);
+
+        var refused = await pipeline.SignAsync(CommandRequest());
+
+        refused.receiptResponse.ftState.Should().Be((State) StateFR.Error, "a refusal is not an unavailable signing unit");
+        refused.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        refused.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "FAILURE")
+            .Which.Data.Should().Contain("refused").And.Contain("unknown event code");
+    }
+
     public static TheoryData<Exception> CallFailures => new()
     {
         new HttpRequestException("connection refused"),

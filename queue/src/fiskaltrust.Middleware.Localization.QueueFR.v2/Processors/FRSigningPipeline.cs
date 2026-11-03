@@ -62,12 +62,12 @@ public class FRSigningPipeline
             {
                 // The SCU reports its own failures in the response; an exception means no answer
                 // came back at all - the SCU unreachable, the transport failing.
-                return Unsigned(ex.Message);
+                return Unsigned(ex.Message, refused: false);
             }
 
             if (FRSSCDErrorHandling.IsError(response.ReceiptResponse))
             {
-                return Unsigned(FRSSCDErrorHandling.Reason(response.ReceiptResponse));
+                return Unsigned(FRSSCDErrorHandling.Reason(response.ReceiptResponse), FRSSCDErrorHandling.IsRefusal(response.ReceiptResponse));
             }
 
             chain.LastSignature = signature;
@@ -83,11 +83,19 @@ public class FRSigningPipeline
             // No document was issued, so neither the number nor the period may move - NF525
             // requires the national numbering of every chain to be gapless, and an unsigned
             // closing must leave the period open so it can be retried.
-            ProcessCommandResponse Unsigned(string reason)
+            ProcessCommandResponse Unsigned(string reason, bool refused)
             {
                 chain.Numerator--;
                 receiptResponse.ftReceiptIdentification = identificationBeforeSigning;
-                receiptResponse.SetSigningUnavailableError(reason);
+                if (refused)
+                {
+                    receiptResponse.SetRefusedError(reason);
+                }
+                else
+                {
+                    receiptResponse.SetSigningUnavailableError(reason);
+                }
+
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         });
