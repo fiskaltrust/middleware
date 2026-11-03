@@ -1,4 +1,5 @@
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.v2;
@@ -52,6 +53,15 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     {
         // ReceiptValidatorFR has made sure there is exactly one reference.
         var copiedReceiptReference = request.ReceiptRequest.cbPreviousReceiptReference!.SingleValue!;
+
+        // A training copy is not a fiscal copy: it neither reads nor feeds the copy journal, so it
+        // cannot shift the numbering of the real copies (as v1's CopyCommand).
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+        {
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateDuplicateSignature(copiedReceiptReference, copyNumber: null));
+            return await _pipeline.SignAsync(request).ConfigureAwait(false);
+        }
+
         var copies = await _copies;
 
         await _copyLock.WaitAsync().ConfigureAwait(false);
@@ -60,13 +70,9 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
             var copyNumber = await copies.GetCountOfCopiesAsync(copiedReceiptReference).ConfigureAwait(false) + 1;
             request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateDuplicateSignature(copiedReceiptReference, copyNumber));
 
-            var response = await _pipeline.SignAsync(request, copyNumber: copyNumber).ConfigureAwait(false);
-            if (FRSigningPipeline.Succeeded(response))
-            {
-                await copies.InsertAsync(CopyPayload(response.receiptResponse, copiedReceiptReference)).ConfigureAwait(false);
-            }
-
-            return response;
+            // The copy is journaled before the chain advances: if that fails, the copy is not
+            // issued and its number is not consumed, so no reprint number is ever signed twice.
+            return await _pipeline.SignAsync(request, copyNumber: copyNumber, recordSigned: signed => copies.InsertAsync(CopyPayload(signed, copiedReceiptReference))).ConfigureAwait(false);
         }
         finally
         {

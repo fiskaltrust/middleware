@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
@@ -37,6 +38,23 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
         protected override void EntityUpdated(ftJournalFRCopyPayload entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalFRCopyPayload entity) => entity.QueueItemId;
+
+        /// <summary>
+        /// Adds the copy and rejects one that is already journaled, as the other storages do: the
+        /// journal is append-only, so an existing copy must never be overwritten.
+        /// </summary>
+        public override async Task InsertAsync(ftJournalFRCopyPayload storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            try
+            {
+                await _tableClient.AddEntityAsync(MapToAzureEntity(storageEntity)).ConfigureAwait(false);
+            }
+            catch (RequestFailedException ex) when (ex.Status == 409)
+            {
+                throw new Exception("Entity with the same ID already exists.", ex);
+            }
+        }
 
         public async Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference)
         {

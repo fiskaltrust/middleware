@@ -21,9 +21,68 @@ public class DuplicateTests
 {
     private readonly InMemoryJournalFRCopyPayloadRepository _copies = new();
     private readonly FakeFRSSCD _sscd = new();
+    private bool _failNextJournalInsert;
 
     private ProtocolCommandProcessorFR CreateSut()
-        => new(new FRSigningPipeline(_sscd, new StoredChainState().Provider()), new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(_copies)));
+        => new(new FRSigningPipeline(_sscd, new StoredChainState().Provider()), new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new Journal(this))));
+
+    /// <summary>The copy journal, which can be told to fail its next insert.</summary>
+    private sealed class Journal(DuplicateTests test) : IJournalFRCopyPayloadRepository
+    {
+        public Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference) => test._copies.GetCountOfCopiesAsync(cbPreviousReceiptReference);
+
+        public Task<ftJournalFRCopyPayload> GetAsync(Guid queueItemId) => test._copies.GetAsync(queueItemId);
+
+        public Task InsertAsync(ftJournalFRCopyPayload c)
+        {
+            if (test._failNextJournalInsert)
+            {
+                test._failNextJournalInsert = false;
+                throw new InvalidOperationException("storage unavailable");
+            }
+
+            return test._copies.InsertAsync(c);
+        }
+    }
+
+    private static ProcessCommandRequest TrainingCopy(string copiedReceiptReference)
+    {
+        var request = Copy(copiedReceiptReference);
+        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        return request;
+    }
+
+    [Fact]
+    public async Task ATrainingCopy_IsNotCountedNorJournaled()
+    {
+        var sut = CreateSut();
+
+        var training = await sut.CopyReceiptPrintExistingReceipt0x3010Async(TrainingCopy("R-1"));
+        var fiscal = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+
+        DuplicataOf(training).Should().Be("Duplicata de R-1", "a training copy carries no reprint number");
+        training.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
+        _sscd.LastRequest!.CopyNumber.Should().Be(1, "the fiscal copy, signed last, is the first one");
+        DuplicataOf(fiscal).Should().Be("1. Duplicata de R-1", "the training copy must not shift the fiscal numbering");
+        (await _copies.GetCountOfCopiesAsync("R-1")).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ACopyThatCannotBeJournaled_IsNotIssuedAndItsNumberIsSignedAgain()
+    {
+        var sut = CreateSut();
+        _failNextJournalInsert = true;
+
+        var failed = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        var retried = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+
+        failed.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        failed.receiptResponse.ftReceiptIdentification.Should().Be("ft1#", "the copy was not issued, so it took no number");
+        DuplicataOf(retried).Should().Be("1. Duplicata de R-1", "no copy of R-1 was issued before");
+        retried.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D1");
+        _sscd.Calls[1].previousSignature.Should().Be(_sscd.Calls[0].previousSignature, "the chain did not advance on the unissued copy");
+        (await _copies.GetCountOfCopiesAsync("R-1")).Should().Be(1);
+    }
 
     private static ProcessCommandRequest Copy(string copiedReceiptReference)
         => new(

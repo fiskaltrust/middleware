@@ -1,3 +1,4 @@
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
@@ -24,7 +25,12 @@ public class FRSigningPipeline
         _chains = chains;
     }
 
-    public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null, int? copyNumber = null)
+    /// <param name="recordSigned">
+    /// Records what the signed entry depends on (the copy journal of a duplicate), inside the chain
+    /// lock and before the chain advances. If it fails the entry is not issued: the number is not
+    /// consumed and is signed again on the retry, so a record never lags behind the chain.
+    /// </param>
+    public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null, int? copyNumber = null, Func<ReceiptResponse, Task>? recordSigned = null)
         => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals) =>
         {
             var receiptResponse = request.ReceiptResponse;
@@ -69,6 +75,21 @@ public class FRSigningPipeline
             if (FRSSCDErrorHandling.IsError(response.ReceiptResponse))
             {
                 return Unsigned(FRSSCDErrorHandling.Reason(response.ReceiptResponse), FRSSCDErrorHandling.IsRefusal(response.ReceiptResponse));
+            }
+
+            if (recordSigned is not null)
+            {
+                try
+                {
+                    await recordSigned(response.ReceiptResponse).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    chain.Numerator--;
+                    receiptResponse.ftReceiptIdentification = identificationBeforeSigning;
+                    receiptResponse.SetReceiptResponseError($"The receipt was signed but could not be recorded, so it was not issued; retry it. Details: {ex.Message}");
+                    return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+                }
             }
 
             chain.LastSignature = signature;
