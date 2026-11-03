@@ -71,7 +71,7 @@ public class InMemorySCU : IFRSSCD, IDisposable
             (request.ReceiptRequest.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
             PeriodTotals(request.PeriodTotals),
             request.ChainCounter.ToString(CultureInfo.InvariantCulture),
-            FRChaining.Flag(previousSignature),
+            FRChaining.Flag(previousSignature).ToCode(),
             previousSignature ?? "");
 
         var dataSetBytes = Encoding.UTF8.GetBytes(dataSet);

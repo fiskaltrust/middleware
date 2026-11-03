@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
@@ -62,7 +63,7 @@ internal class InfoCertReceiptPayload
     /// The start-of-chain flag, coded like <c>TAG-*-OEN</c>: <c>O</c> when the previous signature
     /// is carried over, <c>N</c> on the first entry of the chain.
     /// </summary>
-    [JsonPropertyName("previousSignatureCarriedOver")] public string PreviousSignatureCarriedOver { get; set; } = "";
+    [JsonPropertyName("previousSignatureCarriedOver")] public FRPreviousSignatureCarriedOver PreviousSignatureCarriedOver { get; set; }
 
     /// <summary>
     /// The JWS signature segment of the previous entry of the same chain (Base64Url, like

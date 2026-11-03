@@ -48,7 +48,7 @@ internal static class LneDataSetBuilder
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
             // signature, verbatim as its signature field stores it.
             chainCounter.ToString(CultureInfo.InvariantCulture),
-            FRChaining.Flag(previousSignature),
+            FRChaining.Flag(previousSignature).ToCode(),
             previousSignature ?? "",
         };
 
