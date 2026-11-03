@@ -100,6 +100,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     new OneToManyCsvFile<ArchiveEntry, JsonElement>(PayItemsFileName, e => ArchiveEntry.Array(e.Request, "cbPayItems"), PayItemColumns, e => PayItemChains.Contains(e.Chain)),
                     new JournalTypesCsvFile(),
                     new OneToManyCsvFile<ArchiveEntry, CaseDataRow>(CaseDataFileName, CaseData.Rows, CaseDataColumns),
+                    new RequestsFile(),
                 })
                 .ToList();
 

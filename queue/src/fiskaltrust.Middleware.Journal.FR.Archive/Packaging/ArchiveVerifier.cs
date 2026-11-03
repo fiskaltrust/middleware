@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using fiskaltrust.Middleware.Journal.FR.Archive.Signing;
+using fiskaltrust.Middleware.Journal.FR.Archive.V2;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 {
@@ -172,6 +173,14 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     if (!Verify(certificate, manifest.SignatureAlgorithm, hash, FromBase64(file.Signature)))
                     {
                         result.Errors.Add($"{file.Name} signature invalid");
+                    }
+                    if (file.Name == RequestsFile.Name)
+                    {
+                        using var content = entry.Open();
+                        if (RequestsFile.Validate(content) is { } problem)
+                        {
+                            result.Errors.Add($"{file.Name}: {problem}");
+                        }
                     }
                 }
                 foreach (var unlisted in entries.Keys.Where(k => !listed.Contains(k)))

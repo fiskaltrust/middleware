@@ -21,9 +21,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private const long SiretType = 0x0009;
         private const long TrainingFlag = 0x0000_0000_0002_0000;
 
-        private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string? requestHash, JsonElement request, JsonElement response,
+        private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string? requestHash, string rawRequest, JsonElement request, JsonElement response,
             string chain, long chainCounter, string signature)
         {
+            RawRequest = rawRequest;
             QueueItemId = queueItemId;
             QueueId = queueId;
             QueueRow = queueRow;
@@ -52,6 +53,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>The ReceiptRequest as the queue stored it.</summary>
         public JsonElement Request { get; }
+
+        /// <summary>
+        /// <c>ftQueueItem.request</c> exactly as stored, never re-serialized: the LNE request hash (ADR 0013)
+        /// is recomputed from it (archive-v2 §9).
+        /// </summary>
+        public string RawRequest { get; }
 
         /// <summary>The ReceiptResponse as the queue stored it.</summary>
         public JsonElement Response { get; }
@@ -135,7 +142,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 return null;
             }
 
-            return new ArchiveEntry(queueItemId, queueId, queueRow, requestHash, requestJson, responseJson, chain, counter, signature!);
+            return new ArchiveEntry(queueItemId, queueId, queueRow, requestHash, request!, requestJson, responseJson, chain, counter, signature!);
         }
 
         /// <summary>
