@@ -1,5 +1,8 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
@@ -71,7 +74,22 @@ public class JournalTypeFRTests
         // FakeFRSSCD keeps the contract's default for GetSigningCertificateAsync, as an SCU without archive signing does.
         var act = () => ScuArchiveSigner.CreateAsync(new FakeFRSSCD());
 
-        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*SCU cannot sign the archive export*");
+        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*SCU cannot sign the archive export*does not sign archives*");
+    }
+
+    [Fact]
+    public async Task ScuArchiveSigner_RefusesAHashTheScuReportsItDidNotSign()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var certificate = new CertificateRequest("CN=SCU FR", key, HashAlgorithmName.SHA256).CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+        var scu = new Mock<IFRSSCD>();
+        scu.Setup(x => x.GetSigningCertificateAsync()).ReturnsAsync(new FRSigningCertificate { CertificateBase64 = Convert.ToBase64String(certificate.RawData), CertificateSerialNumber = "CERT-4711" });
+        scu.Setup(x => x.SignHashAsync(It.IsAny<byte[]>())).ReturnsAsync(FRHashSignature.Failed("the key is unavailable"));
+        var sut = await ScuArchiveSigner.CreateAsync(scu.Object);
+
+        var act = () => sut.SignHashAsync(new byte[32], CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*SCU cannot sign the archive export*the key is unavailable*");
     }
 
     [Theory]

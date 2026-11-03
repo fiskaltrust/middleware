@@ -1,7 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.Archive.Signing;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 
@@ -10,8 +9,15 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// fiskaltrust/market-fr#218). The cloud archive generation signs with the fiskaltrust archive
 /// certificate instead; it has no SCU key.
 /// </summary>
+/// <remarks>
+/// The SCU reports a failure in its result, never by throwing, because it may run behind REST. An
+/// exception from the SCU call itself (the SCU unreachable) gets the same refusal: either way the
+/// archive is not signed.
+/// </remarks>
 public sealed class ScuArchiveSigner : IArchiveSigner
 {
+    private const string CannotSign = "The queue's SCU cannot sign the archive export (ADR 0007)";
+
     private readonly IFRSSCD _scu;
 
     private ScuArchiveSigner(IFRSSCD scu, X509Certificate2 certificate, string certificateSerialNumber, string signatureAlgorithm)
@@ -37,9 +43,14 @@ public sealed class ScuArchiveSigner : IArchiveSigner
         {
             signingCertificate = await scu.GetSigningCertificateAsync().ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is NotSupportedException or FRSSCDException)
+        catch (Exception ex)
         {
-            throw new NotSupportedException($"The queue's SCU cannot sign the archive export (ADR 0007): {ex.Message}", ex);
+            throw new NotSupportedException($"{CannotSign}: {ex.Message}", ex);
+        }
+
+        if (signingCertificate.Failure is not null)
+        {
+            throw new NotSupportedException($"{CannotSign}: {signingCertificate.Failure}");
         }
 
         if (signingCertificate.SignatureAlgorithm != ArchiveSignatureAlgorithms.ES256)
@@ -50,5 +61,21 @@ public sealed class ScuArchiveSigner : IArchiveSigner
         return new ScuArchiveSigner(scu, new X509Certificate2(Convert.FromBase64String(signingCertificate.CertificateBase64)), signingCertificate.CertificateSerialNumber, signingCertificate.SignatureAlgorithm);
     }
 
-    public Task<byte[]> SignHashAsync(byte[] sha256, CancellationToken cancellationToken) => _scu.SignHashAsync(sha256);
+    /// <exception cref="InvalidOperationException">The SCU did not sign the hash.</exception>
+    public async Task<byte[]> SignHashAsync(byte[] sha256, CancellationToken cancellationToken)
+    {
+        FRHashSignature signature;
+        try
+        {
+            signature = await _scu.SignHashAsync(sha256).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"{CannotSign}: {ex.Message}", ex);
+        }
+
+        return signature.Failure is null
+            ? signature.Signature
+            : throw new InvalidOperationException($"{CannotSign}: {signature.Failure}");
+    }
 }

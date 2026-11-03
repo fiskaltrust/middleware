@@ -4,7 +4,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2.fr;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.InfoCert;
 using fiskaltrust.Middleware.SCU.FR.InMemory;
 using fiskaltrust.Middleware.SCU.FR.LNE;
@@ -15,7 +14,8 @@ namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
 /// <summary>
 /// Archive signing by the SCU (ADR 0007 amendment, market-fr#218): the queue signs a locally
-/// exported archive's hashes with the SCU key, and embeds the SCU certificate.
+/// exported archive's hashes with the SCU key, and embeds the SCU certificate. A failure comes back
+/// in the result, never as an exception.
 /// </summary>
 public class HashSigningTests
 {
@@ -48,11 +48,11 @@ public class HashSigningTests
     private static IFRSSCD Scu(string name, string privateKey, string? certificate)
         => name == "LNE" ? Lne(privateKey, certificate) : InfoCert(privateKey, certificate);
 
-    private static bool Verifies(FRSigningCertificate signingCertificate, byte[] signature)
+    private static bool Verifies(FRSigningCertificate signingCertificate, FRHashSignature signature)
     {
         using var certificate = new X509Certificate2(Convert.FromBase64String(signingCertificate.CertificateBase64));
         using var publicKey = certificate.GetECDsaPublicKey()!;
-        return publicKey.VerifyHash(Hash, signature, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        return publicKey.VerifyHash(Hash, signature.Signature, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
     }
 
     [Theory]
@@ -66,6 +66,8 @@ public class HashSigningTests
         var signingCertificate = await sut.GetSigningCertificateAsync();
         var signature = await sut.SignHashAsync(Hash);
 
+        signingCertificate.Failure.Should().BeNull();
+        signature.Failure.Should().BeNull();
         signingCertificate.SignatureAlgorithm.Should().Be(FRSigningCertificate.ES256);
         signingCertificate.CertificateSerialNumber.Should().Be("CERT-4711");
         Verifies(signingCertificate, signature).Should().BeTrue();
@@ -73,39 +75,41 @@ public class HashSigningTests
 
     [Theory]
     [MemberData(nameof(CertifiedScus))]
-    public async Task GetSigningCertificateAsync_RefusesWithoutACertificate(string name)
+    public async Task GetSigningCertificateAsync_ReportsAMissingCertificate(string name)
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
 
-        var act = () => Scu(name, privateKey, null).GetSigningCertificateAsync();
+        var result = await Scu(name, privateKey, null).GetSigningCertificateAsync();
 
-        await act.Should().ThrowAsync<FRCertificateException>().WithMessage("*CertificateBase64*");
+        result.Failure.Should().Match("*CertificateBase64*");
+        result.CertificateBase64.Should().BeEmpty();
     }
 
     [Theory]
     [MemberData(nameof(CertifiedScus))]
-    public async Task GetSigningCertificateAsync_RefusesACertificateOfAnotherKey(string name)
+    public async Task GetSigningCertificateAsync_ReportsACertificateOfAnotherKey(string name)
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var other = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         using var _ = key;
 
-        var act = () => Scu(name, privateKey, Certificate(other)).GetSigningCertificateAsync();
+        var result = await Scu(name, privateKey, Certificate(other)).GetSigningCertificateAsync();
 
-        await act.Should().ThrowAsync<FRCertificateException>().WithMessage("*public key*");
+        result.Failure.Should().Match("*public key*");
     }
 
     [Theory]
     [MemberData(nameof(CertifiedScus))]
-    public async Task SignHashAsync_RefusesAnythingButASha256(string name)
+    public async Task SignHashAsync_ReportsAnythingButASha256(string name)
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
 
-        var act = () => Scu(name, privateKey, Certificate(key)).SignHashAsync(new byte[20]);
+        var result = await Scu(name, privateKey, Certificate(key)).SignHashAsync(new byte[20]);
 
-        await act.Should().ThrowAsync<FRValidationException>();
+        result.Failure.Should().Match("*32 bytes*");
+        result.Signature.Should().BeEmpty();
     }
 
     [Fact]

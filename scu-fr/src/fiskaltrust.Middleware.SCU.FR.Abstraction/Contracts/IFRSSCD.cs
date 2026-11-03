@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 
 namespace fiskaltrust.ifPOS.v2.fr;
@@ -44,14 +43,18 @@ public interface IFRSSCD
     /// signed by its SCU, not by the fiskaltrust archive certificate (ADR 0007 amendment).
     /// </summary>
     /// <remarks>
-    /// The default refuses, so an SCU that does not implement archive signing yet still compiles;
-    /// the queue then refuses the local archive export.
+    /// Like <see cref="ProcessReceiptAsync"/>, a failure is never thrown: it comes back in
+    /// <see cref="FRSigningCertificate.Failure"/>. The default reports one, so an SCU that does not
+    /// implement archive signing yet still compiles; the queue then refuses the local archive export.
     /// </remarks>
     Task<FRSigningCertificate> GetSigningCertificateAsync()
-        => Task.FromException<FRSigningCertificate>(new NotSupportedException($"{GetType().Name} does not sign archives."));
+        => Task.FromResult(FRSigningCertificate.Failed($"{GetType().Name} does not sign archives."));
 
     /// <summary>Signs a SHA-256 hash with the signature creation data's key.</summary>
-    /// <returns>The signature in the form <see cref="FRSigningCertificate.SignatureAlgorithm"/> names.</returns>
-    Task<byte[]> SignHashAsync(byte[] sha256)
-        => Task.FromException<byte[]>(new NotSupportedException($"{GetType().Name} does not sign archives."));
+    /// <returns>
+    /// The signature in the form <see cref="FRSigningCertificate.SignatureAlgorithm"/> names, or
+    /// the reason in <see cref="FRHashSignature.Failure"/>.
+    /// </returns>
+    Task<FRHashSignature> SignHashAsync(byte[] sha256)
+        => Task.FromResult(FRHashSignature.Failed($"{GetType().Name} does not sign archives."));
 }

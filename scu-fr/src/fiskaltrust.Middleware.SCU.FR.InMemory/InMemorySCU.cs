@@ -102,7 +102,7 @@ public class InMemorySCU : IFRSSCD, IDisposable
         });
     }
 
-    public Task<byte[]> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_key, sha256));
+    public Task<FRHashSignature> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_key, sha256, "InMemory"));
 
     public void Dispose() => _key.Dispose();
 }

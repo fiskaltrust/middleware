@@ -17,4 +17,25 @@ public class FRSigningCertificate
 
     /// <summary><see cref="ES256"/>: ECDSA P-256 over SHA-256, signature in IEEE P1363 (r||s) form.</summary>
     public string SignatureAlgorithm { get; set; } = ES256;
+
+    /// <summary>
+    /// Why the SCU cannot sign archives, or null when it can. An SCU never throws to report a
+    /// failure (see <see cref="IFRSSCD.ProcessReceiptAsync"/>); the other properties are then empty.
+    /// </summary>
+    public string? Failure { get; set; }
+
+    public static FRSigningCertificate Failed(string reason) => new() { Failure = reason };
+}
+
+/// <summary>The result of <see cref="IFRSSCD.SignHashAsync"/>.</summary>
+/// <remarks>Temporary local declaration, see <see cref="IFRSSCD"/>.</remarks>
+public class FRHashSignature
+{
+    /// <summary>The signature, in the form <see cref="FRSigningCertificate.SignatureAlgorithm"/> names; empty on a failure.</summary>
+    public byte[] Signature { get; set; } = [];
+
+    /// <summary>Why the hash was not signed, or null when it was.</summary>
+    public string? Failure { get; set; }
+
+    public static FRHashSignature Failed(string reason) => new() { Failure = reason };
 }

@@ -3,13 +3,13 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2.fr;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 
 namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 /// <summary>
 /// The archive-signing half of an SCU (<see cref="IFRSSCD.SignHashAsync"/>). Not part of either
-/// referential, so the certified SCUs share it.
+/// referential, so the certified SCUs share it. Like receipt signing, it reports a failure in its
+/// result and never throws.
 /// </summary>
 public static class FRHashSigning
 {
@@ -21,7 +21,7 @@ public static class FRHashSigning
     {
         if (string.IsNullOrWhiteSpace(certificateBase64))
         {
-            throw new FRCertificateException($"The {scuName} SCU has no CertificateBase64 in its configuration, so it cannot sign an archive.");
+            return FRSigningCertificate.Failed($"The {scuName} SCU has no CertificateBase64 in its configuration, so it cannot sign an archive.");
         }
 
         byte[] rawData;
@@ -29,9 +29,9 @@ public static class FRHashSigning
         {
             rawData = Convert.FromBase64String(certificateBase64);
         }
-        catch (FormatException ex)
+        catch (FormatException)
         {
-            throw new FRCertificateException($"The configured CertificateBase64 of the {scuName} SCU is not valid base64.", ex);
+            return FRSigningCertificate.Failed($"The configured CertificateBase64 of the {scuName} SCU is not valid base64.");
         }
 
         X509Certificate2 certificate;
@@ -41,7 +41,7 @@ public static class FRHashSigning
         }
         catch (CryptographicException ex)
         {
-            throw new FRCertificateException($"The configured CertificateBase64 of the {scuName} SCU is not an X.509 certificate.", ex);
+            return FRSigningCertificate.Failed($"The configured CertificateBase64 of the {scuName} SCU is not an X.509 certificate. {ex.Message}");
         }
 
         using (certificate)
@@ -49,7 +49,7 @@ public static class FRHashSigning
         {
             if (publicKey is null || !publicKey.ExportSubjectPublicKeyInfo().SequenceEqual(key.ExportSubjectPublicKeyInfo()))
             {
-                throw new FRCertificateException($"The configured certificate of the {scuName} SCU does not hold the public key of its PrivateKey.");
+                return FRSigningCertificate.Failed($"The configured certificate of the {scuName} SCU does not hold the public key of its PrivateKey.");
             }
         }
 
@@ -62,13 +62,20 @@ public static class FRHashSigning
     }
 
     /// <summary>ES256 over a SHA-256 hash, in IEEE P1363 (r||s) form.</summary>
-    public static byte[] SignHash(ECDsa key, byte[] sha256)
+    public static FRHashSignature SignHash(ECDsa key, byte[] sha256, string scuName)
     {
         if (sha256 is null || sha256.Length != 32)
         {
-            throw new FRValidationException("A SHA-256 hash is 32 bytes.");
+            return FRHashSignature.Failed($"The {scuName} SCU signs SHA-256 hashes, which are 32 bytes.");
         }
 
-        return key.SignHash(sha256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        try
+        {
+            return new FRHashSignature { Signature = key.SignHash(sha256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation) };
+        }
+        catch (Exception ex)
+        {
+            return FRHashSignature.Failed($"The {scuName} SCU could not sign the hash. {ex.Message}");
+        }
     }
 }
