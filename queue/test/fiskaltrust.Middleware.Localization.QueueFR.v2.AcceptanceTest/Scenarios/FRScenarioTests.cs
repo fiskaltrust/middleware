@@ -73,6 +73,7 @@ public class FRScenarioTests
         response.ftReceiptIdentification.Should().EndWith("T1");
         SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().NotBeNullOrEmpty();
         SignatureOf(response, SignatureTypeFR.ChainHash).Should().NotBeNullOrEmpty();
+        response.ftSignatures.Should().ContainSingle(x => x.Caption == "Nombre de lignes").Which.Data.Should().Be("1");
     }
 
     [Fact]

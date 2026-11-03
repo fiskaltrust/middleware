@@ -1,4 +1,5 @@
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 
@@ -21,7 +22,7 @@ public class ReceiptCommandProcessorFR : IReceiptCommandProcessor
 
     public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => PointOfSaleReceipt0x0001Async(request);
 
-    public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => SignTicket(request);
 
     /// <summary>The payment proof (justificatif de paiement) has its own chain, numbered with "P".</summary>
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
@@ -36,7 +37,7 @@ public class ReceiptCommandProcessorFR : IReceiptCommandProcessor
         return FRFallBackOperations.NoOp(request);
     }
 
-    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => SignTicket(request);
 
     public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => SignProvisionalDocument(request);
 
@@ -44,9 +45,24 @@ public class ReceiptCommandProcessorFR : IReceiptCommandProcessor
 
     public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => SignProvisionalDocument(request);
 
+    /// <summary>
+    /// A ticket prints its sales-line count (R13 <c>ENC-TIK-LIG-NBR</c>). The payment proof does
+    /// not, so <see cref="PaymentTransfer0x0002Async"/> signs without it.
+    /// </summary>
+    private Task<ProcessCommandResponse> SignTicket(ProcessCommandRequest request)
+    {
+        AddSalesLineCount(request);
+        return _pipeline.SignAsync(request);
+    }
+
+    /// <summary>A provisional document is a note in R13: it prints the mention and the sales-line count.</summary>
     private Task<ProcessCommandResponse> SignProvisionalDocument(ProcessCommandRequest request)
     {
         request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateProvisionalDocumentSignature());
+        AddSalesLineCount(request);
         return _pipeline.SignAsync(request);
     }
+
+    private static void AddSalesLineCount(ProcessCommandRequest request)
+        => request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateSalesLineCountSignature(FRSalesLineCounter.Count(request.ReceiptRequest)));
 }

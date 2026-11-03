@@ -1,3 +1,4 @@
+using System.Globalization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
@@ -64,5 +65,17 @@ public static class SignaturItemFactory
         ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
         Caption = "Mode école",
         Data = "SIMULATION - NON VALABLE POUR ENCAISSEMENT",
+    };
+
+    /// <summary>
+    /// The number of sales lines (R13 <c>ENC-TIK-LIG-NBR</c>), which note and ticket have to print.
+    /// It is a signature item because a printed computed field goes there (market-fr ADR 0011).
+    /// </summary>
+    public static SignatureItem CreateSalesLineCountSignature(int salesLineCount) => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Nombre de lignes",
+        Data = salesLineCount.ToString(CultureInfo.InvariantCulture),
     };
 }
