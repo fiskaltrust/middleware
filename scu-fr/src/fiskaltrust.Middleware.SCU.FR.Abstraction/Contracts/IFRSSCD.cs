@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace fiskaltrust.ifPOS.v2.fr;
@@ -37,4 +38,20 @@ public interface IFRSSCD
     /// </param>
     /// <returns>The signed response and the chain hash the queue has to persist for the next entry.</returns>
     Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash);
+
+    /// <summary>
+    /// The certificate <see cref="SignHashAsync"/> signs with. An archive the queue exports is
+    /// signed by its SCU, not by the fiskaltrust archive certificate (ADR 0007 amendment).
+    /// </summary>
+    /// <remarks>
+    /// The default refuses, so an SCU that does not implement archive signing yet still compiles;
+    /// the queue then refuses the local archive export.
+    /// </remarks>
+    Task<FRSigningCertificate> GetSigningCertificateAsync()
+        => Task.FromException<FRSigningCertificate>(new NotSupportedException($"{GetType().Name} does not sign archives."));
+
+    /// <summary>Signs a SHA-256 hash with the signature creation data's key.</summary>
+    /// <returns>The signature in the form <see cref="FRSigningCertificate.SignatureAlgorithm"/> names.</returns>
+    Task<byte[]> SignHashAsync(byte[] sha256)
+        => Task.FromException<byte[]>(new NotSupportedException($"{GetType().Name} does not sign archives."));
 }

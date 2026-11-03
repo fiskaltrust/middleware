@@ -7,7 +7,6 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueFR.Archive.Packaging;
-using fiskaltrust.Middleware.Localization.QueueFR.Archive.Signing;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.SCU.FR.InMemory;
@@ -29,10 +28,9 @@ public class FRJournalExportTests : IDisposable
 
     private readonly Guid _queueId = Guid.NewGuid();
     private readonly Guid _cashBoxId = Guid.NewGuid();
-    private readonly X509Certificate2 _archiveCertificate;
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly Func<string, Task<(System.Net.Mime.ContentType contentType, PipeReader reader)>> _journal;
-    private readonly Func<string, Task<(System.Net.Mime.ContentType contentType, PipeReader reader)>> _journalWithoutSigner;
+    private readonly InMemorySCU _scu = new();
 
     public FRJournalExportTests()
     {
@@ -46,22 +44,14 @@ public class FRJournalExportTests : IDisposable
             { "init_masterData", JsonSerializer.Serialize(new MasterDataConfiguration { Account = new AccountMasterData { AccountId = Guid.NewGuid(), AccountName = "fiskaltrust SARL", Country = "FR" } }) },
         };
 
-        using (var key = ECDsa.Create(ECCurve.NamedCurves.nistP256))
-        {
-            _archiveCertificate = new CertificateRequest("CN=fiskaltrust archive test", key, HashAlgorithmName.SHA256)
-                .CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
-        }
-
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var storageProvider = new InMemoryLocalizationStorageProvider(_queueId, configuration, loggerFactory);
-        var scu = new InMemorySCU();
-        var bootstrapper = new QueueFRBootstrapper(_queueId, loggerFactory, configuration, scu, storageProvider, new X509ArchiveSigner(_archiveCertificate));
+        var bootstrapper = new QueueFRBootstrapper(_queueId, loggerFactory, configuration, _scu, storageProvider);
         _signProcessor = bootstrapper.RegisterForSign();
         _journal = bootstrapper.RegisterForJournal();
-        _journalWithoutSigner = new QueueFRBootstrapper(_queueId, loggerFactory, configuration, scu, storageProvider).RegisterForJournal();
     }
 
-    public void Dispose() => _archiveCertificate.Dispose();
+    public void Dispose() => _scu.Dispose();
 
     [Fact]
     public async Task TicketJournal_ChainsEachTicketOnThePreviousSignature()
@@ -123,15 +113,7 @@ public class FRJournalExportTests : IDisposable
     }
 
     [Fact]
-    public async Task ArchiveExport_WithoutAnArchiveSigner_IsRefused()
-    {
-        var act = () => ReadAsync(_journalWithoutSigner, JournalTypeFR.ArchiveExport, DateTime.UtcNow.AddMinutes(-1).Ticks);
-
-        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*archive signer*");
-    }
-
-    [Fact]
-    public async Task ArchiveExport_IsASignedArchiveThatVerifies()
+    public async Task ArchiveExport_IsSignedByTheQueuesScuAndVerifies()
     {
         var from = DateTime.UtcNow.AddMinutes(-1);
         var sale = await SignAsync(CashSale());
@@ -145,6 +127,11 @@ public class FRJournalExportTests : IDisposable
         using var reader = new StreamReader(sub.GetEntry("journal-T.csv")!.Open());
         (await reader.ReadToEndAsync()).Should().Contain(sale.ftReceiptIdentification);
         sub.Entries.Select(e => e.Name).Should().Contain(new[] { "charge-items.csv", "pay-items.csv", "journal-types.csv", "case-data.csv" });
+
+        using var archiveCertificate = new X509Certificate2(ReadEntry(zip, ArchivePackager<object>.ArchiveCertificateFileName));
+        using var scuKey = new X509Certificate2(Convert.FromBase64String((await _scu.GetSigningCertificateAsync()).CertificateBase64)).GetECDsaPublicKey()!;
+        archiveCertificate.GetECDsaPublicKey()!.ExportSubjectPublicKeyInfo().Should().Equal(scuKey.ExportSubjectPublicKeyInfo(), "the queue's SCU signs a locally exported archive (ADR 0007 amendment)");
+        sub.Entries.Should().Contain(e => e.Name == "scu_INMEMORY_0001_v2.cer", "the SCU certificate also checks the entries it signed");
     }
 
     [Fact]
@@ -167,6 +154,16 @@ public class FRJournalExportTests : IDisposable
         var (_, reader) = await journal(JsonSerializer.Serialize(new JournalRequest { ftJournalType = type.As<JournalType>(), From = from, To = to }));
         using var buffer = new MemoryStream();
         await reader.CopyToAsync(buffer);
+        return buffer.ToArray();
+    }
+
+    private static byte[] ReadEntry(ZipArchive zip, string name)
+    {
+        using var buffer = new MemoryStream();
+        using (var stream = zip.GetEntry(name)!.Open())
+        {
+            stream.CopyTo(buffer);
+        }
         return buffer.ToArray();
     }
 

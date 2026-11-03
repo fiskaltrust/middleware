@@ -37,6 +37,9 @@ internal sealed class InfoCertJwsSigner : IDisposable
         return ($"{signingInput}.{ToBase64Url(signature)}", Convert.ToBase64String(chainHash));
     }
 
+    /// <summary>The signing key, also used to sign archive hashes.</summary>
+    public ECDsa Key => _key;
+
     public void Dispose() => _key.Dispose();
 
     private static ECDsa ImportKey(string privateKeyBase64)

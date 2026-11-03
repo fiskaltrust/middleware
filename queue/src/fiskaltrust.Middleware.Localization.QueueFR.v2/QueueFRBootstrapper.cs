@@ -56,7 +56,11 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
             validationConfig);
 
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, receiptProcessorFR.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorFR(id, storageProvider, archiveSigner), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        // A locally exported archive is signed by the queue's SCU (ADR 0007 amendment); archiveSigner overrides it.
+        Func<Task<IArchiveSigner>> createArchiveSigner = archiveSigner is null
+            ? async () => await ScuArchiveSigner.CreateAsync(frSSCD).ConfigureAwait(false)
+            : () => Task.FromResult(archiveSigner);
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorFR(id, storageProvider, createArchiveSigner), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,

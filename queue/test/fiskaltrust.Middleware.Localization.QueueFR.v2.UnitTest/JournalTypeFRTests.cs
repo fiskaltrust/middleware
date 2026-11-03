@@ -1,5 +1,6 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -62,6 +63,15 @@ public class JournalTypeFRTests
         var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = JournalTypeFR.ArchiveExport.As<JournalType>() });
 
         act.Should().Throw<NotSupportedException>().WithMessage("*needs an archive signer*");
+    }
+
+    [Fact]
+    public async Task ScuArchiveSigner_RefusesAnScuThatDoesNotSignArchives()
+    {
+        // FakeFRSSCD keeps the contract's default for GetSigningCertificateAsync, as an SCU without archive signing does.
+        var act = () => ScuArchiveSigner.CreateAsync(new FakeFRSSCD());
+
+        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*SCU cannot sign the archive export*");
     }
 
     [Theory]

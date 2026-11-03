@@ -102,5 +102,10 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
     }
 
+    public Task<FRSigningCertificate> GetSigningCertificateAsync()
+        => Task.FromResult(FRHashSigning.SigningCertificate(_signer.Key, _configuration.CertificateBase64, _configuration.CertificateSerialNumber, CertificationBody));
+
+    public Task<byte[]> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_signer.Key, sha256));
+
     public void Dispose() => _signer.Dispose();
 }

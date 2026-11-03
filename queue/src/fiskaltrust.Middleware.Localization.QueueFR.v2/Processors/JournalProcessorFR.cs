@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
@@ -10,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueFR.Archive.Packaging;
 using fiskaltrust.Middleware.Localization.QueueFR.Archive.Signing;
 using fiskaltrust.Middleware.Localization.QueueFR.Archive.Split;
 using fiskaltrust.Middleware.Localization.QueueFR.Archive.V2;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -43,8 +45,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// <para>
 /// A request that cannot be answered truthfully is refused rather than answered with an empty
 /// document, which would read like a queue with no records: the archive journal (008) until the queue
-/// signs archive receipts (ADR 0009, fiskaltrust/market-fr#209, #244), and the archive export while no
-/// archive signer is configured (ADR 0007, open on fiskaltrust/market-fr#218).
+/// signs archive receipts (ADR 0009, fiskaltrust/market-fr#209, #244), and the archive export when the
+/// queue's SCU cannot sign it (ADR 0007 amendment: no hash signing, or no configured certificate).
 /// </para>
 /// </remarks>
 public class JournalProcessorFR : IJournalProcessor
@@ -56,10 +58,14 @@ public class JournalProcessorFR : IJournalProcessor
     private readonly Guid _queueId;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository;
-    private readonly IArchiveSigner? _archiveSigner;
+    private readonly Func<Task<IArchiveSigner>>? _archiveSigner;
     private readonly ArchiveSplitOptions _splitOptions;
 
-    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, IArchiveSigner? archiveSigner = null, ArchiveSplitOptions? splitOptions = null)
+    /// <param name="archiveSigner">
+    /// Creates the signer of an archive export, per export: the queue's SCU (<see cref="ScuArchiveSigner"/>, ADR 0007 amendment).
+    /// Null refuses the archive export.
+    /// </param>
+    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, ArchiveSplitOptions? splitOptions = null)
     {
         _queueId = queueId;
         _queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
@@ -101,8 +107,8 @@ public class JournalProcessorFR : IJournalProcessor
             if (_archiveSigner is null)
             {
                 throw new NotSupportedException(
-                    $"The French journal type 0x{journalType:X} ({journalTypeFR}) needs an archive signer (ADR 0007), and none is configured for this queue: " +
-                    "who signs a locally exported archive is still open (fiskaltrust/market-fr#218). The per-journal exports (0x4652_2000_0000_0001 to _000B) are available.");
+                    $"The French journal type 0x{journalType:X} ({journalTypeFR}) needs an archive signer (ADR 0007), and none is configured for this queue. " +
+                    "The per-journal exports (0x4652_2000_0000_0001 to _000B) are available.");
             }
 
             var period = new ArchivePeriod(from, to);
@@ -176,8 +182,9 @@ public class JournalProcessorFR : IJournalProcessor
         }
     }
 
-    private async IAsyncEnumerable<byte[]> ArchiveAsync(ArchivePeriod period, IArchiveSigner signer)
+    private async IAsyncEnumerable<byte[]> ArchiveAsync(ArchivePeriod period, Func<Task<IArchiveSigner>> createSigner)
     {
+        var signer = await createSigner().ConfigureAwait(false);
         var entries = await ReadEntriesAsync(period, rejectV1: true).ConfigureAwait(false);
         var archive = ArchiveSplitter.Split(entries, e => e.ReceiptMoment, ArchiveV2Files.KeyOf, period, _splitOptions).Single();
 
@@ -185,7 +192,11 @@ public class JournalProcessorFR : IJournalProcessor
         var siret = (string.IsNullOrEmpty(queueFR?.Siret) ? null : queueFR!.Siret)
             ?? entries.Select(e => e.Siret).FirstOrDefault(s => !string.IsNullOrEmpty(s))
             ?? throw new InvalidOperationException("The archive manifest needs the SIRET, and neither the queue configuration nor the archived entries carry one.");
-        var packager = new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, signer);
+        // When the SCU signs the archive, its certificate is also the one of the entries it signed: embed it in their sub-archive.
+        var scuCertificate = signer is ScuArchiveSigner scuSigner
+            ? (Func<SubArchiveKey, X509Certificate2?>) (key => key.CertificateSerialNumber == scuSigner.CertificateSerialNumber ? scuSigner.Certificate : null)
+            : null;
+        var packager = new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, signer, scuCertificate);
 
         await foreach (var chunk in ThroughTempFileAsync(stream => packager.WriteAsync(archive, new ArchiveMetadata(siret, DateTime.UtcNow), stream)).ConfigureAwait(false))
         {

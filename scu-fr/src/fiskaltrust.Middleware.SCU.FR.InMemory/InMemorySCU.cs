@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
@@ -88,6 +89,20 @@ public class InMemorySCU : IFRSSCD, IDisposable
         FRTotalsPeriod.Year => SignatureTypeFR.YearTotals,
         _ => SignatureTypeFR.DayTotals,
     };
+
+    /// <summary>A self-signed certificate over the ephemeral key, so a test archive verifies.</summary>
+    public Task<FRSigningCertificate> GetSigningCertificateAsync()
+    {
+        var request = new CertificateRequest($"CN=fiskaltrust InMemory SCU FR, SERIALNUMBER={_certificateSerialNumber}", _key, HashAlgorithmName.SHA256);
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+        return Task.FromResult(new FRSigningCertificate
+        {
+            CertificateBase64 = Convert.ToBase64String(certificate.RawData),
+            CertificateSerialNumber = _certificateSerialNumber,
+        });
+    }
+
+    public Task<byte[]> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_key, sha256));
 
     public void Dispose() => _key.Dispose();
 }
