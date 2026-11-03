@@ -91,7 +91,8 @@ public class ScuReconfigurationScenarioTests
         => response.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(type))?.Data;
 
     /// <summary>The data set LNE and the self-certified SCU sign, both ending with counter, flag and previous signature (ADR 0001).</summary>
-    private static string SignedDataOf(ReceiptResponse response) => SignatureOf(response, SignatureTypeFR.Information)!;
+    private static string SignedDataOf(ReceiptResponse response)
+        => response.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information) && x.Caption == "Donnees signees").Data;
 
     private static string[] ChainingFieldsOf(ReceiptResponse response) => SignedDataOf(response).Split('|')[^3..];
 
