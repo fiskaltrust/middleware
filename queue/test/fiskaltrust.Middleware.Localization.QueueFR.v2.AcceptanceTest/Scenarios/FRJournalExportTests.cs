@@ -89,14 +89,16 @@ public class FRJournalExportTests : IDisposable
     }
 
     [Fact]
-    public async Task TechnicalJournal_HoldsTheClosingsOfTheSingleChainBeforeAdr0002()
+    public async Task DailyClosingJournal_HoldsTheDailyClosings_AndTheTechnicalJournalNone()
     {
         await SignAsync(CashSale());
         var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
-        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Technical));
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.DailyClosing));
+        var technical = Rows(await ReadAsync(_journal, JournalTypeFR.Technical));
 
         rows.Should().ContainSingle().Which["ftReceiptIdentification"].Should().Be(closing.ftReceiptIdentification);
+        technical.Should().NotContain(row => row["ftReceiptIdentification"] == closing.ftReceiptIdentification);
     }
 
     [Fact]
