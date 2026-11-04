@@ -118,6 +118,41 @@
       "canonical": "{\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"cbChargeItems\":[{\"Amount\":-1,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Remise\",\"Moment\":\"2026-03-29T01:30:00.0000000Z\",\"Position\":0,\"Quantity\":0,\"UnitPrice\":0.001,\"VATAmount\":-0.1667,\"VATRate\":20,\"ftChargeItemCase\":5067147715117318163,\"ftChargeItemId\":\"0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0\"}],\"cbCustomer\":\"plain string\",\"cbPayItems\":[{\"Amount\":123456789012.1,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"CB\",\"Position\":0,\"Quantity\":1,\"ftPayItemCase\":5067147715117318145}],\"cbPreviousReceiptReference\":[\"R-1\",\"R-2\"],\"cbReceiptMoment\":\"2026-03-29T01:30:00.1234567Z\",\"cbReceiptReference\":\"ref\\u0001\\u001f/é\uD83D\uDE00\",\"cbUser\":{\"A\":false,\"aa\":\"x\",\"n\":{\"x\":[]},\"z\":true,\"é\":1,\"\uD83D\uDE00\":2,\"｡\":3},\"ftQueueID\":\"00000000-0000-0000-0000-000000000000\",\"ftReceiptCase\":5067147715117318145}",
       "sha256": "zqM409GYWtrEz9Gf9vJXjC6IW6Z18OIqHH7P4HgoWZI=",
       "signedField": "1:zqM409GYWtrEz9Gf9vJXjC6IW6Z18OIqHH7P4HgoWZI="
+    },
+    {
+      "name": "zero-multipliers",
+      "request": {
+        "ftCashBoxID": "6b1c2d3e-4f50-4a61-8b72-9c83d4e5f601",
+        "ftReceiptCase": 5067112530745229313,
+        "cbReceiptMoment": "2026-11-04T10:00:00Z",
+        "cbReceiptReference": "R-0",
+        "DecimalPrecisionMultiplier": 0,
+        "cbChargeItems": [
+          {
+            "Position": 1,
+            "Quantity": 1,
+            "Amount": 3.5,
+            "Description": "Thé",
+            "VATRate": 10,
+            "DecimalPrecisionMultiplier": 0,
+            "ftChargeItemCase": 5067112530745229331
+          }
+        ],
+        "cbPayItems": [
+          {
+            "Position": 1,
+            "Quantity": 1,
+            "Amount": 3.5,
+            "Description": "Espèces",
+            "DecimalPrecisionMultiplier": 0,
+            "ftPayItemCase": 5067112530745229313
+          }
+        ]
+      },
+      "storedRequest": "{\"cbReceiptReference\":\"R-0\",\"cbReceiptMoment\":\"2026-11-04T10:00:00Z\",\"cbChargeItems\":[{\"Quantity\":1,\"Description\":\"Th\\u00E9\",\"Amount\":3.5,\"VATRate\":10,\"ftChargeItemCase\":5067112530745229331,\"Position\":1}],\"cbPayItems\":[{\"Description\":\"Esp\\u00E8ces\",\"Amount\":3.5,\"ftPayItemCase\":5067112530745229313,\"Position\":1}],\"ftCashBoxID\":\"6b1c2d3e-4f50-4a61-8b72-9c83d4e5f601\",\"ftReceiptCase\":5067112530745229313}",
+      "canonical": "{\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"cbChargeItems\":[{\"Amount\":3.5,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Thé\",\"Position\":1,\"Quantity\":1,\"VATRate\":10,\"ftChargeItemCase\":5067112530745229331}],\"cbPayItems\":[{\"Amount\":3.5,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Espèces\",\"Position\":1,\"Quantity\":1,\"ftPayItemCase\":5067112530745229313}],\"cbReceiptMoment\":\"2026-11-04T10:00:00.0000000Z\",\"cbReceiptReference\":\"R-0\",\"ftCashBoxID\":\"6b1c2d3e-4f50-4a61-8b72-9c83d4e5f601\",\"ftReceiptCase\":5067112530745229313}",
+      "sha256": "lQ20sfIXMoFzPdltWD4fRsxeAQhgaCqFOVLrSCeOKhk=",
+      "signedField": "1:lQ20sfIXMoFzPdltWD4fRsxeAQhgaCqFOVLrSCeOKhk="
     }
   ]
 }
