@@ -7,8 +7,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 
 /// <summary>
 /// Accumulates the turnover a French closing receipt has to attest. Each period accumulates
-/// independently and is reset by its own closing, so a monthly closing does not depend on the
-/// daily ones having been sent; the perpetual total is never reset. The totals live in the v1
+/// independently, so a monthly closing does not depend on the daily ones having been sent; the
+/// perpetual total is never reset. A closing resets its own period and, as in v1.2 (workerFR
+/// <c>MonthRequest</c>, <c>YearRequest</c>, <c>StartRequest</c>, <c>StopRequest</c>), the shorter
+/// periods it ends too (<see cref="PeriodsClosedBy"/>, decided 2026-11-04): a monthly closing also
+/// closes the day, a yearly closing the day and the month, the initial-operation receipt the day,
+/// and the out-of-operation receipt the day, the month and the year. A shift and a daily closing
+/// close only themselves. The totals live in the v1
 /// columns of ftQueueFR (market-fr ADR 0012), so a half-migrated queue carries them over as they are.
 /// </summary>
 public class FRPeriodTotalsAccumulator
@@ -59,6 +64,29 @@ public class FRPeriodTotalsAccumulator
         {
             _queueFR.SetTotals(FRQueueFRColumns.TotalsPrefix(period), new FRTotals());
         }
+    }
+
+    /// <summary>
+    /// The periods a signed receipt closes, its own and the shorter ones it ends (see the class
+    /// summary). Empty for a receipt that closes nothing, and for every training receipt.
+    /// </summary>
+    public static IReadOnlyList<FRTotalsPeriod> PeriodsClosedBy(ReceiptRequest request)
+    {
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+        {
+            return [];
+        }
+
+        return request.ftReceiptCase.Case() switch
+        {
+            ReceiptCase.ShiftClosing0x2010 => [FRTotalsPeriod.Shift],
+            ReceiptCase.DailyClosing0x2011 => [FRTotalsPeriod.Day],
+            ReceiptCase.MonthlyClosing0x2012 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month],
+            ReceiptCase.YearlyClosing0x2013 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
+            ReceiptCase.InitialOperationReceipt0x4001 => [FRTotalsPeriod.Day],
+            ReceiptCase.OutOfOperationReceipt0x4002 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
+            _ => [],
+        };
     }
 
     /// <summary>

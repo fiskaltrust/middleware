@@ -98,6 +98,57 @@ public class PeriodTotalsTests
     }
 
     [Fact]
+    public async Task MonthlyClosingWithoutADailyOne_AlsoClosesTheDay()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        await pipeline.SignAsync(Sale(normal: 3.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        sscd.Calls[1].periodTotals!.Current.Totalizer.Should().Be(10.00m);
+        sscd.Calls[3].periodTotals!.Current.Totalizer.Should().Be(3.00m, "the monthly closing closed the day too, as in v1.2");
+    }
+
+    [Fact]
+    public async Task YearlyClosing_AlsoClosesTheMonthAndTheDay_ButNotTheShift()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.YearlyClosing0x2013));
+        await pipeline.SignAsync(Sale(normal: 2.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.ShiftClosing0x2010));
+
+        sscd.Calls[3].periodTotals!.Current.Totalizer.Should().Be(2.00m, "the yearly closing closed the day");
+        sscd.Calls[4].periodTotals!.Current.Totalizer.Should().Be(2.00m, "the yearly closing closed the month");
+        sscd.Calls[5].periodTotals!.Current.Totalizer.Should().Be(12.00m, "no closing but its own ends a shift");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.ShiftClosing0x2010, false, new[] { FRTotalsPeriod.Shift })]
+    [InlineData(ReceiptCase.DailyClosing0x2011, false, new[] { FRTotalsPeriod.Day })]
+    [InlineData(ReceiptCase.MonthlyClosing0x2012, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month })]
+    [InlineData(ReceiptCase.YearlyClosing0x2013, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year })]
+    [InlineData(ReceiptCase.InitialOperationReceipt0x4001, false, new[] { FRTotalsPeriod.Day })]
+    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year })]
+    [InlineData(ReceiptCase.ZeroReceipt0x2000, false, new FRTotalsPeriod[0])]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, false, new FRTotalsPeriod[0])]
+    [InlineData(ReceiptCase.YearlyClosing0x2013, true, new FRTotalsPeriod[0])]
+    public void PeriodsClosedBy_FollowsTheV12Cascade(ReceiptCase receiptCase, bool training, FRTotalsPeriod[] expected)
+    {
+        var receiptCaseValue = receiptCase.WithCountry("FR");
+        var request = new ReceiptRequest { ftReceiptCase = training ? receiptCaseValue.WithFlag(ReceiptCaseFlags.Training) : receiptCaseValue };
+
+        FRPeriodTotalsAccumulator.PeriodsClosedBy(request).Should().Equal(expected);
+    }
+
+    [Fact]
     public async Task PerpetualTotalIsReportedOnEveryClosingAndNeverReset()
     {
         var sscd = new FakeFRSSCD();
