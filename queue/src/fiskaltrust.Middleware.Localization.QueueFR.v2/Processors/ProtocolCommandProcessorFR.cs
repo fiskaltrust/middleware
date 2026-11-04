@@ -110,14 +110,22 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     }
 
     /// <summary>
-    /// A copy counts unless its queue item shows it was not issued: no response yet (the process
-    /// stopped while signing it) or an error state. A row whose queue item cannot be read is a v1.2
-    /// row - v1.2 journals a copy only once it is signed - and counts: counting it at worst leaves a
-    /// gap, not counting it could print the same number twice.
+    /// Whether a journal row takes a number.
+    /// <para>
+    /// A row written before the v2 takeover counts, whatever became of its copy: v1.2 counts every
+    /// row of the reference and journals the copy before signing it, so its numbering already
+    /// consumed the numbers of its failed copies, and v2 must continue after the highest number
+    /// v1.2 printed. Such a row is recognized by its queue item: missing (v1.2 backfills rows from
+    /// history) or not written by a v2 queue (<c>version</c> other than <c>v2</c>).
+    /// </para>
+    /// <para>
+    /// A v2 row counts only if its copy was issued: it has a response (else the process stopped
+    /// while signing it) and that response is not an error.
+    /// </para>
     /// </summary>
     private static bool WasIssued(ftQueueItem? queueItem)
     {
-        if (queueItem is null)
+        if (queueItem is null || queueItem.version != V2QueueItemVersion)
         {
             return true;
         }
@@ -154,6 +162,9 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         Siret = "",
         CertificateSerialNumber = "",
     };
+
+    /// <summary>What QueueStorageProvider stamps on every queue item a v2 queue reserves.</summary>
+    private const string V2QueueItemVersion = "v2";
 
     private sealed class ResponseState
     {

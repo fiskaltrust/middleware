@@ -60,7 +60,7 @@ public class DuplicateTests
     /// <summary>What SignProcessor does around the processor: reserve the queue item, process, finish it.</summary>
     private async Task<ProcessCommandResponse> ProcessAsync(ProtocolCommandProcessorFR sut, ProcessCommandRequest request)
     {
-        var queueItem = new ftQueueItem { ftQueueItemId = request.ReceiptResponse.ftQueueItemID, ftQueueId = request.ReceiptResponse.ftQueueID };
+        var queueItem = new ftQueueItem { ftQueueItemId = request.ReceiptResponse.ftQueueItemID, ftQueueId = request.ReceiptResponse.ftQueueID, version = "v2" };
         await _queueItems.InsertOrUpdateAsync(queueItem);
 
         var response = await sut.CopyReceiptPrintExistingReceipt0x3010Async(request);
@@ -205,7 +205,7 @@ public class DuplicateTests
         var sut = CreateSut();
         var interrupted = Copy("R-1");
         // The process stopped while signing: the row and the queue item exist, the response does not.
-        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = interrupted.ReceiptResponse.ftQueueItemID });
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = interrupted.ReceiptResponse.ftQueueItemID, version = "v2" });
         await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = interrupted.ReceiptResponse.ftQueueItemID, CopiedReceiptReference = "R-1" });
 
         var copy = await ProcessAsync(sut, Copy("R-1"));
@@ -229,18 +229,35 @@ public class DuplicateTests
         retried.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D1");
     }
 
+    /// <summary>
+    /// Half migration (ADR 0003): v1.2 counted every row of the reference and journaled a copy before
+    /// signing it, so its failed and unfinished copies consumed numbers too. v2 continues after the
+    /// highest number v1.2 printed, then filters only its own copies.
+    /// </summary>
     [Fact]
-    public async Task CopiesIssuedByV1_AreCounted()
+    public async Task AfterAHalfMigration_TheNextCopyFollowsTheV12Count_FailedV12CopiesIncluded()
     {
-        // A v1.2 copy: its queue item carries a v1 response; another whose queue item is gone.
-        var v1QueueItemId = Guid.NewGuid();
-        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = v1QueueItemId, response = "{\"ftState\":5067112530745229312,\"ftReceiptIdentification\":\"ft5#D1\"}" });
-        await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = v1QueueItemId, CopiedReceiptReference = "R-1" });
+        await V12Copy("R-1", response: "{\"ftState\":5067112530745229312,\"ftReceiptIdentification\":\"ft5#D1\"}");
+        await V12Copy("R-1", response: "{\"ftState\":5067112530745229320,\"ftReceiptIdentification\":\"ft6#\"}");
+        await V12Copy("R-1", response: null);
         await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = Guid.NewGuid(), CopiedReceiptReference = "R-1" });
         var sut = CreateSut();
 
-        var copy = await ProcessAsync(sut, Copy("R-1"));
+        var first = await ProcessAsync(sut, Copy("R-1"));
+        _sscd.FailWith = "signing unavailable";
+        await ProcessAsync(sut, Copy("R-1"));
+        _sscd.FailWith = null;
+        var second = await ProcessAsync(sut, Copy("R-1"));
 
-        DuplicataOf(copy).Should().Be("3. Duplicata de R-1", "v1.2 writes the same copy journal, so a half-migrated queue keeps counting");
+        DuplicataOf(first).Should().Be("5. Duplicata de R-1", "v1.2 printed up to 4: a signed copy, a failed one, an unfinished one and a backfilled row");
+        DuplicataOf(second).Should().Be("6. Duplicata de R-1", "the failed v2 copy in between does not count");
+    }
+
+    /// <summary>A copy journaled by v1.2: its queue item is not a v2 one (no <c>version</c> "v2").</summary>
+    private async Task V12Copy(string copiedReceiptReference, string? response)
+    {
+        var queueItemId = Guid.NewGuid();
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = queueItemId, response = response });
+        await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = queueItemId, CopiedReceiptReference = copiedReceiptReference });
     }
 }
