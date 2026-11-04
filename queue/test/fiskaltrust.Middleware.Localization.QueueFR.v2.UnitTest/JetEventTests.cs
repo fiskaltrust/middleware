@@ -1,3 +1,12 @@
+using Moq;
+using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Validation;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -20,7 +29,7 @@ public class JetEventTests
     {
         var sscd = new FakeFRSSCD();
         var pipeline = new FRSigningPipeline(sscd, new StoredChainState().Provider());
-        return (new ProtocolCommandProcessorFR(pipeline), sscd);
+        return (new ProtocolCommandProcessorFR(pipeline, new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new InMemoryJournalFRCopyPayloadRepository())), new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(new InMemoryQueueItemRepository()))), sscd);
     }
 
     private static ProcessCommandRequest TechnicalEvent(object? caseData, object? cbUser = null)
