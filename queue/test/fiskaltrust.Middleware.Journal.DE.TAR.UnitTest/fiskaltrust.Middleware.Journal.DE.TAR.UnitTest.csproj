@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net461;net6.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Journal.DE.TAR\fiskaltrust.Middleware.Journal.DE.TAR.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TestData\PerformanceTestDataBase64.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
