@@ -16,7 +16,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// A half migration starts only after the daily closing of the last v1 day (market-fr#192): it is
 /// maintenance done outside business hours, like the SCU switch, so the v2 queue never inherits an
 /// open v1 day and the v1 SCU signs the closing of every day it signed receipts of. The only open
-/// period left to fold at the cut is then the month, into the year.
+/// open period left to fold at the cut is then the month, into the year.
+/// </para>
+/// <para>
+/// For the same reason it does not start while the v1 queue is in late-signing ("failed") mode
+/// (market-fr#231, decided 2026-11-04): the POS has not yet confirmed, with a zero receipt, that it
+/// re-sent every receipt it issued while the middleware was unreachable, so the range would run
+/// across the cut.
 /// </para>
 /// <para>
 /// The migration receipt that calls this, and the signed migration event that records each v1
@@ -27,7 +33,7 @@ public static class FRV1Handover
 {
     /// <summary>
     /// Applies the handover to <paramref name="queueFR"/>, or refuses it while the last v1 day is
-    /// open. Must run exactly once, before the first v2 entry: a second run would count the open
+    /// open or the v1 late-signing mode is. Must run exactly once, before the first v2 entry: a second run would count the open
     /// month twice.
     /// </summary>
     /// <param name="lastV1DayEntryMoment">
@@ -45,7 +51,7 @@ public static class FRV1Handover
     /// </returns>
     public static string? Apply(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment, IReadOnlyDictionary<FRReceiptChain, string>? lastV1Signatures = null)
     {
-        var refusal = OpenDayRefusal(queueFR, lastV1DayEntryMoment);
+        var refusal = OpenDayRefusal(queueFR, lastV1DayEntryMoment) ?? OpenLateSigningRefusal(queueFR);
         if (refusal is not null)
         {
             return refusal;
@@ -83,6 +89,19 @@ public static class FRV1Handover
         return why is null
             ? null
             : $"The v1 queue's last day is not closed: {why}. A half migration to v2 starts only after the daily closing (0x2011) of the last v1 day, so that the v2 queue never inherits an open v1 day. Send the daily closing on the v1 queue, then migrate.";
+    }
+
+    private static string? OpenLateSigningRefusal(ftQueueFR queueFR)
+    {
+        if (queueFR.UsedFailedCount <= 0 && queueFR.UsedFailedQueueItemId is null)
+        {
+            return null;
+        }
+
+        var range = queueFR.UsedFailedMomentMin is { } from && queueFR.UsedFailedMomentMax is { } to
+            ? $" issued between {from.ToString("u", CultureInfo.InvariantCulture)} and {to.ToString("u", CultureInfo.InvariantCulture)}"
+            : "";
+        return $"The v1 queue is in late-signing mode: {queueFR.UsedFailedCount} late-signed receipt(s){range} since queue item {queueFR.UsedFailedQueueItemId}. A half migration to v2 starts only once that mode is closed, so that it never runs across the cut. Send a zero receipt (0x2000) on the v1 queue, then migrate.";
     }
 
     private static bool IsZero(FRTotals totals)

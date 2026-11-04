@@ -92,6 +92,44 @@ public class V1HandoverTests
     }
 
     [Fact]
+    public void Apply_WhileTheV1LateSigningModeIsOpen_IsRefusedAndChangesNothing()
+    {
+        var queueFR = V1QueueAtTheCut();
+        queueFR.UsedFailedCount = 2;
+        queueFR.UsedFailedQueueItemId = Guid.NewGuid();
+        queueFR.UsedFailedMomentMin = LastSaleOfTheDay.AddHours(-3);
+        queueFR.UsedFailedMomentMax = LastSaleOfTheDay;
+
+        var refusal = FRV1Handover.Apply(queueFR, LastSaleOfTheDay, new Dictionary<FRReceiptChain, string> { [FRReceiptChain.Ticket] = "djEtc2ln" });
+
+        refusal.Should().Contain("late-signing mode").And.Contain("2 late-signed receipt(s)").And.Contain("zero receipt (0x2000)");
+        queueFR.GYearTotalizer.Should().Be(900.00m, "a refused handover leaves ftQueueFR unchanged");
+        queueFR.TLastSignature.Should().BeNull();
+        queueFR.UsedFailedCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Apply_WithOnlyAStaleFailedQueueItemId_IsRefused()
+    {
+        // v1 clears the id with the count; one without the other still means the mode was not reset.
+        var queueFR = V1QueueAtTheCut();
+        queueFR.UsedFailedQueueItemId = Guid.NewGuid();
+
+        FRV1Handover.Apply(queueFR, LastSaleOfTheDay).Should().Contain("late-signing mode");
+        queueFR.GYearTotalizer.Should().Be(900.00m);
+    }
+
+    [Fact]
+    public void Apply_AfterTheV1ZeroReceiptClosedTheLateSigningMode_Proceeds()
+    {
+        var queueFR = V1QueueAtTheCut();
+        queueFR.UsedFailedCount = 0;
+        queueFR.UsedFailedQueueItemId = null;
+
+        FRV1Handover.Apply(queueFR, LastSaleOfTheDay).Should().BeNull();
+    }
+
+    [Fact]
     public void Apply_ToAV1QueueThatNeverClosedADay_IsRefusedOnceItIssuedAReceipt()
     {
         var queueFR = V1QueueAtTheCut();
