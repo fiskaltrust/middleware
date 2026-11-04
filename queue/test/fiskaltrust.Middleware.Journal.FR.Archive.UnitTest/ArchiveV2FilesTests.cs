@@ -151,6 +151,21 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public void Linker_IgnoresAChainHashItem()
+        {
+            // ADR 0001: the SCUs chain on the signature. A ChainHash item (0x0008) is the shape the SCUs had before
+            // fiskaltrust/middleware#824; the archive does not link on it.
+            var t1 = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "sig-1", extraItems: "," + Item(0x0008, "chain-hash-1", 2)))!;
+            var t2 = Entry("ft2#T2", "sig-2", 2);
+            var linker = new ArchiveChainLinker();
+
+            linker.Link(t1);
+            linker.Link(t2);
+
+            t2.PreviousSignature.Should().Be("sig-1");
+        }
+
+        [Fact]
         public void Linker_LeavesThePreviousSignatureEmptyWhenThePreviousEntryWasNotSeen()
         {
             var t5 = Entry("ft9#T5", "t5", 9);
