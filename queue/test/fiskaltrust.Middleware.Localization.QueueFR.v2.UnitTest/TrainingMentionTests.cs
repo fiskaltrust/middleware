@@ -34,12 +34,7 @@ public class TrainingMentionTests
         ftSignatures = [],
     };
 
-    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd)
-    {
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        repository.Setup(x => x.GetAsync()).ReturnsAsync(Array.Empty<ftQueueItem>());
-        return new FRSigningPipeline(sscd, new FRChainStateProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
-    }
+    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd) => new(sscd, new StoredChainState().Provider());
 
     private static async Task<ReceiptResponse> SignAsync(ReceiptCase receiptCase, FakeFRSSCD? sscd = null)
     {
