@@ -51,7 +51,7 @@ public class JetEventTests
     {
         var (sut, sscd) = CreateSut();
 
-        var response = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"Code\":\"90\",\"Message\":\"Archivage\",\"Information\":\"Z12\"}"), "Alice"));
+        var response = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\",\"Information\":\"Z12\"}}"), "Alice"));
 
         response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#L1");
         sscd.Calls.Should().ContainSingle();
@@ -71,7 +71,7 @@ public class JetEventTests
             .Which.Data.Should().Contain("technical event journal");
 
         sscd.FailWith = null;
-        var next = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"Code\":\"90\",\"Message\":\"Archivage\"}")));
+        var next = await sut.ProtocolTechnicalEvent0x3001Async(TechnicalEvent(Json("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\"}}")));
         next.receiptResponse.ftReceiptIdentification.Should().Be("ft1#L1", "the refused event consumed no number of chain L");
     }
 }

@@ -48,7 +48,7 @@ public class InfoCertJetPayloadTests
     [Fact]
     public async Task TechnicalEvent_SignsTheR19JetFieldsInTheSignatureSheetOrder()
     {
-        var request = TechnicalEvent("{\"Code\":\"90\",\"Message\":\"Archivage\",\"Information\":\"periode 2026-02\"}", "Alice", 3);
+        var request = TechnicalEvent("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\",\"Information\":\"periode 2026-02\"}}", "Alice", 3);
 
         var (payload, _) = await SignAsync(request, "cHJldmlvdXM");
 
@@ -69,7 +69,7 @@ public class InfoCertJetPayloadTests
     [Fact]
     public async Task FirstTechnicalEvent_StartsTheChainWithEmptyOptionalFields()
     {
-        var (payload, _) = await SignAsync(TechnicalEvent("{\"Code\":\"15\",\"Message\":\"Acces JET\"}", null, 1), null);
+        var (payload, _) = await SignAsync(TechnicalEvent("{\"FR\":{\"Code\":\"15\",\"Message\":\"Acces JET\"}}", null, 1), null);
 
         payload.GetProperty("previousSignatureCarriedOver").GetString().Should().Be("N");
         payload.GetProperty("previousSignature").GetString().Should().BeEmpty();
@@ -82,7 +82,7 @@ public class InfoCertJetPayloadTests
     [InlineData(ReceiptCase.ProtocolAccountingEvent0x3002)]
     public async Task OtherLogCases_KeepTheReceiptDataSet(ReceiptCase receiptCase)
     {
-        var (payload, _) = await SignAsync(TechnicalEvent("{\"Code\":\"90\",\"Message\":\"x\"}", null, 1, receiptCase), null);
+        var (payload, _) = await SignAsync(TechnicalEvent("{\"FR\":{\"Code\":\"90\",\"Message\":\"x\"}}", null, 1, receiptCase), null);
 
         payload.TryGetProperty("eventCode", out _).Should().BeFalse();
         payload.TryGetProperty("receiptCase", out _).Should().BeTrue();

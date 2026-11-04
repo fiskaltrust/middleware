@@ -43,10 +43,12 @@ public class InfoCertJetEventTests
 
     [Theory]
     [InlineData(null)]
-    [InlineData("{\"Message\":\"no code\"}")]
-    [InlineData("{\"Code\":\"11\",\"Message\":\"not an R19 code\"}")]
-    [InlineData("{\"Code\":\"abc\",\"Message\":\"not a number\"}")]
-    [InlineData("{\"Code\":\"90\"}")]
+    [InlineData("{\"FR\":{\"Message\":\"no code\"}}")]
+    [InlineData("{\"FR\":{\"Code\":\"11\",\"Message\":\"not an R19 code\"}}")]
+    [InlineData("{\"FR\":{\"Code\":\"abc\",\"Message\":\"not a number\"}}")]
+    [InlineData("{\"FR\":{\"Code\":\"90\"}}")]
+    [InlineData("{\"Code\":\"90\",\"Message\":\"top level, not under FR\"}")]
+    [InlineData("{\"FR\":\"90\"}")]
     [InlineData("[1,2]")]
     public async Task MalformedTechnicalEvent_IsRefusedInTheResponse(string? caseData)
     {
@@ -61,7 +63,7 @@ public class InfoCertJetEventTests
     [Fact]
     public async Task ValidTechnicalEvent_IsSigned()
     {
-        var (response, signature) = await SignAsync(TechnicalEvent(Json("{\"Code\":\"90\",\"Message\":\"Archivage\",\"Information\":\"Z12\"}"), "Alice"));
+        var (response, signature) = await SignAsync(TechnicalEvent(Json("{\"FR\":{\"Code\":\"90\",\"Message\":\"Archivage\",\"Information\":\"Z12\"}}"), "Alice"));
 
         response.ReceiptResponse.ftState.IsState(State.Error).Should().BeFalse();
         signature.Should().NotBeEmpty();
@@ -98,9 +100,9 @@ public class InfoCertJetEventTests
         => InfoCertJetEvent.ContinuousSequenceModeChange.Should().Be(10, "the archive contract (market-fr#227) lists 10 first; the choice 10/15 is open in market-fr#200");
 
     [Fact]
-    public void TryRead_AcceptsTheV1CaseDataFormat_CaseInsensitive_AsStringOrNumberCode_AndTakesTheOperatorFromCbUser()
+    public void TryRead_AcceptsTheV1KeysUnderFR_CaseInsensitive_AsStringOrNumberCode_AndTakesTheOperatorFromCbUser()
     {
-        var request = TechnicalEvent(Json("{\"code\":90,\"message\":\"Archivage\",\"information\":\"\"}"), Json("\"Alice\"")).ReceiptRequest;
+        var request = TechnicalEvent(Json("{\"fr\":{\"code\":90,\"message\":\"Archivage\",\"information\":\"\"}}"), Json("\"Alice\"")).ReceiptRequest;
 
         InfoCertJetEvent.TryRead(request, out var jetEvent, out var error).Should().BeTrue(error);
 
@@ -110,7 +112,7 @@ public class InfoCertJetEventTests
     [Fact]
     public void TryRead_AcceptsCaseDataSentAsAJsonString()
     {
-        var request = TechnicalEvent("{\"Code\":\"15\",\"Message\":\"Acces JET\"}").ReceiptRequest;
+        var request = TechnicalEvent("{\"FR\":{\"Code\":\"15\",\"Message\":\"Acces JET\"}}").ReceiptRequest;
 
         InfoCertJetEvent.TryRead(request, out var jetEvent, out _).Should().BeTrue();
 

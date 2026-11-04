@@ -6,11 +6,12 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 /// <summary>
 /// A technical event of the NF525 technical event journal (JET, Infocert R19 v4.2), as the POS
-/// sends it: a <c>ProtocolTechnicalEvent 0x3001</c> receipt whose <c>ftReceiptCaseData</c> carries the
-/// event code, its label and the optional contextual information, in the format v1.3 already used
-/// and TaxAuditorTool reads: <c>{"Code":"90","Message":"…","Information":"…"}</c>, property names
-/// case-insensitive (market-fr#42 was closed without introducing <c>JET-*</c> names). The operator
-/// is <c>cbUser</c>. The InfoCert SCU alone reads it: it refuses a malformed event and signs a
+/// sends it: a <c>ProtocolTechnicalEvent 0x3001</c> receipt whose <c>ftReceiptCaseData.FR</c> carries
+/// the event code, its label and the optional contextual information:
+/// <c>{"FR":{"Code":"90","Message":"…","Information":"…"}}</c>. The keys are the ones v1.3 used and
+/// TaxAuditorTool reads, moved under the market block like all French case data (market-fr#248, the
+/// v2 contract of market-fr#243); property names are case-insensitive (market-fr#42 was closed
+/// without introducing <c>JET-*</c> names). The operator is <c>cbUser</c>. The InfoCert SCU alone reads it: it refuses a malformed event and signs a
 /// valid event's R19 content (market-fr#200). The queue does not look into the event.
 /// </summary>
 internal sealed record InfoCertJetEvent(int Code, string Label, string? Information, string? Operator)
@@ -58,30 +59,30 @@ internal sealed record InfoCertJetEvent(int Code, string Label, string? Informat
     public static bool TryRead(ReceiptRequest request, out InfoCertJetEvent? jetEvent, out string? error)
     {
         jetEvent = null;
-        var root = AsObject(request.ftReceiptCaseData);
+        var root = MarketBlock(AsObject(request.ftReceiptCaseData));
         if (root is null)
         {
-            error = "ftReceiptCaseData must be an object {\"Code\":…,\"Message\":…,\"Information\":…} describing the technical event.";
+            error = "ftReceiptCaseData.FR must be an object {\"Code\":…,\"Message\":…,\"Information\":…} describing the technical event.";
             return false;
         }
 
         var codeText = Property(root.Value, "Code");
         if (codeText is null || !int.TryParse(codeText, out var code))
         {
-            error = $"ftReceiptCaseData.Code must be an NF525 technical event code (R19 v4.2), but was '{codeText}'.";
+            error = $"ftReceiptCaseData.FR.Code must be an NF525 technical event code (R19 v4.2), but was '{codeText}'.";
             return false;
         }
 
         if (!IsValidCode(code))
         {
-            error = $"ftReceiptCaseData.Code {code} is not a technical event code of R19 v4.2 and not an editor code (>= {FirstEditorCode}).";
+            error = $"ftReceiptCaseData.FR.Code {code} is not a technical event code of R19 v4.2 and not an editor code (>= {FirstEditorCode}).";
             return false;
         }
 
         var label = Property(root.Value, "Message");
         if (string.IsNullOrWhiteSpace(label))
         {
-            error = "ftReceiptCaseData.Message must hold the label of the technical event (JET-EVT-LIB).";
+            error = "ftReceiptCaseData.FR.Message must hold the label of the technical event (JET-EVT-LIB).";
             return false;
         }
 
@@ -108,6 +109,25 @@ internal sealed record InfoCertJetEvent(int Code, string Label, string? Informat
         {
             return null;
         }
+    }
+
+    /// <summary>The <c>FR</c> object of the case data, or null when there is none.</summary>
+    private static JsonElement? MarketBlock(JsonElement? caseData)
+    {
+        if (caseData is null)
+        {
+            return null;
+        }
+
+        foreach (var property in caseData.Value.EnumerateObject())
+        {
+            if (string.Equals(property.Name, "FR", StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value.ValueKind == JsonValueKind.Object ? property.Value : null;
+            }
+        }
+
+        return null;
     }
 
     private static string? Property(JsonElement root, string name)
