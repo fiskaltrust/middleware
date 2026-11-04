@@ -63,16 +63,19 @@ public static class SignaturItemFactory
     /// <summary>
     /// Tells the POS which JET event (R19) to send: it copies <see cref="SignatureItem.Data"/>
     /// unchanged into the ftReceiptCaseData of a <c>ProtocolTechnicalEvent 0x3001</c>, with
-    /// cbPreviousReceiptReference set to the receipt that carried this item. The queue issues no
-    /// JET entry itself (market-fr#231, #208).
+    /// cbPreviousReceiptReference set to the receipt that carried this item. The data is already the
+    /// whole case data, <c>{"FR":{"Code":…,"Message":…,"Information":…}}</c>, the path the InfoCert
+    /// SCU reads (market-fr#248). The queue issues no JET entry itself (market-fr#231, #208).
     /// </summary>
     public static SignatureItem CreateJetEventSignature(int code, string message, string? information) => new()
     {
         ftSignatureFormat = SignatureFormat.Text,
         ftSignatureType = SignatureTypeFR.JetEvent.As<SignatureType>().WithFlag(SignatureTypeFlags.VisualizationOptional),
         Caption = "JET",
-        Data = JsonSerializer.Serialize(new JetEventData(code.ToString(CultureInfo.InvariantCulture), message, information), _jetJson),
+        Data = JsonSerializer.Serialize(new JetEventCaseData(new JetEventData(code.ToString(CultureInfo.InvariantCulture), message, information)), _jetJson),
     };
+
+    private sealed record JetEventCaseData(JetEventData FR);
 
     private sealed record JetEventData(string Code, string Message, string? Information);
 

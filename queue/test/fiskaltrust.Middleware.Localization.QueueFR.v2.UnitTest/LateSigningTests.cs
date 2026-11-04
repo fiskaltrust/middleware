@@ -86,7 +86,7 @@ public class LateSigningTests
     private static List<SignatureItem> JetItems(ProcessCommandResponse response)
         => response.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).ToList();
 
-    private static JsonElement JetData(SignatureItem item) => JsonDocument.Parse(item.Data).RootElement;
+    private static JsonElement JetData(SignatureItem item) => JsonDocument.Parse(item.Data).RootElement.GetProperty("FR");
 
     private static SignatureItem? Mention(ProcessCommandResponse response)
         => response.receiptResponse.ftSignatures.SingleOrDefault(x => x.Caption == "Défaillance enregistrée");

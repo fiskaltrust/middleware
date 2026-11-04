@@ -129,7 +129,7 @@ public abstract class LateSigningScenarioTests
 
     private static IEnumerable<string?> JetCodes(ReceiptResponse response)
         => response.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent))
-            .Select(x => JsonDocument.Parse(x.Data).RootElement.GetProperty("Code").GetString());
+            .Select(x => JsonDocument.Parse(x.Data).RootElement.GetProperty("FR").GetProperty("Code").GetString());
 
     private ReceiptRequest Request(ReceiptCase receiptCase, bool lateSigned = false, DateTime? cbReceiptMoment = null) => new()
     {
