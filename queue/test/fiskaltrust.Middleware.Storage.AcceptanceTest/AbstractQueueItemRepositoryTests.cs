@@ -547,5 +547,19 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
                 await Task.Delay(10);
             }
         }
+
+        /// <summary>The read QueueFR v2 uses for a copy's outcome (market-fr#235): by ID and queue row.</summary>
+        [Fact]
+        public async Task GetAsync_ByIdAndQueueRow_ShouldReturnThatItem()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(5).ToList();
+            var expected = entries[2];
+            var sut = await CreateRepository(entries);
+
+            var actual = await sut.GetAsync(expected.ftQueueItemId, expected.ftQueueRow);
+
+            actual.Should().BeEquivalentTo(expected);
+            (await sut.GetAsync(Guid.NewGuid(), expected.ftQueueRow)).Should().BeNull();
+        }
     }
 }

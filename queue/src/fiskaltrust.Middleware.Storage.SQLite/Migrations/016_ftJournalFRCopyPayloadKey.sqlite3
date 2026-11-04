@@ -1,6 +1,12 @@
 -- market-fr#235: 012 made QueueId the primary key, so a queue could journal a single copy and its
--- second copy failed with a UNIQUE constraint. A copy is identified by its queue item, as in every
--- other storage; the copies of a receipt are looked up by CopiedReceiptReference.
+-- second copy failed with a UNIQUE constraint. v1.2 keys the table on QueueItemId; so do EF and Azure
+-- here. QueueRow (NULL on v1.2 rows) lets QueueFR v2 read a copy's queue item without a scan.
+--
+-- The rebuild runs in one transaction, so an interruption leaves the 015 table as it was and the
+-- migration runs again from the start; the temporary table is dropped first in case an earlier,
+-- non-transactional attempt left it behind.
+BEGIN TRANSACTION;
+DROP TABLE IF EXISTS ftJournalFRCopyPayload_016;
 CREATE TABLE ftJournalFRCopyPayload_016
 (
     QueueItemId               NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -11,10 +17,12 @@ CREATE TABLE ftJournalFRCopyPayload_016
     ReceiptMoment             BIGINT NOT NULL,
     CopiedReceiptReference    NVARCHAR(2147483647) NOT NULL,
     CertificateSerialNumber   NVARCHAR(2147483647) NOT NULL,
-    TimeStamp                 BIGINT NOT NULL
+    TimeStamp                 BIGINT NOT NULL,
+    QueueRow                  BIGINT NULL
 );
 INSERT INTO ftJournalFRCopyPayload_016 (QueueItemId, QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, CopiedReceiptReference, CertificateSerialNumber, TimeStamp)
     SELECT QueueItemId, QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, CopiedReceiptReference, CertificateSerialNumber, TimeStamp FROM ftJournalFRCopyPayload;
 DROP TABLE ftJournalFRCopyPayload;
 ALTER TABLE ftJournalFRCopyPayload_016 RENAME TO ftJournalFRCopyPayload;
-CREATE INDEX idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference);
+CREATE INDEX IF NOT EXISTS idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference);
+COMMIT;

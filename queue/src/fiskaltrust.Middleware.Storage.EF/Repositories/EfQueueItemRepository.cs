@@ -30,6 +30,9 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
 
         protected override Guid GetIdForEntity(ftQueueItem entity) => entity.ftQueueItemId;
 
+        /// <summary>The ID is the primary key here, so the queue row is not needed.</summary>
+        public Task<ftQueueItem> GetAsync(Guid ftQueueItemId, long ftQueueRow) => GetAsync(ftQueueItemId);
+
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow) => await Task.FromResult(DbContext.Set<ftQueueItem>().FirstOrDefault(x => x.ftQueueRow == queueRow)).ConfigureAwait(false);
 
         public override IAsyncEnumerable<ftQueueItem> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive) => DbContext.QueueItemList.Where(x => x.TimeStamp >= fromInclusive && x.TimeStamp <= toInclusive).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();

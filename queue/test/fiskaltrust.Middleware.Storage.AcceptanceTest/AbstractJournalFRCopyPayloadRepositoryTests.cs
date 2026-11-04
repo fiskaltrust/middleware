@@ -98,5 +98,18 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             (await repo.GetCopiesAsync("ref1")).Should().HaveCount(3);
         }
+
+        /// <summary>QueueFR v2 writes the queue row of the copy; a v1.2 row has none.</summary>
+        [Fact]
+        public async Task QueueRow_IsKept_AndNullOnARowWithout()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftJournalFRCopyPayload>(2).ToList();
+            entries[0].QueueRow = 42;
+            entries[1].QueueRow = null;
+            var repo = await CreateRepository(entries);
+
+            (await repo.GetAsync(entries[0].QueueItemId)).QueueRow.Should().Be(42);
+            (await repo.GetAsync(entries[1].QueueItemId)).QueueRow.Should().BeNull();
+        }
     }
 }

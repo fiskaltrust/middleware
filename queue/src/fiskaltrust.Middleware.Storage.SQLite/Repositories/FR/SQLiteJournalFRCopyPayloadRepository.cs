@@ -44,8 +44,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
             EntityUpdated(payload);
             await DbConnection.ExecuteAsync(
                 "INSERT INTO ftJournalFRCopyPayload " +
-                       "(QueueId,   CashBoxIdentification,  Siret,  ReceiptId,  ReceiptMoment,  QueueItemId,  CopiedReceiptReference,  CertificateSerialNumber,  TimeStamp) " +
-                "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);",
+                       "(QueueId,   CashBoxIdentification,  Siret,  ReceiptId,  ReceiptMoment,  QueueItemId,  CopiedReceiptReference,  CertificateSerialNumber,  TimeStamp,  QueueRow) " +
+                "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp, @QueueRow);",
                 payload
             ).ConfigureAwait(false);
         }

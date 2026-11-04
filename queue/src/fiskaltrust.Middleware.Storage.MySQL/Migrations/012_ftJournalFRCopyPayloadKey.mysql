@@ -1,5 +1,21 @@
--- market-fr#235: 009 made QueueId the primary key, so a queue could journal a single copy. A copy is
--- identified by its queue item, as in every other storage; the copies of a receipt are looked up by
--- CopiedReceiptReference.
+-- market-fr#235: 009 made QueueId the primary key, so a queue could journal a single copy. v1.2 keys
+-- the table on QueueItemId; so do EF and Azure here. QueueRow (NULL on v1.2 rows) lets QueueFR v2
+-- read a copy's queue item without a scan.
+--
+-- MySQL commits each DDL statement on its own, so every step can run again after an interruption:
+-- re-keying on QueueItemId is idempotent, and the column and the index are added only when missing.
 ALTER TABLE ftJournalFRCopyPayload DROP PRIMARY KEY, ADD PRIMARY KEY (QueueItemId);
-CREATE INDEX idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference(255));
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftJournalFRCopyPayload ADD COLUMN QueueRow BIGINT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftJournalFRCopyPayload' AND COLUMN_NAME = 'QueueRow');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'CREATE INDEX idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference(255))', 'DO 0')
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftJournalFRCopyPayload' AND INDEX_NAME = 'idx_ftJournalFRCopyPayload_CopiedReceiptReference');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;

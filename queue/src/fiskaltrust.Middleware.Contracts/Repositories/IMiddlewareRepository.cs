@@ -17,6 +17,12 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
     {
         IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId = null);
 
+        /// <summary>
+        /// One queue item, by its ID and its queue row. The row lets a storage that partitions queue
+        /// items by row (Azure Table Storage) read the item directly instead of scanning for the ID.
+        /// </summary>
+        Task<ftQueueItem> GetAsync(Guid ftQueueItemId, long ftQueueRow);
+
         Task<ftQueueItem> GetByQueueRowAsync(long queueRow);
 
         Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem);

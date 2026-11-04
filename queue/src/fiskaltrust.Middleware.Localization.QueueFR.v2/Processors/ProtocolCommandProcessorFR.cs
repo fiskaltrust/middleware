@@ -85,8 +85,9 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     }
 
     /// <summary>
-    /// The earlier copies of the reference that were issued: a targeted lookup (the journal rows of
-    /// this reference, then each one's queue item by ID), never a scan of the queue items.
+    /// The earlier copies of the reference that took a number. Every read is targeted: the journal
+    /// rows of this reference, then, for a v2 row only, its queue item by ID and queue row - a point
+    /// read in every storage, Azure included, where queue items are partitioned by row.
     /// </summary>
     private async Task<int> CountSignedCopiesAsync(IJournalFRCopyPayloadRepository copies, string copiedReceiptReference, Guid currentQueueItemId)
     {
@@ -99,8 +100,17 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
                 continue;
             }
 
-            var queueItem = await queueItems.GetAsync(copy.QueueItemId).ConfigureAwait(false);
-            if (WasIssued(queueItem))
+            // A v1.2 row counts whatever became of its copy: v1.2 counts every row of the reference
+            // and journals a copy before signing it, so its numbering already consumed the numbers of
+            // its unanswered copies, and v2 continues after the highest number v1.2 printed. v1.2
+            // (and its backfill from history) never writes QueueRow.
+            if (copy.QueueRow is not { } queueRow)
+            {
+                count++;
+                continue;
+            }
+
+            if (WasIssued(await queueItems.GetAsync(copy.QueueItemId, queueRow).ConfigureAwait(false)))
             {
                 count++;
             }
@@ -110,51 +120,40 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     }
 
     /// <summary>
-    /// Whether a journal row takes a number.
-    /// <para>
-    /// A row written before the v2 takeover counts, whatever became of its copy: v1.2 counts every
-    /// row of the reference and journals the copy before signing it, so its numbering already
-    /// consumed the numbers of its failed copies, and v2 must continue after the highest number
-    /// v1.2 printed. Such a row is recognized by its queue item: missing (v1.2 backfills rows from
-    /// history) or not written by a v2 queue (<c>version</c> other than <c>v2</c>).
-    /// </para>
-    /// <para>
-    /// A v2 row counts only if its copy was issued: it has a response (else the process stopped
-    /// while signing it) and that response is not an error.
-    /// </para>
+    /// A v2 copy took a number only if it was issued: its queue item has a response (else the process
+    /// stopped while signing it) and that response is not an error. The queue item is stored before
+    /// the journal row, so a missing one was never answered either.
     /// </summary>
     private static bool WasIssued(ftQueueItem? queueItem)
     {
-        if (queueItem is null || queueItem.version != V2QueueItemVersion)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrEmpty(queueItem.response))
+        if (string.IsNullOrEmpty(queueItem?.response))
         {
             return false;
         }
 
         try
         {
-            var outcome = JsonSerializer.Deserialize<ResponseState>(queueItem.response);
+            var outcome = JsonSerializer.Deserialize<ResponseState>(queueItem!.response);
             return outcome is null || !outcome.ftState.IsState(State.Error);
         }
         catch (JsonException)
         {
+            // Counting a copy that was not issued leaves a gap; not counting one that was would
+            // print its number twice.
             return true;
         }
     }
 
     /// <summary>
     /// The journal row, written before signing: it links the copied reference to the copy's queue
-    /// item. What the SCU signs (receipt ID, SIRET, certificate) is on that queue item's response, so
-    /// those columns - NOT NULL in the v1.2 schema - stay empty.
+    /// item and queue row. What the SCU signs (receipt ID, SIRET, certificate) is on that queue
+    /// item's response, so those columns - NOT NULL in the v1.2 schema - stay empty.
     /// </summary>
     private static ftJournalFRCopyPayload CopyRecord(ReceiptResponse response, string copiedReceiptReference) => new()
     {
         QueueId = response.ftQueueID,
         QueueItemId = response.ftQueueItemID,
+        QueueRow = response.ftQueueRow,
         CashBoxIdentification = response.ftCashBoxIdentification,
         ReceiptId = "",
         ReceiptMoment = response.ftReceiptMoment,
@@ -162,9 +161,6 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         Siret = "",
         CertificateSerialNumber = "",
     };
-
-    /// <summary>What QueueStorageProvider stamps on every queue item a v2 queue reserves.</summary>
-    private const string V2QueueItemVersion = "v2";
 
     private sealed class ResponseState
     {

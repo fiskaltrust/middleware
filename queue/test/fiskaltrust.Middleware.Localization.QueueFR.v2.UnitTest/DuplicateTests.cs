@@ -13,6 +13,7 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
@@ -34,7 +35,20 @@ public class DuplicateTests
         => new(
             new FRSigningPipeline(_sscd, new StoredChainState().Provider()),
             new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new Journal(this))),
-            new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(_queueItems)));
+            new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(QueueItemsReadOnlyByIdAndRow())));
+
+    /// <summary>
+    /// The queue items as the copy processor may read them: by ID and queue row only, the read that
+    /// is a point read in every storage. Any other read - by ID alone scans in Azure - fails the test.
+    /// </summary>
+    private IMiddlewareQueueItemRepository QueueItemsReadOnlyByIdAndRow()
+    {
+        var queueItems = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+        queueItems.Setup(x => x.GetAsync(It.IsAny<Guid>(), It.IsAny<long>())).Returns((Guid id, long row) => _queueItems.GetAsync(id, row));
+        return queueItems.Object;
+    }
+
+    private static long _lastQueueRow;
 
     /// <summary>The copy journal, which can be told to fail its next insert.</summary>
     private sealed class Journal(DuplicateTests test) : IJournalFRCopyPayloadRepository
@@ -60,7 +74,7 @@ public class DuplicateTests
     /// <summary>What SignProcessor does around the processor: reserve the queue item, process, finish it.</summary>
     private async Task<ProcessCommandResponse> ProcessAsync(ProtocolCommandProcessorFR sut, ProcessCommandRequest request)
     {
-        var queueItem = new ftQueueItem { ftQueueItemId = request.ReceiptResponse.ftQueueItemID, ftQueueId = request.ReceiptResponse.ftQueueID, version = "v2" };
+        var queueItem = new ftQueueItem { ftQueueItemId = request.ReceiptResponse.ftQueueItemID, ftQueueRow = request.ReceiptResponse.ftQueueRow, ftQueueId = request.ReceiptResponse.ftQueueID, version = "v2" };
         await _queueItems.InsertOrUpdateAsync(queueItem);
 
         var response = await sut.CopyReceiptPrintExistingReceipt0x3010Async(request);
@@ -83,6 +97,7 @@ public class DuplicateTests
             {
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = Interlocked.Increment(ref _lastQueueRow),
                 ftReceiptIdentification = "ft1#",
                 ftReceiptMoment = DateTime.UtcNow,
                 ftState = (State) StateFR.Success,
@@ -150,6 +165,7 @@ public class DuplicateTests
         var recorded = await _copies.GetAsync(request.ReceiptResponse.ftQueueItemID);
         recorded.CopiedReceiptReference.Should().Be("R-1");
         recorded.QueueId.Should().Be(request.ReceiptResponse.ftQueueID);
+        recorded.QueueRow.Should().Be(request.ReceiptResponse.ftQueueRow, "the queue row makes the outcome a point read");
     }
 
     [Fact]
@@ -205,8 +221,8 @@ public class DuplicateTests
         var sut = CreateSut();
         var interrupted = Copy("R-1");
         // The process stopped while signing: the row and the queue item exist, the response does not.
-        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = interrupted.ReceiptResponse.ftQueueItemID, version = "v2" });
-        await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = interrupted.ReceiptResponse.ftQueueItemID, CopiedReceiptReference = "R-1" });
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = interrupted.ReceiptResponse.ftQueueItemID, ftQueueRow = interrupted.ReceiptResponse.ftQueueRow, version = "v2" });
+        await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = interrupted.ReceiptResponse.ftQueueItemID, QueueRow = interrupted.ReceiptResponse.ftQueueRow, CopiedReceiptReference = "R-1" });
 
         var copy = await ProcessAsync(sut, Copy("R-1"));
 
@@ -255,7 +271,7 @@ public class DuplicateTests
         DuplicataOf(second).Should().Be("6. Duplicata de R-1", "the failed v2 copy in between does not count");
     }
 
-    /// <summary>A copy journaled by v1.2: its queue item is not a v2 one (no <c>version</c> "v2").</summary>
+    /// <summary>A copy journaled by v1.2: its row has no queue row, which only v2 writes.</summary>
     private async Task V12Copy(string copiedReceiptReference, string? response)
     {
         var queueItemId = Guid.NewGuid();

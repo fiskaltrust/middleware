@@ -23,6 +23,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
         public string CopiedReceiptReference { get; set; }
         public string CertificateSerialNumber { get; set; }
         public long TimeStamp { get; set; }
+        public long? QueueRow { get; set; }
     }
 
     /// <summary>
@@ -91,6 +92,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
                 CopiedReceiptReference = src.CopiedReceiptReference,
                 CertificateSerialNumber = src.CertificateSerialNumber,
                 TimeStamp = src.TimeStamp,
+                QueueRow = src.QueueRow,
             };
         }
 
@@ -112,6 +114,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
                 CopiedReceiptReference = src.CopiedReceiptReference,
                 CertificateSerialNumber = src.CertificateSerialNumber,
                 TimeStamp = src.TimeStamp,
+                QueueRow = src.QueueRow,
             };
         }
 
