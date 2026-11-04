@@ -231,14 +231,16 @@ public class DuplicateTests
 
     /// <summary>
     /// Half migration (ADR 0003): v1.2 counted every row of the reference and journaled a copy before
-    /// signing it, so its failed and unfinished copies consumed numbers too. v2 continues after the
+    /// signing it, so a copy that failed after being journaled consumed its number too. v2 continues after the
     /// highest number v1.2 printed, then filters only its own copies.
     /// </summary>
     [Fact]
-    public async Task AfterAHalfMigration_TheNextCopyFollowsTheV12Count_FailedV12CopiesIncluded()
+    public async Task AfterAHalfMigration_TheNextCopyFollowsTheV12Count_UnfinishedV12CopiesIncluded()
     {
         await V12Copy("R-1", response: "{\"ftState\":5067112530745229312,\"ftReceiptIdentification\":\"ft5#D1\"}");
-        await V12Copy("R-1", response: "{\"ftState\":5067112530745229320,\"ftReceiptIdentification\":\"ft6#\"}");
+        // Late-signed: v1.2 ORs 0x8 into ftState for a receipt carrying the late-signing flag.
+        await V12Copy("R-1", response: "{\"ftState\":5067112530745229320,\"ftReceiptIdentification\":\"ft6#D2\"}");
+        // Journaled, then never answered: v1.2 still counted it.
         await V12Copy("R-1", response: null);
         await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = Guid.NewGuid(), CopiedReceiptReference = "R-1" });
         var sut = CreateSut();
@@ -249,7 +251,7 @@ public class DuplicateTests
         _sscd.FailWith = null;
         var second = await ProcessAsync(sut, Copy("R-1"));
 
-        DuplicataOf(first).Should().Be("5. Duplicata de R-1", "v1.2 printed up to 4: a signed copy, a failed one, an unfinished one and a backfilled row");
+        DuplicataOf(first).Should().Be("5. Duplicata de R-1", "v1.2 printed up to 4: a signed copy, a late-signed one, an unfinished one and a backfilled row");
         DuplicataOf(second).Should().Be("6. Duplicata de R-1", "the failed v2 copy in between does not count");
     }
 
