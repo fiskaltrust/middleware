@@ -21,7 +21,13 @@ internal sealed class StoredChainState
 
     public InMemoryConfigurationRepository Repository { get; } = new();
 
-    public FRChainStateProvider Provider() => new(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult<IConfigurationRepository>(Repository)), QueueId);
+    private FRChainStateProvider? _provider;
+
+    /// <summary>The one provider over this state, as a queue has one.</summary>
+    public FRChainStateProvider Provider() => _provider ??= new(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult<IConfigurationRepository>(Repository)), QueueId);
+
+    /// <summary>What FinishQueueItem does once the signed queue item is stored.</summary>
+    public Task CommitAsync() => Provider().CommitAsync();
 
     public Task<ftQueueFR> ReadAsync() => Repository.GetQueueFRAsync(QueueId);
 }

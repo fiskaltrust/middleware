@@ -199,6 +199,7 @@ public class PeriodTotalsTests
 
         await pipeline.SignAsync(Sale(normal: 10.00m));
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await state.CommitAsync();
 
         var stored = await state.ReadAsync();
         stored.GDayTotalizer.Should().Be(0m, "the daily closing reset the day");

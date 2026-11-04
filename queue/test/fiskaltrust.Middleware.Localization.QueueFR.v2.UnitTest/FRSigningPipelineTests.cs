@@ -144,6 +144,7 @@ public class FRSigningPipelineTests
 
         await pipeline.SignAsync(CommandRequest());
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await state.CommitAsync();
 
         var stored = await state.ReadAsync();
         stored.TNumerator.Should().Be(1);
@@ -160,6 +161,7 @@ public class FRSigningPipelineTests
         var state = new StoredChainState();
 
         await CreatePipeline(sscd, state).SignAsync(CommandRequest());
+        await state.CommitAsync();
 
         (await state.ReadAsync()).Should().BeNull("no entry was signed, so no chain moved");
     }
