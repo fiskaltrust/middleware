@@ -265,8 +265,7 @@ public class LneFRSSCDTests
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
         using var sut = new LneFRSSCD(Configuration(privateKey));
-        var copy = FRTestData.Request();
-        copy.CopyNumber = 2;
+        var copy = FRTestData.Copy(2, asJson: false);
 
         var (copied, _) = await sut.ProcessReceiptAsync(copy, null);
         var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);

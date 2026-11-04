@@ -57,5 +57,46 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             Assert.Equal(2, countReference1);
             Assert.Equal(1, countReference2);
         }
+
+        [Fact]
+        public async Task GetCopiesAsync_ReturnsTheCopiesOfThatReferenceOnly()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftJournalFRCopyPayload>(3).ToList();
+            entries[0].CopiedReceiptReference = "ref1";
+            entries[1].CopiedReceiptReference = "ref1";
+            entries[2].CopiedReceiptReference = "ref2";
+
+            var repo = await CreateRepository(entries);
+
+            (await repo.GetCopiesAsync("ref1")).Select(x => x.QueueItemId).Should().BeEquivalentTo(new[] { entries[0].QueueItemId, entries[1].QueueItemId });
+            (await repo.GetCopiesAsync("ref3")).Should().BeEmpty();
+        }
+
+        /// <summary>
+        /// QueueFR v2 journals a copy before signing it (market-fr#235): one queue, several copies,
+        /// and only the link to the queue item filled in.
+        /// </summary>
+        [Fact]
+        public async Task SeveralCopiesOfOneQueue_AsQueueFRv2JournalsThem_CanBeInserted()
+        {
+            var queueId = Guid.NewGuid();
+            ftJournalFRCopyPayload Copy() => new ftJournalFRCopyPayload
+            {
+                QueueId = queueId,
+                QueueItemId = Guid.NewGuid(),
+                CashBoxIdentification = "cashbox",
+                ReceiptId = "",
+                ReceiptMoment = DateTime.UtcNow,
+                CopiedReceiptReference = "ref1",
+                Siret = "",
+                CertificateSerialNumber = "",
+            };
+            var repo = await CreateRepository(new[] { Copy() });
+
+            await repo.InsertAsync(Copy());
+            await repo.InsertAsync(Copy());
+
+            (await repo.GetCopiesAsync("ref1")).Should().HaveCount(3);
+        }
     }
 }

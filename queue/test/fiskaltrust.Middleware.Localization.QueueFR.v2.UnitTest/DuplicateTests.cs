@@ -1,11 +1,15 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -15,21 +19,29 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// A copy carries its reprint number (R13 ENC-DUP-PRN-NUM), counted per copied receipt from the
-/// copy journal rather than from the queue items (market-fr#235).
+/// copies that were signed: the copy journal rows of the reference, then their queue items
+/// (market-fr#235). The tests drive the processor as SignProcessor does: the queue item is stored
+/// before processing and gets its response afterwards.
 /// </summary>
 public class DuplicateTests
 {
     private readonly InMemoryJournalFRCopyPayloadRepository _copies = new();
+    private readonly InMemoryQueueItemRepository _queueItems = new();
     private readonly FakeFRSSCD _sscd = new();
     private bool _failNextJournalInsert;
 
     private ProtocolCommandProcessorFR CreateSut()
-        => new(new FRSigningPipeline(_sscd, new StoredChainState().Provider()), new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new Journal(this))));
+        => new(
+            new FRSigningPipeline(_sscd, new StoredChainState().Provider()),
+            new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new Journal(this))),
+            new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(_queueItems)));
 
     /// <summary>The copy journal, which can be told to fail its next insert.</summary>
     private sealed class Journal(DuplicateTests test) : IJournalFRCopyPayloadRepository
     {
         public Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference) => test._copies.GetCountOfCopiesAsync(cbPreviousReceiptReference);
+
+        public Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesAsync(string copiedReceiptReference) => test._copies.GetCopiesAsync(copiedReceiptReference);
 
         public Task<ftJournalFRCopyPayload> GetAsync(Guid queueItemId) => test._copies.GetAsync(queueItemId);
 
@@ -45,43 +57,17 @@ public class DuplicateTests
         }
     }
 
-    private static ProcessCommandRequest TrainingCopy(string copiedReceiptReference)
+    /// <summary>What SignProcessor does around the processor: reserve the queue item, process, finish it.</summary>
+    private async Task<ProcessCommandResponse> ProcessAsync(ProtocolCommandProcessorFR sut, ProcessCommandRequest request)
     {
-        var request = Copy(copiedReceiptReference);
-        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
-        return request;
-    }
+        var queueItem = new ftQueueItem { ftQueueItemId = request.ReceiptResponse.ftQueueItemID, ftQueueId = request.ReceiptResponse.ftQueueID };
+        await _queueItems.InsertOrUpdateAsync(queueItem);
 
-    [Fact]
-    public async Task ATrainingCopy_IsNotCountedNorJournaled()
-    {
-        var sut = CreateSut();
+        var response = await sut.CopyReceiptPrintExistingReceipt0x3010Async(request);
 
-        var training = await sut.CopyReceiptPrintExistingReceipt0x3010Async(TrainingCopy("R-1"));
-        var fiscal = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
-
-        DuplicataOf(training).Should().Be("Duplicata de R-1", "a training copy carries no reprint number");
-        training.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
-        _sscd.LastRequest!.CopyNumber.Should().Be(1, "the fiscal copy, signed last, is the first one");
-        DuplicataOf(fiscal).Should().Be("1. Duplicata de R-1", "the training copy must not shift the fiscal numbering");
-        (await _copies.GetCountOfCopiesAsync("R-1")).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task ACopyThatCannotBeJournaled_IsNotIssuedAndItsNumberIsSignedAgain()
-    {
-        var sut = CreateSut();
-        _failNextJournalInsert = true;
-
-        var failed = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
-        var retried = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
-
-        failed.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
-        failed.receiptResponse.ftReceiptIdentification.Should().Be("ft1#", "the copy was not issued, so it took no number");
-        DuplicataOf(retried).Should().Be("1. Duplicata de R-1", "no copy of R-1 was issued before");
-        retried.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D1");
-        _sscd.Calls[1].previousSignature.Should().Be(_sscd.Calls[0].previousSignature, "the chain did not advance on the unissued copy");
-        (await _copies.GetCountOfCopiesAsync("R-1")).Should().Be(1);
+        queueItem.response = JsonSerializer.Serialize(response.receiptResponse);
+        await _queueItems.InsertOrUpdateAsync(queueItem);
+        return response;
     }
 
     private static ProcessCommandRequest Copy(string copiedReceiptReference)
@@ -103,16 +89,25 @@ public class DuplicateTests
                 ftSignatures = [],
             });
 
+    private static ProcessCommandRequest TrainingCopy(string copiedReceiptReference)
+    {
+        var request = Copy(copiedReceiptReference);
+        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        return request;
+    }
+
     private static string? DuplicataOf(ProcessCommandResponse response) => response.receiptResponse.ftSignatures.SingleOrDefault(x => x.Caption == "Duplicata")?.Data;
+
+    private int? SignedCopyNumber => FRStateData.CopyNumber(_sscd.LastRequest!.ReceiptResponse);
 
     [Fact]
     public async Task CopiesOfTheSameReceipt_AreNumberedOneTwoThree()
     {
         var sut = CreateSut();
 
-        var first = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
-        var second = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
-        var third = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        var first = await ProcessAsync(sut, Copy("R-1"));
+        var second = await ProcessAsync(sut, Copy("R-1"));
+        var third = await ProcessAsync(sut, Copy("R-1"));
 
         DuplicataOf(first).Should().Be("1. Duplicata de R-1");
         DuplicataOf(second).Should().Be("2. Duplicata de R-1");
@@ -124,59 +119,128 @@ public class DuplicateTests
     public async Task ACopyOfAnotherReceipt_StartsAgainAtOne()
     {
         var sut = CreateSut();
-        await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
-        await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        await ProcessAsync(sut, Copy("R-1"));
+        await ProcessAsync(sut, Copy("R-1"));
 
-        var other = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-2"));
+        var other = await ProcessAsync(sut, Copy("R-2"));
 
         DuplicataOf(other).Should().Be("1. Duplicata de R-2");
     }
 
     [Fact]
-    public async Task TheCopyNumber_IsHandedToTheScuToSign()
+    public async Task TheCopyNumber_ReachesTheScuInTheFRBlockOfStateData()
     {
         var sut = CreateSut();
-        await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        await ProcessAsync(sut, Copy("R-1"));
 
-        await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        var second = await ProcessAsync(sut, Copy("R-1"));
 
-        _sscd.LastRequest!.CopyNumber.Should().Be(2);
+        SignedCopyNumber.Should().Be(2);
+        MiddlewareStateData.FromReceiptResponse(second.receiptResponse).FR!.CopyNumber.Should().Be(2);
     }
 
     [Fact]
-    public async Task EachSignedCopy_IsRecordedInTheCopyJournal()
+    public async Task ACopyIsJournaledBeforeItIsSigned_LinkingTheReferenceToItsQueueItem()
     {
         var sut = CreateSut();
+        var request = Copy("R-1");
 
-        var copy = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        await ProcessAsync(sut, request);
 
-        var recorded = await _copies.GetAsync(copy.receiptResponse.ftQueueItemID);
+        var recorded = await _copies.GetAsync(request.ReceiptResponse.ftQueueItemID);
         recorded.CopiedReceiptReference.Should().Be("R-1");
-        recorded.ReceiptId.Should().Be("ft1#D1");
+        recorded.QueueId.Should().Be(request.ReceiptResponse.ftQueueID);
     }
 
     [Fact]
-    public async Task ACopyThatCouldNotBeSigned_IsNotCounted()
+    public async Task ATrainingCopy_IsNeitherNumberedNorJournaled_SoTheFirstFiscalCopyIsOne()
     {
         var sut = CreateSut();
+
+        var training = await ProcessAsync(sut, TrainingCopy("R-1"));
+        var fiscal = await ProcessAsync(sut, Copy("R-1"));
+
+        DuplicataOf(training).Should().Be("Duplicata de R-1", "a training copy carries no reprint number");
+        training.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
+        DuplicataOf(fiscal).Should().Be("1. Duplicata de R-1", "the training copy must not shift the fiscal numbering");
+        SignedCopyNumber.Should().Be(1);
+        (await _copies.GetCopiesAsync("R-1")).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ACopyThatCouldNotBeSigned_IsNotCounted_AndItsRetryGetsTheNumber()
+    {
+        var sut = CreateSut();
+        await ProcessAsync(sut, Copy("R-1"));
         _sscd.FailWith = "signing unavailable";
-        var failed = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        var failed = await ProcessAsync(sut, Copy("R-1"));
         _sscd.FailWith = null;
 
-        var retried = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        var retried = await ProcessAsync(sut, Copy("R-1"));
 
         failed.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        DuplicataOf(retried).Should().Be("2. Duplicata de R-1", "the failed copy did not consume number 2");
+        SignedCopyNumber.Should().Be(2);
+        retried.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D2");
+        (await _copies.GetCopiesAsync("R-1")).Should().HaveCount(3, "the failed copy keeps its journal row; it is just not counted");
+    }
+
+    [Fact]
+    public async Task ACopyTheScuRefused_IsNotCounted()
+    {
+        var sut = CreateSut();
+        _sscd.FailWith = "refused";
+        _sscd.FailState = SCU.FR.Abstraction.Cases.StateFR.Error;
+        await ProcessAsync(sut, Copy("R-1"));
+        _sscd.FailWith = null;
+
+        var retried = await ProcessAsync(sut, Copy("R-1"));
+
         DuplicataOf(retried).Should().Be("1. Duplicata de R-1");
+    }
+
+    [Fact]
+    public async Task ACopyThatNeverFinished_IsNotCounted()
+    {
+        var sut = CreateSut();
+        var interrupted = Copy("R-1");
+        // The process stopped while signing: the row and the queue item exist, the response does not.
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = interrupted.ReceiptResponse.ftQueueItemID });
+        await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = interrupted.ReceiptResponse.ftQueueItemID, CopiedReceiptReference = "R-1" });
+
+        var copy = await ProcessAsync(sut, Copy("R-1"));
+
+        DuplicataOf(copy).Should().Be("1. Duplicata de R-1");
+    }
+
+    [Fact]
+    public async Task ACopyThatCannotBeJournaled_IsNotSigned()
+    {
+        var sut = CreateSut();
+        _failNextJournalInsert = true;
+
+        var act = () => ProcessAsync(sut, Copy("R-1"));
+
+        // SignProcessor turns the exception into a failed response; the chain never moved.
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _sscd.Calls.Should().BeEmpty();
+        var retried = await ProcessAsync(sut, Copy("R-1"));
+        DuplicataOf(retried).Should().Be("1. Duplicata de R-1");
+        retried.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D1");
     }
 
     [Fact]
     public async Task CopiesIssuedByV1_AreCounted()
     {
+        // A v1.2 copy: its queue item carries a v1 response; another whose queue item is gone.
+        var v1QueueItemId = Guid.NewGuid();
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem { ftQueueItemId = v1QueueItemId, response = "{\"ftState\":5067112530745229312,\"ftReceiptIdentification\":\"ft5#D1\"}" });
+        await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = v1QueueItemId, CopiedReceiptReference = "R-1" });
         await _copies.InsertAsync(new ftJournalFRCopyPayload { QueueItemId = Guid.NewGuid(), CopiedReceiptReference = "R-1" });
         var sut = CreateSut();
 
-        var copy = await sut.CopyReceiptPrintExistingReceipt0x3010Async(Copy("R-1"));
+        var copy = await ProcessAsync(sut, Copy("R-1"));
 
-        DuplicataOf(copy).Should().Be("2. Duplicata de R-1", "v1.2 writes the same copy journal, so a half-migrated queue keeps counting");
+        DuplicataOf(copy).Should().Be("3. Duplicata de R-1", "v1.2 writes the same copy journal, so a half-migrated queue keeps counting");
     }
 }

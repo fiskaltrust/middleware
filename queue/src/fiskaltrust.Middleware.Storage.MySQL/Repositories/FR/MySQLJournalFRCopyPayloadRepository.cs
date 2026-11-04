@@ -47,6 +47,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             }
         }
 
+        public async Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesAsync(string copiedReceiptReference)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryAsync<ftJournalFRCopyPayload>(
+                    "SELECT * FROM ftJournalFRCopyPayload WHERE CopiedReceiptReference = @Reference",
+                    new { Reference = copiedReceiptReference }
+                ).ConfigureAwait(false);
+            }
+        }
+
         public async Task InsertAsync(ftJournalFRCopyPayload payload)
         {
             using (var connection = new MySqlConnection(ConnectionString))

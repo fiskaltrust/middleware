@@ -1,0 +1,5 @@
+-- market-fr#235: 009 made QueueId the primary key, so a queue could journal a single copy. A copy is
+-- identified by its queue item, as in every other storage; the copies of a receipt are looked up by
+-- CopiedReceiptReference.
+ALTER TABLE ftJournalFRCopyPayload DROP PRIMARY KEY, ADD PRIMARY KEY (QueueItemId);
+CREATE INDEX idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference(255));

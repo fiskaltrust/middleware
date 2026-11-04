@@ -1,0 +1,20 @@
+-- market-fr#235: 012 made QueueId the primary key, so a queue could journal a single copy and its
+-- second copy failed with a UNIQUE constraint. A copy is identified by its queue item, as in every
+-- other storage; the copies of a receipt are looked up by CopiedReceiptReference.
+CREATE TABLE ftJournalFRCopyPayload_016
+(
+    QueueItemId               NVARCHAR(36) PRIMARY KEY NOT NULL,
+    QueueId                   NVARCHAR(36) NOT NULL,
+    CashBoxIdentification     NVARCHAR(2147483647) NOT NULL,
+    Siret                     NVARCHAR(2147483647) NOT NULL,
+    ReceiptId                 NVARCHAR(2147483647) NOT NULL,
+    ReceiptMoment             BIGINT NOT NULL,
+    CopiedReceiptReference    NVARCHAR(2147483647) NOT NULL,
+    CertificateSerialNumber   NVARCHAR(2147483647) NOT NULL,
+    TimeStamp                 BIGINT NOT NULL
+);
+INSERT INTO ftJournalFRCopyPayload_016 (QueueItemId, QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, CopiedReceiptReference, CertificateSerialNumber, TimeStamp)
+    SELECT QueueItemId, QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, CopiedReceiptReference, CertificateSerialNumber, TimeStamp FROM ftJournalFRCopyPayload;
+DROP TABLE ftJournalFRCopyPayload;
+ALTER TABLE ftJournalFRCopyPayload_016 RENAME TO ftJournalFRCopyPayload;
+CREATE INDEX idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference);

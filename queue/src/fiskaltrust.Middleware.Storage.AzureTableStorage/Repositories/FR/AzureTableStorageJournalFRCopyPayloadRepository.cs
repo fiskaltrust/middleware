@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -61,6 +62,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
             var partitionKey = PartitionKeyOf(cbPreviousReceiptReference);
             var result = _tableClient.QueryAsync<AzureTableStorageFtJournalFRCopyPayload>(x => x.PartitionKey == partitionKey, select: new[] { nameof(ITableEntity.RowKey) });
             return await result.CountAsync().ConfigureAwait(false);
+        }
+
+        public async Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesAsync(string copiedReceiptReference)
+        {
+            var partitionKey = PartitionKeyOf(copiedReceiptReference);
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalFRCopyPayload>(x => x.PartitionKey == partitionKey);
+            return await result.Select(MapToStorageEntity).ToListAsync().ConfigureAwait(false);
         }
 
         protected override AzureTableStorageFtJournalFRCopyPayload MapToAzureEntity(ftJournalFRCopyPayload src)

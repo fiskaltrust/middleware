@@ -90,8 +90,7 @@ public class InfoCertFRSSCDTests
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
         using var sut = new InfoCertFRSSCD(Configuration(privateKey));
-        var copy = FRTestData.Request();
-        copy.CopyNumber = 3;
+        var copy = FRTestData.Copy(3);
 
         var (copied, _) = await sut.ProcessReceiptAsync(copy, null);
         var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);

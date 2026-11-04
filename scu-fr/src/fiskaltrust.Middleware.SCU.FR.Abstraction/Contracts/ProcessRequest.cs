@@ -25,13 +25,6 @@ public class ProcessRequest
     /// signature authenticates the entry's place in the chain and not only its predecessor.
     /// </summary>
     public long ChainCounter { get; set; }
-
-    /// <summary>
-    /// Set for a copy (0x3010) only: the reprint number of the copied receipt, 1 for its first
-    /// copy (R13 <c>ENC-DUP-PRN-NUM</c>, market-fr#235). The queue counts the copies; every SCU
-    /// signs the number, so a reprint count cannot be altered after the fact.
-    /// </summary>
-    public int? CopyNumber { get; set; }
 }
 
 /// <summary>The signed receipt returned by a French SCU.</summary>

@@ -1,12 +1,15 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
-using ScuSignatureTypeFR = fiskaltrust.Middleware.SCU.FR.Abstraction.Cases.SignatureTypeFR;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
@@ -19,15 +22,13 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
 {
     private readonly FRSigningPipeline _pipeline;
     private readonly AsyncLazy<IJournalFRCopyPayloadRepository> _copies;
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItems;
 
-    // Counting the earlier copies, signing and recording the new one must not interleave with
-    // another copy, or two copies of the same receipt would get the same number.
-    private readonly SemaphoreSlim _copyLock = new(1, 1);
-
-    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies)
+    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies, AsyncLazy<IMiddlewareQueueItemRepository> queueItems)
     {
         _pipeline = pipeline;
         _copies = copies;
+        _queueItems = queueItems;
     }
 
     public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
@@ -44,17 +45,24 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     public Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 
     /// <summary>
-    /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235).
-    /// The count comes from the copy journal ftJournalFRCopyPayload, one row per issued copy, which
-    /// v1.2 writes too - so a half-migrated queue keeps counting the copies v1 issued. The number is
-    /// signed by the SCU and printed as "n. Duplicata de reference", as in v1.2.
+    /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235)
+    /// and printed as "n. Duplicata de reference", as in v1.2. The copy is journaled in
+    /// ftJournalFRCopyPayload first, then numbered from the copies of the same receipt that were
+    /// signed, then signed: the number reaches every FR SCU in the FR block of ftStateData.
+    /// <para>
+    /// The journal row only links the reference to the copy's queue item; whether a copy was issued
+    /// is read from that queue item's response. A copy whose signing failed (or that never finished)
+    /// keeps its row but is never counted, so nothing has to be rolled back and the retry - a new
+    /// queue item - gets the number the failed copy did not consume. Requests are processed one at a
+    /// time per queue (LocalQueueSynchronizationDecorator), so two copies cannot interleave.
+    /// </para>
     /// </summary>
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
     {
         // ReceiptValidatorFR has made sure there is exactly one reference.
         var copiedReceiptReference = request.ReceiptRequest.cbPreviousReceiptReference!.SingleValue!;
 
-        // A training copy is not a fiscal copy: it neither reads nor feeds the copy journal, so it
+        // A training copy is not a fiscal copy: it neither feeds nor reads the copy journal, so it
         // cannot shift the numbering of the real copies (as v1's CopyCommand).
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
         {
@@ -63,36 +71,92 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         }
 
         var copies = await _copies;
+        await copies.InsertAsync(CopyRecord(request.ReceiptResponse, copiedReceiptReference)).ConfigureAwait(false);
 
-        await _copyLock.WaitAsync().ConfigureAwait(false);
+        var copyNumber = await CountSignedCopiesAsync(copies, copiedReceiptReference, request.ReceiptResponse.ftQueueItemID).ConfigureAwait(false) + 1;
+
+        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateDuplicateSignature(copiedReceiptReference, copyNumber));
+        var stateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
+        stateData.FR ??= new MiddlewareStateDataFR();
+        stateData.FR.CopyNumber = copyNumber;
+        request.ReceiptResponse.ftStateData = stateData;
+
+        return await _pipeline.SignAsync(request).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The earlier copies of the reference that were issued: a targeted lookup (the journal rows of
+    /// this reference, then each one's queue item by ID), never a scan of the queue items.
+    /// </summary>
+    private async Task<int> CountSignedCopiesAsync(IJournalFRCopyPayloadRepository copies, string copiedReceiptReference, Guid currentQueueItemId)
+    {
+        var queueItems = await _queueItems;
+        var count = 0;
+        foreach (var copy in await copies.GetCopiesAsync(copiedReceiptReference).ConfigureAwait(false))
+        {
+            if (copy.QueueItemId == currentQueueItemId)
+            {
+                continue;
+            }
+
+            var queueItem = await queueItems.GetAsync(copy.QueueItemId).ConfigureAwait(false);
+            if (WasIssued(queueItem))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// A copy counts unless its queue item shows it was not issued: no response yet (the process
+    /// stopped while signing it) or an error state. A row whose queue item cannot be read is a v1.2
+    /// row - v1.2 journals a copy only once it is signed - and counts: counting it at worst leaves a
+    /// gap, not counting it could print the same number twice.
+    /// </summary>
+    private static bool WasIssued(ftQueueItem? queueItem)
+    {
+        if (queueItem is null)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(queueItem.response))
+        {
+            return false;
+        }
+
         try
         {
-            var copyNumber = await copies.GetCountOfCopiesAsync(copiedReceiptReference).ConfigureAwait(false) + 1;
-            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateDuplicateSignature(copiedReceiptReference, copyNumber));
-
-            // The copy is journaled before the chain advances: if that fails, the copy is not
-            // issued and its number is not consumed, so no reprint number is ever signed twice.
-            return await _pipeline.SignAsync(request, copyNumber: copyNumber, recordSigned: signed => copies.InsertAsync(CopyPayload(signed, copiedReceiptReference))).ConfigureAwait(false);
+            var outcome = JsonSerializer.Deserialize<ResponseState>(queueItem.response);
+            return outcome is null || !outcome.ftState.IsState(State.Error);
         }
-        finally
+        catch (JsonException)
         {
-            _copyLock.Release();
+            return true;
         }
     }
 
-    private static ftJournalFRCopyPayload CopyPayload(ReceiptResponse response, string copiedReceiptReference) => new()
+    /// <summary>
+    /// The journal row, written before signing: it links the copied reference to the copy's queue
+    /// item. What the SCU signs (receipt ID, SIRET, certificate) is on that queue item's response, so
+    /// those columns - NOT NULL in the v1.2 schema - stay empty.
+    /// </summary>
+    private static ftJournalFRCopyPayload CopyRecord(ReceiptResponse response, string copiedReceiptReference) => new()
     {
         QueueId = response.ftQueueID,
         QueueItemId = response.ftQueueItemID,
         CashBoxIdentification = response.ftCashBoxIdentification,
-        ReceiptId = response.ftReceiptIdentification,
+        ReceiptId = "",
         ReceiptMoment = response.ftReceiptMoment,
         CopiedReceiptReference = copiedReceiptReference,
-        Siret = SignatureData(response, ScuSignatureTypeFR.Siret),
-        CertificateSerialNumber = SignatureData(response, ScuSignatureTypeFR.CertificateSerialNumber),
+        Siret = "",
+        CertificateSerialNumber = "",
     };
 
-    /// <summary>The SIRET and certificate items are written by the SCU, so their types are the SCU's.</summary>
-    private static string? SignatureData(ReceiptResponse response, ScuSignatureTypeFR type)
-        => response.ftSignatures?.FirstOrDefault(x => ((long) x.ftSignatureType & 0xFFFF) == ((long) type & 0xFFFF))?.Data;
+    private sealed class ResponseState
+    {
+        public State ftState { get; set; }
+    }
 }
