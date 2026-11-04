@@ -69,8 +69,12 @@ public class FRPeriodTotalsAccumulator
         }
     }
 
-    /// <summary>The period a closing receipt reports, or null if the receipt is not a closing.</summary>
-    public static FRTotalsPeriod? PeriodOf(ReceiptRequest request) => request.ftReceiptCase.Case() switch
+    /// <summary>
+    /// The period a closing receipt reports, or null if the receipt is not a closing. A training
+    /// closing reports no period: it attests no real turnover and must neither reset a real period
+    /// nor, on replay, be taken for the boundary of one.
+    /// </summary>
+    public static FRTotalsPeriod? PeriodOf(ReceiptRequest request) => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training) ? null : request.ftReceiptCase.Case() switch
     {
         ReceiptCase.ShiftClosing0x2010 => FRTotalsPeriod.Shift,
         ReceiptCase.DailyClosing0x2011 => FRTotalsPeriod.Day,
