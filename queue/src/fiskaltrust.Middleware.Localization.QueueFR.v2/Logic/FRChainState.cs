@@ -77,8 +77,8 @@ public class FRChainStateProvider
     }
 
     /// <summary>
-    /// Runs <paramref name="operation"/> against the chain the request belongs to and the period
-    /// totals. The state is held for the whole operation: an NF525 chain is strictly sequential,
+    /// Runs <paramref name="operation"/> against the chain the request belongs to, the period totals
+    /// and the late-signing range. The state is held for the whole operation: an NF525 chain is strictly sequential,
     /// so numbering, signing and advancing the signature must not interleave with another receipt
     /// of the same chain. A signature that advanced the chain is kept in memory until
     /// <see cref="CommitAsync"/> or <see cref="Discard"/>.
@@ -87,7 +87,7 @@ public class FRChainStateProvider
     /// The state of an earlier stored receipt still cannot be written to ftQueueFR; nothing is
     /// signed until it is.
     /// </exception>
-    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, Task<T>> operation)
+    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, Task<T>> operation)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -112,7 +112,7 @@ public class FRChainStateProvider
             T result;
             try
             {
-                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR)).ConfigureAwait(false);
+                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR)).ConfigureAwait(false);
             }
             catch
             {

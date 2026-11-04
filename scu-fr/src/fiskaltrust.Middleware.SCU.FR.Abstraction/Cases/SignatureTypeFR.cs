@@ -45,6 +45,13 @@ public enum SignatureTypeFR : long
 
     /// <summary>The receipt was stored but not signed, because no signing SCU is configured.</summary>
     StoredNotSigned = 0x4652_2000_0000_000B,
+
+    /// <summary>
+    /// Asks the POS to send a JET event (R19) as a <c>ProtocolTechnicalEvent 0x3001</c>; the Data is
+    /// the <c>{Code, Message, Information}</c> object of its ftReceiptCaseData (market-fr#231, #208).
+    /// Allocated here too so the SCU never reuses it; 0x10 and 0x11 are the queue's lifecycle items.
+    /// </summary>
+    JetEvent = 0x4652_2000_0000_0012,
 }
 
 public static class SignatureTypeFRExt

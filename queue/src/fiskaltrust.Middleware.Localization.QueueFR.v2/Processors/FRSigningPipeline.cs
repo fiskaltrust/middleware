@@ -4,6 +4,8 @@ using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
@@ -17,15 +19,17 @@ public class FRSigningPipeline
 {
     private readonly IFRSSCD _sscd;
     private readonly FRChainStateProvider _chains;
+    private readonly FRLateSigning _lateSigning;
 
-    public FRSigningPipeline(IFRSSCD sscd, FRChainStateProvider chains)
+    public FRSigningPipeline(IFRSSCD sscd, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null)
     {
         _sscd = sscd;
         _chains = chains;
+        _lateSigning = new FRLateSigning(queueItems);
     }
 
     public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null)
-        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals) =>
+        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning) =>
         {
             var receiptResponse = request.ReceiptResponse;
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
@@ -79,7 +83,10 @@ public class FRSigningPipeline
                 totals.Reset(period);
             }
 
-            return new ProcessCommandResponse(response.ReceiptResponse, actionJournals ?? new List<ftActionJournal>());
+            // Late signing follows the signature: only a signed entry opens or closes the range.
+            var lateSigningJournals = await _lateSigning.ApplySignedAsync(request.ReceiptRequest, response.ReceiptResponse, lateSigning).ConfigureAwait(false);
+
+            return new ProcessCommandResponse(response.ReceiptResponse, [.. actionJournals ?? [], .. lateSigningJournals]);
 
             // No document was issued, so neither the number nor the period may move - NF525
             // requires the national numbering of every chain to be gapless, and an unsigned

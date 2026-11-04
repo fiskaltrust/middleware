@@ -20,6 +20,12 @@ public enum SignatureTypeFR : long
     StoredNotSigned = 0x4652_2000_0000_000B,
     InitialOperationReceipt = 0x4652_2000_0000_0010,
     OutOfOperationReceipt = 0x4652_2000_0000_0011,
+    /// <summary>
+    /// Asks the POS to send a JET event (R19) as a <c>ProtocolTechnicalEvent 0x3001</c>: the Data
+    /// is the <c>{Code, Message, Information}</c> object the POS puts into ftReceiptCaseData
+    /// (market-fr#231, #208). Printing it is optional.
+    /// </summary>
+    JetEvent = 0x4652_2000_0000_0012,
 }
 
 public static class SignatureTypeFRExt

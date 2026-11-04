@@ -36,7 +36,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
         // The chain state is stored only once the signed queue item is (FRQueueStorageProvider).
         var queueStorageProvider = new FRQueueStorageProvider(new QueueStorageProvider(id, storageProvider), chains);
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
-        var pipeline = new FRSigningPipeline(frSSCD, chains);
+        var pipeline = new FRSigningPipeline(frSSCD, chains, queueItemRepository);
 
         // FR launches with enforcing validation: the v2 localization has no legacy integrations to
         // stay compatible with, and the queue currency rule (EUR, rfcs/0705-queue-single-currency)
