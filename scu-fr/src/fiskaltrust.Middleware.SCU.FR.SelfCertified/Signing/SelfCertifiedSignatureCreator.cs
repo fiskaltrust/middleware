@@ -32,6 +32,9 @@ internal sealed class SelfCertifiedSignatureCreator : IDisposable
         return FRChaining.ToBase64Url(signature);
     }
 
+    /// <summary>The signature creation key, which also signs exported archives (ADR 0007 amendment).</summary>
+    public ECDsa Key => _key;
+
     public void Dispose() => _key.Dispose();
 
     private static ECDsa ImportKey(string privateKeyBase64)

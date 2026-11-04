@@ -76,5 +76,15 @@ public class SelfCertifiedFRSSCD : IFRSSCD, IDisposable
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
+    /// <summary>
+    /// The configured certificate of the publisher's key. A self-certified queue signs its
+    /// exported archive with the same key as its receipts, like the certified SCUs (ADR 0007
+    /// amendment); without it the queue refuses the local archive export.
+    /// </summary>
+    public Task<FRSigningCertificate> GetSigningCertificateAsync()
+        => Task.FromResult(FRHashSigning.SigningCertificate(_signatureCreator.Key, _configuration.CertificateBase64, _configuration.CertificateSerialNumber, CertificationBody));
+
+    public Task<FRHashSignature> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_signatureCreator.Key, sha256, CertificationBody));
+
     public void Dispose() => _signatureCreator.Dispose();
 }
