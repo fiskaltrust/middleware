@@ -43,11 +43,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
                 new CsvColumn<TestRecord>("Totalizer", r => r.Total),
                 new CsvColumn<TestRecord>("Text", r => r.Text)
             }, r => r.Chain == "T"),
-            new FlatCsvFile<TestRecord>("journal-G.csv", new[]
+            new FlatCsvFile<TestRecord>("journal-Z.csv", new[]
             {
                 new CsvColumn<TestRecord>("ftQueueItemID", r => r.Id),
                 new CsvColumn<TestRecord>("Totalizer", r => r.Total)
-            }, r => r.Chain == "G"),
+            }, r => r.Chain == "Z"),
             new OneToManyCsvFile<TestRecord, TestLine>("charge-items.csv", r => r.Lines, new[]
             {
                 new CsvColumn<ChildRow<TestRecord, TestLine>>("ftQueueItemID", row => row.Parent.Id),

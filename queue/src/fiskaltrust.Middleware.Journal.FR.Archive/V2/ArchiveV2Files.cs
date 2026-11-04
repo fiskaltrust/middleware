@@ -35,9 +35,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         public string Description { get; }
 
         /// <summary>
-        /// The letters the queue writes into <c>ftReceiptIdentification</c> for this journal. They differ from
-        /// <see cref="Letter"/> where the v2 code has not caught up with the contract: the closing and
-        /// technical chains S, Z, M, Y, E replace G (ADR 0002), and copies are still D (market-fr#173).
+        /// The letters the queue writes into <c>ftReceiptIdentification</c> for this journal: the journal's own
+        /// <see cref="Letter"/>, and on the technical journal E also G, the single closing chain the queue used
+        /// before the ADR 0002 chains (fiskaltrust/middleware#825).
         /// </summary>
         public IReadOnlyCollection<string> ChainLetters { get; }
 
@@ -64,12 +64,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x001, "T", "Ticket", "T"),
             new ArchiveJournal(0x002, "P", "Payment proof", "P"),
             new ArchiveJournal(0x003, "I", "Invoice", "I"),
-            new ArchiveJournal(0x004, "G", "Grand total", "G", "S", "Z", "M", "Y", "E"),
+            new ArchiveJournal(0x004, "E", "Technical", "E", "G"),
             new ArchiveJournal(0x007, "B", "Bill (note)", "B"),
-            new ArchiveJournal(0x008, "A", "Archive", "A"),
             new ArchiveJournal(0x009, "L", "Log", "L"),
-            new ArchiveJournal(0x00A, "C", "Copy", "C", "D"),
+            new ArchiveJournal(0x00A, "D", "Copy", "D"),
             new ArchiveJournal(0x00B, "X", "Training", "X"),
+            new ArchiveJournal(0x00C, "S", "Shift closing", "S"),
+            new ArchiveJournal(0x00D, "Z", "Daily closing", "Z"),
+            new ArchiveJournal(0x00E, "M", "Monthly closing", "M"),
+            new ArchiveJournal(0x00F, "Y", "Yearly closing", "Y"),
         };
 
         public const string ChargeItemsFileName = "charge-items.csv";

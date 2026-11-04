@@ -80,19 +80,19 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
                 Text = "Crème brûlée; \"maison\"",
                 Lines = { new TestLine { Description = "Café", Amount = 2.5m }, new TestLine { Description = "Thé", Amount = 9.8m } }
             };
-            var closing = new TestRecord { Chain = "G", Moment = ticket.Moment.AddHours(1), Total = 12.30m };
+            var closing = new TestRecord { Chain = "Z", Moment = ticket.Moment.AddHours(1), Total = 12.30m };
             var subArchive = new SubArchive<TestRecord>(ticket.Key, new ArchivePeriod(new DateTime(2024, 1, 1), new DateTime(2025, 1, 1)), new[] { ticket, closing }, ticket.Moment, closing.Moment);
             var sink = new MemorySink();
 
             await TestFixtures.Writer(ArchiveFormatVersion.V2).WriteAsync(subArchive, sink, CancellationToken.None);
 
-            sink.Files.Keys.Should().Equal("journal-T.csv", "journal-G.csv", "charge-items.csv");
+            sink.Files.Keys.Should().Equal("journal-T.csv", "journal-Z.csv", "charge-items.csv");
             var journal = sink.Files["journal-T.csv"];
             journal.Take(3).Should().NotEqual(new byte[] { 0xEF, 0xBB, 0xBF });
             Encoding.UTF8.GetString(journal).Should().Be(
                 "ftQueueItemID;ftReceiptMoment;Totalizer;Text\r\n" +
                 $"{ticket.Id:D};2024-05-01T10:00:00.0000001Z;12.30;\"Crème brûlée; \"\"maison\"\"\"\r\n");
-            Encoding.UTF8.GetString(sink.Files["journal-G.csv"]).Should().Be($"ftQueueItemID;Totalizer\r\n{closing.Id:D};12.30\r\n");
+            Encoding.UTF8.GetString(sink.Files["journal-Z.csv"]).Should().Be($"ftQueueItemID;Totalizer\r\n{closing.Id:D};12.30\r\n");
             Encoding.UTF8.GetString(sink.Files["charge-items.csv"]).Should().Be(
                 "ftQueueItemID;Position;Description;Amount\r\n" +
                 $"{ticket.Id:D};1;Café;2.5\r\n" +

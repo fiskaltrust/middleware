@@ -188,14 +188,17 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             }
 
             var tickets = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x001)!), t1, z1, e1);
-            var grandTotals = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x004)!), t1, z1, e1);
+            var technical = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x004)!), t1, z1, e1);
+            var daily = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.JournalOf(0x00D)!), t1, z1, e1);
 
             var lines = tickets.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             lines.Should().HaveCount(2);
             lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;CertificateSerialNumber;Training;Signature");
             lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;false;h.p.t1");
-            grandTotals.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
-                .Should().Equal(new[] { "Z", "E" }, "the closing and technical chains replace G (ADR 0002)");
+            technical.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
+                .Should().Equal(new[] { "E" }, "each ADR 0002 chain has its own journal");
+            daily.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
+                .Should().Equal(new[] { "Z" });
         }
 
         [Fact]
@@ -271,7 +274,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             sub.Entries.Select(e => e.Name).Should().Contain(ArchiveV2Files.Journals.Select(j => j.FileName)
                 .Concat(new[] { ArchiveV2Files.ChargeItemsFileName, ArchiveV2Files.PayItemsFileName, ArchiveV2Files.JournalTypesFileName, ArchiveV2Files.CaseDataFileName }));
             using var reader = new StreamReader(sub.GetEntry(ArchiveV2Files.JournalTypesFileName)!.Open(), Encoding.UTF8);
-            (await reader.ReadToEndAsync()).Should().Contain("00A;C;Copy\r\n").And.StartWith("Code;Chain;Description\r\n000;;Status information QueueFR\r\n001;T;Ticket");
+            (await reader.ReadToEndAsync()).Should().Contain("00A;D;Copy\r\n").And.Contain("00D;Z;Daily closing\r\n").And.NotContain(";G;").And.StartWith("Code;Chain;Description\r\n000;;Status information QueueFR\r\n001;T;Ticket");
         }
     }
 }

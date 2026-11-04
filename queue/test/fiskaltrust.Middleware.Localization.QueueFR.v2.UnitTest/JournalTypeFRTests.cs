@@ -21,12 +21,15 @@ public class JournalTypeFRTests
     [InlineData(0x001, JournalTypeFR.Ticket)]
     [InlineData(0x002, JournalTypeFR.PaymentProof)]
     [InlineData(0x003, JournalTypeFR.Invoice)]
-    [InlineData(0x004, JournalTypeFR.GrandTotal)]
+    [InlineData(0x004, JournalTypeFR.Technical)]
     [InlineData(0x007, JournalTypeFR.Bill)]
-    [InlineData(0x008, JournalTypeFR.Archive)]
     [InlineData(0x009, JournalTypeFR.Log)]
     [InlineData(0x00A, JournalTypeFR.Copy)]
     [InlineData(0x00B, JournalTypeFR.Training)]
+    [InlineData(0x00C, JournalTypeFR.ShiftClosing)]
+    [InlineData(0x00D, JournalTypeFR.DailyClosing)]
+    [InlineData(0x00E, JournalTypeFR.MonthlyClosing)]
+    [InlineData(0x00F, JournalTypeFR.YearlyClosing)]
     [InlineData(0x010, JournalTypeFR.ArchiveExport)]
     public void JournalTypeFR_FollowsTheArchiveContractCodes(long code, JournalTypeFR expected)
     {
@@ -34,9 +37,9 @@ public class JournalTypeFRTests
     }
 
     [Fact]
-    public void JournalTypeFR_ListsElevenJournals()
+    public void JournalTypeFR_ListsFourteenJournals()
     {
-        Enum.GetValues<JournalTypeFR>().Should().HaveCount(11).And.OnlyHaveUniqueItems();
+        Enum.GetValues<JournalTypeFR>().Should().HaveCount(14).And.OnlyHaveUniqueItems();
     }
 
     [Theory]
@@ -53,11 +56,11 @@ public class JournalTypeFRTests
     }
 
     [Fact]
-    public void JournalProcessorFR_RefusesTheArchiveJournalUntilArchiveReceiptsExist()
+    public void JournalProcessorFR_RefusesTheRetiredArchiveGroup008()
     {
-        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = JournalTypeFR.Archive.As<JournalType>() });
+        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = (JournalType) 0x4652_2000_0000_0008 });
 
-        act.Should().Throw<NotSupportedException>().WithMessage("*does not sign archive receipts yet*");
+        act.Should().Throw<ArgumentException>().WithMessage("*is unknown*");
     }
 
     [Fact]
@@ -94,7 +97,8 @@ public class JournalTypeFRTests
 
     [Theory]
     [InlineData(JournalTypeFR.Ticket, "text/csv")]
-    [InlineData(JournalTypeFR.GrandTotal, "text/csv")]
+    [InlineData(JournalTypeFR.Technical, "text/csv")]
+    [InlineData(JournalTypeFR.DailyClosing, "text/csv")]
     [InlineData(JournalTypeFR.Training, "text/csv")]
     [InlineData(JournalTypeFR.StatusInformation, "application/json")]
     public void JournalProcessorFR_AnswersTheGroupJournalsAndTheStatus(JournalTypeFR journalTypeFR, string mediaType)
@@ -117,7 +121,7 @@ public class JournalTypeFRTests
     [Theory]
     [InlineData(0x4652_2000_0000_0005)]
     [InlineData(0x4652_2000_0000_0006)]
-    [InlineData(0x4652_2000_0000_000C)]
+    [InlineData(0x4652_2000_0000_0008)] // the retired v1 archive group
     [InlineData(0x4652_2000_0000_0011)]
     public void JournalProcessorFR_RejectsUnknownFrenchJournalCodes(long ftJournalType)
     {

@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             {
                 new TestRecord { Moment = new DateTime(2024, 2, 1, 8, 0, 0, DateTimeKind.Utc).AddTicks(7), Serial = "AAAA", Version = ArchiveFormatVersion.V1, Total = 1.5m, Lines = { new TestLine { Description = "x", Amount = 1.5m } } },
                 new TestRecord { Moment = new DateTime(2024, 8, 1, 8, 0, 0, DateTimeKind.Utc), Serial = "BBBB", Total = 3m, Text = "é;\"q\"" },
-                new TestRecord { Moment = new DateTime(2024, 8, 2, 8, 0, 0, DateTimeKind.Utc), Serial = "BBBB", Chain = "G", Total = 3m }
+                new TestRecord { Moment = new DateTime(2024, 8, 2, 8, 0, 0, DateTimeKind.Utc), Serial = "BBBB", Chain = "Z", Total = 3m }
             };
             return ArchiveSplitter.Split(records, r => r.Moment, r => r.Key, Year2024).Single();
         }
@@ -69,7 +69,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             second.Kind.Should().Be(ArchiveManifest.SubKind);
             second.CertificateSerialNumber.Should().Be("BBBB");
             second.RecordCount.Should().Be(2);
-            second.Files.Select(f => f.Name).Should().Contain(new[] { "journal-T.csv", "journal-G.csv", "charge-items.csv" });
+            second.Files.Select(f => f.Name).Should().Contain(new[] { "journal-T.csv", "journal-Z.csv", "charge-items.csv" });
             second.Files.Should().OnlyContain(f => f.Hash.Length > 0 && f.Signature.Length > 0 && f.Size > 0);
         }
 

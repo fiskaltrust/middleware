@@ -89,12 +89,12 @@ public class FRJournalExportTests : IDisposable
     }
 
     [Fact]
-    public async Task GrandTotalJournal_HoldsTheClosingChains()
+    public async Task TechnicalJournal_HoldsTheClosingsOfTheSingleChainBeforeAdr0002()
     {
         await SignAsync(CashSale());
         var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
-        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.GrandTotal));
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Technical));
 
         rows.Should().ContainSingle().Which["ftReceiptIdentification"].Should().Be(closing.ftReceiptIdentification);
     }
@@ -108,11 +108,11 @@ public class FRJournalExportTests : IDisposable
     }
 
     [Fact]
-    public async Task ArchiveJournal_IsRefusedUntilTheQueueSignsArchiveReceipts()
+    public async Task RetiredArchiveGroup008_IsAnUnknownJournalType()
     {
-        var act = () => ReadAsync(_journal, JournalTypeFR.Archive);
+        var act = () => ReadAsync(_journal, (JournalTypeFR) 0x4652_2000_0000_0008);
 
-        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*archive receipts*");
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*is unknown*");
     }
 
     [Fact]

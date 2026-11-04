@@ -93,13 +93,6 @@ public class JournalProcessorFR : IJournalProcessor
             return (new ContentType(MediaTypeNames.Application.Json) { CharSet = Encoding.UTF8.WebName }, StatusAsync());
         }
 
-        if (journalTypeFR == JournalTypeFR.Archive)
-        {
-            throw new NotSupportedException(
-                $"The French journal type 0x{journalType:X} ({journalTypeFR}) exports the archive receipts, and the QueueFR.v2 localization does not sign archive receipts yet " +
-                "(fiskaltrust/market-fr#209, #244). The archive itself is exported with the ArchiveExport journal type (0x4652_2000_0000_0010).");
-        }
-
         var (from, to) = Period(request);
 
         if (journalTypeFR == JournalTypeFR.ArchiveExport)
@@ -108,7 +101,7 @@ public class JournalProcessorFR : IJournalProcessor
             {
                 throw new NotSupportedException(
                     $"The French journal type 0x{journalType:X} ({journalTypeFR}) needs an archive signer (ADR 0007), and none is configured for this queue. " +
-                    "The per-journal exports (0x4652_2000_0000_0001 to _000B) are available.");
+                    "The per-journal exports (0x4652_2000_0000_0001 to _000F) are available.");
             }
 
             var period = new ArchivePeriod(from, to);
