@@ -43,26 +43,39 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
     /// <remarks>
     /// Files are hashed from their streams, and a sub-archive is read through a seekable copy that stays in
     /// memory up to <see cref="DefaultInMemorySubArchiveLimit"/> and goes to a temporary file above it, so an
-    /// annual archive does not have to fit in memory.
+    /// annual archive does not have to fit in memory. A crafted zip is refused, not followed: every size is
+    /// counted on the bytes actually decompressed and must match the declared one, a zip holds at most
+    /// <see cref="DefaultMaxEntries"/> entries, and archives nest one level only.
     /// </remarks>
     public static class ArchiveVerifier
     {
         /// <summary>The largest sub-archive verified in memory; a larger one is copied to a temporary file.</summary>
         public const long DefaultInMemorySubArchiveLimit = 16 * 1024 * 1024;
 
-        /// <summary>Lowered by tests to reach the temporary-file path without a 16 MB archive.</summary>
-        internal static long InMemorySubArchiveLimit = DefaultInMemorySubArchiveLimit;
 
         /// <summary>manifest.json, manifest.sig and the certificate are read whole; nothing legitimate comes near this.</summary>
         private const long SmallFileLimit = 1024 * 1024;
 
+        /// <summary>
+        /// The most entries one zip may hold. A sub-archive holds about fifteen files and a main archive one
+        /// sub-archive per certificate and format version of the year, so this only stops a crafted zip.
+        /// </summary>
+        public const int DefaultMaxEntries = 4096;
+
+        /// <summary>The largest decompressed entry, counted on the bytes actually read, not on the zip's declared size.</summary>
+        public const long DefaultMaxEntryBytes = 8L * 1024 * 1024 * 1024;
+
+
         public static ArchiveVerificationResult Verify(Stream archive)
         {
             if (archive is null) throw new ArgumentNullException(nameof(archive));
-            return Verify(archive, "/", ArchiveManifest.MainKind);
+            return Verify(archive, "/", ArchiveManifest.MainKind, VerifierLimits.Default);
         }
 
-        private static ArchiveVerificationResult Verify(Stream archive, string path, string expectedKind)
+        /// <summary>With lowered limits, so tests reach them without huge archives.</summary>
+        internal static ArchiveVerificationResult Verify(Stream archive, VerifierLimits limits) => Verify(archive, "/", ArchiveManifest.MainKind, limits);
+
+        private static ArchiveVerificationResult Verify(Stream archive, string path, string expectedKind, VerifierLimits limits)
         {
             var result = new ArchiveVerificationResult(path);
             ZipArchive zip;
@@ -78,6 +91,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
 
             using (zip)
             {
+                if (zip.Entries.Count > limits.MaxEntries)
+                {
+                    result.Errors.Add($"the zip holds {zip.Entries.Count} entries, more than the {limits.MaxEntries} an archive may hold");
+                    return result;
+                }
                 var duplicates = zip.Entries.GroupBy(e => e.FullName, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
                 if (duplicates.Count > 0)
                 {
@@ -161,7 +179,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                         result.Errors.Add($"{file.Name} listed but missing");
                         continue;
                     }
-                    var (hash, size) = HashEntry(entry);
+                    var (hash, size, unreadable) = HashEntry(entry, limits);
+                    if (unreadable is not null)
+                    {
+                        result.Errors.Add(unreadable);
+                        continue;
+                    }
                     if (size != file.Size)
                     {
                         result.Errors.Add($"{file.Name} size {size}, manifest says {file.Size}");
@@ -188,15 +211,29 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     result.Errors.Add($"{unlisted} is not listed in the manifest");
                 }
 
-                foreach (var subArchive in manifest.SubArchives ?? new List<ManifestSubArchive>())
+                var subArchives = manifest.SubArchives ?? new List<ManifestSubArchive>();
+                if (expectedKind != ArchiveManifest.MainKind && subArchives.Count > 0)
+                {
+                    // Archives nest one level (ADR 0005); following a sub-archive's own list would let a crafted
+                    // archive recurse without bound.
+                    result.Errors.Add("a sub-archive lists sub-archives of its own; archives nest one level only");
+                    subArchives = new List<ManifestSubArchive>();
+                }
+                foreach (var subArchive in subArchives)
                 {
                     if (!manifest.Files.Any(f => f.Name == subArchive.FileName) || !entries.TryGetValue(subArchive.FileName, out var entry))
                     {
                         result.Errors.Add($"sub-archive {subArchive.FileName} is not a listed file");
                         continue;
                     }
-                    using var backing = SeekableCopy(entry);
-                    var sub = Verify(backing, subArchive.FileName, ArchiveManifest.SubKind);
+                    var (copy, uncopied) = SeekableCopy(entry, limits);
+                    if (copy is null)
+                    {
+                        result.Errors.Add(uncopied!);
+                        continue;
+                    }
+                    using var backing = copy;
+                    var sub = Verify(backing, subArchive.FileName, ArchiveManifest.SubKind, limits);
                     if (sub.Manifest is not null
                         && (sub.Manifest.CertificateSerialNumber != subArchive.CertificateSerialNumber || sub.Manifest.FormatVersion != subArchive.FormatVersion
                             || sub.Manifest.PeriodStart != manifest.PeriodStart || sub.Manifest.PeriodEnd != manifest.PeriodEnd || sub.Manifest.Siret != manifest.Siret))
@@ -272,39 +309,100 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                 result.Errors.Add($"{entry.FullName} is {entry.Length} bytes, more than a manifest, signature or certificate holds");
                 return false;
             }
-            using var stream = entry.Open();
             using var buffer = new MemoryStream();
-            stream.CopyTo(buffer);
+            var problem = Decompress(entry, SmallFileLimit, (bytes, count) => buffer.Write(bytes, 0, count), out _);
+            if (problem is not null)
+            {
+                result.Errors.Add(problem);
+                return false;
+            }
             content = buffer.ToArray();
             return true;
         }
 
-        private static (byte[] Hash, long Size) HashEntry(ZipArchiveEntry entry)
+        private static (byte[] Hash, long Size, string? Problem) HashEntry(ZipArchiveEntry entry, VerifierLimits limits)
         {
-            using var stream = entry.Open();
             using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            var buffer = new byte[81920];
-            long size = 0;
-            int read;
-            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                sha256.AppendData(buffer, 0, read);
-                size += read;
-            }
-            return (sha256.GetHashAndReset(), size);
+            var problem = Decompress(entry, limits.MaxEntryBytes, (bytes, count) => sha256.AppendData(bytes, 0, count), out var size);
+            return (sha256.GetHashAndReset(), size, problem);
         }
 
-        private static Stream SeekableCopy(ZipArchiveEntry entry)
+        /// <summary>
+        /// A sub-archive copied to a seekable stream: in memory until the bytes actually copied pass
+        /// <see cref="VerifierLimits.InMemorySubArchiveBytes"/>, then in a temporary file. The zip's declared size decides
+        /// nothing, since a crafted zip can lie about it.
+        /// </summary>
+        private static (Stream? Copy, string? Problem) SeekableCopy(ZipArchiveEntry entry, VerifierLimits limits)
         {
-            Stream backing = entry.Length <= InMemorySubArchiveLimit
-                ? new MemoryStream()
-                : new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
-            using (var stream = entry.Open())
+            Stream backing = new MemoryStream();
+            try
             {
-                stream.CopyTo(backing);
+                var problem = Decompress(entry, limits.MaxEntryBytes, (bytes, count) =>
+                {
+                    if (backing is MemoryStream memory && memory.Length + count > limits.InMemorySubArchiveBytes)
+                    {
+                        var file = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
+                        memory.Position = 0;
+                        memory.CopyTo(file);
+                        memory.Dispose();
+                        backing = file;
+                    }
+                    backing.Write(bytes, 0, count);
+                }, out _);
+                if (problem is not null)
+                {
+                    backing.Dispose();
+                    return (null, problem);
+                }
+                backing.Position = 0;
+                return (backing, null);
             }
-            backing.Position = 0;
-            return backing;
+            catch
+            {
+                backing.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Streams an entry's decompressed bytes into <paramref name="sink"/>, counting what is actually read.
+        /// Returns why the entry is unusable: it decompresses past <paramref name="limit"/>, its data is corrupt,
+        /// or it holds another size than the zip declares (forged metadata). Null when it is fine.
+        /// </summary>
+        private static string? Decompress(ZipArchiveEntry entry, long limit, Action<byte[], int> sink, out long size)
+        {
+            size = 0;
+            try
+            {
+                using var stream = entry.Open();
+                var buffer = new byte[81920];
+                int read;
+                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    size += read;
+                    if (size > limit)
+                    {
+                        return $"{entry.FullName} decompresses to more than {limit} bytes";
+                    }
+                    sink(buffer, read);
+                }
+            }
+            catch (InvalidDataException e)
+            {
+                return $"{entry.FullName} cannot be decompressed ({e.Message})";
+            }
+            return size == entry.Length ? null : $"{entry.FullName} declares {entry.Length} bytes but holds {size}";
+        }
+
+        internal sealed class VerifierLimits
+        {
+            public static readonly VerifierLimits Default = new VerifierLimits();
+
+            public int MaxEntries { get; set; } = DefaultMaxEntries;
+
+            public long MaxEntryBytes { get; set; } = DefaultMaxEntryBytes;
+
+            public long InMemorySubArchiveBytes { get; set; } = DefaultInMemorySubArchiveLimit;
         }
 
         private static byte[]? FromBase64(string value)
