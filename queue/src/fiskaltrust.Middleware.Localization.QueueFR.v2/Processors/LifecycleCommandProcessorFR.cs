@@ -1,3 +1,5 @@
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
@@ -34,6 +36,10 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
+        if (RejectTraining(receiptRequest, receiptResponse, "initial-operation"))
+        {
+            return new ProcessCommandResponse(receiptResponse, []);
+        }
 
         var info = await _sscd.GetInfoAsync().ConfigureAwait(false);
         if (!FRSSCDInfoHelper.HasSignatureCreationData(info))
@@ -58,6 +64,10 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
+        if (RejectTraining(receiptRequest, receiptResponse, "out-of-operation"))
+        {
+            return new ProcessCommandResponse(receiptResponse, []);
+        }
 
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
@@ -73,6 +83,22 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
         await _localizedQueueStorageProvider.DeactivateQueueAsync().ConfigureAwait(false);
         response.receiptResponse.MarkAsDisabled();
         return response;
+    }
+
+    /// <summary>
+    /// A lifecycle receipt opens or closes the real queue, so it cannot be simulated: a training
+    /// one would be signed into the training chain and still change the fiscal queue. v1.2 signed it
+    /// as a training receipt without touching the queue; v2 refuses it before anything is signed.
+    /// </summary>
+    private static bool RejectTraining(ReceiptRequest request, ReceiptResponse response, string receipt)
+    {
+        if (!request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+        {
+            return false;
+        }
+
+        response.SetReceiptResponseError($"An {receipt} receipt cannot be sent in training mode: it opens or closes the fiscal queue. Send it without the training flag.");
+        return true;
     }
 
     public Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
