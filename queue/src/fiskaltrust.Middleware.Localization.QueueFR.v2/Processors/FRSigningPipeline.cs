@@ -1,7 +1,9 @@
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
@@ -36,6 +38,13 @@ public class FRSigningPipeline
             chain.Numerator++;
             ReceiptIdentificationHelper.AppendChainIdentification(receiptResponse, chain);
             FRTypeOfServiceCalculator.Apply(request.ReceiptRequest, receiptResponse);
+
+            // Every document of the training chain carries the simulation mention, whatever its
+            // receipt case: this is the one path all of them take.
+            if (chain.Chain == FRReceiptChain.Training)
+            {
+                receiptResponse.AddSignatureItem(SignaturItemFactory.CreateTrainingSignature());
+            }
 
             try
             {

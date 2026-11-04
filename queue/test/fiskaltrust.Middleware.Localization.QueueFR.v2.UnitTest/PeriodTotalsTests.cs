@@ -163,6 +163,37 @@ public class PeriodTotalsTests
     }
 
     [Fact]
+    public async Task TrainingClosing_CarriesNoTotalsAndLeavesTheRealPeriodOpen()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var trainingClosing = CommandRequest(ReceiptCase.DailyClosing0x2011);
+        trainingClosing.ReceiptRequest.ftReceiptCase = trainingClosing.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(trainingClosing);
+
+        sscd.Calls.Last().periodTotals.Should().BeNull("a training closing attests no real turnover");
+
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "the training closing must not have reset the real day");
+    }
+
+    [Fact]
+    public async Task StoredTrainingClosing_DoesNotCloseTheRealPeriodOnReplay()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd,
+            StoredReceipt(queueRow: 1, ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T1", amount: 30.00m),
+            StoredReceipt(queueRow: 2, ReceiptCase.DailyClosing0x2011, "ft1#X1", amount: 0m, training: true));
+
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        sscd.Calls.Single().periodTotals!.Current.Totalizer.Should().Be(30.00m, "a stored training closing is not a boundary of the real day");
+    }
+
+    [Fact]
     public async Task TotalsResumeFromTheStoredQueueItemsSinceTheLastClosing()
     {
         var sscd = new FakeFRSSCD();
@@ -178,13 +209,13 @@ public class PeriodTotalsTests
         totals.Perpetual.Totalizer.Should().Be(37.00m, "the perpetual total spans the stored closing");
     }
 
-    private static ftQueueItem StoredReceipt(long queueRow, ReceiptCase receiptCase, string identification, decimal amount) => new()
+    private static ftQueueItem StoredReceipt(long queueRow, ReceiptCase receiptCase, string identification, decimal amount, bool training = false) => new()
     {
         ftQueueItemId = Guid.NewGuid(),
         ftQueueRow = queueRow,
         request = System.Text.Json.JsonSerializer.Serialize(new ReceiptRequest
         {
-            ftReceiptCase = receiptCase.WithCountry("FR"),
+            ftReceiptCase = training ? receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.Training) : receiptCase.WithCountry("FR"),
             Currency = Currency.EUR,
             cbChargeItems = amount == 0m ? [] : [new ChargeItem { Amount = amount, Currency = Currency.EUR, ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") }],
             cbPayItems = [],

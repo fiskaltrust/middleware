@@ -33,10 +33,17 @@ public static class FRTotalsCalculator
         PayItemCase.TransferToCashbookVaultOwnerEmployee,
     ];
 
+    /// <remarks>
+    /// Down payments are kept out of every total, on both sides: the charge and pay items of the
+    /// down-payment invoice that records the acompte, and the negative ones of the final invoice
+    /// that settles it. Counting them would raise the turnover when the acompte is taken and again
+    /// when the sale is invoiced in full (NF525 V2.3 §6.18.1.3 as the Infocert auditor applied it,
+    /// fiskaltrust/market-fr#135).
+    /// </remarks>
     public static FRTotals From(ReceiptRequest request)
     {
-        var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
-        var payItems = request.cbPayItems ?? new List<PayItem>();
+        var chargeItems = (request.cbChargeItems ?? new List<ChargeItem>()).Where(x => !IsDownpayment(x)).ToList();
+        var payItems = (request.cbPayItems ?? new List<PayItem>()).Where(x => !IsDownpayment(x)).ToList();
 
         decimal ChargeSum(ChargeItemCase vatCase) => chargeItems.Where(x => x.ftChargeItemCase.Vat() == vatCase).Sum(x => x.Amount);
 
@@ -85,6 +92,10 @@ public static class FRTotalsCalculator
         PIInternal = source.PIInternal,
         PIUnknown = source.PIUnknown,
     };
+
+    private static bool IsDownpayment(ChargeItem item) => ((long) item.ftChargeItemCase & (long) ChargeItemCaseFlags.Downpayment) != 0;
+
+    private static bool IsDownpayment(PayItem item) => ((long) item.ftPayItemCase & (long) PayItemCaseFlags.Downpayment) != 0;
 
     private static bool IsNonCash(PayItemCase payCase) => payCase is PayItemCase.NonCash
         or PayItemCase.CrossedCheque

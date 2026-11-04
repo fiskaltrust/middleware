@@ -51,4 +51,18 @@ public static class SignaturItemFactory
         Caption = "Document provisoire",
         Data = "Ce document ne constitue pas une facture.",
     };
+
+    /// <summary>
+    /// The mention every document of the training chain has to carry, so a fictitious sale can never
+    /// be mistaken for a real one: NF525 V2.3 §6.12.1.3 ("NON VALABLE POUR ENCAISSEMENT", "FACTICE",
+    /// "SIMULATION", "TEST" or another clear mention) and LNE Exigence 5 ("factice", "simulation").
+    /// The POS prints it at least as large as the rest of the document.
+    /// </summary>
+    public static SignatureItem CreateTrainingSignature() => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Mode école",
+        Data = "SIMULATION - NON VALABLE POUR ENCAISSEMENT",
+    };
 }
