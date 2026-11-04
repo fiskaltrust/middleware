@@ -101,6 +101,28 @@ public class ProcessorTests
         sscd.Calls.Should().ContainSingle();
     }
 
+    [Theory]
+    [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
+    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
+    public async Task TrainingLifecycleReceipt_IsRefusedBeforeSigning_AndLeavesTheQueueAlone(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var storage = new Mock<ILocalizedQueueStorageProvider>();
+        var sut = new LifecycleCommandProcessorFR(sscd, pipeline, storage.Object);
+        var request = CommandRequest(receiptCase);
+        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+
+        var response = receiptCase == ReceiptCase.InitialOperationReceipt0x4001
+            ? await sut.InitialOperationReceipt0x4001Async(request)
+            : await sut.OutOfOperationReceipt0x4002Async(request);
+
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        response.actionJournals.Should().BeEmpty("no activation or deactivation is journaled");
+        sscd.Calls.Should().BeEmpty("nothing is signed into the training chain");
+        storage.Verify(x => x.ActivateQueueAsync(), Times.Never);
+        storage.Verify(x => x.DeactivateQueueAsync(), Times.Never);
+    }
+
     [Fact]
     public async Task InitialOperation_WithoutSignatureCreationData_IsRefused()
     {
