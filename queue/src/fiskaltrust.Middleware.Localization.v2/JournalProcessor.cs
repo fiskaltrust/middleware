@@ -149,18 +149,7 @@ public class JournalProcessor
 
     private async Task<object> GetConfigurationAsync()
     {
-        var configurationRepository = await _configurationRepository.Value;
-        var queueBEList = GetConfigurationFromDictionary<ftQueueBE>("init_ftQueueBE");
-        var queueDEList = await configurationRepository.GetQueueDEListAsync().ConfigureAwait(false);
-        var queueESList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueES");
-        var queueEUList = GetConfigurationFromDictionary<ftQueueEU>("init_ftQueueEU");
-        var queueFRList = await configurationRepository.GetQueueFRListAsync().ConfigureAwait(false);
-        var queueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR");
-        var queueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false);
-        var queueMEList = await configurationRepository.GetQueueMEListAsync().ConfigureAwait(false);
-        var queuePLList = await configurationRepository.GetQueuePLListAsync().ConfigureAwait(false);
-        var queuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT");
-            
+        var configurationRepository = await _configurationRepository.Value;  
         return new
         {
             Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
