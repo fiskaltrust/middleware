@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
@@ -37,8 +38,8 @@ public class LneFRSSCDTests
         var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var signatures = response.ReceiptResponse.ftSignatures;
-        var dataSet = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
-        var signature = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
+        var dataSet = FRReceiptQrCode.SignedContentOf(signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
+        var signature = FRChaining.ChainedSignatureOf(signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
 
         FRTestData.IsBase64Url(signature).Should().BeTrue();
         key.VerifyData(Encoding.UTF8.GetBytes(dataSet), FRTestData.FromBase64Url(signature), HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence)
@@ -55,8 +56,27 @@ public class LneFRSSCDTests
         var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         var signatures = response.ReceiptResponse.ftSignatures;
-        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data.Should().Be(signature);
+        FRChaining.ChainedSignatureOf(signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data).Should().Be(signature);
         signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash), "ADR 0001 chains on the signature itself");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_ReturnsTheQrCode_DataSetDotSignature_WithTheCertificateSerialSigned()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        var signatures = response.ReceiptResponse.ftSignatures;
+        var qr = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
+        qr.ftSignatureFormat.Should().Be(SignatureFormat.QRCode, "v1.2 returned its signature as a QR code");
+        qr.Caption.Should().Be("www.fiskaltrust.fr");
+        qr.Data.Should().Be(FRReceiptQrCode.SignedContentOf(qr.Data) + "." + signature);
+        FRReceiptQrCode.SignedContentOf(qr.Data).Split('|')[^4].Should().Be("CERT-4711", "the serial is signed in the data set, as v1.2 signed csn");
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.Information), "the data set is in the QR code");
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ShiftTotals), "no separate certificate item, as in v1.2");
     }
 
     [Fact]
@@ -94,7 +114,7 @@ public class LneFRSSCDTests
     }
 
     private static string DataSetOf(ProcessResponse response)
-        => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
+        => FRReceiptQrCode.SignedContentOf(response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
 
     [Fact]
     public async Task ProcessReceiptAsync_DataSetIsCultureInvariant()
@@ -181,7 +201,7 @@ public class LneFRSSCDTests
 
         var (response, _) = await sut.ProcessReceiptAsync(request, null);
 
-        var dataSet = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
+        var dataSet = FRReceiptQrCode.SignedContentOf(response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
         dataSet.Should().Contain("Day,25.50,20.00");
         dataSet.Should().Contain("99.00", "the perpetual total is reported on every closing");
     }
@@ -287,7 +307,7 @@ public class LneFRSSCDTests
             var request = FRTestData.Request();
             request.ReceiptRequest = receiptRequest;
             var (response, _) = await sut.ProcessReceiptAsync(request, null);
-            return response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information)).Data;
+            return FRReceiptQrCode.SignedContentOf(response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
         }
         finally
         {

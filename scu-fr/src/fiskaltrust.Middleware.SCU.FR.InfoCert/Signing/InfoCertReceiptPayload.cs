@@ -82,7 +82,8 @@ internal class InfoCertReceiptPayload
     /// </summary>
     [JsonPropertyName("previousSignature")] public string PreviousSignature { get; set; } = "";
 
-    [JsonPropertyName("certificateSerialNumber")] public string CertificateSerialNumber { get; set; } = "";
+    /// <summary>The signing certificate's serial number, under v1.2's key <c>csn</c>: the receipt carries no separate certificate item.</summary>
+    [JsonPropertyName("csn")] public string CertificateSerialNumber { get; set; } = "";
 
     [JsonPropertyName("attestationNumber")] public string AttestationNumber { get; set; } = "";
 

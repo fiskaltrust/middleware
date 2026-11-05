@@ -70,6 +70,7 @@ public class InMemorySCU : IFRSSCD, IDisposable
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             (request.ReceiptRequest.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
             PeriodTotals(request.PeriodTotals),
+            _certificateSerialNumber,
             request.ChainCounter.ToString(CultureInfo.InvariantCulture),
             FRChaining.Flag(previousSignature).ToCode(),
             previousSignature ?? "");
@@ -83,8 +84,7 @@ public class InMemorySCU : IFRSSCD, IDisposable
             response.AddSignatureItem(PeriodSignatureType(request.PeriodTotals.Period), $"Total {request.PeriodTotals.Period}", request.PeriodTotals.Current.Totalizer.ToString("0.00", CultureInfo.InvariantCulture));
         }
 
-        response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
-        response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _certificateSerialNumber);
+        response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _siret);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);

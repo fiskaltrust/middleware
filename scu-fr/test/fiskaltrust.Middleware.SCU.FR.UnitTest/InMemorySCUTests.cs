@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.InMemory;
 using FluentAssertions;
 using Xunit;
@@ -29,8 +30,8 @@ public class InMemorySCUTests
         var (first, firstSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(1), null);
         var (second, secondSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(2), firstSignature);
 
-        firstSignature.Should().Be(SignatureData(first, SignatureTypeFR.ReceiptSignature), "the chained value is the stored signature itself");
-        secondSignature.Should().Be(SignatureData(second, SignatureTypeFR.ReceiptSignature));
+        firstSignature.Should().Be(FRChaining.ChainedSignatureOf(SignatureData(first, SignatureTypeFR.ReceiptSignature)), "the chained value is the QR code's signature segment");
+        secondSignature.Should().Be(FRChaining.ChainedSignatureOf(SignatureData(second, SignatureTypeFR.ReceiptSignature)));
         FRTestData.IsBase64Url(firstSignature).Should().BeTrue();
         second.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash));
     }
@@ -45,7 +46,7 @@ public class InMemorySCUTests
 
         // ECDSA signatures are randomized, but the identity signatures must not move.
         SignatureData(first, SignatureTypeFR.Siret).Should().Be(SignatureData(second, SignatureTypeFR.Siret));
-        SignatureData(first, SignatureTypeFR.CertificateSerialNumber).Should().Be("INMEMORY-0001");
+        FRReceiptQrCode.SignedContentOf(SignatureData(first, SignatureTypeFR.ReceiptSignature)).Split('|')[^4].Should().Be("INMEMORY-0001");
     }
 
     [Fact]

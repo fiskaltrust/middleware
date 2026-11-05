@@ -95,7 +95,13 @@ public class InfoCertFRSSCDTests
 
         var signatures = response.ReceiptResponse.ftSignatures;
         signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash), "ADR 0001 chains on the signature itself");
-        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificateSerialNumber)).Data.Should().Be("CERT-4711");
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ShiftTotals), "no separate certificate item, as in v1.2");
+        var qr = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
+        qr.Caption.Should().Be("www.fiskaltrust.fr");
+        using (var payload = System.Text.Json.JsonDocument.Parse(FRTestData.FromBase64Url(qr.Data.Split('.')[1])))
+        {
+            payload.RootElement.GetProperty("csn").GetString().Should().Be("CERT-4711", "the serial is signed in the JWS payload under v1.2's key");
+        }
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Siret)).Data.Should().Be(FRTestData.Siret);
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody)).Data.Should().Be("Infocert IC-2026-001");
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).ftSignatureFormat.Should().Be(SignatureFormat.QRCode);
