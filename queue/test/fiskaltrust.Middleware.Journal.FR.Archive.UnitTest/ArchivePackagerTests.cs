@@ -61,8 +61,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             manifest.RecordCount.Should().Be(3);
             manifest.SignatureAlgorithm.Should().Be(ArchiveSignatureAlgorithms.RS256);
             manifest.SigningCertificate.SerialNumber.Should().Be(certificate.SerialNumber);
-            manifest.SubArchives!.Select(s => s.FileName).Should().Equal("subarchive_AAAA_v1.zip", "subarchive_BBBB_v2.zip");
-            manifest.Files.Select(f => f.Name).Should().Contain(new[] { "subarchive_AAAA_v1.zip", "subarchive_BBBB_v2.zip", ArchivePackager<TestRecord>.ArchiveCertificateFileName });
+            manifest.SubArchives!.Select(s => s.FileName).Should().Equal("subarchive_AAAA_v1_1.zip", "subarchive_BBBB_v2_1.zip");
+            manifest.Files.Select(f => f.Name).Should().Contain(new[] { "subarchive_AAAA_v1_1.zip", "subarchive_BBBB_v2_1.zip", ArchivePackager<TestRecord>.ArchiveCertificateFileName });
 
             result.SubArchives.Should().HaveCount(2);
             var second = result.SubArchives[1].Manifest!;
@@ -116,12 +116,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             using var certificate = TestFixtures.RsaCertificate();
             var bytes = await Package(TwoSubArchives(), certificate);
 
-            var tampered = ReplaceEntry(bytes, "subarchive_BBBB_v2.zip",
+            var tampered = ReplaceEntry(bytes, "subarchive_BBBB_v2_1.zip",
                 sub => ReplaceEntry(sub, "journal-T.csv", csv => Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(csv).Replace(";3;", ";4;"))));
 
             var result = ArchiveVerifier.Verify(new MemoryStream(tampered));
             result.IsValid.Should().BeFalse();
-            result.AllErrors.Should().Contain(e => e.Contains("subarchive_BBBB_v2.zip") && e.Contains("hash mismatch"));
+            result.AllErrors.Should().Contain(e => e.Contains("subarchive_BBBB_v2_1.zip") && e.Contains("hash mismatch"));
         }
 
         [Fact]
@@ -159,7 +159,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             result.AllErrors.Should().BeEmpty();
             result.Manifest!.RecordCount.Should().Be(0);
             result.Manifest.FirstRecordMoment.Should().BeNull();
-            var sub = ReadEntry(bytes, "subarchive_CCCC_v2.zip");
+            var sub = ReadEntry(bytes, "subarchive_CCCC_v2_1.zip");
             Encoding.UTF8.GetString(ReadEntry(sub, "journal-T.csv")).Should().Be("ftQueueItemID;ftReceiptMoment;Totalizer;Text\r\n");
         }
 

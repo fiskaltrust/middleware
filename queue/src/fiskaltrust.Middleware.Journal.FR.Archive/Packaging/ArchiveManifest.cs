@@ -27,6 +27,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         /// <summary>For a sub-archive: its archive format version.</summary>
         public string? FormatVersion { get; set; }
 
+        /// <summary>For a sub-archive: which contiguous run of its SCU certificate and format version it is, from 1 (market-fr#262).</summary>
+        public int? Run { get; set; }
+
         /// <summary>
         /// The column schema of the receipts, <c>InfoCert</c> or <c>LNE</c> (self-certified SCUs use <c>LNE</c>): it also tells a
         /// verifier how the receipt signatures are encoded when the certificate does not say (market-fr#262, #263).
@@ -122,6 +125,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         public string CertificateSerialNumber { get; set; } = string.Empty;
 
         public string FormatVersion { get; set; } = string.Empty;
+
+        /// <summary>The sub-archive's <see cref="ArchiveManifest.Run"/>.</summary>
+        public int Run { get; set; }
 
         /// <summary>The sub-archive's <see cref="ArchiveManifest.Schema"/>.</summary>
         public string? Schema { get; set; }

@@ -116,8 +116,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
         /// <summary>
         /// The sub-archives' periods partition the main period without gaps or overlaps, in time order
         /// (market-fr#262): the first starts with the main period, each next one where the previous one
-        /// ends, at its own first record, and the last ends with the main period. Records of two keys that
-        /// interleave in time (an SCU switched out and back, A → B → A) cannot be partitioned so, and fail.
+        /// ends, at its own first record, and the last ends with the main period. Each sub-archive is one
+        /// contiguous run of one key, so an SCU switched out and back in (A → B → A) gives A two runs.
+        /// Runs whose moments overlap (records supplied out of time order) cannot be partitioned, and fail.
         /// </summary>
         private static List<SubArchive<TRecord>> Partition<TRecord>(List<Group<TRecord>> groups, ArchivePeriod slice)
         {
@@ -130,8 +131,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                 if (g < ordered.Count - 1 && ordered[g].Last!.Value >= end)
                 {
                     throw new NotSupportedException(
-                        $"In {slice}, the records of SCU certificate {ordered[g].Key.CertificateSerialNumber} (format {ordered[g].Key.FormatVersion}) and of {ordered[g + 1].Key.CertificateSerialNumber} (format {ordered[g + 1].Key.FormatVersion}) interleave in time. " +
-                        "Sub-archive periods must not overlap (fiskaltrust/market-fr#262): archive each SCU's period on its own.");
+                        $"In {slice}, run {ordered[g].Run} of SCU certificate {ordered[g].Key.CertificateSerialNumber} (format {ordered[g].Key.FormatVersion}) ends after run {ordered[g + 1].Run} of {ordered[g + 1].Key.CertificateSerialNumber} (format {ordered[g + 1].Key.FormatVersion}) begins: " +
+                        "the records are not in time order, and sub-archive periods must not overlap (fiskaltrust/market-fr#262).");
                 }
                 subArchives.Add(ordered[g].ToSubArchive(new ArchivePeriod(start, end)));
             }
@@ -150,14 +151,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
 
         private sealed class SliceBucket<TRecord>
         {
-            private readonly Dictionary<SubArchiveKey, Group<TRecord>> _byKey = new Dictionary<SubArchiveKey, Group<TRecord>>();
-
+            /// <summary>One group per contiguous run of a key, in record order (market-fr#262).</summary>
             public List<Group<TRecord>> Groups { get; } = new List<Group<TRecord>>();
 
-            /// <summary>
-            /// The key of the last record added. Not the last group: groups keep the order of each key's
-            /// first record, so with certificates A, B, A the last group is B.
-            /// </summary>
+            /// <summary>The key of the last record added, which is also the key of the last run.</summary>
             public SubArchiveKey? LastKey { get; private set; }
 
             public void Add(SubArchiveKey key, TRecord record, DateTime moment)
@@ -166,13 +163,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                 {
                     throw new ArgumentException("Every record needs a sub-archive key.", nameof(key));
                 }
-                if (!_byKey.TryGetValue(key, out var group))
+                if (!key.Equals(LastKey))
                 {
-                    group = new Group<TRecord>(key);
-                    _byKey.Add(key, group);
-                    Groups.Add(group);
+                    Groups.Add(new Group<TRecord>(key, Groups.Count(g => g.Key.Equals(key)) + 1));
                 }
-                group.Add(record, moment);
+                Groups[Groups.Count - 1].Add(record, moment);
                 LastKey = key;
             }
         }
@@ -183,9 +178,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
             private DateTime? _first;
             private DateTime? _last;
 
-            public Group(SubArchiveKey key) => Key = key;
+            public Group(SubArchiveKey key, int run)
+            {
+                Key = key;
+                Run = run;
+            }
 
             public SubArchiveKey Key { get; }
+
+            public int Run { get; }
 
             public DateTime? First => _first;
 
@@ -198,7 +199,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                 if (_last is null || moment > _last) _last = moment;
             }
 
-            public SubArchive<TRecord> ToSubArchive(ArchivePeriod period) => new SubArchive<TRecord>(Key, period, _records, _first, _last);
+            public SubArchive<TRecord> ToSubArchive(ArchivePeriod period) => new SubArchive<TRecord>(Key, period, _records, _first, _last, Run);
         }
     }
 }

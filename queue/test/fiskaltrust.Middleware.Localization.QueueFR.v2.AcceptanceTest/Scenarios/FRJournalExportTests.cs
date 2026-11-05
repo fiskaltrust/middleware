@@ -134,7 +134,7 @@ public class FRJournalExportTests : IDisposable
         using var archiveCertificate = new X509Certificate2(ReadEntry(zip, ArchivePackager<object>.ArchiveCertificateFileName));
         using var scuKey = new X509Certificate2(Convert.FromBase64String((await _scu.GetSigningCertificateAsync()).CertificateBase64)).GetECDsaPublicKey()!;
         archiveCertificate.GetECDsaPublicKey()!.ExportSubjectPublicKeyInfo().Should().Equal(scuKey.ExportSubjectPublicKeyInfo(), "the queue's SCU signs a locally exported archive (ADR 0007 amendment)");
-        sub.Entries.Should().Contain(e => e.Name == "scu_INMEMORY_0001_v2.cer", "the SCU certificate also checks the entries it signed");
+        sub.Entries.Should().Contain(e => e.Name == "scu_INMEMORY_0001_v2_1.cer", "the SCU certificate also checks the entries it signed");
     }
 
     [Fact]

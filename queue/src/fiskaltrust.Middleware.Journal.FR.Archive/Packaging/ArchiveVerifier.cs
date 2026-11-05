@@ -237,7 +237,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     if (sub.Manifest is not null
                         && (sub.Manifest.CertificateSerialNumber != subArchive.CertificateSerialNumber || sub.Manifest.FormatVersion != subArchive.FormatVersion
                             || sub.Manifest.PeriodStart != subArchive.PeriodStart || sub.Manifest.PeriodEnd != subArchive.PeriodEnd
-                            || sub.Manifest.Schema != subArchive.Schema || sub.Manifest.Siret != manifest.Siret))
+                            || sub.Manifest.Run != subArchive.Run || sub.Manifest.Schema != subArchive.Schema || sub.Manifest.Siret != manifest.Siret))
                     {
                         sub.Errors.Add("sub-archive manifest does not match its entry in the main manifest");
                     }

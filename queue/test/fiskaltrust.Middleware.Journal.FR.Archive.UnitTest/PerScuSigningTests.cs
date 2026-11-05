@@ -54,6 +54,27 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public async Task An_SCU_switched_out_and_back_in_gives_two_runs_signed_by_the_same_key()
+        {
+            using var a = TestFixtures.EcdsaCertificate();
+            using var b = TestFixtures.EcdsaCertificate();
+            var signers = new Dictionary<string, IArchiveSigner> { ["AAAA"] = new X509ArchiveSigner(a), ["BBBB"] = new X509ArchiveSigner(b) };
+            var period = new ArchivePeriod(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            var archive = fiskaltrust.Middleware.Journal.FR.Archive.Split.ArchiveSplitter.Split(
+                new[] { TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"), TestRecord.At(2024, 11, 1, "AAAA") }, r => r.Moment, r => r.Key, period).Single();
+
+            using var output = new MemoryStream();
+            await Packager(key => signers[key.CertificateSerialNumber], signers["AAAA"]).WriteAsync(archive, Metadata, output);
+            var result = ArchiveVerifier.Verify(new MemoryStream(output.ToArray()));
+
+            result.AllErrors.Should().BeEmpty();
+            result.Manifest!.SubArchives!.Select(s => (s.FileName, s.Run)).Should().Equal((ArchivePackager<TestRecord>.SubArchiveFileName(archive.SubArchives[0].Key, 1), 1), (ArchivePackager<TestRecord>.SubArchiveFileName(archive.SubArchives[1].Key, 1), 1), (ArchivePackager<TestRecord>.SubArchiveFileName(archive.SubArchives[2].Key, 2), 2));
+            result.Manifest.SubArchives![2].FileName.Should().EndWith("_2.zip");
+            result.Manifest.SigningCertificate.SerialNumber.Should().Be(a.SerialNumber, "the newest run is AAAA's second");
+            result.SubArchives[2].Manifest!.Run.Should().Be(2);
+        }
+
+        [Fact]
         public async Task A_missing_SCU_key_fails_before_anything_is_written()
         {
             using var current = TestFixtures.EcdsaCertificate();

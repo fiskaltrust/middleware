@@ -88,13 +88,28 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
-        public void An_SCU_switched_out_and_back_in_one_year_cannot_be_partitioned_and_fails()
+        public void An_SCU_switched_out_and_back_in_one_year_gives_one_sub_archive_per_run()
         {
-            // Certificates AAAA -> BBBB -> AAAA: the two sub-archives' periods would overlap (market-fr#262).
-            var split = () => Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2026, 1, 1)), null,
-                TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"), TestRecord.At(2024, 11, 1, "AAAA"));
+            // Certificates AAAA -> BBBB -> AAAA (market-fr#262): AAAA has two runs, each its own sub-archive.
+            var archives = Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2026, 1, 1)), null,
+                TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 3, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"), TestRecord.At(2024, 11, 1, "AAAA"));
 
-            split.Should().Throw<NotSupportedException>().WithMessage("*AAAA*BBBB*interleave*");
+            var subArchives = archives[0].SubArchives;
+            subArchives.Select(s => (s.Key.CertificateSerialNumber, s.Run, s.Records.Count)).Should().Equal(("AAAA", 1, 2), ("BBBB", 1, 1), ("AAAA", 2, 1));
+            subArchives[0].Period.Start.Should().Be(archives[0].Period.Start);
+            subArchives[1].Period.Start.Should().Be(subArchives[0].Period.End).And.Be(subArchives[1].FirstRecordMoment!.Value);
+            subArchives[2].Period.Start.Should().Be(subArchives[1].Period.End).And.Be(subArchives[2].FirstRecordMoment!.Value);
+            subArchives[2].Period.End.Should().Be(archives[0].Period.End);
+            archives[1].SubArchives.Single().Key.CertificateSerialNumber.Should().Be("AAAA", "an empty year takes the key of the last record");
+        }
+
+        [Fact]
+        public void Runs_supplied_out_of_time_order_cannot_be_partitioned_and_fail()
+        {
+            var split = () => Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2025, 1, 1)), null,
+                TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 9, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"));
+
+            split.Should().Throw<NotSupportedException>().WithMessage("*AAAA*BBBB*time order*");
         }
 
         [Fact]

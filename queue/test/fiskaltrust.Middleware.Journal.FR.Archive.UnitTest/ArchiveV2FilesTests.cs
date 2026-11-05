@@ -288,8 +288,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             output.Position = 0;
             ArchiveVerifier.Verify(new MemoryStream(output.ToArray())).Errors.Should().BeEmpty();
             using var zip = new ZipArchive(new MemoryStream(output.ToArray()));
-            zip.Entries.Select(e => e.Name).Should().Contain(new[] { "subarchive_SERIAL_1_v2.zip", "subarchive_SERIAL_2_v2.zip" }, "an SCU switch splits the archive (ADR 0005)");
-            using var sub = new ZipArchive(zip.GetEntry("subarchive_SERIAL_1_v2.zip")!.Open());
+            zip.Entries.Select(e => e.Name).Should().Contain(new[] { "subarchive_SERIAL_1_v2_1.zip", "subarchive_SERIAL_2_v2_1.zip" }, "an SCU switch splits the archive (ADR 0005)");
+            using var sub = new ZipArchive(zip.GetEntry("subarchive_SERIAL_1_v2_1.zip")!.Open());
             sub.Entries.Select(e => e.Name).Should().Contain(ArchiveV2Files.Journals.Select(j => j.FileName)
                 .Concat(new[] { ArchiveV2Files.ChargeItemsFileName, ArchiveV2Files.PayItemsFileName, ArchiveV2Files.JournalTypesFileName, ArchiveV2Files.CaseDataFileName }));
             using var reader = new StreamReader(sub.GetEntry(ArchiveV2Files.JournalTypesFileName)!.Open(), Encoding.UTF8);

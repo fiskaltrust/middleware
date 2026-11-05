@@ -103,11 +103,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
             _schemaOf = schemaOf;
         }
 
-        public static string SubArchiveFileName(SubArchiveKey key)
+        /// <summary>
+        /// <c>subarchive_<serial>_v<version>_<run>.zip</c> (market-fr#262): the run number tells apart the sub-archives of an
+        /// SCU switched out and back in within one main archive.
+        /// </summary>
+        public static string SubArchiveFileName(SubArchiveKey key, int run)
         {
             var serial = new string(key.CertificateSerialNumber.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
             var version = new string(key.FormatVersion.Value.Select(c => char.IsLetterOrDigit(c) || c == '.' ? c : '_').ToArray());
-            return $"subarchive_{serial}_v{version}.zip";
+            return $"subarchive_{serial}_v{version}_{run.ToString(System.Globalization.CultureInfo.InvariantCulture)}.zip";
         }
 
         public async Task WriteAsync(MainArchive<TRecord> archive, ArchiveMetadata metadata, Stream output, CancellationToken cancellationToken = default)
@@ -122,7 +126,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
             {
                 throw new InvalidOperationException($"No sub-archive writer for archive format version {missing}.");
             }
-            var duplicateName = archive.SubArchives.GroupBy(s => SubArchiveFileName(s.Key), StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
+            var duplicateName = archive.SubArchives.GroupBy(s => SubArchiveFileName(s.Key, s.Run), StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
             if (duplicateName is not null)
             {
                 throw new InvalidOperationException($"Two sub-archives map to the file name {duplicateName.Key}.");
@@ -148,12 +152,13 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                 var sink = new ZipFileSink(zip, mainSigner, manifest, metadata.GeneratedAt);
                 foreach (var subArchive in archive.SubArchives)
                 {
-                    var fileName = SubArchiveFileName(subArchive.Key);
+                    var fileName = SubArchiveFileName(subArchive.Key, subArchive.Run);
                     await sink.WriteFileAsync(fileName, (stream, ct) => WriteSubArchiveAsync(subArchive, signers[subArchive], metadata, stream, ct), cancellationToken).ConfigureAwait(false);
                     manifest.SubArchives.Add(new ManifestSubArchive
                     {
                         FileName = fileName,
                         CertificateSerialNumber = subArchive.Key.CertificateSerialNumber,
+                        Run = subArchive.Run,
                         FormatVersion = subArchive.Key.FormatVersion.Value,
                         Schema = _schemaOf?.Invoke(subArchive),
                         RecordCount = subArchive.Records.Count,
@@ -172,6 +177,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
         {
             var manifest = NewManifest(ArchiveManifest.SubKind, subArchive.Period, metadata, signer);
             manifest.CertificateSerialNumber = subArchive.Key.CertificateSerialNumber;
+            manifest.Run = subArchive.Run;
             manifest.FormatVersion = subArchive.Key.FormatVersion.Value;
             manifest.FirstRecordMoment = subArchive.FirstRecordMoment;
             manifest.LastRecordMoment = subArchive.LastRecordMoment;
@@ -189,7 +195,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
             var scuCertificate = _scuCertificate(subArchive.Key, signer);
             if (scuCertificate is not null)
             {
-                var name = Path.GetFileNameWithoutExtension(SubArchiveFileName(subArchive.Key)).Replace("subarchive_", "scu_") + ".cer";
+                var name = Path.GetFileNameWithoutExtension(SubArchiveFileName(subArchive.Key, subArchive.Run)).Replace("subarchive_", "scu_") + ".cer";
                 await sink.WriteBytesAsync(name, scuCertificate.RawData, cancellationToken).ConfigureAwait(false);
             }
             await FinishAsync(sink, manifest, signer, cancellationToken).ConfigureAwait(false);

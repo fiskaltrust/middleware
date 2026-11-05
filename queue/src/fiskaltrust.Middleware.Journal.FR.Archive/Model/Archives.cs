@@ -36,16 +36,23 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Model
     /// </summary>
     public sealed class SubArchive<TRecord>
     {
-        public SubArchive(SubArchiveKey key, ArchivePeriod period, IReadOnlyList<TRecord> records, DateTime? firstRecordMoment, DateTime? lastRecordMoment)
+        public SubArchive(SubArchiveKey key, ArchivePeriod period, IReadOnlyList<TRecord> records, DateTime? firstRecordMoment, DateTime? lastRecordMoment, int run = 1)
         {
             Key = key ?? throw new ArgumentNullException(nameof(key));
             Period = period ?? throw new ArgumentNullException(nameof(period));
             Records = records ?? throw new ArgumentNullException(nameof(records));
             FirstRecordMoment = firstRecordMoment;
             LastRecordMoment = lastRecordMoment;
+            Run = run >= 1 ? run : throw new ArgumentOutOfRangeException(nameof(run), "Runs are numbered from 1.");
         }
 
         public SubArchiveKey Key { get; }
+
+        /// <summary>
+        /// Which contiguous run of <see cref="Key"/> this is, from 1, in time order (market-fr#262): an SCU switched out
+        /// and back in within one main archive gives that key two runs, each its own sub-archive.
+        /// </summary>
+        public int Run { get; }
 
         /// <summary>
         /// The sub-archive's share of its main archive's period: the sub-archives of one main archive partition it
