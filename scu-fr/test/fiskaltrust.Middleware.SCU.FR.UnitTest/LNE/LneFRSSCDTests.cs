@@ -246,7 +246,7 @@ public class LneFRSSCDTests
     }
 
     [Fact]
-    public async Task CertificationMention_IsTheRev18WordingWithTheFullSignature()
+    public async Task CertificationMention_IsTheRev18WordingWithTheLneCertificateNumber()
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
@@ -254,10 +254,12 @@ public class LneFRSSCDTests
 
         var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
-        // market-fr#131, LNE Rev. 1.8 Exigence 9.
+        // market-fr#131, LNE Rev. 1.8 Exigence 9: the mention and the LNE certificate number; the
+        // signature is printed in the QR code, not repeated on this line.
         var item = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
         item.Caption.Should().Be("Système de caisse certifié LNE");
-        item.Data.Should().Be(signature);
+        item.Data.Should().Be(Configuration(privateKey).LneCertificateNumber).And.NotBeEmpty();
+        item.Data.Should().NotContain(signature);
     }
 
     [Fact]

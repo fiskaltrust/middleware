@@ -73,9 +73,10 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         // The QR code carries the data set and its signature; the certificate serial is a field of the data set.
         response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
-        // market-fr#131: LNE Rev. 1.8 Exigence 9 recommends this wording, and recommends printing
-        // the full signature with it.
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, signature);
+        // market-fr#131: the mention LNE Rev. 1.8 Exigence 9 recommends, with the LNE certificate
+        // number (an acceptable solution of the same exigence). Printed on every ticket, so it stays
+        // short: the full signature the exigence recommends is in the QR code. Not signed.
+        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
