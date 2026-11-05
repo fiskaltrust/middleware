@@ -1,0 +1,2 @@
+﻿Please keep in mind that we modified the original DSFinV-K index.xml file to include TSE_ZERTIFIKAT_III - TSE_ZERTIFIKAT_V (which is allowed by specification).
+If this file is updated, these fields need to be re-added to produce a valid export.

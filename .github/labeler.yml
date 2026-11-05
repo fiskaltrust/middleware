@@ -21,6 +21,7 @@ market-de:
   - changed-files:
       - any-glob-to-any-file:
           - "queue/src/fiskaltrust.Middleware.Localization.QueueDE/**/*"
+          - "queue/src/fiskaltrust.Middleware.Journal.DE.*/**/*"
           - "scu-de/**/*"
 
 market-dk:
