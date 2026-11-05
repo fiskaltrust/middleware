@@ -110,6 +110,46 @@ public abstract class FRScenarioTests
         TotalsOf(secondClosing).Should().Be(("12.00", "36.00"), "the first closing reset the day, the perpetual total is never reset");
     }
 
+    /// <summary>
+    /// Every FR SCU prints the closing's totals as readable items, as v1.2 did: the period totals
+    /// (low word 0x0003 day, 0x0004 month, 0x0005 year) and the perpetual total (0x0007), each
+    /// starting with the grand total tax included (market-fr#221, decision 5).
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.DailyClosing0x2011, SignatureTypeFR.DayTotals)]
+    [InlineData(ReceiptCase.MonthlyClosing0x2012, SignatureTypeFR.MonthTotals)]
+    [InlineData(ReceiptCase.YearlyClosing0x2013, SignatureTypeFR.YearTotals)]
+    public async Task Closing_PrintsItsTotalsAsReadableItems(ReceiptCase closingCase, SignatureTypeFR periodType)
+    {
+        await SignAsync(CashSale());
+        var closing = await SignAsync(Request(closingCase));
+
+        ReadableTotal(SignatureOf(closing, periodType)).Should().Be("12.00");
+        ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
+        closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002, "low word 0x0002 stays reserved");
+    }
+
+    [Fact]
+    public async Task ShiftClosing_PrintsThePerpetualTotalOnly()
+    {
+        await SignAsync(CashSale());
+        var closing = await SignAsync(Request(ReceiptCase.ShiftClosing0x2010));
+
+        ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
+        closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002 || x.ftSignatureType.IsType(SignatureTypeFR.DayTotals));
+    }
+
+    [Fact]
+    public async Task Sale_PrintsNoTotalsItems()
+    {
+        var sale = await SignAsync(CashSale());
+
+        SignatureOf(sale, SignatureTypeFR.PerpetualTotals).Should().BeNull();
+    }
+
+    /// <summary>The grand total on the first line of a readable totals item ("Total TTC: 12.00").</summary>
+    protected static string? ReadableTotal(string? item) => item?.Split('\n')[0].Split(": ")[1];
+
     [Fact]
     public async Task NonEuroReceipt_IsRejected()
     {
@@ -134,7 +174,7 @@ public abstract class FRScenarioTests
     /// items; an SCU that only carries them inside its signed data set overrides this.
     /// </summary>
     protected virtual (string? Day, string? Perpetual) TotalsOf(ReceiptResponse closing)
-        => (SignatureOf(closing, SignatureTypeFR.DayTotals), SignatureOf(closing, SignatureTypeFR.PerpetualTotals));
+        => (ReadableTotal(SignatureOf(closing, SignatureTypeFR.DayTotals)), ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)));
 
     /// <summary>Reads a signature off the response the way a POS would, by its FR signature type.</summary>
     protected static string? SignatureOf(ReceiptResponse response, SignatureTypeFR type)

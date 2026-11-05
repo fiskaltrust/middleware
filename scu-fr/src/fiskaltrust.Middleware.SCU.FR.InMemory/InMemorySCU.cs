@@ -80,14 +80,9 @@ public class InMemorySCU : IFRSSCD, IDisposable
         var dataSetBytes = Encoding.UTF8.GetBytes(dataSet);
         var signature = FRChaining.ToBase64Url(_key.SignData(dataSetBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence));
 
-        if (request.PeriodTotals is not null)
-        {
-            response.AddSignatureItem(SignatureTypeFR.PerpetualTotals, "Total perpetuel", request.PeriodTotals.Perpetual.Totalizer.ToString("0.00", CultureInfo.InvariantCulture));
-            response.AddSignatureItem(PeriodSignatureType(request.PeriodTotals.Period), $"Total {request.PeriodTotals.Period}", request.PeriodTotals.Current.Totalizer.ToString("0.00", CultureInfo.InvariantCulture));
-        }
-
         response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _siret);
+        response.AddPeriodTotalsItems(request.PeriodTotals);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
@@ -96,13 +91,6 @@ public class InMemorySCU : IFRSSCD, IDisposable
     private static string PeriodTotals(FRPeriodTotals? periodTotals) => periodTotals is null
         ? ""
         : $"{periodTotals.Period}:{periodTotals.Current.Totalizer.ToString("0.00", CultureInfo.InvariantCulture)}:{periodTotals.Perpetual.Totalizer.ToString("0.00", CultureInfo.InvariantCulture)}";
-
-    private static SignatureTypeFR PeriodSignatureType(FRTotalsPeriod period) => period switch
-    {
-        FRTotalsPeriod.Month => SignatureTypeFR.MonthTotals,
-        FRTotalsPeriod.Year => SignatureTypeFR.YearTotals,
-        _ => SignatureTypeFR.DayTotals,
-    };
 
     /// <summary>A self-signed certificate over the ephemeral key, so a test archive verifies.</summary>
     public Task<FRSigningCertificate> GetSigningCertificateAsync()

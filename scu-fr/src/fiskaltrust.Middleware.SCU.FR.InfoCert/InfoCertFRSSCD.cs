@@ -107,6 +107,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
+        response.AddPeriodTotalsItems(request.PeriodTotals);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }

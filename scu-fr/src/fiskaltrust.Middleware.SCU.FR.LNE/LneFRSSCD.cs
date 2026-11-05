@@ -71,6 +71,7 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Certification", $"{CertificationBody} {_configuration.LneCertificateNumber}".TrimEnd());
+        response.AddPeriodTotalsItems(request.PeriodTotals);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
