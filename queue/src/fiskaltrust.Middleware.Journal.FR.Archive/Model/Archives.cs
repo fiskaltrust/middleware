@@ -47,7 +47,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Model
 
         public SubArchiveKey Key { get; }
 
-        /// <summary>The period of the main archive this sub-archive belongs to.</summary>
+        /// <summary>
+        /// The sub-archive's share of its main archive's period: the sub-archives of one main archive partition it
+        /// in time order (market-fr#262). An empty main archive's one sub-archive has the whole period.
+        /// </summary>
         public ArchivePeriod Period { get; }
 
         public IReadOnlyList<TRecord> Records { get; }

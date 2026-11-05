@@ -185,11 +185,21 @@ public class JournalProcessorFR : IJournalProcessor
         var siret = (string.IsNullOrEmpty(queueFR?.Siret) ? null : queueFR!.Siret)
             ?? entries.Select(e => e.Siret).FirstOrDefault(s => !string.IsNullOrEmpty(s))
             ?? throw new InvalidOperationException("The archive manifest needs the SIRET, and neither the queue configuration nor the archived entries carry one.");
-        // When the SCU signs the archive, its certificate is also the one of the entries it signed: embed it in their sub-archive.
-        var scuCertificate = signer is ScuArchiveSigner scuSigner
-            ? (Func<SubArchiveKey, X509Certificate2?>) (key => key.CertificateSerialNumber == scuSigner.CertificateSerialNumber ? scuSigner.Certificate : null)
-            : null;
-        var packager = new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, signer, scuCertificate);
+        // Each sub-archive is signed by the SCU that signed its receipts (market-fr#262). The device holds only its
+        // current SCU's key: an earlier SCU's period is archived when that SCU is switched out (#177) or exported
+        // from the portal, so a local export that reaches into it fails before anything is written.
+        var packager = signer is ScuArchiveSigner scuSigner
+            ? new ArchivePackager<ArchiveEntry>(
+                new[] { ArchiveV2Files.CreateWriter() },
+                key => key.CertificateSerialNumber == scuSigner.CertificateSerialNumber
+                    ? scuSigner
+                    : throw new NotSupportedException(
+                        $"The period {period} holds entries signed by the SCU certificate {key.CertificateSerialNumber}, and this queue only holds the key of its current SCU ({scuSigner.CertificateSerialNumber}). " +
+                        "Export that period from the portal, or use the archive made when that SCU was switched out (fiskaltrust/market-fr#262, #177)."),
+                scuSigner,
+                ArchiveV2Files.ChainAnchorsOf,
+                ArchiveV2Files.SchemaOf)
+            : new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, signer);
 
         await foreach (var chunk in ThroughTempFileAsync(stream => packager.WriteAsync(archive, new ArchiveMetadata(siret, DateTime.UtcNow), stream)).ConfigureAwait(false))
         {

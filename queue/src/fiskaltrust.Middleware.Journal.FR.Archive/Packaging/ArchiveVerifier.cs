@@ -236,11 +236,31 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Packaging
                     var sub = Verify(backing, subArchive.FileName, ArchiveManifest.SubKind, limits);
                     if (sub.Manifest is not null
                         && (sub.Manifest.CertificateSerialNumber != subArchive.CertificateSerialNumber || sub.Manifest.FormatVersion != subArchive.FormatVersion
-                            || sub.Manifest.PeriodStart != manifest.PeriodStart || sub.Manifest.PeriodEnd != manifest.PeriodEnd || sub.Manifest.Siret != manifest.Siret))
+                            || sub.Manifest.PeriodStart != subArchive.PeriodStart || sub.Manifest.PeriodEnd != subArchive.PeriodEnd
+                            || sub.Manifest.Schema != subArchive.Schema || sub.Manifest.Siret != manifest.Siret))
                     {
-                        sub.Errors.Add("sub-archive manifest does not match the main manifest");
+                        sub.Errors.Add("sub-archive manifest does not match its entry in the main manifest");
+                    }
+                    if (manifest.Files.First(f => f.Name == subArchive.FileName).Hash != subArchive.Hash)
+                    {
+                        sub.Errors.Add("sub-archive hash in the index does not match its listed file");
                     }
                     result.SubArchives.Add(sub);
+                }
+
+                // market-fr#262: the sub-archives partition the main period, in time order, without gaps or overlaps.
+                var cursor = manifest.PeriodStart;
+                foreach (var subArchive in subArchives.OrderBy(s => s.PeriodStart))
+                {
+                    if (subArchive.PeriodStart != cursor || subArchive.PeriodEnd <= subArchive.PeriodStart)
+                    {
+                        result.Errors.Add($"sub-archive {subArchive.FileName} period does not continue the previous one");
+                    }
+                    cursor = subArchive.PeriodEnd;
+                }
+                if (subArchives.Count > 0 && cursor != manifest.PeriodEnd)
+                {
+                    result.Errors.Add("the sub-archives do not cover the main period");
                 }
             }
             return result;

@@ -88,15 +88,29 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
-        public void An_empty_year_takes_the_key_of_the_last_record_not_of_the_last_sub_archive()
+        public void An_SCU_switched_out_and_back_in_one_year_cannot_be_partitioned_and_fails()
         {
-            // Certificates AAAA -> BBBB -> AAAA: the sub-archives are AAAA, BBBB, but the chain ended on AAAA.
-            var archives = Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2026, 1, 1)), null,
+            // Certificates AAAA -> BBBB -> AAAA: the two sub-archives' periods would overlap (market-fr#262).
+            var split = () => Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2026, 1, 1)), null,
                 TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"), TestRecord.At(2024, 11, 1, "AAAA"));
 
-            archives[0].SubArchives.Select(s => s.Key.CertificateSerialNumber).Should().Equal("AAAA", "BBBB");
+            split.Should().Throw<NotSupportedException>().WithMessage("*AAAA*BBBB*interleave*");
+        }
+
+        [Fact]
+        public void Sub_archive_periods_partition_the_year_at_each_switch_and_an_empty_year_takes_the_last_key()
+        {
+            var archives = Split(new ArchivePeriod(Utc(2024, 1, 1), Utc(2026, 1, 1)), null,
+                TestRecord.At(2024, 2, 1, "AAAA"), TestRecord.At(2024, 6, 1, "BBBB"), TestRecord.At(2024, 11, 1, "BBBB"));
+
+            var subArchives = archives[0].SubArchives;
+            subArchives.Select(s => s.Key.CertificateSerialNumber).Should().Equal("AAAA", "BBBB");
+            subArchives[0].Period.Start.Should().Be(archives[0].Period.Start);
+            subArchives[0].Period.End.Should().Be(subArchives[1].FirstRecordMoment!.Value, "the switch moment is the boundary");
+            subArchives[1].Period.Start.Should().Be(subArchives[0].Period.End);
+            subArchives[1].Period.End.Should().Be(archives[0].Period.End);
             archives[1].IsEmpty.Should().BeTrue();
-            archives[1].SubArchives.Single().Key.CertificateSerialNumber.Should().Be("AAAA");
+            archives[1].SubArchives.Single().Key.CertificateSerialNumber.Should().Be("BBBB");
         }
 
         [Fact]

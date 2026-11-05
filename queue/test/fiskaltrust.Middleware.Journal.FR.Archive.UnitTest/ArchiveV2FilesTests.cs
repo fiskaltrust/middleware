@@ -28,16 +28,16 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             "\"ftChargeItemCaseData\":{\"FR\":{\"DiscountCode\":\"D1\",\"a/b\":[1,null]}}}]," +
             "\"cbPayItems\":[{\"Position\":1,\"Description\":\"Cash\",\"Amount\":4.40,\"ftPayItemCase\":" + (0x4652_2000_0008_0001L) + "}]" + extra + "}";
 
-        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "") =>
+        internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "", string moment = "2026-03-01T10:00:01.4560000Z") =>
             "{\"ftQueueID\":\"" + QueueId + "\",\"ftCashBoxIdentification\":\"cashbox-fr\",\"ftReceiptIdentification\":\"" + identification + "\"," +
-            "\"ftReceiptMoment\":\"2026-03-01T10:00:01.4560000Z\",\"ftState\":" + state + ",\"ftSignatures\":[" +
+            "\"ftReceiptMoment\":\"" + moment + "\",\"ftState\":" + state + ",\"ftSignatures\":[" +
             Item(0x0001, signature, signatureFormatNibble) + "," + Item(0x0002, serial, signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
 
         private static string Item(long type, string data, long nibble) =>
             "{\"ftSignatureFormat\":1,\"ftSignatureType\":" + (0x4652_0000_0000_0000L | (nibble << 44) | type) + ",\"Caption\":\"x\",\"Data\":\"" + data + "\"}";
 
-        internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001)
-            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial))!;
+        internal static ArchiveEntry Entry(string identification, string signature, long row, string serial = "SERIAL-1", long receiptCase = 0x4652_2000_0000_0001, string moment = "2026-03-01T10:00:01.4560000Z")
+            => ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, row, Request(receiptCase), Response(identification, signature, serial, moment: moment))!;
 
         private static async Task<string> Write(ICsvFileDefinition<ArchiveEntry> file, params ArchiveEntry[] entries)
         {
@@ -251,9 +251,28 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         }
 
         [Fact]
+        public void ChainAnchors_HaveOneEntryPerJournalWithRows_WithItsFirstRowAndPreviousSignatureColumn()
+        {
+            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft1#T2", "t2", 2), Entry("ft1#I1", "i1", 3, receiptCase: 0x4652_2000_0000_1001) };
+            var linker = new ArchiveChainLinker();
+            foreach (var entry in entries)
+            {
+                linker.Link(entry);
+            }
+            var subArchive = new SubArchive<ArchiveEntry>(ArchiveV2Files.KeyOf(entries[0]), new ArchivePeriod(new DateTime(2026, 1, 1), new DateTime(2027, 1, 1)), entries.Skip(1).ToList(), null, null);
+
+            var anchors = ArchiveV2Files.ChainAnchorsOf(subArchive);
+
+            anchors.Select(a => a.Chain).Should().Equal("T", "I");
+            anchors[0].FirstReceiptIdentification.Should().Be("ft1#T2");
+            anchors[0].PreviousSignature.Should().Be(entries[1].PreviousSignature).And.NotBeEmpty("T2 covers T1, archived before this sub-archive");
+            anchors[1].PreviousSignature.Should().BeEmpty("I1 starts its chain");
+        }
+
+        [Fact]
         public async Task Package_WritesEveryV2FileAndVerifies()
         {
-            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2") };
+            var entries = new[] { Entry("ft1#T1", "t1", 1), Entry("ft2#T2", "t2", 2, serial: "SERIAL-2", moment: "2026-06-01T10:00:00.0000000Z") };
             var linker = new ArchiveChainLinker();
             foreach (var entry in entries)
             {

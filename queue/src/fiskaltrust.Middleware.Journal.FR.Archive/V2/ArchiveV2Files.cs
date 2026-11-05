@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
+using fiskaltrust.Middleware.Journal.FR.Archive.Packaging;
 using fiskaltrust.Middleware.Journal.FR.Archive.Writing;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
@@ -74,6 +75,25 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x00E, "M", "Monthly closing", "M"),
             new ArchiveJournal(0x00F, "Y", "Yearly closing", "Y"),
         };
+
+        /// <summary>
+        /// One anchor per journal file with rows in <paramref name="subArchive"/> (market-fr#262, contract section 10):
+        /// <c>chain</c> is the journal letter, <c>firstReceiptIdentification</c> its first row, and <c>previousSignature</c>
+        /// exactly what that row's <c>PreviousSignature</c> column holds (the Base64Url signature part, empty at a chain's start).
+        /// </summary>
+        public static IReadOnlyList<ManifestChainAnchor> ChainAnchorsOf(SubArchive<ArchiveEntry> subArchive)
+            => Journals
+                .Select(journal => (journal, first: subArchive.Records.FirstOrDefault(journal.Holds)))
+                .Where(x => x.first is not null)
+                .Select(x => new ManifestChainAnchor { Chain = x.journal.Letter, FirstReceiptIdentification = x.first!.ReceiptIdentification, PreviousSignature = x.first.PreviousSignature ?? "" })
+                .ToList();
+
+        /// <summary>
+        /// The column schema of <paramref name="subArchive"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
+        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS; null for a sub-archive without receipts.
+        /// </summary>
+        public static string? SchemaOf(SubArchive<ArchiveEntry> subArchive)
+            => subArchive.Records.Count == 0 ? null : subArchive.Records[0].Signature.Contains('|') ? "LNE" : "InfoCert";
 
         public const string ChargeItemsFileName = "charge-items.csv";
         public const string PayItemsFileName = "pay-items.csv";

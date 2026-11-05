@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                 var bucket = buckets[i];
                 if (bucket.Groups.Count > 0)
                 {
-                    result.Add(new MainArchive<TRecord>(slices[i], bucket.Groups.Select(g => g.ToSubArchive(slices[i])).ToList()));
+                    result.Add(new MainArchive<TRecord>(slices[i], Partition(bucket.Groups, slices[i])));
                     lastKeySeen = bucket.LastKey;
                     continue;
                 }
@@ -111,6 +111,31 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
                 result.Add(new MainArchive<TRecord>(slices[i], subArchives));
             }
             return result;
+        }
+
+        /// <summary>
+        /// The sub-archives' periods partition the main period without gaps or overlaps, in time order
+        /// (market-fr#262): the first starts with the main period, each next one where the previous one
+        /// ends, at its own first record, and the last ends with the main period. Records of two keys that
+        /// interleave in time (an SCU switched out and back, A → B → A) cannot be partitioned so, and fail.
+        /// </summary>
+        private static List<SubArchive<TRecord>> Partition<TRecord>(List<Group<TRecord>> groups, ArchivePeriod slice)
+        {
+            var ordered = groups.OrderBy(g => g.First).ToList();
+            var subArchives = new List<SubArchive<TRecord>>(ordered.Count);
+            for (var g = 0; g < ordered.Count; g++)
+            {
+                var start = g == 0 ? slice.Start : ordered[g].First!.Value;
+                var end = g == ordered.Count - 1 ? slice.End : ordered[g + 1].First!.Value;
+                if (g < ordered.Count - 1 && ordered[g].Last!.Value >= end)
+                {
+                    throw new NotSupportedException(
+                        $"In {slice}, the records of SCU certificate {ordered[g].Key.CertificateSerialNumber} (format {ordered[g].Key.FormatVersion}) and of {ordered[g + 1].Key.CertificateSerialNumber} (format {ordered[g + 1].Key.FormatVersion}) interleave in time. " +
+                        "Sub-archive periods must not overlap (fiskaltrust/market-fr#262): archive each SCU's period on its own.");
+                }
+                subArchives.Add(ordered[g].ToSubArchive(new ArchivePeriod(start, end)));
+            }
+            return subArchives;
         }
 
         private static DateTime ToUtc(DateTime localWallClock, TimeZoneInfo zone)
@@ -161,6 +186,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.Split
             public Group(SubArchiveKey key) => Key = key;
 
             public SubArchiveKey Key { get; }
+
+            public DateTime? First => _first;
+
+            public DateTime? Last => _last;
 
             public void Add(TRecord record, DateTime moment)
             {
