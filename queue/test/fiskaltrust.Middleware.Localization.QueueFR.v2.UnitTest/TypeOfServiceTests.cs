@@ -110,9 +110,9 @@ public class TypeOfServiceTests
         var (pipeline, sscd) = CreatePipeline();
         var sut = new ReceiptCommandProcessorFR(pipeline);
         var request = new ProcessCommandRequest(new ftQueue { ftQueueId = Guid.NewGuid() }, Request(Item(ChargeItemCaseTypeOfService.CatalogService)), Response());
-        request.ReceiptRequest.ftReceiptCase = ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003.WithCountry("FR");
+        request.ReceiptRequest.ftReceiptCase = ReceiptCase.DeliveryNote0x0005.WithCountry("FR");
 
-        var response = await sut.PointOfSaleReceiptWithoutObligation0x0003Async(request);
+        var response = await sut.DeliveryNote0x0005Async(request);
 
         sscd.Calls.Should().BeEmpty();
         TypeOfServiceOf(response.receiptResponse).Should().Be("S");

@@ -180,6 +180,35 @@ public class PeriodTotalsTests
         sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "a table check is not turnover");
     }
 
+    /// <summary>
+    /// v1.2 signs an e-commerce sale, a sale without obligation and a sale flagged
+    /// SaleInForeignCountry as a foreign sale (v0 0x0E) in the bill chain, outside the grand totals.
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.ECommerce0x0004, false)]
+    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003, false)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, true)]
+    public async Task ForeignSales_StayOutOfTheGrandTotals(ReceiptCase receiptCase, bool saleInForeignCountry)
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+
+        var foreign = Sale(normal: 50.00m);
+        foreign.ReceiptRequest.ftReceiptCase = saleInForeignCountry
+            ? receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.SaleInForeignCountry)
+            : receiptCase.WithCountry("FR");
+        await pipeline.SignAsync(foreign);
+
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        var totals = sscd.Calls.Last().periodTotals!;
+        totals.Current.Totalizer.Should().Be(10.00m);
+        totals.Perpetual.Totalizer.Should().Be(10.00m);
+        foreign.ReceiptResponse.ftReceiptIdentification.Should().EndWith("B1");
+    }
+
     [Fact]
     public async Task NonClosingReceipts_CarryNoPeriodTotals()
     {

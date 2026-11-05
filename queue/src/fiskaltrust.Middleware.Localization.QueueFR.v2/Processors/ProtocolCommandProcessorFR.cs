@@ -14,8 +14,10 @@ using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJour
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
 /// <summary>
-/// The log cases feed the French technical event and accounting log ("journal des evenements"),
-/// which NF525 requires to be signed and chained just like the sales chains - chain "L". Copies of
+/// The technical and accounting events feed the French event log ("journal des evenements"),
+/// which NF525 requires to be signed and chained just like the sales chains - chain "L". As in
+/// v1.2, an unspecified protocol and an internal consumption are stored but not signed, an order
+/// is signed as a bill and a pay protocol as a payment proof. Copies of
 /// an already issued document go into the duplicate chain ("D") and must be marked as a duplicata.
 /// </summary>
 public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
@@ -31,18 +33,29 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         _queueItems = queueItems;
     }
 
-    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    /// <summary>v1.2 does not sign an unspecified protocol (v0 0x14).</summary>
+    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 
     public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
     public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
-    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    /// <summary>v1.2 does not sign an internal consumption (v0 0x0D).</summary>
+    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 
-    /// <summary>Orders are internal working steps and never leave the till as a document.</summary>
-    public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    /// <summary>v1.2 signs an order as a bill (v0 0x08) in the bill chain, with the provisional-document mention.</summary>
+    public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
+    {
+        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateProvisionalDocumentSignature());
+        return _pipeline.SignAsync(request);
+    }
 
-    public Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+    /// <summary>v1.2 signs a pay protocol as a payment proof (v0 0x02) in the payment-proof chain.</summary>
+    public Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request)
+    {
+        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePaymentProofSignature());
+        return _pipeline.SignAsync(request);
+    }
 
     /// <summary>
     /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235)

@@ -13,7 +13,8 @@ public class ChainResolutionTests
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000, FRReceiptChain.Ticket)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, FRReceiptChain.Ticket)]
-    [InlineData(ReceiptCase.ECommerce0x0004, FRReceiptChain.Ticket)]
+    [InlineData(ReceiptCase.ECommerce0x0004, FRReceiptChain.Bill)]
+    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003, FRReceiptChain.Bill)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, FRReceiptChain.PaymentProof)]
     [InlineData(ReceiptCase.DeliveryNote0x0005, FRReceiptChain.Bill)]
     [InlineData(ReceiptCase.InvoiceB2B0x1002, FRReceiptChain.Invoice)]
@@ -26,9 +27,27 @@ public class ChainResolutionTests
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001, FRReceiptChain.Technical)]
     [InlineData(ReceiptCase.OutOfOperationReceipt0x4002, FRReceiptChain.Technical)]
     [InlineData(ReceiptCase.ProtocolTechnicalEvent0x3001, FRReceiptChain.Log)]
+    [InlineData(ReceiptCase.ProtocolAccountingEvent0x3002, FRReceiptChain.Log)]
+    [InlineData(ReceiptCase.Order0x3004, FRReceiptChain.Bill)]
+    [InlineData(ReceiptCase.Pay0x3005, FRReceiptChain.PaymentProof)]
     [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010, FRReceiptChain.Duplicate)]
     public void ResolveChain_MapsTheReceiptCaseToItsChain(ReceiptCase receiptCase, FRReceiptChain expected)
         => Request(receiptCase).ResolveChain().Should().Be(expected);
+
+    /// <summary>
+    /// The PosSystem API sends a point-of-sale receipt flagged as a sale in a foreign country to
+    /// v1.2 as a foreign sale (v0 0x0E), signed in the bill chain. An invoice keeps its chain.
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000, FRReceiptChain.Bill)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, FRReceiptChain.Bill)]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001, FRReceiptChain.Invoice)]
+    public void ResolveChain_SaleInForeignCountry_GoesToTheBillChain(ReceiptCase receiptCase, FRReceiptChain expected)
+    {
+        var request = new ReceiptRequest { ftReceiptCase = receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.SaleInForeignCountry) };
+
+        request.ResolveChain().Should().Be(expected);
+    }
 
     [Theory]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]

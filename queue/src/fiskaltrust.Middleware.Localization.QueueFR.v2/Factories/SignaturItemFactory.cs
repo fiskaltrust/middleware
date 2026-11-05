@@ -45,7 +45,16 @@ public static class SignaturItemFactory
         Data = copyNumber is null ? $"Duplicata de {copiedReceiptReference}" : $"{copyNumber}. Duplicata de {copiedReceiptReference}",
     };
 
-    /// <summary>The mention a bill, pro forma or delivery note has to carry: it is not a receipt.</summary>
+    /// <summary>The mention v1.2 prints on every payment proof (workerFR <c>PaymentProveRequest</c>).</summary>
+    public static SignatureItem CreatePaymentProofSignature() => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Justificatif de paiement",
+        Data = "Justificatif non valable pour encaissement",
+    };
+
+    /// <summary>The mention a bill, pro forma or order has to carry: it is not a receipt.</summary>
     public static SignatureItem CreateProvisionalDocumentSignature() => new()
     {
         ftSignatureFormat = SignatureFormat.Text,

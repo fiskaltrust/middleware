@@ -115,7 +115,24 @@ public static class FRReceiptChainExt
 
         if (request.ftReceiptCase.IsType(ReceiptCaseType.Log))
         {
-            return receiptCase == ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 ? FRReceiptChain.Duplicate : FRReceiptChain.Log;
+            // As v1.2 through the PosSystem API v2→v0 translation: a pay protocol is a payment
+            // proof (v0 0x02), an order a bill (v0 0x08).
+            return receiptCase switch
+            {
+                ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 => FRReceiptChain.Duplicate,
+                ReceiptCase.Pay0x3005 => FRReceiptChain.PaymentProof,
+                ReceiptCase.Order0x3004 => FRReceiptChain.Bill,
+                _ => FRReceiptChain.Log,
+            };
+        }
+
+        // A sale without fiscalization obligation, an e-commerce sale and any point-of-sale
+        // receipt flagged as a sale in a foreign country reach v1.2 as a foreign sale (v0 0x0E),
+        // which is chained into the bills and kept out of the grand totals.
+        if (receiptCase is ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 or ReceiptCase.ECommerce0x0004
+            || (IsPointOfSaleReceipt(receiptCase) && request.ftReceiptCase.IsFlag(ReceiptCaseFlags.SaleInForeignCountry)))
+        {
+            return FRReceiptChain.Bill;
         }
 
         return receiptCase switch
@@ -127,4 +144,7 @@ public static class FRReceiptChainExt
             _ => FRReceiptChain.Ticket,
         };
     }
+
+    private static bool IsPointOfSaleReceipt(ReceiptCase receiptCase) => receiptCase is ReceiptCase.UnknownReceipt0x0000
+        or ReceiptCase.PointOfSaleReceipt0x0001;
 }
