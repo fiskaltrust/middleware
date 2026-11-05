@@ -15,6 +15,7 @@ using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -52,8 +53,12 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null
             };
 
+            // Storages that start empty by design register their own implementation before this
+            services.TryAddSingleton<IEmptyDatabaseCheck, EmptyDatabaseCheck>();
+
             services.AddSingleton(sp =>
             {
+                sp.GetRequiredService<IEmptyDatabaseCheck>().WarnIfStartedQueueHasEmptyDatabaseAsync(_activeQueueId).Wait();
                 CreateConfigurationActionJournalAsync(middlewareConfiguration, sp.GetRequiredService<IMiddlewareQueueItemRepository>(), sp.GetRequiredService<IMiddlewareActionJournalRepository>()).Wait();
                 return middlewareConfiguration;
             });
