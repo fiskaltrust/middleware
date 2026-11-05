@@ -35,8 +35,9 @@ public class FRSigningPipeline
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
 
             // A closing attests the turnover accumulated up to it; the closing request itself
-            // carries no items, so the snapshot is taken before the receipt is added.
-            var closingPeriod = FRPeriodTotalsAccumulator.PeriodOf(request.ReceiptRequest);
+            // carries no items, so the snapshot is taken before the receipt is added. A training
+            // closing prints the same live figures but closes nothing (PeriodsClosedBy is empty).
+            var closingPeriod = FRPeriodTotalsAccumulator.ReportedPeriodOf(request.ReceiptRequest);
             var periodTotals = closingPeriod is null ? null : totals.Snapshot(closingPeriod.Value);
 
             chain.Numerator++;
@@ -77,10 +78,11 @@ public class FRSigningPipeline
             chain.LastSignature = signature;
             totals.Add(request.ReceiptRequest);
 
-            // A closing also ends the shorter periods (v1.2 cascade, FRPeriodTotalsAccumulator).
+            // A closing also ends the shorter periods (v1.2 cascade, FRPeriodTotalsAccumulator),
+            // and records in the 1.2 columns which receipt closed each of them.
             foreach (var period in FRPeriodTotalsAccumulator.PeriodsClosedBy(request.ReceiptRequest))
             {
-                totals.Reset(period);
+                totals.Close(period, receiptResponse.ftReceiptMoment, receiptResponse.ftQueueItemID);
             }
 
             // Late signing follows the signature: only a signed entry opens or closes the range.
