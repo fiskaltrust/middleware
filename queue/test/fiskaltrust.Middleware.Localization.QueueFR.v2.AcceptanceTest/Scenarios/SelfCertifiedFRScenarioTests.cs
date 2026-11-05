@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using FluentAssertions;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.SCU.FR.SelfCertified;
 
@@ -28,7 +29,7 @@ public class SelfCertifiedFRScenarioTests : FRScenarioTests
     /// </summary>
     protected override (string? Day, string? Perpetual) TotalsOf(ReceiptResponse closing)
     {
-        var totals = SignatureOf(closing, SignatureTypeFR.Information)!.Split('|')[^5].Split(',');
+        var totals = FRReceiptQrCode.SignedContentOf(closing.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data).Split('|')[^5].Split(',');
         totals[0].Should().Be("Day");
         return (totals[1], totals[12]);
     }

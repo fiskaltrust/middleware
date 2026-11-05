@@ -68,9 +68,8 @@ public class SelfCertifiedFRSSCD : IFRSSCD, IDisposable
 
         var signature = _signatureCreator.Sign(dataSet);
 
-        response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
-        response.AddSignatureItem(SignatureTypeFR.Information, "Donnees signees", dataSet);
-        response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
+        // The QR code carries the data set and its signature; the certificate serial is a field of the data set.
+        response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);

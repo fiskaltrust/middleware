@@ -3,6 +3,7 @@ using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.SCU.FR.LNE;
@@ -71,9 +72,9 @@ public class ScuReconfigurationScenarioTests
         }
 
         secondSale.ftReceiptIdentification.Should().EndWith("T2", "the ticket counter carries on under the new SCU");
-        ChainingFieldsOf(secondSale).Should().Equal("2", "O", SignatureOf(firstSale, SignatureTypeFR.ReceiptSignature));
+        ChainingFieldsOf(secondSale).Should().Equal("2", "O", ChainedSignatureOf(firstSale));
         secondClosing.ftReceiptIdentification.Should().EndWith("Z2");
-        ChainingFieldsOf(secondClosing).Should().Equal("2", "O", SignatureOf(firstClosing, SignatureTypeFR.ReceiptSignature));
+        ChainingFieldsOf(secondClosing).Should().Equal("2", "O", ChainedSignatureOf(firstClosing));
         CertificateOf(secondSale).Should().Be("SELF-CERT");
 
         var perpetual = SignedDataOf(secondClosing).Split('|')[^5].Split(',')[12];
@@ -83,16 +84,18 @@ public class ScuReconfigurationScenarioTests
     private static async Task<ReceiptResponse> SignAsync(Func<string, Task<string>> signProcessor, ReceiptRequest request)
         => JsonSerializer.Deserialize<ReceiptResponse>(await signProcessor(JsonSerializer.Serialize(request)))!;
 
-    /// <summary>The certificate serial item (0x4652_2000_0000_0002); the queue-local enum has no member for it until the interface is published.</summary>
-    private static string CertificateOf(ReceiptResponse response)
-        => response.ftSignatures.First(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002).Data;
+    /// <summary>The certificate serial, signed in the data set (fourth field from the end) as v1.2 signed <c>csn</c>; there is no certificate item.</summary>
+    private static string CertificateOf(ReceiptResponse response) => SignedDataOf(response).Split('|')[^4];
+
+    private static string ChainedSignatureOf(ReceiptResponse response)
+        => FRChaining.ChainedSignatureOf(SignatureOf(response, SignatureTypeFR.ReceiptSignature)!);
 
     private static string? SignatureOf(ReceiptResponse response, SignatureTypeFR type)
         => response.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(type))?.Data;
 
-    /// <summary>The data set LNE and the self-certified SCU sign, both ending with counter, flag and previous signature (ADR 0001).</summary>
+    /// <summary>The data set LNE and the self-certified SCU sign, both ending with counter, flag and previous signature (ADR 0001), read from the QR code.</summary>
     private static string SignedDataOf(ReceiptResponse response)
-        => response.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.Information) && x.Caption == "Donnees signees").Data;
+        => FRReceiptQrCode.SignedContentOf(SignatureOf(response, SignatureTypeFR.ReceiptSignature)!);
 
     private static string[] ChainingFieldsOf(ReceiptResponse response) => SignedDataOf(response).Split('|')[^3..];
 

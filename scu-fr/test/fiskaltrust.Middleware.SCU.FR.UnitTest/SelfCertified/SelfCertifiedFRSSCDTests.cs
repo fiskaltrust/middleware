@@ -36,7 +36,7 @@ public class SelfCertifiedFRSSCDTests
 
         var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
-        var signature = SignatureOf(response, SignatureTypeFR.ReceiptSignature);
+        var signature = FRChaining.ChainedSignatureOf(SignatureOf(response, SignatureTypeFR.ReceiptSignature));
         FRTestData.IsBase64Url(signature).Should().BeTrue();
         key.VerifyData(Encoding.UTF8.GetBytes(DataSetOf(response)), FRTestData.FromBase64Url(signature), HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence)
             .Should().BeTrue("an auditor re-verifies the archived data set with the public key");
@@ -54,8 +54,11 @@ public class SelfCertifiedFRSSCDTests
         var signatures = response.ReceiptResponse.ftSignatures;
         signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody), "a self-certified installation has no certification body to mention");
         signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash), "ADR 0001 chains on the signature itself");
-        SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().Be(signature);
-        SignatureOf(response, SignatureTypeFR.CertificateSerialNumber).Should().Be("CERT-4711");
+        SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().Be(DataSetOf(response) + "." + signature, "the QR code is the data set then its signature");
+        response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).ftSignatureFormat.Should().Be(fiskaltrust.ifPOS.v2.Cases.SignatureFormat.QRCode);
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ShiftTotals), "no separate certificate item, as in v1.2");
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.Information), "the data set is in the QR code");
+        DataSetOf(response).Split('|')[^4].Should().Be("CERT-4711", "the certificate serial is signed in the data set");
         SignatureOf(response, SignatureTypeFR.Siret).Should().Be(FRTestData.Siret);
     }
 
@@ -263,7 +266,7 @@ public class SelfCertifiedFRSSCDTests
         act.Should().Throw<FRValidationException>().WithMessage(expectedMessage);
     }
 
-    private static string DataSetOf(ProcessResponse response) => SignatureOf(response, SignatureTypeFR.Information);
+    private static string DataSetOf(ProcessResponse response) => FRReceiptQrCode.SignedContentOf(SignatureOf(response, SignatureTypeFR.ReceiptSignature));
 
     private static string SignatureOf(ProcessResponse response, SignatureTypeFR type)
         => response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(type)).Data;

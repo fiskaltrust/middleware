@@ -19,8 +19,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Scenario
 /// </summary>
 public abstract class FRScenarioTests
 {
-    private const string CashBoxIdentification = "cashbox-fr";
-
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly Guid _cashBoxId;
 
@@ -28,43 +26,7 @@ public abstract class FRScenarioTests
 
     protected FRScenarioTests()
     {
-        var queueId = Guid.NewGuid();
-        _cashBoxId = Guid.NewGuid();
-
-        var configuration = new Dictionary<string, object>
-        {
-            { "cashboxid", _cashBoxId },
-            { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox { ftCashBoxId = _cashBoxId, TimeStamp = DateTime.UtcNow.Ticks }) },
-            { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue>
-                {
-                    new() { ftQueueId = queueId, ftCashBoxId = _cashBoxId, StartMoment = DateTime.UtcNow, CountryCode = "FR" },
-                })
-            },
-            { "init_ftQueueFR", JsonSerializer.Serialize(new List<ftQueueFR>
-                {
-                    new() { ftQueueFRId = queueId, CashBoxIdentification = CashBoxIdentification, Siret = "12345678901234" },
-                })
-            },
-            { "init_ftSignaturCreationUnitFR", JsonSerializer.Serialize(new List<ftSignaturCreationUnitFR>()) },
-            { "init_masterData", JsonSerializer.Serialize(new MasterDataConfiguration
-                {
-                    Account = new AccountMasterData
-                    {
-                        AccountId = Guid.NewGuid(),
-                        AccountName = "fiskaltrust SARL",
-                        Street = "1 rue de la Paix",
-                        Zip = "75002",
-                        City = "Paris",
-                        Country = "FR",
-                    },
-                })
-            },
-        };
-
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var storageProvider = new InMemoryLocalizationStorageProvider(queueId, configuration, loggerFactory);
-        var bootstrapper = new QueueFRBootstrapper(queueId, loggerFactory, configuration, CreateScu(), storageProvider);
-        _signProcessor = bootstrapper.RegisterForSign();
+        (_signProcessor, _cashBoxId) = FRTestQueue.Create(CreateScu());
     }
 
     [Fact]
