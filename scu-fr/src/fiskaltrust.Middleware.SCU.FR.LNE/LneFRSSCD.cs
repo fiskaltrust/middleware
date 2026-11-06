@@ -75,5 +75,10 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
     }
 
+    public Task<FRSigningCertificate> GetSigningCertificateAsync()
+        => Task.FromResult(FRHashSigning.SigningCertificate(_signatureCreator.Key, _configuration.CertificateBase64, _configuration.CertificateSerialNumber, CertificationBody));
+
+    public Task<FRHashSignature> SignHashAsync(byte[] sha256) => Task.FromResult(FRHashSigning.SignHash(_signatureCreator.Key, sha256, CertificationBody));
+
     public void Dispose() => _signatureCreator.Dispose();
 }

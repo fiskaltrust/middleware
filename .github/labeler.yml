@@ -46,6 +46,7 @@ market-fr:
           - "queue/src/fiskaltrust.Middleware.Localization.QueueFR/**/*"
           - "queue/src/fiskaltrust.Middleware.Localization.QueueFR.v2/**/*"
           - "scu-fr/**/*"
+          - "queue/src/fiskaltrust.Middleware.Journal.FR.Archive/**/*"
 
 market-gr:
   - changed-files:

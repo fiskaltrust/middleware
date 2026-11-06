@@ -36,6 +36,9 @@ internal sealed class LneSignatureCreator : IDisposable
         return (signatureBase64, Convert.ToBase64String(SHA256.HashData(chainInput)));
     }
 
+    /// <summary>The signing key, also used to sign archive hashes.</summary>
+    public ECDsa Key => _key;
+
     public void Dispose() => _key.Dispose();
 
     private static ECDsa ImportKey(string privateKeyBase64)
