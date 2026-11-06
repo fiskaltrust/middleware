@@ -104,7 +104,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         };
 
         // A technical event signs its R19 JET content instead of the receipt data set (market-fr#200).
-        var jetPayload = InfoCertJetPayload.TryCreate(request, previousSignature);
+        var jetPayload = InfoCertJetPayload.TryCreate(request, previousSignature, _configuration.CertificateSerialNumber);
         var (jws, signature) = _signer.Sign(jetPayload is null ? JsonSerializer.Serialize(payload) : JsonSerializer.Serialize(jetPayload));
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "www.fiskaltrust.fr", jws, SignatureFormat.QRCode);

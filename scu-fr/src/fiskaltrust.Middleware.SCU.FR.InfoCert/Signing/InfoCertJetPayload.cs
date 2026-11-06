@@ -7,7 +7,8 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 /// <summary>
 /// The json data set the Infocert signature covers for a technical event (JET, market-fr#200):
-/// the fields of the R19 v4.2 "Signature" sheet, in its order, plus the chain counter of ADR 0001.
+/// the fields of the R19 v4.2 "Signature" sheet, in its order, plus the chain counter of ADR 0001 and
+/// the serial number of the signing certificate, as in the receipt data set.
 /// <list type="table">
 /// <item><term>queueItemId</term><description>TAG-JET-NID (JET-NID = ftQueueItemID)</description></item>
 /// <item><term>eventCode</term><description>TAG-JET-COD</description></item>
@@ -17,6 +18,8 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 /// <item><term>cashBoxIdentification</term><description>TAG-JET-CAI-NID</description></item>
 /// <item><term>previousSignatureCarriedOver</term><description>TAG-JET-OEN, O/N (<see cref="FRChaining.Flag"/>)</description></item>
 /// <item><term>previousSignature</term><description>TAG-JET-SIG, Base64Url</description></item>
+/// <item><term>chainCounter</term><description>ADR 0001</description></item>
+/// <item><term>csn</term><description>the signing certificate's serial number, under v1.2's key: the archive tells the SCU that signed an entry by it</description></item>
 /// </list>
 /// </summary>
 /// <remarks>
@@ -44,8 +47,10 @@ internal class InfoCertJetPayload
 
     [JsonPropertyName("chainCounter")] public long ChainCounter { get; set; }
 
+    [JsonPropertyName("csn")] public string CertificateSerialNumber { get; set; } = "";
+
     /// <summary>The JET payload of <paramref name="request"/>, or null when it is not a valid JET event.</summary>
-    public static InfoCertJetPayload? TryCreate(ProcessRequest request, string? previousSignature)
+    public static InfoCertJetPayload? TryCreate(ProcessRequest request, string? previousSignature, string? certificateSerialNumber)
     {
         if (!InfoCertJetEvent.IsJetEvent(request.ReceiptRequest) || !InfoCertJetEvent.TryRead(request.ReceiptRequest, out var jetEvent, out _))
         {
@@ -64,6 +69,7 @@ internal class InfoCertJetPayload
             PreviousSignatureCarriedOver = FRChaining.Flag(previousSignature),
             PreviousSignature = previousSignature ?? "",
             ChainCounter = request.ChainCounter,
+            CertificateSerialNumber = certificateSerialNumber ?? "",
         };
     }
 }

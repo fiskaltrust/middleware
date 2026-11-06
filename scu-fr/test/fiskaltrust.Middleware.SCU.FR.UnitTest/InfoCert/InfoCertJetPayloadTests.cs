@@ -54,7 +54,7 @@ public class InfoCertJetPayloadTests
 
         payload.EnumerateObject().Select(x => x.Name).Should().Equal(
             "queueItemId", "eventCode", "information", "receiptMoment", "operatorId",
-            "cashBoxIdentification", "previousSignatureCarriedOver", "previousSignature", "chainCounter");
+            "cashBoxIdentification", "previousSignatureCarriedOver", "previousSignature", "chainCounter", "csn");
         payload.GetProperty("queueItemId").GetGuid().Should().Be(request.ReceiptResponse.ftQueueItemID);
         payload.GetProperty("eventCode").GetInt32().Should().Be(90);
         payload.GetProperty("information").GetString().Should().Be("periode 2026-02", "TAG-JET-LIB signs the contextual information, not the label");
@@ -64,6 +64,7 @@ public class InfoCertJetPayloadTests
         payload.GetProperty("previousSignatureCarriedOver").GetString().Should().Be("O");
         payload.GetProperty("previousSignature").GetString().Should().Be("cHJldmlvdXM");
         payload.GetProperty("chainCounter").GetInt64().Should().Be(3);
+        payload.GetProperty("csn").GetString().Should().Be("CERT-4711", "the archive tells the signing SCU by the serial in the signed content");
     }
 
     [Fact]
