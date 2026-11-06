@@ -128,9 +128,8 @@ public class InMemorySCUTests
     {
         var scu = new InMemorySCU();
 
-        var act = () => scu.ProcessReceiptAsync(CreateRequest(Invoice));
 
-        await act.Should().ThrowAsync<PLValidationException>();
+        (await scu.ProcessReceiptAsync(CreateRequest(Invoice))).FailureMessage();
     }
 
     [Fact]
@@ -143,9 +142,8 @@ public class InMemorySCUTests
             request => throw new PLValidationException("blocked by hook"),
         });
 
-        var act = () => scu.ProcessReceiptAsync(CreateRequest(CashSale));
 
-        await act.Should().ThrowAsync<PLValidationException>().WithMessage("blocked by hook");
+        (await scu.ProcessReceiptAsync(CreateRequest(CashSale))).FailureMessage().Should().Be("blocked by hook");
         seen.Should().ContainSingle().Which.Should().Be("pl-test");
     }
 }

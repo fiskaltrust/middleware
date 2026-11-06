@@ -60,7 +60,24 @@ public class InMemorySCU : IPLSSCD
     public Task<PLSSCDInfo> GetInfoAsync()
         => Task.FromResult(_deviceInfo.ToPLSSCDInfo());
 
+    /// <summary>
+    /// Never throws, like a device-backed SCU: a failing validator or a refused case comes back as an
+    /// error response (<see cref="PLReceiptResponseExtensions.SetError"/>).
+    /// </summary>
     public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    {
+        try
+        {
+            return Task.FromResult(Process(request));
+        }
+        catch (Exception exception)
+        {
+            request.ReceiptResponse.SetError(exception);
+            return Task.FromResult(new ProcessResponse { ReceiptResponse = request.ReceiptResponse });
+        }
+    }
+
+    private ProcessResponse Process(ProcessRequest request)
     {
         foreach (var validator in _validators)
         {
@@ -99,6 +116,6 @@ public class InMemorySCU : IPLSSCD
             response.AddSignatureItem(Abstraction.Cases.SignatureTypePL.ZReportNumber, PLReceiptCases.ZReportNumberCaption, zReportNumber.ToString(CultureInfo.InvariantCulture));
         }
 
-        return Task.FromResult(new ProcessResponse { ReceiptResponse = response });
+        return new ProcessResponse { ReceiptResponse = response };
     }
 }

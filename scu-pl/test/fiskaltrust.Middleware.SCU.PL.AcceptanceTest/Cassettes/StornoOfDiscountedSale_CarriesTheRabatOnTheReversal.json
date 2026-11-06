@@ -1,10 +1,18 @@
 {
   "RecordedAgainst": "serial://COM9",
-  "RecordedAtUtc": "2026-09-08T15:55:01.6685406Z",
+  "RecordedAtUtc": "2026-10-09T09:44:40.0515937Z",
   "Exchanges": [
+    {
+      "Command": "sfsk\t",
+      "Response": "sfsk\tfsT\tcl0\trd3\tvt0\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\trw2026-10-09;10:59\ttm2026-10-09T10:59:51\u002B02:00\tnuZBF 2101002392\t"
+    },
     {
       "Command": "scomm\t",
       "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    },
+    {
+      "Command": "scnt\t",
+      "Response": "scnt\trd3\thn52\tbn10\tfn0\tnuZBF 2101002392\tbc0\tbt10\tfc0\t"
     },
     {
       "Command": "trinit\tbm0\t",
@@ -31,8 +39,16 @@
       "Response": "trend\t"
     },
     {
+      "Command": "eclastdocnoget\tty0\t",
+      "Response": "eclastdocnoget\tdi58\t"
+    },
+    {
+      "Command": "rtcget\t",
+      "Response": "rtcget\tda2026-10-09;11:44\ttm2026-10-09T11:44:41\u002B02:00\t"
+    },
+    {
       "Command": "scnt\t",
-      "Response": "scnt\trd0\thn19\tbn17\tfn0\tnuZBF 2101002392\tbc0\tbt17\tfc0\t"
+      "Response": "scnt\trd3\thn53\tbn11\tfn0\tnuZBF 2101002392\tbc0\tbt11\tfc0\t"
     }
   ]
 }

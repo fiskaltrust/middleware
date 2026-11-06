@@ -1,4 +1,5 @@
 using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Cases;
 using fiskaltrust.Middleware.SCU.PL.Abstraction.Exceptions;
@@ -74,17 +75,41 @@ public class PLDeviceInfoTests
     }
 }
 
-public class PLStateMapperTests
+public class PLErrorResponseTests
 {
-    [Fact]
-    public void Map_ShouldFlagDeviceUnreachable()
-        => PLStateMapper.Map(new PLDeviceUnreachableException("printer offline"))
-            .Should().Be((State)0x504C_2001_EEEE_EEEE);
+    private static ReceiptResponse Response() => new() { ftState = (State)0x504C_2000_0000_0000 };
 
     [Fact]
-    public void Map_ShouldReturnPlainError_ForOtherFailures()
-        => PLStateMapper.Map(new PLDeviceErrorException(2005, "no transaction mode"))
-            .Should().Be((State)0x504C_2000_EEEE_EEEE);
+    public void SetError_IsThePlainPLError_WithASingleFailureSignature()
+    {
+        var response = Response();
+        response.ftSignatures.Add(new SignatureItem { Caption = "Numer unikatowy", Data = "ZBF 2101002392" });
+
+        response.SetError(new PLDeviceErrorException(2005, "rejected"));
+
+        ((ulong)response.ftState).Should().Be(0x504C_2000_EEEE_EEEE);
+        response.ftSignatures.Should().ContainSingle().Which.Should().Match<SignatureItem>(s => s.Caption == "FAILURE" && s.Data == "rejected");
+    }
+
+    [Fact]
+    public void SetError_TellsTheCallerToRetry_WhenTheRegisterWasNotReached()
+    {
+        var response = Response();
+
+        response.SetError(new PLDeviceUnreachableException("printer offline"));
+
+        response.ftSignatures.Single().Data.Should().Contain("Retry once the register").And.Contain("printer offline");
+    }
+
+    [Fact]
+    public void SetError_TellsTheCallerToCheckTheRegisterFirst_WhenTheOutcomeIsUnknown()
+    {
+        var response = Response();
+
+        response.SetError(new PLDeviceOutcomeUnknownException("no answer to trend"));
+
+        response.ftSignatures.Single().Data.Should().Contain("Do NOT resend blindly").And.NotContain("Retry once");
+    }
 }
 
 public class SignatureTypePLTests

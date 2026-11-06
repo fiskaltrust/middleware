@@ -88,11 +88,12 @@ public sealed class PosNetTestTarget : IDisposable
         }
 
         // Without a recording the emulator improvises from its device model — that keeps the suite
-        // runnable before the first cassette exists, and honest about which is which.
+        // runnable before the first cassette exists, and honest about which is which. The model
+        // reports its PTU table like a printer, so the SCU reads it as it does on hardware.
         if (!cassettes.Exists(cassetteName))
         {
             var improvising = new PosNetPrinterEmulator();
-            return new PosNetTestTarget(improvising.Start(), improvising.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes, cassetteName, pinRateTable: true);
+            return new PosNetTestTarget(improvising.Start(), improvising.DeviceUrl, EmulatorConnectTimeoutMs, EmulatorReceiveTimeoutMs, cassettes, cassetteName, pinRateTable: false);
         }
 
         // Whether the table is pinned has to match the recording: a cassette taken with the table
@@ -125,10 +126,10 @@ public sealed class PosNetTestTarget : IDisposable
     }
 
     /// <param name="pinRateTable">
-    /// Configures the customary PTU table instead of letting the SCU read it off the register. The
-    /// cassettes committed so far were recorded with the table configured, so they hold no
-    /// <c>sfsk</c> exchange and pinning is what keeps them replayable; a cassette recorded off the
-    /// register carries the exchange and replays without the pin. Runs against a printer never pin.
+    /// Configures the customary PTU table instead of letting the SCU read it off the register. A
+    /// cassette recorded with the table configured holds no <c>sfsk</c> exchange and only replays
+    /// with the pin; one recorded off the register carries the exchange and replays without it.
+    /// Runs against a printer and against the device model never pin.
     /// </param>
     private PosNetTestTarget(PosNetPrinterEmulator? emulator, string deviceUrl, int connectTimeoutMs, int receiveTimeoutMs, CassetteStore? cassettes, string cassetteName, bool pinRateTable)
     {

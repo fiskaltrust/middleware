@@ -225,6 +225,44 @@ public class JournalProcessorTests
     }
 
     [Fact]
+    public async Task ProcessAsync_ConfigurationWithStoredQueue_ReturnsStoredStateInsteadOfInitialConfiguration()
+    {
+        // Arrange
+        var request = new JournalRequest { ftJournalType = JournalType.Configuration };
+        var queueGRId = Guid.NewGuid();
+        _configuration["init_ftQueueGR"] = JsonConvert.SerializeObject(new List<ftQueueGR> { new() { ftQueueGRId = queueGRId, InvoiceNumerator = 1 } });
+        SetupConfigurationRepository();
+        _configurationRepositoryMock.Setup(x => x.GetQueueGRListAsync())
+            .ReturnsAsync(new List<ftQueueGR> { new() { ftQueueGRId = queueGRId, InvoiceNumerator = 42 } });
+
+        // Act
+        var (_, pipeReader) = await _journalProcessor.ProcessAsync(request);
+        var configuration = await ReadAndDeserializeAsync<ConfigurationJournal>(pipeReader);
+
+        // Assert
+        Assert.Equal(42, Assert.Single(configuration.QueueGRList).InvoiceNumerator);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ConfigurationOnStorageWithoutGetter_ReturnsInitialConfiguration()
+    {
+        // Arrange
+        var request = new JournalRequest { ftJournalType = JournalType.Configuration };
+        var queueGRId = Guid.NewGuid();
+        _configuration["init_ftQueueGR"] = JsonConvert.SerializeObject(new List<ftQueueGR> { new() { ftQueueGRId = queueGRId } });
+        SetupConfigurationRepository();
+        _configurationRepositoryMock.Setup(x => x.GetQueueGRListAsync())
+            .Throws(new NotImplementedException());
+
+        // Act
+        var (_, pipeReader) = await _journalProcessor.ProcessAsync(request);
+        var configuration = await ReadAndDeserializeAsync<ConfigurationJournal>(pipeReader);
+
+        // Assert
+        Assert.Equal(queueGRId, Assert.Single(configuration.QueueGRList).ftQueueGRId);
+    }
+
+    [Fact]
     public async Task ProcessAsync_RepositoryThrowsException_LogsErrorAndRethrows()
     {
         // Arrange
@@ -441,6 +479,11 @@ public class JournalProcessorTests
         Assert.All(data, item => Assert.Contains("Large test data item", item.Type));
         var tempFilesAfter = Directory.GetFiles(Path.GetTempPath(), "tmp*").Length;
         Assert.True(tempFilesAfter <= tempFilesBefore, "Temp file should be cleaned up after processing large dataset");
+    }
+
+    private sealed class ConfigurationJournal
+    {
+        public List<ftQueueGR> QueueGRList { get; set; } = [];
     }
 
     private void SetupConfigurationRepository()
