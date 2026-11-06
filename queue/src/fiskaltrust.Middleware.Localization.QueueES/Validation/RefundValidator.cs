@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Validation;

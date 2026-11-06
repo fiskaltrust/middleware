@@ -1,7 +1,8 @@
-using fiskaltrust.ifPOS.v2.gr;
+﻿using fiskaltrust.ifPOS.v2.gr;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 

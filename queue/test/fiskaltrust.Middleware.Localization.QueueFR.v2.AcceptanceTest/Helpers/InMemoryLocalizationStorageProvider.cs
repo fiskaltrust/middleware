@@ -14,6 +14,8 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 

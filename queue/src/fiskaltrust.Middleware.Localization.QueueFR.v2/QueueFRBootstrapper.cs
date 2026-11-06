@@ -11,6 +11,8 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2;
 
@@ -25,7 +27,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
     private readonly Queue _queue;
 
     public QueueFRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IFRSSCD frSSCD)
-        : this(id, loggerFactory, configuration, frSSCD, new AzureStorageProvider(loggerFactory, id, configuration)) { }
+        : this(id, loggerFactory, configuration, frSSCD, new fiskaltrust.Middleware.Storage.AzureTableStorage.AzureStorageProvider(loggerFactory, id, configuration)) { }
 
     public QueueFRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IFRSSCD frSSCD, IStorageProvider storageProvider, IArchiveSigner? archiveSigner = null)
     {

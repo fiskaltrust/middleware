@@ -5,7 +5,7 @@ using Dapper;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0.MasterData;
 
-namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.DE.MasterData
+namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.MasterData
 {
     public class SQLitePosSystemMasterDataRepository : AbstractSQLiteRepository<Guid, PosSystemMasterData>, IMasterDataRepository<PosSystemMasterData>
     {
