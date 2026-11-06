@@ -115,7 +115,13 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         // The QR code is the compact JWS; the certificate serial is its payload's csn, as in v1.2.
         response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
+        // market-fr#131: the NF525 mention (NF525 V2.3 §6.1.6.1) is the whole line, so the caption
+        // stays empty. It is left out rather than emitted incomplete.
+        var mention = InfoCertMention.Build(_configuration.SoftwareCategory, _configuration.AttestationNumber, signature, _configuration.SoftwareName, _configuration.SoftwareVersion);
+        if (mention is not null)
+        {
+            response.AddSignatureItem(SignatureTypeFR.CertificationBody, "", mention);
+        }
 
         // The VAT summary is printed on the receipt (R13 v4.2 Récapitulatif), so it travels as
         // signature items (ADR 0011), one per rate.

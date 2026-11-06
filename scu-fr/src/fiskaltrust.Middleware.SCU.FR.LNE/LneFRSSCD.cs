@@ -24,6 +24,9 @@ public class LneFRSSCD : IFRSSCD, IDisposable
 {
     public const string CertificationBody = "LNE";
 
+    /// <summary>The certification mention LNE Rev. 1.8 Exigence 9 recommends on every ticket.</summary>
+    public const string Mention = "Système de caisse certifié LNE";
+
     private readonly LneConfiguration _configuration;
     private readonly LneSignatureCreator _signatureCreator;
 
@@ -70,7 +73,10 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         // The QR code carries the data set and its signature; the certificate serial is a field of the data set.
         response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Certification", $"{CertificationBody} {_configuration.LneCertificateNumber}".TrimEnd());
+        // market-fr#131: the mention LNE Rev. 1.8 Exigence 9 recommends, with the LNE certificate
+        // number (an acceptable solution of the same exigence). Printed on every ticket, so it stays
+        // short: the full signature the exigence recommends is in the QR code. Not signed.
+        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
