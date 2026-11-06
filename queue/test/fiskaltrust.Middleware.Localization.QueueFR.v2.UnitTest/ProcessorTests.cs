@@ -300,6 +300,29 @@ public class ProcessorTests
         result.Errors.Should().Contain(x => x.ErrorCode == "CopyRequiresPreviousReceiptReference", "market-fr#235, as v1.2 did");
     }
 
+    /// <summary>v1.2 takes an opening float (0x0002 payment transfer) without a reference (market-fr#221).</summary>
+    [Fact]
+    public async Task ReceiptValidatorFR_AcceptsAPaymentTransferWithoutAPreviousReceiptReference()
+    {
+        var repository = new Mock<IMiddlewareQueueItemRepository>();
+        var sut = new ReceiptValidatorFR(new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PaymentTransfer0x0002.WithCountry("FR"),
+            Currency = Currency.EUR,
+            cbChargeItems = [],
+            cbPayItems =
+            [
+                new PayItem { Amount = 200m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") },
+                new PayItem { Amount = -200m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.TransferToCashbookVaultOwnerEmployee.WithCountry("FR") },
+            ],
+        };
+
+        var result = await sut.ValidateAsync(request, new ftQueue());
+
+        result.Errors.Should().NotContain(x => x.ErrorCode == "PaymentTransferMissingPreviousReceiptReference");
+    }
+
     [Fact]
     public async Task ReceiptValidatorFR_AcceptsEuro()
     {

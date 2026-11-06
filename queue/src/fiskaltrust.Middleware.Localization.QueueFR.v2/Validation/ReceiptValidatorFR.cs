@@ -109,6 +109,12 @@ public class ReceiptValidatorFR : MarketValidator
 {
     public ReceiptValidatorFR(ReceiptReferenceProvider receiptReferenceProvider) : base(receiptReferenceProvider) { }
 
+    /// <summary>
+    /// v1.2 takes a pay-in, pay-out or transfer (v0 0x0A–0x0C, which the PosSystem API reaches from
+    /// 0x0002) without a reference, such as the opening float of the day (market-fr#221).
+    /// </summary>
+    protected override IReadOnlyCollection<string> ExemptGlobalErrorCodes { get; } = ["PaymentTransferMissingPreviousReceiptReference"];
+
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null)
     {
         yield return new ReceiptValidationsFR();
