@@ -7,6 +7,7 @@ using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.InfoCert;
 using fiskaltrust.Middleware.SCU.FR.InMemory;
 using fiskaltrust.Middleware.SCU.FR.LNE;
+using fiskaltrust.Middleware.SCU.FR.SelfCertified;
 using FluentAssertions;
 using Xunit;
 
@@ -43,10 +44,23 @@ public class HashSigningTests
         CertificateSerialNumber = "CERT-4711",
     });
 
-    public static TheoryData<string> CertifiedScus => new() { "LNE", "InfoCert" };
+    private static IFRSSCD SelfCertified(string privateKey, string? certificate) => new SelfCertifiedFRSSCD(new SelfCertifiedConfiguration
+    {
+        Siret = FRTestData.Siret,
+        PrivateKey = privateKey,
+        CertificateBase64 = certificate,
+        CertificateSerialNumber = "CERT-4711",
+    });
+
+    public static TheoryData<string> CertifiedScus => new() { "LNE", "InfoCert", "SelfCertified" };
 
     private static IFRSSCD Scu(string name, string privateKey, string? certificate)
-        => name == "LNE" ? Lne(privateKey, certificate) : InfoCert(privateKey, certificate);
+        => name switch
+        {
+            "LNE" => Lne(privateKey, certificate),
+            "SelfCertified" => SelfCertified(privateKey, certificate),
+            _ => InfoCert(privateKey, certificate),
+        };
 
     private static bool Verifies(FRSigningCertificate signingCertificate, FRHashSignature signature)
     {

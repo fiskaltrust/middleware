@@ -1,9 +1,9 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
-using fiskaltrust.Middleware.SCU.FR.InMemory;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
@@ -13,55 +13,20 @@ using Xunit;
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Scenarios;
 
 /// <summary>
-/// Drives a real QueueFR.v2 through its sign processor against the in-memory storage and the
-/// in-memory SCU, so the chaining, numbering and signature wiring is exercised end to end.
+/// Drives a real QueueFR.v2 through its sign processor against the in-memory storage and an SCU,
+/// so the chaining, numbering and signature wiring is exercised end to end. Each SCU the queue
+/// supports runs the same scenarios through a subclass.
 /// </summary>
-public class FRScenarioTests
+public abstract class FRScenarioTests
 {
-    private const string CashBoxIdentification = "cashbox-fr";
-
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly Guid _cashBoxId;
 
-    public FRScenarioTests()
+    protected abstract IFRSSCD CreateScu();
+
+    protected FRScenarioTests()
     {
-        var queueId = Guid.NewGuid();
-        _cashBoxId = Guid.NewGuid();
-
-        var configuration = new Dictionary<string, object>
-        {
-            { "cashboxid", _cashBoxId },
-            { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox { ftCashBoxId = _cashBoxId, TimeStamp = DateTime.UtcNow.Ticks }) },
-            { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue>
-                {
-                    new() { ftQueueId = queueId, ftCashBoxId = _cashBoxId, StartMoment = DateTime.UtcNow, CountryCode = "FR" },
-                })
-            },
-            { "init_ftQueueFR", JsonSerializer.Serialize(new List<ftQueueFR>
-                {
-                    new() { ftQueueFRId = queueId, CashBoxIdentification = CashBoxIdentification, Siret = "12345678901234" },
-                })
-            },
-            { "init_ftSignaturCreationUnitFR", JsonSerializer.Serialize(new List<ftSignaturCreationUnitFR>()) },
-            { "init_masterData", JsonSerializer.Serialize(new MasterDataConfiguration
-                {
-                    Account = new AccountMasterData
-                    {
-                        AccountId = Guid.NewGuid(),
-                        AccountName = "fiskaltrust SARL",
-                        Street = "1 rue de la Paix",
-                        Zip = "75002",
-                        City = "Paris",
-                        Country = "FR",
-                    },
-                })
-            },
-        };
-
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var storageProvider = new InMemoryLocalizationStorageProvider(queueId, configuration, loggerFactory);
-        var bootstrapper = new QueueFRBootstrapper(queueId, loggerFactory, configuration, new InMemorySCU(), storageProvider);
-        _signProcessor = bootstrapper.RegisterForSign();
+        (_signProcessor, _cashBoxId) = FRTestQueue.Create(CreateScu());
     }
 
     [Fact]
@@ -115,14 +80,12 @@ public class FRScenarioTests
         var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
         // Two 12.00 EUR sales - a closing attests the period, not its own (empty) item list.
-        SignatureOf(closing, SignatureTypeFR.DayTotals).Should().Be("24.00");
-        SignatureOf(closing, SignatureTypeFR.PerpetualTotals).Should().Be("24.00");
+        TotalsOf(closing).Should().Be(("24.00", "24.00"));
 
         await SignAsync(CashSale());
         var secondClosing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
-        SignatureOf(secondClosing, SignatureTypeFR.DayTotals).Should().Be("12.00", "the first closing reset the day");
-        SignatureOf(secondClosing, SignatureTypeFR.PerpetualTotals).Should().Be("36.00", "the perpetual total is never reset");
+        TotalsOf(secondClosing).Should().Be(("12.00", "36.00"), "the first closing reset the day, the perpetual total is never reset");
     }
 
     [Fact]
@@ -144,8 +107,15 @@ public class FRScenarioTests
         return response!;
     }
 
+    /// <summary>
+    /// The day and perpetual totalizers a closing attests. By default read off the printed total
+    /// items; an SCU that only carries them inside its signed data set overrides this.
+    /// </summary>
+    protected virtual (string? Day, string? Perpetual) TotalsOf(ReceiptResponse closing)
+        => (SignatureOf(closing, SignatureTypeFR.DayTotals), SignatureOf(closing, SignatureTypeFR.PerpetualTotals));
+
     /// <summary>Reads a signature off the response the way a POS would, by its FR signature type.</summary>
-    private static string? SignatureOf(ReceiptResponse response, SignatureTypeFR type)
+    protected static string? SignatureOf(ReceiptResponse response, SignatureTypeFR type)
         => response.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(type))?.Data;
 
     private ReceiptRequest Request(ReceiptCase receiptCase) => new()
