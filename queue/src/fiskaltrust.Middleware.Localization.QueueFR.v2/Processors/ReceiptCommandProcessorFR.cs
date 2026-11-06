@@ -1,4 +1,5 @@
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 
@@ -48,12 +49,25 @@ public class ReceiptCommandProcessorFR : IReceiptCommandProcessor
 
     public Task<ProcessCommandResponse> ProForma0x0007Async(ProcessCommandRequest request) => SignProvisionalDocument(request);
 
-    /// <summary>The sales: the chain (ticket or bill) comes from the receipt case.</summary>
-    private Task<ProcessCommandResponse> SignTicket(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    /// <summary>
+    /// The sales (0x0001, 0x0003, 0x0004): the chain (ticket or bill) comes from the receipt case,
+    /// and each prints its sales-line count (R13 <c>ENC-TIK-LIG-NBR</c>). The payment proof does
+    /// not, so <see cref="PaymentTransfer0x0002Async"/> signs without it.
+    /// </summary>
+    private Task<ProcessCommandResponse> SignTicket(ProcessCommandRequest request)
+    {
+        AddSalesLineCount(request);
+        return _pipeline.SignAsync(request);
+    }
 
+    /// <summary>A provisional document is a note in R13: it prints the mention and the sales-line count.</summary>
     private Task<ProcessCommandResponse> SignProvisionalDocument(ProcessCommandRequest request)
     {
         request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateProvisionalDocumentSignature());
+        AddSalesLineCount(request);
         return _pipeline.SignAsync(request);
     }
+
+    private static void AddSalesLineCount(ProcessCommandRequest request)
+        => request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateSalesLineCountSignature(FRSalesLineCounter.Count(request.ReceiptRequest)));
 }

@@ -62,6 +62,7 @@ public abstract class FRScenarioTests
         var qr = SignatureOf(response, SignatureTypeFR.ReceiptSignature)!;
         qr[(qr.LastIndexOf('.') + 1)..].Should().MatchRegex("^[A-Za-z0-9_-]+$", "the QR code ends with the chained signature, in Base64Url (ADR 0001)");
         SignatureOf(response, SignatureTypeFR.ChainHash).Should().BeNull("an entry chains on the previous signature, not on a separate hash");
+        response.ftSignatures.Should().ContainSingle(x => x.Caption == "Nombre de lignes").Which.Data.Should().Be("1");
     }
 
     [Fact]

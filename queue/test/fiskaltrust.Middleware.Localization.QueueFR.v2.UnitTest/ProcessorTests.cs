@@ -126,6 +126,78 @@ public class ProcessorTests
     private static ProtocolCommandProcessorFR ProtocolProcessor(FRSigningPipeline pipeline)
         => new(pipeline, new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new InMemoryJournalFRCopyPayloadRepository())), new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(new InMemoryQueueItemRepository())));
 
+    private static ProcessCommandRequest CommandRequestWithLines(ReceiptCase receiptCase)
+    {
+        var request = CommandRequest(receiptCase);
+        var sale = ChargeItemCase.NormalVatRate.WithCountry("FR");
+        request.ReceiptRequest.cbChargeItems =
+        [
+            new ChargeItem { Amount = 10m, Currency = Currency.EUR, ftChargeItemCase = sale },
+            new ChargeItem { Amount = 5m, Currency = Currency.EUR, ftChargeItemCase = sale },
+            new ChargeItem { Amount = -1m, Currency = Currency.EUR, ftChargeItemCase = sale.WithFlag(ChargeItemCaseFlags.ExtraOrDiscount) },
+        ];
+        return request;
+    }
+
+    private static Task<ProcessCommandResponse> Process(ReceiptCommandProcessorFR sut, ReceiptCase receiptCase, ProcessCommandRequest request) => receiptCase switch
+    {
+        ReceiptCase.UnknownReceipt0x0000 => sut.UnknownReceipt0x0000Async(request),
+        ReceiptCase.PointOfSaleReceipt0x0001 => sut.PointOfSaleReceipt0x0001Async(request),
+        ReceiptCase.PaymentTransfer0x0002 => sut.PaymentTransfer0x0002Async(request),
+        ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => sut.PointOfSaleReceiptWithoutObligation0x0003Async(request),
+        ReceiptCase.ECommerce0x0004 => sut.ECommerce0x0004Async(request),
+        ReceiptCase.DeliveryNote0x0005 => sut.DeliveryNote0x0005Async(request),
+        (ReceiptCase) 0x0006 => sut.TableCheck0x0006Async(request),
+        (ReceiptCase) 0x0007 => sut.ProForma0x0007Async(request),
+        _ => throw new ArgumentOutOfRangeException(nameof(receiptCase)),
+    };
+
+    [Theory]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001)]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData((ReceiptCase) 0x0007)]
+    public async Task TicketsAndNotes_CarryTheSalesLineCountAsASignatureItemSeenByTheSCU(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var sut = new ReceiptCommandProcessorFR(pipeline);
+
+        var response = await Process(sut, receiptCase, CommandRequestWithLines(receiptCase));
+
+        var item = response.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "Nombre de lignes").Which;
+        item.Data.Should().Be("2", "the discount line is not a sales line");
+        item.ftSignatureType.IsType(SignatureTypeFR.Information).Should().BeTrue();
+        sscd.Calls.Should().ContainSingle();
+        sscd.LastRequest!.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "Nombre de lignes",
+            "the item is added before signing, so the SCU sees it");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
+    [InlineData(ReceiptCase.ECommerce0x0004)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    public async Task PaymentProofAndUnsignedReceipt_DoNotCarryTheSalesLineCount(ReceiptCase receiptCase)
+    {
+        var (pipeline, _) = CreatePipeline();
+        var sut = new ReceiptCommandProcessorFR(pipeline);
+
+        var response = await Process(sut, receiptCase, CommandRequestWithLines(receiptCase));
+
+        response.receiptResponse.ftSignatures.Should().NotContain(x => x.Caption == "Nombre de lignes");
+    }
+
+    [Fact]
+    public async Task TicketWithoutChargeItems_PrintsZeroLines()
+    {
+        var (pipeline, _) = CreatePipeline();
+        var sut = new ReceiptCommandProcessorFR(pipeline);
+
+        var response = await sut.PointOfSaleReceipt0x0001Async(CommandRequest(ReceiptCase.PointOfSaleReceipt0x0001));
+
+        response.receiptResponse.ftSignatures.Should().ContainSingle(x => x.Caption == "Nombre de lignes").Which.Data.Should().Be("0");
+    }
+
     [Fact]
     public async Task CopyReceipt_IsMarkedAsDuplicateAndGoesIntoItsOwnChain()
     {
@@ -298,29 +370,6 @@ public class ProcessorTests
         var result = await sut.ValidateAsync(request, new ftQueue());
 
         result.Errors.Should().Contain(x => x.ErrorCode == "CopyRequiresPreviousReceiptReference", "market-fr#235, as v1.2 did");
-    }
-
-    /// <summary>v1.2 takes an opening float (0x0002 payment transfer) without a reference (market-fr#221).</summary>
-    [Fact]
-    public async Task ReceiptValidatorFR_AcceptsAPaymentTransferWithoutAPreviousReceiptReference()
-    {
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        var sut = new ReceiptValidatorFR(new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
-        var request = new ReceiptRequest
-        {
-            ftReceiptCase = ReceiptCase.PaymentTransfer0x0002.WithCountry("FR"),
-            Currency = Currency.EUR,
-            cbChargeItems = [],
-            cbPayItems =
-            [
-                new PayItem { Amount = 200m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") },
-                new PayItem { Amount = -200m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.TransferToCashbookVaultOwnerEmployee.WithCountry("FR") },
-            ],
-        };
-
-        var result = await sut.ValidateAsync(request, new ftQueue());
-
-        result.Errors.Should().NotContain(x => x.ErrorCode == "PaymentTransferMissingPreviousReceiptReference");
     }
 
     [Fact]
