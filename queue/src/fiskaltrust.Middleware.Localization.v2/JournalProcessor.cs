@@ -1,7 +1,6 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Mime;
-using System.Reflection;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -149,7 +148,7 @@ public class JournalProcessor
 
     private async Task<object> GetConfigurationAsync()
     {
-        var configurationRepository = await _configurationRepository.Value;  
+        var configurationRepository = await _configurationRepository.Value;
         return new
         {
             Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
@@ -157,27 +156,40 @@ public class JournalProcessor
             CashBoxList = await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false),
             QueueList = await configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
-            QueueBEList = GetConfigurationFromDictionary<ftQueueBE>("init_ftQueueBE"),
+            QueueBEList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetQueueBEListAsync, "init_ftQueueBE").ConfigureAwait(false),
             QueueDEList = await configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
-            QueueESList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueES"),
-            QueueEUList = GetConfigurationFromDictionary<ftQueueEU>("init_ftQueueEU"),
+            QueueESList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetQueueESListAsync, "init_ftQueueES").ConfigureAwait(false),
+            QueueEUList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetQueueEUListAsync, "init_ftQueueEU").ConfigureAwait(false),
             QueueFRList = await configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
-            QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
+            QueueGRList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetQueueGRListAsync, "init_ftQueueGR").ConfigureAwait(false),
             QueueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
             QueueMEList = await configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
             QueuePLList = await configurationRepository.GetQueuePLListAsync().ConfigureAwait(false),
             QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
             SignaturCreationUnitATList = await configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
-            SignaturCreationUnitBEList = GetConfigurationFromDictionary<ftSignaturCreationUnitBE>("init_ftSignaturCreationUnitBE"),
+            SignaturCreationUnitBEList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetSignaturCreationUnitBEListAsync, "init_ftSignaturCreationUnitBE").ConfigureAwait(false),
             SignaturCreationUnitDEList = await configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
-            SignaturCreationUnitESList = GetConfigurationFromDictionary<ftSignaturCreationUnitES>("init_ftSignaturCreationUnitES"),
+            SignaturCreationUnitESList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetSignaturCreationUnitESListAsync, "init_ftSignaturCreationUnitES").ConfigureAwait(false),
             SignaturCreationUnitFRList = await configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
-            SignaturCreationUnitGRList = GetConfigurationFromDictionary<ftSignaturCreationUnitGR>("init_ftSignaturCreationUnitGR"),
+            SignaturCreationUnitGRList = await GetStoredOrInitialConfigurationAsync(configurationRepository.GetSignaturCreationUnitGRListAsync, "init_ftSignaturCreationUnitGR").ConfigureAwait(false),
             SignaturCreationUnitITList = await configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
             SignaturCreationUnitMEList = await configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
             SignaturCreationUnitPLList = await configurationRepository.GetSignaturCreationUnitPLListAsync().ConfigureAwait(false),
             SignaturCreationUnitPTList = GetConfigurationFromDictionary<ftSignaturCreationUnitPT>("init_ftSignaturCreationUnitPT"),
         };
+    }
+
+    private async Task<IEnumerable<T>> GetStoredOrInitialConfigurationAsync<T>(Func<Task<IEnumerable<T>>> getStoredConfiguration, string key)
+    {
+        try
+        {
+            return await getStoredConfiguration().ConfigureAwait(false);
+        }
+        catch (NotImplementedException)
+        {
+            // Not every storage backend implements this getter; the startup configuration is all that is left there.
+            return GetConfigurationFromDictionary<T>(key);
+        }
     }
 
     private List<T> GetConfigurationFromDictionary<T>(string key)
