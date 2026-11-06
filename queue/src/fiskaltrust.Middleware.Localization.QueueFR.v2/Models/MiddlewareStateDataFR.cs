@@ -49,4 +49,77 @@ public class MiddlewareStateDataFR
     [JsonPropertyName("ftTypeOfService")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ftTypeOfService { get; set; }
+
+    /// <summary>
+    /// The receipt's totals as the queue computed them when it signed: the receipt's own totals on the
+    /// sales chains, the period and perpetual totals on a closing. The archive reads them from here, so
+    /// they are stored data and never recomputed at export (archive-v2 §1.2, §1.3).
+    /// </summary>
+    [JsonPropertyName("Totals")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FRStateTotals? Totals { get; set; }
+
+    /// <summary>The computed values of each charge item, in request order (archive-v2 §2, D7).</summary>
+    [JsonPropertyName("ChargeItems")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<FRStateChargeItem>? ChargeItems { get; set; }
+
+    /// <summary>The receipt's totals per VAT rate, keyed by the invariant rate string (archive-v2 §4).</summary>
+    [JsonPropertyName("VATSummary")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, FRStateVatSummaryEntry>? VATSummary { get; set; }
+}
+
+/// <summary>Totals TTC by VAT case and by pay-item class, named as the archive columns.</summary>
+public class FRStateTotalsValues
+{
+    public decimal Totalizer { get; set; }
+    public decimal CINormal { get; set; }
+    public decimal CIDiscounted1 { get; set; }
+    public decimal CIDiscounted2 { get; set; }
+    public decimal CISuperReduced1 { get; set; }
+    public decimal CIZero { get; set; }
+    public decimal CIUnknown { get; set; }
+    public decimal PICash { get; set; }
+    public decimal PINonCash { get; set; }
+    public decimal PIInternal { get; set; }
+    public decimal PIUnknown { get; set; }
+}
+
+public class FRStateTotals : FRStateTotalsValues
+{
+    /// <summary>On a closing: the perpetual totals since the start of the chain. Absent otherwise.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FRStateTotalsValues? Perpetual { get; set; }
+}
+
+public class FRStateChargeItem
+{
+    public decimal Position { get; set; }
+    public decimal VATAmount { get; set; }
+    public decimal AmountHT { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? UnitPriceHT { get; set; }
+
+    /// <summary>The two-digit nature-of-VAT code of <c>ftChargeItemCase</c> (D10).</summary>
+    public string VATNature { get; set; } = "00";
+
+    /// <summary>On a discount or extra: the <c>Position</c> of the sales line it applies to (D9).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? AppliesTo { get; set; }
+
+    /// <summary>On a sales line: the sum of the discounts and extras that apply to it (D9).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? DiscountAmount { get; set; }
+}
+
+public class FRStateVatSummaryEntry
+{
+    public decimal AmountHT { get; set; }
+    public decimal VATAmount { get; set; }
+    public decimal AmountTTC { get; set; }
+
+    /// <summary>The nature-of-VAT codes of the rate's lines, distinct, comma-separated.</summary>
+    public string VATNature { get; set; } = "";
 }

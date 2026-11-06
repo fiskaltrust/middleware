@@ -38,6 +38,7 @@ public class FRSigningPipeline
             chain.Numerator++;
             ReceiptIdentificationHelper.AppendChainIdentification(receiptResponse, chain);
             FRTypeOfServiceCalculator.Apply(request.ReceiptRequest, receiptResponse);
+            FRArchiveStateData.Apply(request.ReceiptRequest, receiptResponse, chain.Chain, periodTotals);
 
             // Every document of the training chain carries the simulation mention, whatever its
             // receipt case: this is the one path all of them take.

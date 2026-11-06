@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
@@ -60,13 +61,16 @@ public class JournalProcessorFR : IJournalProcessor
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository;
     private readonly Func<Task<IArchiveSigner>>? _archiveSigner;
     private readonly ArchiveSplitOptions _splitOptions;
+    private readonly Func<Task<FRSSCDInfo?>>? _scuInfo;
 
     /// <param name="archiveSigner">
     /// Creates the signer of an archive export, per export: the queue's SCU (<see cref="ScuArchiveSigner"/>, ADR 0007 amendment).
     /// Null refuses the archive export.
     /// </param>
-    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, ArchiveSplitOptions? splitOptions = null)
+    /// <param name="scuInfo">The SCU's non-secret configuration, joined to the archive as compliance parameters (archive-v2 §12).</param>
+    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, ArchiveSplitOptions? splitOptions = null, Func<Task<FRSSCDInfo?>>? scuInfo = null)
     {
+        _scuInfo = scuInfo;
         _queueId = queueId;
         _queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
         _configurationRepository = storageProvider.CreateConfigurationRepository();
@@ -185,12 +189,13 @@ public class JournalProcessorFR : IJournalProcessor
         var siret = (string.IsNullOrEmpty(queueFR?.Siret) ? null : queueFR!.Siret)
             ?? entries.Select(e => e.Siret).FirstOrDefault(s => !string.IsNullOrEmpty(s))
             ?? throw new InvalidOperationException("The archive manifest needs the SIRET, and neither the queue configuration nor the archived entries carry one.");
+        var context = new ArchiveV2Context { ComplianceParameters = await ComplianceParametersAsync(queueFR).ConfigureAwait(false) };
         // Each sub-archive is signed by the SCU that signed its receipts (market-fr#262). The device holds only its
         // current SCU's key: an earlier SCU's period is archived when that SCU is switched out (#177) or exported
         // from the portal, so a local export that reaches into it fails before anything is written.
         var packager = signer is ScuArchiveSigner scuSigner
             ? new ArchivePackager<ArchiveEntry>(
-                new[] { ArchiveV2Files.CreateWriter() },
+                new[] { ArchiveV2Files.CreateWriter(context: context) },
                 key => key.CertificateSerialNumber == scuSigner.CertificateSerialNumber
                     ? scuSigner
                     : throw new NotSupportedException(
@@ -199,13 +204,69 @@ public class JournalProcessorFR : IJournalProcessor
                 scuSigner,
                 ArchiveV2Files.ChainAnchorsOf,
                 ArchiveV2Files.SchemaOf)
-            : new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter() }, signer);
+            : new ArchivePackager<ArchiveEntry>(new[] { ArchiveV2Files.CreateWriter(context: context) }, signer);
 
         await foreach (var chunk in ThroughTempFileAsync(stream => packager.WriteAsync(archive, new ArchiveMetadata(siret, DateTime.UtcNow), stream)).ConfigureAwait(false))
         {
             yield return chunk;
         }
     }
+
+    /// <summary>
+    /// The French compliance parameters in force (archive-v2 §12, Ref LNE 1.8 Exigence 19): the middleware version,
+    /// the queue's identification and the SCU's configuration as the SCU reports it. Keys that look like secrets are
+    /// never written, whatever an SCU reports.
+    /// </summary>
+    private async Task<IReadOnlyList<ComplianceParameter>> ComplianceParametersAsync(ftQueueFR? queueFR)
+    {
+        var parameters = new List<ComplianceParameter>
+        {
+            new("Middleware", "SoftwareVersion", typeof(JournalProcessor).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion),
+            new("Queue", "ftQueueID", _queueId.ToString("D")),
+            new("Queue", "CountryCode", "FR"),
+            new("Queue", "ftCashBoxIdentification", queueFR?.CashBoxIdentification),
+            new("Queue", "Siret", queueFR?.Siret),
+        };
+
+        var info = _scuInfo is null ? null : await _scuInfo().ConfigureAwait(false);
+        if (info is not null)
+        {
+            parameters.Add(new("SCU", "Description", info.Description));
+            parameters.Add(new("SCU", "Version", info.Version));
+            if (!string.IsNullOrEmpty(info.InfoData))
+            {
+                try
+                {
+                    using var document = JsonDocument.Parse(info.InfoData!);
+                    if (document.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var property in document.RootElement.EnumerateObject().Where(p => !LooksSecret(p.Name)))
+                        {
+                            if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+                            {
+                                continue;
+                            }
+                            parameters.Add(new("SCU", property.Name, property.Value.ValueKind switch
+                            {
+                                JsonValueKind.String => property.Value.GetString(),
+                                JsonValueKind.Null => null,
+                                _ => property.Value.GetRawText(),
+                            }));
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // An SCU that reports no readable info contributes its description and version only.
+                }
+            }
+        }
+        return parameters;
+    }
+
+    private static bool LooksSecret(string name)
+        => new[] { "key", "secret", "password", "token", "connection" }.Any(word => name.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0);
 
     /// <summary>
     /// The signed v2 entries whose receipt moment falls in <paramref name="period"/>, in queue-row order,
@@ -221,7 +282,7 @@ public class JournalProcessorFR : IJournalProcessor
         // writes in the same order. A misordered pair would leave PreviousSignature empty, never wrong.
         await foreach (var queueItem in repository.GetEntriesOnOrAfterTimeStampAsync(0).ConfigureAwait(false))
         {
-            var entry = ArchiveEntry.TryCreate(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response);
+            var entry = ArchiveEntry.TryCreate(queueItem.ftQueueItemId, queueItem.ftQueueId, queueItem.ftQueueRow, queueItem.request, queueItem.response, queueItem.ProcessingVersion);
             if (entry is null)
             {
                 if (rejectV1 && period.Contains(queueItem.ftQueueMoment) && IsV1Entry(queueItem))
