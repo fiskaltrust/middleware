@@ -13,7 +13,7 @@ public class ChainResolutionTests
     [Theory]
     [InlineData(ReceiptCase.UnknownReceipt0x0000, FRReceiptChain.Ticket)]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, FRReceiptChain.Ticket)]
-    [InlineData(ReceiptCase.ECommerce0x0004, FRReceiptChain.Bill)]
+    [InlineData(ReceiptCase.ECommerce0x0004, FRReceiptChain.Ticket)]
     [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003, FRReceiptChain.Bill)]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, FRReceiptChain.PaymentProof)]
     [InlineData(ReceiptCase.DeliveryNote0x0005, FRReceiptChain.Bill)]
@@ -35,14 +35,14 @@ public class ChainResolutionTests
         => Request(receiptCase).ResolveChain().Should().Be(expected);
 
     /// <summary>
-    /// The PosSystem API sends a point-of-sale receipt flagged as a sale in a foreign country to
-    /// v1.2 as a foreign sale (v0 0x0E), signed in the bill chain. An invoice keeps its chain.
+    /// A sale flagged as made in a foreign country stays a ticket: NF525 does not exempt it from the
+    /// grand totals, and v1.2 in production counted it, since the PosSystem API drops the flag.
     /// </summary>
     [Theory]
-    [InlineData(ReceiptCase.UnknownReceipt0x0000, FRReceiptChain.Bill)]
-    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, FRReceiptChain.Bill)]
+    [InlineData(ReceiptCase.UnknownReceipt0x0000, FRReceiptChain.Ticket)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, FRReceiptChain.Ticket)]
     [InlineData(ReceiptCase.InvoiceB2C0x1001, FRReceiptChain.Invoice)]
-    public void ResolveChain_SaleInForeignCountry_GoesToTheBillChain(ReceiptCase receiptCase, FRReceiptChain expected)
+    public void ResolveChain_SaleInForeignCountry_KeepsTheChainOfItsCase(ReceiptCase receiptCase, FRReceiptChain expected)
     {
         var request = new ReceiptRequest { ftReceiptCase = receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.SaleInForeignCountry) };
 

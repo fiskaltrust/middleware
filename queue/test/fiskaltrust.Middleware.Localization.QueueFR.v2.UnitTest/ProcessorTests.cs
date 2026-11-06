@@ -40,11 +40,14 @@ public class ProcessorTests
                 ftSignatures = [],
             });
 
-    /// <summary>v1.2 signs both as a foreign sale (v0 0x0E) in the bill chain, without a mention.</summary>
+    /// <summary>
+    /// v1.2 signs a sale without obligation as a foreign sale (v0 0x0E) in the bill chain; an
+    /// e-commerce sale is a ticket (market-fr#221). Neither carries a mention.
+    /// </summary>
     [Theory]
-    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
-    [InlineData(ReceiptCase.ECommerce0x0004)]
-    public async Task ForeignSales_AreSignedIntoTheBillChain(ReceiptCase receiptCase)
+    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003, "ft1#B1")]
+    [InlineData(ReceiptCase.ECommerce0x0004, "ft1#T1")]
+    public async Task SalesWithoutObligationAndECommerce_AreSignedIntoTheirChain(ReceiptCase receiptCase, string identification)
     {
         var (pipeline, sscd) = CreatePipeline();
         var sut = new ReceiptCommandProcessorFR(pipeline);
@@ -54,7 +57,7 @@ public class ProcessorTests
             ? await sut.ECommerce0x0004Async(request)
             : await sut.PointOfSaleReceiptWithoutObligation0x0003Async(request);
 
-        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#B1");
+        response.receiptResponse.ftReceiptIdentification.Should().Be(identification);
         response.receiptResponse.ftSignatures.Should().NotContain(x => x.Caption == "Document provisoire");
         sscd.Calls.Should().ContainSingle();
     }
