@@ -1393,14 +1393,14 @@ public class ChargeItemValidationAcceptanceTests
     }
 
     /// <summary>
-    /// Scenario 7c: Zero VAT Rate Without Exempt Reason (Invalid)
+    /// Scenario 7c: Not Taxable Without Exempt Reason (Valid)
     /// 
-    /// Story: Charge item with 0% VAT but missing exempt reason (nature not specified)
+    /// Story: Charge item with the NotTaxable VAT category (V = 8), 0% VAT and no exempt reason (nature not specified)
     /// 
-    /// Expected Result: Receipt is rejected with EEEE_ZeroVatRateMissingNature
+    /// Expected Result: Receipt is accepted, the charge item is not subject to VAT (SAF-T TaxType/TaxCode NS)
     /// </summary>
     [Fact]
-    public async Task Scenario7c_ZeroVATRateWithoutExemptReason_ShouldFail()
+    public async Task Scenario7c_NotTaxableWithoutExemptReason_ShouldSucceed()
     {
         // Arrange
         var receiptRequest = new ReceiptRequest
@@ -1414,7 +1414,7 @@ public class ChargeItemValidationAcceptanceTests
                 new ChargeItem
                 {
                     ProductNumber = "PROD-009",
-                    Description = "Exempt Item",
+                    Description = "Not Subject Item",
                     Quantity = 1,
                     Amount = 100.00m,
                     VATRate = 0m,
@@ -1436,13 +1436,8 @@ public class ChargeItemValidationAcceptanceTests
         var receiptResponse = await ProcessReceiptAsync(receiptRequest);
 
         // Assert
-        receiptResponse.ftState.Should().Be((State) 0x5054_2000_EEEE_EEEE,
-            "Zero VAT rate without exempt reason should be rejected");
-
-        var failureSignature = receiptResponse.ftSignatures.FirstOrDefault(s => s.Caption == "FAILURE");
-        failureSignature.Should().NotBeNull("Error should be in signatures");
-        failureSignature!.Data.Should().Contain("EEEE_ZeroVatRateMissingNature",
-            "Error should indicate missing exempt reason (nature)");
+        receiptResponse.ftState.Should().NotBe((State) 0x5054_2000_EEEE_EEEE,
+            "NotTaxable without exempt reason is not subject to VAT and should be accepted");
     }
 
     /// <summary>
@@ -1546,7 +1541,7 @@ public class ChargeItemValidationAcceptanceTests
                     Quantity = 1,
                     Amount = 75.00m,
                     VATRate = 0m,
-                    ftChargeItemCase = PTVATRates.NotTaxableCase // No nature specified
+                    ftChargeItemCase = PTVATRates.NormalCase // No nature specified, and not NotTaxable
                 }
             },
             cbPayItems = new List<PayItem>
@@ -1601,7 +1596,7 @@ public class ChargeItemValidationAcceptanceTests
                     Quantity = 1,
                     Amount = 100.00m,
                     VATRate = 0m,
-                    ftChargeItemCase = PTVATRates.NotTaxableCase // No nature specified
+                    ftChargeItemCase = PTVATRates.NormalCase // No nature specified, and not NotTaxable
                 }
             },
             cbPayItems = new List<PayItem>

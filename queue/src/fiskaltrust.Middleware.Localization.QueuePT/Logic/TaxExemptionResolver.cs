@@ -1,5 +1,6 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
@@ -18,6 +19,13 @@ public static class TaxExemptionResolver
     /// </summary>
     public static bool IsExempt(ChargeItem chargeItem)
         => chargeItem.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatPT.UsualVatApplies || TryGetTaxExemptionCodeOverride(chargeItem, out _);
+
+    /// <summary>
+    /// A charge item is not subject to VAT (SAF-T TaxType/TaxCode "NS") when it uses the not taxable VAT category (V = 8) without an exemption code.
+    /// With an exemption code (NN or ftChargeItemCaseData.PT.TaxExemptionCode) the charge item is exempt (TaxCode "ISE"), whatever its VAT category.
+    /// </summary>
+    public static bool IsNotSubject(ChargeItem chargeItem)
+        => chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable && !IsExempt(chargeItem);
 
     public static bool TryGetTaxExemptionCodeOverride(ChargeItem chargeItem, out string? taxExemptionCode)
     {
@@ -55,8 +63,18 @@ public static class TaxExemptionResolver
         return Constants.TaxExemptionDictionary.TaxExemptionTable.ContainsKey(taxExemptionCode);
     }
 
+    /// <summary>
+    /// Not subject charge items carry no exemption code themselves, but SAF-T requires one on NS lines: M99 ("Não sujeito ou não tributado").
+    /// </summary>
     public static Constants.TaxExemptionInfo? GetTaxExemptionInfo(ChargeItem chargeItem)
-        => TryResolve(chargeItem, out var taxExemptionCode) ? Constants.TaxExemptionDictionary.TaxExemptionTable[taxExemptionCode] : null;
+    {
+        if (IsNotSubject(chargeItem))
+        {
+            return Constants.TaxExemptionDictionary.TaxExemptionTable[Constants.TaxExemptionCode.M99];
+        }
+
+        return TryResolve(chargeItem, out var taxExemptionCode) ? Constants.TaxExemptionDictionary.TaxExemptionTable[taxExemptionCode] : null;
+    }
 
     private static bool TryParseTaxExemptionCode(string? value, out Constants.TaxExemptionCode taxExemptionCode)
     {

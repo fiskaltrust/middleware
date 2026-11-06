@@ -90,6 +90,11 @@ public class PTQrCode
     public decimal? TotalVAT_StandardRate { get; set; }
 
     /// <summary>
+    /// Total amount for transactions not subject to/non-taxable in VAT and transactions subject to VAT whose document does not discriminate or cannot discriminate the amount of tax. Format with two decimal places, with “.” as decimal separator and without separator of thousands.
+    /// </summary>
+    public decimal? NonSubjectOrNonTaxableInVAT { get; set; }
+
+    /// <summary>
     /// Total amount of VAT and Stamp duty - TaxPayable field of SAF-T (PT). Format with two decimal places, with “.” as decimal separator and without separator of thousands.
     /// </summary>
     public required decimal TotalTaxes { get; set; }
@@ -165,6 +170,11 @@ public class PTQrCode
         if (TotalVAT_StandardRate.HasValue && TotalVAT_StandardRate > 0m)
         {
             sb.Append($"I8:{CreateCurrencyValue(TotalVAT_StandardRate.Value)}*");
+        }
+
+        if (NonSubjectOrNonTaxableInVAT.HasValue && NonSubjectOrNonTaxableInVAT > 0m)
+        {
+            sb.Append($"L:{CreateCurrencyValue(NonSubjectOrNonTaxableInVAT.Value)}*");
         }
 
         sb.Append($"N:{CreateCurrencyValue(TotalTaxes)}*");
