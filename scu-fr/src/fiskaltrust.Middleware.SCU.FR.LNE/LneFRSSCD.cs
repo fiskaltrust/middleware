@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.LNE.Models;
 using fiskaltrust.Middleware.SCU.FR.LNE.Signing;
@@ -12,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE;
 
 /// <summary>
 /// The LNE flavour of the NF525 signature. It builds the ordered "jeu de données à signer",
-/// signs it with SHA-256withECDSA and chains over data set plus signature. The signed data set is
+/// signs it with SHA-256withECDSA and chains on the previous signature (ADR 0001). The signed data set is
 /// attached to the response as its own signature item, because an LNE audit reconstructs the
 /// signed string from the archive and re-verifies it field by field.
 /// </summary>
@@ -24,6 +23,9 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE;
 public class LneFRSSCD : IFRSSCD, IDisposable
 {
     public const string CertificationBody = "LNE";
+
+    /// <summary>The certification mention LNE Rev. 1.8 Exigence 9 recommends on every ticket.</summary>
+    public const string Mention = "Système de caisse certifié LNE";
 
     private readonly LneConfiguration _configuration;
     private readonly LneSignatureCreator _signatureCreator;
@@ -47,32 +49,37 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
-    public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
+    {
+        try
+        {
+            return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The LNE signature could not be created for receipt {request.ReceiptRequest?.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry. {ex.Message}"));
+        }
+    }
+
+    private (ProcessResponse response, string signature) SignReceipt(ProcessRequest request, string? previousSignature)
     {
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration.Siret, _configuration.CertificateSerialNumber, lastHash, request.PeriodTotals);
+        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, FRStateData.CopyNumber(response));
 
-        string signature;
-        string chainHash;
-        try
-        {
-            (signature, chainHash) = _signatureCreator.Sign(dataSet);
-        }
-        catch (Exception ex) when (ex is not FRSSCDException)
-        {
-            throw new FRSigningUnavailableException($"The LNE signature could not be created for receipt {receiptRequest.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry.", ex);
-        }
+        var signature = _signatureCreator.Sign(dataSet);
 
-        response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "Signature", signature);
-        response.AddSignatureItem(SignatureTypeFR.ChainHash, "Empreinte", chainHash);
-        response.AddSignatureItem(SignatureTypeFR.Information, "Donnees signees", dataSet);
-        response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
+        // The QR code carries the data set and its signature; the certificate serial is a field of the data set.
+        response.AddReceiptQrCode(FRReceiptQrCode.OfDataSet(dataSet, signature));
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Certification", $"{CertificationBody} {_configuration.LneCertificateNumber}".TrimEnd());
+        // market-fr#131: the mention LNE Rev. 1.8 Exigence 9 recommends, with the LNE certificate
+        // number (an acceptable solution of the same exigence). Printed on every ticket, so it stays
+        // short: the full signature the exigence recommends is in the QR code. Not signed.
+        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
+        response.AddPeriodTotalsItems(request.PeriodTotals);
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
+        return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
     public Task<FRSigningCertificate> GetSigningCertificateAsync()

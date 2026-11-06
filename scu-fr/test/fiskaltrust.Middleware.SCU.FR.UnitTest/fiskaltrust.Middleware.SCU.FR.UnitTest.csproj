@@ -23,6 +23,11 @@
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.FR.InMemory\fiskaltrust.Middleware.SCU.FR.InMemory.csproj" />
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.FR.InfoCert\fiskaltrust.Middleware.SCU.FR.InfoCert.csproj" />
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.FR.LNE\fiskaltrust.Middleware.SCU.FR.LNE.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.FR.SelfCertified\fiskaltrust.Middleware.SCU.FR.SelfCertified.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

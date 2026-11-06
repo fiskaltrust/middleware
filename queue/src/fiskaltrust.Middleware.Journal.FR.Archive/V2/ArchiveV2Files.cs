@@ -57,8 +57,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>
         /// The letters the queue writes into <c>ftReceiptIdentification</c> for this journal: the journal's own
-        /// <see cref="Letter"/>, and on the technical journal E also G, the single closing chain the queue used
-        /// before the ADR 0002 chains (fiskaltrust/middleware#825).
+        /// <see cref="Letter"/>, since every ADR 0002 chain has its own journal.
         /// </summary>
         public IReadOnlyCollection<string> ChainLetters { get; }
 
@@ -110,7 +109,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x001, "T", "ticket", "Ticket", "Tickets", ArchiveJournalKind.Sales, "T"),
             new ArchiveJournal(0x002, "P", "payment-proof", "Payment proof", "Justificatifs de paiement", ArchiveJournalKind.Sales, "P"),
             new ArchiveJournal(0x003, "I", "invoice", "Invoice", "Factures", ArchiveJournalKind.Sales, "I"),
-            new ArchiveJournal(0x004, "E", "technical", "Technical", "Opérations techniques", ArchiveJournalKind.Closing, "E", "G"),
+            new ArchiveJournal(0x004, "E", "technical", "Technical", "Opérations techniques", ArchiveJournalKind.Closing, "E"),
             new ArchiveJournal(0x007, "B", "bill", "Bill (note)", "Notes", ArchiveJournalKind.Sales, "B"),
             new ArchiveJournal(0x009, "L", "log", "Log", "Journal des événements techniques (JET)", ArchiveJournalKind.Other, "L"),
             new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Other, "D"),

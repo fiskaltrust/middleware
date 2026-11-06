@@ -2,18 +2,23 @@
 using System.Text;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.InMemory;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ES;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Base;
-using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Storage.Base.Interface;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -22,7 +27,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly ILogger<IMiddlewareBootstrapper> _logger;
     private readonly Dictionary<string, object> _configuration;
 
-    private readonly TaskCompletionSource _initializedCompletionSource;
+    private readonly TaskCompletionSource<bool> _initializedCompletionSource;
     public Task Initialized => _initializedCompletionSource.Task;
 
     // Singleton repository instances
@@ -32,6 +37,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
     private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;
     private readonly IMiddlewareJournalESRepository _journalESRepository;
+    private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
     private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
     private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
     private readonly IMasterDataRepository<AgencyMasterData> _agencyMasterDataRepository;
@@ -39,7 +45,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public InMemoryStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
         _configuration = configuration;
-        _initializedCompletionSource = new TaskCompletionSource();
+        _initializedCompletionSource = new TaskCompletionSource<bool>();
         _logger = loggerFactory.CreateLogger<IMiddlewareBootstrapper>();
 
         _configurationRepository = new InMemoryConfigurationRepository();
@@ -48,6 +54,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
         _receiptJournalRepository = new InMemoryReceiptJournalRepository();
         _accountMasterDataRepository = new InMemoryAccountMasterDataRepository();
         _journalESRepository = new InMemoryJournalESRepository();
+        _journalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
         _outletMasterDataRepository = new InMemoryOutletMasterDataRepository();
         _posSystemMasterDataRepository = new InMemoryPosSystemMasterDataRepository();
         _agencyMasterDataRepository = new InMemoryAgencyMasterDataRepository();
@@ -63,6 +70,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => CreateAsyncLazy(_receiptJournalRepository);
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => CreateAsyncLazy(_accountMasterDataRepository);
     public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => CreateAsyncLazy(_journalESRepository);
+    public AsyncLazy<IJournalFRCopyPayloadRepository> CreateJournalFRCopyPayloadRepository() => CreateAsyncLazy(_journalFRCopyPayloadRepository);
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => CreateAsyncLazy(_outletMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => CreateAsyncLazy(_posSystemMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => CreateAsyncLazy(_agencyMasterDataRepository);
@@ -79,7 +87,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
             }
             var dbCashBox = cashBoxes.FirstOrDefault(x => x.ftCashBoxId == baseStorageConfig.CashBox.ftCashBoxId);
             await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, _configurationRepository, _logger).ConfigureAwait(false);
-            _initializedCompletionSource.SetResult();
+            _initializedCompletionSource.SetResult(true);
         }
         catch (Exception e)
         {

@@ -42,6 +42,26 @@ public static class ftActionJournalFactory
         return CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueFR)}", receiptResponse.ftQueueItemID, $"Out-of-Operation receipt. Queue-ID: {receiptResponse.ftQueueID}", JsonConvert.SerializeObject(notification));
     }
 
+    public static ftActionJournal CreateLateSigningStartedActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse)
+        => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-LateSigningStarted", receiptResponse.ftQueueItemID,
+            $"QueueItem {receiptResponse.ftQueueItemID} ({receiptResponse.ftReceiptIdentification}) opened the late-signing mode.",
+            JsonConvert.SerializeObject(new { request.cbReceiptReference, receiptResponse.ftReceiptIdentification, request.cbReceiptMoment }));
+
+    public static ftActionJournal CreateLateSigningEndedActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse, Logic.FRLateSigningRange range, string? firstReceiptReference, string? firstReceiptIdentification)
+        => CreateActionJournal(receiptResponse.ftQueueID, $"{request.ftReceiptCase:X}-LateSigningEnded", receiptResponse.ftQueueItemID,
+            $"Failure registered: {range.Count} late-signed receipt(s) from {firstReceiptIdentification} to {receiptResponse.ftReceiptIdentification}.",
+            JsonConvert.SerializeObject(new
+            {
+                range.Count,
+                range.FirstQueueItemId,
+                FirstReceiptReference = firstReceiptReference,
+                FirstReceiptIdentification = firstReceiptIdentification,
+                cbReceiptMomentMin = range.MomentMin,
+                cbReceiptMomentMax = range.MomentMax,
+                ClosingReceiptReference = request.cbReceiptReference,
+                ClosingReceiptIdentification = receiptResponse.ftReceiptIdentification,
+            }));
+
     private static ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1) => new()
     {
         ftActionJournalId = Guid.NewGuid(),

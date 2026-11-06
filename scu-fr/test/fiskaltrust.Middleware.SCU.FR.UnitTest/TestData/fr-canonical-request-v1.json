@@ -1,0 +1,158 @@
+{
+  "vectors": [
+    {
+      "name": "worked-example",
+      "request": {
+        "ftCashBoxID": "A8466A4E-7A1A-4F1B-9C11-0B7C1C1E5D10",
+        "ftPosSystemId": "1b0d9c0f-5a9e-4e51-a7a5-3f3f0c3c2e01",
+        "cbTerminalID": "T1",
+        "cbReceiptReference": "R-2026-0001",
+        "cbReceiptMoment": "2026-11-03T10:15:30.25+01:00",
+        "cbChargeItems": [
+          {
+            "Quantity": 2.0,
+            "Description": "Café crème",
+            "Amount": 7.40,
+            "VATRate": 10.00,
+            "ftChargeItemCase": 5067147715117318163,
+            "Position": 1
+          },
+          {
+            "Quantity": 1,
+            "Description": "Croissant \"beurre\"",
+            "Amount": 1.5,
+            "VATRate": 5.5,
+            "ftChargeItemCase": 5067147715117318161,
+            "Position": 2,
+            "ProductNumber": "CR-01"
+          }
+        ],
+        "cbPayItems": [
+          {
+            "Description": "Espèces",
+            "Amount": 8.90,
+            "ftPayItemCase": 5067147715117318145,
+            "Position": 1,
+            "Moment": "2026-11-03T09:15:31Z"
+          }
+        ],
+        "ftReceiptCase": 5067147715117318145,
+        "ftReceiptCaseData": {
+          "z": 1e2,
+          "a": null,
+          "b": [
+            0.50,
+            "x\ty"
+          ]
+        },
+        "cbReceiptAmount": 8.90
+      },
+      "storedRequest": "{\"cbTerminalID\":\"T1\",\"cbReceiptReference\":\"R-2026-0001\",\"cbReceiptMoment\":\"2026-11-03T10:15:30.25+01:00\",\"cbChargeItems\":[{\"Quantity\":2.0,\"Description\":\"Caf\\u00E9 cr\\u00E8me\",\"Amount\":7.40,\"VATRate\":10.00,\"ftChargeItemCase\":5067147715117318163,\"Position\":1},{\"Quantity\":1,\"Description\":\"Croissant \\u0022beurre\\u0022\",\"Amount\":1.5,\"VATRate\":5.5,\"ftChargeItemCase\":5067147715117318161,\"Position\":2,\"ProductNumber\":\"CR-01\"}],\"cbPayItems\":[{\"Description\":\"Esp\\u00E8ces\",\"Amount\":8.90,\"ftPayItemCase\":5067147715117318145,\"Moment\":\"2026-11-03T09:15:31Z\",\"Position\":1}],\"ftCashBoxID\":\"a8466a4e-7a1a-4f1b-9c11-0b7c1c1e5d10\",\"ftPosSystemId\":\"1b0d9c0f-5a9e-4e51-a7a5-3f3f0c3c2e01\",\"ftReceiptCase\":5067147715117318145,\"ftReceiptCaseData\":{\"z\":1e2,\"a\":null,\"b\":[0.50,\"x\\ty\"]},\"cbReceiptAmount\":8.90}",
+      "canonical": "{\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"cbChargeItems\":[{\"Amount\":7.4,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Café crème\",\"Position\":1,\"Quantity\":2,\"VATRate\":10,\"ftChargeItemCase\":5067147715117318163},{\"Amount\":1.5,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Croissant \\\"beurre\\\"\",\"Position\":2,\"ProductNumber\":\"CR-01\",\"Quantity\":1,\"VATRate\":5.5,\"ftChargeItemCase\":5067147715117318161}],\"cbPayItems\":[{\"Amount\":8.9,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Espèces\",\"Moment\":\"2026-11-03T09:15:31.0000000Z\",\"Position\":1,\"Quantity\":1,\"ftPayItemCase\":5067147715117318145}],\"cbReceiptAmount\":8.9,\"cbReceiptMoment\":\"2026-11-03T09:15:30.2500000Z\",\"cbReceiptReference\":\"R-2026-0001\",\"cbTerminalID\":\"T1\",\"ftCashBoxID\":\"a8466a4e-7a1a-4f1b-9c11-0b7c1c1e5d10\",\"ftPosSystemId\":\"1b0d9c0f-5a9e-4e51-a7a5-3f3f0c3c2e01\",\"ftReceiptCase\":5067147715117318145,\"ftReceiptCaseData\":{\"b\":[0.5,\"x\\ty\"],\"z\":100}}",
+      "sha256": "BozY0lCYu+j8QaPRf6AmbAejdx+6pThYb3Bu3WdgZhA=",
+      "signedField": "1:BozY0lCYu+j8QaPRf6AmbAejdx+6pThYb3Bu3WdgZhA="
+    },
+    {
+      "name": "minimal",
+      "request": {
+        "cbReceiptReference": "0",
+        "cbReceiptMoment": "2026-01-01T00:00:00",
+        "cbChargeItems": [],
+        "cbPayItems": [],
+        "ftReceiptCase": 5067147715117318145
+      },
+      "storedRequest": "{\"cbReceiptReference\":\"0\",\"cbReceiptMoment\":\"2026-01-01T00:00:00\",\"cbChargeItems\":[],\"cbPayItems\":[],\"ftReceiptCase\":5067147715117318145}",
+      "canonical": "{\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"cbReceiptMoment\":\"2026-01-01T00:00:00.0000000Z\",\"cbReceiptReference\":\"0\",\"ftReceiptCase\":5067147715117318145}",
+      "sha256": "e0AcMQchoh4fyElokZS/+OslsEQR0B7dUdMf2nOHP+Y=",
+      "signedField": "1:e0AcMQchoh4fyElokZS/+OslsEQR0B7dUdMf2nOHP+Y="
+    },
+    {
+      "name": "edge-cases",
+      "request": {
+        "ftQueueID": "00000000-0000-0000-0000-000000000000",
+        "cbReceiptReference": "ref\u0001\u001F/é\uD83D\uDE00",
+        "cbReceiptMoment": "2026-03-29T03:30:00.1234567+02:00",
+        "cbPreviousReceiptReference": [
+          "R-1",
+          "R-2"
+        ],
+        "cbChargeItems": [
+          {
+            "Quantity": -0.0,
+            "Description": "Remise",
+            "Amount": -1.000,
+            "VATRate": 20,
+            "VATAmount": -0.1667,
+            "UnitPrice": 1E-3,
+            "ftChargeItemCase": 5067147715117318163,
+            "Moment": "2026-03-29T01:30:00",
+            "ftChargeItemId": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+            "Currency": "EUR",
+            "DecimalPrecisionMultiplier": 1
+          }
+        ],
+        "cbPayItems": [
+          {
+            "Description": "CB",
+            "Amount": 123456789012.10,
+            "ftPayItemCase": 5067147715117318145,
+            "Quantity": 1
+          }
+        ],
+        "ftReceiptCase": 5067147715117318145,
+        "cbUser": {
+          "é": 1,
+          "z": true,
+          "A": false,
+          "aa": "x",
+          "\uD83D\uDE00": 2,
+          "｡": 3,
+          "n": {
+            "y": null,
+            "x": []
+          }
+        },
+        "cbCustomer": "plain string"
+      },
+      "storedRequest": "{\"cbReceiptReference\":\"ref\\u0001\\u001F/\\u00E9\\uD83D\\uDE00\",\"cbReceiptMoment\":\"2026-03-29T03:30:00.1234567+02:00\",\"cbChargeItems\":[{\"ftChargeItemId\":\"0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0\",\"Quantity\":0.0,\"Description\":\"Remise\",\"Amount\":-1.000,\"VATRate\":20,\"ftChargeItemCase\":5067147715117318163,\"VATAmount\":-0.1667,\"Moment\":\"2026-03-29T01:30:00\",\"UnitPrice\":0.001}],\"cbPayItems\":[{\"Description\":\"CB\",\"Amount\":123456789012.10,\"ftPayItemCase\":5067147715117318145}],\"ftReceiptCase\":5067147715117318145,\"ftQueueID\":\"00000000-0000-0000-0000-000000000000\",\"cbPreviousReceiptReference\":[\"R-1\",\"R-2\"],\"cbUser\":{\"\\u00E9\":1,\"z\":true,\"A\":false,\"aa\":\"x\",\"\\uD83D\\uDE00\":2,\"\\uFF61\":3,\"n\":{\"y\":null,\"x\":[]}},\"cbCustomer\":\"plain string\"}",
+      "canonical": "{\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"cbChargeItems\":[{\"Amount\":-1,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Remise\",\"Moment\":\"2026-03-29T01:30:00.0000000Z\",\"Position\":0,\"Quantity\":0,\"UnitPrice\":0.001,\"VATAmount\":-0.1667,\"VATRate\":20,\"ftChargeItemCase\":5067147715117318163,\"ftChargeItemId\":\"0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0\"}],\"cbCustomer\":\"plain string\",\"cbPayItems\":[{\"Amount\":123456789012.1,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"CB\",\"Position\":0,\"Quantity\":1,\"ftPayItemCase\":5067147715117318145}],\"cbPreviousReceiptReference\":[\"R-1\",\"R-2\"],\"cbReceiptMoment\":\"2026-03-29T01:30:00.1234567Z\",\"cbReceiptReference\":\"ref\\u0001\\u001f/é\uD83D\uDE00\",\"cbUser\":{\"A\":false,\"aa\":\"x\",\"n\":{\"x\":[]},\"z\":true,\"é\":1,\"\uD83D\uDE00\":2,\"｡\":3},\"ftQueueID\":\"00000000-0000-0000-0000-000000000000\",\"ftReceiptCase\":5067147715117318145}",
+      "sha256": "zqM409GYWtrEz9Gf9vJXjC6IW6Z18OIqHH7P4HgoWZI=",
+      "signedField": "1:zqM409GYWtrEz9Gf9vJXjC6IW6Z18OIqHH7P4HgoWZI="
+    },
+    {
+      "name": "zero-multipliers",
+      "request": {
+        "ftCashBoxID": "6b1c2d3e-4f50-4a61-8b72-9c83d4e5f601",
+        "ftReceiptCase": 5067112530745229313,
+        "cbReceiptMoment": "2026-11-04T10:00:00Z",
+        "cbReceiptReference": "R-0",
+        "DecimalPrecisionMultiplier": 0,
+        "cbChargeItems": [
+          {
+            "Position": 1,
+            "Quantity": 1,
+            "Amount": 3.5,
+            "Description": "Thé",
+            "VATRate": 10,
+            "DecimalPrecisionMultiplier": 0,
+            "ftChargeItemCase": 5067112530745229331
+          }
+        ],
+        "cbPayItems": [
+          {
+            "Position": 1,
+            "Quantity": 1,
+            "Amount": 3.5,
+            "Description": "Espèces",
+            "DecimalPrecisionMultiplier": 0,
+            "ftPayItemCase": 5067112530745229313
+          }
+        ]
+      },
+      "storedRequest": "{\"cbReceiptReference\":\"R-0\",\"cbReceiptMoment\":\"2026-11-04T10:00:00Z\",\"cbChargeItems\":[{\"Quantity\":1,\"Description\":\"Th\\u00E9\",\"Amount\":3.5,\"VATRate\":10,\"ftChargeItemCase\":5067112530745229331,\"Position\":1}],\"cbPayItems\":[{\"Description\":\"Esp\\u00E8ces\",\"Amount\":3.5,\"ftPayItemCase\":5067112530745229313,\"Position\":1}],\"ftCashBoxID\":\"6b1c2d3e-4f50-4a61-8b72-9c83d4e5f601\",\"ftReceiptCase\":5067112530745229313}",
+      "canonical": "{\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"cbChargeItems\":[{\"Amount\":3.5,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Thé\",\"Position\":1,\"Quantity\":1,\"VATRate\":10,\"ftChargeItemCase\":5067112530745229331}],\"cbPayItems\":[{\"Amount\":3.5,\"Currency\":\"EUR\",\"DecimalPrecisionMultiplier\":1,\"Description\":\"Espèces\",\"Position\":1,\"Quantity\":1,\"ftPayItemCase\":5067112530745229313}],\"cbReceiptMoment\":\"2026-11-04T10:00:00.0000000Z\",\"cbReceiptReference\":\"R-0\",\"ftCashBoxID\":\"6b1c2d3e-4f50-4a61-8b72-9c83d4e5f601\",\"ftReceiptCase\":5067112530745229313}",
+      "sha256": "lQ20sfIXMoFzPdltWD4fRsxeAQhgaCqFOVLrSCeOKhk=",
+      "signedField": "1:lQ20sfIXMoFzPdltWD4fRsxeAQhgaCqFOVLrSCeOKhk="
+    }
+  ]
+}

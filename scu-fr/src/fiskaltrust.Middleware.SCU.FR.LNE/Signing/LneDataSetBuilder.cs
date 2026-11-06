@@ -6,6 +6,7 @@ using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.FR.LNE.Signing;
 
@@ -21,30 +22,48 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE.Signing;
 /// </remarks>
 internal static class LneDataSetBuilder
 {
-    /// <summary>Field separator. Never appears in the values, which are all identifiers, numbers or moments.</summary>
+    /// <summary>Field separator. Never appears in the values: identifiers, numbers and moments, and issuer claims that <see cref="LneConfiguration"/> rejects when they contain it.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, string siret, string certificateSerialNumber, string? lastHash, FRPeriodTotals? periodTotals = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, LneConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null)
     {
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
 
         var fields = new List<string>
         {
-            siret,
+            configuration.Siret,
+            // market-fr#141: the issuer claims, at fixed positions after the SIRET and empty when
+            // not configured, so the data set keeps one shape. The SIREN is the SIRET's first nine digits.
+            configuration.Rcs ?? "",
+            configuration.Naf ?? "",
+            configuration.LegalForm ?? "",
+            configuration.VatOption ?? "",
+            configuration.ElectronicAddress ?? "",
             response.ftQueueID.ToString(),
             response.ftQueueItemID.ToString(),
+            // market-fr#225, ADR 0013: the hash of the request in its canonical form, as version:base64.
+            FRCanonicalRequest.SignedField(request),
             response.ftCashBoxIdentification ?? "",
             response.ftReceiptIdentification ?? "",
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             ((long) request.ftReceiptCase).ToString("X16", CultureInfo.InvariantCulture),
+            // market-fr#235: the reprint number of a copy (R13 ENC-DUP-PRN-NUM); empty on every other receipt.
+            copyNumber?.ToString(CultureInfo.InvariantCulture) ?? "",
+            // market-fr#148, ADR 0011: the number of sales lines (R13 ENC-TIK-LIG-NBR), printed by the
+            // queue as "Nombre de lignes" and signed here; 0 when the receipt has none.
+            FRSalesLines.Count(request).ToString(CultureInfo.InvariantCulture),
             request.Currency.ToString(),
             Amount(chargeItems.Sum(x => x.Amount)),
             VatBreakdown(chargeItems),
             PaymentBreakdown(payItems),
             PeriodTotals(periodTotals),
-            certificateSerialNumber,
-            lastHash ?? "",
+            configuration.CertificateSerialNumber,
+            // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's
+            // signature, verbatim as its signature field stores it.
+            chainCounter.ToString(CultureInfo.InvariantCulture),
+            FRChaining.Flag(previousSignature).ToCode(),
+            previousSignature ?? "",
         };
 
         return string.Join(FieldSeparator, fields);

@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Storage.InMemory;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Storage.Base.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 
@@ -55,6 +59,8 @@ internal sealed class InMemoryLocalizationStorageProvider : IStorageProvider
         _initialized = Task.CompletedTask;
     }
 
+    private readonly AsyncLazy<IJournalFRCopyPayloadRepository> _journalFRCopyPayloadRepository = new(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new InMemoryJournalFRCopyPayloadRepository()));
+
     public Task Initialized => _initialized;
 
     public AsyncLazy<IConfigurationRepository> CreateConfigurationRepository() => _configurationRepository;
@@ -66,6 +72,8 @@ internal sealed class InMemoryLocalizationStorageProvider : IStorageProvider
     public AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository() => _actionJournalRepository;
 
     public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => _journalEsRepository;
+
+    public AsyncLazy<IJournalFRCopyPayloadRepository> CreateJournalFRCopyPayloadRepository() => _journalFRCopyPayloadRepository;
 
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => _accountMasterDataRepository;
 

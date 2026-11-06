@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using FluentAssertions;
 
 namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
@@ -16,6 +20,36 @@ public static class FRTestData
     {
         var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         return (Convert.ToBase64String(key.ExportPkcs8PrivateKey()), key);
+    }
+
+    /// <summary>Decodes RFC 4648 §5 Base64Url without padding, the encoding chained signatures use.</summary>
+    public static byte[] FromBase64Url(string value)
+    {
+        var padded = value.Replace('-', '+').Replace('_', '/');
+        return Convert.FromBase64String(padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '='));
+    }
+
+    /// <summary>True when <paramref name="value"/> only uses the Base64Url alphabet, unpadded.</summary>
+    public static bool IsBase64Url(string value)
+        => value.Length > 0 && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_');
+
+    public static ProcessRequest Request(long chainCounter = 1) => new()
+    {
+        ReceiptRequest = CashSaleRequest(),
+        ReceiptResponse = Response(),
+        ChainCounter = chainCounter,
+    };
+
+    /// <summary>
+    /// A copy as the queue hands it over: the reprint number in the FR block of ftStateData, as JSON
+    /// (an SCU behind REST) or as the queue's own object (an SCU in the queue's process).
+    /// </summary>
+    public static ProcessRequest Copy(int copyNumber, bool asJson = true)
+    {
+        var request = Request();
+        object stateData = new Dictionary<string, object> { ["FR"] = new Dictionary<string, object> { ["CopyNumber"] = copyNumber } };
+        request.ReceiptResponse.ftStateData = asJson ? System.Text.Json.JsonSerializer.SerializeToElement(stateData) : stateData;
+        return request;
     }
 
     public static ReceiptRequest CashSaleRequest() => new()
@@ -48,4 +82,17 @@ public static class FRTestData
         ftState = (State) 0x4652_2000_0000_0000,
         ftSignatures = new List<SignatureItem>(),
     };
+
+    /// <summary>
+    /// Asserts the SCU reported a failed signature the only way it may: in its response, with the
+    /// signing-unavailable ftState, the reason in a FAILURE item and no chain signature.
+    /// </summary>
+    public static void ShouldBeASigningFailure(ProcessResponse response, string signature)
+    {
+        response.ReceiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        response.ReceiptResponse.ftSignatures.Should().ContainSingle()
+            .Which.Caption.Should().Be("FAILURE");
+        response.ReceiptResponse.ftSignatures.Single().Data.Should().Contain("could not be created");
+        signature.Should().BeEmpty("an unsigned receipt gives the chain nothing to continue from");
+    }
 }

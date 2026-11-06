@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
@@ -33,17 +36,61 @@ public static class SignaturItemFactory
 
     /// <summary>
     /// The mention the customer copy has to carry, so a duplicate can never be mistaken for the
-    /// original document.
+    /// original document, with its reprint number (R13 ENC-DUP-PRN-NUM, printed on every document
+    /// type; market-fr#235). Same wording as v1.2.
     /// </summary>
-    public static SignatureItem CreateDuplicateSignature(string? copiedReceiptReference) => new()
+    /// <param name="copyNumber">The reprint number; null for a training copy, which is not counted.</param>
+    public static SignatureItem CreateDuplicateSignature(string copiedReceiptReference, int? copyNumber) => new()
     {
         ftSignatureFormat = SignatureFormat.Text,
         ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
         Caption = "Duplicata",
-        Data = $"Duplicata de {copiedReceiptReference}",
+        Data = copyNumber is null ? $"Duplicata de {copiedReceiptReference}" : $"{copyNumber}. Duplicata de {copiedReceiptReference}",
     };
 
-    /// <summary>The mention a bill, pro forma or delivery note has to carry: it is not a receipt.</summary>
+    /// <summary>
+    /// Printed on the zero receipt that ends the late-signing mode: the range of receipts the POS
+    /// issued while the middleware was unreachable (v1.2 "Failure registered", market-fr#231).
+    /// </summary>
+    public static SignatureItem CreateLateSigningEndedSignature(string? firstReceiptIdentification, string? closingReceiptIdentification) => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Défaillance enregistrée",
+        Data = $"du {firstReceiptIdentification} au {closingReceiptIdentification}",
+    };
+
+    private static readonly JsonSerializerOptions _jetJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    /// <summary>
+    /// Tells the POS which JET event (R19) to send: it copies <see cref="SignatureItem.Data"/>
+    /// unchanged into the ftReceiptCaseData of a <c>ProtocolTechnicalEvent 0x3001</c>, with
+    /// cbPreviousReceiptReference set to the receipt that carried this item. The data is already the
+    /// whole case data, <c>{"FR":{"Code":…,"Message":…,"Information":…}}</c>, the path the InfoCert
+    /// SCU reads (market-fr#248). The queue issues no JET entry itself (market-fr#231, #208).
+    /// </summary>
+    public static SignatureItem CreateJetEventSignature(int code, string message, string? information) => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.JetEvent.As<SignatureType>().WithFlag(SignatureTypeFlags.VisualizationOptional),
+        Caption = "JET",
+        Data = JsonSerializer.Serialize(new JetEventCaseData(new JetEventData(code.ToString(CultureInfo.InvariantCulture), message, information)), _jetJson),
+    };
+
+    private sealed record JetEventCaseData(JetEventData FR);
+
+    private sealed record JetEventData(string Code, string Message, string? Information);
+
+    /// <summary>The mention v1.2 prints on every payment proof (workerFR <c>PaymentProveRequest</c>).</summary>
+    public static SignatureItem CreatePaymentProofSignature() => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Justificatif de paiement",
+        Data = "Justificatif non valable pour encaissement",
+    };
+
+    /// <summary>The mention a bill, pro forma or order has to carry: it is not a receipt.</summary>
     public static SignatureItem CreateProvisionalDocumentSignature() => new()
     {
         ftSignatureFormat = SignatureFormat.Text,
@@ -64,5 +111,17 @@ public static class SignaturItemFactory
         ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
         Caption = "Mode école",
         Data = "SIMULATION - NON VALABLE POUR ENCAISSEMENT",
+    };
+
+    /// <summary>
+    /// The number of sales lines (R13 <c>ENC-TIK-LIG-NBR</c>), which note and ticket have to print.
+    /// It is a signature item because a printed computed field goes there (market-fr ADR 0011).
+    /// </summary>
+    public static SignatureItem CreateSalesLineCountSignature(int salesLineCount) => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Nombre de lignes",
+        Data = salesLineCount.ToString(CultureInfo.InvariantCulture),
     };
 }

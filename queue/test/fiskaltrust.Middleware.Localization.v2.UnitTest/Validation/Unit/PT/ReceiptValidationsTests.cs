@@ -12,6 +12,7 @@ using FluentValidation.TestHelper;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.v2.UnitTest.Validation;
 

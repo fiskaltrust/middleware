@@ -22,10 +22,21 @@ public class MarketValidator : IMarketValidator
     {
         yield return new GlobalValidations.ReceiptValidations(_receiptReferenceProvider, queue);
         yield return new GlobalValidations.PayItemValidations(queue);
-        yield return new GlobalValidations.ChargeItemValidations(queue);
+        yield return new GlobalValidations.ChargeItemValidations(queue, ZeroVatRateNatureNotRequired);
     }
 
+    /// <summary>
+    /// Zero VAT rate charge items for which the market does not require a nature of VAT. By default, every zero VAT rate charge item requires one.
+    /// </summary>
+    protected virtual Func<ChargeItem, bool>? ZeroVatRateNatureNotRequired => null;
+
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null) => [];
+
+    /// <summary>
+    /// The error codes of global rules a market does not apply. Defaults to none; a market lists a
+    /// code only where its own rules deliberately differ.
+    /// </summary>
+    protected virtual IReadOnlyCollection<string> ExemptGlobalErrorCodes => [];
 
     public async Task<ValidationResult> ValidateAsync(ReceiptRequest request, ftQueue? queue = null, ReceiptResponse? response = null, object? numberSeries = null)
     {
@@ -33,7 +44,7 @@ public class MarketValidator : IMarketValidator
 
         foreach (var validator in GetGlobalValidators(queue))
         {
-            result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
+            result.Errors.AddRange((await validator.ValidateAsync(request)).Errors.Where(error => !ExemptGlobalErrorCodes.Contains(error.ErrorCode)));
         }
 
         foreach (var validator in GetMarketValidators(response, numberSeries))

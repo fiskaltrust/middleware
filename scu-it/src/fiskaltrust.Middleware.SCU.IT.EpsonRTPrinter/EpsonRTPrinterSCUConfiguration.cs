@@ -69,6 +69,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
         /// repeatedly, and one that waited as long as a print command would burn the whole window on the
         /// first attempt — which is exactly the attempt most likely to find the printer busy and silent.
         /// </para>
+        /// <para>
+        /// While no recovery baseline is known, each receipt first reads it, and when that read fails resets the
+        /// printer (1-088) and reads again, each step capped at this value: up to three of them before the receipt
+        /// is sent, on every receipt until a baseline is known.
+        /// </para>
         /// </summary>
         public int RecoveryStatusQueryTimeoutMs { get; set; } = 8000;
 

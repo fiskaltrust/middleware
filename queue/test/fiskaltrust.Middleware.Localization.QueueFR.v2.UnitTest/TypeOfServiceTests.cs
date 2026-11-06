@@ -36,9 +36,7 @@ public class TypeOfServiceTests
     private static (FRSigningPipeline pipeline, FakeFRSSCD sscd) CreatePipeline()
     {
         var sscd = new FakeFRSSCD();
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        repository.Setup(x => x.GetAsync()).ReturnsAsync(Array.Empty<ftQueueItem>());
-        return (new FRSigningPipeline(sscd, new FRChainStateProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)))), sscd);
+        return (new FRSigningPipeline(sscd, new StoredChainState().Provider()), sscd);
     }
 
     private static string? TypeOfServiceOf(ReceiptResponse response) => MiddlewareStateData.FromReceiptResponse(response).FR?.ftTypeOfService;
@@ -112,9 +110,9 @@ public class TypeOfServiceTests
         var (pipeline, sscd) = CreatePipeline();
         var sut = new ReceiptCommandProcessorFR(pipeline);
         var request = new ProcessCommandRequest(new ftQueue { ftQueueId = Guid.NewGuid() }, Request(Item(ChargeItemCaseTypeOfService.CatalogService)), Response());
-        request.ReceiptRequest.ftReceiptCase = ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003.WithCountry("FR");
+        request.ReceiptRequest.ftReceiptCase = ReceiptCase.DeliveryNote0x0005.WithCountry("FR");
 
-        var response = await sut.PointOfSaleReceiptWithoutObligation0x0003Async(request);
+        var response = await sut.DeliveryNote0x0005Async(request);
 
         sscd.Calls.Should().BeEmpty();
         TypeOfServiceOf(response.receiptResponse).Should().Be("S");

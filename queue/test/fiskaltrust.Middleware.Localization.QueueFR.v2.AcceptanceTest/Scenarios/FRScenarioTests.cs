@@ -1,9 +1,9 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
-using fiskaltrust.Middleware.SCU.FR.InMemory;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
@@ -13,55 +13,42 @@ using Xunit;
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.AcceptanceTest.Scenarios;
 
 /// <summary>
-/// Drives a real QueueFR.v2 through its sign processor against the in-memory storage and the
-/// in-memory SCU, so the chaining, numbering and signature wiring is exercised end to end.
+/// Drives a real QueueFR.v2 through its sign processor against the in-memory storage and an SCU,
+/// so the chaining, numbering and signature wiring is exercised end to end. Each SCU the queue
+/// supports runs the same scenarios through a subclass.
 /// </summary>
-public class FRScenarioTests
+public abstract class FRScenarioTests
 {
-    private const string CashBoxIdentification = "cashbox-fr";
-
     private readonly Func<string, Task<string>> _signProcessor;
     private readonly Guid _cashBoxId;
 
-    public FRScenarioTests()
+    protected abstract IFRSSCD CreateScu();
+
+    protected FRScenarioTests()
     {
-        var queueId = Guid.NewGuid();
-        _cashBoxId = Guid.NewGuid();
+        (_signProcessor, _cashBoxId) = FRTestQueue.Create(CreateScu());
+    }
 
-        var configuration = new Dictionary<string, object>
+    [Fact]
+    public async Task Copies_AreNumberedPerCopiedReceipt()
+    {
+        var sale = Request(ReceiptCase.PointOfSaleReceipt0x0001);
+        await SignAsync(sale);
+        ReceiptRequest CopyOfTheSale()
         {
-            { "cashboxid", _cashBoxId },
-            { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox { ftCashBoxId = _cashBoxId, TimeStamp = DateTime.UtcNow.Ticks }) },
-            { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue>
-                {
-                    new() { ftQueueId = queueId, ftCashBoxId = _cashBoxId, StartMoment = DateTime.UtcNow, CountryCode = "FR" },
-                })
-            },
-            { "init_ftQueueFR", JsonSerializer.Serialize(new List<ftQueueFR>
-                {
-                    new() { ftQueueFRId = queueId, CashBoxIdentification = CashBoxIdentification, Siret = "12345678901234" },
-                })
-            },
-            { "init_ftSignaturCreationUnitFR", JsonSerializer.Serialize(new List<ftSignaturCreationUnitFR>()) },
-            { "init_masterData", JsonSerializer.Serialize(new MasterDataConfiguration
-                {
-                    Account = new AccountMasterData
-                    {
-                        AccountId = Guid.NewGuid(),
-                        AccountName = "fiskaltrust SARL",
-                        Street = "1 rue de la Paix",
-                        Zip = "75002",
-                        City = "Paris",
-                        Country = "FR",
-                    },
-                })
-            },
-        };
+            var copy = Request(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010);
+            copy.cbPreviousReceiptReference = sale.cbReceiptReference;
+            return copy;
+        }
 
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var storageProvider = new InMemoryLocalizationStorageProvider(queueId, configuration, loggerFactory);
-        var bootstrapper = new QueueFRBootstrapper(queueId, loggerFactory, configuration, new InMemorySCU(), storageProvider);
-        _signProcessor = bootstrapper.RegisterForSign();
+        var first = await SignAsync(CopyOfTheSale());
+        var second = await SignAsync(CopyOfTheSale());
+        var withoutReference = await SignAsync(Request(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010));
+
+        first.ftSignatures.Should().Contain(x => x.Caption == "Duplicata" && x.Data == $"1. Duplicata de {sale.cbReceiptReference}");
+        second.ftSignatures.Should().Contain(x => x.Caption == "Duplicata" && x.Data == $"2. Duplicata de {sale.cbReceiptReference}");
+        second.ftReceiptIdentification.Should().EndWith("D2");
+        withoutReference.ftState.IsState(State.Error).Should().BeTrue("market-fr#235: a copy has to name the receipt it copies");
     }
 
     [Fact]
@@ -72,7 +59,10 @@ public class FRScenarioTests
         response.ftState.IsState(State.Error).Should().BeFalse();
         response.ftReceiptIdentification.Should().EndWith("T1");
         SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().NotBeNullOrEmpty();
-        SignatureOf(response, SignatureTypeFR.ChainHash).Should().NotBeNullOrEmpty();
+        var qr = SignatureOf(response, SignatureTypeFR.ReceiptSignature)!;
+        qr[(qr.LastIndexOf('.') + 1)..].Should().MatchRegex("^[A-Za-z0-9_-]+$", "the QR code ends with the chained signature, in Base64Url (ADR 0001)");
+        SignatureOf(response, SignatureTypeFR.ChainHash).Should().BeNull("an entry chains on the previous signature, not on a separate hash");
+        response.ftSignatures.Should().ContainSingle(x => x.Caption == "Nombre de lignes").Which.Data.Should().Be("1");
     }
 
     [Fact]
@@ -83,7 +73,7 @@ public class FRScenarioTests
 
         first.ftReceiptIdentification.Should().EndWith("T1");
         second.ftReceiptIdentification.Should().EndWith("T2");
-        SignatureOf(second, SignatureTypeFR.ChainHash).Should().NotBe(SignatureOf(first, SignatureTypeFR.ChainHash));
+        SignatureOf(second, SignatureTypeFR.ReceiptSignature).Should().NotBe(SignatureOf(first, SignatureTypeFR.ReceiptSignature));
     }
 
     [Fact]
@@ -97,12 +87,12 @@ public class FRScenarioTests
     }
 
     [Fact]
-    public async Task DailyClosing_IsSignedIntoTheGrandTotalChain()
+    public async Task DailyClosing_IsSignedIntoTheDailyClosingChain()
     {
         var response = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
         response.ftState.IsState(State.Error).Should().BeFalse();
-        response.ftReceiptIdentification.Should().EndWith("G1");
+        response.ftReceiptIdentification.Should().EndWith("Z1");
     }
 
     [Fact]
@@ -113,15 +103,53 @@ public class FRScenarioTests
         var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
         // Two 12.00 EUR sales - a closing attests the period, not its own (empty) item list.
-        SignatureOf(closing, SignatureTypeFR.DayTotals).Should().Be("24.00");
-        SignatureOf(closing, SignatureTypeFR.PerpetualTotals).Should().Be("24.00");
+        TotalsOf(closing).Should().Be(("24.00", "24.00"));
 
         await SignAsync(CashSale());
         var secondClosing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
 
-        SignatureOf(secondClosing, SignatureTypeFR.DayTotals).Should().Be("12.00", "the first closing reset the day");
-        SignatureOf(secondClosing, SignatureTypeFR.PerpetualTotals).Should().Be("36.00", "the perpetual total is never reset");
+        TotalsOf(secondClosing).Should().Be(("12.00", "36.00"), "the first closing reset the day, the perpetual total is never reset");
     }
+
+    /// <summary>
+    /// Every FR SCU prints the closing's totals as readable items, as v1.2 did: the period totals
+    /// (low word 0x0003 day, 0x0004 month, 0x0005 year) and the perpetual total (0x0007), each
+    /// starting with the grand total tax included (market-fr#221, decision 5).
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.DailyClosing0x2011, SignatureTypeFR.DayTotals)]
+    [InlineData(ReceiptCase.MonthlyClosing0x2012, SignatureTypeFR.MonthTotals)]
+    [InlineData(ReceiptCase.YearlyClosing0x2013, SignatureTypeFR.YearTotals)]
+    public async Task Closing_PrintsItsTotalsAsReadableItems(ReceiptCase closingCase, SignatureTypeFR periodType)
+    {
+        await SignAsync(CashSale());
+        var closing = await SignAsync(Request(closingCase));
+
+        ReadableTotal(SignatureOf(closing, periodType)).Should().Be("12.00");
+        ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
+        closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002, "low word 0x0002 stays reserved");
+    }
+
+    [Fact]
+    public async Task ShiftClosing_PrintsThePerpetualTotalOnly()
+    {
+        await SignAsync(CashSale());
+        var closing = await SignAsync(Request(ReceiptCase.ShiftClosing0x2010));
+
+        ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
+        closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002 || x.ftSignatureType.IsType(SignatureTypeFR.DayTotals));
+    }
+
+    [Fact]
+    public async Task Sale_PrintsNoTotalsItems()
+    {
+        var sale = await SignAsync(CashSale());
+
+        SignatureOf(sale, SignatureTypeFR.PerpetualTotals).Should().BeNull();
+    }
+
+    /// <summary>The grand total on the first line of a readable totals item ("Total TTC: 12.00").</summary>
+    protected static string? ReadableTotal(string? item) => item?.Split('\n')[0].Split(": ")[1];
 
     [Fact]
     public async Task NonEuroReceipt_IsRejected()
@@ -142,8 +170,15 @@ public class FRScenarioTests
         return response!;
     }
 
+    /// <summary>
+    /// The day and perpetual totalizers a closing attests. By default read off the printed total
+    /// items; an SCU that only carries them inside its signed data set overrides this.
+    /// </summary>
+    protected virtual (string? Day, string? Perpetual) TotalsOf(ReceiptResponse closing)
+        => (ReadableTotal(SignatureOf(closing, SignatureTypeFR.DayTotals)), ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)));
+
     /// <summary>Reads a signature off the response the way a POS would, by its FR signature type.</summary>
-    private static string? SignatureOf(ReceiptResponse response, SignatureTypeFR type)
+    protected static string? SignatureOf(ReceiptResponse response, SignatureTypeFR type)
         => response.ftSignatures.FirstOrDefault(x => x.ftSignatureType.IsType(type))?.Data;
 
     private ReceiptRequest Request(ReceiptCase receiptCase) => new()

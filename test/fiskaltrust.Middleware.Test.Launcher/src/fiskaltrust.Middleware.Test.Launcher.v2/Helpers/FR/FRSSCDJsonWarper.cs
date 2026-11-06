@@ -21,9 +21,9 @@ public class FRSSCDJsonWarper : IFRSSCD
 
     public Task<FRSSCDInfo> GetInfoAsync() => _frsscd.GetInfoAsync();
 
-    public async Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public async Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
     {
-        var (response, hash) = await _frsscd.ProcessReceiptAsync(request.JsonWarp()!, lastHash);
-        return (response.JsonWarp()!, hash);
+        var (response, signature) = await _frsscd.ProcessReceiptAsync(request.JsonWarp()!, previousSignature);
+        return (response.JsonWarp()!, signature);
     }
 }

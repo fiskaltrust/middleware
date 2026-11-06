@@ -31,7 +31,27 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         internal static string Response(string identification, string signature, string serial = "SERIAL-1", long state = 0x4652_2000_0000_0000, long signatureFormatNibble = 2, string extraItems = "", string moment = "2026-03-01T10:00:01.4560000Z", string stateData = "") =>
             "{" + (stateData.Length > 0 ? "\"ftStateData\":" + stateData + "," : "") + "\"ftQueueID\":\"" + QueueId + "\",\"ftCashBoxIdentification\":\"cashbox-fr\",\"ftReceiptIdentification\":\"" + identification + "\"," +
             "\"ftReceiptMoment\":\"" + moment + "\",\"ftState\":" + state + ",\"ftSignatures\":[" +
-            Item(0x0001, signature, signatureFormatNibble) + "," + Item(0x0002, serial, signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
+            Item(0x0001, Qr(signature, serial), signatureFormatNibble) + "," + Item(0x0009, "12345678901234", signatureFormatNibble) + extraItems + "]}";
+
+        /// <summary>
+        /// The receipt QR code for a test signature, carrying <paramref name="serial"/> where v1.2 did: a
+        /// fake JWS <c>h.p.sig</c> gets a payload with <c>csn</c>, a bare signature gets a minimal data set
+        /// whose fourth-from-last field is the serial. A data set given in full (it holds '|') is kept as is.
+        /// </summary>
+        internal static string Qr(string signature, string serial)
+        {
+            if (signature.Contains('|') || string.IsNullOrEmpty(serial))
+            {
+                return signature;
+            }
+            var dot = signature.LastIndexOf('.');
+            if (dot < 0)
+            {
+                return $"12345678901234|{serial}|1|O|.{signature}";
+            }
+            var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"csn\":\"" + serial + "\"}")).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            return $"h.{payload}.{signature.Substring(dot + 1)}";
+        }
 
         private static string Item(long type, string data, long nibble) =>
             "{\"ftSignatureFormat\":1,\"ftSignatureType\":" + (0x4652_0000_0000_0000L | (nibble << 44) | type) + ",\"Caption\":\"x\",\"Data\":\"" + data + "\"}";
@@ -82,14 +102,16 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         [Fact]
         public void RequestHash_IsTheCanonicalRequestFieldOfTheSignedDataSet()
         {
-            // An LNE data set ("Donnees signees", an information item): SIRET, issuer claims, queue and queue item
+            // An LNE QR code, the data set then its signature: SIRET, issuer claims, queue and queue item
             // ids, then the canonical request field (ADR 0013), never recomputed by the archive.
             const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
             var dataSet = string.Join("|", "12345678901234", "", "", "", "", "", QueueId, Guid.Empty, signedField, "cashbox-fr", "ft1#T1", "2026-03-01T10:00:01.4560000Z", "4652200000000001", "EUR", "4.40", "13:4.40", "1:4.40", "", "SERIAL-1", "1", "0", "");
-            var lne = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "t1", extraItems: "," + Item(0x0000, dataSet, 2)))!;
+            var lne = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", dataSet + ".t1"))!;
             var infoCert = Entry("ft1#T1", "h.p.t1", 1);
 
             lne.RequestHash.Should().Be(signedField);
+            lne.CertificateSerialNumber.Should().Be("SERIAL-1", "the serial is the data set's fourth-from-last field");
+            lne.ChainedSignature.Should().Be("t1");
             infoCert.RequestHash.Should().BeNull("the InfoCert SCU signs no request hash");
         }
 
@@ -97,7 +119,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public async Task JournalFile_WritesTheSignedRequestHash()
         {
             const string signedField = "1:n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=";
-            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "t1", extraItems: "," + Item(0x0000, "12345678901234|" + signedField + "|x", 2)))!;
+            var entry = ArchiveEntry.TryCreate(Guid.NewGuid(), QueueId, 1, Request(), Response("ft1#T1", "12345678901234|" + signedField + "|x.t1"))!;
 
             var csv = await Write(ArchiveV2Files.JournalFile(ArchiveV2Files.Journals.Single(j => j.Letter == "T")), entry);
 
@@ -194,7 +216,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var lines = tickets.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             lines.Should().HaveCount(2);
             lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;CertificateSerialNumber;SoftwareVersion;Training;Signature;Totalizer;CINormal;CIDiscounted1;CIDiscounted2;CISuperReduced1;CIZero;CIUnknown;PICash;PINonCash;PIInternal;PIUnknown");
-            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;;false;h.p.t1;;;;;;;;;;;");
+            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;;false;{Qr("h.p.t1", "SERIAL-1")};;;;;;;;;;;");
             technical.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
                 .Should().Equal(new[] { "E" }, "each ADR 0002 chain has its own journal");
             daily.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])

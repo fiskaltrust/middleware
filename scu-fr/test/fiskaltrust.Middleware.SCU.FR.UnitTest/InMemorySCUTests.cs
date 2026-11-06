@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.InMemory;
 using FluentAssertions;
 using Xunit;
@@ -22,16 +23,17 @@ public class InMemorySCUTests
     }
 
     [Fact]
-    public async Task ProcessReceiptAsync_LinksTheChain()
+    public async Task ProcessReceiptAsync_ChainsOnThePreviousSignature()
     {
         using var sut = new InMemorySCU();
 
-        var (_, firstHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
-        var (second, secondHash) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, firstHash);
+        var (first, firstSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(1), null);
+        var (second, secondSignature) = await sut.ProcessReceiptAsync(FRTestData.Request(2), firstSignature);
 
-        firstHash.Should().NotBeNullOrEmpty();
-        secondHash.Should().NotBe(firstHash);
-        second.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash)).Data.Should().Be(secondHash);
+        firstSignature.Should().Be(FRChaining.ChainedSignatureOf(SignatureData(first, SignatureTypeFR.ReceiptSignature)), "the chained value is the QR code's signature segment");
+        secondSignature.Should().Be(FRChaining.ChainedSignatureOf(SignatureData(second, SignatureTypeFR.ReceiptSignature)));
+        FRTestData.IsBase64Url(firstSignature).Should().BeTrue();
+        second.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ChainHash));
     }
 
     [Fact]
@@ -39,12 +41,12 @@ public class InMemorySCUTests
     {
         using var sut = new InMemorySCU();
 
-        var (first, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
-        var (second, _) = await sut.ProcessReceiptAsync(new ProcessRequest { ReceiptRequest = FRTestData.CashSaleRequest(), ReceiptResponse = FRTestData.Response() }, null);
+        var (first, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+        var (second, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
 
         // ECDSA signatures are randomized, but the identity signatures must not move.
         SignatureData(first, SignatureTypeFR.Siret).Should().Be(SignatureData(second, SignatureTypeFR.Siret));
-        SignatureData(first, SignatureTypeFR.CertificateSerialNumber).Should().Be("INMEMORY-0001");
+        FRReceiptQrCode.SignedContentOf(SignatureData(first, SignatureTypeFR.ReceiptSignature)).Split('|')[^4].Should().Be("INMEMORY-0001");
     }
 
     [Fact]
@@ -55,6 +57,17 @@ public class InMemorySCUTests
         var info = await sut.GetInfoAsync();
 
         info.InfoData.Should().Contain("\"SignatureCreationDataAvailable\":true");
+    }
+
+    [Fact]
+    public async Task ProcessReceiptAsync_WhenTheKeyIsGone_ReturnsTheFailureInsteadOfThrowing()
+    {
+        var sut = new InMemorySCU();
+        sut.Dispose();
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        FRTestData.ShouldBeASigningFailure(response, signature);
     }
 
     private static string SignatureData(ProcessResponse response, SignatureTypeFR type)

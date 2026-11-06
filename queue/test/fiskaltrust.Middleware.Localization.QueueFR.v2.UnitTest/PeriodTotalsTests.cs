@@ -1,15 +1,12 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Moq;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
@@ -20,11 +17,11 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 /// </summary>
 public class PeriodTotalsTests
 {
-    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd, params ftQueueItem[] existingQueueItems)
+    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd, ftQueueFR? stored = null) => CreatePipeline(sscd, new StoredChainState(stored));
+
+    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd, StoredChainState state)
     {
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        repository.Setup(x => x.GetAsync()).ReturnsAsync(existingQueueItems);
-        return new FRSigningPipeline(sscd, new FRChainStateProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        return new FRSigningPipeline(sscd, state.Provider());
     }
 
     private static ProcessCommandRequest Sale(decimal normal, decimal reduced1 = 0m, decimal cash = 0m)
@@ -101,6 +98,57 @@ public class PeriodTotalsTests
     }
 
     [Fact]
+    public async Task MonthlyClosingWithoutADailyOne_AlsoClosesTheDay()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        await pipeline.SignAsync(Sale(normal: 3.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        sscd.Calls[1].periodTotals!.Current.Totalizer.Should().Be(10.00m);
+        sscd.Calls[3].periodTotals!.Current.Totalizer.Should().Be(3.00m, "the monthly closing closed the day too, as in v1.2");
+    }
+
+    [Fact]
+    public async Task YearlyClosing_AlsoClosesTheMonthAndTheDay_ButNotTheShift()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.YearlyClosing0x2013));
+        await pipeline.SignAsync(Sale(normal: 2.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.ShiftClosing0x2010));
+
+        sscd.Calls[3].periodTotals!.Current.Totalizer.Should().Be(2.00m, "the yearly closing closed the day");
+        sscd.Calls[4].periodTotals!.Current.Totalizer.Should().Be(2.00m, "the yearly closing closed the month");
+        sscd.Calls[5].periodTotals!.Current.Totalizer.Should().Be(12.00m, "no closing but its own ends a shift");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.ShiftClosing0x2010, false, new[] { FRTotalsPeriod.Shift })]
+    [InlineData(ReceiptCase.DailyClosing0x2011, false, new[] { FRTotalsPeriod.Day })]
+    [InlineData(ReceiptCase.MonthlyClosing0x2012, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month })]
+    [InlineData(ReceiptCase.YearlyClosing0x2013, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year })]
+    [InlineData(ReceiptCase.InitialOperationReceipt0x4001, false, new[] { FRTotalsPeriod.Day })]
+    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year })]
+    [InlineData(ReceiptCase.ZeroReceipt0x2000, false, new FRTotalsPeriod[0])]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, false, new FRTotalsPeriod[0])]
+    [InlineData(ReceiptCase.YearlyClosing0x2013, true, new FRTotalsPeriod[0])]
+    public void PeriodsClosedBy_FollowsTheV12Cascade(ReceiptCase receiptCase, bool training, FRTotalsPeriod[] expected)
+    {
+        var receiptCaseValue = receiptCase.WithCountry("FR");
+        var request = new ReceiptRequest { ftReceiptCase = training ? receiptCaseValue.WithFlag(ReceiptCaseFlags.Training) : receiptCaseValue };
+
+        FRPeriodTotalsAccumulator.PeriodsClosedBy(request).Should().Equal(expected);
+    }
+
+    [Fact]
     public async Task PerpetualTotalIsReportedOnEveryClosingAndNeverReset()
     {
         var sscd = new FakeFRSSCD();
@@ -132,6 +180,54 @@ public class PeriodTotalsTests
         sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "a table check is not turnover");
     }
 
+    /// <summary>
+    /// A sale without fiscalization obligation is a v1.2 foreign sale (v0 0x0E): signed in the
+    /// bill chain, outside the grand totals.
+    /// </summary>
+    [Fact]
+    public async Task SaleWithoutObligation_StaysOutOfTheGrandTotals()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var withoutObligation = Sale(normal: 50.00m);
+        withoutObligation.ReceiptRequest.ftReceiptCase = ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003.WithCountry("FR");
+        await pipeline.SignAsync(withoutObligation);
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        var totals = sscd.Calls.Last().periodTotals!;
+        totals.Current.Totalizer.Should().Be(10.00m);
+        totals.Perpetual.Totalizer.Should().Be(10.00m);
+        withoutObligation.ReceiptResponse.ftReceiptIdentification.Should().EndWith("B1");
+    }
+
+    /// <summary>
+    /// An e-commerce sale and a sale flagged as made in a foreign country are tickets and count in
+    /// the grand totals: NF525 exempts neither (market-fr#221).
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.ECommerce0x0004, false)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, true)]
+    public async Task ECommerceAndForeignSales_CountInTheGrandTotals(ReceiptCase receiptCase, bool saleInForeignCountry)
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var sale = Sale(normal: 50.00m);
+        sale.ReceiptRequest.ftReceiptCase = saleInForeignCountry
+            ? receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.SaleInForeignCountry)
+            : receiptCase.WithCountry("FR");
+        await pipeline.SignAsync(sale);
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        var totals = sscd.Calls.Last().periodTotals!;
+        totals.Current.Totalizer.Should().Be(60.00m);
+        totals.Perpetual.Totalizer.Should().Be(60.00m);
+        sale.ReceiptResponse.ftReceiptIdentification.Should().EndWith("T2");
+    }
+
     [Fact]
     public async Task NonClosingReceipts_CarryNoPeriodTotals()
     {
@@ -153,17 +249,17 @@ public class PeriodTotalsTests
 
         await pipeline.SignAsync(Sale(normal: 10.00m));
 
-        sscd.ThrowOnProcess = () => new FRSigningUnavailableException();
+        sscd.FailWith = "signing unavailable";
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
-        sscd.ThrowOnProcess = null;
+        sscd.FailWith = null;
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
         sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "the failed closing must not have reset the day");
     }
 
     [Fact]
-    public async Task TrainingClosing_CarriesNoTotalsAndLeavesTheRealPeriodOpen()
+    public async Task TrainingClosing_PrintsTheLiveTotalsAndLeavesTheRealPeriodOpen()
     {
         var sscd = new FakeFRSSCD();
         var pipeline = CreatePipeline(sscd);
@@ -173,7 +269,10 @@ public class PeriodTotalsTests
         trainingClosing.ReceiptRequest.ftReceiptCase = trainingClosing.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
         await pipeline.SignAsync(trainingClosing);
 
-        sscd.Calls.Last().periodTotals.Should().BeNull("a training closing attests no real turnover");
+        // v1.2 (workerFR TrainingRequest): a training closing prints the live figures of the real
+        // period, without resetting them (market-fr#221, decision 12).
+        sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "a training closing prints the live period totals");
+        trainingClosing.ReceiptResponse.ftReceiptIdentification.Should().EndWith("X1");
 
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
@@ -181,59 +280,92 @@ public class PeriodTotalsTests
     }
 
     [Fact]
-    public async Task StoredTrainingClosing_DoesNotCloseTheRealPeriodOnReplay()
+    public async Task TotalsResumeFromTheV1ColumnsOfFtQueueFR()
     {
         var sscd = new FakeFRSSCD();
-        var pipeline = CreatePipeline(sscd,
-            StoredReceipt(queueRow: 1, ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T1", amount: 30.00m),
-            StoredReceipt(queueRow: 2, ReceiptCase.DailyClosing0x2011, "ft1#X1", amount: 0m, training: true));
-
-        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
-
-        sscd.Calls.Single().periodTotals!.Current.Totalizer.Should().Be(30.00m, "a stored training closing is not a boundary of the real day");
-    }
-
-    [Fact]
-    public async Task TotalsResumeFromTheStoredQueueItemsSinceTheLastClosing()
-    {
-        var sscd = new FakeFRSSCD();
-        var pipeline = CreatePipeline(sscd,
-            StoredReceipt(queueRow: 1, ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T1", amount: 30.00m),
-            StoredReceipt(queueRow: 2, ReceiptCase.DailyClosing0x2011, "ft1#G1", amount: 0m),
-            StoredReceipt(queueRow: 3, ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T2", amount: 7.00m));
+        var pipeline = CreatePipeline(sscd, new ftQueueFR { ftQueueFRId = Guid.NewGuid(), GDayTotalizer = 7.00m, TTotalizer = 30.00m, ITotalizer = 7.00m });
 
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
         var totals = sscd.Calls.Single().periodTotals!;
-        totals.Current.Totalizer.Should().Be(7.00m, "only the receipts after the stored daily closing count");
-        totals.Perpetual.Totalizer.Should().Be(37.00m, "the perpetual total spans the stored closing");
+        totals.Current.Totalizer.Should().Be(7.00m, "the day accumulates in GDayTotalizer");
+        totals.Perpetual.Totalizer.Should().Be(37.00m, "the perpetual total is the ticket plus the invoice total, as in v1");
     }
 
-    private static ftQueueItem StoredReceipt(long queueRow, ReceiptCase receiptCase, string identification, decimal amount, bool training = false) => new()
+    [Fact]
+    public async Task TotalsAreStoredInFtQueueFR()
     {
-        ftQueueItemId = Guid.NewGuid(),
-        ftQueueRow = queueRow,
-        request = System.Text.Json.JsonSerializer.Serialize(new ReceiptRequest
-        {
-            ftReceiptCase = training ? receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.Training) : receiptCase.WithCountry("FR"),
-            Currency = Currency.EUR,
-            cbChargeItems = amount == 0m ? [] : [new ChargeItem { Amount = amount, Currency = Currency.EUR, ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") }],
-            cbPayItems = [],
-        }),
-        response = System.Text.Json.JsonSerializer.Serialize(new ReceiptResponse
-        {
-            ftState = (State) StateFR.Success,
-            ftReceiptIdentification = identification,
-            ftQueueID = Guid.NewGuid(),
-            ftQueueItemID = Guid.NewGuid(),
-            ftReceiptMoment = DateTime.UtcNow,
-            ftSignatures = [],
-        }),
-    };
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
 
-    /// <summary>Named like the SCU packages' exception - the queue recognizes it by type name.</summary>
-    private class FRSigningUnavailableException : Exception
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await state.CommitAsync();
+
+        var stored = await state.ReadAsync();
+        stored.GDayTotalizer.Should().Be(0m, "the daily closing reset the day");
+        stored.GMonthTotalizer.Should().Be(10.00m);
+        stored.GMonthCITotalNormal.Should().Be(10.00m);
+        stored.GMonthPITotalCash.Should().Be(10.00m);
+        stored.TTotalizer.Should().Be(10.00m);
+    }
+
+    /// <summary>
+    /// v1.2 keeps a totalizer per non-sales chain and the moment and queue item of the last closing
+    /// of each period. v2 writes them too, next to its ADR 0012 columns (market-fr#221, decision 10).
+    /// </summary>
+    [Fact]
+    public async Task TheV12ColumnsAreWrittenToo()
     {
-        public FRSigningUnavailableException() : base("signing unavailable") { }
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+
+        var proForma = Sale(normal: 7.00m);
+        proForma.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x0007).WithCountry("FR");
+        await pipeline.SignAsync(proForma);
+
+        var payIn = CommandRequest(ReceiptCase.PaymentTransfer0x0002);
+        payIn.ReceiptRequest.cbPayItems = [new PayItem { Amount = 200.00m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }];
+        await pipeline.SignAsync(payIn);
+
+        var training = Sale(normal: 3.00m);
+        training.ReceiptRequest.ftReceiptCase = training.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(training);
+
+        var monthly = CommandRequest(ReceiptCase.MonthlyClosing0x2012);
+        await pipeline.SignAsync(monthly);
+        await state.CommitAsync();
+
+        var stored = await state.ReadAsync();
+        stored.ATotalizer.Should().Be(10.00m, "the archive totals take the sales since the last archive");
+        stored.ACITotalNormal.Should().Be(10.00m);
+        stored.BTotalizer.Should().Be(7.00m);
+        stored.BCITotalNormal.Should().Be(7.00m);
+        stored.PTotalizer.Should().Be(0m, "a payment proof has no charge items");
+        stored.PPITotalCash.Should().Be(200.00m);
+        stored.XTotalizer.Should().Be(3.00m);
+        stored.GLastMonthMoment.Should().Be(monthly.ReceiptResponse.ftReceiptMoment);
+        stored.GLastMonthQueueItemId.Should().Be(monthly.ReceiptResponse.ftQueueItemID);
+        stored.GLastDayQueueItemId.Should().Be(monthly.ReceiptResponse.ftQueueItemID, "a monthly closing also closes the day");
+        stored.GLastYearQueueItemId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrainingClosing_LeavesTheV12ClosingColumnsAlone()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        var trainingClosing = CommandRequest(ReceiptCase.DailyClosing0x2011);
+        trainingClosing.ReceiptRequest.ftReceiptCase = trainingClosing.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(trainingClosing);
+        await state.CommitAsync();
+
+        (await state.ReadAsync()).GLastDayQueueItemId.Should().BeNull();
     }
 }

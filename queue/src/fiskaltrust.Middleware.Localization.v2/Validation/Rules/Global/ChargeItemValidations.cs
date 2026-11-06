@@ -9,13 +9,14 @@ namespace fiskaltrust.Middleware.Localization.v2.Validation.Rules.Global;
 
 public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 {
-    public ChargeItemValidations(ftQueue? queue = null)
+    /// <param name="zeroVatRateNatureNotRequired">Lets a market accept zero VAT rate charge items without a nature of VAT, e.g. when the exemption is given elsewhere.</param>
+    public ChargeItemValidations(ftQueue? queue = null, Func<ChargeItem, bool>? zeroVatRateNatureNotRequired = null)
     {
         Include(new MandatoryFields());
         Include(new VatCalculation());
         Include(new NegativeAmounts());
         Include(new DiscountLimit());
-        Include(new ZeroVatRateMustHaveNature());
+        Include(new ZeroVatRateMustHaveNature(zeroVatRateNatureNotRequired));
         Include(new CountryConsistency(queue));
     }
 
@@ -93,7 +94,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 
     public class ZeroVatRateMustHaveNature : AbstractValidator<ReceiptRequest>
     {
-        public ZeroVatRateMustHaveNature()
+        public ZeroVatRateMustHaveNature(Func<ChargeItem, bool>? natureNotRequired = null)
         {
             When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten), () =>
             {
@@ -101,7 +102,7 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                 {
                     chargeItem.RuleFor(x => x.ftChargeItemCase)
                         .Must(caseValue => ((long) caseValue & 0xFF00) != 0x0000)
-                        .When(x => x.VATRate == 0)
+                        .When(x => x.VATRate == 0 && !(natureNotRequired?.Invoke(x) ?? false))
                         .WithMessage("Charge item with zero VAT rate must have a NatureOfVat set (0xFF00 bits must not be 0x0000).")
                         .WithErrorCode("ZeroVatRateMissingNature");
                 });

@@ -51,6 +51,15 @@ public class MiddlewareStateDataFR
     public string? ftTypeOfService { get; set; }
 
     /// <summary>
+    /// The reprint number of a copy (0x3010): 1 for the first fiscal copy of the copied receipt
+    /// (R13 ENC-DUP-PRN-NUM, market-fr#235). Every FR SCU reads it from here and signs it.
+    /// Omitted on every other receipt and on a training copy.
+    /// </summary>
+    [JsonPropertyName(fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.CopyNumberProperty)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? CopyNumber { get; set; }
+
+    /// <summary>
     /// The receipt's totals as the queue computed them when it signed: the receipt's own totals on the
     /// sales chains, the period and perpetual totals on a closing. The archive reads them from here, so
     /// they are stored data and never recomputed at export (archive-v2 §1.2, §1.3).

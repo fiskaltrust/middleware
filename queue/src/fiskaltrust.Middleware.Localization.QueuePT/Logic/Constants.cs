@@ -32,6 +32,9 @@ public static class Constants
         M41 = 0x4100,
         M42 = 0x4200,
         M43 = 0x4300,
+        M44 = 0x4400,
+        M45 = 0x4500,
+        M46 = 0x4600,
         M99 = 0x9900
     }
 
@@ -185,6 +188,21 @@ public static class Constants
                 Code = "M43",
                 Mention = "IVA - autoliquidação",
                 Law = "Decreto-Lei n.º 362/99, de 16 de setembro"
+            }},
+            { TaxExemptionCode.M44, new TaxExemptionInfo {
+                Code = "M44",
+                Mention = "IVA – Regras específicas - artigo 6.º",
+                Law = "Artigo 6.º do CIVA"
+            }},
+            { TaxExemptionCode.M45, new TaxExemptionInfo {
+                Code = "M45",
+                Mention = "IVA – regime transfronteiriço de isenção",
+                Law = "Artigo 58.º-A do CIVA"
+            }},
+            { TaxExemptionCode.M46, new TaxExemptionInfo {
+                Code = "M46",
+                Mention = "IVA – e-TaxFree",
+                Law = "Decreto-Lei n.º 19/2017, de 14 de fevereiro"
             }},
             { TaxExemptionCode.M99, new TaxExemptionInfo {
                 Code = "M99",

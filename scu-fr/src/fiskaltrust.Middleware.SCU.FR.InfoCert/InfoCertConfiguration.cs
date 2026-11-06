@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
+using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert;
 
@@ -24,12 +26,38 @@ public class InfoCertConfiguration
     /// <summary>Serial number of the signing certificate; printed alongside every signature.</summary>
     public string CertificateSerialNumber { get; set; } = "";
 
-    /// <summary>The Infocert attestation number issued for the certified solution.</summary>
+    /// <summary>
+    /// The Infocert attestation number issued for the certified solution: the product number the
+    /// NF525 mention prints (NF525 V2.3 §6.1.6.1, market-fr#131).
+    /// </summary>
     public string AttestationNumber { get; set; } = "";
 
+    /// <summary>
+    /// The NF525 software category, <c>A</c>, <c>B</c> or <c>C</c> (NF525 V2.3 §2.1), printed in the
+    /// NF525 mention (market-fr#131). Without it no mention is emitted.
+    /// </summary>
+    public string? SoftwareCategory { get; set; }
+
+    /// <summary>The certified software's name; optional in the NF525 mention.</summary>
     public string SoftwareName { get; set; } = "fiskaltrust.Middleware";
 
+    /// <summary>The certified software's version, as on the certificate; printed in the NF525 mention.</summary>
     public string SoftwareVersion { get; set; } = "";
+
+    /// <summary>Issuer claim: RCS registration, e.g. "RCS Nanterre B 642036065" (SOC-RCS, market-fr#141).</summary>
+    public string? Rcs { get; set; }
+
+    /// <summary>Issuer claim: NAF/APE code (SOC-NAF).</summary>
+    public string? Naf { get; set; }
+
+    /// <summary>Issuer claim: legal form and share capital, e.g. "SAS, au capital de 500000 EUR" (SOC-TYPE, SOC-CAPITAL).</summary>
+    public string? LegalForm { get; set; }
+
+    /// <summary>Issuer claim: <c>debits</c> or <c>receipts</c> (SOC-REF-REGTVA, BT-8).</summary>
+    public string? VatOption { get; set; }
+
+    /// <summary>Issuer claim: electronic address, <c>SIREN</c> or <c>SIREN_XXX</c> under scheme 0225 (BT-34).</summary>
+    public string? ElectronicAddress { get; set; }
 
     public static InfoCertConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
@@ -45,6 +73,13 @@ public class InfoCertConfiguration
         if (string.IsNullOrWhiteSpace(result.PrivateKey))
         {
             throw new FRValidationException("The Infocert SCU requires a PrivateKey (base64 encoded secp256r1 key) in its configuration.");
+        }
+
+        FRIssuerClaims.ValidateVatOption("Infocert", result.VatOption);
+
+        if (!string.IsNullOrEmpty(result.SoftwareCategory) && System.Array.IndexOf(InfoCertMention.Categories, result.SoftwareCategory) < 0)
+        {
+            throw new FRValidationException($"The Infocert SCU SoftwareCategory must be A, B or C (NF525 V2.3 §2.1), not '{result.SoftwareCategory}'.");
         }
 
         return result;

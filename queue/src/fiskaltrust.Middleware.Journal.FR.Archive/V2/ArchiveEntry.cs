@@ -18,9 +18,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private const long CountryMask = unchecked((long) 0xFFFF_0000_0000_0000);
         private const long CountryFR = 0x4652_0000_0000_0000;
         private const long ReceiptSignatureType = 0x0001;
-        private const long CertificateSerialNumberType = 0x0002;
         private const long SiretType = 0x0009;
-        private const long InformationType = 0x0000;
 
         // FRCanonicalRequest.SignedField: the canonical-form version, a colon, the padded Base64 SHA-256 (ADR 0013).
         private static readonly Regex SignedRequestHashField = new Regex("^[0-9]+:[A-Za-z0-9+/]{43}=$", RegexOptions.CultureInvariant);
@@ -36,7 +34,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             QueueItemId = queueItemId;
             QueueId = queueId;
             QueueRow = queueRow;
-            RequestHash = SignedRequestHash(response);
+            RequestHash = SignedRequestHash(signature);
             Request = request;
             Response = response;
             Chain = chain;
@@ -46,7 +44,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             ReceiptMoment = Moment(response, "ftReceiptMoment") ?? DateTime.MinValue;
             ReceiptCase = Long(request, "ftReceiptCase") ?? 0;
             State = Long(response, "ftState") ?? 0;
-            CertificateSerialNumber = SignatureData(response, CertificateSerialNumberType);
+            CertificateSerialNumber = SignedCertificateSerialNumber(signature);
             Siret = SignatureData(response, SiretType);
         }
 
@@ -202,20 +200,57 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private static bool IsErrorState(long state) => (state & 0xFFFF_FFFF) is 0xEEEE_EEEE or 0xFFFF_FFFF;
 
         /// <summary>
-        /// The request field of the LNE data set ("Donnees signees", an information item). The data set is
-        /// '|'-separated and holds exactly one field of the <c>version:hash</c> shape.
+        /// The signed content of the receipt QR code (the <c>ReceiptSignature</c> item): everything before
+        /// its last '.', since a Base64Url signature has none. A '|'-separated data set (LNE, self-certified)
+        /// or a JWS <c>header.payload</c> (Infocert).
         /// </summary>
-        private static string? SignedRequestHash(JsonElement response)
+        private static string SignedContent(string qrCode)
         {
-            foreach (var dataSet in SignatureItems(response, InformationType))
+            var dot = qrCode.LastIndexOf('.');
+            return dot < 0 ? "" : qrCode.Substring(0, dot);
+        }
+
+        private static bool IsDataSet(string signedContent) => signedContent.IndexOf('|') >= 0;
+
+        /// <summary>
+        /// The request field of the LNE data set the QR code carries. The data set is '|'-separated and
+        /// holds exactly one field of the <c>version:hash</c> shape. Null for a JWS (Infocert signs none).
+        /// </summary>
+        private static string? SignedRequestHash(string qrCode)
+        {
+            var content = SignedContent(qrCode);
+            return IsDataSet(content) ? content.Split('|').FirstOrDefault(f => SignedRequestHashField.IsMatch(f)) : null;
+        }
+
+        /// <summary>
+        /// The signing certificate's serial number, read from the signed content as v1.2 carried it: the
+        /// <c>csn</c> of a JWS payload, or the fourth-from-last field of a data set (before the chain
+        /// counter, the start-of-chain flag and the previous signature, ADR 0001). Null when absent.
+        /// </summary>
+        private static string? SignedCertificateSerialNumber(string qrCode)
+        {
+            var content = SignedContent(qrCode);
+            if (IsDataSet(content))
             {
-                var field = dataSet?.Split('|').FirstOrDefault(f => SignedRequestHashField.IsMatch(f));
-                if (field is not null)
-                {
-                    return field;
-                }
+                var fields = content.Split('|');
+                return fields.Length >= 4 && fields[fields.Length - 4].Length > 0 ? fields[fields.Length - 4] : null;
             }
-            return null;
+            var segments = content.Split('.');
+            if (segments.Length != 2)
+            {
+                return null;
+            }
+            try
+            {
+                var payload = segments[1].Replace('-', '+').Replace('_', '/');
+                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                using var json = JsonDocument.Parse(Convert.FromBase64String(payload));
+                return json.RootElement.ValueKind == JsonValueKind.Object ? String(json.RootElement, "csn") : null;
+            }
+            catch (Exception ex) when (ex is FormatException || ex is JsonException)
+            {
+                return null;
+            }
         }
 
         /// <summary>
