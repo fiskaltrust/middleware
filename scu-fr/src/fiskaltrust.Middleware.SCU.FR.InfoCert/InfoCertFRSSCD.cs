@@ -112,8 +112,8 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         var jetPayload = InfoCertJetPayload.TryCreate(request, previousSignature, _configuration.CertificateSerialNumber);
         var (jws, signature) = _signer.Sign(jetPayload is null ? JsonSerializer.Serialize(payload) : JsonSerializer.Serialize(jetPayload));
 
-        response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "www.fiskaltrust.fr", jws, SignatureFormat.QRCode);
-        response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
+        // The QR code is the compact JWS; the certificate serial is its payload's csn, as in v1.2.
+        response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
 

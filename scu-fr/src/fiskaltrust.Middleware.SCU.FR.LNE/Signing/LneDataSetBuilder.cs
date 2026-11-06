@@ -42,6 +42,8 @@ internal static class LneDataSetBuilder
             configuration.ElectronicAddress ?? "",
             response.ftQueueID.ToString(),
             response.ftQueueItemID.ToString(),
+            // market-fr#225, ADR 0013: the hash of the request in its canonical form, as version:base64.
+            FRCanonicalRequest.SignedField(request),
             response.ftCashBoxIdentification ?? "",
             response.ftReceiptIdentification ?? "",
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),

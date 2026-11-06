@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 /// FR-localized signature types. The layout follows the v2 convention
 /// (<c>0xCCCC_2000_0000_0XXX</c>, "2000" marking the v2 data format); the low word keeps the
 /// numbering the v1 QueueFR localization used, so a POS that already renders French signatures
-/// keeps recognizing them: 1 = the NF525 token, 3/4/5 = day/month/year totals, 6 = archive
+/// keeps recognizing them: 1 = the NF525 QR code, 2 = shift totals (reserved), 3/4/5 = day/month/year totals, 6 = archive
 /// totals, 7 = perpetual totals.
 /// </summary>
 public enum SignatureTypeFR : long
@@ -16,13 +16,19 @@ public enum SignatureTypeFR : long
     Information = 0x4652_2000_0000_0000,
 
     /// <summary>
-    /// The NF525 receipt signature, in Base64Url — a compact ES256 JWS for Infocert, a bare
-    /// signature for LNE. The next entry of the same chain covers it (ADR 0001).
+    /// The receipt QR code (format QR code, caption <c>www.fiskaltrust.fr</c>, as in v1.2): the signed
+    /// content and its signature — a compact ES256 JWS for Infocert, <c>&lt;data set&gt;.&lt;signature&gt;</c>
+    /// for LNE and the self-certified SCU (<see cref="Helpers.FRReceiptQrCode"/>). The next entry of the
+    /// same chain covers the signature after the last <c>.</c> (ADR 0001).
     /// </summary>
     ReceiptSignature = 0x4652_2000_0000_0001,
 
-    /// <summary>Serial number of the certificate the signature was created with.</summary>
-    CertificateSerialNumber = 0x4652_2000_0000_0002,
+    /// <summary>
+    /// v1.2's Shift Totals item. Not emitted by v2; reserved so the low word keeps its v1.2 meaning.
+    /// The certificate serial number has no item of its own: it is part of the signed content in the
+    /// QR code, as in v1.2 (<c>csn</c>).
+    /// </summary>
+    ShiftTotals = 0x4652_2000_0000_0002,
 
     DayTotals = 0x4652_2000_0000_0003,
     MonthTotals = 0x4652_2000_0000_0004,

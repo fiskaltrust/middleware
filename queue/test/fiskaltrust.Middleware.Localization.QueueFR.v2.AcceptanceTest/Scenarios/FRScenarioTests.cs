@@ -72,7 +72,8 @@ public class FRScenarioTests
         response.ftState.IsState(State.Error).Should().BeFalse();
         response.ftReceiptIdentification.Should().EndWith("T1");
         SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().NotBeNullOrEmpty();
-        SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().MatchRegex("^[A-Za-z0-9_-]+$", "chained signatures are stored in Base64Url (ADR 0001)");
+        var qr = SignatureOf(response, SignatureTypeFR.ReceiptSignature)!;
+        qr[(qr.LastIndexOf('.') + 1)..].Should().MatchRegex("^[A-Za-z0-9_-]+$", "the QR code ends with the chained signature, in Base64Url (ADR 0001)");
         SignatureOf(response, SignatureTypeFR.ChainHash).Should().BeNull("an entry chains on the previous signature, not on a separate hash");
     }
 
