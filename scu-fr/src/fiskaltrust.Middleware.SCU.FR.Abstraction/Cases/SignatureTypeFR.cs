@@ -45,6 +45,13 @@ public enum SignatureTypeFR : long
 
     /// <summary>The receipt was stored but not signed, because no signing SCU is configured.</summary>
     StoredNotSigned = 0x4652_2000_0000_000B,
+
+    /// <summary>
+    /// One line of the receipt's VAT summary (Infocert R13 v4.2 <i>Récapitulatif</i>): amount before
+    /// VAT, VAT and amount including VAT of one rate. Printed, so a signature item (ADR 0011);
+    /// emitted by the Infocert SCU only.
+    /// </summary>
+    VatSummary = 0x4652_2000_0000_000C,
 }
 
 public static class SignatureTypeFRExt
