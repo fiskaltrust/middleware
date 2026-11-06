@@ -109,7 +109,8 @@ public class ArchiveStateDataTests
             Perpetual = new FRTotals { Totalizer = 1000m, CIReduced1 = 400m, CINormal = 600m, PICash = 1000m },
         };
 
-        var state = Apply(request, FRReceiptChain.GrandTotal, period);
+        // The period totals decide, whatever the closing's chain.
+        var state = Apply(request, FRReceiptChain.Log, period);
 
         state.Totals!.Totalizer.Should().Be(30m);
         state.Totals.CIDiscounted1.Should().Be(30m);

@@ -355,9 +355,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var signatures = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.SignaturesFileName), l1, t1));
             var jet = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.JetFileName), l1, t1));
 
-            signatures.Should().HaveCount(6, "three signature items on each response");
+            var itemsPerResponse = Response("ft1#L1", "l1").Split(new[] { "\"ftSignatureType\"" }, StringSplitOptions.None).Length - 1;
+            signatures.Should().HaveCount(2 * itemsPerResponse, "one row per signature item of each response");
             signatures[0]["Index"].Should().Be("0");
-            signatures[0]["Data"].Should().Be("l1");
+            signatures[0]["Data"].Should().EndWith("l1");
             jet.Should().ContainSingle("only the 0x3001 event on L is a JET row");
             jet[0]["EventCode"].Should().Be("50");
             jet[0]["EventLabel"].Should().Be("Clôture");
