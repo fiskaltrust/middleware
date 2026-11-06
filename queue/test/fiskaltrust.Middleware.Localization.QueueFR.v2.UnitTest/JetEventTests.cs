@@ -1,3 +1,4 @@
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using Moq;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.Helpers;

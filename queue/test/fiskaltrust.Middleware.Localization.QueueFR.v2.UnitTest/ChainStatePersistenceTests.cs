@@ -1,3 +1,4 @@
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;

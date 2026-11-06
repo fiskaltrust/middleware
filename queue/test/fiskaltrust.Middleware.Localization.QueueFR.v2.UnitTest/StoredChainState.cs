@@ -1,3 +1,4 @@
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;

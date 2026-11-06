@@ -1,3 +1,4 @@
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
