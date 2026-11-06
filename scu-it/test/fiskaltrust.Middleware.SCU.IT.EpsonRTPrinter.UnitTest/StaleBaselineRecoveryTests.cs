@@ -98,6 +98,35 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             Assert.Equal(1, printer.StatusQueriesBeforeFirstSend);
         }
 
+        [Fact]
+        public async Task PrinterLeftInZState_IsResetSoTheBaselineCanBeReadAndTheLostDocumentRecovered()
+        {
+            // A closure from the printer's keyboard leaves it in the Z state, where it refuses the last-document
+            // query; without a reset the receipt runs without a baseline and ends in "unknown document state".
+            var printer = new ScriptedPrinter { InZStateUntilReset = true };
+            var sut = CreateSut(printer);
+
+            var response = await Sign(sut, "first-after-closure");
+
+            Assert.False(HasFailed(response), FailureData(response));
+            Assert.Equal("0003", DocNumber(response));
+            Assert.Equal(1, printer.Resets);
+            Assert.Equal(2, printer.StatusQueriesBeforeFirstSend);
+        }
+
+        [Fact]
+        public async Task PrinterLeftInZState_WhenTheResetTimesOut_SkipsTheSecondReadAndRefusesToGuess()
+        {
+            var printer = new ScriptedPrinter { InZStateUntilReset = true, ResetTimesOut = true };
+            var sut = CreateSut(printer);
+
+            var response = await Sign(sut, "first-after-closure");
+
+            Assert.Equal(EpsonRTPrinterSCU.UnknownDocumentStateError, FailureData(response));
+            Assert.Equal(1, printer.Resets);
+            Assert.Equal(1, printer.StatusQueriesBeforeFirstSend);
+        }
+
         private static bool HasFailed(ProcessResponse response) =>
             ((ulong) response.ReceiptResponse.ftState & 0xEEEE_EEEE) == 0xEEEE_EEEE;
 
@@ -156,12 +185,21 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             /// <summary>1-based index of the first send that actually puts a document on paper.</summary>
             public int FirstPrintingSend { get; set; } = 1;
 
+            /// <summary>Outside the Registration State the printer refuses the status read until a 1-088 reset.</summary>
+            public bool InZStateUntilReset { get; set; }
+
+            public int Resets { get; private set; }
+
+            /// <summary>The 1-088 reset is not answered within its timeout.</summary>
+            public bool ResetTimesOut { get; set; }
+
             public int StatusQueries { get; private set; }
             public int Sends { get; private set; }
 
             /// <summary>
-            /// Status reads answered before the first send. A receipt that re-reads its baseline shows 1
-            /// here; one that reuses a cached baseline shows 0.
+            /// Status reads asked before the first send, refused ones included. A receipt that re-reads its
+            /// baseline shows 1 here, 2 when a refused read was followed by a reset and a second read; one that
+            /// reuses a cached baseline shows 0.
             /// </summary>
             public int StatusQueriesBeforeFirstSend { get; private set; }
 
@@ -174,9 +212,25 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
             public Task<HttpResponseMessage> SendCommandAsync(string payload, TimeSpan? timeout = null)
             {
+                if (payload.Contains("resetPrinter"))
+                {
+                    Resets++;
+                    if (ResetTimesOut)
+                    {
+                        throw new TaskCanceledException("The reset was not answered.");
+                    }
+                    InZStateUntilReset = false;
+                    return Task.FromResult(Soap(SoapSerializer.Serialize(new PrinterCommandResponse { Success = true })));
+                }
+
                 if (payload.Contains(LastEmittedDocCommand))
                 {
                     StatusQueries++;
+                    if (InZStateUntilReset)
+                    {
+                        return Task.FromResult(Soap(SoapSerializer.Serialize(new PrinterCommandResponse { Success = false })));
+                    }
+
                     if (StatusQueries > StatusQueriesBeforeFailure)
                     {
                         throw new HttpRequestException("the printer could not be reached");

@@ -597,21 +597,14 @@ public static class AADEMappings
         }
     }
 
-    public static bool RequiresCustomerInfo(InvoiceType invoiceType)
+    /// <summary>
+    /// Retail types forbid a counterpart (AADE error 205) unless the document is a fuel document
+    /// (invoiceHeader.fuelInvoice = true). 11.2 does not allow fuelInvoice at all.
+    /// </summary>
+    public static bool SupportsCounterpart(InvoiceType invoiceType, bool isFuelInvoice = false) => invoiceType switch
     {
-        return invoiceType switch
-        {
-            InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 or InvoiceType.Item93 => true,
-            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
-            // Any invoice type not listed above (incl. the v2.0.1 delivery-note types
-            // 9.1/9.2/10.1/10.2) falls back to false rather than throwing.
-            _ => false,
-        };
-    }
-
-    public static bool SupportsCounterpart(InvoiceType invoiceType) => invoiceType switch
-    {
-        InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+        InvoiceType.Item112 => false,
+        InvoiceType.Item111 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => isFuelInvoice,
         _ => true
     };
 

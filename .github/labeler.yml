@@ -63,6 +63,12 @@ market-me:
           - "queue/src/fiskaltrust.Middleware.Localization.QueueME/**/*"
           - "scu-me/**/*"
 
+market-pl:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "queue/src/fiskaltrust.Middleware.Localization.QueuePL/**/*"
+          - "scu-pl/**/*"
+
 market-pt:
   - changed-files:
       - any-glob-to-any-file:
@@ -206,3 +212,16 @@ scu-it-epsonrtserver:
       - any-glob-to-any-file:
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.Abstraction/**/*"
           - "scu-it/src/fiskaltrust.Middleware.SCU.IT.EpsonRTServer/**/*"
+
+scu-pl-inmemory:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "scu-pl/src/fiskaltrust.Middleware.SCU.PL.Abstraction/**/*"
+          - "scu-pl/src/fiskaltrust.Middleware.SCU.PL.InMemory/**/*"
+
+scu-pl-posnet:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "scu-pl/src/fiskaltrust.Middleware.SCU.PL.Abstraction/**/*"
+          - "scu-pl/src/fiskaltrust.Middleware.SCU.PL.PosNet/**/*"
+          - "scu-pl/src/fiskaltrust.Middleware.SCU.PL.PosNet.Android/**/*"

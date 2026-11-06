@@ -41,6 +41,16 @@ public enum CustomerCountryCategory
 
 public static class ReceiptRequestExtensions
 {
+    /// <summary>
+    /// The counterpart override from <c>ftReceiptCaseData.GR.mydataoverride.invoice.counterpart</c>, or null.
+    /// </summary>
+    public static PartyTypeOverride? GetCounterpartOverride(this ReceiptRequest receiptRequest)
+    {
+        return receiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var data)
+            ? data?.GR?.MyDataOverride?.Invoice?.Counterpart
+            : null;
+    }
+
     public static bool TryDeserializeftReceiptCaseData<T>(this ReceiptRequest request, out T? result) where T : class
     {
         result = default;

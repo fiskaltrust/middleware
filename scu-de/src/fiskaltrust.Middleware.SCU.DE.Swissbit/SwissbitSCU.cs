@@ -188,8 +188,18 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             }
             else
             {
-                await proxy.TseUpdateTimeAsync();
-                currentTime.AddSeconds(tseStatus.MaxTimeSynchronizationDelay);
+                try
+                {
+                    await proxy.TseUpdateTimeAsync();
+                    currentTime.AddSeconds(tseStatus.MaxTimeSynchronizationDelay);
+                }
+                catch (SwissbitException ex) when (!force && ex.Error == WormError.WORM_ERROR_CERTIFICATE_EXPIRED)
+                {
+                    // With an expired certificate the TSE can no longer sign, but reading the TSE info and exporting the
+                    // stored data must still be possible, so this must not prevent the SCU from initializing.
+                    _logger.LogWarning(ex, "The time of the TSE could not be updated because its certificate expired at {CertificateExpirationDate} (UTC). Signing is no longer possible, but the stored data can still be exported.",
+                        DateTimeOffset.FromUnixTimeSeconds((long) tseStatus.CertificateExpirationDate).UtcDateTime);
+                }
             }
         }
 
