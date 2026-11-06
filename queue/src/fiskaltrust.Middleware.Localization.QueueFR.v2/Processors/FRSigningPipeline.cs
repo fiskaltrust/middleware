@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 
 /// <summary>
 /// The single path through which a French receipt becomes a signed, chained entry: take the next
-/// number of its chain, let the SCU sign it against the chain's previous hash, and advance the
+/// number of its chain, let the SCU sign it against the chain's previous signature, and advance the
 /// chain and the period totals only once the signature exists.
 /// </summary>
 public class FRSigningPipeline
@@ -46,33 +46,56 @@ public class FRSigningPipeline
                 receiptResponse.AddSignatureItem(SignaturItemFactory.CreateTrainingSignature());
             }
 
+            ProcessResponse response;
+            string signature;
             try
             {
-                var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+                (response, signature) = await _sscd.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request.ReceiptRequest,
                     ReceiptResponse = receiptResponse,
                     PeriodTotals = periodTotals,
-                }, chain.LastHash).ConfigureAwait(false);
-
-                chain.LastHash = hash;
-                totals.Add(request.ReceiptRequest);
-
-                if (closingPeriod is not null)
-                {
-                    totals.Reset(closingPeriod.Value);
-                }
-
-                return new ProcessCommandResponse(response.ReceiptResponse, actionJournals ?? new List<ftActionJournal>());
+                    ChainCounter = chain.Numerator,
+                }, chain.LastSignature).ConfigureAwait(false);
             }
-            catch (Exception ex) when (FRSSCDErrorHandling.IsSigningUnavailable(ex))
+            catch (Exception ex)
             {
-                // No document was issued, so neither the number nor the period may move - NF525
-                // requires the national numbering of every chain to be gapless, and an unsigned
-                // closing must leave the period open so it can be retried.
+                // The SCU reports its own failures in the response; an exception means no answer
+                // came back at all - the SCU unreachable, the transport failing.
+                return Unsigned(ex.Message, refused: false);
+            }
+
+            if (FRSSCDErrorHandling.IsError(response.ReceiptResponse))
+            {
+                return Unsigned(FRSSCDErrorHandling.Reason(response.ReceiptResponse), FRSSCDErrorHandling.IsRefusal(response.ReceiptResponse));
+            }
+
+            chain.LastSignature = signature;
+            totals.Add(request.ReceiptRequest);
+
+            if (closingPeriod is not null)
+            {
+                totals.Reset(closingPeriod.Value);
+            }
+
+            return new ProcessCommandResponse(response.ReceiptResponse, actionJournals ?? new List<ftActionJournal>());
+
+            // No document was issued, so neither the number nor the period may move - NF525
+            // requires the national numbering of every chain to be gapless, and an unsigned
+            // closing must leave the period open so it can be retried.
+            ProcessCommandResponse Unsigned(string reason, bool refused)
+            {
                 chain.Numerator--;
                 receiptResponse.ftReceiptIdentification = identificationBeforeSigning;
-                receiptResponse.SetSigningUnavailableError(ex);
+                if (refused)
+                {
+                    receiptResponse.SetRefusedError(reason);
+                }
+                else
+                {
+                    receiptResponse.SetSigningUnavailableError(reason);
+                }
+
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         });

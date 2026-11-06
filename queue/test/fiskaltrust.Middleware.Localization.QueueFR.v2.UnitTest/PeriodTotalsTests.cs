@@ -153,10 +153,10 @@ public class PeriodTotalsTests
 
         await pipeline.SignAsync(Sale(normal: 10.00m));
 
-        sscd.ThrowOnProcess = () => new FRSigningUnavailableException();
+        sscd.FailWith = "signing unavailable";
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
-        sscd.ThrowOnProcess = null;
+        sscd.FailWith = null;
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
         sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "the failed closing must not have reset the day");
@@ -230,10 +230,4 @@ public class PeriodTotalsTests
             ftSignatures = [],
         }),
     };
-
-    /// <summary>Named like the SCU packages' exception - the queue recognizes it by type name.</summary>
-    private class FRSigningUnavailableException : Exception
-    {
-        public FRSigningUnavailableException() : base("signing unavailable") { }
-    }
 }

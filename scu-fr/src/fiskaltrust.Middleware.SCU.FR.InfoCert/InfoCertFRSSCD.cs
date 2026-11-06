@@ -5,7 +5,6 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
-using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.InfoCert.Models;
 using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
@@ -14,9 +13,9 @@ namespace fiskaltrust.Middleware.SCU.FR.InfoCert;
 
 /// <summary>
 /// The Infocert flavour of the NF525 signature. It serializes the receipt into a json data set,
-/// signs it as an ES256 JWS and returns the SHA-256 of the signing input as the chain hash, so the
-/// signature travels as one self-describing token a verifier can check against the certificate
-/// without knowing the middleware.
+/// signs it as an ES256 JWS and returns the JWS signature segment, which the next entry of the
+/// chain carries (ADR 0001). The signature travels as one self-describing token a verifier can
+/// check against the certificate without knowing the middleware.
 /// </summary>
 /// <remarks>
 /// Deliberately independent of the LNE SCU: the two certification bodies audit against their own
@@ -49,7 +48,19 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 
-    public Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public Task<(ProcessResponse response, string signature)> ProcessReceiptAsync(ProcessRequest request, string? previousSignature)
+    {
+        try
+        {
+            return Task.FromResult(SignReceipt(request, previousSignature));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(request.ReceiptResponse.ToSigningFailure($"The Infocert signature could not be created for receipt {request.ReceiptRequest?.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry. {ex.Message}"));
+        }
+    }
+
+    private (ProcessResponse response, string signature) SignReceipt(ProcessRequest request, string? previousSignature)
     {
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
@@ -76,30 +87,22 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             PINonCash = totals.PINonCash,
             PIInternal = totals.PIInternal,
             PIUnknown = totals.PIUnknown,
-            LastHash = lastHash ?? "",
+            ChainCounter = request.ChainCounter,
+            PreviousSignatureCarriedOver = FRChaining.Flag(previousSignature),
+            PreviousSignature = previousSignature ?? "",
             CertificateSerialNumber = _configuration.CertificateSerialNumber,
             AttestationNumber = _configuration.AttestationNumber,
             PeriodTotals = request.PeriodTotals,
         };
 
-        string jws;
-        string chainHash;
-        try
-        {
-            (jws, chainHash) = _signer.Sign(JsonSerializer.Serialize(payload));
-        }
-        catch (Exception ex) when (ex is not FRSSCDException)
-        {
-            throw new FRSigningUnavailableException($"The Infocert signature could not be created for receipt {receiptRequest.cbReceiptReference}. The NF525 chain must not continue with an unsigned entry.", ex);
-        }
+        var (jws, signature) = _signer.Sign(JsonSerializer.Serialize(payload));
 
         response.AddSignatureItem(SignatureTypeFR.ReceiptSignature, "www.fiskaltrust.fr", jws, SignatureFormat.QRCode);
-        response.AddSignatureItem(SignatureTypeFR.ChainHash, "Empreinte", chainHash);
         response.AddSignatureItem(SignatureTypeFR.CertificateSerialNumber, "Certificat", _configuration.CertificateSerialNumber);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, "Attestation", $"{CertificationBody} {_configuration.AttestationNumber}".TrimEnd());
 
-        return Task.FromResult((new ProcessResponse { ReceiptResponse = response }, chainHash));
+        return (new ProcessResponse { ReceiptResponse = response }, signature);
     }
 
     public Task<FRSigningCertificate> GetSigningCertificateAsync()

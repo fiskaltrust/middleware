@@ -171,7 +171,7 @@ public class ProcessorTests
     public async Task InitialOperation_WhenSigningFails_DoesNotActivateTheQueue()
     {
         var (pipeline, sscd) = CreatePipeline();
-        sscd.ThrowOnProcess = () => new FRSigningUnavailableException();
+        sscd.FailWith = "signing unavailable";
         var storage = new Mock<ILocalizedQueueStorageProvider>();
         var sut = new LifecycleCommandProcessorFR(sscd, pipeline, storage.Object);
 
@@ -183,10 +183,24 @@ public class ProcessorTests
     }
 
     [Fact]
+    public async Task InitialOperation_WhenTheScuCannotBeReached_DoesNotActivateTheQueue()
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        sscd.ThrowOnProcess = () => new HttpRequestException("connection refused");
+        var storage = new Mock<ILocalizedQueueStorageProvider>();
+        var sut = new LifecycleCommandProcessorFR(sscd, pipeline, storage.Object);
+
+        var response = await sut.InitialOperationReceipt0x4001Async(CommandRequest(ReceiptCase.InitialOperationReceipt0x4001));
+
+        response.receiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        storage.Verify(x => x.ActivateQueueAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task OutOfOperation_WhenSigningFails_LeavesTheQueueOpenSoTheClosingCanBeRetried()
     {
         var (pipeline, sscd) = CreatePipeline();
-        sscd.ThrowOnProcess = () => new FRSigningUnavailableException();
+        sscd.FailWith = "signing unavailable";
         var storage = new Mock<ILocalizedQueueStorageProvider>();
         var sut = new LifecycleCommandProcessorFR(sscd, pipeline, storage.Object);
 
@@ -231,11 +245,5 @@ public class ProcessorTests
         var result = await sut.ValidateAsync(request, new ftQueue());
 
         result.Errors.Should().NotContain(x => x.ErrorCode == "CurrencyMustMatchMarket");
-    }
-
-    /// <summary>Named like the SCU packages' exception - the queue recognizes it by type name.</summary>
-    private class FRSigningUnavailableException : Exception
-    {
-        public FRSigningUnavailableException() : base("signing unavailable") { }
     }
 }
