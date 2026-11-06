@@ -59,7 +59,22 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
                     && (x.ftReceiptCase.IsCase((ReceiptCase) 0x0006) || x.ftReceiptCase.IsCase((ReceiptCase) 0x0007)))
             .WithMessage(request => $"Receipt is not balanced: charge items sum ({request.cbChargeItems?.Sum(x => x.Amount) ?? 0m:F2}) does not match pay items sum ({request.cbPayItems?.Sum(x => x.Amount) ?? 0m:F2}).")
             .WithErrorCode("ReceiptNotBalanced");
+
+        // v1.2 takes a bill (v0 0x08) with exactly one pay item, of case v0 0x11, which the PosSystem
+        // API reaches from v2 0x0D. Table checks, pro formas and orders are bills; sales are not.
+        RuleFor(x => x.cbPayItems)
+            .Must(items => items is { Count: 1 } && items[0].ftPayItemCase.IsCase(BillPayItemCase))
+            .When(x => IsBill(x.ftReceiptCase))
+            .WithMessage(request => $"The receipt case 0x{(long) request.ftReceiptCase.Case():X4} must have exactly one pay item, of case 0x{(long) BillPayItemCase:X4}.")
+            .WithErrorCode("BillRequiresOneInternalPayItem");
     }
+
+    private const PayItemCase BillPayItemCase = (PayItemCase) 0x000D;
+
+    /// <summary>The cases the PosSystem API sends v1.2 as a bill (v0 0x08): table check, pro forma, order.</summary>
+    private static bool IsBill(ReceiptCase receiptCase) => receiptCase.IsCase((ReceiptCase) 0x0006)
+        || receiptCase.IsCase((ReceiptCase) 0x0007)
+        || receiptCase.IsCase(ReceiptCase.Order0x3004);
 
     private const decimal BalanceTolerance = 0.01m;
 

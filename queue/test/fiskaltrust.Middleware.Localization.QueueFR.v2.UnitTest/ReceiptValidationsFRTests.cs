@@ -12,13 +12,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 /// </summary>
 public class ReceiptValidationsFRTests
 {
-    private static ReceiptRequest Request(long receiptCase, decimal charge = 0m, decimal pay = 0m) => new()
+    private static ReceiptRequest Request(long receiptCase, decimal charge = 0m, decimal pay = 0m, long payCase = 0x0001) => new()
     {
         ftReceiptCase = (ReceiptCase) (0x4652_2000_0000_0000 | receiptCase),
         Currency = Currency.EUR,
         cbPreviousReceiptReference = "receipt-1",
         cbChargeItems = charge == 0m ? [] : [new ChargeItem { Amount = charge, Currency = Currency.EUR, ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") }],
-        cbPayItems = pay == 0m ? [] : [new PayItem { Amount = pay, Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }],
+        cbPayItems = pay == 0m ? [] : [new PayItem { Amount = pay, Currency = Currency.EUR, ftPayItemCase = (PayItemCase) (0x4652_2000_0000_0000 | payCase) }],
     };
 
     private static IEnumerable<string> Errors(ReceiptRequest request) => new ReceiptValidationsFR().Validate(request).Errors.Select(x => x.ErrorCode);
@@ -67,8 +67,33 @@ public class ReceiptValidationsFRTests
     [InlineData(0x0007)]
     public void TableCheckAndProForma_MustBalance(long receiptCase)
     {
-        Errors(Request(receiptCase, charge: 10m)).Should().Contain("ReceiptNotBalanced");
-        Errors(Request(receiptCase, charge: 10m, pay: 10.01m)).Should().BeEmpty();
-        Errors(Request(receiptCase, charge: 10m, pay: 10.02m)).Should().Contain("ReceiptNotBalanced");
+        Errors(Request(receiptCase, charge: 10m, pay: 9m, payCase: 0x000D)).Should().Contain("ReceiptNotBalanced");
+        Errors(Request(receiptCase, charge: 10m, pay: 10.01m, payCase: 0x000D)).Should().BeEmpty();
+        Errors(Request(receiptCase, charge: 10m, pay: 10.02m, payCase: 0x000D)).Should().Contain("ReceiptNotBalanced");
     }
+    /// <summary>
+    /// v1.2 takes a bill (v0 0x08) with exactly one pay item of case v0 0x11 (v2 0x0D). Table check,
+    /// pro forma and order are bills; a sale without obligation, an e-commerce sale and a sale are not.
+    /// </summary>
+    [Theory]
+    [InlineData(0x0006)]
+    [InlineData(0x0007)]
+    [InlineData(0x3004)]
+    public void Bills_TakeExactlyOneInternalPayItem(long receiptCase)
+    {
+        Errors(Request(receiptCase, charge: 10m, pay: 10m, payCase: 0x000D)).Should().BeEmpty();
+        Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().Contain("BillRequiresOneInternalPayItem");
+        Errors(Request(receiptCase, charge: 10m)).Should().Contain("BillRequiresOneInternalPayItem");
+
+        var twoItems = Request(receiptCase, charge: 10m, pay: 5m, payCase: 0x000D);
+        twoItems.cbPayItems = [.. twoItems.cbPayItems, twoItems.cbPayItems[0]];
+        Errors(twoItems).Should().Contain("BillRequiresOneInternalPayItem");
+    }
+
+    [Theory]
+    [InlineData(0x0001)]
+    [InlineData(0x0003)]
+    [InlineData(0x0004)]
+    public void Sales_TakeAnyPayItem(long receiptCase)
+        => Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().NotContain("BillRequiresOneInternalPayItem");
 }
