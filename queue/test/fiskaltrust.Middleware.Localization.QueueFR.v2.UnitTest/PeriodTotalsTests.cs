@@ -211,7 +211,7 @@ public class PeriodTotalsTests
     }
 
     [Fact]
-    public async Task TrainingClosing_CarriesNoTotalsAndLeavesTheRealPeriodOpen()
+    public async Task TrainingClosing_PrintsTheLiveTotalsAndLeavesTheRealPeriodOpen()
     {
         var sscd = new FakeFRSSCD();
         var pipeline = CreatePipeline(sscd);
@@ -221,7 +221,10 @@ public class PeriodTotalsTests
         trainingClosing.ReceiptRequest.ftReceiptCase = trainingClosing.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
         await pipeline.SignAsync(trainingClosing);
 
-        sscd.Calls.Last().periodTotals.Should().BeNull("a training closing attests no real turnover");
+        // v1.2 (workerFR TrainingRequest): a training closing prints the live figures of the real
+        // period, without resetting them (market-fr#221, decision 12).
+        sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "a training closing prints the live period totals");
+        trainingClosing.ReceiptResponse.ftReceiptIdentification.Should().EndWith("X1");
 
         await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
@@ -258,5 +261,63 @@ public class PeriodTotalsTests
         stored.GMonthCITotalNormal.Should().Be(10.00m);
         stored.GMonthPITotalCash.Should().Be(10.00m);
         stored.TTotalizer.Should().Be(10.00m);
+    }
+
+    /// <summary>
+    /// v1.2 keeps a totalizer per non-sales chain and the moment and queue item of the last closing
+    /// of each period. v2 writes them too, next to its ADR 0012 columns (market-fr#221, decision 10).
+    /// </summary>
+    [Fact]
+    public async Task TheV12ColumnsAreWrittenToo()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+
+        var proForma = Sale(normal: 7.00m);
+        proForma.ReceiptRequest.ftReceiptCase = ((ReceiptCase) 0x0007).WithCountry("FR");
+        await pipeline.SignAsync(proForma);
+
+        var payIn = CommandRequest(ReceiptCase.PaymentTransfer0x0002);
+        payIn.ReceiptRequest.cbPayItems = [new PayItem { Amount = 200.00m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }];
+        await pipeline.SignAsync(payIn);
+
+        var training = Sale(normal: 3.00m);
+        training.ReceiptRequest.ftReceiptCase = training.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(training);
+
+        var monthly = CommandRequest(ReceiptCase.MonthlyClosing0x2012);
+        await pipeline.SignAsync(monthly);
+        await state.CommitAsync();
+
+        var stored = await state.ReadAsync();
+        stored.ATotalizer.Should().Be(10.00m, "the archive totals take the sales since the last archive");
+        stored.ACITotalNormal.Should().Be(10.00m);
+        stored.BTotalizer.Should().Be(7.00m);
+        stored.BCITotalNormal.Should().Be(7.00m);
+        stored.PTotalizer.Should().Be(0m, "a payment proof has no charge items");
+        stored.PPITotalCash.Should().Be(200.00m);
+        stored.XTotalizer.Should().Be(3.00m);
+        stored.GLastMonthMoment.Should().Be(monthly.ReceiptResponse.ftReceiptMoment);
+        stored.GLastMonthQueueItemId.Should().Be(monthly.ReceiptResponse.ftQueueItemID);
+        stored.GLastDayQueueItemId.Should().Be(monthly.ReceiptResponse.ftQueueItemID, "a monthly closing also closes the day");
+        stored.GLastYearQueueItemId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TrainingClosing_LeavesTheV12ClosingColumnsAlone()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        var trainingClosing = CommandRequest(ReceiptCase.DailyClosing0x2011);
+        trainingClosing.ReceiptRequest.ftReceiptCase = trainingClosing.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(trainingClosing);
+        await state.CommitAsync();
+
+        (await state.ReadAsync()).GLastDayQueueItemId.Should().BeNull();
     }
 }
