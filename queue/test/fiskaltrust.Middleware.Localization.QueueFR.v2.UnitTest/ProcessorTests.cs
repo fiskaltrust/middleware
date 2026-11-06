@@ -389,4 +389,30 @@ public class ProcessorTests
 
         result.Errors.Should().NotContain(x => x.ErrorCode == "CurrencyMustMatchMarket");
     }
+
+    /// <summary>
+    /// dev only: where #820 meets #860, every sale prints its sales-line count; the delivery note,
+    /// neither signed nor numbered, prints nothing (market-fr#221, #148).
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, true)]
+    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003, true)]
+    [InlineData(ReceiptCase.ECommerce0x0004, true)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005, false)]
+    public async Task Sales_PrintTheirLineCount_DeliveryNotesDoNot(ReceiptCase receiptCase, bool printed)
+    {
+        var (pipeline, _) = CreatePipeline();
+        var sut = new ReceiptCommandProcessorFR(pipeline);
+        var request = CommandRequest(receiptCase);
+
+        var response = receiptCase switch
+        {
+            ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => await sut.PointOfSaleReceiptWithoutObligation0x0003Async(request),
+            ReceiptCase.ECommerce0x0004 => await sut.ECommerce0x0004Async(request),
+            ReceiptCase.DeliveryNote0x0005 => await sut.DeliveryNote0x0005Async(request),
+            _ => await sut.PointOfSaleReceipt0x0001Async(request),
+        };
+
+        response.receiptResponse.ftSignatures.Any(x => x.Caption == "Nombre de lignes").Should().Be(printed);
+    }
 }
