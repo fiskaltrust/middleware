@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
@@ -44,6 +47,39 @@ public static class SignaturItemFactory
         Caption = "Duplicata",
         Data = copyNumber is null ? $"Duplicata de {copiedReceiptReference}" : $"{copyNumber}. Duplicata de {copiedReceiptReference}",
     };
+
+    /// <summary>
+    /// Printed on the zero receipt that ends the late-signing mode: the range of receipts the POS
+    /// issued while the middleware was unreachable (v1.2 "Failure registered", market-fr#231).
+    /// </summary>
+    public static SignatureItem CreateLateSigningEndedSignature(string? firstReceiptIdentification, string? closingReceiptIdentification) => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
+        Caption = "Défaillance enregistrée",
+        Data = $"du {firstReceiptIdentification} au {closingReceiptIdentification}",
+    };
+
+    private static readonly JsonSerializerOptions _jetJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    /// <summary>
+    /// Tells the POS which JET event (R19) to send: it copies <see cref="SignatureItem.Data"/>
+    /// unchanged into the ftReceiptCaseData of a <c>ProtocolTechnicalEvent 0x3001</c>, with
+    /// cbPreviousReceiptReference set to the receipt that carried this item. The data is already the
+    /// whole case data, <c>{"FR":{"Code":…,"Message":…,"Information":…}}</c>, the path the InfoCert
+    /// SCU reads (market-fr#248). The queue issues no JET entry itself (market-fr#231, #208).
+    /// </summary>
+    public static SignatureItem CreateJetEventSignature(int code, string message, string? information) => new()
+    {
+        ftSignatureFormat = SignatureFormat.Text,
+        ftSignatureType = SignatureTypeFR.JetEvent.As<SignatureType>().WithFlag(SignatureTypeFlags.VisualizationOptional),
+        Caption = "JET",
+        Data = JsonSerializer.Serialize(new JetEventCaseData(new JetEventData(code.ToString(CultureInfo.InvariantCulture), message, information)), _jetJson),
+    };
+
+    private sealed record JetEventCaseData(JetEventData FR);
+
+    private sealed record JetEventData(string Code, string Message, string? Information);
 
     /// <summary>The mention a bill, pro forma or delivery note has to carry: it is not a receipt.</summary>
     public static SignatureItem CreateProvisionalDocumentSignature() => new()

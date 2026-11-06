@@ -53,6 +53,13 @@ public enum SignatureTypeFR : long
     StoredNotSigned = 0x4652_2000_0000_000B,
 
     /// <summary>
+    /// Asks the POS to send a JET event (R19) as a <c>ProtocolTechnicalEvent 0x3001</c>; the Data is
+    /// its whole ftReceiptCaseData, <c>{"FR":{Code, Message, Information}}</c> (market-fr#231, #208, #248).
+    /// Allocated here too so the SCU never reuses it; 0x10 and 0x11 are the queue's lifecycle items.
+    /// </summary>
+    JetEvent = 0x4652_2000_0000_0012,
+
+    /// <summary>
     /// One line of the receipt's VAT summary (Infocert R13 v4.2 <i>Récapitulatif</i>): amount before
     /// VAT, VAT and amount including VAT of one rate. Printed, so a signature item (ADR 0011);
     /// emitted by the Infocert SCU only.
