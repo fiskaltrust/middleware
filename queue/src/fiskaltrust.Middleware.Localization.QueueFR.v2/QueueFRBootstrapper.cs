@@ -32,9 +32,11 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueFRAsync(id)).CashBoxIdentification);
 
-        var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
+        var chains = new FRChainStateProvider(storageProvider.CreateConfigurationRepository(), id);
+        // The chain state is stored only once the signed queue item is (FRQueueStorageProvider).
+        var queueStorageProvider = new FRQueueStorageProvider(new QueueStorageProvider(id, storageProvider), chains);
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
-        var pipeline = new FRSigningPipeline(frSSCD, new FRChainStateProvider(queueItemRepository));
+        var pipeline = new FRSigningPipeline(frSSCD, chains);
 
         // FR launches with enforcing validation: the v2 localization has no legacy integrations to
         // stay compatible with, and the queue currency rule (EUR, rfcs/0705-queue-single-currency)
@@ -61,7 +63,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
             ? async () => await ScuArchiveSigner.CreateAsync(frSSCD).ConfigureAwait(false)
             : () => Task.FromResult(archiveSigner);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorFR(id, storageProvider, createArchiveSigner), configuration, loggerFactory.CreateLogger<JournalProcessor>());
-        _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
+        _queue = new Queue(new FRSignProcessor(signProcessor, chains), journalProcessor, loggerFactory)
         {
             Id = id,
             Configuration = configuration,

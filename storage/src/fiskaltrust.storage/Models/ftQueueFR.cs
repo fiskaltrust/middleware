@@ -790,6 +790,99 @@ namespace fiskaltrust.storage.V0
 
         #endregion
 
+        #region QueueFR.v2 chains
+
+        // Used by QueueFR.v2 only (market-fr ADR 0012). The v1 columns above keep holding the counters and
+        // totals; these add the chains v1 does not have (ADR 0002) and the previous signature every v2 chain
+        // covers (ADR 0001), which v1 does not store - its *LastHash columns hold a hash, not a signature.
+
+        /// <summary>
+        /// Numerator of the technical chain, prefixed by E
+        /// </summary>
+        public long ENumerator { get; set; }
+
+        /// <summary>
+        /// Numerator of the shift closing chain, prefixed by S
+        /// </summary>
+        public long SNumerator { get; set; }
+
+        /// <summary>
+        /// Numerator of the daily closing chain, prefixed by Z
+        /// </summary>
+        public long ZNumerator { get; set; }
+
+        /// <summary>
+        /// Numerator of the monthly closing chain, prefixed by M
+        /// </summary>
+        public long MNumerator { get; set; }
+
+        /// <summary>
+        /// Numerator of the yearly closing chain, prefixed by Y
+        /// </summary>
+        public long YNumerator { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of tickets
+        /// </summary>
+        public string TLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of payment proofs
+        /// </summary>
+        public string PLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of invoices
+        /// </summary>
+        public string ILastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of bills
+        /// </summary>
+        public string BLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of logs
+        /// </summary>
+        public string LLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of duplicates (v2 prefix D)
+        /// </summary>
+        public string CLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of training receipts
+        /// </summary>
+        public string XLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of the technical chain
+        /// </summary>
+        public string ELastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of shift closings
+        /// </summary>
+        public string SLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of daily closings
+        /// </summary>
+        public string ZLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of monthly closings
+        /// </summary>
+        public string MLastSignature { get; set; }
+
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of yearly closings
+        /// </summary>
+        public string YLastSignature { get; set; }
+
+        #endregion
+
         #region Late Signing
 
         /// <summary>

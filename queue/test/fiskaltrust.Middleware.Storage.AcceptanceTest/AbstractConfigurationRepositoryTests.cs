@@ -502,6 +502,44 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task InsertOrUpdateQueueFRAsync_ShouldRoundTripTheQueueFRV2ChainColumns()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueFR>(10).ToList();
+
+            var sut = await CreateRepository(queuesFR: entries);
+
+            var entryToUpdate = await sut.GetQueueFRAsync(entries[0].ftQueueFRId);
+            entryToUpdate.ENumerator = 11;
+            entryToUpdate.SNumerator = 12;
+            entryToUpdate.ZNumerator = 13;
+            entryToUpdate.MNumerator = 14;
+            entryToUpdate.YNumerator = 15;
+            entryToUpdate.TLastSignature = "T-signature";
+            entryToUpdate.PLastSignature = "P-signature";
+            entryToUpdate.ILastSignature = "I-signature";
+            entryToUpdate.BLastSignature = "B-signature";
+            entryToUpdate.LLastSignature = "L-signature";
+            entryToUpdate.CLastSignature = "C-signature";
+            entryToUpdate.XLastSignature = "X-signature";
+            entryToUpdate.ELastSignature = "E-signature";
+            entryToUpdate.SLastSignature = "S-signature";
+            entryToUpdate.ZLastSignature = "Z-signature";
+            entryToUpdate.MLastSignature = "M-signature";
+            entryToUpdate.YLastSignature = null;
+
+            await sut.InsertOrUpdateQueueFRAsync(entryToUpdate);
+
+            var updatedEntry = await sut.GetQueueFRAsync(entries[0].ftQueueFRId);
+
+            updatedEntry.Should().BeEquivalentTo(entryToUpdate);
+            updatedEntry.ENumerator.Should().Be(11);
+            updatedEntry.YNumerator.Should().Be(15);
+            updatedEntry.TLastSignature.Should().Be("T-signature");
+            updatedEntry.MLastSignature.Should().Be("M-signature");
+            updatedEntry.YLastSignature.Should().BeNull();
+        }
+
+        [Fact]
         public async Task InsertOrUpdateQueueFRAsync_ShouldUpdateTimeStampOfTheInsertedEntry()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueFR>(10).ToList();

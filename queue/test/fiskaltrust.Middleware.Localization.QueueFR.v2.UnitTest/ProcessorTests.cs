@@ -20,9 +20,7 @@ public class ProcessorTests
     private static (FRSigningPipeline pipeline, FakeFRSSCD sscd) CreatePipeline()
     {
         var sscd = new FakeFRSSCD();
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        repository.Setup(x => x.GetAsync()).ReturnsAsync(Array.Empty<ftQueueItem>());
-        return (new FRSigningPipeline(sscd, new FRChainStateProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object)))), sscd);
+        return (new FRSigningPipeline(sscd, new StoredChainState().Provider()), sscd);
     }
 
     private static ProcessCommandRequest CommandRequest(ReceiptCase receiptCase)
@@ -89,14 +87,14 @@ public class ProcessorTests
     }
 
     [Fact]
-    public async Task DailyClosing_IsSignedIntoTheGrandTotalChainAndWritesAnActionJournal()
+    public async Task DailyClosing_IsSignedIntoTheDailyClosingChainAndWritesAnActionJournal()
     {
         var (pipeline, sscd) = CreatePipeline();
         var sut = new DailyOperationsCommandProcessorFR(pipeline);
 
         var response = await sut.DailyClosing0x2011Async(CommandRequest(ReceiptCase.DailyClosing0x2011));
 
-        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#G1");
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z1");
         response.actionJournals.Should().ContainSingle();
         sscd.Calls.Should().ContainSingle();
     }
@@ -139,7 +137,7 @@ public class ProcessorTests
     }
 
     [Fact]
-    public async Task InitialOperation_ActivatesTheQueueAndOpensTheGrandTotalChain()
+    public async Task InitialOperation_ActivatesTheQueueAndOpensTheTechnicalChain()
     {
         var (pipeline, sscd) = CreatePipeline();
         var storage = new Mock<ILocalizedQueueStorageProvider>();
@@ -147,7 +145,7 @@ public class ProcessorTests
 
         var response = await sut.InitialOperationReceipt0x4001Async(CommandRequest(ReceiptCase.InitialOperationReceipt0x4001));
 
-        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#G1");
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E1");
         response.actionJournals.Should().ContainSingle();
         storage.Verify(x => x.ActivateQueueAsync(), Times.Once);
     }
@@ -164,7 +162,7 @@ public class ProcessorTests
         var response = await sut.OutOfOperationReceipt0x4002Async(CommandRequest(ReceiptCase.OutOfOperationReceipt0x4002));
 
         deactivatedAfterSigning.Should().BeTrue("a disabled queue must not produce another chain entry");
-        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#G1");
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E1");
     }
 
     [Fact]

@@ -73,9 +73,10 @@ public class FRSigningPipeline
             chain.LastSignature = signature;
             totals.Add(request.ReceiptRequest);
 
-            if (closingPeriod is not null)
+            // A closing also ends the shorter periods (v1.2 cascade, FRPeriodTotalsAccumulator).
+            foreach (var period in FRPeriodTotalsAccumulator.PeriodsClosedBy(request.ReceiptRequest))
             {
-                totals.Reset(closingPeriod.Value);
+                totals.Reset(period);
             }
 
             return new ProcessCommandResponse(response.ReceiptResponse, actionJournals ?? new List<ftActionJournal>());

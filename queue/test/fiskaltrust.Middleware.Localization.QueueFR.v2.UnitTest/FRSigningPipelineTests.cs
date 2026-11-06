@@ -1,25 +1,22 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Moq;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 public class FRSigningPipelineTests
 {
-    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd, params ftQueueItem[] existingQueueItems)
+    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd, ftQueueFR? stored = null) => CreatePipeline(sscd, new StoredChainState(stored));
+
+    private static FRSigningPipeline CreatePipeline(FakeFRSSCD sscd, StoredChainState state)
     {
-        var repository = new Mock<IMiddlewareQueueItemRepository>();
-        repository.Setup(x => x.GetAsync()).ReturnsAsync(existingQueueItems);
-        return new FRSigningPipeline(sscd, new FRChainStateProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        return new FRSigningPipeline(sscd, state.Provider());
     }
 
     private static ProcessCommandRequest CommandRequest(ReceiptCase receiptCase = ReceiptCase.PointOfSaleReceipt0x0001)
@@ -67,6 +64,27 @@ public class FRSigningPipelineTests
     }
 
     [Fact]
+    public async Task SignAsync_ChainsEachClosingTypeOnItsOwnPredecessor()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        var firstDay = await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        var zero = await pipeline.SignAsync(CommandRequest(ReceiptCase.ZeroReceipt0x2000));
+        var month = await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        var secondDay = await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        firstDay.receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z1");
+        zero.receiptResponse.ftReceiptIdentification.Should().Be("ft1#E1", "a zero receipt is not a closing (ADR 0002)");
+        month.receiptResponse.ftReceiptIdentification.Should().Be("ft1#M1");
+        secondDay.receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z2");
+
+        sscd.Calls[1].previousSignature.Should().BeNull("the technical chain is independent of the closing chains");
+        sscd.Calls[2].previousSignature.Should().BeNull("the monthly closing does not chain on a daily closing");
+        sscd.Calls[3].previousSignature.Should().Be("sig-1", "a daily closing chains on the previous daily closing");
+    }
+
+    [Fact]
     public async Task SignAsync_HandsTheChainCounterToTheScu()
     {
         var sscd = new FakeFRSSCD();
@@ -91,27 +109,61 @@ public class FRSigningPipelineTests
     }
 
     [Fact]
-    public async Task SignAsync_ResumesTheChainFromTheStoredQueueItems()
+    public async Task SignAsync_ResumesTheChainFromFtQueueFR()
     {
         var sscd = new FakeFRSSCD();
-        var pipeline = CreatePipeline(sscd, StoredTicket(queueRow: 1, identification: "ft1#T7", receiptSignature: "c3RvcmVkLXNpZw"));
+        var pipeline = CreatePipeline(sscd, new ftQueueFR { ftQueueFRId = Guid.NewGuid(), TNumerator = 7, TLastSignature = "c3RvcmVkLXNpZw" });
 
         var response = await pipeline.SignAsync(CommandRequest());
 
         response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#T8");
-        sscd.Calls.Single().previousSignature.Should().Be("c3RvcmVkLXNpZw", "a bare signature is the chained signature as it stands");
+        sscd.Calls.Single().previousSignature.Should().Be("c3RvcmVkLXNpZw");
         sscd.Calls.Single().chainCounter.Should().Be(8);
     }
 
     [Fact]
-    public async Task SignAsync_ResumingAfterAJws_ChainsOnItsSignatureSegment()
+    public async Task SignAsync_ContinuesTheCounterOfAV1ChainWithoutASignature()
     {
         var sscd = new FakeFRSSCD();
-        var pipeline = CreatePipeline(sscd, StoredTicket(queueRow: 1, identification: "ft1#T7", receiptSignature: "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl"));
+        var pipeline = CreatePipeline(sscd, new ftQueueFR { ftQueueFRId = Guid.NewGuid(), TNumerator = 41, TLastHash = "v1-hash", CNumerator = 3 });
+
+        var ticket = await pipeline.SignAsync(CommandRequest());
+        var copy = await pipeline.SignAsync(CommandRequest(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010));
+
+        ticket.receiptResponse.ftReceiptIdentification.Should().Be("ft1#T42", "a half-migrated queue keeps counting in the v1 column");
+        copy.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D4", "the duplicate chain continues the v1 copy chain");
+        sscd.Calls.First().previousSignature.Should().BeNull("v1 stores a hash, never the signature the v2 chain covers");
+    }
+
+    [Fact]
+    public async Task SignAsync_StoresTheAdvancedChainInFtQueueFR()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
 
         await pipeline.SignAsync(CommandRequest());
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await state.CommitAsync();
 
-        sscd.Calls.Single().previousSignature.Should().Be("c2lnbmF0dXJl", "an Infocert JWS chains on its signature segment, verbatim");
+        var stored = await state.ReadAsync();
+        stored.TNumerator.Should().Be(1);
+        stored.TLastSignature.Should().Be("sig-1");
+        stored.ZNumerator.Should().Be(1, "the daily closing chain has a column of its own");
+        stored.ZLastSignature.Should().Be("sig-2");
+        stored.GNumerator.Should().Be(0, "the v1 grand-total chain is not continued (ADR 0002)");
+    }
+
+    [Fact]
+    public async Task SignAsync_WhenSigningFails_StoresNothing()
+    {
+        var sscd = new FakeFRSSCD { FailWith = "signing unavailable" };
+        var state = new StoredChainState();
+
+        await CreatePipeline(sscd, state).SignAsync(CommandRequest());
+        await state.CommitAsync();
+
+        (await state.ReadAsync()).Should().BeNull("no entry was signed, so no chain moved");
     }
 
     [Fact]
@@ -200,29 +252,4 @@ public class FRSigningPipelineTests
 
         response.actionJournals.Should().ContainSingle().Which.Should().Be(actionJournal);
     }
-
-    private static ftQueueItem StoredTicket(long queueRow, string identification, string receiptSignature) => new()
-    {
-        ftQueueItemId = Guid.NewGuid(),
-        ftQueueRow = queueRow,
-        request = System.Text.Json.JsonSerializer.Serialize(new ReceiptRequest { ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("FR") }),
-        response = System.Text.Json.JsonSerializer.Serialize(new ReceiptResponse
-        {
-            ftState = (State) StateFR.Success,
-            ftReceiptIdentification = identification,
-            ftQueueID = Guid.NewGuid(),
-            ftQueueItemID = Guid.NewGuid(),
-            ftReceiptMoment = DateTime.UtcNow,
-            ftSignatures =
-            [
-                new SignatureItem
-                {
-                    ftSignatureType = SignatureTypeFR.ReceiptSignature.As<SignatureType>(),
-                    ftSignatureFormat = SignatureFormat.QRCode,
-                    Caption = "Signature",
-                    Data = receiptSignature,
-                },
-            ],
-        }),
-    };
 }
