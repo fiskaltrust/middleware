@@ -1,6 +1,7 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 
@@ -11,28 +12,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// </summary>
 public static class FRTotalsCalculator
 {
-    private static readonly ChargeItemCase[] KnownVatCases =
-    [
-        ChargeItemCase.NormalVatRate,
-        ChargeItemCase.DiscountedVatRate1,
-        ChargeItemCase.DiscountedVatRate2,
-        ChargeItemCase.SuperReducedVatRate1,
-        ChargeItemCase.ZeroVatRate,
-    ];
-
-    private static readonly PayItemCase[] KnownPayCases =
-    [
-        PayItemCase.CashPayment,
-        PayItemCase.NonCash,
-        PayItemCase.CrossedCheque,
-        PayItemCase.DebitCardPayment,
-        PayItemCase.CreditCardPayment,
-        PayItemCase.VoucherPaymentCouponVoucherByMoneyValue,
-        PayItemCase.OnlinePayment,
-        PayItemCase.InternalMaterialConsumption,
-        PayItemCase.TransferToCashbookVaultOwnerEmployee,
-    ];
-
     /// <remarks>
     /// Down payments are kept out of every total, on both sides: the charge and pay items of the
     /// down-payment invoice that records the acompte, and the negative ones of the final invoice
@@ -45,21 +24,22 @@ public static class FRTotalsCalculator
         var chargeItems = (request.cbChargeItems ?? new List<ChargeItem>()).Where(x => !IsDownpayment(x)).ToList();
         var payItems = (request.cbPayItems ?? new List<PayItem>()).Where(x => !IsDownpayment(x)).ToList();
 
-        decimal ChargeSum(ChargeItemCase vatCase) => chargeItems.Where(x => x.ftChargeItemCase.Vat() == vatCase).Sum(x => x.Amount);
+        decimal ChargeSum(FRVatBucket bucket) => chargeItems.Where(x => FRTotalsBuckets.Of(x) == bucket).Sum(x => x.Amount);
+        decimal PaySum(FRPayBucket bucket) => payItems.Where(x => FRTotalsBuckets.Of(x) == bucket).Sum(x => x.Amount);
 
         return new FRTotals
         {
             Totalizer = chargeItems.Sum(x => x.Amount),
-            CINormal = ChargeSum(ChargeItemCase.NormalVatRate),
-            CIReduced1 = ChargeSum(ChargeItemCase.DiscountedVatRate1),
-            CIReduced2 = ChargeSum(ChargeItemCase.DiscountedVatRate2),
-            CIReducedS = ChargeSum(ChargeItemCase.SuperReducedVatRate1),
-            CIZero = ChargeSum(ChargeItemCase.ZeroVatRate),
-            CIUnknown = chargeItems.Where(x => !KnownVatCases.Contains(x.ftChargeItemCase.Vat())).Sum(x => x.Amount),
-            PICash = payItems.Where(x => x.ftPayItemCase.Case() == PayItemCase.CashPayment).Sum(x => x.Amount),
-            PINonCash = payItems.Where(x => IsNonCash(x.ftPayItemCase.Case())).Sum(x => x.Amount),
-            PIInternal = payItems.Where(x => IsInternal(x.ftPayItemCase.Case())).Sum(x => x.Amount),
-            PIUnknown = payItems.Where(x => !KnownPayCases.Contains(x.ftPayItemCase.Case())).Sum(x => x.Amount),
+            CINormal = ChargeSum(FRVatBucket.Normal),
+            CIReduced1 = ChargeSum(FRVatBucket.Reduced1),
+            CIReduced2 = ChargeSum(FRVatBucket.Reduced2),
+            CIReducedS = ChargeSum(FRVatBucket.ReducedS),
+            CIZero = ChargeSum(FRVatBucket.Zero),
+            CIUnknown = ChargeSum(FRVatBucket.Unknown),
+            PICash = PaySum(FRPayBucket.Cash),
+            PINonCash = PaySum(FRPayBucket.NonCash),
+            PIInternal = PaySum(FRPayBucket.Internal),
+            PIUnknown = PaySum(FRPayBucket.Unknown),
         };
     }
 
@@ -96,14 +76,4 @@ public static class FRTotalsCalculator
     private static bool IsDownpayment(ChargeItem item) => ((long) item.ftChargeItemCase & (long) ChargeItemCaseFlags.Downpayment) != 0;
 
     private static bool IsDownpayment(PayItem item) => ((long) item.ftPayItemCase & (long) PayItemCaseFlags.Downpayment) != 0;
-
-    private static bool IsNonCash(PayItemCase payCase) => payCase is PayItemCase.NonCash
-        or PayItemCase.CrossedCheque
-        or PayItemCase.DebitCardPayment
-        or PayItemCase.CreditCardPayment
-        or PayItemCase.VoucherPaymentCouponVoucherByMoneyValue
-        or PayItemCase.OnlinePayment;
-
-    private static bool IsInternal(PayItemCase payCase) => payCase is PayItemCase.InternalMaterialConsumption
-        or PayItemCase.TransferToCashbookVaultOwnerEmployee;
 }
