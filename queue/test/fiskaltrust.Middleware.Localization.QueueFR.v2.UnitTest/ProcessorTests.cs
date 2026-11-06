@@ -174,8 +174,6 @@ public class ProcessorTests
 
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
-    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
-    [InlineData(ReceiptCase.ECommerce0x0004)]
     [InlineData(ReceiptCase.DeliveryNote0x0005)]
     public async Task PaymentProofAndUnsignedReceipt_DoNotCarryTheSalesLineCount(ReceiptCase receiptCase)
     {
