@@ -77,6 +77,7 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         // number (an acceptable solution of the same exigence). Printed on every ticket, so it stays
         // short: the full signature the exigence recommends is in the QR code. Not signed.
         response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
+        response.AddPeriodTotalsItems(request.PeriodTotals);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
     }

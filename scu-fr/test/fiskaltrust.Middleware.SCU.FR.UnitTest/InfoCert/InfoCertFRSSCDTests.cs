@@ -127,6 +127,43 @@ public class InfoCertFRSSCDTests
         signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).ftSignatureFormat.Should().Be(SignatureFormat.QRCode);
     }
 
+    /// <summary>A closing prints its period and perpetual totals as readable items, as v1.2 did (market-fr#221).</summary>
+    [Fact]
+    public async Task Closing_PrintsTheReadablePeriodAndPerpetualTotals()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
+        var request = FRTestData.Request();
+        request.PeriodTotals = new FRPeriodTotals
+        {
+            Period = FRTotalsPeriod.Month,
+            Current = new FRTotals { Totalizer = 24.00m, CINormal = 24.00m, PICash = 24.00m },
+            Perpetual = new FRTotals { Totalizer = 1000.00m, CINormal = 1000.00m, PICash = 1000.00m },
+        };
+
+        var (response, _) = await sut.ProcessReceiptAsync(request, null);
+
+        var signatures = response.ReceiptResponse.ftSignatures;
+        var month = signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.MonthTotals));
+        month.Caption.Should().Be("Month Totals");
+        month.Data.Should().StartWith("Total TTC: 24.00\nTVA 20 %: 24.00\n").And.Contain("Espèces: 24.00");
+        signatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.PerpetualTotals)).Data.Should().StartWith("Total TTC: 1000.00");
+        signatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.DayTotals));
+    }
+
+    [Fact]
+    public async Task Sale_PrintsNoTotalsItems()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        response.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.PerpetualTotals));
+    }
+
     [Fact]
     public async Task GetInfoAsync_ReportsTheCertificationBodyInTheInfoDataBlob()
     {

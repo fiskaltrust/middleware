@@ -123,6 +123,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         {
             response.AddSignatureItem(SignatureTypeFR.CertificationBody, "", mention);
         }
+        response.AddPeriodTotalsItems(request.PeriodTotals);
 
         // The VAT summary is printed on the receipt (R13 v4.2 Récapitulatif), so it travels as
         // signature items (ADR 0011), one per rate.
