@@ -9,8 +9,8 @@ namespace fiskaltrust.Middleware.SCU.FR.UnitTest.InfoCert;
 
 /// <summary>
 /// The signed receipt totals use the same buckets as the queue's period totals: this is the
-/// queue's FRTotalsCalculatorTests table (QueueFR v1.2 as the oracle; card, crossed cheque and
-/// voucher non-cash by decision), run against the InfoCert copy.
+/// queue's FRTotalsCalculatorTests table (QueueFR v1.2 as the oracle; card, crossed cheque,
+/// voucher and Ticket Restaurant non-cash by decision), run against the InfoCert copy.
 /// </summary>
 public class InfoCertTotalsTests
 {
@@ -51,7 +51,7 @@ public class InfoCertTotalsTests
         { 0x4652_2000_0000_000C, "PIInternal" },
         { 0x4652_2000_0000_000D, "PIInternal" },
         { 0x4652_2000_0000_000E, "PIInternal" },
-        { 0x4652_2000_0000_000F, "PICash" },
+        { 0x4652_2000_0000_000F, "PINonCash" },
         { 0x4652_2000_0040_0001, "PIUnknown" },
         { 0x4652_2000_0000_00FF, "PIUnknown" },
     };

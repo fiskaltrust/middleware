@@ -71,13 +71,12 @@ public static class FRTotalsBuckets
             // v1.2: "handled like a cash payment".
             PayItemCase.UnknownPaymentType => FRPayBucket.Cash,
             PayItemCase.CashPayment => FRPayBucket.Cash,
-            // v1.2 reaches v0 06 (voucher), which it counts as cash.
-            PayItemCase.TicketRestaurant => FRPayBucket.Cash,
             PayItemCase.NonCash => FRPayBucket.NonCash,
-            // Cash in v1.2; non-cash in v2 by decision (ADR "card, cheque and voucher are non-cash").
+            // Cash in v1.2; non-cash in v2 by decision (market-fr ADR 0015, which covers Ticket Restaurant too).
             PayItemCase.CrossedCheque => FRPayBucket.NonCash,
             PayItemCase.CreditCardPayment => FRPayBucket.NonCash,
             PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => FRPayBucket.NonCash,
+            PayItemCase.TicketRestaurant => FRPayBucket.NonCash,
             PayItemCase.DebitCardPayment => FRPayBucket.NonCash,
             PayItemCase.OnlinePayment => FRPayBucket.NonCash,
             PayItemCase.LoyaltyProgramCustomerCardPayment => FRPayBucket.NonCash,

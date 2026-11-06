@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// The bucket of every v2 VAT class and pay case, with QueueFR v1.2 (reached through the PosSystem
-/// API v2→v0 translation) as the oracle, except card, crossed cheque and voucher, which stay
+/// API v2→v0 translation) as the oracle, except card, crossed cheque, voucher and Ticket Restaurant, which are
 /// non-cash by decision (market-fr ADR). The InfoCert SCU runs the same table
 /// (InfoCertTotalsTests), so the period totals and the signed receipt totals cannot drift.
 /// </summary>
@@ -58,7 +58,7 @@ public class FRTotalsCalculatorTests
         { 0x4652_2000_0000_000C, nameof(FRTotals.PIInternal) },
         { 0x4652_2000_0000_000D, nameof(FRTotals.PIInternal) },
         { 0x4652_2000_0000_000E, nameof(FRTotals.PIInternal) },
-        { 0x4652_2000_0000_000F, nameof(FRTotals.PICash) },
+        { 0x4652_2000_0000_000F, nameof(FRTotals.PINonCash) },
         // Tip: v1.2 compares the whole case, so a tipped item matches no bucket.
         { 0x4652_2000_0040_0001, nameof(FRTotals.PIUnknown) },
         { 0x4652_2000_0000_00FF, nameof(FRTotals.PIUnknown) },
