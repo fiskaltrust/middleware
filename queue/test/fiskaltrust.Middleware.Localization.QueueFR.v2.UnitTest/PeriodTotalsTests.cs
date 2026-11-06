@@ -180,6 +180,54 @@ public class PeriodTotalsTests
         sscd.Calls.Last().periodTotals!.Current.Totalizer.Should().Be(10.00m, "a table check is not turnover");
     }
 
+    /// <summary>
+    /// A sale without fiscalization obligation is a v1.2 foreign sale (v0 0x0E): signed in the
+    /// bill chain, outside the grand totals.
+    /// </summary>
+    [Fact]
+    public async Task SaleWithoutObligation_StaysOutOfTheGrandTotals()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var withoutObligation = Sale(normal: 50.00m);
+        withoutObligation.ReceiptRequest.ftReceiptCase = ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003.WithCountry("FR");
+        await pipeline.SignAsync(withoutObligation);
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        var totals = sscd.Calls.Last().periodTotals!;
+        totals.Current.Totalizer.Should().Be(10.00m);
+        totals.Perpetual.Totalizer.Should().Be(10.00m);
+        withoutObligation.ReceiptResponse.ftReceiptIdentification.Should().EndWith("B1");
+    }
+
+    /// <summary>
+    /// An e-commerce sale and a sale flagged as made in a foreign country are tickets and count in
+    /// the grand totals: NF525 exempts neither (market-fr#221).
+    /// </summary>
+    [Theory]
+    [InlineData(ReceiptCase.ECommerce0x0004, false)]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, true)]
+    public async Task ECommerceAndForeignSales_CountInTheGrandTotals(ReceiptCase receiptCase, bool saleInForeignCountry)
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var sale = Sale(normal: 50.00m);
+        sale.ReceiptRequest.ftReceiptCase = saleInForeignCountry
+            ? receiptCase.WithCountry("FR").WithFlag(ReceiptCaseFlags.SaleInForeignCountry)
+            : receiptCase.WithCountry("FR");
+        await pipeline.SignAsync(sale);
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+
+        var totals = sscd.Calls.Last().periodTotals!;
+        totals.Current.Totalizer.Should().Be(60.00m);
+        totals.Perpetual.Totalizer.Should().Be(60.00m);
+        sale.ReceiptResponse.ftReceiptIdentification.Should().EndWith("T2");
+    }
+
     [Fact]
     public async Task NonClosingReceipts_CarryNoPeriodTotals()
     {

@@ -115,11 +115,25 @@ public static class FRReceiptChainExt
 
         if (request.ftReceiptCase.IsType(ReceiptCaseType.Log))
         {
-            return receiptCase == ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 ? FRReceiptChain.Duplicate : FRReceiptChain.Log;
+            // As v1.2 through the PosSystem API v2→v0 translation: a pay protocol is a payment
+            // proof (v0 0x02), an order a bill (v0 0x08).
+            return receiptCase switch
+            {
+                ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 => FRReceiptChain.Duplicate,
+                ReceiptCase.Pay0x3005 => FRReceiptChain.PaymentProof,
+                ReceiptCase.Order0x3004 => FRReceiptChain.Bill,
+                _ => FRReceiptChain.Log,
+            };
         }
 
+        // A sale without fiscalization obligation reaches v1.2 as a foreign sale (v0 0x0E), which
+        // is chained into the bills and kept out of the grand totals. An e-commerce sale and a sale
+        // flagged as made in a foreign country are tickets: NF525 exempts neither from the grand
+        // totals, and the PosSystem API drops the flag, so v1.2 in production counted them too
+        // (market-fr#221). Whether a sale bears French VAT is told by its charge items, not here.
         return receiptCase switch
         {
+            ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => FRReceiptChain.Bill,
             ReceiptCase.PaymentTransfer0x0002 => FRReceiptChain.PaymentProof,
             ReceiptCase.DeliveryNote0x0005 => FRReceiptChain.Bill,
             (ReceiptCase) 0x0006 /* Table Check */ => FRReceiptChain.Bill,

@@ -40,39 +40,91 @@ public class ProcessorTests
                 ftSignatures = [],
             });
 
-    [Fact]
-    public async Task ReceiptWithoutFiscalizationObligation_IsStoredButNotSigned()
-    {
-        var (pipeline, sscd) = CreatePipeline();
-        var sut = new ReceiptCommandProcessorFR(pipeline);
-
-        var response = await sut.PointOfSaleReceiptWithoutObligation0x0003Async(CommandRequest(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003));
-
-        sscd.Calls.Should().BeEmpty("a receipt without obligation must not consume a number of a fiscal chain");
-        response.receiptResponse.ftSignatures.Should().ContainSingle().Which.ftSignatureType.IsType(SignatureTypeFR.StoredNotSigned).Should().BeTrue();
-    }
-
+    /// <summary>
+    /// v1.2 signs a sale without obligation as a foreign sale (v0 0x0E) in the bill chain; an
+    /// e-commerce sale is a ticket (market-fr#221). Neither carries a mention.
+    /// </summary>
     [Theory]
-    [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    [InlineData((ReceiptCase) 0x0006)]
-    [InlineData((ReceiptCase) 0x0007)]
-    public async Task ProvisionalDocuments_AreMarkedAndSignedIntoTheBillChain(ReceiptCase receiptCase)
+    [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003, "ft1#B1")]
+    [InlineData(ReceiptCase.ECommerce0x0004, "ft1#T1")]
+    public async Task SalesWithoutObligationAndECommerce_AreSignedIntoTheirChain(ReceiptCase receiptCase, string identification)
     {
         var (pipeline, sscd) = CreatePipeline();
         var sut = new ReceiptCommandProcessorFR(pipeline);
         var request = CommandRequest(receiptCase);
 
+        var response = receiptCase == ReceiptCase.ECommerce0x0004
+            ? await sut.ECommerce0x0004Async(request)
+            : await sut.PointOfSaleReceiptWithoutObligation0x0003Async(request);
+
+        response.receiptResponse.ftReceiptIdentification.Should().Be(identification);
+        response.receiptResponse.ftSignatures.Should().NotContain(x => x.Caption == "Document provisoire");
+        sscd.Calls.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData((ReceiptCase) 0x0007)]
+    [InlineData(ReceiptCase.Order0x3004)]
+    public async Task ProvisionalDocuments_AreMarkedAndSignedIntoTheBillChain(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var request = CommandRequest(receiptCase);
+
         var response = receiptCase switch
         {
-            ReceiptCase.DeliveryNote0x0005 => await sut.DeliveryNote0x0005Async(request),
-            (ReceiptCase) 0x0006 => await sut.TableCheck0x0006Async(request),
-            _ => await sut.ProForma0x0007Async(request),
+            (ReceiptCase) 0x0006 => await new ReceiptCommandProcessorFR(pipeline).TableCheck0x0006Async(request),
+            (ReceiptCase) 0x0007 => await new ReceiptCommandProcessorFR(pipeline).ProForma0x0007Async(request),
+            _ => await ProtocolProcessor(pipeline).Order0x3004Async(request),
         };
 
         response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#B1");
         response.receiptResponse.ftSignatures.Should().Contain(x => x.Caption == "Document provisoire");
         sscd.Calls.Should().ContainSingle();
     }
+
+    /// <summary>v1.2 neither signs nor numbers a delivery note (v0 0x09), an unspecified protocol (v0 0x14) or an internal consumption (v0 0x0D).</summary>
+    [Theory]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
+    [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
+    public async Task UnsignedDocuments_AreStoredButNeitherSignedNorNumbered(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var request = CommandRequest(receiptCase);
+
+        var response = receiptCase switch
+        {
+            ReceiptCase.DeliveryNote0x0005 => await new ReceiptCommandProcessorFR(pipeline).DeliveryNote0x0005Async(request),
+            ReceiptCase.ProtocolUnspecified0x3000 => await ProtocolProcessor(pipeline).ProtocolUnspecified0x3000Async(request),
+            _ => await ProtocolProcessor(pipeline).InternalUsageMaterialConsumption0x3003Async(request),
+        };
+
+        sscd.Calls.Should().BeEmpty();
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#");
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+    }
+
+    /// <summary>v1.2 prints "justificatif non valable pour encaissement" on every payment proof (v0 0x02).</summary>
+    [Theory]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002)]
+    [InlineData(ReceiptCase.Pay0x3005)]
+    public async Task PaymentProofs_CarryTheMentionAndAreSignedIntoThePaymentProofChain(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var request = CommandRequest(receiptCase);
+
+        var response = receiptCase == ReceiptCase.Pay0x3005
+            ? await ProtocolProcessor(pipeline).Pay0x3005Async(request)
+            : await new ReceiptCommandProcessorFR(pipeline).PaymentTransfer0x0002Async(request);
+
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#P1");
+        response.receiptResponse.ftSignatures.Should().Contain(x => x.Data == "Justificatif non valable pour encaissement");
+        sscd.Calls.Should().ContainSingle();
+    }
+
+    private static ProtocolCommandProcessorFR ProtocolProcessor(FRSigningPipeline pipeline)
+        => new(pipeline, new AsyncLazy<IJournalFRCopyPayloadRepository>(() => Task.FromResult<IJournalFRCopyPayloadRepository>(new InMemoryJournalFRCopyPayloadRepository())), new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(new InMemoryQueueItemRepository())));
 
     [Fact]
     public async Task CopyReceipt_IsMarkedAsDuplicateAndGoesIntoItsOwnChain()
@@ -246,6 +298,29 @@ public class ProcessorTests
         var result = await sut.ValidateAsync(request, new ftQueue());
 
         result.Errors.Should().Contain(x => x.ErrorCode == "CopyRequiresPreviousReceiptReference", "market-fr#235, as v1.2 did");
+    }
+
+    /// <summary>v1.2 takes an opening float (0x0002 payment transfer) without a reference (market-fr#221).</summary>
+    [Fact]
+    public async Task ReceiptValidatorFR_AcceptsAPaymentTransferWithoutAPreviousReceiptReference()
+    {
+        var repository = new Mock<IMiddlewareQueueItemRepository>();
+        var sut = new ReceiptValidatorFR(new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PaymentTransfer0x0002.WithCountry("FR"),
+            Currency = Currency.EUR,
+            cbChargeItems = [],
+            cbPayItems =
+            [
+                new PayItem { Amount = 200m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") },
+                new PayItem { Amount = -200m, Currency = Currency.EUR, ftPayItemCase = PayItemCase.TransferToCashbookVaultOwnerEmployee.WithCountry("FR") },
+            ],
+        };
+
+        var result = await sut.ValidateAsync(request, new ftQueue());
+
+        result.Errors.Should().NotContain(x => x.ErrorCode == "PaymentTransferMissingPreviousReceiptReference");
     }
 
     [Fact]
