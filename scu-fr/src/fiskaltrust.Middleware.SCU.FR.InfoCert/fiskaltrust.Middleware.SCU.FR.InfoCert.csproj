@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>The fiskaltrust Middleware NF525 signature creation unit for France, for installations certified by Infocert.</Description>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="fiskaltrust.interface" Version="1.3.79-rc1-26216-90828" />
+    <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.FR.Abstraction\fiskaltrust.Middleware.SCU.FR.Abstraction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="fiskaltrust.Middleware.SCU.FR.UnitTest" />
+  </ItemGroup>
+
+</Project>

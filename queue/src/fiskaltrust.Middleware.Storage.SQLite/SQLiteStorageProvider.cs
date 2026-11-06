@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.Middleware.Storage.Base.Interface;
@@ -45,6 +46,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
     private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
     private readonly IMasterDataRepository<AgencyMasterData> _agencyMasterDataRepository;
+    private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
     
 
@@ -69,6 +71,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
         _outletMasterDataRepository = new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile);
         _posSystemMasterDataRepository = new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile);
         _agencyMasterDataRepository = new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile);
+        _journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
 
         Task.Run(() => InitAsync());
     }
@@ -84,6 +87,7 @@ public class SQLiteStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => CreateAsyncLazy(_outletMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => CreateAsyncLazy(_posSystemMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => CreateAsyncLazy(_agencyMasterDataRepository);
+    public AsyncLazy<IJournalFRCopyPayloadRepository> CreateJournalFRCopyPayloadRepository() => CreateAsyncLazy(_journalFRCopyPayloadRepository);
 
     private async Task InitAsync()
     {

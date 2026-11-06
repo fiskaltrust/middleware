@@ -20,6 +20,9 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 
         public override async Task<ftQueueItem> GetAsync(Guid id) => await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>("Select * from ftQueueItem where ftQueueItemId = @QueueItemId", new { QueueItemId = id }).ConfigureAwait(false);
 
+        /// <summary>The ID is the primary key here, so the queue row is not needed.</summary>
+        public Task<ftQueueItem> GetAsync(Guid ftQueueItemId, long ftQueueRow) => GetAsync(ftQueueItemId);
+
         public override async Task<IEnumerable<ftQueueItem>> GetAsync() => await DbConnection.QueryAsync<ftQueueItem>("select * from ftQueueItem").ConfigureAwait(false);
 
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow) => await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>("Select * from ftQueueItem where ftQueueRow = @MyQueueRow", new { MyQueueRow = queueRow }).ConfigureAwait(false);

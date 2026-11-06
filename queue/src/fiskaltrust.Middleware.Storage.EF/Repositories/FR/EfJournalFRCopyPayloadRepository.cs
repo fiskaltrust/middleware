@@ -42,5 +42,8 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.FR
         {
             return await DbContext.JournalFRCopyPayloadList.CountAsync(x => x.CopiedReceiptReference == cbPreviousReceiptReference);
         }
+
+        public async Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesAsync(string copiedReceiptReference)
+            => await DbContext.JournalFRCopyPayloadList.Where(x => x.CopiedReceiptReference == copiedReceiptReference).ToListAsync();
     }
 }

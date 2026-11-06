@@ -1,0 +1,100 @@
+using System;
+using System.Text.Json.Serialization;
+using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
+
+namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
+
+/// <summary>
+/// The json data set the Infocert signature covers. It carries the receipt identity, the totals
+/// broken down by VAT class and payment nature, and the chaining fields of ADR 0001 — the chain
+/// counter, the start-of-chain flag and the previous entry's signature, the counterparts of
+/// Infocert's <c>TAG-*-OEN</c> and <c>TAG-*-SIG</c> — the elements NF525 requires for inaltérabilité.
+/// </summary>
+/// <remarks>
+/// The field set has to be confirmed against the Infocert dossier before certification; the
+/// layout follows the payload the v1 QueueFR localization signs, so existing French archives
+/// stay readable with the same tooling.
+/// </remarks>
+internal class InfoCertReceiptPayload
+{
+    [JsonPropertyName("queueId")] public Guid QueueId { get; set; }
+
+    [JsonPropertyName("queueItemId")] public Guid QueueItemId { get; set; }
+
+    [JsonPropertyName("cashBoxIdentification")] public string? CashBoxIdentification { get; set; }
+
+    [JsonPropertyName("siret")] public string Siret { get; set; } = "";
+
+    // market-fr#141: the issuer claims, next to the SIRET and omitted when not configured.
+    [JsonPropertyName("rcs"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Rcs { get; set; }
+
+    [JsonPropertyName("naf"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Naf { get; set; }
+
+    [JsonPropertyName("legalform"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LegalForm { get; set; }
+
+    [JsonPropertyName("vatoption"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? VatOption { get; set; }
+
+    [JsonPropertyName("elecaddress"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ElectronicAddress { get; set; }
+
+    [JsonPropertyName("receiptId")] public string? ReceiptId { get; set; }
+
+    [JsonPropertyName("receiptMoment")] public DateTime ReceiptMoment { get; set; }
+
+    [JsonPropertyName("receiptCase")] public long ReceiptCase { get; set; }
+
+    [JsonPropertyName("currency")] public string Currency { get; set; } = "EUR";
+
+    /// <summary>The reprint number of a copy (R13 ENC-DUP-PRN-NUM, market-fr#235); omitted on every other receipt.</summary>
+    [JsonPropertyName("copyNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? CopyNumber { get; set; }
+
+    [JsonPropertyName("totalizer")] public decimal Totalizer { get; set; }
+
+    [JsonPropertyName("ciNormal")] public decimal CINormal { get; set; }
+
+    [JsonPropertyName("ciReduced1")] public decimal CIReduced1 { get; set; }
+
+    [JsonPropertyName("ciReduced2")] public decimal CIReduced2 { get; set; }
+
+    [JsonPropertyName("ciReducedS")] public decimal CIReducedS { get; set; }
+
+    [JsonPropertyName("ciZero")] public decimal CIZero { get; set; }
+
+    [JsonPropertyName("ciUnknown")] public decimal CIUnknown { get; set; }
+
+    [JsonPropertyName("piCash")] public decimal PICash { get; set; }
+
+    [JsonPropertyName("piNonCash")] public decimal PINonCash { get; set; }
+
+    [JsonPropertyName("piInternal")] public decimal PIInternal { get; set; }
+
+    [JsonPropertyName("piUnknown")] public decimal PIUnknown { get; set; }
+
+    /// <summary>The entry's position in its chain, starting at 1.</summary>
+    [JsonPropertyName("chainCounter")] public long ChainCounter { get; set; }
+
+    /// <summary>
+    /// The start-of-chain flag, coded like <c>TAG-*-OEN</c>: <c>O</c> when the previous signature
+    /// is carried over, <c>N</c> on the first entry of the chain.
+    /// </summary>
+    [JsonPropertyName("previousSignatureCarriedOver")] public FRPreviousSignatureCarriedOver PreviousSignatureCarriedOver { get; set; }
+
+    /// <summary>
+    /// The JWS signature segment of the previous entry of the same chain (Base64Url, like
+    /// <c>TAG-*-SIG</c>), or empty on the first entry.
+    /// </summary>
+    [JsonPropertyName("previousSignature")] public string PreviousSignature { get; set; } = "";
+
+    /// <summary>The signing certificate's serial number, under v1.2's key <c>csn</c>: the receipt carries no separate certificate item.</summary>
+    [JsonPropertyName("csn")] public string CertificateSerialNumber { get; set; } = "";
+
+    [JsonPropertyName("attestationNumber")] public string AttestationNumber { get; set; } = "";
+
+    /// <summary>
+    /// Present on grand-total (closing) receipts only: the accumulated turnover the closing
+    /// attests. Omitted everywhere else so ordinary receipts keep their payload shape.
+    /// </summary>
+    [JsonPropertyName("periodTotals")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FRPeriodTotals? PeriodTotals { get; set; }
+}

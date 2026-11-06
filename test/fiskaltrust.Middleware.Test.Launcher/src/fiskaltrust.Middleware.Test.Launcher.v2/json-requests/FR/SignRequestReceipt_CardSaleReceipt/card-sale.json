@@ -1,0 +1,29 @@
+{
+  "ftCashBoxID": "{{ ftCashBoxID }}",
+  "ftPosSystemId": "{{ ftPosSystemID }}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "fr-card-sale",
+  "cbReceiptMoment": "2026-08-04T10:05:00Z",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Description": "Menu du jour",
+      "Amount": 18.00,
+      "VATRate": 20,
+      "ftChargeItemCase": 5067147715117318147,
+      "Currency": "EUR"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Carte bancaire",
+      "Amount": 18.00,
+      "ftPayItemCase": 5067147715117318148,
+      "Currency": "EUR"
+    }
+  ],
+  "cbReceiptAmount": 18.00,
+  "ftReceiptCase": 5067147715117318145,
+  "Currency": "EUR"
+}

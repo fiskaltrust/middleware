@@ -28,6 +28,12 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
                 new { Reference = cbPreviousReceiptReference }
             ).ConfigureAwait(false);
 
+        public async Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesAsync(string copiedReceiptReference) =>
+            await DbConnection.QueryAsync<ftJournalFRCopyPayload>(
+                "SELECT * FROM ftJournalFRCopyPayload WHERE CopiedReceiptReference = @Reference",
+                new { Reference = copiedReceiptReference }
+            ).ConfigureAwait(false);
+
         public async Task InsertAsync(ftJournalFRCopyPayload payload)
         {
             if (await GetAsync(GetIdForEntity(payload)).ConfigureAwait(false) != null)
@@ -38,8 +44,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
             EntityUpdated(payload);
             await DbConnection.ExecuteAsync(
                 "INSERT INTO ftJournalFRCopyPayload " +
-                       "(QueueId,   CashBoxIdentification,  Siret,  ReceiptId,  ReceiptMoment,  QueueItemId,  CopiedReceiptReference,  CertificateSerialNumber,  TimeStamp) " +
-                "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);",
+                       "(QueueId,   CashBoxIdentification,  Siret,  ReceiptId,  ReceiptMoment,  QueueItemId,  CopiedReceiptReference,  CertificateSerialNumber,  TimeStamp,  QueueRow) " +
+                "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp, @QueueRow);",
                 payload
             ).ConfigureAwait(false);
         }

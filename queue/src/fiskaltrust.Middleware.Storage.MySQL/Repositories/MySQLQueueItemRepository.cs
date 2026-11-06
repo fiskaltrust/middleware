@@ -29,6 +29,9 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
+        /// <summary>The ID is the primary key here, so the queue row is not needed.</summary>
+        public Task<ftQueueItem> GetAsync(Guid ftQueueItemId, long ftQueueRow) => GetAsync(ftQueueItemId);
+
         public override async Task<IEnumerable<ftQueueItem>> GetAsync()
         {
             using (var connection = new MySqlConnection(ConnectionString))

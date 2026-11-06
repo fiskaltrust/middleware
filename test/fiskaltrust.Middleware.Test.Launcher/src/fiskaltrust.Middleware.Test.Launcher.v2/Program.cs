@@ -46,13 +46,13 @@ var posSystemId = cashBoxConfigurationText is null
 var queueConfiguration = Environment.GetEnvironmentVariable("MW_QUEUE_CONFIGURATION") is { Length: > 0 } queueFile
     ? PackageConfigurationFile.Read(queueFile)
     : Single(cashBoxConfiguration?.ftQueues, nameof(ftCashBoxConfiguration.ftQueues))
-        ?? Fallback("queue-configuration.json", nameof(ftCashBoxConfiguration.ftQueues));
+        ?? Fallback(market == "FR" ? "queue-configuration-fr.json" : "queue-configuration.json", nameof(ftCashBoxConfiguration.ftQueues));
 
 var configuredScu = Single(cashBoxConfiguration?.ftSignaturCreationDevices, nameof(ftCashBoxConfiguration.ftSignaturCreationDevices));
 var scuOverrideFile = Environment.GetEnvironmentVariable("MW_SCU_CONFIGURATION");
 var scuConfiguration = scuOverrideFile is { Length: > 0 }
     ? PackageConfigurationFile.Read(scuOverrideFile)
-    : configuredScu ?? Fallback("scu-configuration-bizkaia.json", nameof(ftCashBoxConfiguration.ftSignaturCreationDevices));
+    : configuredScu ?? Fallback(market == "FR" ? "scu-configuration-fr-inmemory.json" : "scu-configuration-bizkaia.json", nameof(ftCashBoxConfiguration.ftSignaturCreationDevices));
 
 // Poland has no per-package file to fall back to — it runs from configuration/PL/, and the ones it
 // used to carry are gone. Pointing it at another market's file names would send a PL run hunting for
@@ -103,6 +103,7 @@ var builder = new CashBoxBuilder(
     {
         "ES" => (ICashBoxBuilder)new CashBoxBuilderES(),
         "PL" => new CashBoxBuilderPL(),
+        "FR" => new CashBoxBuilderFR(),
         _ => throw new NotImplementedException(),
     },
     queueConfiguration,
@@ -177,6 +178,19 @@ var requests = Directory.EnumerateDirectories(
     var response = await middleware.Sign(await requests["SignRequestReceipt_CashSaleReceipt"].First()(r => r.cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8)));
     response.Should().NotBeNull();
     response.ftState.Should().Match(x => !x!.Value.IsState(State.Error)).And.Match(x => !x!.Value.IsState(State.Fail));
+}
+
+if (builder.Market == "FR")
+{
+    // The French chains are numbered and hashed independently, so the FR run also exercises a
+    // card sale, an invoice and the daily closing - each of them lands in a different chain.
+    foreach (var scenario in new[] { "SignRequestReceipt_CardSaleReceipt", "SignRequestInvoice_B2BInvoice", "SignRequestDailyOperations_DailyClosing" })
+    {
+        var response = await middleware.Sign(await requests[scenario].First()(r => r.cbReceiptReference = Guid.NewGuid().ToString().Substring(0, 8)));
+        response.Should().NotBeNull();
+        response!.ftState.Should().Match(x => !x!.Value.IsState(State.Error)).And.Match(x => !x!.Value.IsState(State.Fail));
+        Console.WriteLine($"{scenario}: {response.ftReceiptIdentification}");
+    }
 }
 
 // {

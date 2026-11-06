@@ -1,0 +1,144 @@
+using System.Globalization;
+using System.Text.Json;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
+
+namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
+
+/// <summary>
+/// Late signing (market-fr#231). A POS that could not reach the middleware issues its receipts as
+/// "electronic recording system failed" and, once the middleware is reachable again, re-sends them
+/// with <see cref="ReceiptCaseFlags.LateSigning"/>. They are signed normally, in arrival order, into
+/// their own chain: the flag is part of the signed <c>ftReceiptCase</c>, so every late-signed entry
+/// is marked inside its own signature. On top of that the queue
+/// <list type="bullet">
+/// <item>keeps the range open (<see cref="FRLateSigningState"/>) from the first signed late-signed
+/// receipt to the next signed zero receipt, and sets <see cref="StateFlags.LateSigningModeIsActive"/>
+/// on every response in between;</item>
+/// <item>asks the POS for the JET events 70 "Début de mode dégradé" and 120 "Fin de mode dégradé"
+/// (R19 v4.2) through a JET signature item: the queue issues no JET entry itself, the POS sends
+/// the event as a <c>ProtocolTechnicalEvent 0x3001</c> (decision of 2026-11-04 on market-fr#231);</item>
+/// <item>prints the range on the closing zero receipt and journals the start and end of the mode,
+/// as v1.2 did.</item>
+/// </list>
+/// Training receipts neither open nor close the mode: the training chain stays apart from the
+/// fiscal chains.
+/// </summary>
+public class FRLateSigning
+{
+    /// <summary>R19 v4.2: "Début de mode dégradé (hors connexion, …)".</summary>
+    public const int JetDegradedModeStart = 70;
+
+    /// <summary>R19 v4.2: "Fin de mode dégradé".</summary>
+    public const int JetDegradedModeEnd = 120;
+
+    public const string JetDegradedModeStartLabel = "Début de mode dégradé";
+
+    public const string JetDegradedModeEndLabel = "Fin de mode dégradé";
+
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository>? _queueItems;
+
+    /// <param name="queueItems">
+    /// Where the first late-signed receipt is read back when the mode closes. Without it the range
+    /// names that receipt by its queue item id.
+    /// </param>
+    public FRLateSigning(AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null)
+    {
+        _queueItems = queueItems;
+    }
+
+    /// <summary>
+    /// Folds a signed receipt into the late-signing range, adds the items the response has to carry
+    /// and returns the action journal entries to write.
+    /// </summary>
+    public async Task<List<ftActionJournal>> ApplySignedAsync(ReceiptRequest request, ReceiptResponse response, FRLateSigningState state)
+    {
+        var journals = new List<ftActionJournal>();
+        var training = request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training);
+
+        if (!training && request.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning) && state.Add(response.ftQueueItemID, request.cbReceiptMoment))
+        {
+            var information = Information(
+                ("cbReceiptReference", request.cbReceiptReference),
+                ("ftReceiptIdentification", response.ftReceiptIdentification),
+                ("cbReceiptMoment", Moment(request.cbReceiptMoment)));
+            response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(JetDegradedModeStart, JetDegradedModeStartLabel, information));
+            journals.Add(ftActionJournalFactory.CreateLateSigningStartedActionJournal(request, response));
+        }
+
+        if (!training && request.ftReceiptCase.Case() == ReceiptCase.ZeroReceipt0x2000 && state.IsOpen)
+        {
+            var range = state.Close();
+            var (firstReference, firstIdentification) = await FirstReceiptAsync(range, request, response).ConfigureAwait(false);
+            var information = Information(
+                ("count", range.Count.ToString(CultureInfo.InvariantCulture)),
+                ("first.cbReceiptReference", firstReference),
+                ("first.ftReceiptIdentification", firstIdentification),
+                ("cbReceiptMomentMin", Moment(range.MomentMin)),
+                ("cbReceiptMomentMax", Moment(range.MomentMax)),
+                ("closing.cbReceiptReference", request.cbReceiptReference),
+                ("closing.ftReceiptIdentification", response.ftReceiptIdentification));
+            response.ftSignatures.Add(SignaturItemFactory.CreateLateSigningEndedSignature(firstIdentification, response.ftReceiptIdentification));
+            response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(JetDegradedModeEnd, JetDegradedModeEndLabel, information));
+            journals.Add(ftActionJournalFactory.CreateLateSigningEndedActionJournal(request, response, range, firstReference, firstIdentification));
+        }
+
+        MarkMode(response, state);
+        return journals;
+    }
+
+    /// <summary>Sets <see cref="StateFlags.LateSigningModeIsActive"/> while the mode is open.</summary>
+    public static void MarkMode(ReceiptResponse response, FRLateSigningState state)
+    {
+        if (state.IsOpen)
+        {
+            response.ftState = response.ftState.WithFlag(StateFlags.LateSigningModeIsActive);
+        }
+    }
+
+    private async Task<(string? reference, string? identification)> FirstReceiptAsync(FRLateSigningRange range, ReceiptRequest request, ReceiptResponse response)
+    {
+        if (range.FirstQueueItemId is not { } firstId)
+        {
+            return (null, null);
+        }
+
+        // A late-signed zero receipt opens and closes the mode itself.
+        if (firstId == response.ftQueueItemID)
+        {
+            return (request.cbReceiptReference, response.ftReceiptIdentification);
+        }
+
+        if (_queueItems is not null)
+        {
+            try
+            {
+                var queueItem = await (await _queueItems).GetAsync(firstId).ConfigureAwait(false);
+                if (queueItem is not null)
+                {
+                    var firstRequest = string.IsNullOrEmpty(queueItem.request) ? null : JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request);
+                    var firstResponse = string.IsNullOrEmpty(queueItem.response) ? null : JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
+                    return (firstRequest?.cbReceiptReference, firstResponse?.ftReceiptIdentification ?? firstId.ToString());
+                }
+            }
+            catch (JsonException)
+            {
+                // The range is still closed; the mention falls back to the queue item id.
+            }
+        }
+
+        return (null, firstId.ToString());
+    }
+
+    private static string Moment(DateTime? moment) => moment?.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK", CultureInfo.InvariantCulture) ?? "";
+
+    /// <summary>The JET-INF text: <c>key=value</c> pairs separated by "; ", empty values left out.</summary>
+    private static string Information(params (string key, string? value)[] pairs)
+        => string.Join("; ", pairs.Where(x => !string.IsNullOrEmpty(x.value)).Select(x => $"{x.key}={x.value}"));
+}

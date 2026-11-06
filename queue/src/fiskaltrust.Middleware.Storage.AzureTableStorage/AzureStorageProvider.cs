@@ -9,8 +9,10 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.Base.Helpers;
@@ -122,6 +124,11 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
         {
             await Initialized;
             return new AzureTableStorageJournalESRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IJournalFRCopyPayloadRepository> CreateJournalFRCopyPayloadRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageJournalFRCopyPayloadRepository(_queueConfiguration, _tableServiceClient);
         });
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => new(async () =>
         {
