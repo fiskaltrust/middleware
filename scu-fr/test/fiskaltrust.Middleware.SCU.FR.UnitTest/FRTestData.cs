@@ -40,6 +40,18 @@ public static class FRTestData
         ChainCounter = chainCounter,
     };
 
+    /// <summary>
+    /// A copy as the queue hands it over: the reprint number in the FR block of ftStateData, as JSON
+    /// (an SCU behind REST) or as the queue's own object (an SCU in the queue's process).
+    /// </summary>
+    public static ProcessRequest Copy(int copyNumber, bool asJson = true)
+    {
+        var request = Request();
+        object stateData = new Dictionary<string, object> { ["FR"] = new Dictionary<string, object> { ["CopyNumber"] = copyNumber } };
+        request.ReceiptResponse.ftStateData = asJson ? System.Text.Json.JsonSerializer.SerializeToElement(stateData) : stateData;
+        return request;
+    }
+
     public static ReceiptRequest CashSaleRequest() => new()
     {
         ftCashBoxID = Guid.NewGuid(),

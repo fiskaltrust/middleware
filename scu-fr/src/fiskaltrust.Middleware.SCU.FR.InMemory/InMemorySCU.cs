@@ -68,6 +68,8 @@ public class InMemorySCU : IFRSSCD, IDisposable
             response.ftQueueItemID.ToString(),
             response.ftReceiptIdentification ?? "",
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+            // market-fr#235: the reprint number of a copy (R13 ENC-DUP-PRN-NUM); empty on every other receipt.
+            FRStateData.CopyNumber(response)?.ToString(CultureInfo.InvariantCulture) ?? "",
             (request.ReceiptRequest.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
             PeriodTotals(request.PeriodTotals),
             _certificateSerialNumber,

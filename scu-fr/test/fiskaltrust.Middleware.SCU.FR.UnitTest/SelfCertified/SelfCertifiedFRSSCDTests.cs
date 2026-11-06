@@ -106,6 +106,8 @@ public class SelfCertifiedFRSSCDTests
         {
             var request = FRTestData.Request(3);
             request.ReceiptRequest = receiptRequest;
+
+            request.ReceiptResponse.ftStateData = FRTestData.Copy(2).ReceiptResponse.ftStateData;
             return request;
         }
 

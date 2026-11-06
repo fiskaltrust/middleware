@@ -88,6 +88,23 @@ public class InfoCertFRSSCDTests
     }
 
     [Fact]
+    public async Task CopyNumber_IsSignedOnACopyAndOmittedOtherwise()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
+        var copy = FRTestData.Copy(3);
+
+        var (copied, _) = await sut.ProcessReceiptAsync(copy, null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        using var copyPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(copied).Split('.')[1]));
+        copyPayload.RootElement.GetProperty("copyNumber").GetInt32().Should().Be(3, "R13 ENC-DUP-PRN-NUM is part of the signed duplicate");
+        using var ticketPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(ticket).Split('.')[1]));
+        ticketPayload.RootElement.TryGetProperty("copyNumber", out var _).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ProcessReceiptAsync_AttachesTheAuditSignatures()
     {
         var (privateKey, key) = FRTestData.CreateKey();

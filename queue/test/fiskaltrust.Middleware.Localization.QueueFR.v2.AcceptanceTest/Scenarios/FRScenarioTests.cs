@@ -30,6 +30,28 @@ public abstract class FRScenarioTests
     }
 
     [Fact]
+    public async Task Copies_AreNumberedPerCopiedReceipt()
+    {
+        var sale = Request(ReceiptCase.PointOfSaleReceipt0x0001);
+        await SignAsync(sale);
+        ReceiptRequest CopyOfTheSale()
+        {
+            var copy = Request(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010);
+            copy.cbPreviousReceiptReference = sale.cbReceiptReference;
+            return copy;
+        }
+
+        var first = await SignAsync(CopyOfTheSale());
+        var second = await SignAsync(CopyOfTheSale());
+        var withoutReference = await SignAsync(Request(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010));
+
+        first.ftSignatures.Should().Contain(x => x.Caption == "Duplicata" && x.Data == $"1. Duplicata de {sale.cbReceiptReference}");
+        second.ftSignatures.Should().Contain(x => x.Caption == "Duplicata" && x.Data == $"2. Duplicata de {sale.cbReceiptReference}");
+        second.ftReceiptIdentification.Should().EndWith("D2");
+        withoutReference.ftState.IsState(State.Error).Should().BeTrue("market-fr#235: a copy has to name the receipt it copies");
+    }
+
+    [Fact]
     public async Task CashSale_IsSignedAndNumberedInTheTicketChain()
     {
         var response = await SignAsync(CashSale());

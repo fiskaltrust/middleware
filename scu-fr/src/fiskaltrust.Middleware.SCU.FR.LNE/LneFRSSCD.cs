@@ -66,7 +66,7 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         var receiptRequest = request.ReceiptRequest;
         var response = request.ReceiptResponse;
 
-        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals);
+        var dataSet = LneDataSetBuilder.Build(receiptRequest, response, _configuration, request.ChainCounter, previousSignature, request.PeriodTotals, FRStateData.CopyNumber(response));
 
         var signature = _signatureCreator.Sign(dataSet);
 

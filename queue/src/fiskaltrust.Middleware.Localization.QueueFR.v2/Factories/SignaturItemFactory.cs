@@ -33,14 +33,16 @@ public static class SignaturItemFactory
 
     /// <summary>
     /// The mention the customer copy has to carry, so a duplicate can never be mistaken for the
-    /// original document.
+    /// original document, with its reprint number (R13 ENC-DUP-PRN-NUM, printed on every document
+    /// type; market-fr#235). Same wording as v1.2.
     /// </summary>
-    public static SignatureItem CreateDuplicateSignature(string? copiedReceiptReference) => new()
+    /// <param name="copyNumber">The reprint number; null for a training copy, which is not counted.</param>
+    public static SignatureItem CreateDuplicateSignature(string copiedReceiptReference, int? copyNumber) => new()
     {
         ftSignatureFormat = SignatureFormat.Text,
         ftSignatureType = SignatureTypeFR.Information.As<SignatureType>(),
         Caption = "Duplicata",
-        Data = $"Duplicata de {copiedReceiptReference}",
+        Data = copyNumber is null ? $"Duplicata de {copiedReceiptReference}" : $"{copyNumber}. Duplicata de {copiedReceiptReference}",
     };
 
     /// <summary>The mention a bill, pro forma or delivery note has to carry: it is not a receipt.</summary>

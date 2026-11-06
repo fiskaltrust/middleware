@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
@@ -274,6 +275,45 @@ public class LneFRSSCDTests
 
         // siret, five issuer claims, queue id, queue item id, then the request hash (ADR 0013).
         DataSetOf(response).Split('|')[8].Should().Be(FRCanonicalRequest.SignedField(request.ReceiptRequest)).And.StartWith("1:");
+    }
+
+    [Fact]
+    public async Task CopyNumber_IsSignedAfterTheReceiptCase()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+        var copy = FRTestData.Copy(2, asJson: false);
+
+        var (copied, _) = await sut.ProcessReceiptAsync(copy, null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // ... request hash, cashbox, receipt id, moment, receipt case, then the copy number.
+        DataSetOf(copied).Split('|')[13].Should().Be("2");
+        DataSetOf(ticket).Split('|')[13].Should().BeEmpty("only a copy has a reprint number");
+    }
+
+    [Fact]
+    public async Task SalesLineCount_IsSignedAfterTheCopyNumber_InA24FieldDataSet()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+        var request = FRTestData.Request();
+        request.ReceiptRequest.cbChargeItems =
+        [
+            new ChargeItem { Amount = 10m, Quantity = 1, Description = "a", ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") },
+            new ChargeItem { Amount = 5m, Quantity = 2, Description = "b", ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") },
+            new ChargeItem { Amount = -1m, Quantity = 1, Description = "discount", ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR").WithFlag(ChargeItemCaseFlags.ExtraOrDiscount) },
+        ];
+        request.ReceiptRequest.cbPayItems = [new PayItem { Amount = 14m, Description = "cash", ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }];
+
+        var (response, _) = await sut.ProcessReceiptAsync(request, null);
+
+        // ... receipt case, copy number, then the sales-line count (market-fr#148); the discount is not a line.
+        var fields = DataSetOf(response).Split('|');
+        fields[14].Should().Be("2");
+        fields.Should().HaveCount(24, "the frozen LNE field order (2026-11-04)");
     }
 
     [Fact]

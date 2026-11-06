@@ -25,7 +25,7 @@ internal static class LneDataSetBuilder
     /// <summary>Field separator. Never appears in the values: identifiers, numbers and moments, and issuer claims that <see cref="LneConfiguration"/> rejects when they contain it.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, LneConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, LneConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null)
     {
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
@@ -48,6 +48,11 @@ internal static class LneDataSetBuilder
             response.ftReceiptIdentification ?? "",
             response.ftReceiptMoment.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             ((long) request.ftReceiptCase).ToString("X16", CultureInfo.InvariantCulture),
+            // market-fr#235: the reprint number of a copy (R13 ENC-DUP-PRN-NUM); empty on every other receipt.
+            copyNumber?.ToString(CultureInfo.InvariantCulture) ?? "",
+            // market-fr#148, ADR 0011: the number of sales lines (R13 ENC-TIK-LIG-NBR), printed by the
+            // queue as "Nombre de lignes" and signed here; 0 when the receipt has none.
+            FRSalesLines.Count(request).ToString(CultureInfo.InvariantCulture),
             request.Currency.ToString(),
             Amount(chargeItems.Sum(x => x.Amount)),
             VatBreakdown(chargeItems),
