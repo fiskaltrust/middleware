@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         {
             ("Component", "Composant concerné : Middleware (le logiciel), Queue (la file) ou SCU (le module de signature)."),
             ("Parameter", "Nom du paramètre, tel qu'il est configuré."),
-            ("Value", "Valeur du paramètre à la génération de l'archive ; vide s'il n'est pas configuré. Une modification antérieure figure dans jet.csv (code 270)."),
+            ("Value", "Valeur du paramètre à la génération de l'archive ; vide s'il n'est pas configuré. Ne donne pas les valeurs antérieures : une modification pendant la période archivée figure dans jet.csv (code 270), qui la date sans garantir l'ancienne valeur."),
         };
 
         public async Task WriteAsync(IReadOnlyList<ArchiveEntry> records, TextWriter writer, CsvOptions options, CancellationToken cancellationToken)
