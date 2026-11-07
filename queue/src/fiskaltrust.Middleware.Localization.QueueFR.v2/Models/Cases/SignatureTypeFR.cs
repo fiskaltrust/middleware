@@ -17,6 +17,8 @@ public enum SignatureTypeFR : long
     PerpetualTotals = 0x4652_2000_0000_0007,
     /// <summary>Reserved, not emitted since ADR 0001 (market-fr#122); see the SCU abstraction.</summary>
     ChainHash = 0x4652_2000_0000_0008,
+    /// <summary>The certification-body line an LNE or InfoCert SCU prints; the self-certified SCU emits none.</summary>
+    CertificationBody = 0x4652_2000_0000_000A,
     StoredNotSigned = 0x4652_2000_0000_000B,
     InitialOperationReceipt = 0x4652_2000_0000_0010,
     OutOfOperationReceipt = 0x4652_2000_0000_0011,

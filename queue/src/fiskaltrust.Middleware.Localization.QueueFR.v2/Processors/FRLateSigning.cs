@@ -21,9 +21,11 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// <item>keeps the range open (<see cref="FRLateSigningState"/>) from the first signed late-signed
 /// receipt to the next signed zero receipt, and sets <see cref="StateFlags.LateSigningModeIsActive"/>
 /// on every response in between;</item>
-/// <item>asks the POS for the JET events 70 "Début de mode dégradé" and 120 "Fin de mode dégradé"
-/// (R19 v4.2) through a JET signature item: the queue issues no JET entry itself, the POS sends
-/// the event as a <c>ProtocolTechnicalEvent 0x3001</c> (decision of 2026-11-04 on market-fr#231);</item>
+/// <item>asks the POS for the JET event 70 "Début de mode dégradé" (R19 v4.2) through a JET
+/// signature item: the queue issues no JET entry itself, the POS sends the event as a
+/// <c>ProtocolTechnicalEvent 0x3001</c> (decision of 2026-11-04 on market-fr#231). JET 120 "Fin de
+/// mode dégradé" is the POS's own event, sent without a prompt when it leaves the mode (decided
+/// 2026-11-05, market-fr#200);</item>
 /// <item>prints the range on the closing zero receipt and journals the start and end of the mode,
 /// as v1.2 did.</item>
 /// </list>
@@ -32,15 +34,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// </summary>
 public class FRLateSigning
 {
-    /// <summary>R19 v4.2: "Début de mode dégradé (hors connexion, …)".</summary>
-    public const int JetDegradedModeStart = 70;
-
-    /// <summary>R19 v4.2: "Fin de mode dégradé".</summary>
-    public const int JetDegradedModeEnd = 120;
-
-    public const string JetDegradedModeStartLabel = "Début de mode dégradé";
-
-    public const string JetDegradedModeEndLabel = "Fin de mode dégradé";
 
     private readonly AsyncLazy<IMiddlewareQueueItemRepository>? _queueItems;
 
@@ -64,11 +57,11 @@ public class FRLateSigning
 
         if (!training && request.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning) && state.Add(response.ftQueueItemID, request.cbReceiptMoment))
         {
-            var information = Information(
+            var information = FRJetItems.Information(
                 ("cbReceiptReference", request.cbReceiptReference),
                 ("ftReceiptIdentification", response.ftReceiptIdentification),
-                ("cbReceiptMoment", Moment(request.cbReceiptMoment)));
-            response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(JetDegradedModeStart, JetDegradedModeStartLabel, information));
+                ("cbReceiptMoment", FRJetItems.Moment(request.cbReceiptMoment)));
+            response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(FRJetItems.DegradedModeStart, FRJetItems.DegradedModeStartLabel, information));
             journals.Add(ftActionJournalFactory.CreateLateSigningStartedActionJournal(request, response));
         }
 
@@ -76,16 +69,7 @@ public class FRLateSigning
         {
             var range = state.Close();
             var (firstReference, firstIdentification) = await FirstReceiptAsync(range, request, response).ConfigureAwait(false);
-            var information = Information(
-                ("count", range.Count.ToString(CultureInfo.InvariantCulture)),
-                ("first.cbReceiptReference", firstReference),
-                ("first.ftReceiptIdentification", firstIdentification),
-                ("cbReceiptMomentMin", Moment(range.MomentMin)),
-                ("cbReceiptMomentMax", Moment(range.MomentMax)),
-                ("closing.cbReceiptReference", request.cbReceiptReference),
-                ("closing.ftReceiptIdentification", response.ftReceiptIdentification));
             response.ftSignatures.Add(SignaturItemFactory.CreateLateSigningEndedSignature(firstIdentification, response.ftReceiptIdentification));
-            response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(JetDegradedModeEnd, JetDegradedModeEndLabel, information));
             journals.Add(ftActionJournalFactory.CreateLateSigningEndedActionJournal(request, response, range, firstReference, firstIdentification));
         }
 
@@ -135,10 +119,4 @@ public class FRLateSigning
 
         return (null, firstId.ToString());
     }
-
-    private static string Moment(DateTime? moment) => moment?.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK", CultureInfo.InvariantCulture) ?? "";
-
-    /// <summary>The JET-INF text: <c>key=value</c> pairs separated by "; ", empty values left out.</summary>
-    private static string Information(params (string key, string? value)[] pairs)
-        => string.Join("; ", pairs.Where(x => !string.IsNullOrEmpty(x.value)).Select(x => $"{x.key}={x.value}"));
 }

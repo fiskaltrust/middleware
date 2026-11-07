@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.InfoCert;
 using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 using FluentAssertions;
@@ -79,13 +80,13 @@ public class InfoCertJetEventTests
     }
 
     [Theory]
-    [InlineData(InfoCertJetEvent.ContinuousSequenceModeChange)]
-    [InlineData(InfoCertJetEvent.JetAccess)]
+    [InlineData(FRJetEvent.ContinuousSequenceModeChange)]
+    [InlineData(15)]
     [InlineData(90)]
     [InlineData(450)]
     [InlineData(900)]
     [InlineData(4711)]
-    public void R19AndEditorCodes_AreValid(int code) => InfoCertJetEvent.IsValidCode(code).Should().BeTrue();
+    public void R19AndEditorCodes_AreValid(int code) => FRJetEvent.IsValidCode(code).Should().BeTrue();
 
     [Theory]
     [InlineData(0)]
@@ -93,20 +94,20 @@ public class InfoCertJetEventTests
     [InlineData(310)]
     [InlineData(899)]
     [InlineData(-90)]
-    public void OtherCodes_AreInvalid(int code) => InfoCertJetEvent.IsValidCode(code).Should().BeFalse();
+    public void OtherCodes_AreInvalid(int code) => FRJetEvent.IsValidCode(code).Should().BeFalse();
 
     [Fact]
     public void ContinuousSequenceModeChange_FollowsTheArchiveContract()
-        => InfoCertJetEvent.ContinuousSequenceModeChange.Should().Be(10, "the archive contract (market-fr#227) lists 10 first; the choice 10/15 is open in market-fr#200");
+        => FRJetEvent.ContinuousSequenceModeChange.Should().Be(10, "R19 v4 gave 10 this meaning and v2 never used 10 for JET access (market-fr#200, 2026-11-04)");
 
     [Fact]
     public void TryRead_AcceptsTheV1KeysUnderFR_CaseInsensitive_AsStringOrNumberCode_AndTakesTheOperatorFromCbUser()
     {
         var request = TechnicalEvent(Json("{\"fr\":{\"code\":90,\"message\":\"Archivage\",\"information\":\"\"}}"), Json("\"Alice\"")).ReceiptRequest;
 
-        InfoCertJetEvent.TryRead(request, out var jetEvent, out var error).Should().BeTrue(error);
+        FRJetEvent.TryRead(request, out var jetEvent, out var error).Should().BeTrue(error);
 
-        jetEvent.Should().Be(new InfoCertJetEvent(90, "Archivage", null, "Alice"));
+        jetEvent.Should().Be(new FRJetEvent(90, "Archivage", null, "Alice"));
     }
 
     [Fact]
@@ -114,9 +115,9 @@ public class InfoCertJetEventTests
     {
         var request = TechnicalEvent("{\"FR\":{\"Code\":\"15\",\"Message\":\"Acces JET\"}}").ReceiptRequest;
 
-        InfoCertJetEvent.TryRead(request, out var jetEvent, out _).Should().BeTrue();
+        FRJetEvent.TryRead(request, out var jetEvent, out _).Should().BeTrue();
 
-        jetEvent!.Code.Should().Be(InfoCertJetEvent.JetAccess);
+        jetEvent!.Code.Should().Be(15);
         jetEvent.Operator.Should().BeNull();
     }
 }

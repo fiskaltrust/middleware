@@ -52,7 +52,7 @@ internal class InfoCertJetPayload
     /// <summary>The JET payload of <paramref name="request"/>, or null when it is not a valid JET event.</summary>
     public static InfoCertJetPayload? TryCreate(ProcessRequest request, string? previousSignature, string? certificateSerialNumber)
     {
-        if (!InfoCertJetEvent.IsJetEvent(request.ReceiptRequest) || !InfoCertJetEvent.TryRead(request.ReceiptRequest, out var jetEvent, out _))
+        if (!FRJetEvent.IsJetEvent(request.ReceiptRequest) || !FRJetEvent.TryRead(request.ReceiptRequest, out var jetEvent, out _))
         {
             return null;
         }
