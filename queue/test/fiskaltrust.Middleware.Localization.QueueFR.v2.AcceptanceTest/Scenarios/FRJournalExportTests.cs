@@ -136,6 +136,7 @@ public class FRJournalExportTests : IDisposable
         ticket["SoftwareVersion"].Should().NotBeEmpty("the queue item records the version that processed it");
         ReadCsv(sub, "charge-items.csv").Should().OnlyContain(r => r["AmountHT"] != "" && r["VATAmount"] != "" && r["PricesIncludeVAT"] == "true");
         ReadCsv(sub, "compliance-parameters.csv").Should().Contain(r => r["Component"] == "Queue" && r["Parameter"] == "ftQueueID");
+        ReadCsv(sub, "compliance-parameters.csv").Should().ContainSingle(r => r["Component"] == "Queue" && r["Parameter"] == "ValidationLevel", "it is written even when not configured (market-fr#221)");
         sub.Entries.Select(e => e.Name).Should().Contain(new[] { "charge-items.csv", "pay-items.csv", "receipt-vat-summary.csv", "signatures.csv", "jet.csv", "case-data.csv", "compliance-parameters.csv", "README.txt" })
             .And.NotContain("journal-types.csv");
 

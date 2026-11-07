@@ -64,18 +64,21 @@ public class JournalProcessorFR : IJournalProcessor
     private readonly Func<Task<IArchiveSigner>>? _archiveSigner;
     private readonly ArchiveSplitOptions _splitOptions;
     private readonly Func<Task<FRSSCDInfo?>>? _scuInfo;
+    private readonly string? _validationLevel;
 
     /// <param name="archiveSigner">
     /// Creates the signer of an archive export, per export: the queue's SCU (<see cref="ScuArchiveSigner"/>, ADR 0007 amendment).
     /// Null refuses the archive export.
     /// </param>
     /// <param name="scuInfo">The SCU's non-secret configuration, joined to the archive as compliance parameters (archive-v2 §12).</param>
-    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, ArchiveSplitOptions? splitOptions = null, Func<Task<FRSSCDInfo?>>? scuInfo = null)
+    /// <param name="validationLevel">The queue's <c>ValidationLevel</c> as configured, or null when it is not configured (FR then applies <c>Error</c>).</param>
+    public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, ArchiveSplitOptions? splitOptions = null, Func<Task<FRSSCDInfo?>>? scuInfo = null, string? validationLevel = null)
     {
         _scuInfo = scuInfo;
         _queueId = queueId;
         _queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
         _configurationRepository = storageProvider.CreateConfigurationRepository();
+        _validationLevel = validationLevel;
         _archiveSigner = archiveSigner;
         _splitOptions = splitOptions ?? new ArchiveSplitOptions();
     }
@@ -229,6 +232,7 @@ public class JournalProcessorFR : IJournalProcessor
             new("Queue", "CountryCode", "FR"),
             new("Queue", "ftCashBoxIdentification", queueFR?.CashBoxIdentification),
             new("Queue", "Siret", queueFR?.Siret),
+            new("Queue", "ValidationLevel", _validationLevel),
         };
 
         var info = _scuInfo is null ? null : await _scuInfo().ConfigureAwait(false);

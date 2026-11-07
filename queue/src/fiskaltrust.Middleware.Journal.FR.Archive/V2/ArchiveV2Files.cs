@@ -276,7 +276,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Child<JsonElement>("Quantity", r => Number(r.Child, "Quantity"), "Quantité ; négative sur un remboursement."),
             Child<JsonElement>("Unit", r => ArchiveEntry.Text(r.Child, "Unit"), "Unité de la quantité."),
             Child<JsonElement>("UnitPrice", r => Number(r.Child, "UnitPrice"), "Prix unitaire TTC (TVA comprise)."),
-            Child<JsonElement>("UnitPriceHT", r => LineNumber(r, "UnitPriceHT"), "Prix unitaire HT (hors TVA) : montant HT divisé par la quantité, arrondi au centime."),
+            Child<JsonElement>("UnitPriceHT", r => LineNumber(r, "UnitPriceHT"), "Prix unitaire HT (hors TVA) : montant HT divisé par la quantité, arrondi à six décimales (un prix unitaire peut être inférieur au centime)."),
             Child<JsonElement>("Amount", r => Number(r.Child, "Amount"), "Montant total TTC (TVA comprise) de la ligne."),
             Child<JsonElement>("AmountHT", r => LineNumber(r, "AmountHT"), "Montant total HT (hors TVA) de la ligne : Amount moins VATAmount."),
             Child<JsonElement>("VATAmount", r => LineNumber(r, "VATAmount"), "Montant de TVA de la ligne : celui envoyé par la caisse, sinon calculé depuis le taux et arrondi au centime."),

@@ -80,7 +80,7 @@ public static class FRArchiveStateData
                 Position = item.Position,
                 VATAmount = vat,
                 AmountHT = amountHT,
-                UnitPriceHT = item.Quantity == 0 ? null : Math.Round(amountHT / item.Quantity, 2, MidpointRounding.AwayFromZero),
+                UnitPriceHT = item.Quantity == 0 ? null : Math.Round(amountHT / item.Quantity, 6, MidpointRounding.AwayFromZero),
                 VATNature = (((long) item.ftChargeItemCase >> 8) & 0xFF).ToString("X2", CultureInfo.InvariantCulture),
             };
 

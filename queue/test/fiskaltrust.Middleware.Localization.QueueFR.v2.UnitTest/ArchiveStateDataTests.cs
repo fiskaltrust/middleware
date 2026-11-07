@@ -50,7 +50,17 @@ public class ArchiveStateDataTests
         state.ChargeItems![0].Should().BeEquivalentTo(new { Position = 1m, VATAmount = 0.40m, AmountHT = 4.00m, UnitPriceHT = 2.00m, VATNature = "00" });
         state.ChargeItems[1].VATAmount.Should().Be(1.67m, "10 x 20 / 120 = 1.666…, rounded to the cent away from zero");
         state.ChargeItems[1].AmountHT.Should().Be(8.33m);
-        state.ChargeItems[1].UnitPriceHT.Should().Be(2.78m);
+        state.ChargeItems[1].UnitPriceHT.Should().Be(2.776667m, "8.33 / 3, rounded to six decimals away from zero");
+    }
+
+    [Fact]
+    public void UnitPriceHT_KeepsPricesBelowACent()
+    {
+        var state = Apply(Ticket(
+            new ChargeItem { Position = 1, Quantity = 1000, Amount = 1.20m, VATRate = 20, ftChargeItemCase = Charge(ChargeItemCase.NormalVatRate), Currency = Currency.EUR }), FRReceiptChain.Ticket);
+
+        state.ChargeItems![0].AmountHT.Should().Be(1.00m);
+        state.ChargeItems[0].UnitPriceHT.Should().Be(0.001m, "rounded to the cent it would read 0.00");
     }
 
     [Fact]
