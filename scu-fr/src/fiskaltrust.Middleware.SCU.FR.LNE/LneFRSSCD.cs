@@ -28,6 +28,9 @@ public class LneFRSSCD : IFRSSCD, IDisposable
     /// <summary>The certification mention LNE Rev. 1.8 Exigence 9 recommends on every ticket.</summary>
     public const string Mention = "Système de caisse certifié LNE";
 
+    /// <summary>The line a sandbox prints instead: a sandbox SCU is not certified (market-fr#221, 2026-11-07).</summary>
+    public const string SandboxMention = FRSandbox.PendingCertification + " LNE";
+
     private readonly LneConfiguration _configuration;
     private readonly LneSignatureCreator _signatureCreator;
 
@@ -87,7 +90,15 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         // market-fr#131: the mention LNE Rev. 1.8 Exigence 9 recommends, with the LNE certificate
         // number (an acceptable solution of the same exigence). Printed on every ticket, so it stays
         // short: the full signature the exigence recommends is in the QR code. Not signed.
-        response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
+        // A sandbox is not certified (LNE Rev. 1.8 §III.10): it claims no certification and prints no number.
+        if (_configuration.Sandbox)
+        {
+            response.AddSignatureItem(SignatureTypeFR.CertificationBody, SandboxMention, "");
+        }
+        else
+        {
+            response.AddSignatureItem(SignatureTypeFR.CertificationBody, Mention, _configuration.LneCertificateNumber);
+        }
         response.AddPeriodTotalsItems(request.PeriodTotals);
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);

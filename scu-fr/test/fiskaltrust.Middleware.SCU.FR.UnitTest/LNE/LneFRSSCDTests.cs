@@ -264,6 +264,31 @@ public class LneFRSSCDTests
     }
 
     [Fact]
+    public async Task CertificationMention_InASandbox_ClaimsNoCertification()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration(privateKey);
+        configuration.Sandbox = true;
+        using var sut = new LneFRSSCD(configuration);
+
+        var (response, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        var item = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+        item.Caption.Should().Be("en cours de certif. LNE");
+        item.Data.Should().BeEmpty();
+        response.ReceiptResponse.ftSignatures.Should().NotContain(x => (x.Caption ?? "").Contains("certifié") || (x.Data ?? "").Contains("certifié"));
+    }
+
+    [Fact]
+    public void FromConfiguration_ReadsTheLauncherSandboxKey()
+    {
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa", ["CertificateSerialNumber"] = "CERT-4711", ["LneCertificateNumber"] = "LNE-1", ["Sandbox"] = "true" };
+
+        LneConfiguration.FromConfiguration(configuration).Sandbox.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RequestHash_IsTheCanonicalRequestHashAfterTheQueueItemId()
     {
         var (privateKey, key) = FRTestData.CreateKey();

@@ -302,6 +302,40 @@ public class InfoCertFRSSCDTests
     }
 
     [Fact]
+    public async Task Nf525Mention_InASandbox_SaysCertificationIsPending()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var configuration = Configuration(privateKey);
+        configuration.Sandbox = true;
+        using var sut = new InfoCertFRSSCD(configuration);
+
+        var (response, signature) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // A sandbox is not certified: no attestation number, the excerpt and the software stay.
+        var extract = new string(new[] { signature[2], signature[6], signature[12], signature[18] });
+        var item = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.CertificationBody));
+        item.Data.Should().Be($"(NF525) B en cours de certif. {extract} OnQPMS 06.07");
+        item.Data.Should().NotContain("0546");
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData("True", true)]
+    [InlineData("false", false)]
+    [InlineData(null, false)]
+    public void FromConfiguration_ReadsTheLauncherSandboxKey(object? sandbox, bool expected)
+    {
+        var configuration = new Dictionary<string, object> { ["Siret"] = FRTestData.Siret, ["PrivateKey"] = "aa" };
+        if (sandbox is not null)
+        {
+            configuration["sandbox"] = sandbox;
+        }
+
+        InfoCertConfiguration.FromConfiguration(configuration).Sandbox.Should().Be(expected);
+    }
+
+    [Fact]
     public void Nf525Mention_LeavesOutAnEmptySoftwareName()
     {
         InfoCertMention.Build("C", "1234", "ABWCDExFGHIJiKLMNO2PQ", "", "v1.0").Should().Be("(NF525) C 1234 Wxi2 v1.0");

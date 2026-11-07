@@ -125,8 +125,10 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
         // market-fr#131: the NF525 mention (NF525 V2.3 §6.1.6.1) is the whole line, so the caption
-        // stays empty. It is left out rather than emitted incomplete.
-        var mention = InfoCertMention.Build(_configuration.SoftwareCategory, _configuration.AttestationNumber, signature, _configuration.SoftwareName, _configuration.SoftwareVersion);
+        // stays empty. It is left out rather than emitted incomplete. A sandbox is not certified, so
+        // "en cours de certif." stands where the attestation number goes.
+        var productNumber = _configuration.Sandbox ? FRSandbox.PendingCertification : _configuration.AttestationNumber;
+        var mention = InfoCertMention.Build(_configuration.SoftwareCategory, productNumber, signature, _configuration.SoftwareName, _configuration.SoftwareVersion);
         if (mention is not null)
         {
             response.AddSignatureItem(SignatureTypeFR.CertificationBody, "", mention);

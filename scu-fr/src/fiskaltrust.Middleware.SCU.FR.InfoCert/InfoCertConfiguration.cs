@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
@@ -59,9 +60,17 @@ public class InfoCertConfiguration
     /// <summary>Issuer claim: electronic address, <c>SIREN</c> or <c>SIREN_XXX</c> under scheme 0225 (BT-34).</summary>
     public string? ElectronicAddress { get; set; }
 
+    /// <summary>
+    /// True in a sandbox (the Launcher's <c>sandbox</c> key). The NF525 mention then reads
+    /// "en cours de certif." instead of the attestation number (<see cref="FRSandbox"/>).
+    /// </summary>
+    [JsonIgnore]
+    public bool Sandbox { get; set; }
+
     public static InfoCertConfiguration FromConfiguration(Dictionary<string, object> configuration)
     {
         var result = FRScuConfiguration.Read<InfoCertConfiguration>(configuration);
+        result.Sandbox = FRSandbox.IsSet(configuration);
 
         if (string.IsNullOrWhiteSpace(result.Siret))
         {
