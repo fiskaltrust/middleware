@@ -318,7 +318,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Child<KeyValuePair<string, JsonElement>>("VATRate", r => r.Child.Key, "Taux de TVA en pourcentage."),
             Child<KeyValuePair<string, JsonElement>>("VATNature", r => ArchiveEntry.Text(r.Child.Value, "VATNature"), "Code(s) de nature de TVA des lignes à ce taux, séparés par une virgule."),
             Child<KeyValuePair<string, JsonElement>>("AmountHT", r => RawNumber(r.Child.Value, "AmountHT"), "Base HT à ce taux."),
-            Child<KeyValuePair<string, JsonElement>>("VATAmount", r => RawNumber(r.Child.Value, "VATAmount"), "Montant de TVA à ce taux."),
+            Child<KeyValuePair<string, JsonElement>>("VATAmount", r => RawNumber(r.Child.Value, "VATAmount"), "Montant de TVA à ce taux : somme des TVA non arrondies des lignes, arrondie une fois au centime. Il peut différer d'un centime de la somme des VATAmount de charge-items.csv, arrondis ligne par ligne."),
             Child<KeyValuePair<string, JsonElement>>("AmountTTC", r => RawNumber(r.Child.Value, "AmountTTC"), "Total TTC à ce taux : somme des montants TTC des lignes, acomptes, remises et remboursements compris."),
         };
 

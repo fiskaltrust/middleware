@@ -108,16 +108,21 @@ public static class FRArchiveStateData
     }
 
     /// <summary>
-    /// Every charge item, grouped by rate: discounts, refunds and down payments included, as the InfoCert
-    /// SCU builds its signed summary (fiskaltrust/middleware#828). HT is TTC minus VAT.
+    /// Every charge item, grouped by rate, highest rate first: discounts, refunds and down payments included.
+    /// The same rule as the summary the InfoCert SCU signs (<c>InfoCertVatSummary</c>, fiskaltrust/middleware#828),
+    /// so the two agree to the cent: the VAT of a rate is the sum of its items' unrounded VAT (the sent
+    /// <c>VATAmount</c>, else the share implied by the rate), rounded once to the cent away from zero. HT is TTC
+    /// minus VAT. The per-line <see cref="FRStateChargeItem.VATAmount"/> is rounded per line, so the lines of a
+    /// rate can differ from it by a cent.
     /// </summary>
     private static Dictionary<string, FRStateVatSummaryEntry> VatSummaryOf(IReadOnlyList<ChargeItem> items, IReadOnlyList<FRStateChargeItem> lines)
         => items.Select((item, index) => (item, line: lines[index]))
-            .GroupBy(x => x.item.VATRate.ToString("0.##########", CultureInfo.InvariantCulture))
-            .ToDictionary(g => g.Key, g =>
+            .GroupBy(x => x.item.VATRate)
+            .OrderByDescending(g => g.Key)
+            .ToDictionary(g => g.Key.ToString("0.##########", CultureInfo.InvariantCulture), g =>
             {
                 var ttc = g.Sum(x => x.item.Amount);
-                var vat = g.Sum(x => x.line.VATAmount);
+                var vat = Math.Round(g.Sum(x => x.item.VATAmount ?? x.item.Amount / (100 + x.item.VATRate) * x.item.VATRate), 2, MidpointRounding.AwayFromZero);
                 return new FRStateVatSummaryEntry
                 {
                     AmountTTC = ttc,

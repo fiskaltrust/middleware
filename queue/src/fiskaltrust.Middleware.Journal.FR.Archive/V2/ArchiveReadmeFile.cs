@@ -213,12 +213,6 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 lines.Add("");
             }));
 
-            sections.Add(("7.", "Exemption de clôture", () =>
-            {
-                Para("Le logiciel ne se prévaut pas de l'exemption de clôture : il réalise des clôtures "
-                    + "journalières, mensuelles et annuelles, chacune signée et chaînée sur sa propre chaîne (Z, M, Y).");
-            }));
-
             var output = new List<string> { "README - Archive fiscale fiskaltrust (France, format version 2)", "", "Sommaire", "" };
             output.AddRange(sections.Select(s => $"  {s.Number} {s.Title}"));
             foreach (var (number, title, body) in sections)

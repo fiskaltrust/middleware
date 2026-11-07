@@ -88,6 +88,23 @@ public class ArchiveStateDataTests
     }
 
     [Fact]
+    public void VatSummary_RoundsEachRateOnce_AsTheSignedInfoCertSummary()
+    {
+        // 1.00 at 20 %: the VAT share is 0.1666…, so each line rounds to 0.17 (0.51 for three), while the rate's
+        // unrounded sum, 0.50, rounds to 0.50 - the InfoCertVatSummary rule (fiskaltrust/middleware#828).
+        var item = new ChargeItem { Quantity = 1, Amount = 1m, VATRate = 20, ftChargeItemCase = Charge(ChargeItemCase.NormalVatRate), Currency = Currency.EUR };
+        var state = Apply(Ticket(
+            new ChargeItem { Position = 1, Quantity = 1, Amount = 1m, VATRate = 20, ftChargeItemCase = item.ftChargeItemCase, Currency = Currency.EUR },
+            new ChargeItem { Position = 2, Quantity = 1, Amount = 1m, VATRate = 20, ftChargeItemCase = item.ftChargeItemCase, Currency = Currency.EUR },
+            new ChargeItem { Position = 3, Quantity = 1, Amount = 1m, VATRate = 20, ftChargeItemCase = item.ftChargeItemCase, Currency = Currency.EUR },
+            new ChargeItem { Position = 4, Quantity = 1, Amount = 1.055m, VATRate = 5.5m, ftChargeItemCase = Charge(ChargeItemCase.DiscountedVatRate1), Currency = Currency.EUR }), FRReceiptChain.Ticket);
+
+        state.ChargeItems!.Take(3).Should().OnlyContain(l => l.VATAmount == 0.17m, "a line rounds its own VAT");
+        state.VATSummary!["20"].Should().BeEquivalentTo(new { AmountTTC = 3m, VATAmount = 0.50m, AmountHT = 2.50m });
+        state.VATSummary.Keys.Should().Equal(new[] { "20", "5.5" }, "highest rate first, as InfoCertVatSummary orders it");
+    }
+
+    [Fact]
     public void SalesReceipt_StoresItsOwnTotals_WithoutPerpetual()
     {
         var state = Apply(Ticket(new ChargeItem { Position = 1, Quantity = 1, Amount = 10m, VATRate = 20, ftChargeItemCase = Charge(ChargeItemCase.NormalVatRate), Currency = Currency.EUR }), FRReceiptChain.Ticket);
