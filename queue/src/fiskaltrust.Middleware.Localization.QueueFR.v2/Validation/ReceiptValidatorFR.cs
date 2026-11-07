@@ -51,32 +51,10 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
             .WithMessage(request => $"The receipt case 0x{(long) request.ftReceiptCase.Case():X4} must not have pay items.")
             .WithErrorCode("PayItemsNotAllowed");
 
-        // v1.2 balances a bill (v0 0x08) like every other receipt. The shared ReceiptBalance rule
-        // skips table checks and pro formas, so France checks them here, with the same tolerance.
-        RuleFor(x => x)
-            .Must(request => Math.Abs((request.cbChargeItems?.Sum(x => x.Amount) ?? 0m) - (request.cbPayItems?.Sum(x => x.Amount) ?? 0m)) <= BalanceTolerance)
-            .When(x => !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
-                    && (x.ftReceiptCase.IsCase((ReceiptCase) 0x0006) || x.ftReceiptCase.IsCase((ReceiptCase) 0x0007)))
-            .WithMessage(request => $"Receipt is not balanced: charge items sum ({request.cbChargeItems?.Sum(x => x.Amount) ?? 0m:F2}) does not match pay items sum ({request.cbPayItems?.Sum(x => x.Amount) ?? 0m:F2}).")
-            .WithErrorCode("ReceiptNotBalanced");
-
-        // v1.2 takes a bill (v0 0x08) with exactly one pay item, of case v0 0x11, which the PosSystem
-        // API reaches from v2 0x0D. Table checks, pro formas and orders are bills; sales are not.
-        RuleFor(x => x.cbPayItems)
-            .Must(items => items is { Count: 1 } && items[0].ftPayItemCase.IsCase(BillPayItemCase))
-            .When(x => IsBill(x.ftReceiptCase))
-            .WithMessage(request => $"The receipt case 0x{(long) request.ftReceiptCase.Case():X4} must have exactly one pay item, of case 0x{(long) BillPayItemCase:X4}.")
-            .WithErrorCode("BillRequiresOneInternalPayItem");
+        // Table checks, pro formas and orders follow the shared v2 rules (market-fr ADR 0016): no
+        // FR balance rule on 0x0006/0x0007, which the shared ReceiptBalance skips, and no internal
+        // pay item required on a bill, as v1.2 required of its v0 0x08 bill.
     }
-
-    private const PayItemCase BillPayItemCase = (PayItemCase) 0x000D;
-
-    /// <summary>The cases the PosSystem API sends v1.2 as a bill (v0 0x08): table check, pro forma, order.</summary>
-    private static bool IsBill(ReceiptCase receiptCase) => receiptCase.IsCase((ReceiptCase) 0x0006)
-        || receiptCase.IsCase((ReceiptCase) 0x0007)
-        || receiptCase.IsCase(ReceiptCase.Order0x3004);
-
-    private const decimal BalanceTolerance = 0.01m;
 
     /// <summary>
     /// v1.2 refuses charge and pay items on closings, zero, start, stop, audit, archive and copy

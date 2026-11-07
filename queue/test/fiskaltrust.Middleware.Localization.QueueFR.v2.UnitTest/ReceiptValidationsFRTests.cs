@@ -61,39 +61,18 @@ public class ReceiptValidationsFRTests
     public void SalesAndTechnicalEvents_KeepTheirItems(long receiptCase)
         => Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().NotContain(["ChargeItemsNotAllowed", "PayItemsNotAllowed"]);
 
-    /// <summary>The shared balance rule skips table checks and pro formas; v1.2 balanced them too, with v2's ±0.01.</summary>
-    [Theory]
-    [InlineData(0x0006)]
-    [InlineData(0x0007)]
-    public void TableCheckAndProForma_MustBalance(long receiptCase)
-    {
-        Errors(Request(receiptCase, charge: 10m, pay: 9m, payCase: 0x000D)).Should().Contain("ReceiptNotBalanced");
-        Errors(Request(receiptCase, charge: 10m, pay: 10.01m, payCase: 0x000D)).Should().BeEmpty();
-        Errors(Request(receiptCase, charge: 10m, pay: 10.02m, payCase: 0x000D)).Should().Contain("ReceiptNotBalanced");
-    }
     /// <summary>
-    /// v1.2 takes a bill (v0 0x08) with exactly one pay item of case v0 0x11 (v2 0x0D). Table check,
-    /// pro forma and order are bills; a sale without obligation, an e-commerce sale and a sale are not.
+    /// Table check, pro forma and order follow the shared v2 rules (market-fr ADR 0016): France adds
+    /// neither a balance rule nor a required internal pay item, as v1.2 did for its bill.
     /// </summary>
     [Theory]
     [InlineData(0x0006)]
     [InlineData(0x0007)]
     [InlineData(0x3004)]
-    public void Bills_TakeExactlyOneInternalPayItem(long receiptCase)
+    public void Bills_FollowTheSharedRules(long receiptCase)
     {
+        Errors(Request(receiptCase, charge: 10m)).Should().BeEmpty("a pro forma or a table check sends no payment");
+        Errors(Request(receiptCase, charge: 10m, pay: 9m)).Should().BeEmpty("the shared ReceiptBalance rule decides");
         Errors(Request(receiptCase, charge: 10m, pay: 10m, payCase: 0x000D)).Should().BeEmpty();
-        Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().Contain("BillRequiresOneInternalPayItem");
-        Errors(Request(receiptCase, charge: 10m)).Should().Contain("BillRequiresOneInternalPayItem");
-
-        var twoItems = Request(receiptCase, charge: 10m, pay: 5m, payCase: 0x000D);
-        twoItems.cbPayItems = [.. twoItems.cbPayItems, twoItems.cbPayItems[0]];
-        Errors(twoItems).Should().Contain("BillRequiresOneInternalPayItem");
     }
-
-    [Theory]
-    [InlineData(0x0001)]
-    [InlineData(0x0003)]
-    [InlineData(0x0004)]
-    public void Sales_TakeAnyPayItem(long receiptCase)
-        => Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().NotContain("BillRequiresOneInternalPayItem");
 }
