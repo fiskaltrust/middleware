@@ -1,11 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using fiskaltrust.Middleware.Journal.FR.Archive.Csv;
 using fiskaltrust.Middleware.Journal.FR.Archive.Model;
 using fiskaltrust.Middleware.Journal.FR.Archive.Packaging;
@@ -13,27 +9,51 @@ using fiskaltrust.Middleware.Journal.FR.Archive.Writing;
 
 namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 {
+    /// <summary>What kind of entries a journal holds, which decides its columns beyond the common ones.</summary>
+    public enum ArchiveJournalKind
+    {
+        /// <summary>T, P, I, B, X: the receipt's own totals (archive-v2 §1.2).</summary>
+        Sales,
+
+        /// <summary>S, Z, M, Y and E: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
+        Closing,
+
+        /// <summary>L, D: the common columns only.</summary>
+        Other,
+    }
+
     /// <summary>
     /// One journal of the archive (archive-v2 field contract §7, market-fr#173): the journal code a POS
     /// asks for, the file it lands in, and the chain letters whose entries it holds.
     /// </summary>
     public sealed class ArchiveJournal
     {
-        internal ArchiveJournal(int code, string letter, string description, params string[] chainLetters)
+        internal ArchiveJournal(int code, string letter, string name, string description, string frenchName, ArchiveJournalKind kind, params string[] chainLetters)
         {
             Code = code;
             Letter = letter;
+            Name = name;
             Description = description;
+            FrenchName = frenchName;
+            Kind = kind;
             ChainLetters = new HashSet<string>(chainLetters, StringComparer.Ordinal);
         }
 
         /// <summary>The <c>jjj</c> part of the <c>ftJournalType</c>, e.g. 0x001 for tickets.</summary>
         public int Code { get; }
 
-        /// <summary>The contract's letter, which names the file.</summary>
+        /// <summary>The contract's letter, which leads the file name.</summary>
         public string Letter { get; }
 
+        /// <summary>The English name in the file name, lower case with hyphens, e.g. <c>daily-closing</c>.</summary>
+        public string Name { get; }
+
         public string Description { get; }
+
+        /// <summary>The French name the archive documentation shows next to the letter.</summary>
+        public string FrenchName { get; }
+
+        public ArchiveJournalKind Kind { get; }
 
         /// <summary>
         /// The letters the queue writes into <c>ftReceiptIdentification</c> for this journal: the journal's own
@@ -41,38 +61,63 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// </summary>
         public IReadOnlyCollection<string> ChainLetters { get; }
 
-        public string FileName => $"journal-{Letter}.csv";
+        /// <summary>
+        /// <c>journal-&lt;letter&gt;-&lt;name&gt;.csv</c> (decided 2026-11-06): still one file per chain letter, and
+        /// readable in a plain zip listing.
+        /// </summary>
+        public string FileName => $"journal-{Letter}-{Name}.csv";
 
         public bool Holds(ArchiveEntry entry) => ChainLetters.Contains(entry.Chain);
     }
 
+    /// <summary>A French compliance parameter joined to the archive (Ref LNE 1.8 Exigence 19, archive-v2 §12).</summary>
+    public sealed class ComplianceParameter
+    {
+        public ComplianceParameter(string component, string parameter, string? value)
+        {
+            Component = component;
+            Parameter = parameter;
+            Value = value;
+        }
+
+        /// <summary><c>Middleware</c>, <c>Queue</c> or <c>SCU</c>.</summary>
+        public string Component { get; }
+
+        public string Parameter { get; }
+
+        public string? Value { get; }
+    }
+
+    /// <summary>What the export knows beyond the entries: the compliance parameters in force.</summary>
+    public sealed class ArchiveV2Context
+    {
+        public IReadOnlyList<ComplianceParameter> ComplianceParameters { get; set; } = Array.Empty<ComplianceParameter>();
+    }
+
     /// <summary>
-    /// The files of a v2 sub-archive (ADR 0006, archive-v2 field contract, market-fr#227). This is the first
-    /// slice of market-fr#199: the columns the stored queue item already carries.
+    /// The files of a v2 sub-archive (ADR 0006, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
     /// <remarks>
-    /// Not written yet, because their source is still open or not stored yet: the issuer claims (#141),
-    /// <c>SoftwareVersion</c> (#124), the totals and counters of §1.2–§1.4, the response-computed charge-item
-    /// values (<c>ftStateData.FR.ChargeItems[]</c>, D7), <c>receipt-vat-summary.csv</c> (§4, #147),
-    /// <c>signatures.csv</c> (§5) and <c>jet.csv</c> (§6, #200). The per-SCU schema (D1) is not applied:
-    /// both schemas' common columns are written.
+    /// Not written yet: the issuer data beyond the SIRET (under review, #141), the closing period columns
+    /// (<c>ClosingType</c>, <c>PeriodStart</c>, <c>PeriodEnd</c>), the copy columns and <c>LineCount</c> (#148),
+    /// which their own pull requests add.
     /// </remarks>
     public static class ArchiveV2Files
     {
         public static readonly IReadOnlyList<ArchiveJournal> Journals = new[]
         {
-            new ArchiveJournal(0x001, "T", "Ticket", "T"),
-            new ArchiveJournal(0x002, "P", "Payment proof", "P"),
-            new ArchiveJournal(0x003, "I", "Invoice", "I"),
-            new ArchiveJournal(0x004, "E", "Technical", "E"),
-            new ArchiveJournal(0x007, "B", "Bill (note)", "B"),
-            new ArchiveJournal(0x009, "L", "Log", "L"),
-            new ArchiveJournal(0x00A, "D", "Copy", "D"),
-            new ArchiveJournal(0x00B, "X", "Training", "X"),
-            new ArchiveJournal(0x00C, "S", "Shift closing", "S"),
-            new ArchiveJournal(0x00D, "Z", "Daily closing", "Z"),
-            new ArchiveJournal(0x00E, "M", "Monthly closing", "M"),
-            new ArchiveJournal(0x00F, "Y", "Yearly closing", "Y"),
+            new ArchiveJournal(0x001, "T", "ticket", "Ticket", "Tickets", ArchiveJournalKind.Sales, "T"),
+            new ArchiveJournal(0x002, "P", "payment-proof", "Payment proof", "Justificatifs de paiement", ArchiveJournalKind.Sales, "P"),
+            new ArchiveJournal(0x003, "I", "invoice", "Invoice", "Factures", ArchiveJournalKind.Sales, "I"),
+            new ArchiveJournal(0x004, "E", "technical", "Technical", "Opérations techniques", ArchiveJournalKind.Closing, "E"),
+            new ArchiveJournal(0x007, "B", "bill", "Bill (note)", "Notes", ArchiveJournalKind.Sales, "B"),
+            new ArchiveJournal(0x009, "L", "log", "Log", "Journal des événements techniques (JET)", ArchiveJournalKind.Other, "L"),
+            new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Other, "D"),
+            new ArchiveJournal(0x00B, "X", "training", "Training", "Mode école", ArchiveJournalKind.Sales, "X"),
+            new ArchiveJournal(0x00C, "S", "shift-closing", "Shift closing", "Clôtures de service", ArchiveJournalKind.Closing, "S"),
+            new ArchiveJournal(0x00D, "Z", "daily-closing", "Daily closing", "Clôtures journalières", ArchiveJournalKind.Closing, "Z"),
+            new ArchiveJournal(0x00E, "M", "monthly-closing", "Monthly closing", "Clôtures mensuelles", ArchiveJournalKind.Closing, "M"),
+            new ArchiveJournal(0x00F, "Y", "yearly-closing", "Yearly closing", "Clôtures annuelles", ArchiveJournalKind.Closing, "Y"),
         };
 
         /// <summary>
@@ -88,18 +133,26 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 .ToList();
 
         /// <summary>
-        /// The column schema of <paramref name="subArchive"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
-        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS; null for a sub-archive without receipts.
+        /// The schema of <paramref name="subArchive"/>: <c>LNE</c> when its receipts sign a delimited data set (LNE and
+        /// self-certified SCUs), <c>InfoCert</c> when they sign a JWS; null for a sub-archive without receipts. Both write
+        /// the same files and columns (decided 2026-11-06); the schema says how to read <c>Signature</c>.
         /// </summary>
         public static string? SchemaOf(SubArchive<ArchiveEntry> subArchive)
             => subArchive.Records.Count == 0 ? null : subArchive.Records[0].Signature.Contains('|') ? "LNE" : "InfoCert";
 
         public const string ChargeItemsFileName = "charge-items.csv";
         public const string PayItemsFileName = "pay-items.csv";
-        public const string JournalTypesFileName = "journal-types.csv";
+        public const string VatSummaryFileName = "receipt-vat-summary.csv";
+        public const string SignaturesFileName = "signatures.csv";
+        public const string JetFileName = "jet.csv";
         public const string CaseDataFileName = "case-data.csv";
+        public const string ComplianceParametersFileName = "compliance-parameters.csv";
 
         private const long PayItemDownpaymentFlag = 0x0008_0000;
+        private const long ChargeItemExtraOrDiscountFlag = 0x0004_0000;
+        private const long ChargeItemDownpaymentFlag = 0x0008_0000;
+        private const long ChargeItemReturnableDepositFlag = 0x0010_0000;
+        private const long JetEventCase = 0x3001;
 
         private static readonly HashSet<string> ChargeItemChains = new HashSet<string>(new[] { "T", "I", "B", "X" }, StringComparer.Ordinal);
         private static readonly HashSet<string> PayItemChains = new HashSet<string>(new[] { "T", "P", "I", "B", "X" }, StringComparer.Ordinal);
@@ -112,98 +165,242 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>The journal file of one journal, e.g. for a single-journal export.</summary>
         public static ICsvFileDefinition<ArchiveEntry> JournalFile(ArchiveJournal journal)
-            => new FlatCsvFile<ArchiveEntry>(journal.FileName, CommonColumns, journal.Holds);
+            => new FlatCsvFile<ArchiveEntry>(journal.FileName, JournalColumns(journal.Kind), journal.Holds,
+                $"une ligne par document de la chaîne {journal.Letter} ({journal.FrenchName})");
 
-        public static IReadOnlyList<ICsvFileDefinition<ArchiveEntry>> Files()
-            => Journals.Select(JournalFile)
+        public static IReadOnlyList<CsvColumn<ArchiveEntry>> JournalColumns(ArchiveJournalKind kind) => kind switch
+        {
+            ArchiveJournalKind.Sales => CommonColumns.Concat(SalesTotalsColumns).ToList(),
+            ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingTotalsColumns).ToList(),
+            _ => CommonColumns,
+        };
+
+        /// <summary>The data files, in the order the archive lists them; <c>README.txt</c> comes last and describes them.</summary>
+        public static IReadOnlyList<ICsvFileDefinition<ArchiveEntry>> Files(ArchiveV2Context? context = null)
+        {
+            context ??= new ArchiveV2Context();
+            var files = Journals.Select(JournalFile)
                 .Concat(new ICsvFileDefinition<ArchiveEntry>[]
                 {
-                    new OneToManyCsvFile<ArchiveEntry, JsonElement>(ChargeItemsFileName, e => ArchiveEntry.Array(e.Request, "cbChargeItems"), ChargeItemColumns, e => ChargeItemChains.Contains(e.Chain)),
-                    new OneToManyCsvFile<ArchiveEntry, JsonElement>(PayItemsFileName, e => ArchiveEntry.Array(e.Request, "cbPayItems"), PayItemColumns, e => PayItemChains.Contains(e.Chain)),
-                    new JournalTypesCsvFile(),
-                    new OneToManyCsvFile<ArchiveEntry, CaseDataRow>(CaseDataFileName, CaseData.Rows, CaseDataColumns),
+                    new OneToManyCsvFile<ArchiveEntry, JsonElement>(ChargeItemsFileName, e => ArchiveEntry.Array(e.Request, "cbChargeItems"), ChargeItemColumns, e => ChargeItemChains.Contains(e.Chain),
+                        "une ligne par article (cbChargeItems) d'un document des chaînes T, I, B ou X"),
+                    new OneToManyCsvFile<ArchiveEntry, JsonElement>(PayItemsFileName, e => ArchiveEntry.Array(e.Request, "cbPayItems"), PayItemColumns, e => PayItemChains.Contains(e.Chain),
+                        "une ligne par paiement (cbPayItems) d'un document des chaînes T, P, I, B ou X"),
+                    new OneToManyCsvFile<ArchiveEntry, KeyValuePair<string, JsonElement>>(VatSummaryFileName, VatSummaryOf, VatSummaryColumns, e => ChargeItemChains.Contains(e.Chain),
+                        "une ligne par document et par taux de TVA (récapitulatif de TVA)"),
+                    new OneToManyCsvFile<ArchiveEntry, JsonElement>(SignaturesFileName, e => ArchiveEntry.Array(e.Response, "ftSignatures"), SignatureColumns, null,
+                        "une ligne par élément de signature (ftSignatures) de la réponse d'un document, toutes chaînes"),
+                    new FlatCsvFile<ArchiveEntry>(JetFileName, JetColumns, IsJetEvent,
+                        "une ligne par événement du journal des événements techniques (JET), sur la chaîne L"),
+                    new OneToManyCsvFile<ArchiveEntry, CaseDataRow>(CaseDataFileName, CaseData.Rows, CaseDataColumns, null,
+                        "une ligne par valeur élémentaire des données complémentaires (case data) et des champs structurés de la requête"),
+                    new ComplianceParametersFile(context.ComplianceParameters),
                     new RequestsFile(),
                 })
                 .ToList();
+            files.Add(new ArchiveReadmeFile(files.OfType<IDocumentedFile>().ToList()));
+            return files;
+        }
 
-        public static ISubArchiveWriter<ArchiveEntry> CreateWriter(CsvOptions? options = null)
-            => new CsvSubArchiveWriter<ArchiveEntry>(ArchiveFormatVersion.V2, Files(), options);
+        public static ISubArchiveWriter<ArchiveEntry> CreateWriter(CsvOptions? options = null, ArchiveV2Context? context = null)
+            => new CsvSubArchiveWriter<ArchiveEntry>(ArchiveFormatVersion.V2, Files(context), options);
+
+        private static CsvColumn<ArchiveEntry> Col(string name, Func<ArchiveEntry, object?> value, string description) => new CsvColumn<ArchiveEntry>(name, value, description);
+
+        private static CsvColumn<ChildRow<ArchiveEntry, T>> Child<T>(string name, Func<ChildRow<ArchiveEntry, T>, object?> value, string description)
+            => new CsvColumn<ChildRow<ArchiveEntry, T>>(name, value, description);
 
         /// <summary>§1.1, the columns common to every chain.</summary>
         public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> CommonColumns = new[]
         {
-            new CsvColumn<ArchiveEntry>("ftQueueItemID", e => e.QueueItemId),
-            new CsvColumn<ArchiveEntry>("ftQueueID", e => e.QueueId),
-            new CsvColumn<ArchiveEntry>("ftCashBoxIdentification", e => ArchiveEntry.String(e.Response, "ftCashBoxIdentification")),
-            new CsvColumn<ArchiveEntry>("ftQueueRow", e => e.QueueRow),
-            new CsvColumn<ArchiveEntry>("Chain", e => e.Chain),
-            new CsvColumn<ArchiveEntry>("ftReceiptIdentification", e => e.ReceiptIdentification),
-            new CsvColumn<ArchiveEntry>("ChainCounter", e => e.ChainCounter),
-            new CsvColumn<ArchiveEntry>("StartOfChain", e => e.StartOfChain),
-            new CsvColumn<ArchiveEntry>("PreviousSignature", e => e.PreviousSignature),
-            new CsvColumn<ArchiveEntry>("ftReceiptMoment", e => e.ReceiptMoment),
-            new CsvColumn<ArchiveEntry>("cbReceiptMoment", e => MomentOrText(e.Request, "cbReceiptMoment")),
-            new CsvColumn<ArchiveEntry>("cbReceiptReference", e => ArchiveEntry.String(e.Request, "cbReceiptReference")),
-            new CsvColumn<ArchiveEntry>("cbPreviousReceiptReference", e => References(e.Request, "cbPreviousReceiptReference")),
-            new CsvColumn<ArchiveEntry>("ftReceiptCase", e => CsvValueFormatter.Hex(e.ReceiptCase)),
-            new CsvColumn<ArchiveEntry>("cbTerminalID", e => ArchiveEntry.Text(e.Request, "cbTerminalID")),
-            new CsvColumn<ArchiveEntry>("cbUser", e => ArchiveEntry.Text(e.Request, "cbUser")),
-            new CsvColumn<ArchiveEntry>("cbArea", e => ArchiveEntry.Text(e.Request, "cbArea")),
-            new CsvColumn<ArchiveEntry>("ftState", e => CsvValueFormatter.Hex(e.State)),
-            new CsvColumn<ArchiveEntry>("RequestHash", e => e.RequestHash),
-            new CsvColumn<ArchiveEntry>("Siret", e => e.Siret),
-            new CsvColumn<ArchiveEntry>("CertificateSerialNumber", e => e.CertificateSerialNumber),
-            new CsvColumn<ArchiveEntry>("Training", e => e.Training),
-            new CsvColumn<ArchiveEntry>("Signature", e => e.Signature),
+            Col("ftQueueItemID", e => e.QueueItemId, "Identifiant unique du document (GUID). Clé de jointure avec tous les autres fichiers."),
+            Col("ftQueueID", e => e.QueueId, "Identifiant de la file (queue) fiskaltrust qui a signé le document."),
+            Col("ftCashBoxIdentification", e => ArchiveEntry.String(e.Response, "ftCashBoxIdentification"), "Identification de la caisse (terminal) fiskaltrust émettrice."),
+            Col("ftQueueRow", e => e.QueueRow, "Numéro d'ordre de la requête dans la file, incrémental et sans trou."),
+            Col("Chain", e => e.Chain, "Lettre de la chaîne de signature du document (liste 5.1)."),
+            Col("ftReceiptIdentification", e => e.ReceiptIdentification, "Numéro du document : préfixe fiskaltrust, lettre de la chaîne et compteur de la chaîne."),
+            Col("ChainCounter", e => e.ChainCounter, "Rang du document dans sa chaîne, signé ; continu et sans trou."),
+            Col("StartOfChain", e => e.StartOfChain, "true pour le premier document d'une chaîne, qui n'a pas de signature précédente."),
+            Col("PreviousSignature", e => e.PreviousSignature, "Signature (partie Base64Url) du document précédent de la même chaîne ; vide en début de chaîne. Assure le chaînage."),
+            Col("ftReceiptMoment", e => e.ReceiptMoment, "Date et heure d'enregistrement du document par fiskaltrust (UTC)."),
+            Col("cbReceiptMoment", e => MomentOrText(e.Request, "cbReceiptMoment"), "Date et heure de la transaction telles que le système de caisse les a envoyées (UTC)."),
+            Col("cbReceiptReference", e => ArchiveEntry.String(e.Request, "cbReceiptReference"), "Référence du document dans le système de caisse."),
+            Col("cbPreviousReceiptReference", e => References(e.Request, "cbPreviousReceiptReference"), "Référence(s) du document d'origine (annulation, remboursement, duplicata, justificatif) ; plusieurs références séparées par une virgule."),
+            Col("ftReceiptCase", e => CsvValueFormatter.Hex(e.ReceiptCase), "Code du type de document et de ses options (hexadécimal, liste 5.3)."),
+            Col("cbTerminalID", e => ArchiveEntry.Text(e.Request, "cbTerminalID"), "Identifiant du terminal du système de caisse."),
+            Col("cbUser", e => ArchiveEntry.Text(e.Request, "cbUser"), "Opérateur (utilisateur) ayant réalisé l'opération."),
+            Col("cbArea", e => ArchiveEntry.Text(e.Request, "cbArea"), "Table ou zone de vente, telle qu'envoyée par le système de caisse."),
+            Col("ftState", e => CsvValueFormatter.Hex(e.State), "État de la file au moment du document (hexadécimal), dont le mode de signature différée."),
+            Col("RequestHash", e => e.RequestHash, "Empreinte signée de la requête canonique (version:SHA-256 Base64), recalculable depuis requests.jsonl ; vide si le module de signature n'en signe pas."),
+            Col("Siret", e => e.Siret, "Numéro SIRET de l'émetteur (14 chiffres), signé."),
+            Col("CertificateSerialNumber", e => e.CertificateSerialNumber, "Numéro de série du certificat qui a signé le document."),
+            Col("SoftwareVersion", e => e.ProcessingVersion, "Version complète du logiciel fiskaltrust qui a traité le document (version, build et révision)."),
+            Col("Training", e => e.Training, "true si le document est émis en mode école (formation) ; sans valeur fiscale."),
+            Col("Signature", e => e.Signature, "Signature du document : jeton JWS (InfoCert) ou données signées suivies de la signature après le dernier point (LNE)."),
         };
 
-        /// <summary>§2, the charge-item columns sent by the POS.</summary>
+        private static readonly (string Name, string Label)[] TotalColumns =
+        {
+            ("Totalizer", "Total TTC"),
+            ("CINormal", "Total TTC au taux normal de TVA"),
+            ("CIDiscounted1", "Total TTC au taux réduit 1 de TVA"),
+            ("CIDiscounted2", "Total TTC au taux réduit 2 de TVA"),
+            ("CISuperReduced1", "Total TTC au taux super-réduit de TVA"),
+            ("CIZero", "Total TTC au taux zéro ou exonéré"),
+            ("CIUnknown", "Total TTC à un taux de TVA non classé"),
+            ("PICash", "Total des paiements en espèces"),
+            ("PINonCash", "Total des paiements autres qu'en espèces (carte, chèque, bon, paiement en ligne)"),
+            ("PIInternal", "Total des mouvements internes (consommation interne, transferts)"),
+            ("PIUnknown", "Total des paiements d'un type non classé"),
+        };
+
+        /// <summary>§1.2: the receipt's own totals, stored by the queue in <c>ftStateData.FR.Totals</c>.</summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> SalesTotalsColumns = TotalColumns
+            .Select(t => Col(t.Name, e => StateNumber(e.StateFR, "Totals", t.Name), t.Label + " du document, acomptes exclus."))
+            .ToList();
+
+        /// <summary>§1.3: the period totals of a closing, then the perpetual totals, stored in <c>ftStateData.FR.Totals</c>.</summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ClosingTotalsColumns = TotalColumns
+            .Select(t => Col(t.Name, e => StateNumber(e.StateFR, "Totals", t.Name), t.Label + " de la période close (grand total de période)."))
+            .Concat(TotalColumns.Select(t => Col("Perpetual" + t.Name, e => StateNumber(e.StateFR, "Totals", "Perpetual", t.Name), t.Label + " perpétuel, depuis le début de la chaîne (grand total perpétuel).")))
+            .ToList();
+
+        /// <summary>§2, the charge items: the POS's values and the values the queue computed and stored.</summary>
         public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, JsonElement>>> ChargeItemColumns = new[]
         {
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ftQueueItemID", r => r.Parent.QueueItemId),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Position", r => Number(r.Child, "Position")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ProductNumber", r => ArchiveEntry.Text(r.Child, "ProductNumber")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Description", r => ArchiveEntry.Text(r.Child, "Description")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Quantity", r => Number(r.Child, "Quantity")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Unit", r => ArchiveEntry.Text(r.Child, "Unit")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("UnitPrice", r => Number(r.Child, "UnitPrice")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Amount", r => Number(r.Child, "Amount")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("VATRate", r => Number(r.Child, "VATRate")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ftChargeItemCase", r => Hex(r.Child, "ftChargeItemCase")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Moment", r => MomentOrText(r.Child, "Moment")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("DiscountCode", r => CaseDataFR(r.Child, "ftChargeItemCaseData", "DiscountCode")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("DiscountRate", r => CaseDataFR(r.Child, "ftChargeItemCaseData", "DiscountRate")),
+            Child<JsonElement>("ftQueueItemID", r => r.Parent.QueueItemId, "Identifiant du document (jointure avec les journaux)."),
+            Child<JsonElement>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification, "Numéro du document, pour contrôler la jointure."),
+            Child<JsonElement>("Position", r => Number(r.Child, "Position"), "Numéro de la ligne dans le document ; avec ftQueueItemID, identifie la ligne (jointure avec case-data.csv)."),
+            Child<JsonElement>("ProductNumber", r => ArchiveEntry.Text(r.Child, "ProductNumber"), "Code de l'article."),
+            Child<JsonElement>("Description", r => ArchiveEntry.Text(r.Child, "Description"), "Libellé de l'article."),
+            Child<JsonElement>("Quantity", r => Number(r.Child, "Quantity"), "Quantité ; négative sur un remboursement."),
+            Child<JsonElement>("Unit", r => ArchiveEntry.Text(r.Child, "Unit"), "Unité de la quantité."),
+            Child<JsonElement>("UnitPrice", r => Number(r.Child, "UnitPrice"), "Prix unitaire TTC (TVA comprise)."),
+            Child<JsonElement>("UnitPriceHT", r => LineNumber(r, "UnitPriceHT"), "Prix unitaire HT (hors TVA) : montant HT divisé par la quantité, arrondi au centime."),
+            Child<JsonElement>("Amount", r => Number(r.Child, "Amount"), "Montant total TTC (TVA comprise) de la ligne."),
+            Child<JsonElement>("AmountHT", r => LineNumber(r, "AmountHT"), "Montant total HT (hors TVA) de la ligne : Amount moins VATAmount."),
+            Child<JsonElement>("VATAmount", r => LineNumber(r, "VATAmount"), "Montant de TVA de la ligne : celui envoyé par la caisse, sinon calculé depuis le taux et arrondi au centime."),
+            Child<JsonElement>("PricesIncludeVAT", r => true, "Toujours true : UnitPrice et Amount sont des montants TVA comprise."),
+            Child<JsonElement>("VATRate", r => Number(r.Child, "VATRate"), "Taux de TVA en pourcentage (20, 5.5…)."),
+            Child<JsonElement>("VATNature", r => LineText(r, "VATNature"), "Code à deux chiffres de la nature de TVA (exonération, autoliquidation…) ; 00 pour une TVA ordinaire."),
+            Child<JsonElement>("ftChargeItemCase", r => Hex(r.Child, "ftChargeItemCase"), "Code du type de ligne : taux de TVA, type de prestation et options (hexadécimal, liste 5.3)."),
+            Child<JsonElement>("Downpayment", r => Flag(r.Child, "ftChargeItemCase", ChargeItemDownpaymentFlag), "true si la ligne est un acompte ; exclue des totaux."),
+            Child<JsonElement>("ExtraOrDiscount", r => Flag(r.Child, "ftChargeItemCase", ChargeItemExtraOrDiscountFlag), "true si la ligne est une remise ou un supplément."),
+            Child<JsonElement>("ReturnableDeposit", r => Flag(r.Child, "ftChargeItemCase", ChargeItemReturnableDepositFlag), "true si la ligne est une consigne."),
+            Child<JsonElement>("Moment", r => MomentOrText(r.Child, "Moment"), "Date et heure de la ligne, si la caisse l'a envoyée (UTC)."),
+            Child<JsonElement>("AppliesTo", r => LineNumber(r, "AppliesTo"), "Sur une remise ou un supplément : Position de la ligne à laquelle elle s'applique ; vide pour une remise sur le document."),
+            Child<JsonElement>("DiscountCode", r => CaseDataFR(r.Child, "ftChargeItemCaseData", "DiscountCode"), "Code de la remise, envoyé par la caisse."),
+            Child<JsonElement>("DiscountRate", r => CaseDataFR(r.Child, "ftChargeItemCaseData", "DiscountRate"), "Taux de la remise en pourcentage, envoyé par la caisse."),
+            Child<JsonElement>("DiscountAmount", r => LineNumber(r, "DiscountAmount"), "Sur une ligne de vente : total TTC des remises et suppléments qui s'y appliquent."),
         };
 
         /// <summary>§3, the pay-item columns.</summary>
         public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, JsonElement>>> PayItemColumns = new[]
         {
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ftQueueItemID", r => r.Parent.QueueItemId),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Position", r => Number(r.Child, "Position")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ftPayItemCase", r => Hex(r.Child, "ftPayItemCase")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Description", r => ArchiveEntry.Text(r.Child, "Description")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Amount", r => Number(r.Child, "Amount")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Quantity", r => Number(r.Child, "Quantity")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Moment", r => (object?) MomentOrText(r.Child, "Moment") ?? r.Parent.ReceiptMoment),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Currency", r => CaseDataFR(r.Child, "ftPayItemCaseData", "Currency")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("ExchangeRate", r => CaseDataFR(r.Child, "ftPayItemCaseData", "ExchangeRate")),
-            new CsvColumn<ChildRow<ArchiveEntry, JsonElement>>("Downpayment", r => ArchiveEntry.Long(r.Child, "ftPayItemCase") is { } c ? (c & PayItemDownpaymentFlag) != 0 : (bool?) null),
+            Child<JsonElement>("ftQueueItemID", r => r.Parent.QueueItemId, "Identifiant du document (jointure avec les journaux)."),
+            Child<JsonElement>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification, "Numéro du document, pour contrôler la jointure."),
+            Child<JsonElement>("Position", r => Number(r.Child, "Position"), "Numéro du paiement dans le document."),
+            Child<JsonElement>("ftPayItemCase", r => Hex(r.Child, "ftPayItemCase"), "Code du moyen de paiement et de ses options (hexadécimal, liste 5.3)."),
+            Child<JsonElement>("Description", r => ArchiveEntry.Text(r.Child, "Description"), "Libellé du paiement."),
+            Child<JsonElement>("Amount", r => Number(r.Child, "Amount"), "Montant total du paiement ; négatif sur un remboursement."),
+            Child<JsonElement>("Quantity", r => Number(r.Child, "Quantity"), "Nombre de paiements de même valeur regroupés sur la ligne (par exemple plusieurs bons d'un même montant) ; Amount en est le total. Vaut 1 en pratique."),
+            Child<JsonElement>("Moment", r => (object?) MomentOrText(r.Child, "Moment") ?? r.Parent.ReceiptMoment, "Date et heure du paiement (UTC) ; à défaut, celle du document."),
+            Child<JsonElement>("Currency", r => CaseDataFR(r.Child, "ftPayItemCaseData", "Currency"), "Devise du paiement (ISO 4217), si ce n'est pas l'euro."),
+            Child<JsonElement>("ExchangeRate", r => CaseDataFR(r.Child, "ftPayItemCaseData", "ExchangeRate"), "Taux de change appliqué."),
+            Child<JsonElement>("Downpayment", r => Flag(r.Child, "ftPayItemCase", PayItemDownpaymentFlag), "true si le paiement est un acompte ; exclu des totaux."),
+        };
+
+        /// <summary>§4, the VAT summary per receipt and rate, stored by the queue in <c>ftStateData.FR.VATSummary</c>.</summary>
+        public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, KeyValuePair<string, JsonElement>>>> VatSummaryColumns = new[]
+        {
+            Child<KeyValuePair<string, JsonElement>>("ftQueueItemID", r => r.Parent.QueueItemId, "Identifiant du document (jointure avec les journaux)."),
+            Child<KeyValuePair<string, JsonElement>>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification, "Numéro du document, pour contrôler la jointure."),
+            Child<KeyValuePair<string, JsonElement>>("VATRate", r => r.Child.Key, "Taux de TVA en pourcentage."),
+            Child<KeyValuePair<string, JsonElement>>("VATNature", r => ArchiveEntry.Text(r.Child.Value, "VATNature"), "Code(s) de nature de TVA des lignes à ce taux, séparés par une virgule."),
+            Child<KeyValuePair<string, JsonElement>>("AmountHT", r => RawNumber(r.Child.Value, "AmountHT"), "Base HT à ce taux."),
+            Child<KeyValuePair<string, JsonElement>>("VATAmount", r => RawNumber(r.Child.Value, "VATAmount"), "Montant de TVA à ce taux : somme des TVA non arrondies des lignes, arrondie une fois au centime. Il peut différer d'un centime de la somme des VATAmount de charge-items.csv, arrondis ligne par ligne."),
+            Child<KeyValuePair<string, JsonElement>>("AmountTTC", r => RawNumber(r.Child.Value, "AmountTTC"), "Total TTC à ce taux : somme des montants TTC des lignes, acomptes, remises et remboursements compris."),
+        };
+
+        /// <summary>§5, every signature item of a response.</summary>
+        public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, JsonElement>>> SignatureColumns = new[]
+        {
+            Child<JsonElement>("ftQueueItemID", r => r.Parent.QueueItemId, "Identifiant du document (jointure avec les journaux)."),
+            Child<JsonElement>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification, "Numéro du document, pour contrôler la jointure."),
+            Child<JsonElement>("Index", r => r.Index, "Rang de l'élément dans la réponse, à partir de 0."),
+            Child<JsonElement>("ftSignatureType", r => Hex(r.Child, "ftSignatureType"), "Type de l'élément (hexadécimal, liste 5.5)."),
+            Child<JsonElement>("ftSignatureFormat", r => Hex(r.Child, "ftSignatureFormat"), "Format de l'élément : texte, QR code… (hexadécimal)."),
+            Child<JsonElement>("Caption", r => ArchiveEntry.Text(r.Child, "Caption"), "Intitulé imprimé de l'élément."),
+            Child<JsonElement>("Data", r => ArchiveEntry.Text(r.Child, "Data"), "Contenu de l'élément : QR code de signature ou mention imprimée."),
+        };
+
+        /// <summary>§6, one row per JET event (a non-training 0x3001 receipt on L).</summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> JetColumns = new[]
+        {
+            Col("ftQueueItemID", e => e.QueueItemId, "Identifiant du document de l'événement (jointure avec le journal L)."),
+            Col("ftReceiptIdentification", e => e.ReceiptIdentification, "Numéro du document de l'événement sur la chaîne L."),
+            Col("EventCode", e => ReceiptCaseDataFR(e.Request, "Code"), "Code de l'événement (liste 5.6)."),
+            Col("EventLabel", e => ReceiptCaseDataFR(e.Request, "Message"), "Libellé de l'événement."),
+            Col("OperatorID", e => ArchiveEntry.Text(e.Request, "cbUser"), "Opérateur ayant déclenché l'événement."),
+            Col("ftReceiptMoment", e => e.ReceiptMoment, "Date et heure de l'événement (UTC)."),
+            Col("Information", e => ReceiptCaseDataFR(e.Request, "Information"), "Information complémentaire sur l'événement."),
+            Col("ftCashBoxIdentification", e => ArchiveEntry.String(e.Response, "ftCashBoxIdentification"), "Identification de la caisse."),
+            Col("PreviousSignature", e => e.PreviousSignature, "Signature de l'événement précédent de la chaîne L."),
+            Col("Signature", e => e.Signature, "Signature de l'événement."),
         };
 
         /// <summary>§8, the last-resort copy of the case data and object-typed request fields.</summary>
         public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>> CaseDataColumns = new[]
         {
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("ftQueueItemID", r => r.Parent.QueueItemId),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("Owner", r => r.Child.Owner),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("Position", r => r.Child.Position),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("Field", r => r.Child.Field),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("Path", r => r.Child.Path),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("ValueType", r => r.Child.ValueType),
-            new CsvColumn<ChildRow<ArchiveEntry, CaseDataRow>>("Value", r => r.Child.Value),
+            Child<CaseDataRow>("ftQueueItemID", r => r.Parent.QueueItemId, "Identifiant du document (jointure avec les journaux)."),
+            Child<CaseDataRow>("ftReceiptIdentification", r => r.Parent.ReceiptIdentification, "Numéro du document, pour contrôler la jointure."),
+            Child<CaseDataRow>("Owner", r => r.Child.Owner, "Niveau de la donnée : Receipt (document), ChargeItem (ligne) ou PayItem (paiement)."),
+            Child<CaseDataRow>("Position", r => r.Child.Position, "Position de la ligne ou du paiement ; vide au niveau du document."),
+            Child<CaseDataRow>("Field", r => r.Child.Field, "Nom du champ de la requête, par exemple ftChargeItemCaseData ou cbCustomer."),
+            Child<CaseDataRow>("Path", r => r.Child.Path, "Chemin de la valeur dans le champ (pointeur JSON, RFC 6901) ; vide pour la racine."),
+            Child<CaseDataRow>("ValueType", r => r.Child.ValueType, "Type de la valeur : string, number, boolean, null, object ou array."),
+            Child<CaseDataRow>("Value", r => r.Child.Value, "La valeur, en texte ; vide pour null et pour un objet ou un tableau."),
         };
+
+        private static bool IsJetEvent(ArchiveEntry entry) => entry.Chain == "L" && !entry.Training && (entry.ReceiptCase & 0xFFFF) == JetEventCase;
+
+        private static IEnumerable<KeyValuePair<string, JsonElement>> VatSummaryOf(ArchiveEntry entry)
+            => entry.StateFR is { } fr && ArchiveEntry.Property(fr, "VATSummary") is { ValueKind: JsonValueKind.Object } summary
+                ? summary.EnumerateObject().Select(p => new KeyValuePair<string, JsonElement>(p.Name, p.Value)).ToList()
+                : Enumerable.Empty<KeyValuePair<string, JsonElement>>();
+
+        /// <summary>The stored line values of a charge item: same index in <c>ftStateData.FR.ChargeItems</c> as in the request.</summary>
+        private static JsonElement? Line(ChildRow<ArchiveEntry, JsonElement> row)
+            => row.Parent.StateFR is { } fr && ArchiveEntry.Property(fr, "ChargeItems") is { ValueKind: JsonValueKind.Array } lines && row.Index < lines.GetArrayLength()
+                ? lines[row.Index]
+                : (JsonElement?) null;
+
+        private static string? LineNumber(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? RawNumber(line, name) : null;
+
+        private static string? LineText(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? ArchiveEntry.Text(line, name) : null;
+
+        private static string? StateNumber(JsonElement? element, params string[] path)
+        {
+            if (element is not { } current)
+            {
+                return null;
+            }
+            for (var i = 0; i < path.Length - 1; i++)
+            {
+                if (ArchiveEntry.Property(current, path[i]) is not { ValueKind: JsonValueKind.Object } next)
+                {
+                    return null;
+                }
+                current = next;
+            }
+            return RawNumber(current, path[path.Length - 1]);
+        }
+
+        private static string? RawNumber(JsonElement element, string name)
+            => ArchiveEntry.Property(element, name) is { ValueKind: JsonValueKind.Number } value ? value.GetRawText() : null;
+
+        private static bool? Flag(JsonElement element, string name, long flag)
+            => ArchiveEntry.Long(element, name) is { } value ? (value & flag) != 0 : (bool?) null;
 
         /// <summary>A number as the POS sent it: the stored JSON text, so no rounding or reformatting.</summary>
         private static string? Number(JsonElement element, string name)
@@ -227,26 +424,36 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 ? (ArchiveEntry.Property(fr, key) is { } value && value.ValueKind == JsonValueKind.Number ? value.GetRawText() : ArchiveEntry.Text(fr, key))
                 : null;
 
-        /// <summary>§7: the journal-type table, so a reader can map the files. It does not depend on the entries.</summary>
-        private sealed class JournalTypesCsvFile : ICsvFileDefinition<ArchiveEntry>
+        /// <summary>
+        /// A key of <c>ftReceiptCaseData.FR</c>, read case-insensitively, the case data being an object or a JSON
+        /// string (archive-v2 §6).
+        /// </summary>
+        private static string? ReceiptCaseDataFR(JsonElement request, string key)
         {
-            public string FileName => JournalTypesFileName;
-
-            public async Task WriteAsync(IReadOnlyList<ArchiveEntry> records, TextWriter writer, CsvOptions options, CancellationToken cancellationToken)
+            var caseData = ArchiveEntry.Property(request, "ftReceiptCaseData");
+            if (caseData is { ValueKind: JsonValueKind.String } text)
             {
-                var csv = new CsvWriter(writer, options);
-                if (options.WriteHeader)
+                try
                 {
-                    await csv.WriteRowAsync(new[] { "Code", "Chain", "Description" }, cancellationToken).ConfigureAwait(false);
+                    using var document = JsonDocument.Parse(text.GetString()!);
+                    caseData = document.RootElement.Clone();
                 }
-                var rows = new[] { new[] { "000", "", "Status information QueueFR" } }
-                    .Concat(Journals.Select(j => new[] { j.Code.ToString("X3", CultureInfo.InvariantCulture), j.Letter, j.Description }))
-                    .Concat(new[] { new[] { "010", "", "Export (with Archive)" } });
-                foreach (var row in rows)
+                catch (JsonException)
                 {
-                    await csv.WriteRowAsync(row, cancellationToken).ConfigureAwait(false);
+                    return null;
                 }
             }
+            if (caseData is not { ValueKind: JsonValueKind.Object } data || PropertyIgnoreCase(data, "FR") is not { ValueKind: JsonValueKind.Object } fr)
+            {
+                return null;
+            }
+            return PropertyIgnoreCase(fr, key) is { } value
+                ? value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText()
+                : null;
         }
+
+        private static JsonElement? PropertyIgnoreCase(JsonElement element, string name)
+            => element.EnumerateObject().Where(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) && p.Value.ValueKind != JsonValueKind.Null)
+                .Select(p => (JsonElement?) p.Value).FirstOrDefault();
     }
 }

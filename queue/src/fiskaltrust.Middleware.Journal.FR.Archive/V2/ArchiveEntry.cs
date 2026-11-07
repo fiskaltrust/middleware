@@ -25,8 +25,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private const long TrainingFlag = 0x0000_0000_0002_0000;
 
         private ArchiveEntry(Guid queueItemId, Guid queueId, long queueRow, string rawRequest, JsonElement request, JsonElement response,
-            string chain, long chainCounter, string signature)
+            string chain, long chainCounter, string signature, string? processingVersion)
         {
+            ProcessingVersion = string.IsNullOrEmpty(processingVersion) ? null : processingVersion;
+            StateFR = Property(response, "ftStateData") is { ValueKind: JsonValueKind.Object } stateData
+                && Property(stateData, "FR") is { ValueKind: JsonValueKind.Object } fr ? fr : (JsonElement?) null;
             RawRequest = rawRequest;
             QueueItemId = queueItemId;
             QueueId = queueId;
@@ -46,6 +49,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         }
 
         public Guid QueueItemId { get; }
+
+        /// <summary>
+        /// The version of the middleware that processed the entry, as stored on the queue item
+        /// (<c>ftQueueItem.ProcessingVersion</c>, the informational version with build and commit; market-fr#124).
+        /// </summary>
+        public string? ProcessingVersion { get; }
+
+        /// <summary>The <c>FR</c> block of the response's <c>ftStateData</c>, where the queue stores totals and line values.</summary>
+        public JsonElement? StateFR { get; }
 
         public Guid QueueId { get; }
 
@@ -109,7 +121,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// an error response, a v1 entry (whose signature items lack the v2 format nibble), or a response
         /// without a receipt signature.
         /// </summary>
-        public static ArchiveEntry? TryCreate(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response)
+        public static ArchiveEntry? TryCreate(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response, string? processingVersion = null)
         {
             if (string.IsNullOrEmpty(request) || string.IsNullOrEmpty(response))
             {
@@ -149,7 +161,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 return null;
             }
 
-            return new ArchiveEntry(queueItemId, queueId, queueRow, request!, requestJson, responseJson, chain, counter, signature!);
+            return new ArchiveEntry(queueItemId, queueId, queueRow, request!, requestJson, responseJson, chain, counter, signature!, processingVersion);
         }
 
         /// <summary>

@@ -129,9 +129,15 @@ public class FRJournalExportTests : IDisposable
         using var zip = new ZipArchive(new MemoryStream(bytes));
         var subArchive = zip.Entries.Should().ContainSingle(e => e.Name.StartsWith("subarchive_")).Subject;
         using var sub = new ZipArchive(subArchive.Open());
-        using var reader = new StreamReader(sub.GetEntry("journal-T.csv")!.Open());
-        (await reader.ReadToEndAsync()).Should().Contain(sale.ftReceiptIdentification);
-        sub.Entries.Select(e => e.Name).Should().Contain(new[] { "charge-items.csv", "pay-items.csv", "journal-types.csv", "case-data.csv" });
+        var tickets = ReadCsv(sub, "journal-T-ticket.csv");
+        tickets.Should().ContainSingle(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
+        var ticket = tickets.Single(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
+        ticket["Totalizer"].Should().NotBeEmpty("the queue stores the receipt totals when it signs (market-fr#221)");
+        ticket["SoftwareVersion"].Should().NotBeEmpty("the queue item records the version that processed it");
+        ReadCsv(sub, "charge-items.csv").Should().OnlyContain(r => r["AmountHT"] != "" && r["VATAmount"] != "" && r["PricesIncludeVAT"] == "true");
+        ReadCsv(sub, "compliance-parameters.csv").Should().Contain(r => r["Component"] == "Queue" && r["Parameter"] == "ftQueueID");
+        sub.Entries.Select(e => e.Name).Should().Contain(new[] { "charge-items.csv", "pay-items.csv", "receipt-vat-summary.csv", "signatures.csv", "jet.csv", "case-data.csv", "compliance-parameters.csv", "README.txt" })
+            .And.NotContain("journal-types.csv");
 
         using var archiveCertificate = new X509Certificate2(ReadEntry(zip, ArchivePackager<object>.ArchiveCertificateFileName));
         using var scuKey = new X509Certificate2(Convert.FromBase64String((await _scu.GetSigningCertificateAsync()).CertificateBase64)).GetECDsaPublicKey()!;
@@ -228,5 +234,14 @@ public class FRJournalExportTests : IDisposable
             new PayItem { Amount = 12.00m, Description = "Especes", Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") },
         ];
         return request;
+    }
+
+    private static List<Dictionary<string, string>> ReadCsv(ZipArchive zip, string name)
+    {
+        using var reader = new StreamReader(zip.GetEntry(name)!.Open());
+        var lines = reader.ReadToEnd().Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        var header = lines[0].Split(';');
+        // The rows checked here hold no quoted separator.
+        return lines.Skip(1).Select(l => l.Split(';')).Select(cells => header.Select((h, i) => (h, v: i < cells.Length ? cells[i] : "")).ToDictionary(x => x.h, x => x.v)).ToList();
     }
 }
