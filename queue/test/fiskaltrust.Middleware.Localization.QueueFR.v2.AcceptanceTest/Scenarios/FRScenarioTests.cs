@@ -162,6 +162,135 @@ public abstract class FRScenarioTests
         response.ftState.IsState(State.Error).Should().BeTrue("a French queue totalizes in EUR only");
     }
 
+    // ---- Corrections, translated from the v1.2 scenarios (market-fr#221 gap G1) ----
+    // v1.2 corrected a paid receipt with the reverse flag 0x40000. In v2 that business case is a
+    // refund (IsRefund 0x0100_0000): the void (0x4_0000) is only for a receipt whose goods and
+    // money never changed hands, and a voided receipt can no longer be referenced
+    // (docs: general/cash-register-integration/refunds-and-voids).
+
+    [Fact]
+    public async Task RefundThenCorrectedSale_ReferencingTheOriginal_IsSignedInTheTicketChain()
+    {
+        // v1.2 CheckDataUnalterablity_ChangeInvoiceTicket_Quantity, IsPaymentDataRecorded_Test1/2/4,
+        // CheckDataUnalterablity_Change_Payment (LNE conditions 5 and 6).
+        var sale = Sale(ReceiptCase.PointOfSaleReceipt0x0001, quantity: 5, amount: 200m);
+        var original = await SignAsync(sale);
+
+        var refund = FullRefundOf(sale);
+        var refunded = await SignAsync(refund);
+
+        var corrected = Sale(ReceiptCase.PointOfSaleReceipt0x0001, quantity: 3, amount: 120m);
+        corrected.cbPreviousReceiptReference = sale.cbReceiptReference;
+        var correction = await SignAsync(corrected);
+
+        foreach (var response in new[] { original, refunded, correction })
+        {
+            response.ftState.IsState(State.Error).Should().BeFalse("a refund leaves the original referenceable, unlike a void");
+            SignatureOf(response, SignatureTypeFR.ReceiptSignature).Should().NotBeNullOrEmpty();
+        }
+        original.ftReceiptIdentification.Should().EndWith("T1");
+        refunded.ftReceiptIdentification.Should().EndWith("T2", "the refund is signed in the chain of the receipt it refunds");
+        correction.ftReceiptIdentification.Should().EndWith("T3");
+
+        var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
+        TotalsOf(closing).Day.Should().Be("120.00", "200 sold, 200 refunded, 120 sold again");
+    }
+
+    [Fact]
+    public async Task InvoiceRefund_IsSignedInTheInvoiceChainAndCancelsTheTurnover()
+    {
+        // v1.2 CheckDataUnalterablity_CancelInvoice (LNE condition 6).
+        var invoice = Sale(ReceiptCase.InvoiceB2C0x1001, quantity: 5, amount: 200m);
+        await SignAsync(invoice);
+
+        var refunded = await SignAsync(FullRefundOf(invoice));
+
+        refunded.ftState.IsState(State.Error).Should().BeFalse();
+        refunded.ftReceiptIdentification.Should().EndWith("I2");
+        var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
+        TotalsOf(closing).Day.Should().Be("0.00");
+    }
+
+    [Fact]
+    public async Task TechnicalVoid_IsSigned_AndTheVoidedReceiptCanNoLongerBeReferenced()
+    {
+        // v2-only rule (shared Localization.v2 PreviousReceiptMustNotBeVoided): pins the departure
+        // from v1.2, where a corrected receipt could reference the reversed one.
+        var sale = Sale(ReceiptCase.PointOfSaleReceipt0x0001, quantity: 2, amount: 6m);
+        await SignAsync(sale);
+
+        var voided = await SignAsync(VoidOf(sale));
+        var corrected = Sale(ReceiptCase.PointOfSaleReceipt0x0001, quantity: 2, amount: 6m);
+        corrected.cbPreviousReceiptReference = sale.cbReceiptReference;
+        var refused = await SignAsync(corrected);
+
+        voided.ftState.IsState(State.Error).Should().BeFalse();
+        voided.ftReceiptIdentification.Should().EndWith("T2");
+        refused.ftState.IsState(State.Error).Should().BeTrue("a voided receipt can no longer be referenced");
+        refused.ftReceiptIdentification.Should().NotMatchRegex("T[0-9]+$", "a refused receipt takes no number");
+
+        var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
+        TotalsOf(closing).Day.Should().Be("0.00");
+    }
+
+    [Fact]
+    public async Task DiscountLine_ReducesTheTurnover()
+    {
+        // v1.2 IsPaymentDataRecorded_Test5 (100 - 20 = 80) and _Test6 (gap G6). In v2 a negative
+        // line has to carry ExtraOrDiscount, the shared NegativeAmounts rule refuses it otherwise.
+        var sale = Request(ReceiptCase.PointOfSaleReceipt0x0001);
+        sale.cbChargeItems =
+        [
+            new ChargeItem { Amount = 100m, VATRate = 20m, Quantity = 1, Description = "Chaussures", Currency = Currency.EUR, ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") },
+            new ChargeItem { Amount = -20m, VATRate = 20m, Quantity = 1, Description = "Remise", Currency = Currency.EUR, ftChargeItemCase = WithFlag(ChargeItemCase.NormalVatRate.WithCountry("FR"), ChargeItemCaseFlags.ExtraOrDiscount) },
+        ];
+        sale.cbPayItems = [new PayItem { Amount = 80m, Description = "Especes", Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }];
+
+        var response = await SignAsync(sale);
+        var closing = await SignAsync(Request(ReceiptCase.DailyClosing0x2011));
+
+        response.ftState.IsState(State.Error).Should().BeFalse();
+        response.ftSignatures.Should().ContainSingle(x => x.Caption == "Nombre de lignes").Which.Data.Should().Be("1", "a discount is not a sales line");
+        TotalsOf(closing).Day.Should().Be("80.00");
+    }
+
+    private ReceiptRequest Sale(ReceiptCase receiptCase, decimal quantity, decimal amount)
+    {
+        var request = Request(receiptCase);
+        request.cbChargeItems =
+        [
+            new ChargeItem { Amount = amount, VATRate = 5.5m, Quantity = quantity, Description = "Chaussures", Currency = Currency.EUR, ftChargeItemCase = ChargeItemCase.DiscountedVatRate1.WithCountry("FR") },
+        ];
+        request.cbPayItems = [new PayItem { Amount = amount, Quantity = 1, Description = "Especes", Currency = Currency.EUR, ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }];
+        return request;
+    }
+
+    /// <summary>A full refund: the receipt flag IsRefund, every item inverted, the original referenced.</summary>
+    private ReceiptRequest FullRefundOf(ReceiptRequest original) => Inverted(original, (long) ReceiptCaseFlags.Refund, chargeItemFlag: 0, payItemFlag: 0);
+
+    /// <summary>A void: the receipt flag IsVoid and IsVoid on every inverted item, the original referenced.</summary>
+    private ReceiptRequest VoidOf(ReceiptRequest original) => Inverted(original, (long) ReceiptCaseFlags.Void, (long) ChargeItemCaseFlags.Void, (long) PayItemCaseFlags.Void);
+
+    private ReceiptRequest Inverted(ReceiptRequest original, long receiptFlag, long chargeItemFlag, long payItemFlag)
+    {
+        var request = Request((ReceiptCase) ((long) original.ftReceiptCase & 0xFFFF));
+        request.ftReceiptCase = (ReceiptCase) ((long) original.ftReceiptCase | receiptFlag);
+        request.cbPreviousReceiptReference = original.cbReceiptReference;
+        request.cbChargeItems = original.cbChargeItems.Select(x => new ChargeItem
+        {
+            Amount = -x.Amount, VATRate = x.VATRate, Quantity = -x.Quantity, Description = x.Description, Currency = x.Currency,
+            ftChargeItemCase = (ChargeItemCase) ((long) x.ftChargeItemCase | chargeItemFlag),
+        }).ToList();
+        request.cbPayItems = original.cbPayItems.Select(x => new PayItem
+        {
+            Amount = -x.Amount, Quantity = -x.Quantity, Description = x.Description, Currency = x.Currency,
+            ftPayItemCase = (PayItemCase) ((long) x.ftPayItemCase | payItemFlag),
+        }).ToList();
+        return request;
+    }
+
+    private static ChargeItemCase WithFlag(ChargeItemCase chargeItemCase, ChargeItemCaseFlags flag) => (ChargeItemCase) ((long) chargeItemCase | (long) flag);
+
     private async Task<ReceiptResponse> SignAsync(ReceiptRequest request)
     {
         var responseJson = await _signProcessor(JsonSerializer.Serialize(request));
