@@ -114,6 +114,7 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.Order0x3004 => await _protocolCommandProcessor.Order0x3004Async(processCommandRequest),
                     ReceiptCase.Pay0x3005 => await _protocolCommandProcessor.Pay0x3005Async(processCommandRequest),
                     ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 => await _protocolCommandProcessor.CopyReceiptPrintExistingReceipt0x3010Async(processCommandRequest),
+                    (ReceiptCase)0x3011 /* Archive Receipt, replace with enum */ => await _protocolCommandProcessor.ArchiveReceipt0x3011Async(processCommandRequest),
                     _ => null
                 };
             }
