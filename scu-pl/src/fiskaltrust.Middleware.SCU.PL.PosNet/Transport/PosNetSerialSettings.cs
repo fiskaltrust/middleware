@@ -21,6 +21,13 @@ public sealed record PosNetSerialSettings(string PortName, int BaudRate, Parity 
     /// parsed once — by whoever selects the transport — rather than again here.
     /// </summary>
     public static PosNetSerialSettings From(PosNetDeviceAddress.Serial serial, PosNetConfiguration configuration)
+        => From(serial.PortName, configuration);
+
+    /// <summary>
+    /// The same settings for a link that is no serial port by name — a USB device the host opens
+    /// itself still carries them to the device as its CDC line coding (<see cref="CdcLineCoding"/>).
+    /// </summary>
+    public static PosNetSerialSettings From(string portName, PosNetConfiguration configuration)
     {
         if (configuration.SerialBaudRate <= 0)
         {
@@ -32,7 +39,7 @@ public sealed record PosNetSerialSettings(string PortName, int BaudRate, Parity 
             2 => StopBits.Two,
             var other => throw new PLValidationException($"The PosNet SerialStopBits '{other}' is not supported; the printer offers 1 or 2."),
         };
-        return new PosNetSerialSettings(serial.PortName, configuration.SerialBaudRate, ParseParity(configuration.SerialParity), stopBits, ParseHandshake(configuration.SerialHandshake));
+        return new PosNetSerialSettings(portName, configuration.SerialBaudRate, ParseParity(configuration.SerialParity), stopBits, ParseHandshake(configuration.SerialHandshake));
     }
 
     private static Parity ParseParity(string? value)

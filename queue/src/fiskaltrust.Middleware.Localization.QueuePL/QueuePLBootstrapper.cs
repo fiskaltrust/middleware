@@ -38,7 +38,7 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
         var signProcessorPL = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new Validation.ReceiptValidatorPL(new ReceiptReferenceProvider(queueItemRepository)),
-            new LifecycleCommandProcessorPL(plSSCD, queueStorageProvider),
+            new LifecycleCommandProcessorPL(plSSCD, queueStorageProvider, middlewareConfiguration.IsSandbox),
             new ReceiptCommandProcessorPL(plSSCD),
             new DailyOperationsCommandProcessorPL(plSSCD),
             new InvoiceCommandProcessorPL(),

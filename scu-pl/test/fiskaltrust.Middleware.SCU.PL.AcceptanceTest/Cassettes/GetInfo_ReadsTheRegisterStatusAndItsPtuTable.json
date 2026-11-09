@@ -1,0 +1,14 @@
+{
+  "RecordedAgainst": "serial://COM9",
+  "RecordedAtUtc": "2026-10-09T09:44:39.4868579Z",
+  "Exchanges": [
+    {
+      "Command": "scomm\t",
+      "Response": "scomm\tfsT\ttzN\tts0\thrT\tnuZBF 2101002392\ttdN\t"
+    },
+    {
+      "Command": "sfsk\t",
+      "Response": "sfsk\tfsT\tcl0\trd3\tvt0\tva23,00\tvb8,00\tvc5,00\tvd0,00\tve101,00\tvf101,00\tvg101,00\trw2026-10-09;10:59\ttm2026-10-09T10:59:51\u002B02:00\tnuZBF 2101002392\t"
+    }
+  ]
+}
