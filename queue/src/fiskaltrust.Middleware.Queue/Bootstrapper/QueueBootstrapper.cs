@@ -50,7 +50,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 // Key handling is based on this condition to ensure that we are handling it case insensitive
                 LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
-                LauncherVersion = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherversion").Value?.ToString() ?? null
+                LauncherVersion = _configuration.FirstOrDefault(x => string.Equals(x.Key, "launcherversion", System.StringComparison.OrdinalIgnoreCase)).Value?.ToString() ?? null
             };
 
             services.AddSingleton(sp =>
