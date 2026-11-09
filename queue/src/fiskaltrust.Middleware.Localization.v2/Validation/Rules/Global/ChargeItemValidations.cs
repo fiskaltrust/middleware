@@ -74,23 +74,42 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     && !x.IsPartialRefundReceipt(), () =>
             {
-                // A down payment is deducted on the final invoice as a negative line (flag 0x0008).
-                RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
-                {
-                    chargeItem.RuleFor(x => x.Quantity)
-                        .GreaterThanOrEqualTo(0)
-                        .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment())
-                        .WithMessage(item => $"Negative quantity ({item.Quantity}) is not allowed for non-refund charge items")
-                        .WithErrorCode("NegativeQuantityNotAllowed");
+                When(x => !IsDrawerMoveReceipt(x), () => NonNegativeItems(_ => false));
 
-                    chargeItem.RuleFor(x => x.Amount)
-                        .GreaterThanOrEqualTo(0)
-                        .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment())
-                        .WithMessage(item => $"Negative amount ({item.Amount}) is not allowed for non-refund charge items")
-                        .WithErrorCode("NegativeAmountNotAllowed");
-                });
+                // Money leaving the drawer is a negative not-taxable cash transfer, receivable or
+                // voucher. Only on these two cases: a negative voucher on a sale is a redemption,
+                // which this rule does not decide.
+                When(IsDrawerMoveReceipt, () => NonNegativeItems(IsDrawerMoveItem));
             });
         }
+
+        /// <param name="exempt">Charge items the receipt may send with a negative sign.</param>
+        private void NonNegativeItems(Func<ChargeItem, bool> exempt)
+        {
+            // A down payment is deducted on the final invoice as a negative line (flag 0x0008).
+            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            {
+                chargeItem.RuleFor(x => x.Quantity)
+                    .GreaterThanOrEqualTo(0)
+                    .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment() && !exempt(x))
+                    .WithMessage(item => $"Negative quantity ({item.Quantity}) is not allowed for non-refund charge items")
+                    .WithErrorCode("NegativeQuantityNotAllowed");
+
+                chargeItem.RuleFor(x => x.Amount)
+                    .GreaterThanOrEqualTo(0)
+                    .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment() && !exempt(x))
+                    .WithMessage(item => $"Negative amount ({item.Amount}) is not allowed for non-refund charge items")
+                    .WithErrorCode("NegativeAmountNotAllowed");
+            });
+        }
+
+        private static bool IsDrawerMoveReceipt(ReceiptRequest request) => request.ftReceiptCase.Case() is ReceiptCase.PaymentTransfer0x0002 or ReceiptCase.Pay0x3005;
+
+        /// <summary>A not-taxable (V=8) cash transfer (S=A), receivable (S=9) or voucher (S=4).</summary>
+        private static bool IsDrawerMoveItem(ChargeItem item) => item.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable
+            && item.ftChargeItemCase.TypeOfService() is ChargeItemCaseTypeOfService.CashTransfer
+                or ChargeItemCaseTypeOfService.Receivable
+                or ChargeItemCaseTypeOfService.Voucher;
     }
 
     public class ZeroVatRateMustHaveNature : AbstractValidator<ReceiptRequest>

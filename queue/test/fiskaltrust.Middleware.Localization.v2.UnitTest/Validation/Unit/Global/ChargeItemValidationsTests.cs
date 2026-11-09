@@ -278,6 +278,31 @@ public class ChargeItemValidationsTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
+    private static ReceiptRequest WithOneItem(ReceiptCase receiptCase, long chargeItemCase, decimal amount) => new()
+    {
+        ftReceiptCase = receiptCase.WithCountry("FR"),
+        cbChargeItems = [new ChargeItem { Description = "Move", VATRate = 0m, Amount = amount, Quantity = 1m, ftChargeItemCase = ((ChargeItemCase) chargeItemCase).WithCountry("FR") }],
+        cbPayItems = []
+    };
+
+    /// <summary>Money leaving the drawer: a negative not-taxable cash transfer, receivable or voucher.</summary>
+    [Theory]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x00A8)]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x0098)]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x0048)]
+    [InlineData(ReceiptCase.Pay0x3005, 0x00A8)]
+    public void NegativeAmounts_DrawerMoveOnAPaymentTransfer_ShouldSkip(ReceiptCase receiptCase, long chargeItemCase)
+        => new ChargeItemValidations.NegativeAmounts().TestValidate(WithOneItem(receiptCase, chargeItemCase, -500m)).ShouldNotHaveAnyValidationErrors();
+
+    [Theory]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x00A3)] // taxed cash transfer
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x0018)] // not-taxable delivery
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, 0x00A8)] // cash transfer on a sale
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, 0x0048)] // voucher redemption on a sale: not decided here (middleware#771)
+    public void NegativeAmounts_OtherNegativeItems_StillFail(ReceiptCase receiptCase, long chargeItemCase)
+        => new ChargeItemValidations.NegativeAmounts().TestValidate(WithOneItem(receiptCase, chargeItemCase, -500m))
+            .ShouldHaveValidationErrorFor("cbChargeItems[0].Amount").WithErrorCode("NegativeAmountNotAllowed");
+
     // ─── ZeroVatRateMustHaveNature ─────────────────────────────────────────────
 
     [Fact]
