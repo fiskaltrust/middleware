@@ -390,6 +390,35 @@ public class ProcessorTests
     }
 
     /// <summary>
+    /// The shared business cases DrawerMoneyManagement_1/_2 as sent: a not-taxable cash transfer
+    /// charge item and its cash pay item, with no previous receipt (market-fr ADR 0016). France
+    /// accepts the vault-to-drawer move. The drawer-to-vault move still fails on the shared
+    /// NegativeAmounts rule only, which France does not exempt (draft shared fix M4).
+    /// </summary>
+    [Theory]
+    [InlineData(500.0, 0x0001L, new string[0])]
+    [InlineData(-500.0, 0x0001L, new[] { "NegativeAmountNotAllowed" })]
+    [InlineData(-100.0, 0x000CL, new[] { "NegativeAmountNotAllowed" })] // Withdrawal_1
+    public async Task ReceiptValidatorFR_TakesTheReferenceTablesDrawerMove(double amount, long payItemCase, string[] expectedErrors)
+    {
+        var repository = new Mock<IMiddlewareQueueItemRepository>();
+        var sut = new ReceiptValidatorFR(new ReceiptReferenceProvider(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(repository.Object))));
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.PaymentTransfer0x0002.WithCountry("FR"),
+            cbReceiptReference = "drawer-1",
+            cbReceiptMoment = DateTime.UtcNow,
+            Currency = Currency.EUR,
+            cbChargeItems = [new ChargeItem { Amount = (decimal) amount, Quantity = 1m, VATRate = 0m, Description = "move money", Currency = Currency.EUR, ftChargeItemCase = ((ChargeItemCase) 0x00A8).WithCountry("FR") }],
+            cbPayItems = [new PayItem { Amount = (decimal) amount, Description = "Cash", Currency = Currency.EUR, ftPayItemCase = ((PayItemCase) payItemCase).WithCountry("FR") }],
+        };
+
+        var result = await sut.ValidateAsync(request, new ftQueue { CountryCode = "FR" });
+
+        result.Errors.Select(x => x.ErrorCode).Should().BeEquivalentTo(expectedErrors);
+    }
+
+    /// <summary>
     /// dev only: where #820 meets #860, every sale prints its sales-line count; the delivery note,
     /// neither signed nor numbered, prints nothing (market-fr#221, #148).
     /// </summary>

@@ -47,11 +47,48 @@ public class ReceiptValidationsFRTests
     [Theory]
     [InlineData(0x0002)]
     [InlineData(0x3005)]
-    public void PaymentProofs_RefuseChargeItems_ButTakePayItems(long receiptCase)
+    public void PaymentProofs_RefuseSalesChargeItems_ButTakePayItems(long receiptCase)
     {
         Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().Contain("ChargeItemsNotAllowed");
         Errors(Request(receiptCase, pay: 200m)).Should().BeEmpty("a float pay-in carries only its pay item");
     }
+
+    private static ReceiptRequest DrawerMove(long receiptCase, long chargeItemCase, decimal amount)
+    {
+        var request = Request(receiptCase, pay: amount);
+        request.cbChargeItems = [new ChargeItem { Amount = amount, Currency = Currency.EUR, ftChargeItemCase = (ChargeItemCase) (0x4652_2000_0000_0000 | chargeItemCase) }];
+        return request;
+    }
+
+    /// <summary>
+    /// A drawer move takes the charge item of the public reference tables (market-fr ADR 0016):
+    /// a not-taxable (V=8) cash transfer (S=A), receivable (S=9) or voucher (S=4).
+    /// </summary>
+    [Theory]
+    [InlineData(0x0002, 0x00A8)]
+    [InlineData(0x0002, 0x0098)]
+    [InlineData(0x0002, 0x0048)]
+    [InlineData(0x3005, 0x00A8)]
+    [InlineData(0x3005, 0x0098)]
+    [InlineData(0x3005, 0x0048)]
+    public void PaymentProofs_TakeANotTaxableDrawerMoveChargeItem(long receiptCase, long chargeItemCase)
+    {
+        Errors(DrawerMove(receiptCase, chargeItemCase, 500m)).Should().BeEmpty();
+        Errors(DrawerMove(receiptCase, chargeItemCase, -500m)).Should().BeEmpty("France adds no sign rule; the shared NegativeAmounts decides");
+    }
+
+    [Theory]
+    [InlineData(0x0002, 0x00A3, "a cash transfer must not be taxed")]
+    [InlineData(0x0002, 0x0018, "a not-taxable delivery is a sale")]
+    [InlineData(0x0002, 0x0028, "a not-taxable service is a sale")]
+    [InlineData(0x3005, 0x0038, "a tip is a sale")]
+    [InlineData(0x3005, 0x0047, "a voucher must be not taxable")]
+    public void PaymentProofs_RefuseAnyOtherChargeItem(long receiptCase, long chargeItemCase, string because)
+        => Errors(DrawerMove(receiptCase, chargeItemCase, 500m)).Should().Contain("ChargeItemsNotAllowed", because);
+
+    [Fact]
+    public void ReceiptsWithoutASale_RefuseADrawerMoveChargeItemToo()
+        => Errors(DrawerMove(0x2011, 0x00A8, 500m)).Should().Contain("ChargeItemsNotAllowed");
 
     [Theory]
     [InlineData(0x0001)]

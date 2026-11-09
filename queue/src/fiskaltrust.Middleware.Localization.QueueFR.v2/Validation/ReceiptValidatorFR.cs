@@ -41,8 +41,17 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
         // PosSystem API sends v1.2 (market-fr#221): the receipts that carry no sale have no items.
         RuleFor(x => x.cbChargeItems)
             .Must(items => items is null || items.Count == 0)
-            .When(x => CarriesNoItems(x.ftReceiptCase) || CarriesNoChargeItems(x.ftReceiptCase))
+            .When(x => CarriesNoItems(x.ftReceiptCase))
             .WithMessage(request => $"The receipt case 0x{(long) request.ftReceiptCase.Case():X4} must not have charge items.")
+            .WithErrorCode("ChargeItemsNotAllowed");
+
+        // A drawer move takes either convention (market-fr ADR 0016): pay items only, summing to
+        // zero as in v1.2, or a not-taxable cash transfer, receivable or voucher charge item with
+        // its pay item, as the public reference tables build it. Nothing else is charged on chain P.
+        RuleForEach(x => x.cbChargeItems)
+            .Must(IsDrawerMoveChargeItem)
+            .When(x => CarriesOnlyDrawerMoveChargeItems(x.ftReceiptCase))
+            .WithMessage((request, chargeItem) => $"Charge item '{chargeItem.Description}' (0x{(long) chargeItem.ftChargeItemCase:X16}) is not allowed on receipt case 0x{(long) request.ftReceiptCase.Case():X4}: only a cash transfer (0xA), receivable (0x9) or voucher (0x4) charge item that is not taxable (0x8) is.")
             .WithErrorCode("ChargeItemsNotAllowed");
 
         RuleFor(x => x.cbPayItems)
@@ -76,11 +85,17 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
         or ReceiptCase.FinishSCUSwitch0x4012;
 
     /// <summary>
-    /// v1.2 refuses charge items on a payment proof, a pay-in, a pay-out and a payment transfer:
-    /// the v2 payment transfer reaches v1.2 as one of the last three, the pay protocol as the first.
+    /// The chain P receipts: v1.2 refuses every charge item on them (a payment proof, pay-in,
+    /// pay-out or transfer); v2 also takes the drawer-move charge item of the public reference tables.
     /// </summary>
-    private static bool CarriesNoChargeItems(ReceiptCase receiptCase) => receiptCase.Case() is ReceiptCase.PaymentTransfer0x0002
+    private static bool CarriesOnlyDrawerMoveChargeItems(ReceiptCase receiptCase) => receiptCase.Case() is ReceiptCase.PaymentTransfer0x0002
         or ReceiptCase.Pay0x3005;
+
+    /// <summary>A not-taxable (V=8) cash transfer (S=A), receivable (S=9) or voucher (S=4) charge item.</summary>
+    internal static bool IsDrawerMoveChargeItem(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable
+        && chargeItem.ftChargeItemCase.TypeOfService() is ChargeItemCaseTypeOfService.CashTransfer
+            or ChargeItemCaseTypeOfService.Receivable
+            or ChargeItemCaseTypeOfService.Voucher;
 }
 
 public class ReceiptValidatorFR : MarketValidator
@@ -92,6 +107,12 @@ public class ReceiptValidatorFR : MarketValidator
     /// 0x0002) without a reference, such as the opening float of the day (market-fr#221).
     /// </summary>
     protected override IReadOnlyCollection<string> ExemptGlobalErrorCodes { get; } = ["PaymentTransferMissingPreviousReceiptReference"];
+
+    /// <summary>
+    /// A drawer-move charge item is not taxable (V=8) and carries no sale, so it has no nature of
+    /// VAT to give (market-fr ADR 0016).
+    /// </summary>
+    protected override Func<ChargeItem, bool>? ZeroVatRateNatureNotRequired => ReceiptValidationsFR.IsDrawerMoveChargeItem;
 
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null)
     {

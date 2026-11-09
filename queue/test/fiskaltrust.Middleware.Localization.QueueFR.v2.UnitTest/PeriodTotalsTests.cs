@@ -354,6 +354,49 @@ public class PeriodTotalsTests
         stored.GLastYearQueueItemId.Should().BeNull();
     }
 
+    private static ProcessCommandRequest DrawerMove(decimal? cashTransfer, params (PayItemCase payItemCase, decimal amount)[] payItems)
+    {
+        var request = CommandRequest(ReceiptCase.PaymentTransfer0x0002);
+        request.ReceiptRequest.cbChargeItems = cashTransfer is { } amount
+            ? [new ChargeItem { Amount = amount, Currency = Currency.EUR, VATRate = 0m, ftChargeItemCase = ((ChargeItemCase) 0x00A8).WithCountry("FR") }]
+            : [];
+        request.ReceiptRequest.cbPayItems = payItems.Select(x => new PayItem { Amount = x.amount, Currency = Currency.EUR, ftPayItemCase = x.payItemCase.WithCountry("FR") }).ToList();
+        return request;
+    }
+
+    /// <summary>
+    /// A drawer move counts in the chain P totals whichever convention it follows (market-fr ADR
+    /// 0016): the cash-transfer charge item moves <c>PTotalizer</c>, and every pay item moves the
+    /// bucket of its pay case, so moving money from one pay type to another moves both buckets.
+    /// The perpetual total stays the sum of the pay buckets, and no sales total moves.
+    /// </summary>
+    [Fact]
+    public async Task DrawerMoves_CountInThePaymentProofTotals_InBothConventions()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        // Reference tables: vault to drawer, then drawer to vault, as a cash transfer charge item.
+        await pipeline.SignAsync(DrawerMove(500.00m, (PayItemCase.CashPayment, 500.00m)));
+        await pipeline.SignAsync(DrawerMove(-120.00m, (PayItemCase.CashPayment, -120.00m)));
+        // v1.2: drawer to vault as two pay items, then card money handed out as cash.
+        await pipeline.SignAsync(DrawerMove(null, (PayItemCase.CashPayment, -80.00m), (PayItemCase.TransferToCashbookVaultOwnerEmployee, 80.00m)));
+        await pipeline.SignAsync(DrawerMove(null, (PayItemCase.CreditCardPayment, -50.00m), (PayItemCase.CashPayment, 50.00m)));
+        await state.CommitAsync();
+
+        var stored = await state.ReadAsync();
+        stored.PTotalizer.Should().Be(380.00m, "the cash transfer charge items count, the pay-items-only moves add zero");
+        stored.PPITotalCash.Should().Be(350.00m);
+        stored.PPITotalInternal.Should().Be(80.00m);
+        stored.PPITotalNonCash.Should().Be(-50.00m);
+        stored.PPITotalUnknown.Should().Be(0m);
+        (stored.PPITotalCash + stored.PPITotalNonCash + stored.PPITotalInternal + stored.PPITotalUnknown).Should().Be(stored.PTotalizer);
+        stored.GDayTotalizer.Should().Be(0m, "a drawer move is not a sale");
+        stored.TTotalizer.Should().Be(0m);
+        stored.ATotalizer.Should().Be(0m);
+    }
+
     [Fact]
     public async Task TrainingClosing_LeavesTheV12ClosingColumnsAlone()
     {
