@@ -66,6 +66,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x003, "I", "Invoice", "I"),
             new ArchiveJournal(0x004, "E", "Technical", "E"),
             new ArchiveJournal(0x007, "B", "Bill (note)", "B"),
+            new ArchiveJournal(0x008, "A", "Archive", "A"),
             new ArchiveJournal(0x009, "L", "Log", "L"),
             new ArchiveJournal(0x00A, "D", "Copy", "D"),
             new ArchiveJournal(0x00B, "X", "Training", "X"),

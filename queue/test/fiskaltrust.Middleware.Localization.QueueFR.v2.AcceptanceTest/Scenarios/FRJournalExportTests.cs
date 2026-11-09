@@ -109,12 +109,29 @@ public class FRJournalExportTests : IDisposable
         status.Should().Contain(Siret).And.Contain("\"Code\":\"00A\"");
     }
 
+    /// <summary>
+    /// The archive receipts are chain A, journal 008 (market-fr#221, 2026-11-09), so the archive
+    /// export keeps them in a journal of their own instead of dropping them.
+    /// </summary>
     [Fact]
-    public async Task RetiredArchiveGroup008_IsAnUnknownJournalType()
+    public async Task ArchiveJournal_HoldsTheArchiveReceipts_ChainedOnThePreviousOne()
     {
-        var act = () => ReadAsync(_journal, (JournalTypeFR) 0x4652_2000_0000_0008);
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*is unknown*");
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Archive));
+
+        rows.Should().HaveCount(2);
+        rows[0]["ftReceiptIdentification"].Should().Be(first.ftReceiptIdentification);
+        rows[1]["ftReceiptIdentification"].Should().Be(second.ftReceiptIdentification);
+        rows[1]["PreviousSignature"].Should().Be(ChainedSignature(first));
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
+        subArchive.Entries.Should().Contain(e => e.Name == "journal-A.csv");
     }
 
     [Fact]

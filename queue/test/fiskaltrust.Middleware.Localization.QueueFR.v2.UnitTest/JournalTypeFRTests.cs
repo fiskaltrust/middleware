@@ -24,6 +24,7 @@ public class JournalTypeFRTests
     [InlineData(0x003, JournalTypeFR.Invoice)]
     [InlineData(0x004, JournalTypeFR.Technical)]
     [InlineData(0x007, JournalTypeFR.Bill)]
+    [InlineData(0x008, JournalTypeFR.Archive)]
     [InlineData(0x009, JournalTypeFR.Log)]
     [InlineData(0x00A, JournalTypeFR.Copy)]
     [InlineData(0x00B, JournalTypeFR.Training)]
@@ -38,9 +39,9 @@ public class JournalTypeFRTests
     }
 
     [Fact]
-    public void JournalTypeFR_ListsFourteenJournals()
+    public void JournalTypeFR_ListsFifteenJournals()
     {
-        Enum.GetValues<JournalTypeFR>().Should().HaveCount(14).And.OnlyHaveUniqueItems();
+        Enum.GetValues<JournalTypeFR>().Should().HaveCount(15).And.OnlyHaveUniqueItems();
     }
 
     [Theory]
@@ -57,9 +58,9 @@ public class JournalTypeFRTests
     }
 
     [Fact]
-    public void JournalProcessorFR_RefusesTheRetiredArchiveGroup008()
+    public void JournalProcessorFR_RefusesTheUnassignedCode005()
     {
-        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = (JournalType) 0x4652_2000_0000_0008 });
+        var act = () => Sut().ProcessAsync(new JournalRequest { ftJournalType = (JournalType) 0x4652_2000_0000_0005 });
 
         act.Should().Throw<ArgumentException>().WithMessage("*is unknown*");
     }
@@ -122,7 +123,6 @@ public class JournalTypeFRTests
     [Theory]
     [InlineData(0x4652_2000_0000_0005)]
     [InlineData(0x4652_2000_0000_0006)]
-    [InlineData(0x4652_2000_0000_0008)] // the retired v1 archive group
     [InlineData(0x4652_2000_0000_0011)]
     public void JournalProcessorFR_RejectsUnknownFrenchJournalCodes(long ftJournalType)
     {
