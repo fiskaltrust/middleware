@@ -48,6 +48,12 @@ internal class InfoCertReceiptPayload
     /// <summary>The reprint number of a copy (R13 ENC-DUP-PRN-NUM, market-fr#235); omitted on every other receipt.</summary>
     [JsonPropertyName("copyNumber"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? CopyNumber { get; set; }
 
+    /// <summary>
+    /// The boundaries of the archive an archive receipt closes, as v1.2 signed them (market-fr#221); omitted on
+    /// every other receipt. The link to the previous archive receipt (TAG-ARC-SIG) is <see cref="PreviousSignature"/>.
+    /// </summary>
+    [JsonPropertyName("archive"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public FRArchiveBoundaries? Archive { get; set; }
+
     [JsonPropertyName("totalizer")] public decimal Totalizer { get; set; }
 
     [JsonPropertyName("ciNormal")] public decimal CINormal { get; set; }

@@ -27,7 +27,7 @@ internal static class SelfCertifiedDataSetBuilder
     /// <summary>Field separator. Never appears in the values: identifiers, numbers and moments, and issuer claims that <see cref="SelfCertifiedConfiguration"/> rejects when they contain it.</summary>
     public const char FieldSeparator = '|';
 
-    public static string Build(ReceiptRequest request, ReceiptResponse response, SelfCertifiedConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null)
+    public static string Build(ReceiptRequest request, ReceiptResponse response, SelfCertifiedConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null, FRArchiveBoundaries? archive = null)
     {
         var chargeItems = request.cbChargeItems ?? new List<ChargeItem>();
         var payItems = request.cbPayItems ?? new List<PayItem>();
@@ -59,6 +59,9 @@ internal static class SelfCertifiedDataSetBuilder
             Amount(chargeItems.Sum(x => x.Amount)),
             VatBreakdown(chargeItems),
             PaymentBreakdown(payItems),
+            // market-fr#221: the boundaries an archive receipt signs, as v1.2; empty on every other
+            // receipt. Placed before the period totals so the fields read from the end keep their place.
+            FRArchiveBoundaries.SignedField(archive),
             PeriodTotals(periodTotals),
             configuration.CertificateSerialNumber,
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's

@@ -26,9 +26,11 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     private readonly FRSigningPipeline _pipeline;
     private readonly AsyncLazy<IJournalFRCopyPayloadRepository> _copies;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItems;
+    private readonly FRArchiveReceipt? _archive;
 
-    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies, AsyncLazy<IMiddlewareQueueItemRepository> queueItems)
+    public ProtocolCommandProcessorFR(FRSigningPipeline pipeline, AsyncLazy<IJournalFRCopyPayloadRepository> copies, AsyncLazy<IMiddlewareQueueItemRepository> queueItems, FRArchiveReceipt? archive = null)
     {
+        _archive = archive;
         _pipeline = pipeline;
         _copies = copies;
         _queueItems = queueItems;
@@ -58,7 +60,7 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         return _pipeline.SignAsync(request);
     }
 
-    public Task<ProcessCommandResponse?> ArchiveReceipt0x3011Async(ProcessCommandRequest request) => FRArchiveReceipt.SignAsync(_pipeline, request);
+    public Task<ProcessCommandResponse?> ArchiveReceipt0x3011Async(ProcessCommandRequest request) => _archive?.SignAsync(request) ?? Task.FromResult<ProcessCommandResponse?>(null);
 
     /// <summary>
     /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235)

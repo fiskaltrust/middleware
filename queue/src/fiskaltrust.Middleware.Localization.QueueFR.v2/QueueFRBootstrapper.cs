@@ -56,7 +56,8 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
             new ReceiptCommandProcessorFR(pipeline),
             new DailyOperationsCommandProcessorFR(pipeline),
             new InvoiceCommandProcessorFR(pipeline),
-            new ProtocolCommandProcessorFR(pipeline, storageProvider.CreateJournalFRCopyPayloadRepository(), queueItemRepository),
+            new ProtocolCommandProcessorFR(pipeline, storageProvider.CreateJournalFRCopyPayloadRepository(), queueItemRepository,
+                new FRArchiveReceipt(pipeline, chains, queueItemRepository, storageProvider.CreateMiddlewareReceiptJournalRepository(), storageProvider.CreateMiddlewareActionJournalRepository())),
             validationConfig);
 
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, receiptProcessorFR.ProcessAsync, cashBoxIdentification, middlewareConfiguration);

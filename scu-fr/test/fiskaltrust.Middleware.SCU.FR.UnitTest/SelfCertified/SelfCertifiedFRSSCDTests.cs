@@ -43,6 +43,20 @@ public class SelfCertifiedFRSSCDTests
     }
 
     [Fact]
+    public async Task ArchiveBoundaries_AreSignedBeforeThePeriodTotals()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new SelfCertifiedFRSSCD(Configuration(privateKey));
+
+        var (archive, _) = await sut.ProcessReceiptAsync(FRTestData.Archive(), null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        DataSetOf(archive).Split('|')[^6].Split(',')[0].Should().Be(FRTestData.PreviousArchive.ToString("D"), "market-fr#221: the archive receipt signs its boundaries");
+        DataSetOf(ticket).Split('|')[^6].Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task ProcessReceiptAsync_EmitsNoCertificationBodyItem()
     {
         var (privateKey, key) = FRTestData.CreateKey();
