@@ -9,8 +9,8 @@ namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 /// The readable totals a closing prints, as v1.2 did (workerFR "Day/Month/Year Totals" and the
 /// perpetual "Totals" item): one item for the totals of the closed period and one for the perpetual
 /// grand total, so the POS prints them without decoding the signed content. Every FR SCU emits
-/// them the same way. A shift closing prints the perpetual total only: low word 0x0002 (v1.2 shift
-/// totals) stays reserved.
+/// them the same way. A shift closing prints its shift totals under the v2 type 0x000D, because low
+/// word 0x0002 (v1.2 shift totals) stays reserved (market-fr#221, G5).
 /// </summary>
 public static class FRPeriodTotalsItems
 {
@@ -23,6 +23,7 @@ public static class FRPeriodTotalsItems
 
         var (type, caption) = periodTotals.Period switch
         {
+            FRTotalsPeriod.Shift => (SignatureTypeFR.ShiftPeriodTotals, "Shift Totals"),
             FRTotalsPeriod.Day => (SignatureTypeFR.DayTotals, "Day Totals"),
             FRTotalsPeriod.Month => (SignatureTypeFR.MonthTotals, "Month Totals"),
             FRTotalsPeriod.Year => (SignatureTypeFR.YearTotals, "Year Totals"),
