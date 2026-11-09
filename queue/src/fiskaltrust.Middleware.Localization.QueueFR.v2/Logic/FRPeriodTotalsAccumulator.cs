@@ -12,8 +12,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// <c>MonthRequest</c>, <c>YearRequest</c>, <c>StartRequest</c>, <c>StopRequest</c>), the shorter
 /// periods it ends too (<see cref="PeriodsClosedBy"/>, decided 2026-11-04): a monthly closing also
 /// closes the day, a yearly closing the day and the month, the initial-operation receipt the day,
-/// and the out-of-operation receipt the day, the month and the year. A shift and a daily closing
-/// close only themselves. The totals live in the v1
+/// the out-of-operation receipt the day, the month and the year, and the archive receipt the day and
+/// the archive period (v1.2 <c>ArchiveCommand</c>). A shift and a daily closing close only themselves. The totals live in the v1
 /// columns of ftQueueFR (market-fr ADR 0012), so a half-migrated queue carries them over as they are.
 /// </summary>
 public class FRPeriodTotalsAccumulator
@@ -51,7 +51,7 @@ public class FRPeriodTotalsAccumulator
                     AddTo(FRQueueFRColumns.TotalsPrefix(period), totals);
                 }
                 AddTo(chain == FRReceiptChain.Ticket ? FRQueueFRColumns.TicketTotalsPrefix : FRQueueFRColumns.InvoiceTotalsPrefix, totals);
-                AddTo(ArchiveTotalsPrefix, totals);
+                AddTo(FRQueueFRColumns.TotalsPrefix(FRTotalsPeriod.Archive), totals);
                 break;
             case FRReceiptChain.Bill:
                 AddTo(BillTotalsPrefix, FRTotalsCalculator.From(request));
@@ -71,8 +71,6 @@ public class FRPeriodTotalsAccumulator
     }
 
     private const string BillTotalsPrefix = "B";
-
-    private const string ArchiveTotalsPrefix = "A";
 
     /// <summary>The totals a closing of <paramref name="period"/> reports, plus the perpetual total.</summary>
     public FRPeriodTotals Snapshot(FRTotalsPeriod period) => new()
@@ -104,6 +102,7 @@ public class FRPeriodTotalsAccumulator
             case FRTotalsPeriod.Day: _queueFR.GLastDayMoment = moment; _queueFR.GLastDayQueueItemId = queueItemId; break;
             case FRTotalsPeriod.Month: _queueFR.GLastMonthMoment = moment; _queueFR.GLastMonthQueueItemId = queueItemId; break;
             case FRTotalsPeriod.Year: _queueFR.GLastYearMoment = moment; _queueFR.GLastYearQueueItemId = queueItemId; break;
+            case FRTotalsPeriod.Archive: _queueFR.ALastMoment = moment; _queueFR.ALastQueueItemId = queueItemId; break;
         }
     }
 
@@ -126,6 +125,7 @@ public class FRPeriodTotalsAccumulator
             ReceiptCase.YearlyClosing0x2013 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
             ReceiptCase.InitialOperationReceipt0x4001 => [FRTotalsPeriod.Day],
             ReceiptCase.OutOfOperationReceipt0x4002 => [FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year],
+            FRReceiptChainExt.ArchiveReceipt => [FRTotalsPeriod.Day, FRTotalsPeriod.Archive],
             _ => [],
         };
     }
@@ -147,6 +147,7 @@ public class FRPeriodTotalsAccumulator
         ReceiptCase.DailyClosing0x2011 => FRTotalsPeriod.Day,
         ReceiptCase.MonthlyClosing0x2012 => FRTotalsPeriod.Month,
         ReceiptCase.YearlyClosing0x2013 => FRTotalsPeriod.Year,
+        FRReceiptChainExt.ArchiveReceipt => FRTotalsPeriod.Archive,
         _ => null,
     };
 

@@ -58,6 +58,8 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         return _pipeline.SignAsync(request);
     }
 
+    public Task<ProcessCommandResponse?> ArchiveReceipt0x3011Async(ProcessCommandRequest request) => FRArchiveReceipt.SignAsync(_pipeline, request);
+
     /// <summary>
     /// A copy is numbered per copied receipt (R13 ENC-DUP-PRN-NUM, NF525 V2.3 §6.3.1.3; market-fr#235)
     /// and printed as "n. Duplicata de reference", as in v1.2. The copy is journaled in

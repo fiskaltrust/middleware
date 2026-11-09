@@ -14,6 +14,7 @@ public enum SignatureTypeFR : long
     DayTotals = 0x4652_2000_0000_0003,
     MonthTotals = 0x4652_2000_0000_0004,
     YearTotals = 0x4652_2000_0000_0005,
+    ArchiveTotals = 0x4652_2000_0000_0006,
     PerpetualTotals = 0x4652_2000_0000_0007,
     /// <summary>Reserved, not emitted since ADR 0001 (market-fr#122); see the SCU abstraction.</summary>
     ChainHash = 0x4652_2000_0000_0008,

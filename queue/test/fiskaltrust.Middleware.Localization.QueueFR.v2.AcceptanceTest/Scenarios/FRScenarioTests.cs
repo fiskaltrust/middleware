@@ -140,6 +140,31 @@ public abstract class FRScenarioTests
         closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002 || x.ftSignatureType.IsType(SignatureTypeFR.DayTotals));
     }
 
+    /// <summary>
+    /// The archive receipt (0x3011) is signed into chain A and prints the sales since the previous
+    /// archive receipt as "Archive Totals" (low word 0x0006, as v1.2), then the perpetual total
+    /// (market-fr#221).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveReceipt_IsSignedIntoTheArchiveChainAndPrintsTheArchiveTotals()
+    {
+        await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        first.ftState.IsState(State.Error).Should().BeFalse();
+        first.ftReceiptIdentification.Should().EndWith("A1");
+        first.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ArchiveTotals)).Caption.Should().Be("Archive Totals");
+        ReadableTotal(SignatureOf(first, SignatureTypeFR.ArchiveTotals)).Should().Be("12.00");
+        ReadableTotal(SignatureOf(first, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
+
+        await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        second.ftReceiptIdentification.Should().EndWith("A2");
+        ReadableTotal(SignatureOf(second, SignatureTypeFR.ArchiveTotals)).Should().Be("12.00", "the first archive receipt reset the archive period");
+        ReadableTotal(SignatureOf(second, SignatureTypeFR.PerpetualTotals)).Should().Be("24.00");
+    }
+
     [Fact]
     public async Task Sale_PrintsNoTotalsItems()
     {
