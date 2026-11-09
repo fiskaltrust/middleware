@@ -74,17 +74,18 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     && !x.IsPartialRefundReceipt(), () =>
             {
+                // A down payment is deducted on the final invoice as a negative line (flag 0x0008).
                 RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
                 {
                     chargeItem.RuleFor(x => x.Quantity)
                         .GreaterThanOrEqualTo(0)
-                        .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid())
+                        .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment())
                         .WithMessage(item => $"Negative quantity ({item.Quantity}) is not allowed for non-refund charge items")
                         .WithErrorCode("NegativeQuantityNotAllowed");
 
                     chargeItem.RuleFor(x => x.Amount)
                         .GreaterThanOrEqualTo(0)
-                        .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid())
+                        .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment())
                         .WithMessage(item => $"Negative amount ({item.Amount}) is not allowed for non-refund charge items")
                         .WithErrorCode("NegativeAmountNotAllowed");
                 });

@@ -259,6 +259,25 @@ public class ChargeItemValidationsTests
         result.ShouldNotHaveAnyValidationErrors();
     }
 
+    /// <summary>The final invoice deducts the down payment received as a negative Downpayment line.</summary>
+    [Fact]
+    public void NegativeAmounts_DownpaymentDeduction_ShouldSkip()
+    {
+        var validator = new ChargeItemValidations.NegativeAmounts();
+        var request = new ReceiptRequest
+        {
+            ftReceiptCase = ReceiptCase.InvoiceB2C0x1001.WithCountry("FR"),
+            cbChargeItems =
+            [
+                new ChargeItem { Description = "Item", VATRate = 20m, Amount = 3000m, Quantity = 1m, ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR").WithTypeOfService(ChargeItemCaseTypeOfService.Delivery) },
+                new ChargeItem { Description = "Down payment received", VATRate = 20m, Amount = -1200m, Quantity = -1m, ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR").WithFlag(ChargeItemCaseFlags.Downpayment) },
+            ],
+            cbPayItems = []
+        };
+        var result = validator.TestValidate(request);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
     // ─── ZeroVatRateMustHaveNature ─────────────────────────────────────────────
 
     [Fact]

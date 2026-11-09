@@ -18,4 +18,6 @@ public static class ChargeItemExt
     public static bool IsExtra(this ChargeItem ci) => ci.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount) && ((!ci.IsVoid() && !ci.IsRefund() && ci.Amount > 0) || ((ci.IsVoid() || ci.IsRefund()) && ci.Amount < 0));
 
     public static bool IsRefund(this ChargeItem chargeItem) => chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund);
+
+    public static bool IsDownpayment(this ChargeItem chargeItem) => chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Downpayment);
 }
