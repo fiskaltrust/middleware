@@ -33,5 +33,13 @@
         public int DelayOnRetriesInMs { get; set; } = 1000;
         public int ExportTimeoutMs { get; set; } = 18000 * 1000;
         public bool Sandbox { get; set; }
+
+        /// <summary>
+        /// When true, a request to terminate the TSE (out-of-operation receipt) is refused with a
+        /// <see cref="Exceptions.SwissbitCloudV2Exception"/> instead of disabling the Swissbit Cloud TSE, which is final.
+        /// Meant for a TSE several cashboxes share, e.g. the sandbox developer sample: one cashbox must not be able to
+        /// switch the TSE off for all the others.
+        /// </summary>
+        public bool PreventTseDisable { get; set; } = false;
     }
 }

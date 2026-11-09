@@ -184,6 +184,15 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     throw new SwissbitCloudV2Exception($"The state of the TSE is {tssResult.InitializationState} and therefore this request is not supported.");
                 }
 
+                if (_configuration.PreventTseDisable)
+                {
+                    if (tssResult.InitializationState == SwissbitCloudV2TseState.disabled.ToString())
+                    {
+                        return SwissbitCloudV2TseState.disabled.ToTseState();
+                    }
+                    throw new SwissbitCloudV2Exception("Disabling this TSE is not allowed: the SCU is configured with PreventTseDisable, and disabling a Swissbit Cloud TSE is final.");
+                }
+
                 var tseResult = await _swissbitCloudV2Provider.DisableTseAsync();
 
                 return ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
