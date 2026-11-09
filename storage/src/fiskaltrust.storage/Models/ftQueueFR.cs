@@ -881,6 +881,11 @@ namespace fiskaltrust.storage.V0
         /// </summary>
         public string YLastSignature { get; set; }
 
+        /// <summary>
+        /// Base64Url signature of the last entry of the v2 chain of archive receipts
+        /// </summary>
+        public string ALastSignature { get; set; }
+
         #endregion
 
         #region Late Signing
