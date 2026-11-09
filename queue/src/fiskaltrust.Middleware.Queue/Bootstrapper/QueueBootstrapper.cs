@@ -49,7 +49,8 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 // Key handling is based on this condition to ensure that we are handling it case insensitive
-                LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null
+                LauncherEnvironment = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
+                LauncherVersion = _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherversion").Value?.ToString() ?? null
             };
 
             services.AddSingleton(sp =>
@@ -123,7 +124,8 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                     AssemblyName = middlewareConfiguration.AssemblyName,
                     AssemblyVersion = middlewareConfiguration.AssemblyVersion,
                     LauncherEnvironment = middlewareConfiguration.LauncherEnvironment,
-                    PreviewFeatures = middlewareConfiguration.PreviewFeatures
+                    PreviewFeatures = middlewareConfiguration.PreviewFeatures,
+                    LauncherVersion = middlewareConfiguration.LauncherVersion
                 }),
                 TimeStamp = DateTime.UtcNow.Ticks
             };
