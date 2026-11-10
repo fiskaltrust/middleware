@@ -1,10 +1,10 @@
-﻿using fiskaltrust.Exports.Common.Models;
-using fiskaltrust.Exports.Common.Repositories;
+﻿using fiskaltrust.Middleware.Journal.DE.Common.Models;
+using fiskaltrust.Middleware.Journal.DE.Common.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Exports.Common.Helpers;
+using fiskaltrust.Middleware.Journal.DE.Common.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using System.Collections.Generic;
 using System.Linq;

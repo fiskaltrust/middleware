@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Exports data from fiskaltrust queues in a DSFinV-K-compatible format.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Schema\*" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="Schema\gdpdu-01-09-2004.dtd" />
+        <None Remove="Schema\index.xml" />
+        <None Remove="Schema\README.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Journal.DE.Common\fiskaltrust.Middleware.Journal.DE.Common.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CsvHelper" Version="15.0.5" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="fiskaltrust.Middleware.Journal.DE.DSFinVK.UnitTest" />
+    </ItemGroup>
+
+</Project>
