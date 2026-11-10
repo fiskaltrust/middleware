@@ -135,9 +135,9 @@ public class FRJournalExportTests : IDisposable
     }
 
     /// <summary>
-    /// The archive receipt for an archive lies in the next archive, so chain A gets a chain anchor
-    /// like every other chain: its first A receipt and the previous A receipt's signature
-    /// (contract section 10, market-fr#221).
+    /// An archive ends on its own archive receipt (decided 2026-11-10), and chain A gets a chain anchor
+    /// like every other chain: its first A receipt and the previous A receipt's signature, which the
+    /// previous archive holds (contract section 10, market-fr#221).
     /// </summary>
     [Fact]
     public async Task ArchiveExport_AnchorsChainAOnThePreviousArchiveReceipt()
@@ -168,29 +168,33 @@ public class FRJournalExportTests : IDisposable
     }
 
     /// <summary>
-    /// As v1.2, an archive receipt signs which receipts its archive holds - from the queue item the
-    /// previous archive ended on to itself - the last journals, the day, month and year totals and
-    /// the previous archive receipt; the archive's bytes are not hashed (market-fr#221).
+    /// As v1.2, an archive receipt signs which receipts its archive holds, the last journals, the day,
+    /// month and year totals and the previous archive receipt; the archive's bytes are not hashed
+    /// (market-fr#221). Unlike v1.2, the range runs from the record after the previous archive receipt
+    /// up to and including the archive receipt itself, so every record lies in exactly one range
+    /// (decided 2026-11-10).
     /// </summary>
     [Fact]
     public async Task ArchiveReceipt_SignsTheBoundariesOfTheArchiveItCloses()
     {
         var firstSale = await SignAsync(CashSale());
         var first = await SignAsync(Request((ReceiptCase) 0x3011));
-        await SignAsync(CashSale());
+        var secondSale = await SignAsync(CashSale());
         var second = await SignAsync(Request((ReceiptCase) 0x3011));
 
         var firstBoundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(first)!;
         firstBoundaries.PreviousArchiveQueueItemId.Should().BeNull("it is the queue's first archive receipt");
         firstBoundaries.FirstContainedReceiptQueueItemId.Should().Be(firstSale.ftQueueItemID);
         firstBoundaries.FirstContainedReceiptMoment.Should().Be(firstSale.ftReceiptMoment);
-        firstBoundaries.LastContainedReceiptQueueItemId.Should().Be(first.ftQueueItemID);
+        firstBoundaries.LastContainedReceiptQueueItemId.Should().Be(first.ftQueueItemID, "the archive receipt is its own last contained receipt");
+        firstBoundaries.LastContainedReceiptMoment.Should().Be(first.ftReceiptMoment);
         firstBoundaries.LastReceiptJournalId.Should().NotBeNull();
         firstBoundaries.Day.Totalizer.Should().Be(12.00m);
 
         var secondBoundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(second)!;
         secondBoundaries.PreviousArchiveQueueItemId.Should().Be(first.ftQueueItemID);
-        secondBoundaries.FirstContainedReceiptQueueItemId.Should().Be(first.ftQueueItemID, "v1.2 starts an archive on the queue item the previous one ended on");
+        secondBoundaries.FirstContainedReceiptQueueItemId.Should().Be(secondSale.ftQueueItemID, "the range starts on the record after the previous archive receipt");
+        secondBoundaries.FirstContainedReceiptMoment.Should().Be(secondSale.ftReceiptMoment);
         secondBoundaries.LastContainedReceiptQueueItemId.Should().Be(second.ftQueueItemID);
         secondBoundaries.LastContainedReceiptMoment.Should().Be(second.ftReceiptMoment);
         secondBoundaries.Day.Totalizer.Should().Be(12.00m, "the first archive receipt closed the day");
@@ -210,6 +214,7 @@ public class FRJournalExportTests : IDisposable
         var training = await SignAsync(request);
 
         SCU.FR.Abstraction.Helpers.FRStateData.Archive(training).Should().BeNull();
+        training.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypeFR.DayTotals), "a training archive receipt prints the live day totals, as v1.2");
     }
 
     [Fact]
