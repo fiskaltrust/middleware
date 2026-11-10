@@ -61,6 +61,12 @@ public sealed class PosNetDeviceModel
     /// <summary>The numer unikatowy, in the shape a POSNET Online printer answers it.</summary>
     public string UniqueNumber { get; set; } = "ZBF 2101002392";
 
+    /// <summary>The numer fabryczny factorynumberget and the fiscalization record report, as on the office printer.</summary>
+    public string FactoryNumber { get; set; } = "PO204000343";
+
+    /// <summary>The numer ewidencyjny of the fiscalization record (fmrecfisc rn), as on the office printer.</summary>
+    public string RegistrationNumber { get; set; } = "2026/000063420";
+
     /// <summary>
     /// The PTU table as the register reports it: a percentage, <see cref="ExemptRate"/> or
     /// <see cref="InactiveRate"/> per slot A–G. Derived from the SCU's default table rather than
@@ -196,6 +202,12 @@ public sealed class PosNetDeviceModel
             "scomm" => $"scomm\tfs{Flag(Fiscalized)}\ttzN\tts{(TransactionOpen ? ReceiptDocumentType : 0)}\thrT\tnu{UniqueNumber}\ttdN\t",
             "!sprn" or "sprn" => $"sprn\tpr{MechanismStatus}\t",
             "getrealid" => $"getrealid\tnmPOSNET THERMAL HD ONLINE\tvr21.01\tnu{UniqueNumber}\t",
+            "factorynumberget" => $"factorynumberget\tfn{FactoryNumber}\t",
+            // A register that is not fiscalized has no fiscalization record. The spec names no error code for
+            // that; NoFiscalMode is the model's assumption, and the SCU treats every refusal alike.
+            "fmrecfisc" => Fiscalized
+                ? $"fmrecfisc\tda2026-09-03;15:41\ttm2026-09-03T15:41:49+02:00\tno1\tni9998887766\tam0\trn{RegistrationNumber}\tfn{FactoryNumber}\tbcT\tnaPLN\t"
+                : Error("fmrecfisc", PosNetErrors.NoFiscalMode),
             "!sdev" or "sdev" => $"sdev\tds{DeviceStatus}\tcpT\tqe{Flag(!TransactionOpen || DeviceStatus == 0)}\tpeN\ttl{(TransactionOpen ? 1 : 0)}\t",
             "scnt" => $"scnt\trd{DailyReportCounter}\thn{Printouts + 1}\tbn{CompletedReceipts}\tfn{Invoices}\tnu{UniqueNumber}\tbc{CanceledReceipts}\tbt{LastReceiptNumber}\tfc0\t",
             "stot" => Stot(),

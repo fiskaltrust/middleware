@@ -54,8 +54,11 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     private readonly System.Threading.SemaphoreSlim _deviceLock = new(1, 1);
 
     /// <summary>
-    /// The register identity, read once per SCU instance. The numer unikatowy is assigned to a
-    /// device for its lifetime, so re-reading it before every receipt would only add a round trip.
+    /// The register identity (numer unikatowy, numer fabryczny), read once per SCU instance and
+    /// refreshed by <see cref="GetInfoAsync"/>. The numer unikatowy belongs to the fiscal memory and
+    /// only changes when a service technician exchanges it, so re-reading it before every receipt would
+    /// only add round trips; a fiscal memory exchanged while this SCU keeps running is reported with
+    /// the old number until the next info read or restart.
     /// </summary>
     private PLDeviceInfo? _identity;
 
@@ -78,11 +81,26 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest)
         => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
+    /// <summary>
+    /// Reads the register's state afresh: the fiscal mode from scomm, the numbers each from the one
+    /// command that reports the legal value (<see cref="ReadIdentityAsync"/>), the numer ewidencyjny
+    /// from the fiscalization record, and the PTU table. The fresh identity replaces the cached one.
+    /// </summary>
     public async Task<PLSSCDInfo> GetInfoAsync()
     {
         var status = await _client.ExecuteAsync(PosNetCommands.Scomm());
+        var identity = _identity = await ReadIdentityAsync();
+        // Only a fiscalized register has a fiscalization record; a register in training mode refuses the read.
+        var fiscalizationRecord = await TryReadRefusableAsync(PosNetCommands.Fmrecfisc());
         var rateTable = await GetRateTableAsync();
-        return ToDeviceInfo(status, rateTable).ToPLSSCDInfo();
+        return new PLDeviceInfo
+        {
+            FiscalizationState = ToFiscalizationState(status),
+            VatRateTable = rateTable,
+            UniqueDeviceNumber = identity.UniqueDeviceNumber,
+            DeviceSerialNumber = identity.DeviceSerialNumber,
+            RegistrationNumber = ReadText(fiscalizationRecord, "rn"),
+        }.ToPLSSCDInfo();
     }
 
     /// <summary>
@@ -575,16 +593,53 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
             RegisterTimeZoneId).DateTime);
 
     /// <summary>
-    /// Adds the register identity to the response, reading the status once and reusing it. An
-    /// unreachable or silent register propagates: no sale may be recorded without a register.
-    /// Only the numer unikatowy and the serial number reach the response, and scomm carries both,
-    /// so the PTU table is deliberately left out of this read: a goods return and a daily closing
-    /// resolve no PTU slot and must not fail on a table they never use.
+    /// Adds the register identity to the response, reading it once and reusing it. An unreachable or
+    /// silent register propagates: no sale may be recorded without a register. Only the numer
+    /// unikatowy and the numer fabryczny reach the response, so the PTU table is deliberately left out
+    /// of this read: a goods return and a daily closing resolve no PTU slot and must not fail on a
+    /// table they never use.
     /// </summary>
     private async Task EnrichWithDeviceIdentityAsync(ReceiptResponse response)
     {
-        _identity ??= ToDeviceInfo(await _client.ExecuteAsync(PosNetCommands.Scomm()), rateTable: []);
+        _identity ??= await ReadIdentityAsync();
         response.EnrichWithDeviceIdentification(_identity);
+    }
+
+    /// <summary>
+    /// Reads the register's numbers, each from the command that reports the legal value. The numer
+    /// unikatowy comes from getrealid and never from scomm, whose <c>nu</c> is the numer identyfikacyjny
+    /// an integrator can overwrite (<see cref="PosNetCommands.Scomm"/>). It belongs to the fiscal memory
+    /// and changes when that is exchanged; the numer fabryczny (factorynumberget) stays with the device.
+    /// The numer unikatowy is required — it is printed on every fiscal document — while a register that
+    /// refuses the numer fabryczny is reported without one: it is not part of the receipt, and no sale
+    /// may fail on it. Like any other command, an unanswered read propagates.
+    /// </summary>
+    private async Task<PLDeviceInfo> ReadIdentityAsync()
+    {
+        var realIdentity = await _client.ExecuteAsync(PosNetCommands.Getrealid());
+        var factoryNumber = await TryReadRefusableAsync(PosNetCommands.Factorynumberget());
+        return new PLDeviceInfo
+        {
+            UniqueDeviceNumber = ReadText(realIdentity, "nu"),
+            DeviceSerialNumber = ReadText(factoryNumber, "fn"),
+        };
+    }
+
+    /// <summary>
+    /// Runs a read whose refusal is an answer: a register that confirms it cannot report the value
+    /// yields null. An unanswered or unreadable read still propagates — its late answer could otherwise
+    /// arrive in place of the next command.
+    /// </summary>
+    private async Task<PosNetResponse?> TryReadRefusableAsync(PosNetCommand command)
+    {
+        try
+        {
+            return await _client.ExecuteAsync(command);
+        }
+        catch (PLDeviceErrorException)
+        {
+            return null;
+        }
     }
 
     private async Task<PtuSlotResolver> GetPtuSlotResolverAsync()
@@ -630,8 +685,8 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
     /// fields are POSNET's, and an SCU for another register would report its own under its own name rather
     /// than reuse this shape. A register that is not ready does not fail the
     /// zero receipt — the state is the answer; only a register that does not answer at all does.
-    /// Fiscal mode and read-only mode come from scomm, the factory device type and software version
-    /// from getrealid — synchronous reads, which wait behind any command sent before them. They are
+    /// Fiscal mode and read-only mode come from scomm, the factory device type, software version and
+    /// numer unikatowy from getrealid — synchronous reads, which wait behind any command sent before them. They are
     /// only sent while no sale or closing holds the device lock — taken without waiting, as the zero
     /// receipt must not wait for a sale — and the register is still idle once the lock is held: the
     /// first state read runs outside the lock, so a sale may have started since. Otherwise those
@@ -688,7 +743,8 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
                         TransactionOpen = state.TransactionResources is null ? (bool?)null : state.TransactionResources != 0,
                         FiscalMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "fs"),
                         ReadOnlyMode = status is null ? (bool?)null : PosNetStatus.ReadFlag(status, "td"),
-                        UniqueDeviceNumber = status is not null && status.Parameters.TryGetValue("nu", out var nu) && nu.Trim().Length > 0 ? nu.Trim() : null,
+                        // From getrealid: scomm's nu is the numer identyfikacyjny an integrator can overwrite.
+                        UniqueDeviceNumber = ReadText(identity, "nu"),
                         DeviceType = ReadText(identity, "nm"),
                         SoftwareVersion = ReadText(identity, "vr"),
                     },
@@ -810,21 +866,10 @@ public class PosNetPLSSCD : IPLSSCD, IDisposable
         }
     }
 
-    private static PLDeviceInfo ToDeviceInfo(PosNetResponse status, List<PLVatRateTableEntry> rateTable) => new()
-    {
-        FiscalizationState = ToFiscalizationState(status),
-        VatRateTable = rateTable,
-        // scomm reports the numer unikatowy (nu), the number printed on every fiscal document. The
-        // numer fabryczny is not part of this status — reading it is a follow-up to middleware#751.
-        DeviceSerialNumber = null,
-        UniqueDeviceNumber = status.Parameters.TryGetValue("nu", out var uniqueNumber) && uniqueNumber.Trim().Length > 0
-            ? uniqueNumber.Trim()
-            : null,
-    };
-
     /// <summary>
     /// The scomm status flags are the letters T (tak) and N (nie) — a POSNET Online printer answers
-    /// e.g. <c>fsN tzN ts0 hrT nuZBF 2101002392 tdN</c>. 1/0 is accepted as well, and an
+    /// e.g. <c>fsN tzN ts0 hrT nuZBF 2101002392 tdN</c> (that nu is the numer identyfikacyjny, see
+    /// <see cref="PosNetCommands.Scomm"/>). 1/0 is accepted as well, and an
     /// unrecognized or missing flag leaves the state <see cref="PLFiscalizationState.Unknown"/>:
     /// reporting a fiscalized register as non-fiscal would keep a PL queue from ever activating.
     /// </summary>
