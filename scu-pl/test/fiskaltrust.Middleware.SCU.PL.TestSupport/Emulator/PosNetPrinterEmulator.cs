@@ -234,9 +234,22 @@ public sealed class PosNetPrinterEmulator : IDisposable
                 // the recordings too; it only configures the next printout's footer, not its fiscal content.
                 || command.CommandId == "ftrcfg" && (!_replay.TryPeek(out var upcoming) || !upcoming.Command.StartsWith("ftrcfg", StringComparison.Ordinal))
                 // The factory identity read on the zero receipt (getrealid) is newer too, and read-only.
-                || command.CommandId == "getrealid" && (!_replay.TryPeek(out var queued) || !queued.Command.StartsWith("getrealid", StringComparison.Ordinal))))
+                || command.CommandId == "getrealid" && (!_replay.TryPeek(out var queued) || !queued.Command.StartsWith("getrealid", StringComparison.Ordinal))
+                // So are the numer fabryczny and the fiscalization record (numer ewidencyjny), read with the identity.
+                || command.CommandId is "factorynumberget" or "fmrecfisc"
+                    && (!_replay.TryPeek(out var pending) || !pending.Command.StartsWith(command.CommandId, StringComparison.Ordinal))))
         {
             return PosNetPayload.ToFrame(Model.Answer(command));
+        }
+
+        // The recordings read the register identity with scomm; the SCU now reads it with getrealid,
+        // because scomm's nu is the overwritable numer identyfikacyjny. A recorded scomm the SCU no
+        // longer sends is a read-only status read, so it is passed over rather than failing the replay.
+        if (_replaysACassette && command.CommandId != "scomm"
+            && _replay.TryPeek(out var skipped) && skipped.Command.StartsWith("scomm\t", StringComparison.Ordinal))
+        {
+            _replay.TryDequeue(out _);
+            _replayPosition++;
         }
 
         if (_replay.TryDequeue(out var recorded))

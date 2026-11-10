@@ -228,13 +228,29 @@ public static class PosNetCommands
     /// <summary>Clears a pending eDokument binding armed by <c>eparagonidznext</c> (spec p. 253).</summary>
     public static PosNetCommand EparagonIdzCancel() => new("eparagonidzcancel");
 
+    /// <summary>
+    /// The general status: fiscal mode (fs), read-only mode (td) and more. Its <c>nu</c> is not the numer
+    /// unikatowy: since the legal format of that number changed, the status reads carry the numer
+    /// identyfikacyjny instead, which an integrator can overwrite with <c>progid</c> and which only
+    /// defaults to the numer unikatowy (POT-I-DEV-37 v6403 "progid", p. 393). Use <see cref="Getrealid"/>.
+    /// </summary>
     public static PosNetCommand Scomm() => new("scomm");
 
     /// <summary>
-    /// The factory device type (nm), software version (vr) and unique number (nu) — read-only, and unlike
-    /// sid not the programmed (emulated) identity (POT-I-DEV-37 "getrealid").
+    /// The factory device type (nm), software version (vr) and the real numer unikatowy (nu) — read-only,
+    /// and unlike the status reads and sid not the identity programmed with <c>progid</c> (POT-I-DEV-37 "getrealid").
     /// </summary>
     public static PosNetCommand Getrealid() => new("getrealid");
+
+    /// <summary>The numer fabryczny (fn), e.g. <c>PO807271327</c> — read-only (POT-I-DEV-37 "factorynumberget").</summary>
+    public static PosNetCommand Factorynumberget() => new("factorynumberget");
+
+    /// <summary>
+    /// The fiscalization record (POT-I-DEV-37 "fmrecfisc"): among it the numer ewidencyjny (rn, e.g.
+    /// <c>2018/000003370</c>), the numer fabryczny (fn) and the NIP (ni). A register that is not fiscalized
+    /// has no such record, and a fiscalized one exactly one, so the record number is left out.
+    /// </summary>
+    public static PosNetCommand Fmrecfisc() => new("fmrecfisc");
 
     public static PosNetCommand Scnt() => new("scnt");
 

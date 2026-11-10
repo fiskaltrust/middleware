@@ -47,7 +47,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         NoTransactionShouldBeOpen(target);
         DocumentNumberOf(result).Should().BePositive();
         // The protected memory numbers every document type in one sequence, so di runs ahead of
@@ -65,7 +65,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CardSaleWithChange());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trend = target.SentCommands.Single(c => c.CommandId == "trend");
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("to", "200"));
         trend.Parameters.Should().Contain(new KeyValuePair<string, string>("re", "300"));
@@ -79,7 +79,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.DiscountSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trdiscntsubtot", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trdiscntsubtot", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trline = target.SentCommands.Single(c => c.CommandId == "trline");
         // The line value stays the value before the rabat — the register prints both and totalizes
         // the difference.
@@ -103,7 +103,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.MarkupSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trdiscntsubtot", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trdiscntsubtot", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         // Same fields as a rabat, with rd0: the register adds the value instead of subtracting it.
         var trline = target.SentCommands.Single(c => c.CommandId == "trline");
         trline.Parameters.Should().Contain(new KeyValuePair<string, string>("wa", "1000"));
@@ -125,7 +125,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trline", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trline", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         var lines = target.SentCommands.Where(c => c.CommandId == "trline").ToList();
         // The storno repeats the goods of the position it reverses — the coffee, not the beer that
         // was sold between them — and states the value the device verifies against what it printed.
@@ -147,7 +147,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.StornoOfDiscountedSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trline", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trline", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         var lines = target.SentCommands.Where(c => c.CommandId == "trline").ToList();
         // The reversal repeats the rabat the position was sold with. Without it the register takes
         // the value before the rabat off the receipt: the same three commands with rw200 missing were
@@ -169,7 +169,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         await target.Sut.ProcessReceiptAsync(PLReceiptExamples.NipReceipt());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trnipset", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trnipset", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         var trnipset = target.SentCommands.Single(c => c.CommandId == "trnipset");
         trnipset.Parameters.Should().Contain(new KeyValuePair<string, string>("ni", "1234563218"));
     }
@@ -183,9 +183,9 @@ public class PosNetPLSSCDAcceptanceTests
         var second = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
         // The PTU table and the register identity are read once, so only the first sale carries the
-        // leading sfsk and scomm; the receipt counter is read before every sale, the guard needs a
-        // fresh baseline each time, and the mechanism before opening and before closing each receipt.
-        target.SentMnemonics.Should().HaveCount(26);
+        // leading sfsk, getrealid and factorynumberget; the receipt counter is read before every sale, the
+        // guard needs a fresh baseline each time, and the mechanism before opening and before closing each receipt.
+        target.SentMnemonics.Should().HaveCount(27);
         NoTransactionShouldBeOpen(target);
         DocumentNumberOf(second).Should().Be(DocumentNumberOf(first) + 1);
         FiscalDocumentNumber.InProtectedMemoryOf(second.ReceiptResponse).Should().Be(FiscalDocumentNumber.InProtectedMemoryOf(first.ReceiptResponse) + 1);
@@ -208,7 +208,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var info = await target.Sut.GetInfoAsync();
 
-        target.SentMnemonics.Should().Equal("scomm", "sfsk");
+        target.SentMnemonics.Should().Equal("scomm", "getrealid", "factorynumberget", "fmrecfisc", "sfsk");
         var deviceInfo = PLDeviceInfo.FromPLSSCDInfo(info);
         deviceInfo.Should().NotBeNull();
         // Which state a real register reports depends on the device in front of you, but the status
@@ -240,7 +240,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale())).FailureMessage().Should().Contain("error 2005");
         // A scripted register has no pinned table, so the SCU reads it first.
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "prncancel");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "prncancel");
         NoTransactionShouldBeOpen(target);
     }
 
@@ -271,7 +271,7 @@ public class PosNetPLSSCDAcceptanceTests
         // No trend was sent, so no receipt can exist: a definite failure, safe to resend.
         (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale())).FailureMessage().Should().Contain("NOT issued");
         // trpayment is never resent; the open receipt is canceled so the register is free again.
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "prncancel");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "prncancel");
         NoTransactionShouldBeOpen(target);
     }
 
@@ -287,7 +287,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale("KID0123456789ABC"));
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "eparagonidznext", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt", "eparagonbufferget");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "eparagonidznext", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt", "eparagonbufferget");
         var binding = target.SentCommands.Single(c => c.CommandId == "eparagonidznext");
         binding.Parameters.Should().Contain(new KeyValuePair<string, string>("id", "KID0123456789ABC"));
         var readback = target.SentCommands.Single(c => c.CommandId == "eparagonbufferget");
@@ -307,7 +307,7 @@ public class PosNetPLSSCDAcceptanceTests
         (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale())).FailureMessage().Should().Contain("error 2034");
         // The rejected binding is the last frame on the wire: no trinit, no line, no cancel —
         // nothing was sent to the device for this receipt after the failed bind.
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "eparagonidznext");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "eparagonidznext");
         NoTransactionShouldBeOpen(target);
     }
 
@@ -324,7 +324,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         (await target.Sut.ProcessReceiptAsync(PLReceiptExamples.EReceiptSale())).FailureMessage();
         // The armed binding is cleared and nothing is printed: no trinit ever goes out.
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "eparagonidznext", "eparagonidzcancel");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "eparagonidznext", "eparagonidzcancel");
         NoTransactionShouldBeOpen(target);
     }
 
@@ -367,7 +367,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.PrintoutSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "trftrln", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
         target.SentCommands.Single(c => c.CommandId == "trend").Parameters.Should().Contain(new KeyValuePair<string, string>("fe", "0"));
         target.SentCommands.Single(c => c.CommandId == "ftrcfg").Parameters.Should()
             .Contain(new KeyValuePair<string, string>("bc", "1234567890")).And
@@ -408,7 +408,7 @@ public class PosNetPLSSCDAcceptanceTests
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.PrintoutSale());
 
         // First line rejected → footer closed with trftrend, no prncancel, the readback still happens.
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "qrcode", "ftrcfg", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "trftrln", "trftrend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Dodatkowe linie nie wydrukowane" && s.Data.StartsWith("?2063"));
         DocumentNumberOf(result).Should().BePositive();
         NoTransactionShouldBeOpen(target);
@@ -462,7 +462,7 @@ public class PosNetPLSSCDAcceptanceTests
 
 
         (await target.Sut.ProcessReceiptAsync(request)).FailureMessage().Should().Contain("error 2063");
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "qrcode", "ftrcfg");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "qrcode", "ftrcfg");
         NoTransactionShouldBeOpen(target);
     }
 
@@ -473,7 +473,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt");
         result.ReceiptResponse.ftSignatures.Should().NotContain(s => s.Caption == "Identyfikator eDokumentu" || s.Caption == "Status eDokumentu");
     }
 
@@ -499,7 +499,7 @@ public class PosNetPLSSCDAcceptanceTests
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.CashSale());
         var info = PLDeviceInfo.FromPLSSCDInfo(await target.Sut.GetInfoAsync());
 
-        target.SentMnemonics.Should().Equal("sfsk", "scomm", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt", "scomm");
+        target.SentMnemonics.Should().Equal("sfsk", "getrealid", "factorynumberget", "scnt", "!sprn", "!sdev", "trinit", "trline", "trpayment", "!sprn", "!sdev", "trend", "eclastdocnoget", "rtcget", "scnt", "scomm", "getrealid", "factorynumberget", "fmrecfisc");
         // Candies at 8% land in slot B of the table the register reports — the same table GetInfo hands to the queue.
         target.SentCommands.Single(c => c.CommandId == "trline").Parameters.Should().Contain(new KeyValuePair<string, string>("vt", "1"));
         info!.VatRateTable.Select(e => e.PtuSlot).Should().Equal("A", "B", "C", "D", "G");
@@ -513,7 +513,7 @@ public class PosNetPLSSCDAcceptanceTests
 
         var result = await target.Sut.ProcessReceiptAsync(PLReceiptExamples.Return());
 
-        target.SentMnemonics.Should().Equal("scomm", "stocash");
+        target.SentMnemonics.Should().Equal("getrealid", "factorynumberget", "stocash");
         target.SentCommands.Single(c => c.CommandId == "stocash").Parameters.Should().Contain(new KeyValuePair<string, string>("kw", "999"));
         FiscalDocumentNumber.Of(result.ReceiptResponse).Should().BeNull("a goods return is a non-fiscal printout");
         result.ReceiptResponse.ftSignatures.Should().ContainSingle(s => s.Caption == "Zwrot towaru (wydruk niefiskalny)").Which.Data.Should().Be("9.99");

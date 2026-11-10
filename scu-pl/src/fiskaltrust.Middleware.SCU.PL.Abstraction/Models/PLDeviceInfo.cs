@@ -36,18 +36,34 @@ public class PLVatRateTableEntry
 /// <summary>
 /// Typed state of the Polish register as reported by the device. In Poland the certified register
 /// owns the compliance state; this model travels as the json-serialized <c>InfoData</c> blob of
-/// <see cref="PLSSCDInfo"/>. Software registers (kasy wirtualne) have no numer fabryczny — for them
-/// <see cref="DeviceSerialNumber"/> stays null and <see cref="UniqueDeviceNumber"/> identifies the register.
+/// <see cref="PLSSCDInfo"/>.
+/// <para>
+/// A register carries three numbers that behave differently. On a hardware register the numer
+/// unikatowy belongs to the exchangeable fiscal memory and changes when that is exchanged; the numer
+/// fabryczny and the numer ewidencyjny stay the same. On a software register (kasa wirtualna) a numer
+/// fabryczny, where it has one, is identical to the numer unikatowy (Dz.U. 2025 poz. 861, Załącznik
+/// nr 1 §8 pkt 11). Each field is null where the register does not report it.
+/// </para>
 /// </summary>
 public class PLDeviceInfo
 {
-    /// <summary>The manufacturing serial number (numer fabryczny); null for software registers.</summary>
+    /// <summary>
+    /// The manufacturing serial number (numer fabryczny). It stays with the device when the fiscal
+    /// memory is exchanged; on a software register that has one, it equals <see cref="UniqueDeviceNumber"/>.
+    /// </summary>
     public string? DeviceSerialNumber { get; set; }
 
-    /// <summary>The unique number assigned from the MF pool (numer unikatowy), printed on every fiscal document.</summary>
+    /// <summary>
+    /// The numer unikatowy, printed on every fiscal document. The manufacturer writes it into the
+    /// fiscal memory (Dz.U. 2021 poz. 1759 §60), so it belongs to the fiscal memory and changes when
+    /// that is exchanged.
+    /// </summary>
     public string? UniqueDeviceNumber { get; set; }
 
-    /// <summary>The registration number assigned during fiscalization (numer ewidencyjny), identifying the register in the CRK.</summary>
+    /// <summary>
+    /// The registration number assigned during fiscalization (numer ewidencyjny), identifying the
+    /// register in the CRK. It stays the same when the fiscal memory is exchanged.
+    /// </summary>
     public string? RegistrationNumber { get; set; }
 
     public PLFiscalizationState FiscalizationState { get; set; }
