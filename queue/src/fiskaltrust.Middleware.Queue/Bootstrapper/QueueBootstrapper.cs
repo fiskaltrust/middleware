@@ -101,6 +101,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                     configuration["CashboxConfigurationTimestamp"] = cashboxConfiguration.TimeStamp;
 
                     configuration["LauncherEnvironment"] = middlewareConfiguration.LauncherEnvironment;
+                    configuration["LauncherVersion"] = middlewareConfiguration.LauncherVersion;
                 }
                 catch { }
             }
