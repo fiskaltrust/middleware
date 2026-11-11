@@ -166,7 +166,7 @@ public class JournalProcessor
             QueueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
             QueueMEList = await configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
             QueuePLList = await configurationRepository.GetQueuePLListAsync().ConfigureAwait(false),
-            QueuePTList = await configurationRepository.GetQueuePTListAsync().ConfigureAwait(false),
+            QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
             SignaturCreationUnitATList = await configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
             SignaturCreationUnitBEList = await configurationRepository.GetSignaturCreationUnitBEListAsync().ConfigureAwait(false),
             SignaturCreationUnitDEList = await configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
@@ -176,7 +176,7 @@ public class JournalProcessor
             SignaturCreationUnitITList = await configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
             SignaturCreationUnitMEList = await configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
             SignaturCreationUnitPLList = await configurationRepository.GetSignaturCreationUnitPLListAsync().ConfigureAwait(false),
-            SignaturCreationUnitPTList = await configurationRepository.GetSignaturCreationUnitPTListAsync().ConfigureAwait(false),
+            SignaturCreationUnitPTList = GetConfigurationFromDictionary<ftSignaturCreationUnitPT>("init_ftSignaturCreationUnitPT"),
         };
     }
 
