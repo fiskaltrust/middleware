@@ -130,14 +130,38 @@ public abstract class FRScenarioTests
         closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002, "low word 0x0002 stays reserved");
     }
 
+    /// <summary>
+    /// A shift closing prints its shift totals, as v1.2 did, under the v2 type 0x000D (low word 0x0002
+    /// stays reserved), and the perpetual total. It prints no day totals (market-fr#221, G5).
+    /// </summary>
     [Fact]
-    public async Task ShiftClosing_PrintsThePerpetualTotalOnly()
+    public async Task ShiftClosing_PrintsItsShiftTotalsAndThePerpetualTotal()
     {
         await SignAsync(CashSale());
-        var closing = await SignAsync(Request(ReceiptCase.ShiftClosing0x2010));
+        var firstShift = await SignAsync(Request(ReceiptCase.ShiftClosing0x2010));
 
-        ReadableTotal(SignatureOf(closing, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
-        closing.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002 || x.ftSignatureType.IsType(SignatureTypeFR.DayTotals));
+        firstShift.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ShiftPeriodTotals)).Caption.Should().Be("Shift Totals");
+        ReadableTotal(SignatureOf(firstShift, SignatureTypeFR.ShiftPeriodTotals)).Should().Be("12.00");
+        ReadableTotal(SignatureOf(firstShift, SignatureTypeFR.PerpetualTotals)).Should().Be("12.00");
+        firstShift.ftSignatures.Should().NotContain(x => ((long) x.ftSignatureType & 0xFFFF) == 0x0002 || x.ftSignatureType.IsType(SignatureTypeFR.DayTotals));
+
+        await SignAsync(CashSale());
+        var secondShift = await SignAsync(Request(ReceiptCase.ShiftClosing0x2010));
+
+        ReadableTotal(SignatureOf(secondShift, SignatureTypeFR.ShiftPeriodTotals)).Should().Be("12.00", "the first shift closing reset the shift");
+        ReadableTotal(SignatureOf(secondShift, SignatureTypeFR.PerpetualTotals)).Should().Be("24.00");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.DailyClosing0x2011)]
+    [InlineData(ReceiptCase.MonthlyClosing0x2012)]
+    [InlineData(ReceiptCase.YearlyClosing0x2013)]
+    public async Task OtherClosings_PrintNoShiftTotals(ReceiptCase closingCase)
+    {
+        await SignAsync(CashSale());
+        var closing = await SignAsync(Request(closingCase));
+
+        SignatureOf(closing, SignatureTypeFR.ShiftPeriodTotals).Should().BeNull();
     }
 
     [Fact]

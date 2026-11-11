@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 /// (<c>0xCCCC_2000_0000_0XXX</c>, "2000" marking the v2 data format); the low word keeps the
 /// numbering the v1 QueueFR localization used, so a POS that already renders French signatures
 /// keeps recognizing them: 1 = the NF525 QR code, 2 = shift totals (reserved), 3/4/5 = day/month/year totals, 6 = archive
-/// totals, 7 = perpetual totals.
+/// totals, 7 = perpetual totals. v2 prints the shift totals under 0x0D.
 /// </summary>
 public enum SignatureTypeFR : long
 {
@@ -65,6 +65,13 @@ public enum SignatureTypeFR : long
     /// emitted by the Infocert SCU only.
     /// </summary>
     VatSummary = 0x4652_2000_0000_000C,
+
+    /// <summary>
+    /// The totals of the closed shift, printed by a shift closing (<c>0x2010</c>) as v1.2 printed its
+    /// "Shift Totals" item, in the layout of the day/month/year totals. A v2 type of its own, because
+    /// low word 0x0002 stays reserved (market-fr#221, G5).
+    /// </summary>
+    ShiftPeriodTotals = 0x4652_2000_0000_000D,
 }
 
 public static class SignatureTypeFRExt

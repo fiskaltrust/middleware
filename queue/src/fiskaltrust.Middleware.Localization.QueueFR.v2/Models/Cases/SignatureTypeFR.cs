@@ -18,6 +18,8 @@ public enum SignatureTypeFR : long
     /// <summary>Reserved, not emitted since ADR 0001 (market-fr#122); see the SCU abstraction.</summary>
     ChainHash = 0x4652_2000_0000_0008,
     StoredNotSigned = 0x4652_2000_0000_000B,
+    /// <summary>The shift totals a shift closing prints (low word 0x0002 stays reserved); see the SCU abstraction.</summary>
+    ShiftPeriodTotals = 0x4652_2000_0000_000D,
     InitialOperationReceipt = 0x4652_2000_0000_0010,
     OutOfOperationReceipt = 0x4652_2000_0000_0011,
     /// <summary>
