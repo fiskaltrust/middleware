@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>T, P, I, B, X: the receipt's own totals (archive-v2 §1.2).</summary>
         Sales,
 
-        /// <summary>S, Z, M, Y and E: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
+        /// <summary>S, Z, M, Y, E and A: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
         Closing,
 
         /// <summary>L, D: the common columns only.</summary>
@@ -111,6 +111,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x003, "I", "invoice", "Invoice", "Factures", ArchiveJournalKind.Sales, "I"),
             new ArchiveJournal(0x004, "E", "technical", "Technical", "Opérations techniques", ArchiveJournalKind.Closing, "E"),
             new ArchiveJournal(0x007, "B", "bill", "Bill (note)", "Notes", ArchiveJournalKind.Sales, "B"),
+            new ArchiveJournal(0x008, "A", "archive", "Archive", "Archives", ArchiveJournalKind.Closing, "A"),
             new ArchiveJournal(0x009, "L", "log", "Log", "Journal des événements techniques (JET)", ArchiveJournalKind.Other, "L"),
             new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Other, "D"),
             new ArchiveJournal(0x00B, "X", "training", "Training", "Mode école", ArchiveJournalKind.Sales, "X"),

@@ -13,7 +13,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 /// are unassigned. The v1.3 QueueFR (<c>Contracts.Constants.JournalTypes</c>) numbers Bill to
 /// Training 005 to 009 instead; see fiskaltrust/market-fr#173. Since 2026-11-04 the journals follow the
 /// v2 chains of ADR 0002: 004 is the technical chain E, 00A the copies D, 00C to 00F the closing chains
-/// S, Z, M, Y, and 008 (the v1 archive group) is retired. Only the <c>tjjj</c> part identifies the journal: the
+/// S, Z, M, Y. Since 2026-11-09, 008 is again the archive receipts, now the v2 archive chain A
+/// (market-fr#221). Only the <c>tjjj</c> part identifies the journal: the
 /// country, the version nibble and the <c>gggg</c> flags are ignored when matching.
 /// </remarks>
 public enum JournalTypeFR : long
@@ -35,6 +36,9 @@ public enum JournalTypeFR : long
 
     /// <summary>Bill ("B" group) export.</summary>
     Bill = 0x4652_2000_0000_0007,
+
+    /// <summary>Archive chain ("A") export: the archive receipts.</summary>
+    Archive = 0x4652_2000_0000_0008,
 
     /// <summary>Log ("L" group) export.</summary>
     Log = 0x4652_2000_0000_0009,

@@ -56,10 +56,19 @@ public enum FRReceiptChain
 
     /// <summary>The closing chain of yearly closings.</summary>
     YearlyClosing,
+
+    /// <summary>
+    /// Archive receipts. As in v1.2, each one closes an archive period and chains on the previous
+    /// archive receipt's signature (market-fr#221, decided 2026-11-09).
+    /// </summary>
+    Archive,
 }
 
 public static class FRReceiptChainExt
 {
+    /// <summary>The archive receipt; ifPOS has no name for the case yet.</summary>
+    public const ReceiptCase ArchiveReceipt = (ReceiptCase) 0x3011;
+
     /// <summary>The letter that prefixes the national numbering of this chain.</summary>
     public static string Identifier(this FRReceiptChain chain) => chain switch
     {
@@ -75,6 +84,7 @@ public static class FRReceiptChainExt
         FRReceiptChain.DailyClosing => "Z",
         FRReceiptChain.MonthlyClosing => "M",
         FRReceiptChain.YearlyClosing => "Y",
+        FRReceiptChain.Archive => "A",
         _ => "T",
     };
 
@@ -122,6 +132,7 @@ public static class FRReceiptChainExt
                 ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 => FRReceiptChain.Duplicate,
                 ReceiptCase.Pay0x3005 => FRReceiptChain.PaymentProof,
                 ReceiptCase.Order0x3004 => FRReceiptChain.Bill,
+                ArchiveReceipt => FRReceiptChain.Archive,
                 _ => FRReceiptChain.Log,
             };
         }

@@ -137,6 +137,8 @@ public class PeriodTotalsTests
     [InlineData(ReceiptCase.YearlyClosing0x2013, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year })]
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001, false, new[] { FRTotalsPeriod.Day })]
     [InlineData(ReceiptCase.OutOfOperationReceipt0x4002, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Month, FRTotalsPeriod.Year })]
+    [InlineData((ReceiptCase) 0x3011, false, new[] { FRTotalsPeriod.Day, FRTotalsPeriod.Archive })]
+    [InlineData((ReceiptCase) 0x3011, true, new FRTotalsPeriod[0])]
     [InlineData(ReceiptCase.ZeroReceipt0x2000, false, new FRTotalsPeriod[0])]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, false, new FRTotalsPeriod[0])]
     [InlineData(ReceiptCase.YearlyClosing0x2013, true, new FRTotalsPeriod[0])]
@@ -410,5 +412,69 @@ public class PeriodTotalsTests
         await state.CommitAsync();
 
         (await state.ReadAsync()).GLastDayQueueItemId.Should().BeNull();
+    }
+
+    /// <summary>
+    /// The archive receipt (0x3011) is signed into chain A against the previous archive receipt,
+    /// prints the sales since that receipt, and resets them and the day, as v1.2 did (market-fr#221).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveReceipt_ChainsOnTheLastArchive_AndReportsAndResetsTheArchivePeriod()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        await pipeline.SignAsync(Sale(normal: 4.00m));
+        var first = CommandRequest((ReceiptCase) 0x3011);
+        await pipeline.SignAsync(first);
+        await pipeline.SignAsync(Sale(normal: 6.00m));
+        var second = CommandRequest((ReceiptCase) 0x3011);
+        await pipeline.SignAsync(second);
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await state.CommitAsync();
+
+        var firstArchive = sscd.Calls[3];
+        firstArchive.receiptIdentification.Should().EndWith("A1");
+        firstArchive.previousSignature.Should().BeNull("it is the first archive receipt");
+        firstArchive.periodTotals!.Period.Should().Be(FRTotalsPeriod.Archive);
+        firstArchive.periodTotals.Current.Totalizer.Should().Be(14.00m, "a closing does not end the archive period");
+        firstArchive.periodTotals.Perpetual.Totalizer.Should().Be(14.00m);
+
+        var secondArchive = sscd.Calls[5];
+        secondArchive.receiptIdentification.Should().EndWith("A2");
+        secondArchive.previousSignature.Should().NotBeNull("it chains on the first archive receipt");
+        secondArchive.periodTotals!.Current.Totalizer.Should().Be(6.00m, "the first archive receipt reset the archive period");
+
+        sscd.Calls[6].periodTotals!.Current.Totalizer.Should().Be(0m, "the archive receipt also closed the day");
+
+        var stored = await state.ReadAsync();
+        stored.ANumerator.Should().Be(2);
+        stored.ALastSignature.Should().NotBeNullOrEmpty();
+        stored.ATotalizer.Should().Be(0m);
+        stored.ALastQueueItemId.Should().Be(second.ReceiptResponse.ftQueueItemID);
+        stored.ALastMoment.Should().Be(second.ReceiptResponse.ftReceiptMoment);
+    }
+
+    [Fact]
+    public async Task TrainingArchiveReceipt_PrintsTheLiveArchiveTotalsAndResetsNothing()
+    {
+        var sscd = new FakeFRSSCD();
+        var state = new StoredChainState();
+        var pipeline = CreatePipeline(sscd, state);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var training = CommandRequest((ReceiptCase) 0x3011);
+        training.ReceiptRequest.ftReceiptCase = training.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(training);
+        await state.CommitAsync();
+
+        sscd.Calls[1].periodTotals!.Current.Totalizer.Should().Be(10.00m);
+        var stored = await state.ReadAsync();
+        stored.ANumerator.Should().Be(0);
+        stored.ATotalizer.Should().Be(10.00m);
+        stored.ALastQueueItemId.Should().BeNull();
     }
 }

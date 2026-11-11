@@ -26,6 +26,7 @@ public static class FRQueueFRColumns
         FRReceiptChain.DailyClosing => queueFR.ZNumerator,
         FRReceiptChain.MonthlyClosing => queueFR.MNumerator,
         FRReceiptChain.YearlyClosing => queueFR.YNumerator,
+        FRReceiptChain.Archive => queueFR.ANumerator,
         _ => throw new ArgumentOutOfRangeException(nameof(chain), chain, null),
     };
 
@@ -45,6 +46,7 @@ public static class FRQueueFRColumns
             case FRReceiptChain.DailyClosing: queueFR.ZNumerator = numerator; break;
             case FRReceiptChain.MonthlyClosing: queueFR.MNumerator = numerator; break;
             case FRReceiptChain.YearlyClosing: queueFR.YNumerator = numerator; break;
+            case FRReceiptChain.Archive: queueFR.ANumerator = numerator; break;
             default: throw new ArgumentOutOfRangeException(nameof(chain), chain, null);
         }
     }
@@ -65,6 +67,7 @@ public static class FRQueueFRColumns
             FRReceiptChain.DailyClosing => queueFR.ZLastSignature,
             FRReceiptChain.MonthlyClosing => queueFR.MLastSignature,
             FRReceiptChain.YearlyClosing => queueFR.YLastSignature,
+            FRReceiptChain.Archive => queueFR.ALastSignature,
             _ => throw new ArgumentOutOfRangeException(nameof(chain), chain, null),
         };
         return string.IsNullOrEmpty(signature) ? null : signature;
@@ -86,6 +89,7 @@ public static class FRQueueFRColumns
             case FRReceiptChain.DailyClosing: queueFR.ZLastSignature = signature; break;
             case FRReceiptChain.MonthlyClosing: queueFR.MLastSignature = signature; break;
             case FRReceiptChain.YearlyClosing: queueFR.YLastSignature = signature; break;
+            case FRReceiptChain.Archive: queueFR.ALastSignature = signature; break;
             default: throw new ArgumentOutOfRangeException(nameof(chain), chain, null);
         }
     }
@@ -101,6 +105,7 @@ public static class FRQueueFRColumns
         FRTotalsPeriod.Day => "GDay",
         FRTotalsPeriod.Month => "GMonth",
         FRTotalsPeriod.Year => "GYear",
+        FRTotalsPeriod.Archive => "A",
         _ => throw new ArgumentOutOfRangeException(nameof(period), period, "The perpetual total is the sum of the ticket and invoice totals."),
     };
 

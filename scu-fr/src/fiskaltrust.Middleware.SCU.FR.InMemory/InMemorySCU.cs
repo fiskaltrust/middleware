@@ -71,6 +71,8 @@ public class InMemorySCU : IFRSSCD, IDisposable
             // market-fr#235: the reprint number of a copy (R13 ENC-DUP-PRN-NUM); empty on every other receipt.
             FRStateData.CopyNumber(response)?.ToString(CultureInfo.InvariantCulture) ?? "",
             (request.ReceiptRequest.cbChargeItems ?? new List<ChargeItem>()).Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
+            // market-fr#221: the boundaries an archive receipt signs; empty on every other receipt.
+            FRArchiveBoundaries.SignedField(FRStateData.Archive(response)),
             PeriodTotals(request.PeriodTotals),
             _certificateSerialNumber,
             request.ChainCounter.ToString(CultureInfo.InvariantCulture),

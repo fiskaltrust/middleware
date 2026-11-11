@@ -105,6 +105,22 @@ public class InfoCertFRSSCDTests
     }
 
     [Fact]
+    public async Task ArchiveBoundaries_AreSignedOnAnArchiveReceiptAndOmittedOtherwise()
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new InfoCertFRSSCD(Configuration(privateKey));
+
+        var (archive, _) = await sut.ProcessReceiptAsync(FRTestData.Archive(), null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        using var archivePayload = JsonDocument.Parse(FromBase64Url(SignatureOf(archive).Split('.')[1]));
+        archivePayload.RootElement.GetProperty("archive").GetProperty("PreviousArchiveQueueItemId").GetGuid().Should().Be(FRTestData.PreviousArchive);
+        using var ticketPayload = JsonDocument.Parse(FromBase64Url(SignatureOf(ticket).Split('.')[1]));
+        ticketPayload.RootElement.TryGetProperty("archive", out var _).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ProcessReceiptAsync_AttachesTheAuditSignatures()
     {
         var (privateKey, key) = FRTestData.CreateKey();

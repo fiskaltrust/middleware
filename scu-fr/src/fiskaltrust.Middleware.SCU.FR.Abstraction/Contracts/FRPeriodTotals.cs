@@ -44,6 +44,9 @@ public enum FRTotalsPeriod
 
     /// <summary>The grand total since the queue was opened. Never reset.</summary>
     Perpetual,
+
+    /// <summary>The sales since the previous archive receipt, reset by the next one (v1.2 <c>A*</c>).</summary>
+    Archive,
 }
 
 /// <summary>

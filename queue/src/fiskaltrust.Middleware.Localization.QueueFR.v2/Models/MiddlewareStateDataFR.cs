@@ -60,6 +60,15 @@ public class MiddlewareStateDataFR
     public int? CopyNumber { get; set; }
 
     /// <summary>
+    /// The boundaries of the archive an archive receipt (0x3011) closes, as v1.2 signed them
+    /// (market-fr#221). Every FR SCU reads them from here and signs them. Omitted on every other
+    /// receipt and on a training archive receipt.
+    /// </summary>
+    [JsonPropertyName(fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.ArchiveProperty)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public fiskaltrust.ifPOS.v2.fr.FRArchiveBoundaries? Archive { get; set; }
+
+    /// <summary>
     /// The receipt's totals as the queue computed them when it signed: the receipt's own totals on the
     /// sales chains, the period and perpetual totals on a closing. The archive reads them from here, so
     /// they are stored data and never recomputed at export (archive-v2 §1.2, §1.3).

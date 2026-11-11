@@ -27,6 +27,7 @@ public static class FRPeriodTotalsItems
             FRTotalsPeriod.Day => (SignatureTypeFR.DayTotals, "Day Totals"),
             FRTotalsPeriod.Month => (SignatureTypeFR.MonthTotals, "Month Totals"),
             FRTotalsPeriod.Year => (SignatureTypeFR.YearTotals, "Year Totals"),
+            FRTotalsPeriod.Archive => (SignatureTypeFR.ArchiveTotals, "Archive Totals"),
             _ => ((SignatureTypeFR?) null, ""),
         };
 

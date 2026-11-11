@@ -139,6 +139,25 @@ public class FRChainStateProvider
     }
 
     /// <summary>
+    /// Reads the chain state as the next signed receipt finds it, e.g. the previous archive receipt and
+    /// the period totals an archive receipt signs (market-fr#221). Nothing it reads may be changed.
+    /// </summary>
+    public async Task<T> ReadAsync<T>(Func<ftQueueFR, T> read)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var repository = await _configurationRepository;
+            _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+            return read(_queueFR);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
     /// Stores the state a signature advanced, once the signed queue item is stored. If the write
     /// fails the state stays in memory and is stored before the next signature.
     /// </summary>

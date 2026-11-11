@@ -293,6 +293,27 @@ public class LneFRSSCDTests
         DataSetOf(ticket).Split('|')[13].Should().BeEmpty("only a copy has a reprint number");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ArchiveBoundaries_AreSignedBeforeThePeriodTotals(bool asJson)
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        using var sut = new LneFRSSCD(Configuration(privateKey));
+
+        var (archive, _) = await sut.ProcessReceiptAsync(FRTestData.Archive(asJson), null);
+        var (ticket, _) = await sut.ProcessReceiptAsync(FRTestData.Request(), null);
+
+        // ... payment breakdown, archive boundaries, period totals, certificate serial, counter, flag, previous signature.
+        var boundaries = DataSetOf(archive).Split('|')[^6].Split(',');
+        boundaries[0].Should().Be(FRTestData.PreviousArchive.ToString("D"));
+        boundaries[2].Should().Be("2026-01-01T08:00:00.0000000Z");
+        boundaries[8].Should().Be("12.50", "the day totalizer follows the eight boundary fields");
+        boundaries.Should().HaveCount(8 + 3 * 11);
+        DataSetOf(ticket).Split('|')[^6].Should().BeEmpty("only an archive receipt has boundaries");
+    }
+
     [Fact]
     public async Task SalesLineCount_IsSignedAfterTheCopyNumber_InA24FieldDataSet()
     {
@@ -313,7 +334,7 @@ public class LneFRSSCDTests
         // ... receipt case, copy number, then the sales-line count (market-fr#148); the discount is not a line.
         var fields = DataSetOf(response).Split('|');
         fields[14].Should().Be("2");
-        fields.Should().HaveCount(24, "the frozen LNE field order (2026-11-04)");
+        fields.Should().HaveCount(25, "the LNE field order frozen on 2026-11-04, plus the archive boundaries (market-fr#221)");
     }
 
     [Fact]

@@ -21,6 +21,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
         public string ZLastSignature { get; set; }
         public string MLastSignature { get; set; }
         public string YLastSignature { get; set; }
+        public string ALastSignature { get; set; }
         public double BCITotalReducedS { get; set; }
         public double BCITotalReduced2 { get; set; }
         public double BCITotalReduced1 { get; set; }

@@ -109,12 +109,112 @@ public class FRJournalExportTests : IDisposable
         status.Should().Contain(Siret).And.Contain("\"Code\":\"00A\"");
     }
 
+    /// <summary>
+    /// The archive receipts are chain A, journal 008 (market-fr#221, 2026-11-09), so the archive
+    /// export keeps them in a journal of their own instead of dropping them.
+    /// </summary>
     [Fact]
-    public async Task RetiredArchiveGroup008_IsAnUnknownJournalType()
+    public async Task ArchiveJournal_HoldsTheArchiveReceipts_ChainedOnThePreviousOne()
     {
-        var act = () => ReadAsync(_journal, (JournalTypeFR) 0x4652_2000_0000_0008);
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*is unknown*");
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Archive));
+
+        rows.Should().HaveCount(2);
+        rows[0]["ftReceiptIdentification"].Should().Be(first.ftReceiptIdentification);
+        rows[1]["ftReceiptIdentification"].Should().Be(second.ftReceiptIdentification);
+        rows[1]["PreviousSignature"].Should().Be(ChainedSignature(first));
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
+        subArchive.Entries.Should().Contain(e => e.Name == "journal-A.csv");
+    }
+
+    /// <summary>
+    /// An archive ends on its own archive receipt (decided 2026-11-10), and chain A gets a chain anchor
+    /// like every other chain: its first A receipt and the previous A receipt's signature, which the
+    /// previous archive holds (contract section 10, market-fr#221).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveExport_AnchorsChainAOnThePreviousArchiveReceipt()
+    {
+        await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var from = DateTime.UtcNow;
+        await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
+        using var manifest = JsonDocument.Parse(ReadEntry(subArchive, ArchivePackager<object>.ManifestFileName));
+        var anchor = manifest.RootElement.GetProperty("chainAnchors").EnumerateArray().Single(a => a.GetProperty("chain").GetString() == "A");
+        anchor.GetProperty("firstReceiptIdentification").GetString().Should().Be(second.ftReceiptIdentification);
+        anchor.GetProperty("previousSignature").GetString().Should().Be(ChainedSignature(first));
+    }
+
+    [Fact]
+    public async Task ArchiveReceipt_AsTheQueuesFirstReceipt_IsRefused()
+    {
+        var response = JsonSerializer.Deserialize<ReceiptResponse>(await _signProcessor(JsonSerializer.Serialize(Request((ReceiptCase) 0x3011))))!;
+
+        response.ftState.IsState(State.Error).Should().BeTrue("as v1, the first receipt of a queue has nothing to archive");
+        response.ftReceiptIdentification.Should().NotContain("A1");
+    }
+
+    /// <summary>
+    /// As v1.2, an archive receipt signs which receipts its archive holds, the last journals, the day,
+    /// month and year totals and the previous archive receipt; the archive's bytes are not hashed
+    /// (market-fr#221). Unlike v1.2, the range runs from the record after the previous archive receipt
+    /// up to and including the archive receipt itself, so every record lies in exactly one range
+    /// (decided 2026-11-10).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveReceipt_SignsTheBoundariesOfTheArchiveItCloses()
+    {
+        var firstSale = await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var secondSale = await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var firstBoundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(first)!;
+        firstBoundaries.PreviousArchiveQueueItemId.Should().BeNull("it is the queue's first archive receipt");
+        firstBoundaries.FirstContainedReceiptQueueItemId.Should().Be(firstSale.ftQueueItemID);
+        firstBoundaries.FirstContainedReceiptMoment.Should().Be(firstSale.ftReceiptMoment);
+        firstBoundaries.LastContainedReceiptQueueItemId.Should().Be(first.ftQueueItemID, "the archive receipt is its own last contained receipt");
+        firstBoundaries.LastContainedReceiptMoment.Should().Be(first.ftReceiptMoment);
+        firstBoundaries.LastReceiptJournalId.Should().NotBeNull();
+        firstBoundaries.Day.Totalizer.Should().Be(12.00m);
+
+        var secondBoundaries = SCU.FR.Abstraction.Helpers.FRStateData.Archive(second)!;
+        secondBoundaries.PreviousArchiveQueueItemId.Should().Be(first.ftQueueItemID);
+        secondBoundaries.FirstContainedReceiptQueueItemId.Should().Be(secondSale.ftQueueItemID, "the range starts on the record after the previous archive receipt");
+        secondBoundaries.FirstContainedReceiptMoment.Should().Be(secondSale.ftReceiptMoment);
+        secondBoundaries.LastContainedReceiptQueueItemId.Should().Be(second.ftQueueItemID);
+        secondBoundaries.LastContainedReceiptMoment.Should().Be(second.ftReceiptMoment);
+        secondBoundaries.Day.Totalizer.Should().Be(12.00m, "the first archive receipt closed the day");
+        secondBoundaries.Year.Totalizer.Should().Be(24.00m);
+
+        var signedContent = SCU.FR.Abstraction.Helpers.FRReceiptQrCode.SignedContentOf(second.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data);
+        signedContent.Should().Contain(first.ftQueueItemID.ToString("D"), "the SCU signs the link to the previous archive receipt");
+    }
+
+    [Fact]
+    public async Task TrainingArchiveReceipt_SignsNoBoundaries()
+    {
+        await SignAsync(CashSale());
+        var request = Request((ReceiptCase) 0x3011);
+        request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+
+        var training = await SignAsync(request);
+
+        SCU.FR.Abstraction.Helpers.FRStateData.Archive(training).Should().BeNull();
+        training.ftSignatures.Should().Contain(x => x.ftSignatureType.IsType(SignatureTypeFR.DayTotals), "a training archive receipt prints the live day totals, as v1.2");
     }
 
     [Fact]

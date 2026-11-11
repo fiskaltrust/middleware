@@ -1,5 +1,6 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.fr;
 
 namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
@@ -13,6 +14,7 @@ public static class FRStateData
 {
     public const string Block = "FR";
     public const string CopyNumberProperty = "CopyNumber";
+    public const string ArchiveProperty = "Archive";
 
     /// <summary>
     /// The reprint number of a copy (0x3010), 1 for the first copy of the copied receipt (R13
@@ -27,6 +29,23 @@ public static class FRStateData
                 ? number.GetInt32()
                 : null;
     }
+
+    /// <summary>
+    /// The boundaries an archive receipt (0x3011) signs (market-fr#221); null on every other receipt
+    /// and on a training archive receipt.
+    /// </summary>
+    public static FRArchiveBoundaries? Archive(ReceiptResponse response)
+    {
+        var stateData = AsJson(response.ftStateData);
+        return stateData is { ValueKind: JsonValueKind.Object } json
+            && json.TryGetProperty(Block, out var fr) && fr.ValueKind == JsonValueKind.Object
+            && fr.TryGetProperty(ArchiveProperty, out var archive) && archive.ValueKind == JsonValueKind.Object
+                ? archive.Deserialize<FRArchiveBoundaries>(ReadOptions)
+                : null;
+    }
+
+    // The queue writes its state data as typed objects; behind REST the casing may differ.
+    private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
 
     private static JsonElement? AsJson(object? stateData) => stateData switch
     {
