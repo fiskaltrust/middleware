@@ -47,11 +47,48 @@ public class ReceiptValidationsFRTests
     [Theory]
     [InlineData(0x0002)]
     [InlineData(0x3005)]
-    public void PaymentProofs_RefuseChargeItems_ButTakePayItems(long receiptCase)
+    public void PaymentProofs_RefuseSalesChargeItems_ButTakePayItems(long receiptCase)
     {
         Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().Contain("ChargeItemsNotAllowed");
         Errors(Request(receiptCase, pay: 200m)).Should().BeEmpty("a float pay-in carries only its pay item");
     }
+
+    private static ReceiptRequest DrawerMove(long receiptCase, long chargeItemCase, decimal amount)
+    {
+        var request = Request(receiptCase, pay: amount);
+        request.cbChargeItems = [new ChargeItem { Amount = amount, Currency = Currency.EUR, ftChargeItemCase = (ChargeItemCase) (0x4652_2000_0000_0000 | chargeItemCase) }];
+        return request;
+    }
+
+    /// <summary>
+    /// A drawer move takes the charge item of the public reference tables (market-fr ADR 0016):
+    /// a not-taxable (V=8) cash transfer (S=A), receivable (S=9) or voucher (S=4).
+    /// </summary>
+    [Theory]
+    [InlineData(0x0002, 0x00A8)]
+    [InlineData(0x0002, 0x0098)]
+    [InlineData(0x0002, 0x0048)]
+    [InlineData(0x3005, 0x00A8)]
+    [InlineData(0x3005, 0x0098)]
+    [InlineData(0x3005, 0x0048)]
+    public void PaymentProofs_TakeANotTaxableDrawerMoveChargeItem(long receiptCase, long chargeItemCase)
+    {
+        Errors(DrawerMove(receiptCase, chargeItemCase, 500m)).Should().BeEmpty();
+        Errors(DrawerMove(receiptCase, chargeItemCase, -500m)).Should().BeEmpty("France adds no sign rule; the shared NegativeAmounts decides");
+    }
+
+    [Theory]
+    [InlineData(0x0002, 0x00A3, "a cash transfer must not be taxed")]
+    [InlineData(0x0002, 0x0018, "a not-taxable delivery is a sale")]
+    [InlineData(0x0002, 0x0028, "a not-taxable service is a sale")]
+    [InlineData(0x3005, 0x0038, "a tip is a sale")]
+    [InlineData(0x3005, 0x0047, "a voucher must be not taxable")]
+    public void PaymentProofs_RefuseAnyOtherChargeItem(long receiptCase, long chargeItemCase, string because)
+        => Errors(DrawerMove(receiptCase, chargeItemCase, 500m)).Should().Contain("ChargeItemsNotAllowed", because);
+
+    [Fact]
+    public void ReceiptsWithoutASale_RefuseADrawerMoveChargeItemToo()
+        => Errors(DrawerMove(0x2011, 0x00A8, 500m)).Should().Contain("ChargeItemsNotAllowed");
 
     [Theory]
     [InlineData(0x0001)]
@@ -61,39 +98,18 @@ public class ReceiptValidationsFRTests
     public void SalesAndTechnicalEvents_KeepTheirItems(long receiptCase)
         => Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().NotContain(["ChargeItemsNotAllowed", "PayItemsNotAllowed"]);
 
-    /// <summary>The shared balance rule skips table checks and pro formas; v1.2 balanced them too, with v2's ±0.01.</summary>
-    [Theory]
-    [InlineData(0x0006)]
-    [InlineData(0x0007)]
-    public void TableCheckAndProForma_MustBalance(long receiptCase)
-    {
-        Errors(Request(receiptCase, charge: 10m, pay: 9m, payCase: 0x000D)).Should().Contain("ReceiptNotBalanced");
-        Errors(Request(receiptCase, charge: 10m, pay: 10.01m, payCase: 0x000D)).Should().BeEmpty();
-        Errors(Request(receiptCase, charge: 10m, pay: 10.02m, payCase: 0x000D)).Should().Contain("ReceiptNotBalanced");
-    }
     /// <summary>
-    /// v1.2 takes a bill (v0 0x08) with exactly one pay item of case v0 0x11 (v2 0x0D). Table check,
-    /// pro forma and order are bills; a sale without obligation, an e-commerce sale and a sale are not.
+    /// Table check, pro forma and order follow the shared v2 rules (market-fr ADR 0016): France adds
+    /// neither a balance rule nor a required internal pay item, as v1.2 did for its bill.
     /// </summary>
     [Theory]
     [InlineData(0x0006)]
     [InlineData(0x0007)]
     [InlineData(0x3004)]
-    public void Bills_TakeExactlyOneInternalPayItem(long receiptCase)
+    public void Bills_FollowTheSharedRules(long receiptCase)
     {
+        Errors(Request(receiptCase, charge: 10m)).Should().BeEmpty("a pro forma or a table check sends no payment");
+        Errors(Request(receiptCase, charge: 10m, pay: 9m)).Should().BeEmpty("the shared ReceiptBalance rule decides");
         Errors(Request(receiptCase, charge: 10m, pay: 10m, payCase: 0x000D)).Should().BeEmpty();
-        Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().Contain("BillRequiresOneInternalPayItem");
-        Errors(Request(receiptCase, charge: 10m)).Should().Contain("BillRequiresOneInternalPayItem");
-
-        var twoItems = Request(receiptCase, charge: 10m, pay: 5m, payCase: 0x000D);
-        twoItems.cbPayItems = [.. twoItems.cbPayItems, twoItems.cbPayItems[0]];
-        Errors(twoItems).Should().Contain("BillRequiresOneInternalPayItem");
     }
-
-    [Theory]
-    [InlineData(0x0001)]
-    [InlineData(0x0003)]
-    [InlineData(0x0004)]
-    public void Sales_TakeAnyPayItem(long receiptCase)
-        => Errors(Request(receiptCase, charge: 10m, pay: 10m)).Should().NotContain("BillRequiresOneInternalPayItem");
 }
