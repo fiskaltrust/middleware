@@ -21,16 +21,20 @@ public class FRSigningPipeline
     private readonly IFRSSCD _sscd;
     private readonly FRChainStateProvider _chains;
     private readonly FRLateSigning _lateSigning;
+    private readonly FRJetWatch _jetWatch;
+    private readonly FRPendingMessages _pendingMessages;
 
-    public FRSigningPipeline(IFRSSCD sscd, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null)
+    public FRSigningPipeline(IFRSSCD sscd, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null, AsyncLazy<IMiddlewareActionJournalRepository>? actionJournals = null)
     {
         _sscd = sscd;
         _chains = chains;
         _lateSigning = new FRLateSigning(queueItems);
+        _jetWatch = new FRJetWatch(queueItems);
+        _pendingMessages = new FRPendingMessages(actionJournals);
     }
 
     public Task<ProcessCommandResponse> SignAsync(ProcessCommandRequest request, List<ftActionJournal>? actionJournals = null)
-        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning) =>
+        => _chains.ExecuteInChainAsync(request.ReceiptRequest, async (chain, totals, lateSigning, pendingMessages) =>
         {
             var receiptResponse = request.ReceiptResponse;
             var identificationBeforeSigning = receiptResponse.ftReceiptIdentification;
@@ -89,6 +93,12 @@ public class FRSigningPipeline
 
             // Late signing follows the signature: only a signed entry opens or closes the range.
             var lateSigningJournals = await _lateSigning.ApplySignedAsync(request.ReceiptRequest, response.ReceiptResponse, lateSigning).ConfigureAwait(false);
+
+            // The JET events the POS is asked to send (ADR 0009, market-fr#200): those the receipt
+            // case calls for, and, once per process, what changed in the installation.
+            FRJetItems.AddForSignedReceipt(request.ReceiptRequest, response.ReceiptResponse);
+            await _jetWatch.CheckOnceAsync(request.ReceiptRequest, response.ReceiptResponse).ConfigureAwait(false);
+            await _pendingMessages.ApplySignedAsync(request.ReceiptRequest, response.ReceiptResponse, pendingMessages).ConfigureAwait(false);
 
             return new ProcessCommandResponse(response.ReceiptResponse, [.. actionJournals ?? [], .. lateSigningJournals]);
 

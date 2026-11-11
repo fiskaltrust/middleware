@@ -227,6 +227,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <c>csn</c> of a JWS payload, or the fourth-from-last field of a data set (before the chain
         /// counter, the start-of-chain flag and the previous signature, ADR 0001). Null when absent.
         /// </summary>
+        /// <summary>
+        /// The certificate serial a receipt QR code signs: field 4 from the end of an LNE or self-certified
+        /// data set, <c>csn</c> of an InfoCert JWS payload. Null when the QR code carries none.
+        /// </summary>
+        public static string? CertificateSerialNumberOf(string qrCode) => SignedCertificateSerialNumber(qrCode);
+
         private static string? SignedCertificateSerialNumber(string qrCode)
         {
             var content = SignedContent(qrCode);

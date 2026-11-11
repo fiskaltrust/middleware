@@ -1,6 +1,7 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Base.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
@@ -88,7 +89,7 @@ public class FRChainStateProvider
     /// The state of an earlier stored receipt still cannot be written to ftQueueFR; nothing is
     /// signed until it is.
     /// </exception>
-    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, Task<T>> operation)
+    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, FRPendingMessagesState, Task<T>> operation)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -113,7 +114,7 @@ public class FRChainStateProvider
             T result;
             try
             {
-                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR)).ConfigureAwait(false);
+                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR), new FRPendingMessagesState(_queueFR)).ConfigureAwait(false);
             }
             catch
             {
@@ -206,6 +207,52 @@ public class FRChainStateProvider
     /// Runs one French sign request alone, from reserving its queue item to storing it, so that the
     /// state it advances is committed or discarded before another receipt is chained onto it.
     /// </summary>
+    /// <summary>
+    /// Records a JET event found outside a request (a local archive export's integrity check, a
+    /// rollback) as a pending message: the action journal entry is stored first, then the count in
+    /// ftQueueFR (<see cref="FRPendingMessagesState"/>). Runs between requests, so no signed but
+    /// unstored chain state is written with it.
+    /// </summary>
+    public async Task<ftActionJournal> RaisePendingJetEventAsync(IMiddlewareActionJournalRepository actionJournals, int code, string label, string? information)
+    {
+        await _requestLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await _lock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var repository = await _configurationRepository;
+                if (_pending || _unstored)
+                {
+                    throw new InvalidOperationException("The French chain state of the last signed receipt is not stored yet; the pending JET event is raised once it is.");
+                }
+
+                _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+                var journal = new FRPendingMessagesState(_queueFR).Raise(_queueId, code, label, information, DateTime.UtcNow);
+                try
+                {
+                    await actionJournals.InsertAsync(journal).ConfigureAwait(false);
+                    await StoreAsync(repository).ConfigureAwait(false);
+                }
+                catch
+                {
+                    _queueFR = null;
+                    throw;
+                }
+
+                return journal;
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+        finally
+        {
+            _requestLock.Release();
+        }
+    }
+
     public async Task<T> SerializeAsync<T>(Func<Task<T>> request)
     {
         await _requestLock.WaitAsync().ConfigureAwait(false);

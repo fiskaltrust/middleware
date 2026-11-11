@@ -39,13 +39,16 @@ public class DuplicateTests
             new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(QueueItemsReadOnlyByIdAndRow())));
 
     /// <summary>
-    /// The queue items as the copy processor may read them: by ID and queue row only, the read that
-    /// is a point read in every storage. Any other read - by ID alone scans in Azure - fails the test.
+    /// The queue items as the copy processor may read them: by ID and queue row, the read that is a
+    /// point read in every storage, and by receipt reference, which every storage indexes (the JET
+    /// 155/156 item looks up the copied receipt's case, market-fr#200). Any other read - by ID alone
+    /// scans in Azure - fails the test.
     /// </summary>
     private IMiddlewareQueueItemRepository QueueItemsReadOnlyByIdAndRow()
     {
         var queueItems = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
         queueItems.Setup(x => x.GetAsync(It.IsAny<Guid>(), It.IsAny<long>())).Returns((Guid id, long row) => _queueItems.GetAsync(id, row));
+        queueItems.Setup(x => x.GetByReceiptReferenceAsync(It.IsAny<string>(), It.IsAny<string>())).Returns((string reference, string terminal) => _queueItems.GetByReceiptReferenceAsync(reference, terminal));
         return queueItems.Object;
     }
 
@@ -129,6 +132,36 @@ public class DuplicateTests
         DuplicataOf(second).Should().Be("2. Duplicata de R-1");
         DuplicataOf(third).Should().Be("3. Duplicata de R-1");
         third.receiptResponse.ftReceiptIdentification.Should().Be("ft1#D3", "the duplicate chain counts every copy");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.Order0x3004, "155")]
+    [InlineData(ReceiptCase.Pay0x3005, "156")]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, null)]
+    public async Task ACopy_AsksForTheJetEventOfTheCopiedReceipt(ReceiptCase copiedCase, string? code)
+    {
+        var sut = CreateSut();
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem
+        {
+            ftQueueItemId = Guid.NewGuid(),
+            ftQueueRow = Interlocked.Increment(ref _lastQueueRow),
+            cbReceiptReference = "B-1",
+            version = "v2",
+            request = JsonSerializer.Serialize(new ReceiptRequest { ftReceiptCase = copiedCase.WithCountry("FR"), cbReceiptReference = "B-1", Currency = Currency.EUR }),
+            response = JsonSerializer.Serialize(new ReceiptResponse { ftState = (State) StateFR.Success, ftReceiptIdentification = "ft1#B1", ftSignatures = [] }),
+        });
+
+        var copy = await ProcessAsync(sut, Copy("B-1"));
+
+        var jet = copy.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).ToList();
+        if (code is null)
+        {
+            jet.Should().BeEmpty("R19 has no code for a copy of a ticket");
+        }
+        else
+        {
+            jet.Should().ContainSingle().Which.Data.Should().Contain($"\"Code\":\"{code}\"").And.Contain("copied.cbReceiptReference=B-1");
+        }
     }
 
     [Fact]

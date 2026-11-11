@@ -4,6 +4,8 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -39,7 +41,22 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     /// <summary>v1.2 does not sign an unspecified protocol (v0 0x14).</summary>
     public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
+    /// <summary>
+    /// A JET event is validated here, before any SCU signs it, so every certification body refuses the
+    /// same malformed events (one JET behaviour, market-fr#200): a refused event takes no number of
+    /// chain L. The InfoCert SCU still reads the event to sign its R19 content.
+    /// </summary>
+    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request)
+    {
+        if (FRJetEvent.IsJetEvent(request.ReceiptRequest) && !FRJetEvent.TryRead(request.ReceiptRequest, out _, out var error))
+        {
+            request.ReceiptResponse.SetReceiptResponseError($"The technical event cannot enter the NF525 technical event journal: {error}");
+            request.ReceiptResponse.ftState = (State) StateFR.Error;
+            return Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, []));
+        }
+
+        return _pipeline.SignAsync(request);
+    }
 
     public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
@@ -88,6 +105,8 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
             return await _pipeline.SignAsync(request).ConfigureAwait(false);
         }
 
+        var copiedCase = await CopiedCaseAsync(copiedReceiptReference).ConfigureAwait(false);
+
         var copies = await _copies;
         await copies.InsertAsync(CopyRecord(request.ReceiptResponse, copiedReceiptReference)).ConfigureAwait(false);
 
@@ -99,7 +118,44 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         stateData.FR.CopyNumber = copyNumber;
         request.ReceiptResponse.ftStateData = stateData;
 
-        return await _pipeline.SignAsync(request).ConfigureAwait(false);
+        var signed = await _pipeline.SignAsync(request).ConfigureAwait(false);
+        if (FRSigningPipeline.Succeeded(signed))
+        {
+            FRJetItems.AddForCopy(request.ReceiptRequest, signed.receiptResponse, copiedReceiptReference, copiedCase);
+        }
+
+        return signed;
+    }
+
+    /// <summary>
+    /// The receipt case of the copied receipt: the signed, non-copy queue item with that reference.
+    /// Null when it is not stored here (a v1.2 receipt answered by another queue, a wrong reference).
+    /// </summary>
+    private async Task<ReceiptCase?> CopiedCaseAsync(string copiedReceiptReference)
+    {
+        var queueItems = await _queueItems;
+        await foreach (var item in queueItems.GetByReceiptReferenceAsync(copiedReceiptReference).ConfigureAwait(false))
+        {
+            if (string.IsNullOrEmpty(item.request) || !WasIssued(item))
+            {
+                continue;
+            }
+
+            try
+            {
+                var original = JsonSerializer.Deserialize<ReceiptRequest>(item.request);
+                if (original is not null && original.ftReceiptCase.Case() != ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)
+                {
+                    return original.ftReceiptCase.Case();
+                }
+            }
+            catch (JsonException)
+            {
+                // Not a v2 request; look further.
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
