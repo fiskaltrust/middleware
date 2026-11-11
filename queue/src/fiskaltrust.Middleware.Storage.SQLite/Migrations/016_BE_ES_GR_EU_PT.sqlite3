@@ -84,3 +84,29 @@ CREATE TABLE IF NOT EXISTS ftQueueEU
     CashBoxIdentification        NVARCHAR(2147483647)      NULL,
     TimeStamp                    BIGINT                    NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ftQueuePT
+(
+    ftQueuePTId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitPTId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    LastSignature                NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,
+    SSCDFailMoment               BIGINT                    NULL,
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL,
+    UsedFailedCount              BIGINT                    NOT NULL,
+    UsedFailedMomentMin          BIGINT                    NULL,
+    UsedFailedMomentMax          BIGINT                    NULL,
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    IssuerTIN                    NVARCHAR(2147483647)      NULL,
+    NumeratorStorage             NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitPT
+(
+    ftSignaturCreationUnitPTId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    PrivateKey                   NVARCHAR(2147483647)      NULL,
+    SoftwareCertificateNumber    NVARCHAR(2147483647)      NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);

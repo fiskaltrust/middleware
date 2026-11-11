@@ -40,6 +40,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             SqlMapper.AddTypeHandler(typeof(Guid?), new NullableGuidTypeHandler());
             SqlMapper.AddTypeHandler(typeof(DateTime), new SQLiteDateTimeTypeHandler());
             SqlMapper.AddTypeHandler(typeof(DateTime?), new SQLiteNullableDateTimeTypeHandler());
+            SqlMapper.AddTypeHandler(typeof(storage.V0.NumeratorStorage), new NumeratorStorageTypeHandler());
         }
 
         public async Task<IEnumerable<BaseStorageBootStrapper.Migrations>> MigrateAsync()
