@@ -392,13 +392,13 @@ public class ProcessorTests
     /// <summary>
     /// The shared business cases DrawerMoneyManagement_1/_2 as sent: a not-taxable cash transfer
     /// charge item and its cash pay item, with no previous receipt (market-fr ADR 0016). France
-    /// accepts the vault-to-drawer move. The drawer-to-vault move still fails on the shared
-    /// NegativeAmounts rule only, which France does not exempt (draft shared fix M4).
+    /// accepts both directions: the shared NegativeAmounts rule accepts money leaving the drawer
+    /// (interface 1.3.79-rc1 branch, shared fix M4).
     /// </summary>
     [Theory]
     [InlineData(500.0, 0x0001L, new string[0])]
-    [InlineData(-500.0, 0x0001L, new[] { "NegativeAmountNotAllowed" })]
-    [InlineData(-100.0, 0x000CL, new[] { "NegativeAmountNotAllowed" })] // Withdrawal_1
+    [InlineData(-500.0, 0x0001L, new string[0])]
+    [InlineData(-100.0, 0x000CL, new string[0])] // Withdrawal_1
     public async Task ReceiptValidatorFR_TakesTheReferenceTablesDrawerMove(double amount, long payItemCase, string[] expectedErrors)
     {
         var repository = new Mock<IMiddlewareQueueItemRepository>();

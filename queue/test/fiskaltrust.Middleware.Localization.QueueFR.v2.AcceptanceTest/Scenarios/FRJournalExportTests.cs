@@ -131,7 +131,7 @@ public class FRJournalExportTests : IDisposable
         var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
         using var zip = new ZipArchive(new MemoryStream(bytes));
         using var subArchive = new ZipArchive(zip.Entries.Single(e => e.Name.StartsWith("subarchive_")).Open());
-        subArchive.Entries.Should().Contain(e => e.Name == "journal-A.csv");
+        subArchive.Entries.Should().Contain(e => e.Name == "journal-A-archive.csv");
     }
 
     /// <summary>
