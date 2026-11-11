@@ -20,7 +20,8 @@ public class QueuePLBootstrapper : IV2QueueBootstrapper
 
     public QueuePLBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPLSSCD plSSCD, IStorageProvider storageProvider)
     {
-        var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
+        var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration, GetType());
+        QueueStartActionJournal.Create(middlewareConfiguration, storageProvider, loggerFactory.CreateLogger<QueuePLBootstrapper>());
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueuePLAsync(id)).CashBoxIdentification);
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);

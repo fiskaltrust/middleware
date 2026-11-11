@@ -23,7 +23,8 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
 
     public QueueGRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IGRSSCD grSSCD, IStorageProvider storageProvider)
     {
-        var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
+        var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration, GetType());
+        QueueStartActionJournal.Create(middlewareConfiguration, storageProvider, loggerFactory.CreateLogger<QueueGRBootstrapper>());
         var signaturCreationUnitGR = new ftSignaturCreationUnitGR();
 
 
