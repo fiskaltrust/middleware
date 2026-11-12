@@ -134,6 +134,31 @@ public class FRJournalExportTests : IDisposable
         subArchive.Entries.Should().Contain(e => e.Name == "journal-A-archive.csv");
     }
 
+    /// <summary>The archive receipt's row carries the boundaries it signed (contract §1.4), never closing totals.</summary>
+    [Fact]
+    public async Task ArchiveJournal_CarriesTheSignedBoundaries()
+    {
+        var firstSale = await SignAsync(CashSale());
+        var first = await SignAsync(Request((ReceiptCase) 0x3011));
+        var secondSale = await SignAsync(CashSale());
+        var second = await SignAsync(Request((ReceiptCase) 0x3011));
+
+        var rows = Rows(await ReadAsync(_journal, JournalTypeFR.Archive));
+
+        rows.Should().HaveCount(2);
+        rows[0]["PreviousArchiveQueueItemID"].Should().BeEmpty("the queue's first archive receipt has no previous one");
+        rows[0]["FirstContainedReceiptQueueItemID"].Should().Be(firstSale.ftQueueItemID.ToString("D"));
+        rows[0]["FirstContainedReceiptMoment"].Should().Be(firstSale.ftReceiptMoment.ToUniversalTime().ToString("o"));
+        rows[1]["PreviousArchiveQueueItemID"].Should().Be(first.ftQueueItemID.ToString("D"));
+        rows[1]["FirstContainedReceiptQueueItemID"].Should().Be(secondSale.ftQueueItemID.ToString("D"));
+        rows[1]["LastContainedReceiptQueueItemID"].Should().Be(second.ftQueueItemID.ToString("D"), "the archive receipt is its own last contained receipt");
+        rows[1]["LastContainedReceiptMoment"].Should().Be(second.ftReceiptMoment.ToUniversalTime().ToString("o"));
+        rows[1]["LastReceiptJournalID"].Should().NotBeEmpty();
+        rows[1]["LastJournalFRID"].Should().BeEmpty();
+        rows[1]["ATotalizer"].Should().Be("12.00", "the archive period of the second receipt holds one 12.00 sale");
+        rows[1].Keys.Should().NotContain(new[] { "Totalizer", "CINormal", "PerpetualTotalizer" });
+    }
+
     /// <summary>
     /// An archive ends on its own archive receipt (decided 2026-11-10), and chain A gets a chain anchor
     /// like every other chain: its first A receipt and the previous A receipt's signature, which the

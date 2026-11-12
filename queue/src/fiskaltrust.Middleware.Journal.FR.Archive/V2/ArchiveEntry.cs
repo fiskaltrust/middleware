@@ -158,7 +158,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <exception cref="ArchiveEntryException">
         /// The item is stored but cannot be read: a request or response that is not a JSON object, or a signed
         /// v2 entry whose identification, receipt moment or signed content cannot be read. An export never
-        /// skips such an entry silently.
+        /// skips such an entry silently (LNE Ex. 10).
         /// </exception>
         public static ArchiveEntry? Read(Guid queueItemId, Guid queueId, long queueRow, string? request, string? response, string? processingVersion = null)
         {

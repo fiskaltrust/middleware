@@ -15,8 +15,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>T, P, I, B, X: the receipt's own totals (archive-v2 §1.2).</summary>
         Sales,
 
-        /// <summary>S, Z, M, Y, E and A: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
+        /// <summary>S, Z, M, Y and E: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
         Closing,
+
+        /// <summary>A: the boundaries the archive receipt signed (archive-v2 §1.4), no closing totals.</summary>
+        Archive,
 
         /// <summary>L, D: the common columns only.</summary>
         Other,
@@ -111,7 +114,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x003, "I", "invoice", "Invoice", "Factures", ArchiveJournalKind.Sales, "I"),
             new ArchiveJournal(0x004, "E", "technical", "Technical", "Opérations techniques", ArchiveJournalKind.Closing, "E"),
             new ArchiveJournal(0x007, "B", "bill", "Bill (note)", "Notes", ArchiveJournalKind.Sales, "B"),
-            new ArchiveJournal(0x008, "A", "archive", "Archive", "Archives", ArchiveJournalKind.Closing, "A"),
+            new ArchiveJournal(0x008, "A", "archive", "Archive", "Archives", ArchiveJournalKind.Archive, "A"),
             new ArchiveJournal(0x009, "L", "log", "Log", "Journal des événements techniques (JET)", ArchiveJournalKind.Other, "L"),
             new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Other, "D"),
             new ArchiveJournal(0x00B, "X", "training", "Training", "Mode école", ArchiveJournalKind.Sales, "X"),
@@ -173,6 +176,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         {
             ArchiveJournalKind.Sales => CommonColumns.Concat(SalesTotalsColumns).ToList(),
             ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingTotalsColumns).ToList(),
+            ArchiveJournalKind.Archive => CommonColumns.Concat(ArchiveReceiptColumns).ToList(),
             _ => CommonColumns,
         };
 
@@ -265,6 +269,24 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             .Select(t => Col(t.Name, e => StateNumber(e.StateFR, "Totals", t.Name), t.Label + " de la période close (grand total de période)."))
             .Concat(TotalColumns.Select(t => Col("Perpetual" + t.Name, e => StateNumber(e.StateFR, "Totals", "Perpetual", t.Name), t.Label + " perpétuel, depuis le début de la chaîne (grand total perpétuel).")))
             .ToList();
+
+        /// <summary>
+        /// §1.4: the boundaries of the archive an archive receipt (0x3011) closes, as the queue handed them to the SCU
+        /// in <c>ftStateData.FR.Archive</c> and the SCU signed them, and the archive-period total. The archive-period
+        /// totals per VAT case and pay-item class are not archived.
+        /// </summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ArchiveReceiptColumns = new[]
+        {
+            Col("PreviousArchiveQueueItemID", e => ArchiveId(e, "PreviousArchiveQueueItemId"), "Identifiant (ftQueueItemID) du reçu d'archive précédent ; vide pour le premier reçu d'archive de la caisse. Chaîne les archives."),
+            Col("FirstContainedReceiptQueueItemID", e => ArchiveId(e, "FirstContainedReceiptQueueItemId"), "Identifiant du premier enregistrement contenu dans l'archive, signé : l'enregistrement qui suit le reçu d'archive précédent."),
+            Col("FirstContainedReceiptMoment", e => ArchiveMoment(e, "FirstContainedReceiptMoment"), "Date et heure (UTC) du premier enregistrement contenu dans l'archive, signées."),
+            Col("LastContainedReceiptQueueItemID", e => ArchiveId(e, "LastContainedReceiptQueueItemId"), "Identifiant du dernier enregistrement contenu dans l'archive, signé : le reçu d'archive lui-même."),
+            Col("LastContainedReceiptMoment", e => ArchiveMoment(e, "LastContainedReceiptMoment"), "Date et heure (UTC) du dernier enregistrement contenu dans l'archive, signées."),
+            Col("LastReceiptJournalID", e => ArchiveId(e, "LastReceiptJournalId"), "Dernière ligne du journal des reçus avant le reçu d'archive, signée."),
+            Col("LastActionJournalID", e => ArchiveId(e, "LastActionJournalId"), "Dernière ligne du journal des actions avant le reçu d'archive, signée."),
+            Col("LastJournalFRID", e => ArchiveId(e, "LastJournalFRId"), "Dernière ligne ftJournalFR avant le reçu d'archive, signée ; vide, la version 2 n'en écrit pas."),
+            Col("ATotalizer", e => StateNumber(e.StateFR, "Totals", "Totalizer"), "Total TTC de la période d'archivage close par le reçu."),
+        };
 
         /// <summary>§2, the charge items: the POS's values and the values the queue computed and stored.</summary>
         public static readonly IReadOnlyList<CsvColumn<ChildRow<ArchiveEntry, JsonElement>>> ChargeItemColumns = new[]
@@ -379,6 +401,21 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private static string? LineNumber(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? RawNumber(line, name) : null;
 
         private static string? LineText(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? ArchiveEntry.Text(line, name) : null;
+
+        private static JsonElement? ArchiveBoundaries(ArchiveEntry entry)
+            => entry.StateFR is { } fr && ArchiveEntry.Property(fr, "Archive") is { ValueKind: JsonValueKind.Object } archive ? archive : (JsonElement?) null;
+
+        /// <summary>A GUID of the boundaries, written as "D"; a value that is no GUID as stored.</summary>
+        private static object? ArchiveId(ArchiveEntry entry, string name)
+            => ArchiveBoundaries(entry) is { } archive && ArchiveEntry.String(archive, name) is { } text
+                ? Guid.TryParse(text, out var id) ? id : (object) text
+                : null;
+
+        /// <summary>A moment of the boundaries, in UTC; a value that is no date as stored.</summary>
+        private static object? ArchiveMoment(ArchiveEntry entry, string name)
+            => ArchiveBoundaries(entry) is { } archive
+                ? ArchiveEntry.Moment(archive, name) is { } moment ? moment : (object?) ArchiveEntry.String(archive, name)
+                : null;
 
         private static string? StateNumber(JsonElement? element, params string[] path)
         {

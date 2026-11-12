@@ -78,19 +78,38 @@ public class FRArchiveReceipt
         {
             var stateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
             stateData.FR ??= new MiddlewareStateDataFR();
-            stateData.FR.Archive = await BoundariesAsync(request, previousArchiveQueueItemId, day, month, year).ConfigureAwait(false);
+            var boundaries = await BoundariesAsync(request, previousArchiveQueueItemId, day, month, year).ConfigureAwait(false);
+            if (boundaries is null)
+            {
+                // The range would start nowhere: signing it on the receipt alone would leave every record since the
+                // previous archive receipt in no signed range (contract §1.4, "every record lies in exactly one range").
+                request.ReceiptResponse.SetReceiptResponseError(
+                    $"The previous archive receipt (queue item {previousArchiveQueueItemId}) cannot be found in storage, so the range this archive receipt closes cannot be fixed. No archive receipt is signed until the storage holds it again.");
+                return new ProcessCommandResponse(request.ReceiptResponse, []);
+            }
+            stateData.FR.Archive = boundaries;
             request.ReceiptResponse.ftStateData = stateData;
         }
 
         return await _pipeline.SignAsync(request).ConfigureAwait(false);
     }
 
-    private async Task<FRArchiveBoundaries> BoundariesAsync(ProcessCommandRequest request, Guid? previousArchiveQueueItemId, FRTotals day, FRTotals month, FRTotals year)
+    /// <summary>The boundaries of the archive this receipt closes; null when the previous archive receipt is not in storage.</summary>
+    private async Task<FRArchiveBoundaries?> BoundariesAsync(ProcessCommandRequest request, Guid? previousArchiveQueueItemId, FRTotals day, FRTotals month, FRTotals year)
     {
         var queueItems = await _queueItems;
         var response = request.ReceiptResponse;
 
-        var first = await FirstContainedAsync(queueItems, previousArchiveQueueItemId).ConfigureAwait(false);
+        ftQueueItem? previous = null;
+        if (previousArchiveQueueItemId is { } previousId)
+        {
+            previous = await queueItems.GetAsync(previousId).ConfigureAwait(false);
+            if (previous is null)
+            {
+                return null;
+            }
+        }
+        var first = await FirstContainedAsync(queueItems, previous).ConfigureAwait(false);
 
         return new FRArchiveBoundaries
         {
@@ -116,17 +135,11 @@ public class FRArchiveReceipt
     /// queue's first queue item. After a half migration, a previous archive receipt that v1.2 signed
     /// belongs to no v1.2 archive (v1.2 put it in the next one), so the v2 range starts on it.
     /// </summary>
-    private static async Task<ftQueueItem?> FirstContainedAsync(IMiddlewareQueueItemRepository queueItems, Guid? previousArchiveQueueItemId)
+    private static async Task<ftQueueItem?> FirstContainedAsync(IMiddlewareQueueItemRepository queueItems, ftQueueItem? previous)
     {
-        if (previousArchiveQueueItemId is not { } previousId)
-        {
-            return await queueItems.GetEntriesOnOrAfterTimeStampAsync(0, 1).FirstOrDefaultAsync().ConfigureAwait(false);
-        }
-
-        var previous = await queueItems.GetAsync(previousId).ConfigureAwait(false);
         if (previous is null)
         {
-            return null;
+            return await queueItems.GetEntriesOnOrAfterTimeStampAsync(0, 1).FirstOrDefaultAsync().ConfigureAwait(false);
         }
 
         if (SignedByV12(previous))

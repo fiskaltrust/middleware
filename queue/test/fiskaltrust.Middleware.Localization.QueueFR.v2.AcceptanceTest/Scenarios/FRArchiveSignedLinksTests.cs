@@ -127,6 +127,26 @@ public class FRArchiveSignedLinksTests : IDisposable
         manifest.RootElement.GetProperty("recordCount").GetInt32().Should().Be(count);
     }
 
+    [Fact]
+    public async Task ArchiveReceipt_IsRefused_WhenThePreviousArchiveReceiptIsNotInStorage()
+    {
+        // The chain state names a previous archive receipt that storage no longer returns (a purged or migrated store):
+        // signing would collapse the range to the receipt itself and leave every record since then in no signed range.
+        Start(new ftQueueFR { ALastQueueItemId = Guid.NewGuid(), ANumerator = 3, ALastSignature = "a3-signature" });
+        await SignAsync(CashSale());
+
+        var request = CashSale();
+        request.ftReceiptCase = ((ReceiptCase) 0x3011).WithCountry("FR"); // 0x3011: archive receipt
+        request.cbChargeItems = [];
+        request.cbPayItems = [];
+        var response = JsonSerializer.Deserialize<ReceiptResponse>(await _signProcessor(JsonSerializer.Serialize(request)))!;
+
+        response.ftState.IsState(State.Error).Should().BeTrue();
+        response.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature));
+        JsonSerializer.Serialize(response.ftSignatures).Should().Contain("previous archive receipt");
+        Rows(await ReadAsync(JournalTypeFR.Archive)).Should().BeEmpty("no archive receipt was signed");
+    }
+
     /// <summary>A v1.2 ticket stored before the handover: v1 signature types (0x4652_0000_0000_0001, v1 receipt signature).</summary>
     private async Task StoreV1PredecessorAsync()
     {

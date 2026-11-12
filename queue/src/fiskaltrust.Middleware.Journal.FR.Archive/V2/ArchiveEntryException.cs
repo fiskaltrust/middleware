@@ -4,7 +4,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 {
     /// <summary>
     /// A stored queue item the archive cannot read. An export fails on it rather than leave the entry out
-    /// (the archive is complete, or it is not produced).
+    /// (Ref LNE Ex. 10: the archive is complete, or it is not produced).
     /// </summary>
     public sealed class ArchiveEntryException : Exception
     {
