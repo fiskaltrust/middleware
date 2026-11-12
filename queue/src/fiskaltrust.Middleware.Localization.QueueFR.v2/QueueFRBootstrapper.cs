@@ -52,7 +52,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
 
         var receiptProcessorFR = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
-            new ReceiptValidatorFR(new ReceiptReferenceProvider(queueItemRepository)),
+            new ReceiptValidatorFR(new ReceiptReferenceProvider(queueItemRepository), async () => await frSSCD.GetInfoAsync().ConfigureAwait(false)),
             new LifecycleCommandProcessorFR(frSSCD, pipeline, queueStorageProvider, new FRMigration(pipeline, chains, queueItemRepository)),
             new ReceiptCommandProcessorFR(pipeline),
             new DailyOperationsCommandProcessorFR(pipeline),

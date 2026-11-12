@@ -233,6 +233,7 @@ public class FRJournalExportTests : IDisposable
         await SignAsync(CashSale());
         var request = Request((ReceiptCase) 0x3011);
         request.ftReceiptCase = request.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        request.ftReceiptCaseData = new { FR = new { ManagerId = "manager-1" } };
 
         var training = await SignAsync(request);
 

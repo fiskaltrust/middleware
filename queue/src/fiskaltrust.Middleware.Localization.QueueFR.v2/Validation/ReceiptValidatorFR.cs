@@ -1,8 +1,14 @@
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.v2.Validation;
+using fiskaltrust.Middleware.Localization.v2.Validation.Rules.Atoms.Customer;
+using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
+using fiskaltrust.storage.V0;
 using FluentValidation;
+using FluentValidation.Results;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Validation;
 
@@ -13,7 +19,17 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Validation;
 /// </summary>
 public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
 {
-    public ReceiptValidationsFR()
+    /// <summary>The <c>CertificationBody</c> the InfoCert SCU reports.</summary>
+    public const string InfoCertBody = "Infocert";
+
+    /// <summary>The <c>CertificationBody</c> the LNE SCU reports.</summary>
+    public const string LneBody = "LNE";
+
+    /// <param name="certificationBody">
+    /// The body that certified the queue's SCU, as it reports it (<c>Infocert</c>, <c>LNE</c>, ...): the référentiel
+    /// rules of that body apply on top of the common ones (market-fr#140). Null applies the common rules only.
+    /// </param>
+    public ReceiptValidationsFR(string? certificationBody = null)
     {
         RuleFor(x => x.Currency)
             .Equal(Currency.EUR)
@@ -60,6 +76,47 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
             .WithMessage(request => $"The receipt case 0x{(long) request.ftReceiptCase.Case():X4} must not have pay items.")
             .WithErrorCode("PayItemsNotAllowed");
 
+        // Contract §1.2 ManagerId (D4): a training receipt names the person responsible for the operator.
+        RuleFor(x => x.ftReceiptCaseData)
+            .Must(caseData => !string.IsNullOrWhiteSpace(FRCaseData.ManagerId(caseData)))
+            .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+            .WithMessage("A training receipt must name the person responsible for the operator in ftReceiptCaseData.FR.ManagerId.")
+            .WithErrorCode("TrainingRequiresManagerId");
+
+        // Contract §1.1 cbPreviousReceiptReference (LNE Ex. 4): a void is linked to the receipt it voids.
+        RuleFor(x => x.cbPreviousReceiptReference)
+            .NotNull()
+            .When(x => x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+            .WithMessage("A void must reference the receipt it voids in cbPreviousReceiptReference.")
+            .WithErrorCode("VoidMissingPreviousReceiptReference");
+
+        if (certificationBody == InfoCertBody)
+        {
+            // R13 ENC-TIK-OPS-NID, R12 FAC-OPS-NID: the operator on tickets and invoices (contract §1.1 cbUser, InfoCert M).
+            RuleFor(x => x.cbUser)
+                .Must((request, _) => !string.IsNullOrWhiteSpace(request.GetcbUserOrNull()))
+                .When(x => x.ResolveChain() is FRReceiptChain.Ticket or FRReceiptChain.Invoice)
+                .WithMessage("A ticket or an invoice must name its operator in cbUser.")
+                .WithErrorCode("UserRequired");
+
+            // market-fr#140 (2026-10-26, amended): the R12 customer on every invoice of chain I.
+            When(x => x.ResolveChain() == FRReceiptChain.Invoice, () =>
+            {
+                Include(new CustomerRequiredForInvoice());
+                Include(new InvoiceCustomerFR());
+            });
+        }
+
+        if (certificationBody == LneBody)
+        {
+            // Ref LNE 1.8 Ex. 15: archive operations and logged events carry the terminal (contract §1.1 cbTerminalID).
+            RuleFor(x => x.cbTerminalID)
+                .NotEmpty()
+                .When(x => x.ResolveChain() is FRReceiptChain.Archive or FRReceiptChain.Log)
+                .WithMessage("An archive or log receipt must name its terminal in cbTerminalID.")
+                .WithErrorCode("TerminalIdRequired");
+        }
+
         // Table checks, pro formas and orders follow the shared v2 rules (market-fr ADR 0016): no
         // FR balance rule on 0x0006/0x0007, which the shared ReceiptBalance skips, and no internal
         // pay item required on a bill, as v1.2 required of its v0 0x08 bill.
@@ -98,9 +155,39 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
             or ChargeItemCaseTypeOfService.Voucher;
 }
 
-public class ReceiptValidatorFR : MarketValidator
+public class ReceiptValidatorFR : MarketValidator, IMarketValidator
 {
-    public ReceiptValidatorFR(ReceiptReferenceProvider receiptReferenceProvider) : base(receiptReferenceProvider) { }
+    private readonly Func<Task<FRSSCDInfo?>>? _scuInfo;
+    private string? _certificationBody;
+    private bool _certificationBodyKnown;
+
+    /// <param name="scuInfo">The queue's SCU, asked once which body certified it (<see cref="ReceiptValidationsFR"/>).</param>
+    public ReceiptValidatorFR(ReceiptReferenceProvider receiptReferenceProvider, Func<Task<FRSSCDInfo?>>? scuInfo = null) : base(receiptReferenceProvider)
+    {
+        _scuInfo = scuInfo;
+    }
+
+    /// <summary>
+    /// Learns the SCU's certification body before validating. It is asked once; an SCU that cannot be reached is
+    /// asked again on the next receipt, and meanwhile only the common rules apply (signing fails anyway).
+    /// </summary>
+    public new async Task<ValidationResult> ValidateAsync(ReceiptRequest request, ftQueue? queue = null, ReceiptResponse? response = null, object? numberSeries = null)
+    {
+        if (!_certificationBodyKnown && _scuInfo is not null)
+        {
+            try
+            {
+                _certificationBody = FRSSCDInfoHelper.GetCertificationBody(await _scuInfo().ConfigureAwait(false));
+                _certificationBodyKnown = true;
+            }
+            catch (Exception)
+            {
+                _certificationBody = null;
+            }
+        }
+
+        return await base.ValidateAsync(request, queue, response, numberSeries).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// v1.2 takes a pay-in, pay-out or transfer (v0 0x0A–0x0C, which the PosSystem API reaches from
@@ -116,6 +203,6 @@ public class ReceiptValidatorFR : MarketValidator
 
     protected override IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null)
     {
-        yield return new ReceiptValidationsFR();
+        yield return new ReceiptValidationsFR(_certificationBody);
     }
 }

@@ -138,6 +138,7 @@ public abstract class LateSigningScenarioTests
     {
         ftCashBoxID = _cashBoxId,
         cbTerminalID = "1",
+        cbUser = "operator-1",
         cbReceiptReference = Guid.NewGuid().ToString("N")[..8],
         cbReceiptMoment = cbReceiptMoment ?? DateTime.UtcNow,
         Currency = Currency.EUR,
