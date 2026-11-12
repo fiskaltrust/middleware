@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Journal.FR.Archive.V2;
+using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2;
@@ -75,6 +76,7 @@ public class FRArchiveReceipt
         request.ReceiptResponse.AddSignatureItem(ScuSignatureTypeFR.DayTotals, "Day Totals", FRPeriodTotalsItems.Readable(day));
 
         // A training archive receipt archives nothing (v1.2 TrainingRequest).
+        List<FRChainIntegrity.Defect> defects = [];
         if (!request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
         {
             var stateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
@@ -93,9 +95,57 @@ public class FRArchiveReceipt
             }
             stateData.FR.Archive = boundaries;
             request.ReceiptResponse.ftStateData = stateData;
+            defects = await IntegrityDefectsAsync(previousArchiveQueueItemId, request.ReceiptResponse.ftQueueItemID).ConfigureAwait(false);
         }
 
-        return await _pipeline.SignAsync(request).ConfigureAwait(false);
+        var response = await _pipeline.SignAsync(request).ConfigureAwait(false);
+        if (defects.Count == 0 || !FRSigningPipeline.Succeeded(response))
+        {
+            return response;
+        }
+
+        // ADR 0009, #208: a defect found while handling the request is reported, never blocking: the archive
+        // receipt carries one JET item per code in its own response, and is signed all the same.
+        foreach (var (code, label, information) in FRChainIntegrity.PerCode(defects))
+        {
+            response.receiptResponse.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(code, label, information));
+        }
+
+        return response;
+    }
+
+    /// <summary>
+    /// Checks the chains of the range this archive receipt closes (<see cref="FRChainIntegrity"/>): the signed
+    /// entries after the previous archive receipt, and each chain's last entry against the chain state.
+    /// </summary>
+    private async Task<List<FRChainIntegrity.Defect>> IntegrityDefectsAsync(Guid? previousArchiveQueueItemId, Guid currentQueueItemId)
+    {
+        var queueItems = await _queueItems;
+        var from = 0L;
+        if (previousArchiveQueueItemId is { } previousId && await queueItems.GetAsync(previousId).ConfigureAwait(false) is { } previous)
+        {
+            from = previous.TimeStamp + 1;
+        }
+
+        var entries = new List<(ArchiveEntry?, ArchiveEntryException?)>();
+        await foreach (var item in queueItems.GetEntriesOnOrAfterTimeStampAsync(from).ConfigureAwait(false))
+        {
+            if (item.ftQueueItemId == currentQueueItemId)
+            {
+                break;
+            }
+
+            try
+            {
+                entries.Add((ArchiveEntry.Read(item.ftQueueItemId, item.ftQueueId, item.ftQueueRow, item.request, item.response), null));
+            }
+            catch (ArchiveEntryException ex)
+            {
+                entries.Add((null, ex));
+            }
+        }
+
+        return await _chains.ReadAsync(queueFR => FRChainIntegrity.Check(entries, queueFR)).ConfigureAwait(false);
     }
 
     /// <summary>The boundaries of the archive this receipt closes.</summary>
