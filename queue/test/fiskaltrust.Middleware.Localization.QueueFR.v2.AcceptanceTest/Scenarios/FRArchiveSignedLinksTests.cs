@@ -205,6 +205,38 @@ public class FRArchiveSignedLinksTests : IDisposable
         JsonSerializer.Serialize(response.ftSignatures).Should().Contain("cannot be read");
     }
 
+    /// <summary>The stop guard is on in the bootstrapped queue: a sale after the archive receipt keeps the queue running (C11).</summary>
+    [Fact]
+    public async Task OutOfOperation_AfterASaleThatFollowedTheArchiveReceipt_IsRefused()
+    {
+        Start(new ftQueueFR());
+        await SignAsync(CashSale());
+        await SignAsync(ArchiveRequest());
+        var sale = await SignAsync(CashSale());
+
+        var response = await SignUncheckedAsync(StopRequest());
+
+        response.ftState.IsState(State.Error).Should().BeTrue();
+        JsonSerializer.Serialize(response.ftSignatures).Should().Contain(sale.ftReceiptIdentification);
+    }
+
+    [Fact]
+    public async Task OutOfOperation_RightAfterTheArchiveReceipt_IsSigned()
+    {
+        Start(new ftQueueFR());
+        await SignAsync(CashSale());
+        await SignAsync(ArchiveRequest());
+
+        (await SignUncheckedAsync(StopRequest())).ftState.IsState(State.Error).Should().BeFalse();
+    }
+
+    private ReceiptRequest StopRequest()
+    {
+        var request = ArchiveRequest();
+        request.ftReceiptCase = ReceiptCase.OutOfOperationReceipt0x4002.WithCountry("FR");
+        return request;
+    }
+
     private async Task StoreItemAsync(string? response, Guid? id = null)
     {
         var repository = await _storageProvider.CreateMiddlewareQueueItemRepository();

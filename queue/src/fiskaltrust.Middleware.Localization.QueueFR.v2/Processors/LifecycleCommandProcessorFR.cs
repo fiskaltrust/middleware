@@ -32,12 +32,21 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     private readonly FRChainStateProvider? _chains;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository>? _queueItems;
 
-    /// <param name="chains">With <paramref name="queueItems"/>, lets the out-of-operation receipt check it follows an archive receipt (C11).</param>
-    public LifecycleCommandProcessorFR(IFRSSCD sscd, FRSigningPipeline pipeline, ILocalizedQueueStorageProvider localizedQueueStorageProvider, FRMigration? migration = null,
-        FRChainStateProvider? chains = null, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null)
+    /// <param name="chains">With <paramref name="queueItems"/>, lets the out-of-operation receipt check it follows an archive receipt (C11). Required: the check never switches off.</param>
+    public LifecycleCommandProcessorFR(IFRSSCD sscd, FRSigningPipeline pipeline, ILocalizedQueueStorageProvider localizedQueueStorageProvider,
+        FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository> queueItems, FRMigration? migration = null)
+        : this(sscd, pipeline, localizedQueueStorageProvider, migration)
     {
-        _chains = chains;
-        _queueItems = queueItems;
+        _chains = chains ?? throw new ArgumentNullException(nameof(chains));
+        _queueItems = queueItems ?? throw new ArgumentNullException(nameof(queueItems));
+    }
+
+    /// <summary>
+    /// Tests only: without the chain state and the queue items, the out-of-operation receipt does not check that it follows an
+    /// archive receipt. Production code uses the public constructor, which requires them.
+    /// </summary>
+    internal LifecycleCommandProcessorFR(IFRSSCD sscd, FRSigningPipeline pipeline, ILocalizedQueueStorageProvider localizedQueueStorageProvider, FRMigration? migration = null)
+    {
         _migration = migration;
         _sscd = sscd;
         _pipeline = pipeline;
@@ -104,15 +113,19 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
 
     /// <summary>
     /// Why the queue may not be taken out of operation now, or null (C11; Ref LNE 1.8 Ex. 7, 10): as v1.2 archived then
-    /// stopped, the last signed entry must be the non-training archive receipt the chain state names, so every record
-    /// lies in a signed archive range before the queue closes. Entries without a signature (refused, failed, or this
-    /// receipt itself) do not count; a training document does. The entries are read by queue row from the archive
-    /// receipt on, never from the start.
+    /// stopped, no record that adds to an archive may follow the non-training archive receipt the chain state names, so
+    /// every such record lies in a signed archive range before the queue closes. Only JET events (chain L) and training
+    /// documents (chain X) may follow it: a compliant POS sends the JET 20 its archive receipt asked for, and may answer
+    /// other JET events on a zero receipt, before it stops. Those L and X entries, and the stop itself, lie outside every
+    /// archive-receipt range; the portal's closing export, which runs to the last signed entry, covers them. Entries
+    /// without a signature (refused, failed, or this receipt itself) do not count. The entries are read by queue row from
+    /// the archive receipt on, never from the start.
     /// </summary>
     private async Task<string?> NotRightAfterAnArchiveReceiptAsync(Guid currentQueueItemId)
     {
         if (_chains is null || _queueItems is null)
         {
+            // Only the tests-only constructor leaves them out.
             return null;
         }
 
@@ -140,7 +153,7 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
                 return $"The queue can be taken out of operation only right after an archive receipt (0x3011); queue row {item.ftQueueRow} after it cannot be read: {ex.Message}";
             }
 
-            if (entry is not null)
+            if (entry is not null && entry.Chain is not ("L" or "X"))
             {
                 return $"The queue can be taken out of operation only right after an archive receipt (0x3011), and {entry.ReceiptIdentification} was signed after it: send an archive receipt first.";
             }

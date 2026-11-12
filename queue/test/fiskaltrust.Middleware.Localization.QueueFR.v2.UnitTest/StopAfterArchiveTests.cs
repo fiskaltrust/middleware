@@ -64,13 +64,35 @@ public class StopAfterArchiveTests
         await RefusedAsync("ft2#T2");
     }
 
+    /// <summary>A compliant POS sends the JET 20 its archive receipt asked for (0x3001, chain L) before it stops.</summary>
     [Fact]
-    public async Task AStopAfterATrainingDocumentThatFollowedTheArchiveReceipt_IsRefused()
+    public async Task AStopAfterTheArchiveReceiptsJetEvent_TakesTheQueueOutOfOperation()
+    {
+        await ArchiveAsync();
+        await StoreAsync("L", 1, 0x3001);
+
+        (await StopAsync()).receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        _storage.Verify(x => x.DeactivateQueueAsync(), Times.Once);
+    }
+
+    /// <summary>Training documents add nothing to an archive, so they do not keep the queue running.</summary>
+    [Fact]
+    public async Task AStopAfterATrainingDocument_TakesTheQueueOutOfOperation()
     {
         await ArchiveAsync();
         await StoreAsync("X", 1);
 
-        await RefusedAsync("ft2#X1");
+        (await StopAsync()).receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AStopAfterAJetEventAndThenASale_IsRefused()
+    {
+        await ArchiveAsync();
+        await StoreAsync("L", 1, 0x3001);
+        await StoreAsync("T", 2);
+
+        await RefusedAsync("ft3#T2");
     }
 
     [Fact]
