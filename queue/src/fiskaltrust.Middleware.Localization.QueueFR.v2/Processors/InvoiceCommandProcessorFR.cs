@@ -1,5 +1,6 @@
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -34,7 +35,7 @@ public class InvoiceCommandProcessorFR : IInvoiceCommandProcessor
     /// </summary>
     private Task<ProcessCommandResponse> SignInvoice(ProcessCommandRequest request)
     {
-        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateSalesLineCountSignature(FRSalesLineCounter.Count(request.ReceiptRequest)));
+        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateSalesLineCountSignature(FRSalesLines.Count(request.ReceiptRequest)));
         return _pipeline.SignAsync(request);
     }
 }
