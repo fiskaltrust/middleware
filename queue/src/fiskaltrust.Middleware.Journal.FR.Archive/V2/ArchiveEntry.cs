@@ -126,12 +126,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>The part of <see cref="Signature"/> the next entry of the chain covers (ADR 0001).</summary>
         public string ChainedSignature => Signature.Substring(Signature.LastIndexOf('.') + 1);
 
-        /// <summary>The signing certificate's serial number, as signed: the JWS payload's <c>csn</c>, the data set's fourth-from-last field.</summary>
+        /// <summary>
+        /// The signing certificate's serial number, as signed: the JWS header's <c>kid</c> (market-fr#221), else a JSON JWS
+        /// payload's <c>csn</c> (InfoCert entries signed before), or the data set's fourth-from-last field.
+        /// </summary>
         public string? CertificateSerialNumber { get; }
 
         /// <summary>
         /// The SIRET the SCU signed: the data set's first field, the JWS payload's <c>siret</c>. An InfoCert JET
-        /// payload signs none; its SIRET is the one the SCU printed with it (the <c>Siret</c> item, 0x0009).
+        /// payload and an R13/R12/R19 string sign none (market-fr#221); their SIRET is the one the SCU printed (the <c>Siret</c> item, 0x0009).
         /// </summary>
         public string? Siret { get; }
 
@@ -223,7 +226,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             SignedLinks links;
             try
             {
-                links = SignedLinks.Parse(signature!, queueItemId);
+                links = SignedLinks.Parse(signature!, queueItemId, identification, Long(requestJson, "ftReceiptCase"));
             }
             catch (FormatException ex)
             {
@@ -238,12 +241,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             return new ArchiveEntry(queueItemId, queueId, queueRow, processingVersion, content, chain, counter, identification!, moment);
         }
 
-        /// <summary>The certificate serial number a receipt QR code signs, or null when its signed content cannot be read.</summary>
+        /// <summary>The certificate serial number of a receipt QR code (a JWS header's <c>kid</c>, else its signed content), or null when its signed content cannot be read.</summary>
         public static string? CertificateSerialNumberOf(string qrCode)
         {
             try
             {
-                return SignedLinks.Parse(qrCode, null).CertificateSerialNumber;
+                return SignedLinks.CertificateSerialNumberOf(qrCode);
             }
             catch (FormatException)
             {
@@ -278,7 +281,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             static ArchiveEntryException Corrupt(string reason, Exception? inner) => new ArchiveEntryException(Guid.Empty, 0, "A spooled archive entry cannot be read back: " + reason + ".", inner);
             var responseJson = ParseObject(response, "response", Corrupt);
             var signature = SignatureData(responseJson, ReceiptSignatureType)!;
-            return new ArchiveEntryContent(request, ParseObject(request, "request", Corrupt), responseJson, signature, SignedLinks.Parse(signature, null));
+            var requestJson = ParseObject(request, "request", Corrupt);
+            var links = SignedLinks.Parse(signature, null, String(responseJson, "ftReceiptIdentification"), Long(requestJson, "ftReceiptCase"));
+            return new ArchiveEntryContent(request, requestJson, responseJson, signature, links);
         }
 
         private static JsonElement ParseObject(string json, string what, Func<string, Exception?, ArchiveEntryException> unreadable)
