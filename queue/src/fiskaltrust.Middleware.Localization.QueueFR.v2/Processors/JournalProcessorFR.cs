@@ -73,7 +73,7 @@ public class JournalProcessorFR : IJournalProcessor
     /// Null refuses the archive export.
     /// </param>
     /// <param name="scuInfo">The SCU's non-secret configuration, joined to the archive as compliance parameters (archive-v2 §12).</param>
-    /// <param name="validationLevel">The queue's <c>ValidationLevel</c> as configured, or null when it is not configured (FR then applies <c>Error</c>).</param>
+    /// <param name="validationLevel">The validation level the queue applies, joined to the archive as a compliance parameter: always <c>Error</c> on a French queue, whatever is configured (the bootstrapper passes it).</param>
     /// <param name="chains">
     /// The queue's chain state, through which a defect the archive export finds in its chains is raised as a pending JET
     /// event (ADR 0009, #208). Null leaves the export unchecked.

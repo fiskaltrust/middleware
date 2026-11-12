@@ -338,7 +338,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>
         /// §1.3: which period a closing or technical receipt closes, stored by the queue in <c>ftStateData.FR.Closing</c>.
-        /// Not signed. <c>PeriodStart</c> and <c>PeriodEnd</c> are empty on a receipt that closes no period.
+        /// <c>PeriodStart</c> is signed in LNE data-set field 20, <c>PeriodEnd</c> in field 12 (the receipt moment).
+        /// <c>PeriodStart</c> and <c>PeriodEnd</c> are empty on a receipt that closes no period.
         /// </summary>
         public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> ClosingPeriodColumns = new[]
         {
