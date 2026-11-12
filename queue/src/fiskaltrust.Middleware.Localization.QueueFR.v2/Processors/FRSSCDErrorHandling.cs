@@ -18,9 +18,12 @@ public static class FRSSCDErrorHandling
 
     /// <summary>
     /// True when the SCU could sign but refused this receipt (<see cref="StateFR.Error"/>), e.g. a
-    /// request it cannot accept, rather than reporting that signing is unavailable.
+    /// request it cannot accept, rather than reporting that signing is unavailable. Only the
+    /// "signing unavailable" marker (<c>0x001</c> in the version part, <see cref="StateFR.SigningUnavailableError"/>)
+    /// tells them apart; the rest of the upper word is not compared.
     /// </summary>
-    public static bool IsRefusal(ReceiptResponse scuResponse) => scuResponse.ftState == (State) StateFR.Error;
+    public static bool IsRefusal(ReceiptResponse scuResponse)
+        => IsError(scuResponse) && (((ulong) scuResponse.ftState >> 32) & 0xFFF) != 0x001;
 
     public static string Reason(ReceiptResponse scuResponse)
         => scuResponse.ftSignatures?.FirstOrDefault(x => x.Caption == "FAILURE")?.Data

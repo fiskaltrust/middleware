@@ -1,4 +1,5 @@
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -72,6 +73,10 @@ public class FRChainStateProvider
     // next signature, which would otherwise be lost on a restart.
     private bool _unstored;
 
+    // ftQueueFR may lag behind the stored queue items: at start-up (a process stopped between the two
+    // writes) and after a store whose outcome is unknown. Checked before the next request is numbered.
+    private bool _reconcileDue = true;
+
     public FRChainStateProvider(AsyncLazy<IConfigurationRepository> configurationRepository, Guid queueId)
     {
         _configurationRepository = configurationRepository;
@@ -107,7 +112,7 @@ public class FRChainStateProvider
                 }
             }
 
-            _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
 
             var state = new FRChainState(request.ResolveChain(), _queueFR);
             var numeratorBefore = state.Numerator;
@@ -149,7 +154,7 @@ public class FRChainStateProvider
         try
         {
             var repository = await _configurationRepository;
-            _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
             return read(_queueFR);
         }
         finally
@@ -204,9 +209,121 @@ public class FRChainStateProvider
     }
 
     /// <summary>
-    /// Runs one French sign request alone, from reserving its queue item to storing it, so that the
-    /// state it advances is committed or discarded before another receipt is chained onto it.
+    /// Drops the in-memory state because it is unknown whether the signed queue item was stored. The
+    /// stored state is read again and rolled forward over the stored items before the next request
+    /// (<see cref="ReconcileAsync"/>), so a stored entry is never numbered again.
     /// </summary>
+    public void DiscardAndReconcile()
+    {
+        _lock.Wait();
+        try
+        {
+            _queueFR = null;
+            _pending = false;
+            _reconcileDue = true;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Rolls ftQueueFR forward over the signed entries stored after the state it holds:
+    /// walks back from the last stored queue item to the first one the state
+    /// already covers, replays the newer ones in order (<see cref="FRChainRepair"/>), runs the
+    /// lifecycle step of a replayed opening or closing receipt, and stores the result. Runs once at
+    /// start-up and again after a store whose outcome was unknown; returns the number of entries replayed.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">ftQueueFR is missing, or the repaired state cannot be stored.</exception>
+    public async Task<int> ReconcileAsync(IMiddlewareQueueItemRepository queueItems, Func<ReceiptCase, Task> lifecycle)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!_reconcileDue)
+            {
+                return 0;
+            }
+
+            var repository = await _configurationRepository;
+            if (_unstored)
+            {
+                await StoreAsync(repository).ConfigureAwait(false);
+            }
+
+            _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
+
+            var ahead = new List<FRChainRepair.SignedEntry>();
+            var last = await queueItems.GetLastQueueItemAsync().ConfigureAwait(false);
+            for (var row = last?.ftQueueRow ?? 0; row > 0; row--)
+            {
+                var item = row == last!.ftQueueRow ? last : await queueItems.GetByQueueRowAsync(row).ConfigureAwait(false);
+                if (item is null)
+                {
+                    continue;
+                }
+
+                var (kind, entry) = FRChainRepair.Read(item);
+                if (kind == FRChainRepair.Kind.V1)
+                {
+                    break;
+                }
+
+                if (entry is null)
+                {
+                    continue;
+                }
+
+                if (entry.Number <= _queueFR.GetNumerator(entry.Chain))
+                {
+                    break;
+                }
+
+                ahead.Add(entry);
+            }
+
+            ahead.Reverse();
+            foreach (var entry in ahead)
+            {
+                FRChainRepair.Apply(_queueFR, entry);
+                if (!entry.Request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
+                {
+                    await lifecycle(entry.Request.ftReceiptCase.Case()).ConfigureAwait(false);
+                }
+            }
+
+            if (ahead.Count > 0)
+            {
+                try
+                {
+                    await StoreAsync(repository).ConfigureAwait(false);
+                }
+                catch
+                {
+                    _queueFR = null;
+                    throw;
+                }
+            }
+
+            _reconcileDue = false;
+            return ahead.Count;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// The queue's ftQueueFR row. A missing row is a configuration error (the queue's
+    /// <c>init_ftQueueFR</c>), never a blank row: a blank one would be stored over the configuration
+    /// by the next commit, without SIRET or SCU.
+    /// </summary>
+    private async Task<ftQueueFR> LoadAsync(IConfigurationRepository repository)
+        => await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"The French queue {_queueId} has no ftQueueFR row. It is part of the queue's configuration (init_ftQueueFR); nothing is signed until it exists.");
+
     /// <summary>
     /// Records a JET event found outside a request (a local archive export's integrity check, a
     /// rollback) as a pending message: the action journal entry is stored first, then the count in
@@ -227,7 +344,7 @@ public class FRChainStateProvider
                     throw new InvalidOperationException("The French chain state of the last signed receipt is not stored yet; the pending JET event is raised once it is.");
                 }
 
-                _queueFR ??= await repository.GetQueueFRAsync(_queueId).ConfigureAwait(false) ?? new ftQueueFR { ftQueueFRId = _queueId };
+                _queueFR ??= await LoadAsync(repository).ConfigureAwait(false);
                 var journal = new FRPendingMessagesState(_queueFR).Raise(_queueId, code, label, information, DateTime.UtcNow);
                 try
                 {
@@ -253,6 +370,10 @@ public class FRChainStateProvider
         }
     }
 
+    /// <summary>
+    /// Runs one French sign request alone, from reserving its queue item to storing it, so that the
+    /// state it advances is committed or discarded before another receipt is chained onto it.
+    /// </summary>
     public async Task<T> SerializeAsync<T>(Func<Task<T>> request)
     {
         await _requestLock.WaitAsync().ConfigureAwait(false);

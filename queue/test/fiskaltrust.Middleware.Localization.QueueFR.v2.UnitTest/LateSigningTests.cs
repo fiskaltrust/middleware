@@ -210,7 +210,9 @@ public class LateSigningTests
         refused.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
         JetItems(refused).Should().BeEmpty("only a signed entry opens the mode");
         refused.actionJournals.Should().BeEmpty();
-        (await _state.ReadAsync()).Should().BeNull("nothing was signed, so nothing was stored");
+        var stored = await _state.ReadAsync();
+        stored.TNumerator.Should().Be(0, "nothing was signed, so nothing was stored");
+        stored.UsedFailedCount.Should().Be(0);
 
         _sscd.FailWith = null;
         InLateSigningMode(await SignAsync(ReceiptCase.PointOfSaleReceipt0x0001)).Should().BeFalse();

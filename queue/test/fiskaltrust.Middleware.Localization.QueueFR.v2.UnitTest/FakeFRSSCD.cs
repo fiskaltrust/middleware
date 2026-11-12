@@ -34,6 +34,9 @@ public class FakeFRSSCD : IFRSSCD
 
     public bool HasSignatureCreationData { get; set; } = true;
 
+    /// <summary>Answers success with an empty signature, as a faulty SCU could.</summary>
+    public bool EmptySignature { get; set; }
+
     public Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => Task.FromResult(new EchoResponse { Message = echoRequest.Message });
 
     public Task<FRSSCDInfo> GetInfoAsync() => Task.FromResult(new FRSSCDInfo
@@ -57,7 +60,7 @@ public class FakeFRSSCD : IFRSSCD
             return Task.FromResult(response.ToSigningFailure(FailWith, FailState));
         }
 
-        var signature = $"sig-{++_calls}";
+        var signature = EmptySignature ? "" : $"sig-{++_calls}";
         return Task.FromResult((new ProcessResponse { ReceiptResponse = request.ReceiptResponse }, signature));
     }
 }

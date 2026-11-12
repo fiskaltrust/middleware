@@ -32,11 +32,12 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
     public QueueFRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IFRSSCD frSSCD, IStorageProvider storageProvider, IArchiveSigner? archiveSigner = null)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
-        var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueFRAsync(id)).CashBoxIdentification);
+        var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueFRAsync(id)
+            ?? throw new InvalidOperationException($"The French queue {id} has no ftQueueFR row. It is part of the queue's configuration (init_ftQueueFR).")).CashBoxIdentification);
 
         var chains = new FRChainStateProvider(storageProvider.CreateConfigurationRepository(), id);
         // The chain state is stored only once the signed queue item is (FRQueueStorageProvider).
-        var queueStorageProvider = new FRQueueStorageProvider(new QueueStorageProvider(id, storageProvider), chains);
+        var queueStorageProvider = new FRQueueStorageProvider(new QueueStorageProvider(id, storageProvider), chains, storageProvider.CreateMiddlewareQueueItemRepository());
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
         var pipeline = new FRSigningPipeline(frSSCD, chains, queueItemRepository, storageProvider.CreateMiddlewareActionJournalRepository());
 

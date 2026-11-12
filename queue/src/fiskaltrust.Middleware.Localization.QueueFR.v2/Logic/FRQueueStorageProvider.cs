@@ -1,10 +1,13 @@
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.Base.Helpers;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
@@ -12,29 +15,53 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// <summary>
 /// The queue storage of the French queue: it stores the chain state a signature advanced only
 /// once the signed queue item is stored, and drops it when the item is not stored or is stored as
-/// failed. Everything else is the shared v2 storage unchanged.
+/// failed. When the store fails, it reads back whether the item was kept before deciding, and when
+/// that cannot be told, the next request rolls the state forward over the stored items (market-fr
+/// ADR 0012). A lifecycle receipt opens or closes the queue only once its signed item is stored.
+/// Everything else is the shared v2 storage unchanged.
 /// </summary>
 public sealed class FRQueueStorageProvider : IQueueStorageProvider
 {
     private readonly IQueueStorageProvider _inner;
     private readonly FRChainStateProvider _chains;
 
-    public FRQueueStorageProvider(IQueueStorageProvider inner, FRChainStateProvider chains)
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository>? _queueItems;
+
+    public FRQueueStorageProvider(IQueueStorageProvider inner, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null)
     {
         _inner = inner;
         _chains = chains;
+        _queueItems = queueItems;
     }
+
+    // The opening or closing a lifecycle receipt asked for, applied once its signed item is stored.
+    private Func<Task>? _lifecycle;
 
     public async Task FinishQueueItem(ftQueueItem queueItem, ReceiptResponse receiptResponse)
     {
+        var lifecycle = _lifecycle;
+        _lifecycle = null;
         try
         {
             await _inner.FinishQueueItem(queueItem, receiptResponse).ConfigureAwait(false);
         }
         catch
         {
-            // The signed entry is not in the queue: the chain must not point at it.
-            _chains.Discard();
+            // The shared storage writes the queue item before the queue row, so a failure can come
+            // after the signed entry was kept: then the chain must keep it too.
+            switch (await StoredAsync(queueItem, receiptResponse).ConfigureAwait(false))
+            {
+                case true:
+                    await KeepAsync(queueItem, lifecycle).ConfigureAwait(false);
+                    break;
+                case false:
+                    _chains.Discard();
+                    break;
+                default:
+                    _chains.DiscardAndReconcile();
+                    break;
+            }
+
             throw;
         }
 
@@ -42,6 +69,28 @@ public sealed class FRQueueStorageProvider : IQueueStorageProvider
         {
             _chains.Discard();
             return;
+        }
+
+        await KeepAsync(queueItem, lifecycle).ConfigureAwait(false);
+    }
+
+    /// <summary>The signed item is stored: open or close the queue if it asked to, then store the chain state.</summary>
+    private async Task KeepAsync(ftQueueItem queueItem, Func<Task>? lifecycle)
+    {
+        if (lifecycle is not null)
+        {
+            try
+            {
+                await lifecycle().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // The item is stored but the queue row is not: replaying the item before the next
+                // request applies both (FRChainStateProvider.ReconcileAsync).
+                _chains.DiscardAndReconcile();
+                await TryRecordAsync($"Queue item {queueItem.ftQueueItemId} is stored, but opening or closing the queue failed and is retried before the next request: {ex.Message}", queueItem.ftQueueItemId).ConfigureAwait(false);
+                return;
+            }
         }
 
         try
@@ -56,7 +105,61 @@ public sealed class FRQueueStorageProvider : IQueueStorageProvider
         }
     }
 
-    private async Task TryRecordAsync(string message, Guid queueItemId)
+    /// <summary>Whether the signed item is in storage: true, false, or null when that cannot be read.</summary>
+    private async Task<bool?> StoredAsync(ftQueueItem queueItem, ReceiptResponse receiptResponse)
+    {
+        if (_queueItems is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var stored = await (await _queueItems).GetAsync(queueItem.ftQueueItemId).ConfigureAwait(false);
+            if (stored is null || string.IsNullOrEmpty(stored.response))
+            {
+                return false;
+            }
+
+            var response = JsonSerializer.Deserialize<ReceiptResponse>(stored.response);
+            return response is not null && !response.ftState.IsState(State.Error) && response.ftReceiptIdentification == receiptResponse.ftReceiptIdentification;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Before a request is numbered: roll the chain state forward over stored entries it does not cover.</summary>
+    private async Task ReconcileAsync()
+    {
+        if (_queueItems is null)
+        {
+            return;
+        }
+
+        var replayed = await _chains.ReconcileAsync(await _queueItems, ApplyLifecycleAsync).ConfigureAwait(false);
+        if (replayed > 0)
+        {
+            await TryRecordAsync($"The French chain state was {replayed} stored signed entr{(replayed == 1 ? "y" : "ies")} behind and was rolled forward from the stored queue items.", null).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>A replayed opening or closing receipt whose queue row was not written.</summary>
+    private async Task ApplyLifecycleAsync(ReceiptCase receiptCase)
+    {
+        var queue = await _inner.GetQueueAsync().ConfigureAwait(false);
+        if (receiptCase == ReceiptCase.InitialOperationReceipt0x4001 && queue.StartMoment is null)
+        {
+            await _inner.ActivateQueueAsync().ConfigureAwait(false);
+        }
+        else if (receiptCase == ReceiptCase.OutOfOperationReceipt0x4002 && queue.StopMoment is null)
+        {
+            await _inner.DeactivateQueueAsync().ConfigureAwait(false);
+        }
+    }
+
+    private async Task TryRecordAsync(string message, Guid? queueItemId)
     {
         try
         {
@@ -68,9 +171,19 @@ public sealed class FRQueueStorageProvider : IQueueStorageProvider
         }
     }
 
-    public Task ActivateQueueAsync() => _inner.ActivateQueueAsync();
+    /// <summary>Opens the queue once the signed opening entry is stored (<see cref="FinishQueueItem"/>).</summary>
+    public Task ActivateQueueAsync()
+    {
+        _lifecycle = _inner.ActivateQueueAsync;
+        return Task.CompletedTask;
+    }
 
-    public Task DeactivateQueueAsync() => _inner.DeactivateQueueAsync();
+    /// <summary>Closes the queue once the signed closing entry is stored (<see cref="FinishQueueItem"/>).</summary>
+    public Task DeactivateQueueAsync()
+    {
+        _lifecycle = _inner.DeactivateQueueAsync;
+        return Task.CompletedTask;
+    }
 
     public Task CreateActionJournalAsync(ftActionJournal actionJournal) => _inner.CreateActionJournalAsync(actionJournal);
 
@@ -90,7 +203,11 @@ public sealed class FRQueueStorageProvider : IQueueStorageProvider
 
     public Task<ftReceiptJournal> InsertReceiptJournal(ftQueueItem queueItem, ReceiptRequest receiptrequest) => _inner.InsertReceiptJournal(queueItem, receiptrequest);
 
-    public Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest) => _inner.ReserveNextQueueItem(receiptRequest);
+    public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
+    {
+        await ReconcileAsync().ConfigureAwait(false);
+        return await _inner.ReserveNextQueueItem(receiptRequest).ConfigureAwait(false);
+    }
 
     public Task<List<(ReceiptRequest, ReceiptResponse)>> GetReceiptReferencesIfNecessaryAsync(ProcessCommandRequest request) => _inner.GetReceiptReferencesIfNecessaryAsync(request);
 }

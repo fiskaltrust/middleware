@@ -163,7 +163,7 @@ public class FRSigningPipelineTests
         await CreatePipeline(sscd, state).SignAsync(CommandRequest());
         await state.CommitAsync();
 
-        (await state.ReadAsync()).Should().BeNull("no entry was signed, so no chain moved");
+        (await state.ReadAsync()).TNumerator.Should().Be(0, "no entry was signed, so no chain moved");
     }
 
     [Fact]

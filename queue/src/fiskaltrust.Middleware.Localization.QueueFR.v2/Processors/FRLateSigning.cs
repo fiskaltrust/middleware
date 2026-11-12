@@ -113,9 +113,10 @@ public class FRLateSigning
                     return (firstRequest?.cbReceiptReference, firstResponse?.ftReceiptIdentification ?? firstId.ToString());
                 }
             }
-            catch (JsonException)
+            catch (Exception)
             {
-                // The range is still closed; the mention falls back to the queue item id.
+                // The receipt is already signed and the range is closed; the mention falls back to
+                // the queue item id rather than losing the signature to a storage read.
             }
         }
 

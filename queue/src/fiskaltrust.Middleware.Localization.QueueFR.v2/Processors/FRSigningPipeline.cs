@@ -81,6 +81,12 @@ public class FRSigningPipeline
                 return Unsigned(FRSSCDErrorHandling.Reason(response.ReceiptResponse), FRSSCDErrorHandling.IsRefusal(response.ReceiptResponse));
             }
 
+            // A success without a signature is no signature: the chain would restart at the next entry.
+            if (string.IsNullOrEmpty(signature))
+            {
+                return Unsigned("the signature creation unit returned no signature", refused: false);
+            }
+
             chain.LastSignature = signature;
             totals.Add(request.ReceiptRequest);
 
@@ -96,9 +102,27 @@ public class FRSigningPipeline
 
             // The JET events the POS is asked to send (ADR 0009, market-fr#200): those the receipt
             // case calls for, and, once per process, what changed in the installation.
+            // From here on the entry is signed: a failing storage read may cost an item, never the
+            // signature (the chain would otherwise reuse the number).
             FRJetItems.AddForSignedReceipt(request.ReceiptRequest, response.ReceiptResponse);
-            await _jetWatch.CheckOnceAsync(request.ReceiptRequest, response.ReceiptResponse).ConfigureAwait(false);
-            await _pendingMessages.ApplySignedAsync(request.ReceiptRequest, response.ReceiptResponse, pendingMessages).ConfigureAwait(false);
+            try
+            {
+                await _jetWatch.CheckOnceAsync(request.ReceiptRequest, response.ReceiptResponse).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // The watch runs again on the next receipt.
+            }
+
+            try
+            {
+                await _pendingMessages.ApplySignedAsync(request.ReceiptRequest, response.ReceiptResponse, pendingMessages).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // The messages stay pending and are handed over by the next zero receipt.
+                response.ReceiptResponse.ftState = response.ReceiptResponse.ftState.WithFlag(StateFlags.MessageIsPending);
+            }
 
             return new ProcessCommandResponse(response.ReceiptResponse, [.. actionJournals ?? [], .. lateSigningJournals]);
 
