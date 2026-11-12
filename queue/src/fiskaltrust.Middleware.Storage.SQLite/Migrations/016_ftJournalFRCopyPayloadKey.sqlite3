@@ -5,6 +5,7 @@
 -- The rebuild runs in one transaction, so an interruption leaves the 015 table as it was and the
 -- migration runs again from the start; the temporary table is dropped first in case an earlier,
 -- non-transactional attempt left it behind.
+-- The version is recorded in the same transaction, so a run that committed is never replayed.
 BEGIN TRANSACTION;
 DROP TABLE IF EXISTS ftJournalFRCopyPayload_016;
 CREATE TABLE ftJournalFRCopyPayload_016
@@ -25,4 +26,5 @@ INSERT INTO ftJournalFRCopyPayload_016 (QueueItemId, QueueId, CashBoxIdentificat
 DROP TABLE ftJournalFRCopyPayload;
 ALTER TABLE ftJournalFRCopyPayload_016 RENAME TO ftJournalFRCopyPayload;
 CREATE INDEX IF NOT EXISTS idx_ftJournalFRCopyPayload_CopiedReceiptReference ON ftJournalFRCopyPayload (CopiedReceiptReference);
+UPDATE ftDatabaseSchema SET CurrentVersion = '016_ftJournalFRCopyPayloadKey';
 COMMIT;

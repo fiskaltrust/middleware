@@ -1,6 +1,7 @@
 ﻿-- The QueueFR v2 chain columns of ftQueueFR (market-fr ADR 0012).
 -- The columns are added in one transaction, so an interruption leaves the table as it was and the
 -- migration runs again from the start.
+-- The version is recorded in the same transaction, so a run that committed is never replayed.
 BEGIN TRANSACTION;
 ALTER TABLE ftQueueFR ADD COLUMN ENumerator BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE ftQueueFR ADD COLUMN SNumerator BIGINT NOT NULL DEFAULT 0;
@@ -19,4 +20,5 @@ ALTER TABLE ftQueueFR ADD COLUMN SLastSignature NVARCHAR(2147483647) NULL;
 ALTER TABLE ftQueueFR ADD COLUMN ZLastSignature NVARCHAR(2147483647) NULL;
 ALTER TABLE ftQueueFR ADD COLUMN MLastSignature NVARCHAR(2147483647) NULL;
 ALTER TABLE ftQueueFR ADD COLUMN YLastSignature NVARCHAR(2147483647) NULL;
+UPDATE ftDatabaseSchema SET CurrentVersion = '015_QueueFRV2Chains';
 COMMIT;

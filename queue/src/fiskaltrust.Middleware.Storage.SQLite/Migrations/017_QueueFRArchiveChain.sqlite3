@@ -1,6 +1,8 @@
 ﻿-- The previous signature of the QueueFR v2 archive chain A.
 -- The columns are added in one transaction, so an interruption leaves the table as it was and the
 -- migration runs again from the start.
+-- The version is recorded in the same transaction, so a run that committed is never replayed.
 BEGIN TRANSACTION;
 ALTER TABLE ftQueueFR ADD COLUMN ALastSignature NVARCHAR(2147483647) NULL;
+UPDATE ftDatabaseSchema SET CurrentVersion = '017_QueueFRArchiveChain';
 COMMIT;
