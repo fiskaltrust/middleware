@@ -92,11 +92,12 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
 
         if (certificationBody == InfoCertBody)
         {
-            // R13 ENC-TIK-OPS-NID, R12 FAC-OPS-NID: the operator on tickets and invoices (contract §1.1 cbUser, InfoCert M).
+            // R13 ENC-TIK-OPS-NID, R12 FAC-OPS-NID, R19 JET-OPE-NID: the operator on tickets, invoices and technical events
+            // (contract §1.1 cbUser, InfoCert M).
             RuleFor(x => x.cbUser)
                 .Must((request, _) => !string.IsNullOrWhiteSpace(request.GetcbUserOrNull()))
-                .When(x => x.ResolveChain() is FRReceiptChain.Ticket or FRReceiptChain.Invoice)
-                .WithMessage("A ticket or an invoice must name its operator in cbUser.")
+                .When(x => x.ResolveChain() is FRReceiptChain.Ticket or FRReceiptChain.Invoice or FRReceiptChain.Log)
+                .WithMessage("A ticket, an invoice or a technical event must name its operator in cbUser.")
                 .WithErrorCode("UserRequired");
 
             // R13 ENC-SIG-MOTIF, NF525 V2.3 §6.3.3.5: a copy says why it is made (contract §1.2 CopyReason, InfoCert M).

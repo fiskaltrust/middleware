@@ -33,7 +33,11 @@ public enum FRReceiptChain
     /// </summary>
     Technical,
 
-    /// <summary>Non-fiscal documents handed to the customer: bills, pro formas, delivery notes.</summary>
+    /// <summary>
+    /// Documents handed to the customer that are not the sale's receipt: notes (0x0006), pro formas (0x0007), orders
+    /// (0x3004) and receipts without an obligation to issue them (0x0003). A delivery note (0x0005) maps here but is
+    /// recorded without a signature, so it never enters the chain.
+    /// </summary>
     Bill,
 
     /// <summary>Technical event and accounting logs.</summary>

@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// <list type="bullet">
 /// <item><see cref="JournalTypeFR.StatusInformation"/>: the queue's FR identification and the journal-type table, as JSON.</item>
 /// <item>The group journals (001-00B): that journal's CSV file (archive-v2 field contract §1, §7).</item>
-/// <item><see cref="JournalTypeFR.ArchiveExport"/>: the signed main archive of one fiscal year (ADR 0005-0007).</item>
+/// <item><see cref="JournalTypeFR.ArchiveExport"/>: one standalone signed archive file of the requested period, at most a year under one certificate (ADR 0019).</item>
 /// </list>
 /// <para>
 /// <c>From</c> and <c>To</c> are UTC ticks of the receipt moment, both inclusive; <c>To</c> 0 means

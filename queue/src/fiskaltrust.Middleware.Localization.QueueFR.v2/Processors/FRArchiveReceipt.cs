@@ -58,7 +58,8 @@ public class FRArchiveReceipt
 
     public async Task<ProcessCommandResponse?> SignAsync(ProcessCommandRequest request)
     {
-        // As v1 (ArchiveCommand): the first receipt of a queue has nothing to archive.
+        // Defensive, as v1.3 ArchiveCommand ([04 F12]): the numerator only moves after the initial-operation receipt, so on an
+        // active queue this never fires; v1.2 ArchiveRequest has no such guard.
         if (request.queue.ftReceiptNumerator == 0)
         {
             request.ReceiptResponse.SetReceiptResponseError("Nothing to archive: the first receipt of a queue cannot be an archive receipt.");

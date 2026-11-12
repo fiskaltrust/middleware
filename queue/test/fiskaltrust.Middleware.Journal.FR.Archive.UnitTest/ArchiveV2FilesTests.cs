@@ -133,7 +133,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var chargeItems = await Write(files.Single(f => f.FileName == ArchiveV2Files.ChargeItemsFileName), t1);
             var payItems = await Write(files.Single(f => f.FileName == ArchiveV2Files.PayItemsFileName), t1);
 
-            chargeItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;;\"Café; crème\";2;;;;4.40;;;true;10;;0x4652200000000013;false;false;false;;;;;;\r\n", "the discount code of a line comes from the discount applied to it, stored by the queue; this line has none");
+            chargeItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;;\"Café; crème\";2;;;;4.40;true;;10;;;0x4652200000000013;;;;;;;false;false;false\r\n", "the discount code of a line comes from the discount applied to it, stored by the queue; this line has none");
             payItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;0x4652200000080001;Cash;4.40;;2026-03-01T10:00:01.4560000Z;;;true");
         }
 

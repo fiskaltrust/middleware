@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// Late signing (market-fr#231). A POS that could not reach the middleware issues its receipts as
 /// "electronic recording system failed" and, once the middleware is reachable again, re-sends them
 /// with <see cref="ReceiptCaseFlags.LateSigning"/>. They are signed normally, in arrival order, into
-/// their own chain: the flag is part of the signed <c>ftReceiptCase</c>, so every late-signed entry
+/// the chain of their receipt case: the flag is part of the signed <c>ftReceiptCase</c>, so every late-signed entry
 /// is marked inside its own signature. On top of that the queue
 /// <list type="bullet">
 /// <item>keeps the range open (<see cref="FRLateSigningState"/>) from the first signed late-signed

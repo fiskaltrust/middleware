@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE;
 /// <summary>
 /// The LNE flavour of the NF525 signature. It builds the ordered "jeu de données à signer",
 /// signs it with SHA-256withECDSA and chains on the previous signature (ADR 0001). The signed data set is
-/// attached to the response as its own signature item, because an LNE audit reconstructs the
+/// returned in the receipt's QR code item, followed by its signature, because an LNE audit reconstructs the
 /// signed string from the archive and re-verifies it field by field.
 /// </summary>
 /// <remarks>

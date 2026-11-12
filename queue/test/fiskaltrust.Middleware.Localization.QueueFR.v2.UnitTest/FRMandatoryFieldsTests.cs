@@ -167,6 +167,17 @@ public class FRMandatoryFieldsTests
         Errors(request, InfoCert).Should().Contain("UserRequired");
     }
 
+    /// <summary>R19 JET-OPE-NID: a technical event names its operator (contract §1.1 cbUser, InfoCert M on L).</summary>
+    [Fact]
+    public void AnInfoCertTechnicalEventWithoutOperator_IsRefused()
+    {
+        var request = Sale(0x3001);
+        request.cbChargeItems = [];
+        request.cbPayItems = [];
+        request.cbUser = null;
+        Errors(request, InfoCert).Should().Contain("UserRequired");
+    }
+
     [Fact]
     public void AnLneTicketWithoutOperator_IsTaken()
     {

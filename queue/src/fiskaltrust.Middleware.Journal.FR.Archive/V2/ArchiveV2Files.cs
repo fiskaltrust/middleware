@@ -390,21 +390,21 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Child<JsonElement>("UnitPrice", r => Number(r.Child, "UnitPrice"), "Prix unitaire TTC (TVA comprise)."),
             Child<JsonElement>("UnitPriceHT", r => LineNumber(r, "UnitPriceHT"), "Prix unitaire HT (hors TVA) : montant HT divisé par la quantité, arrondi à six décimales (un prix unitaire peut être inférieur au centime)."),
             Child<JsonElement>("Amount", r => Number(r.Child, "Amount"), "Montant total TTC (TVA comprise) de la ligne."),
-            Child<JsonElement>("AmountHT", r => LineNumber(r, "AmountHT"), "Montant total HT (hors TVA) de la ligne : Amount moins VATAmount."),
-            Child<JsonElement>("VATAmount", r => LineNumber(r, "VATAmount"), "Montant de TVA de la ligne : celui envoyé par la caisse, sinon calculé depuis le taux et arrondi au centime."),
             Child<JsonElement>("PricesIncludeVAT", r => true, "Toujours true : UnitPrice et Amount sont des montants TVA comprise."),
+            Child<JsonElement>("AmountHT", r => LineNumber(r, "AmountHT"), "Montant total HT (hors TVA) de la ligne : Amount moins VATAmount."),
             Child<JsonElement>("VATRate", r => Number(r.Child, "VATRate"), "Taux de TVA en pourcentage (20, 5.5…)."),
+            Child<JsonElement>("VATAmount", r => LineNumber(r, "VATAmount"), "Montant de TVA de la ligne : celui envoyé par la caisse, sinon calculé depuis le taux et arrondi au centime."),
             Child<JsonElement>("VATNature", r => LineText(r, "VATNature"), "Code à deux chiffres de la nature de TVA (exonération, autoliquidation…) ; 00 pour une TVA ordinaire."),
             Child<JsonElement>("ftChargeItemCase", r => Hex(r.Child, "ftChargeItemCase"), "Code du type de ligne : taux de TVA, type de prestation et options (hexadécimal, liste 5.3)."),
-            Child<JsonElement>("Downpayment", r => Flag(r.Child, "ftChargeItemCase", ChargeItemDownpaymentFlag), "true si la ligne est un acompte ; exclue des totaux."),
-            Child<JsonElement>("ExtraOrDiscount", r => Flag(r.Child, "ftChargeItemCase", ChargeItemExtraOrDiscountFlag), "true si la ligne est une remise ou un supplément."),
-            Child<JsonElement>("ReturnableDeposit", r => Flag(r.Child, "ftChargeItemCase", ChargeItemReturnableDepositFlag), "true si la ligne est une consigne."),
             Child<JsonElement>("Moment", r => MomentOrText(r.Child, "Moment"), "Date et heure de la ligne, si la caisse l'a envoyée (UTC)."),
             Child<JsonElement>("CountsAsLine", r => LineBool(r, "CountsAsLine"), "true si la ligne compte comme ligne de vente (LineCount), comme le module de signature la compte."),
-            Child<JsonElement>("AppliesTo", r => LineNumber(r, "AppliesTo"), "Sur une remise ou un supplément : Position de la ligne à laquelle elle s'applique ; vide pour une remise sur le document."),
             Child<JsonElement>("DiscountCode", r => LineText(r, "DiscountCode"), "Sur une ligne de vente : code(s) des remises qui s'y appliquent, envoyés par la caisse, séparés par une virgule."),
             Child<JsonElement>("DiscountRate", r => LineText(r, "DiscountRate"), "Sur une ligne de vente : taux des remises qui s'y appliquent, en pourcentage, séparés par une virgule."),
             Child<JsonElement>("DiscountAmount", r => LineNumber(r, "DiscountAmount"), "Sur une ligne de vente : total TTC des remises et suppléments qui s'y appliquent."),
+            Child<JsonElement>("AppliesTo", r => LineNumber(r, "AppliesTo"), "Sur une remise ou un supplément : Position de la ligne à laquelle elle s'applique ; vide pour une remise sur le document."),
+            Child<JsonElement>("Downpayment", r => Flag(r.Child, "ftChargeItemCase", ChargeItemDownpaymentFlag), "true si la ligne est un acompte ; exclue des totaux."),
+            Child<JsonElement>("ExtraOrDiscount", r => Flag(r.Child, "ftChargeItemCase", ChargeItemExtraOrDiscountFlag), "true si la ligne est une remise ou un supplément."),
+            Child<JsonElement>("ReturnableDeposit", r => Flag(r.Child, "ftChargeItemCase", ChargeItemReturnableDepositFlag), "true si la ligne est une consigne."),
         };
 
         /// <summary>§3, the pay-item columns.</summary>
@@ -553,14 +553,23 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         }
 
         private static string? RawNumber(JsonElement element, string name)
-            => ArchiveEntry.Property(element, name) is { ValueKind: JsonValueKind.Number } value ? value.GetRawText() : null;
+            => ArchiveEntry.Property(element, name) is { ValueKind: JsonValueKind.Number } value ? Plain(value.GetRawText()) : null;
+
+        /// <summary>
+        /// A JSON number as stored, unless it has an exponent: then its exact value in plain decimals ([06 D15], Conventions
+        /// <i>Decimals</i>), so no reader meets <c>1E-05</c>. A number beyond the decimal range is kept as stored.
+        /// </summary>
+        private static string Plain(string raw)
+            => raw.IndexOfAny(new[] { 'e', 'E' }) >= 0 && decimal.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)
+                ? value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : raw;
 
         private static bool? Flag(JsonElement element, string name, long flag)
             => ArchiveEntry.Long(element, name) is { } value ? (value & flag) != 0 : (bool?) null;
 
         /// <summary>A number as the POS sent it: the stored JSON text, so no rounding or reformatting.</summary>
         private static string? Number(JsonElement element, string name)
-            => ArchiveEntry.Property(element, name) is { } value && value.ValueKind == JsonValueKind.Number ? value.GetRawText() : ArchiveEntry.Text(element, name);
+            => ArchiveEntry.Property(element, name) is { } value && value.ValueKind == JsonValueKind.Number ? Plain(value.GetRawText()) : ArchiveEntry.Text(element, name);
 
         private static string? Hex(JsonElement element, string name)
             => ArchiveEntry.Long(element, name) is { } value ? CsvValueFormatter.Hex(value) : null;

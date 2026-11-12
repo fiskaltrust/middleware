@@ -16,7 +16,4 @@ public static class FRFallBackOperations
         FRTypeOfServiceCalculator.Apply(request.ReceiptRequest, request.ReceiptResponse);
         return Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
     }
-
-    public static Task<ProcessCommandResponse> NotSupported(ProcessCommandRequest request, string name)
-        => throw new NotSupportedException($"The ftReceiptCase {name} - 0x{request.ReceiptRequest.ftReceiptCase.Case():x} is not supported in the QueueFR.v2 implementation.");
 }

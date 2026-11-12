@@ -162,6 +162,27 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             (await Rows(Journal(0x003), entry))[0]["CustomerEndpointId"].Should().Be("0225:987654321_X");
         }
 
+        // §2 order and the Conventions' decimals ([06 D15, D16]).
+
+        [Fact]
+        public void TheChargeItemColumns_FollowTheContractTable()
+            => ArchiveV2Files.ChargeItemColumns.Select(c => c.Name).Should().Equal(
+                "ftQueueItemID", "ftReceiptIdentification", "Position", "ProductNumber", "Description", "Quantity", "Unit", "UnitPrice", "UnitPriceHT",
+                "Amount", "PricesIncludeVAT", "AmountHT", "VATRate", "VATAmount", "VATNature", "ftChargeItemCase", "Moment", "CountsAsLine",
+                "DiscountCode", "DiscountRate", "DiscountAmount", "AppliesTo", "Downpayment", "ExtraOrDiscount", "ReturnableDeposit");
+
+        [Fact]
+        public async Task ANumberSentWithAnExponent_IsWrittenInPlainDecimals()
+        {
+            var request = "{\"ftReceiptCase\":" + 0x4652_2000_0000_0001L + ",\"cbChargeItems\":[{\"Position\":1,\"Description\":\"a\",\"Quantity\":1E-05,\"Amount\":1.5e2,\"VATRate\":20,\"ftChargeItemCase\":" + 0x4652_2000_0000_0013L + "}],\"cbPayItems\":[]}";
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, request, ArchiveV2FilesTests.Response("ft1#T1", "t1"))!;
+
+            var row = (await Rows(ChargeItems(), entry))[0];
+
+            row["Amount"].Should().Be("150");
+            row["Quantity"].Should().Be("0.00001");
+        }
+
         // §1.2 Copy chain (D).
 
         [Fact]

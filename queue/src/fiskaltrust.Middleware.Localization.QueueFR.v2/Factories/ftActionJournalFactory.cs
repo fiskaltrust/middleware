@@ -7,14 +7,22 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Factories;
 
 public static class ftActionJournalFactory
 {
-    public static ftActionJournal CreateDailyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
-        => CreateActionJournal(receiptResponse.ftQueueID, request.ftReceiptCase.ToString("X"), receiptResponse.ftQueueItemID, "Daily-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
-
-    public static ftActionJournal CreateMonthlyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
-        => CreateActionJournal(receiptResponse.ftQueueID, request.ftReceiptCase.ToString("X"), receiptResponse.ftQueueItemID, "Monthly-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
-
-    public static ftActionJournal CreateYearlyClosingActionJournal(ftQueue queue, ReceiptRequest request, ReceiptResponse receiptResponse)
-        => CreateActionJournal(receiptResponse.ftQueueID, request.ftReceiptCase.ToString("X"), receiptResponse.ftQueueItemID, "Yearly-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
+    /// <summary>A signed closing: dated by its receipt moment, with its identification, the period it closed and its totals.</summary>
+    public static ftActionJournal CreateClosingActionJournal(ReceiptRequest request, ReceiptResponse signedResponse, string message)
+    {
+        var fr = MiddlewareStateData.FromReceiptResponse(signedResponse).FR;
+        var journal = CreateActionJournal(signedResponse.ftQueueID, request.ftReceiptCase.ToString("X"), signedResponse.ftQueueItemID, message, JsonConvert.SerializeObject(new
+        {
+            signedResponse.ftReceiptIdentification,
+            signedResponse.ftReceiptMoment,
+            fr?.Closing?.ClosingType,
+            fr?.Closing?.PeriodStart,
+            fr?.Closing?.PeriodEnd,
+            fr?.Totals,
+        }));
+        journal.Moment = signedResponse.ftReceiptMoment;
+        return journal;
+    }
 
     public static ftActionJournal CreateInitialOperationActionJournal(ReceiptRequest request, ReceiptResponse receiptResponse)
     {

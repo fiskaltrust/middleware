@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.SCU.FR.LNE.Signing;
 /// from the archived receipt, so nothing here may be reordered or reformatted once certified.
 /// </summary>
 /// <remarks>
-/// The field list has to be confirmed against the LNE dossier before certification. Amounts are
+/// The 25-field list is frozen since 2026-11-10; any change is a decision of its own. Amounts are
 /// written with two decimals and an invariant decimal point, moments in round-trip UTC, so the
 /// string is stable across cultures and machines.
 /// </remarks>

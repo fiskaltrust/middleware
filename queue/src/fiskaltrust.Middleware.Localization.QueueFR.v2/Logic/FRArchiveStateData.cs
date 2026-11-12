@@ -188,7 +188,7 @@ public static class FRArchiveStateData
 
     /// <summary>
     /// Every charge item, grouped by rate, highest rate first: discounts, refunds and down payments included.
-    /// The same rule as the summary the InfoCert SCU signs (<c>InfoCertVatSummary</c>, fiskaltrust/middleware#828),
+    /// The same rule as the summary the InfoCert SCU prints (<c>InfoCertVatSummary</c>, fiskaltrust/middleware#828),
     /// so the two agree to the cent: the VAT of a rate is the sum of its items' unrounded VAT (the sent
     /// <c>VATAmount</c>, else the share implied by the rate), rounded once to the cent away from zero. HT is TTC
     /// minus VAT. The per-line <see cref="FRStateChargeItem.VATAmount"/> is rounded per line, so the lines of a
