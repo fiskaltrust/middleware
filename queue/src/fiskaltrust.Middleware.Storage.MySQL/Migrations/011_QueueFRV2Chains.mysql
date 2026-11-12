@@ -1,17 +1,122 @@
-﻿ALTER TABLE ftQueueFR ADD COLUMN ENumerator BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE ftQueueFR ADD COLUMN SNumerator BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE ftQueueFR ADD COLUMN ZNumerator BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE ftQueueFR ADD COLUMN MNumerator BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE ftQueueFR ADD COLUMN YNumerator BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE ftQueueFR ADD COLUMN TLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN PLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN ILastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN BLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN LLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN CLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN XLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN ELastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN SLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN ZLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN MLastSignature LONGTEXT NULL;
-ALTER TABLE ftQueueFR ADD COLUMN YLastSignature LONGTEXT NULL;
+﻿-- The QueueFR v2 chain columns of ftQueueFR (market-fr ADR 0012).
+-- MySQL commits each DDL statement on its own, so every column is added only when missing and the
+-- script can run again after an interruption.
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN ENumerator BIGINT NOT NULL DEFAULT 0', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'ENumerator');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN SNumerator BIGINT NOT NULL DEFAULT 0', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'SNumerator');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN ZNumerator BIGINT NOT NULL DEFAULT 0', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'ZNumerator');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN MNumerator BIGINT NOT NULL DEFAULT 0', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'MNumerator');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN YNumerator BIGINT NOT NULL DEFAULT 0', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'YNumerator');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN TLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'TLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN PLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'PLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN ILastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'ILastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN BLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'BLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN LLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'LLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN CLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'CLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN XLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'XLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN ELastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'ELastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN SLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'SLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN ZLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'ZLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN MLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'MLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN YLastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'YLastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;

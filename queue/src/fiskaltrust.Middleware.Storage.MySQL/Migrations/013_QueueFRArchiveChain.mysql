@@ -1,1 +1,10 @@
-﻿ALTER TABLE ftQueueFR ADD COLUMN ALastSignature LONGTEXT NULL;
+﻿-- The previous signature of the QueueFR v2 archive chain A.
+-- MySQL commits each DDL statement on its own, so every column is added only when missing and the
+-- script can run again after an interruption.
+
+SET @statement = (SELECT IF(COUNT(*) = 0, 'ALTER TABLE ftQueueFR ADD COLUMN ALastSignature LONGTEXT NULL', 'DO 0')
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ftQueueFR' AND COLUMN_NAME = 'ALastSignature');
+PREPARE migration_step FROM @statement;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
