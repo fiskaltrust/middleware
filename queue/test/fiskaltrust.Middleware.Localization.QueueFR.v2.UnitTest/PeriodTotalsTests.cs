@@ -112,6 +112,58 @@ public class PeriodTotalsTests
         sscd.Calls[3].periodTotals!.Current.Totalizer.Should().Be(3.00m, "the monthly closing closed the day too, as in v1.2");
     }
 
+    // market-fr#221 (as v1.2): a closing prints and signs every period it closes, shortest first.
+
+    private static IEnumerable<(FRTotalsPeriod, decimal)> Reported(FRPeriodTotals? periodTotals)
+        => periodTotals!.Reported().Select(x => (x.Period, x.Totals.Totalizer));
+
+    [Fact]
+    public async Task MonthlyClosing_ReportsTheDayAndTheMonthItCloses()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.DailyClosing0x2011));
+        await pipeline.SignAsync(Sale(normal: 3.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+
+        Reported(sscd.Calls[1].periodTotals).Should().Equal((FRTotalsPeriod.Day, 10.00m));
+        Reported(sscd.Calls[3].periodTotals).Should().Equal((FRTotalsPeriod.Day, 3.00m), (FRTotalsPeriod.Month, 13.00m));
+        sscd.Calls[3].periodTotals!.Period.Should().Be(FRTotalsPeriod.Month, "its own period stays the reported one");
+    }
+
+    [Theory]
+    [InlineData(ReceiptCase.YearlyClosing0x2013)]
+    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
+    public async Task YearlyClosingAndQueueStop_ReportTheDayTheMonthAndTheYear(ReceiptCase receiptCase)
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        await pipeline.SignAsync(CommandRequest(ReceiptCase.MonthlyClosing0x2012));
+        await pipeline.SignAsync(Sale(normal: 2.00m));
+        await pipeline.SignAsync(CommandRequest(receiptCase));
+
+        Reported(sscd.Calls[3].periodTotals).Should().Equal((FRTotalsPeriod.Day, 2.00m), (FRTotalsPeriod.Month, 2.00m), (FRTotalsPeriod.Year, 12.00m));
+        sscd.Calls[3].periodTotals!.Perpetual.Totalizer.Should().Be(12.00m);
+    }
+
+    [Fact]
+    public async Task TrainingMonthlyClosing_ReportsTheLiveDayAndMonth()
+    {
+        var sscd = new FakeFRSSCD();
+        var pipeline = CreatePipeline(sscd);
+
+        await pipeline.SignAsync(Sale(normal: 10.00m));
+        var training = CommandRequest(ReceiptCase.MonthlyClosing0x2012);
+        training.ReceiptRequest.ftReceiptCase = training.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+        await pipeline.SignAsync(training);
+
+        Reported(sscd.Calls.Last().periodTotals).Should().Equal((FRTotalsPeriod.Day, 10.00m), (FRTotalsPeriod.Month, 10.00m));
+    }
+
     [Fact]
     public async Task YearlyClosing_AlsoClosesTheMonthAndTheDay_ButNotTheShift()
     {
