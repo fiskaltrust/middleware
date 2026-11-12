@@ -83,6 +83,8 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.OutOfOperationReceipt0x4002 => await _lifecyclCommandProcessor.OutOfOperationReceipt0x4002Async(processCommandRequest),
                     ReceiptCase.InitSCUSwitch0x4011 => await _lifecyclCommandProcessor.InitSCUSwitch0x4011Async(processCommandRequest),
                     ReceiptCase.FinishSCUSwitch0x4012 => await _lifecyclCommandProcessor.FinishSCUSwitch0x4012Async(processCommandRequest),
+                    (ReceiptCase)0x4021 /* Initiate migration, replace with enum */ => await _lifecyclCommandProcessor.InitiateMigration0x4021Async(processCommandRequest),
+                    (ReceiptCase)0x4022 /* Finish migration, replace with enum */ => await _lifecyclCommandProcessor.FinishMigration0x4022Async(processCommandRequest),
                     _ => null
                 };
             }
