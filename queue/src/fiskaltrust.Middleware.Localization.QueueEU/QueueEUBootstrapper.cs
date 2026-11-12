@@ -28,6 +28,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
     public QueueEUBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
+        QueueStartActionJournal.Create(middlewareConfiguration, storageProvider, loggerFactory.CreateLogger<QueueEUBootstrapper>());
 
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 

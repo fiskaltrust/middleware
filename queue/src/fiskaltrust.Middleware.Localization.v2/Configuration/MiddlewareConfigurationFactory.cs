@@ -13,7 +13,10 @@ public static class MiddlewareConfigurationFactory
             QueueId = id,
             IsSandbox = configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
             ServiceFolder = configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-            Configuration = configuration
+            Configuration = configuration,
+            // Key handling is case insensitive, consistent with the v1 QueueBootstrapper
+            LauncherVersion = configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherversion").Value?.ToString(),
+            LauncherEnvironment = configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString()
         };
     }
 

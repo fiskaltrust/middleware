@@ -29,6 +29,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
     public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IPTSSCD ptSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
+        QueueStartActionJournal.Create(middlewareConfiguration, storageProvider, loggerFactory.CreateLogger<QueuePTBootstrapper>());
         // Get queuePT from storage
         var queuePT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
         if (queuePT.IssuerTIN is null)

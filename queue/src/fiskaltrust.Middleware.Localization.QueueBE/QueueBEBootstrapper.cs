@@ -26,6 +26,7 @@ public class QueueBEBootstrapper : IV2QueueBootstrapper
     public QueueBEBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IBESSCD beSSCD, IStorageProvider storageProvider)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
+        QueueStartActionJournal.Create(middlewareConfiguration, storageProvider, loggerFactory.CreateLogger<QueueBEBootstrapper>());
         var signaturCreationUnitBE = new ftSignaturCreationUnitBE();
 
         var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueBEAsync(id)).CashBoxIdentification);
