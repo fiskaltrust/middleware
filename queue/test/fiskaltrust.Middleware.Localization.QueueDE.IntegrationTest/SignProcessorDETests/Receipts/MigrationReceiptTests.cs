@@ -1,4 +1,5 @@
-﻿using System;
+﻿using fiskaltrust.Middleware.PostFiscalization;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -59,7 +60,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             var signProcessor = new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configRepo, queueItemRepository, receiptJournalRepository,
-                             actionJournalRepository, Mock.Of<ICryptoHelper>(), signProcessorDE, config);
+                             actionJournalRepository, Mock.Of<ICryptoHelper>(), signProcessorDE, config, PostFiscalizationProcessor.Disabled(Mock.Of<ILogger<PostFiscalizationProcessor>>()));
 
             var receiptResponse = await signProcessor.ProcessAsync(request);
 

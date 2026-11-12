@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Storage.Base.Interface;
 using fiskaltrust.storage.V0;
 
@@ -213,7 +214,7 @@ public class QueueStorageProvider : IQueueStorageProvider
                 {
                     Request = JsonSerializer.Deserialize<ReceiptRequest>(qi.request)!,
                     Response = JsonSerializer.Deserialize<ReceiptResponse>(qi.response)!,
-                }).Where(x => !x.Response.ftState.IsState(State.Error)).ToList();
+                }).Where(x => x.Response.IsFiscalized()).ToList();
 
             if (receipts.Count == 0)
             {
