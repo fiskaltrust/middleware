@@ -51,7 +51,7 @@ public static class FRV1Handover
     /// </returns>
     public static string? Apply(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment, IReadOnlyDictionary<FRReceiptChain, string>? lastV1Signatures = null)
     {
-        var refusal = OpenDayRefusal(queueFR, lastV1DayEntryMoment) ?? OpenLateSigningRefusal(queueFR);
+        var refusal = Refusal(queueFR, lastV1DayEntryMoment);
         if (refusal is not null)
         {
             return refusal;
@@ -70,6 +70,28 @@ public static class FRV1Handover
 
         return null;
     }
+
+    /// <summary>
+    /// Why the v1 queue cannot be migrated yet, or null: no v1.2 archive receipt, an open v1 day, an
+    /// open late-signing mode, or v1 messages still pending.
+    /// </summary>
+    public static string? Refusal(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment)
+        => ArchiveReceiptRefusal(queueFR) ?? OpenDayRefusal(queueFR, lastV1DayEntryMoment) ?? OpenLateSigningRefusal(queueFR) ?? PendingMessagesRefusal(queueFR);
+
+    /// <summary>
+    /// A v1.2 archive receipt precedes the migration (ADR 0003 amendment 2026-11-11): the v1 history is
+    /// then the v1.2 archive, and the first v2 archive range starts on that receipt.
+    /// </summary>
+    private static string? ArchiveReceiptRefusal(ftQueueFR queueFR)
+        => queueFR.ALastQueueItemId is null
+            ? "The v1 queue has no archive receipt. A half migration to v2 starts only after a v1.2 archive receipt (0x3011), so that the v1 history is archived by v1.2 and the first v2 archive starts on that receipt. Send the archive receipt on the v1 queue, then migrate."
+            : null;
+
+    /// <summary>Messages a v1.2 queue still holds for the POS are returned by a v1 zero receipt only: v2 never hands them over.</summary>
+    private static string? PendingMessagesRefusal(ftQueueFR queueFR)
+        => queueFR.MessageCount > 0
+            ? $"The v1 queue holds {queueFR.MessageCount} pending message(s) since {queueFR.MessageMoment?.ToString("u", CultureInfo.InvariantCulture) ?? "an unknown moment"}. A half migration to v2 starts only once they are read: send a zero receipt (0x2000) on the v1 queue, then migrate."
+            : null;
 
     private static string? OpenDayRefusal(ftQueueFR queueFR, DateTime? lastV1DayEntryMoment)
     {
