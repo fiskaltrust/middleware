@@ -92,7 +92,7 @@ public static class FRJetItems
 
     /// <summary>
     /// The item a signed copy carries: 155 for a copy of a bill (<c>0x3004</c>, the "note"), 156 for
-    /// a copy of a payment proof (<c>0x3005</c>). A copy of any other receipt has no R19 code.
+    /// a copy of a payment proof (chain P: <c>0x0002</c> or <c>0x3005</c>, contract §6). A copy of any other receipt has no R19 code.
     /// </summary>
     public static void AddForCopy(ReceiptRequest request, ReceiptResponse response, string copiedReceiptReference, ReceiptCase? copiedCase)
     {
@@ -105,7 +105,7 @@ public static class FRJetItems
         {
             // TODO pending A2: the archive contract (section 6) raises 155 on a copy of any bill (B) original, not only of 0x3004.
             ReceiptCase.Order0x3004 => (NoteCopy, NoteCopyLabel),
-            ReceiptCase.Pay0x3005 => (PaymentProofCopy, PaymentProofCopyLabel),
+            ReceiptCase.Pay0x3005 or ReceiptCase.PaymentTransfer0x0002 => (PaymentProofCopy, PaymentProofCopyLabel),
             _ => (0, ""),
         };
         if (code == 0)

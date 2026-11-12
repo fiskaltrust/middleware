@@ -19,6 +19,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// <summary>S, Z, M, Y and E: the period and perpetual totals of a closing (archive-v2 §1.3).</summary>
         Closing,
 
+        /// <summary>D: what the copy copies, its number and its reason (archive-v2 §1.2 <i>Copy chain</i>).</summary>
+        Copy,
+
         /// <summary>A: the boundaries the archive receipt signed (archive-v2 §1.4), no closing totals.</summary>
         Archive,
 
@@ -102,9 +105,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     /// The files of a v2 archive file (ADR 0006, ADR 0019, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
     /// <remarks>
-    /// Not written yet: the copy columns (<c>CopiedReceiptReference</c>, <c>CopyType</c>, <c>CopyNumber</c>,
-    /// <c>CopyReason</c>), with the copy package (P11). <c>TotalHT</c>, <c>PrintCount</c> and <c>GuestCount</c> are
-    /// written empty until their source is decided.
+    /// <c>TotalHT</c>, <c>PrintCount</c> and <c>GuestCount</c> are written empty until their source is decided.
     /// </remarks>
     public static class ArchiveV2Files
     {
@@ -117,7 +118,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             new ArchiveJournal(0x007, "B", "bill", "Bill (note)", "Notes", ArchiveJournalKind.Sales, "B"),
             new ArchiveJournal(0x008, "A", "archive", "Archive", "Archives", ArchiveJournalKind.Archive, "A"),
             new ArchiveJournal(0x009, "L", "log", "Log", "Journal des événements techniques (JET)", ArchiveJournalKind.Other, "L"),
-            new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Other, "D"),
+            new ArchiveJournal(0x00A, "D", "copy", "Copy", "Duplicatas", ArchiveJournalKind.Copy, "D"),
             new ArchiveJournal(0x00B, "X", "training", "Training", "Mode école", ArchiveJournalKind.Sales, "X"),
             new ArchiveJournal(0x00C, "S", "shift-closing", "Shift closing", "Clôtures de service", ArchiveJournalKind.Closing, "S"),
             new ArchiveJournal(0x00D, "Z", "daily-closing", "Daily closing", "Clôtures journalières", ArchiveJournalKind.Closing, "Z"),
@@ -190,6 +191,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             ArchiveJournalKind.Sales => CommonColumns.Concat(SalesColumns).Concat(SalesTotalsColumns).Concat(CustomerColumns).ToList(),
             ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingPeriodColumns).Concat(ClosingTotalsColumns).ToList(),
             ArchiveJournalKind.Archive => CommonColumns.Concat(ArchiveReceiptColumns).ToList(),
+            ArchiveJournalKind.Copy => CommonColumns.Concat(CopyColumns).ToList(),
             _ => CommonColumns,
         };
 
@@ -320,6 +322,19 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("CustomerTaxId", e => Customer(e, "CustomerTaxId"), "Identifiant fiscal du client ; pour une entreprise française, son SIREN (9 chiffres) ou son SIRET (14 chiffres)."),
             Col("CustomerEndpointId", e => Customer(e, "CustomerEndpointId") ?? StateText(e, "CustomerEndpointId"), "Adresse électronique du client (schéma:identifiant) ; pour une entreprise française qui n'en envoie pas, 0225:<SIREN> déduit à la signature."),
             Col("CustomerReference", e => Customer(e, "CustomerReference"), "Référence de l'acheteur (BT-10)."),
+        };
+
+        /// <summary>
+        /// §1.2 <i>Copy chain (D)</i>: the POS reference of the copied receipt, its fiscal number and type as the queue found
+        /// them when it signed the copy, the copy's number and its reason. None of them is signed but the number.
+        /// </summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> CopyColumns = new[]
+        {
+            Col("CopiedReceiptReference", e => References(e.Request, "cbPreviousReceiptReference"), "Référence, dans le système de caisse, du document dont c'est le duplicata."),
+            Col("CopiedReceiptIdentification", e => StateText(e, "CopiedReceiptIdentification"), "Numéro fiscal (ftReceiptIdentification) du document dupliqué ; vide s'il n'est pas enregistré dans cette caisse."),
+            Col("CopyType", e => StateText(e, "CopyType"), "Nature du document dupliqué (liste 5.8) ; vide s'il n'est pas enregistré dans cette caisse."),
+            Col("CopyNumber", e => StateNumber(e.StateFR, "CopyNumber"), "Rang du duplicata pour ce document : 1 pour le premier. Signé."),
+            Col("CopyReason", e => CaseDataFR(e.Request, "ftReceiptCaseData", "CopyReason"), "Motif du duplicata, saisi dans le système de caisse."),
         };
 
         /// <summary>§1.2: the receipt's own totals, stored by the queue in <c>ftStateData.FR.Totals</c>.</summary>

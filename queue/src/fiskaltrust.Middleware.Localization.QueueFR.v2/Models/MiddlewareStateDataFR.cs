@@ -60,6 +60,22 @@ public class MiddlewareStateDataFR
     public int? CopyNumber { get; set; }
 
     /// <summary>
+    /// On a copy: the <see cref="DocumentType"/> of the copied receipt (R13 ENC-DUP-TYP, archive-v2 §1.2 <c>CopyType</c>).
+    /// Archived, not signed (signing it waits on the InfoCert format, A5). Omitted when the copied receipt is not stored here.
+    /// </summary>
+    [JsonPropertyName("CopyType")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CopyType { get; set; }
+
+    /// <summary>
+    /// On a copy: the fiscal number (<c>ftReceiptIdentification</c>) of the copied receipt (R13 ENC-DUP-ORI-NUM); the POS
+    /// reference stays <c>cbPreviousReceiptReference</c>. Archived, not signed. Omitted when the copied receipt is not stored here.
+    /// </summary>
+    [JsonPropertyName("CopiedReceiptIdentification")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CopiedReceiptIdentification { get; set; }
+
+    /// <summary>
     /// The boundaries of the archive an archive receipt (0x3011) closes, as v1.2 signed them
     /// (market-fr#221). Every FR SCU reads them from here and signs them. Omitted on every other
     /// receipt and on a training archive receipt.

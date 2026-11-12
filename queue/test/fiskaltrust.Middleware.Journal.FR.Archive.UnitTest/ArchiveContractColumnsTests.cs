@@ -162,6 +162,32 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             (await Rows(Journal(0x003), entry))[0]["CustomerEndpointId"].Should().Be("0225:987654321_X");
         }
 
+        // §1.2 Copy chain (D).
+
+        [Fact]
+        public async Task TheCopyJournal_CarriesTheCopyColumns()
+        {
+            var request = "{\"ftReceiptCase\":" + 0x4652_2000_0000_3010L + ",\"cbPreviousReceiptReference\":\"R-7\",\"ftReceiptCaseData\":{\"FR\":{\"CopyReason\":\"ticket perdu\"}},\"cbChargeItems\":[],\"cbPayItems\":[]}";
+            var state = "{\"FR\":{\"CopyNumber\":2,\"CopyType\":\"ticket\",\"CopiedReceiptIdentification\":\"ft1#T7\"}}";
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, request, ArchiveV2FilesTests.Response("ft1#D1", "d1", stateData: state))!;
+
+            var row = (await Rows(Journal(0x00A), entry))[0];
+
+            row["CopiedReceiptReference"].Should().Be("R-7");
+            row["CopiedReceiptIdentification"].Should().Be("ft1#T7");
+            row["CopyType"].Should().Be("ticket");
+            row["CopyNumber"].Should().Be("2");
+            row["CopyReason"].Should().Be("ticket perdu");
+        }
+
+        [Fact]
+        public async Task TheLogJournal_KeepsTheCommonColumnsOnly()
+        {
+            var entry = ArchiveEntry.Read(Guid.NewGuid(), QueueId, 1, ArchiveV2FilesTests.Request(0x4652_2000_0000_3001), ArchiveV2FilesTests.Response("ft1#L1", "l1"))!;
+
+            (await Rows(Journal(0x009), entry))[0].Should().NotContainKey("CopyType");
+        }
+
         // §2 charge items.
 
         [Fact]

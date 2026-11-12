@@ -191,6 +191,31 @@ public class FRMandatoryFieldsTests
         Errors(request, InfoCert).Should().NotContain("TerminalIdRequired");
     }
 
+    // Copy reason (R13 ENC-SIG-MOTIF, NF525 V2.3 §6.3.3.5): InfoCert M, LNE C (contract §1.2 Copy chain).
+
+    private static ReceiptRequest CopyOf(string reference, object? caseData = null)
+    {
+        var request = Sale(0x3010, caseData);
+        request.cbChargeItems = [];
+        request.cbPayItems = [];
+        request.cbPreviousReceiptReference = reference;
+        return request;
+    }
+
+    [Fact]
+    public void AnInfoCertCopyWithoutReason_IsRefused()
+        => Errors(CopyOf("T-1"), InfoCert).Should().Contain("CopyReasonRequired");
+
+    [Fact]
+    public void AnInfoCertCopyWithAReason_IsTaken()
+        => Errors(CopyOf("T-1", new { FR = new { CopyReason = "ticket perdu" } }), InfoCert).Should().NotContain("CopyReasonRequired");
+
+    [Theory]
+    [InlineData(Lne)]
+    [InlineData(null)]
+    public void ACopyWithAnotherScu_NeedsNoReason(string? certificationBody)
+        => Errors(CopyOf("T-1"), certificationBody).Should().NotContain("CopyReasonRequired");
+
     // The validator asks the SCU which body certified it.
 
     [Fact]

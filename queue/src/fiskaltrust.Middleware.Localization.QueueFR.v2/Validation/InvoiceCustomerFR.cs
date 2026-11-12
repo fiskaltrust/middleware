@@ -106,7 +106,13 @@ public class InvoiceCustomerFR : AbstractValidator<ReceiptRequest>
 internal static class FRCaseData
 {
     /// <summary><c>ftReceiptCaseData.FR.ManagerId</c> (contract §1.2, D4), or null.</summary>
-    public static string? ManagerId(object? caseData)
+    public static string? ManagerId(object? caseData) => Key(caseData, "ManagerId");
+
+    /// <summary><c>ftReceiptCaseData.FR.CopyReason</c> (contract §1.2 <i>Copy chain</i>, D5), or null.</summary>
+    public static string? CopyReason(object? caseData) => Key(caseData, "CopyReason");
+
+    /// <summary>A string key of the FR block of a case data, or null.</summary>
+    public static string? Key(object? caseData, string key)
     {
         JsonElement element;
         try
@@ -125,7 +131,7 @@ internal static class FRCaseData
             return null;
         }
 
-        return element.ValueKind == JsonValueKind.Object && Property(element, "FR") is { ValueKind: JsonValueKind.Object } fr ? String(fr, "ManagerId") : null;
+        return element.ValueKind == JsonValueKind.Object && Property(element, "FR") is { ValueKind: JsonValueKind.Object } fr ? String(fr, key) : null;
     }
 
     /// <summary>A string property, matched case-insensitively; null when absent or not a string.</summary>

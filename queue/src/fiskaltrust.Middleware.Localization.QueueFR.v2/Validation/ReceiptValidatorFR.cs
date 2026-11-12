@@ -99,6 +99,13 @@ public class ReceiptValidationsFR : AbstractValidator<ReceiptRequest>
                 .WithMessage("A ticket or an invoice must name its operator in cbUser.")
                 .WithErrorCode("UserRequired");
 
+            // R13 ENC-SIG-MOTIF, NF525 V2.3 §6.3.3.5: a copy says why it is made (contract §1.2 CopyReason, InfoCert M).
+            RuleFor(x => x.ftReceiptCaseData)
+                .Must(caseData => !string.IsNullOrWhiteSpace(FRCaseData.CopyReason(caseData)))
+                .When(x => x.ResolveChain() == FRReceiptChain.Duplicate)
+                .WithMessage("A copy must give its reason in ftReceiptCaseData.FR.CopyReason.")
+                .WithErrorCode("CopyReasonRequired");
+
             // market-fr#140 (2026-10-26, amended): the R12 customer on every invoice of chain I.
             When(x => x.ResolveChain() == FRReceiptChain.Invoice, () =>
             {

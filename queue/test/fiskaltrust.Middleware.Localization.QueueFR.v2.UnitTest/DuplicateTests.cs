@@ -49,10 +49,40 @@ public class DuplicateTests
         var queueItems = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
         queueItems.Setup(x => x.GetAsync(It.IsAny<Guid>(), It.IsAny<long>())).Returns((Guid id, long row) => _queueItems.GetAsync(id, row));
         queueItems.Setup(x => x.GetByReceiptReferenceAsync(It.IsAny<string>(), It.IsAny<string>())).Returns((string reference, string terminal) => _queueItems.GetByReceiptReferenceAsync(reference, terminal));
+        // Only a copy of a pre-transaction document reads on from its original, to find what finalised or voided it (§6.3.3.6-7).
+        queueItems.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>())).Returns((long from, int? take) =>
+        {
+            ReadOnFromOriginal = true;
+            return _queueItems.GetEntriesOnOrAfterTimeStampAsync(from, take);
+        });
         return queueItems.Object;
     }
 
     private static long _lastQueueRow;
+
+    private bool ReadOnFromOriginal { get; set; }
+
+    /// <summary>A signed receipt stored as SignProcessor leaves it.</summary>
+    private async Task StoreSignedAsync(ReceiptCase receiptCase, string reference, string identification, string? previousReference = null)
+    {
+        await _queueItems.InsertOrUpdateAsync(new ftQueueItem
+        {
+            ftQueueItemId = Guid.NewGuid(),
+            ftQueueRow = Interlocked.Increment(ref _lastQueueRow),
+            cbReceiptReference = reference,
+            version = "v2",
+            request = JsonSerializer.Serialize(new ReceiptRequest
+            {
+                ftReceiptCase = (ReceiptCase) ((long) receiptCase | 0x4652_2000_0000_0000),
+                cbReceiptReference = reference,
+                cbPreviousReceiptReference = previousReference,
+                Currency = Currency.EUR,
+            }),
+            response = JsonSerializer.Serialize(new ReceiptResponse { ftState = (State) StateFR.Success, ftReceiptIdentification = identification, ftSignatures = [] }),
+        });
+    }
+
+    private JsonElement SignedStateFR() => JsonSerializer.SerializeToElement(_sscd.LastRequest!.ReceiptResponse.ftStateData).GetProperty("FR");
 
     /// <summary>The copy journal, which can be told to fail its next insert.</summary>
     private sealed class Journal(DuplicateTests test) : IJournalFRCopyPayloadRepository
@@ -162,6 +192,98 @@ public class DuplicateTests
         {
             jet.Should().ContainSingle().Which.Data.Should().Contain($"\"Code\":\"{code}\"").And.Contain("copied.cbReceiptReference=B-1");
         }
+    }
+
+    /// <summary>R13 ENC-DUP-TYP and ENC-DUP-ORI-NUM: the copy says what it copies, from the copied receipt itself.</summary>
+    [Theory]
+    [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, "ft1#T7", "ticket")]
+    [InlineData((ReceiptCase) 0x0006, "ft1#B2", "note")]
+    [InlineData(ReceiptCase.PaymentTransfer0x0002, "ft1#P3", "payment-proof")]
+    [InlineData(ReceiptCase.InvoiceB2C0x1001, "ft1#I4", "invoice")]
+    public async Task ACopy_StoresTheTypeAndTheFiscalNumberOfTheCopiedReceipt(ReceiptCase copiedCase, string identification, string copyType)
+    {
+        var sut = CreateSut();
+        await StoreSignedAsync(copiedCase, "O-1", identification);
+
+        var copy = await ProcessAsync(sut, Copy("O-1"));
+
+        copy.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        SignedStateFR().GetProperty("CopyType").GetString().Should().Be(copyType);
+        SignedStateFR().GetProperty("CopiedReceiptIdentification").GetString().Should().Be(identification);
+    }
+
+    [Fact]
+    public async Task ACopyOfAReceiptNotStoredHere_IsSigned_WithoutAType()
+    {
+        var copy = await ProcessAsync(CreateSut(), Copy("V1-42"));
+
+        copy.receiptResponse.ftState.IsState(State.Error).Should().BeFalse("a v1.2 receipt answered elsewhere can still be copied");
+        SignedStateFR().TryGetProperty("CopyType", out _).Should().BeFalse();
+    }
+
+    /// <summary>Contract §6: 156 on a copy of any payment proof, the transfer receipt included.</summary>
+    [Fact]
+    public async Task ACopyOfAPaymentTransfer_AsksForJet156()
+    {
+        await StoreSignedAsync(ReceiptCase.PaymentTransfer0x0002, "P-1", "ft1#P1");
+
+        var copy = await ProcessAsync(CreateSut(), Copy("P-1"));
+
+        copy.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).Should().ContainSingle()
+            .Which.Data.Should().Contain("\"Code\":\"156\"");
+    }
+
+    /// <summary>NF525 V2.3 §6.3.3.6: no duplicate of a pre-transaction document once a sale finalised it.</summary>
+    [Theory]
+    [InlineData((ReceiptCase) 0x0006)]
+    [InlineData((ReceiptCase) 0x0007)]
+    [InlineData(ReceiptCase.Order0x3004)]
+    public async Task ACopyOfAFinalisedPreTransactionDocument_IsRefused(ReceiptCase copiedCase)
+    {
+        await StoreSignedAsync(copiedCase, "N-1", "ft1#B1");
+        await StoreSignedAsync(ReceiptCase.PointOfSaleReceipt0x0001, "T-1", "ft1#T1", previousReference: "N-1");
+        var calls = _sscd.Calls.Count;
+
+        var copy = await ProcessAsync(CreateSut(), Copy("N-1"));
+
+        copy.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        JsonSerializer.Serialize(copy.receiptResponse.ftSignatures).Should().Contain("T-1");
+        _sscd.Calls.Count.Should().Be(calls, "nothing is signed");
+        (await _copies.GetCopiesAsync("N-1")).Should().BeEmpty("a refused copy takes no number");
+    }
+
+    /// <summary>NF525 V2.3 §6.3.3.7: no duplicate of an abandoned document; a voided pre-transaction document is one.</summary>
+    [Fact]
+    public async Task ACopyOfAVoidedNote_IsRefused()
+    {
+        await StoreSignedAsync((ReceiptCase) 0x0006, "N-1", "ft1#B1");
+        await StoreSignedAsync((ReceiptCase) 0x0004_0006, "N-1-VOID", "ft1#B2", previousReference: "N-1");
+
+        var copy = await ProcessAsync(CreateSut(), Copy("N-1"));
+
+        copy.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ACopyOfAnOpenNote_IsSigned()
+    {
+        await StoreSignedAsync((ReceiptCase) 0x0006, "N-1", "ft1#B1");
+        await StoreSignedAsync(ReceiptCase.PointOfSaleReceipt0x0001, "T-1", "ft1#T1", previousReference: "N-9");
+
+        var copy = await ProcessAsync(CreateSut(), Copy("N-1"));
+
+        copy.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        ReadOnFromOriginal.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ACopyOfATicket_ReadsNothingButItsOriginal()
+    {
+        await StoreSignedAsync(ReceiptCase.PointOfSaleReceipt0x0001, "T-1", "ft1#T1");
+
+        await ProcessAsync(CreateSut(), Copy("T-1"));
+
+        ReadOnFromOriginal.Should().BeFalse("only a pre-transaction document can be finalised or abandoned");
     }
 
     [Fact]

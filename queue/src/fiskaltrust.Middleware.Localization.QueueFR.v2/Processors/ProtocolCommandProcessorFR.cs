@@ -105,7 +105,13 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
             return await _pipeline.SignAsync(request).ConfigureAwait(false);
         }
 
-        var copiedCase = await CopiedCaseAsync(copiedReceiptReference).ConfigureAwait(false);
+        var original = await CopiedReceiptAsync(copiedReceiptReference).ConfigureAwait(false);
+        if (original is not null && await CopyBanAsync(original.Value, copiedReceiptReference).ConfigureAwait(false) is { } ban)
+        {
+            request.ReceiptResponse.SetReceiptResponseError(ban);
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
+        }
+        var copiedCase = original?.Request.ftReceiptCase.Case();
 
         var copies = await _copies;
         await copies.InsertAsync(CopyRecord(request.ReceiptResponse, copiedReceiptReference)).ConfigureAwait(false);
@@ -116,6 +122,8 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         var stateData = MiddlewareStateData.FromReceiptResponse(request.ReceiptResponse);
         stateData.FR ??= new MiddlewareStateDataFR();
         stateData.FR.CopyNumber = copyNumber;
+        stateData.FR.CopyType = original is { } copied ? FRArchiveStateData.DocumentTypeOf(copied.Request) : null;
+        stateData.FR.CopiedReceiptIdentification = original?.Identification;
         request.ReceiptResponse.ftStateData = stateData;
 
         var signed = await _pipeline.SignAsync(request).ConfigureAwait(false);
@@ -127,11 +135,65 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
         return signed;
     }
 
+    /// <summary>The copied receipt: its queue item, its request and its fiscal number.</summary>
+    private readonly record struct CopiedReceipt(ftQueueItem Item, ReceiptRequest Request, string? Identification);
+
     /// <summary>
-    /// The receipt case of the copied receipt: the signed, non-copy queue item with that reference.
+    /// The pre-transaction documents (NF525 V2.3 §6.3.3.6): a note, a pro forma and an order, which a sale finalises.
+    /// </summary>
+    private static bool IsPreTransaction(ReceiptRequest request) => request.ftReceiptCase.Case() is (ReceiptCase) 0x0006 or (ReceiptCase) 0x0007 or ReceiptCase.Order0x3004;
+
+    /// <summary>
+    /// Why the copied receipt may not be copied, or null. NF525 V2.3 §6.3.3.6: no duplicate of a pre-transaction document
+    /// once a receipt that references it finalised it; §6.3.3.7: none of an abandoned one, which the queue sees as a void
+    /// referencing it. Only a pre-transaction original reads on from its own time stamp; any other copy reads nothing more.
+    /// </summary>
+    private async Task<string?> CopyBanAsync(CopiedReceipt original, string copiedReceiptReference)
+    {
+        if (!IsPreTransaction(original.Request))
+        {
+            return null;
+        }
+
+        var queueItems = await _queueItems;
+        await foreach (var item in queueItems.GetEntriesOnOrAfterTimeStampAsync(original.Item.TimeStamp).ConfigureAwait(false))
+        {
+            if (item.ftQueueItemId == original.Item.ftQueueItemId || string.IsNullOrEmpty(item.request) || !WasIssued(item))
+            {
+                continue;
+            }
+
+            ReceiptRequest? later;
+            try
+            {
+                later = JsonSerializer.Deserialize<ReceiptRequest>(item.request);
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            if (later is null || later.ftReceiptCase.Case() == ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 || !References(later, copiedReceiptReference))
+            {
+                continue;
+            }
+
+            return later.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+                ? $"The receipt {copiedReceiptReference} was voided by {later.cbReceiptReference}: an abandoned document cannot be copied (NF525 §6.3.3.7)."
+                : $"The receipt {copiedReceiptReference} was finalised by {later.cbReceiptReference}: a pre-transaction document cannot be copied once finalised (NF525 §6.3.3.6).";
+        }
+
+        return null;
+    }
+
+    private static bool References(ReceiptRequest request, string reference)
+        => request.cbPreviousReceiptReference?.Match(single => single == reference, group => group.Contains(reference)) == true;
+
+    /// <summary>
+    /// The copied receipt: the signed, non-copy queue item with that reference.
     /// Null when it is not stored here (a v1.2 receipt answered by another queue, a wrong reference).
     /// </summary>
-    private async Task<ReceiptCase?> CopiedCaseAsync(string copiedReceiptReference)
+    private async Task<CopiedReceipt?> CopiedReceiptAsync(string copiedReceiptReference)
     {
         var queueItems = await _queueItems;
         await foreach (var item in queueItems.GetByReceiptReferenceAsync(copiedReceiptReference).ConfigureAwait(false))
@@ -146,7 +208,7 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
                 var original = JsonSerializer.Deserialize<ReceiptRequest>(item.request);
                 if (original is not null && original.ftReceiptCase.Case() != ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)
                 {
-                    return original.ftReceiptCase.Case();
+                    return new CopiedReceipt(item, original, IdentificationOf(item.response));
                 }
             }
             catch (JsonException)
@@ -198,6 +260,18 @@ public class ProtocolCommandProcessorFR : IProtocolCommandProcessor
     /// stopped while signing it) and that response is not an error. The queue item is stored before
     /// the journal row, so a missing one was never answered either.
     /// </summary>
+    private static string? IdentificationOf(string? response)
+    {
+        try
+        {
+            return string.IsNullOrEmpty(response) ? null : JsonSerializer.Deserialize<ReceiptResponse>(response)?.ftReceiptIdentification;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static bool WasIssued(ftQueueItem? queueItem)
     {
         if (string.IsNullOrEmpty(queueItem?.response))
