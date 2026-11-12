@@ -116,8 +116,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
 
             var lines = tickets.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             lines.Should().HaveCount(2);
-            lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;CertificateSerialNumber;SoftwareVersion;Training;Signature;Totalizer;CINormal;CIDiscounted1;CIDiscounted2;CISuperReduced1;CIZero;CIUnknown;PICash;PINonCash;PIInternal;PIUnknown");
-            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;SERIAL-1;;false;{Qr("h.p.t1", "SERIAL-1", "ft1#T1")};;;;;;;;;;;");
+            lines[0].Should().Be("ftQueueItemID;ftQueueID;ftCashBoxIdentification;ftQueueRow;Chain;ftReceiptIdentification;ChainCounter;StartOfChain;PreviousSignature;ftReceiptMoment;cbReceiptMoment;cbReceiptReference;cbPreviousReceiptReference;ftReceiptCase;cbTerminalID;cbUser;cbArea;ftState;RequestHash;Siret;Rcs;Naf;LegalForm;VatOption;ElectronicAddress;CertificateSerialNumber;SoftwareVersion;Training;Signature;TotalHT;PrintCount;GuestCount;DocumentType;OperationType;TrainingMention;ManagerId;DiscountTotal;LineCount;Totalizer;CINormal;CIDiscounted1;CIDiscounted2;CISuperReduced1;CIZero;CIUnknown;PICash;PINonCash;PIInternal;PIUnknown;CustomerName;CustomerId;CustomerStreet;CustomerZip;CustomerCity;CustomerCountrySubentity;CustomerCountry;CustomerVATId;CustomerTaxId;CustomerEndpointId;CustomerReference");
+            lines[1].Should().Be($"{t1.QueueItemId};{QueueId};cashbox-fr;1;T;ft1#T1;1;true;;2026-03-01T10:00:01.4560000Z;2026-03-01T10:00:00.1230000Z;R-1;;0x4652200000000001;T1;\"{{\"\"Name\"\":\"\"Ana\"\"}}\";;0x4652200000000000;;12345678901234;;;;;;SERIAL-1;;false;{Qr("h.p.t1", "SERIAL-1", "ft1#T1")};;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;");
             technical.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
                 .Should().Equal(new[] { "E" }, "each ADR 0002 chain has its own journal");
             daily.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(';')[4])
@@ -133,7 +133,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var chargeItems = await Write(files.Single(f => f.FileName == ArchiveV2Files.ChargeItemsFileName), t1);
             var payItems = await Write(files.Single(f => f.FileName == ArchiveV2Files.PayItemsFileName), t1);
 
-            chargeItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;;\"Café; crème\";2;;;;4.40;;;true;10;;0x4652200000000013;false;false;false;;;D1;;\r\n");
+            chargeItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;;\"Café; crème\";2;;;;4.40;;;true;10;;0x4652200000000013;false;false;false;;;;;;\r\n", "the discount code of a line comes from the discount applied to it, stored by the queue; this line has none");
             payItems.Should().Contain($"{t1.QueueItemId};ft1#T1;1;0x4652200000080001;Cash;4.40;;2026-03-01T10:00:01.4560000Z;;;true");
         }
 

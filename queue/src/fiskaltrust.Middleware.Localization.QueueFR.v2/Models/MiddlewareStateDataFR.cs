@@ -93,6 +93,38 @@ public class MiddlewareStateDataFR
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public FRStateClosing? Closing { get; set; }
 
+    /// <summary>
+    /// On the sales chains T, P, I, B, X: the kind of document, derived from <c>ftReceiptCase</c> (archive-v2 §1.2):
+    /// <c>ticket</c>, <c>payment-proof</c>, <c>invoice</c>, <c>receipt-without-obligation</c>, <c>delivery-note</c>,
+    /// <c>note</c>, <c>pro-forma</c> or <c>order</c>. A training document has the type of the document it simulates.
+    /// </summary>
+    [JsonPropertyName("DocumentType")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DocumentType { get; set; }
+
+    /// <summary>On the sales chains: <c>sale</c>, <c>refund</c> or <c>void</c>, from the <c>ftReceiptCase</c> flags (archive-v2 §1.2).</summary>
+    [JsonPropertyName("OperationType")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OperationType { get; set; }
+
+    /// <summary>On a receipt with charge items: the sum of its discount and extra items, line and receipt level (archive-v2 §1.2, D9).</summary>
+    [JsonPropertyName("DiscountTotal")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? DiscountTotal { get; set; }
+
+    /// <summary>On a receipt with charge items: the number of sales lines, as the SCU signs it (R13 ENC-TIK-LIG-NBR, #148).</summary>
+    [JsonPropertyName("LineCount")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LineCount { get; set; }
+
+    /// <summary>
+    /// On an invoice to a French business buyer that sent no <c>CustomerEndpointId</c>: <c>0225:&lt;SIREN&gt;</c>, the SIREN
+    /// being the first nine digits of its <c>CustomerTaxId</c> (archive-v2 §1.2 <i>Customer</i>, market-fr#140, BR-FR-12).
+    /// </summary>
+    [JsonPropertyName("CustomerEndpointId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CustomerEndpointId { get; set; }
+
     /// <summary>The computed values of each charge item, in request order (archive-v2 §2, D7).</summary>
     [JsonPropertyName("ChargeItems")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -161,6 +193,17 @@ public class FRStateChargeItem
     /// <summary>On a sales line: the sum of the discounts and extras that apply to it (D9).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? DiscountAmount { get; set; }
+
+    /// <summary>On a sales line: the <c>FR.DiscountCode</c> of the discounts that apply to it, joined by commas (D9).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DiscountCode { get; set; }
+
+    /// <summary>On a sales line: the <c>FR.DiscountRate</c> of the discounts that apply to it, joined by commas (D9).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DiscountRate { get; set; }
+
+    /// <summary>Whether the line counts in <see cref="MiddlewareStateDataFR.LineCount"/>, as the SCU counts it (archive-v2 §2).</summary>
+    public bool CountsAsLine { get; set; }
 }
 
 public class FRStateVatSummaryEntry

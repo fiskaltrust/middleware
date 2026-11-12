@@ -102,8 +102,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
     /// The files of a v2 archive file (ADR 0006, ADR 0019, archive-v2 field contract, market-fr#227, #221).
     /// </summary>
     /// <remarks>
-    /// Not written yet: the issuer data beyond the SIRET (under review, #141), the copy columns and
-    /// <c>LineCount</c> (#148), which their own pull requests add.
+    /// Not written yet: the copy columns (<c>CopiedReceiptReference</c>, <c>CopyType</c>, <c>CopyNumber</c>,
+    /// <c>CopyReason</c>), with the copy package (P11). <c>TotalHT</c>, <c>PrintCount</c> and <c>GuestCount</c> are
+    /// written empty until their source is decided.
     /// </remarks>
     public static class ArchiveV2Files
     {
@@ -186,7 +187,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         public static IReadOnlyList<CsvColumn<ArchiveEntry>> JournalColumns(ArchiveJournalKind kind) => kind switch
         {
-            ArchiveJournalKind.Sales => CommonColumns.Concat(SalesTotalsColumns).ToList(),
+            ArchiveJournalKind.Sales => CommonColumns.Concat(SalesColumns).Concat(SalesTotalsColumns).Concat(CustomerColumns).ToList(),
             ArchiveJournalKind.Closing => CommonColumns.Concat(ClosingPeriodColumns).Concat(ClosingTotalsColumns).ToList(),
             ArchiveJournalKind.Archive => CommonColumns.Concat(ArchiveReceiptColumns).ToList(),
             _ => CommonColumns,
@@ -250,6 +251,11 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("ftState", e => CsvValueFormatter.Hex(e.State), "État de la file au moment du document (hexadécimal), dont le mode de signature différée."),
             Col("RequestHash", e => e.RequestHash, "Empreinte signée de la requête canonique (version:SHA-256 Base64), recalculable depuis requests.jsonl ; vide si le module de signature n'en signe pas."),
             Col("Siret", e => e.Siret, "Numéro SIRET de l'émetteur (14 chiffres), signé."),
+            Col("Rcs", e => e.Issuer.Rcs, "Immatriculation RCS de l'émetteur, signée telle que configurée ; vide si elle n'est pas configurée."),
+            Col("Naf", e => e.Issuer.Naf, "Code NAF (APE) de l'émetteur, signé tel que configuré ; vide s'il n'est pas configuré."),
+            Col("LegalForm", e => e.Issuer.LegalForm, "Forme juridique et capital social de l'émetteur, signés tels que configurés ; vide s'ils ne sont pas configurés."),
+            Col("VatOption", e => e.Issuer.VatOption, "Option de TVA de l'émetteur : debits (sur les débits) ou receipts (sur les encaissements), signée ; vide si elle n'est pas configurée."),
+            Col("ElectronicAddress", e => e.Issuer.ElectronicAddress, "Adresse électronique de facturation de l'émetteur (SIREN ou SIREN_XXX, schéma 0225), signée ; vide si elle n'est pas configurée."),
             Col("CertificateSerialNumber", e => e.CertificateSerialNumber, "Numéro de série du certificat qui a signé le document."),
             Col("SoftwareVersion", e => e.ProcessingVersion, "Version complète du logiciel fiskaltrust qui a traité le document (version, build et révision)."),
             Col("Training", e => e.Training, "true si le document est émis en mode école (formation) ; sans valeur fiscale."),
@@ -269,6 +275,42 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             ("PINonCash", "Total des paiements autres qu'en espèces (carte, chèque, bon, paiement en ligne)"),
             ("PIInternal", "Total des mouvements internes (consommation interne, transferts)"),
             ("PIUnknown", "Total des paiements d'un type non classé"),
+        };
+
+        /// <summary>
+        /// §1.2: what a sales document is, as the queue stored it when it signed (<c>ftStateData.FR</c>), and what the request
+        /// carries for training. <c>TotalHT</c>, <c>PrintCount</c> and <c>GuestCount</c> are written empty until their source is decided.
+        /// </summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> SalesColumns = new[]
+        {
+            // TODO pending decision (#135/#147): the TotalHT basis, as the VAT summary includes down payments and Totalizer excludes them.
+            Col("TotalHT", e => null, "Total HT du document. Vide : sa base (acomptes compris ou non) n'est pas encore décidée."),
+            // TODO pending decision: the source of PrintCount (always 1 on an original?).
+            Col("PrintCount", e => null, "Nombre d'impressions du document original. Vide : sa source n'est pas encore décidée ; les duplicatas sont sur la chaîne D."),
+            // TODO pending decision: the source of GuestCount (no request field carries it).
+            Col("GuestCount", e => null, "Nombre de couverts (restauration). Vide : aucun champ de la requête ne le porte encore."),
+            Col("DocumentType", e => StateText(e, "DocumentType"), "Nature du document (liste 5.6) : ticket, payment-proof, invoice, receipt-without-obligation, delivery-note, note, pro-forma ou order ; un document en mode école a la nature du document qu'il simule."),
+            Col("OperationType", e => StateText(e, "OperationType"), "Nature de l'opération : sale (vente), refund (remboursement) ou void (annulation), selon les options de ftReceiptCase."),
+            Col("TrainingMention", TrainingMention, "Sur la chaîne X : la mention imprimée du mode école."),
+            Col("ManagerId", e => CaseDataFR(e.Request, "ftReceiptCaseData", "ManagerId"), "Sur la chaîne X : identifiant du responsable de l'opérateur en mode école."),
+            Col("DiscountTotal", e => StateNumber(e.StateFR, "DiscountTotal"), "Total TTC des remises et suppléments du document, sur ligne et sur le document."),
+            Col("LineCount", e => StateNumber(e.StateFR, "LineCount"), "Nombre de lignes de vente du document, tel que signé (hors remises, acomptes et consignes)."),
+        };
+
+        /// <summary>§1.2 <i>Customer</i> (D8): the request's <c>cbCustomer</c>, and the endpoint the queue inferred for a French business buyer.</summary>
+        public static readonly IReadOnlyList<CsvColumn<ArchiveEntry>> CustomerColumns = new[]
+        {
+            Col("CustomerName", e => Customer(e, "CustomerName"), "Nom ou raison sociale du client."),
+            Col("CustomerId", e => Customer(e, "CustomerId"), "Numéro du client (numéro de compte client sur un ticket)."),
+            Col("CustomerStreet", e => Customer(e, "CustomerStreet"), "Adresse du client : rue."),
+            Col("CustomerZip", e => Customer(e, "CustomerZip"), "Adresse du client : code postal."),
+            Col("CustomerCity", e => Customer(e, "CustomerCity"), "Adresse du client : ville."),
+            Col("CustomerCountrySubentity", e => Customer(e, "CustomerCountrySubentity"), "Adresse du client : subdivision du pays (région, état)."),
+            Col("CustomerCountry", e => Customer(e, "CustomerCountry"), "Pays du client (code ISO 3166-1 alpha-2)."),
+            Col("CustomerVATId", e => Customer(e, "CustomerVATId"), "Numéro de TVA intracommunautaire du client professionnel ; vide pour un particulier."),
+            Col("CustomerTaxId", e => Customer(e, "CustomerTaxId"), "Identifiant fiscal du client ; pour une entreprise française, son SIREN (9 chiffres) ou son SIRET (14 chiffres)."),
+            Col("CustomerEndpointId", e => Customer(e, "CustomerEndpointId") ?? StateText(e, "CustomerEndpointId"), "Adresse électronique du client (schéma:identifiant) ; pour une entreprise française qui n'en envoie pas, 0225:<SIREN> déduit à la signature."),
+            Col("CustomerReference", e => Customer(e, "CustomerReference"), "Référence de l'acheteur (BT-10)."),
         };
 
         /// <summary>§1.2: the receipt's own totals, stored by the queue in <c>ftStateData.FR.Totals</c>.</summary>
@@ -334,9 +376,10 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Child<JsonElement>("ExtraOrDiscount", r => Flag(r.Child, "ftChargeItemCase", ChargeItemExtraOrDiscountFlag), "true si la ligne est une remise ou un supplément."),
             Child<JsonElement>("ReturnableDeposit", r => Flag(r.Child, "ftChargeItemCase", ChargeItemReturnableDepositFlag), "true si la ligne est une consigne."),
             Child<JsonElement>("Moment", r => MomentOrText(r.Child, "Moment"), "Date et heure de la ligne, si la caisse l'a envoyée (UTC)."),
+            Child<JsonElement>("CountsAsLine", r => LineBool(r, "CountsAsLine"), "true si la ligne compte comme ligne de vente (LineCount), comme le module de signature la compte."),
             Child<JsonElement>("AppliesTo", r => LineNumber(r, "AppliesTo"), "Sur une remise ou un supplément : Position de la ligne à laquelle elle s'applique ; vide pour une remise sur le document."),
-            Child<JsonElement>("DiscountCode", r => CaseDataFR(r.Child, "ftChargeItemCaseData", "DiscountCode"), "Code de la remise, envoyé par la caisse."),
-            Child<JsonElement>("DiscountRate", r => CaseDataFR(r.Child, "ftChargeItemCaseData", "DiscountRate"), "Taux de la remise en pourcentage, envoyé par la caisse."),
+            Child<JsonElement>("DiscountCode", r => LineText(r, "DiscountCode"), "Sur une ligne de vente : code(s) des remises qui s'y appliquent, envoyés par la caisse, séparés par une virgule."),
+            Child<JsonElement>("DiscountRate", r => LineText(r, "DiscountRate"), "Sur une ligne de vente : taux des remises qui s'y appliquent, en pourcentage, séparés par une virgule."),
             Child<JsonElement>("DiscountAmount", r => LineNumber(r, "DiscountAmount"), "Sur une ligne de vente : total TTC des remises et suppléments qui s'y appliquent."),
         };
 
@@ -424,6 +467,23 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         private static string? LineNumber(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? RawNumber(line, name) : null;
 
         private static string? LineText(ChildRow<ArchiveEntry, JsonElement> row, string name) => Line(row) is { } line ? ArchiveEntry.Text(line, name) : null;
+
+        private static bool? LineBool(ChildRow<ArchiveEntry, JsonElement> row, string name)
+            => Line(row) is { } line && ArchiveEntry.Property(line, name) is { } value && (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False)
+                ? value.ValueKind == JsonValueKind.True
+                : (bool?) null;
+
+        private static string? StateText(ArchiveEntry entry, string name) => entry.StateFR is { } fr ? ArchiveEntry.Text(fr, name) : null;
+
+        private static string? Customer(ArchiveEntry entry, string name)
+            => ArchiveEntry.Property(entry.Request, "cbCustomer") is { ValueKind: JsonValueKind.Object } customer ? ArchiveEntry.Text(customer, name) : null;
+
+        /// <summary>The training mention the queue printed (caption <c>Mode école</c>, contract §5).</summary>
+        private static object? TrainingMention(ArchiveEntry entry)
+            => ArchiveEntry.Array(entry.Response, "ftSignatures")
+                .Where(item => ArchiveEntry.String(item, "Caption") == "Mode école")
+                .Select(item => ArchiveEntry.Text(item, "Data"))
+                .FirstOrDefault();
 
         private static JsonElement? ClosingBlock(ArchiveEntry entry)
             => entry.StateFR is { } fr && ArchiveEntry.Property(fr, "Closing") is { ValueKind: JsonValueKind.Object } closing ? closing : (JsonElement?) null;

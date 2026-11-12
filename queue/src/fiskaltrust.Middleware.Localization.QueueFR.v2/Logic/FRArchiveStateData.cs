@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.fr;
 using fiskaltrust.Middleware.Localization.QueueFR.v2.Models;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 
@@ -29,8 +30,48 @@ public static class FRArchiveStateData
         stateData.FR.Totals = totals;
         stateData.FR.ChargeItems = lines;
         stateData.FR.VATSummary = lines is null ? null : VatSummaryOf(request.cbChargeItems!, lines);
+        if (IsSalesChain(chain))
+        {
+            stateData.FR.DocumentType = DocumentTypeOf(request);
+            stateData.FR.OperationType = OperationTypeOf(request);
+            stateData.FR.CustomerEndpointId = chain == FRReceiptChain.Invoice ? FRCustomerEndpoint.Infer(request) : null;
+        }
+        if (lines is not null)
+        {
+            stateData.FR.DiscountTotal = request.cbChargeItems!.Where(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount)).Sum(x => x.Amount);
+            stateData.FR.LineCount = lines.Count(x => x.CountsAsLine);
+        }
         response.ftStateData = stateData;
     }
+
+    private static bool IsSalesChain(FRReceiptChain chain)
+        => chain is FRReceiptChain.Ticket or FRReceiptChain.PaymentProof or FRReceiptChain.Invoice or FRReceiptChain.Bill or FRReceiptChain.Training;
+
+    /// <summary>The kind of document (archive-v2 §1.2 <c>DocumentType</c>); a training document has the type of the one it simulates.</summary>
+    public static string DocumentTypeOf(ReceiptRequest request)
+    {
+        if (request.ftReceiptCase.IsType(ReceiptCaseType.Invoice))
+        {
+            return "invoice";
+        }
+
+        return request.ftReceiptCase.Case() switch
+        {
+            ReceiptCase.PaymentTransfer0x0002 or ReceiptCase.Pay0x3005 => "payment-proof",
+            ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "receipt-without-obligation",
+            ReceiptCase.DeliveryNote0x0005 => "delivery-note",
+            (ReceiptCase) 0x0006 /* Table check */ => "note",
+            (ReceiptCase) 0x0007 /* Pro forma */ => "pro-forma",
+            ReceiptCase.Order0x3004 => "order",
+            _ => "ticket",
+        };
+    }
+
+    /// <summary><c>void</c>, <c>refund</c> or <c>sale</c> (archive-v2 §1.2 <c>OperationType</c>): a void wins over a refund flag.</summary>
+    public static string OperationTypeOf(ReceiptRequest request)
+        => request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) ? "void"
+            : request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? "refund"
+            : "sale";
 
     private static FRStateTotals? TotalsOf(ReceiptRequest request, FRReceiptChain chain, FRPeriodTotals? periodTotals)
     {
@@ -70,6 +111,8 @@ public static class FRArchiveStateData
     public static List<FRStateChargeItem> ChargeItemsOf(IReadOnlyList<ChargeItem> items)
     {
         var lines = new List<FRStateChargeItem>(items.Count);
+        var salesLines = new List<FRStateChargeItem>();
+        var targets = new List<(ChargeItem Item, FRStateChargeItem Target)>();
         FRStateChargeItem? lastSalesLine = null;
         foreach (var item in items)
         {
@@ -82,30 +125,66 @@ public static class FRArchiveStateData
                 AmountHT = amountHT,
                 UnitPriceHT = item.Quantity == 0 ? null : Math.Round(amountHT / item.Quantity, 6, MidpointRounding.AwayFromZero),
                 VATNature = (((long) item.ftChargeItemCase >> 8) & 0xFF).ToString("X2", CultureInfo.InvariantCulture),
+                // As the SCU counts the lines it signs (FRSalesLines, #148), so the archive agrees with the signature.
+                CountsAsLine = FRSalesLines.IsSalesLine(item),
             };
 
             if (item.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))
             {
-                line.AppliesTo = AppliesTo(item) ?? lastSalesLine?.Position;
+                // [01 #11]: the target is the line itself, never looked up again by a Position that may repeat. A
+                // named FR.AppliesTo picks the first sales line at that Position; a discount before any sales line,
+                // or naming none, is receipt-level.
+                var named = AppliesTo(item);
+                var target = named is { } position ? salesLines.FirstOrDefault(l => l.Position == position) : lastSalesLine;
+                line.AppliesTo = named ?? lastSalesLine?.Position;
+                if (target is not null)
+                {
+                    targets.Add((item, target));
+                }
             }
             else
             {
                 lastSalesLine = line;
+                salesLines.Add(line);
             }
             lines.Add(line);
         }
 
-        foreach (var discount in lines.Where(l => l.AppliesTo is not null))
+        foreach (var (item, target) in targets)
         {
-            var target = lines.FirstOrDefault(l => l.AppliesTo is null && l.Position == discount.AppliesTo && !ReferenceEquals(l, discount));
-            if (target is not null)
-            {
-                var index = lines.IndexOf(discount);
-                target.DiscountAmount = (target.DiscountAmount ?? 0) + items[index].Amount;
-            }
+            target.DiscountAmount = (target.DiscountAmount ?? 0) + item.Amount;
+            target.DiscountCode = Join(target.DiscountCode, CaseDataFR(item, "DiscountCode"));
+            target.DiscountRate = Join(target.DiscountRate, CaseDataFR(item, "DiscountRate"));
         }
         return lines;
     }
+
+    private static string? Join(string? current, string? value)
+        => string.IsNullOrEmpty(value) ? current : string.IsNullOrEmpty(current) ? value : current + "," + value;
+
+    private static string? CaseDataFR(ChargeItem item, string name)
+    {
+        if (CaseData(item) is not { ValueKind: JsonValueKind.Object } data
+            || !TryGet(data, "FR", out var fr) || fr.ValueKind != JsonValueKind.Object
+            || !TryGet(fr, name, out var value))
+        {
+            return null;
+        }
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(),
+            _ => null,
+        };
+    }
+
+    private static JsonElement? CaseData(ChargeItem item) => item.ftChargeItemCaseData switch
+    {
+        JsonElement json => json,
+        string text when !string.IsNullOrWhiteSpace(text) => TryParse(text),
+        null => (JsonElement?) null,
+        var other => JsonSerializer.SerializeToElement(other),
+    };
 
     /// <summary>
     /// Every charge item, grouped by rate, highest rate first: discounts, refunds and down payments included.
@@ -117,9 +196,9 @@ public static class FRArchiveStateData
     /// </summary>
     private static Dictionary<string, FRStateVatSummaryEntry> VatSummaryOf(IReadOnlyList<ChargeItem> items, IReadOnlyList<FRStateChargeItem> lines)
         => items.Select((item, index) => (item, line: lines[index]))
-            .GroupBy(x => x.item.VATRate)
-            .OrderByDescending(g => g.Key)
-            .ToDictionary(g => g.Key.ToString("0.##########", CultureInfo.InvariantCulture), g =>
+            .GroupBy(x => x.item.VATRate.ToString("0.##########", CultureInfo.InvariantCulture))
+            .OrderByDescending(g => g.Max(x => x.item.VATRate))
+            .ToDictionary(g => g.Key, g =>
             {
                 var ttc = g.Sum(x => x.item.Amount);
                 var vat = Math.Round(g.Sum(x => x.item.VATAmount ?? x.item.Amount / (100 + x.item.VATRate) * x.item.VATRate), 2, MidpointRounding.AwayFromZero);
@@ -134,13 +213,7 @@ public static class FRArchiveStateData
 
     private static decimal? AppliesTo(ChargeItem item)
     {
-        var caseData = item.ftChargeItemCaseData switch
-        {
-            JsonElement json => json,
-            string text when !string.IsNullOrWhiteSpace(text) => TryParse(text),
-            null => (JsonElement?) null,
-            var other => JsonSerializer.SerializeToElement(other),
-        };
+        var caseData = CaseData(item);
         if (caseData is not { ValueKind: JsonValueKind.Object } data
             || !TryGet(data, "FR", out var fr) || fr.ValueKind != JsonValueKind.Object
             || !TryGet(fr, "AppliesTo", out var value))

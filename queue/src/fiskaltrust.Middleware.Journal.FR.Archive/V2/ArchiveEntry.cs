@@ -142,6 +142,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// </summary>
         public string? PreviousSignature => Content.Links.PreviousSignature;
 
+        /// <summary>The issuer claims the SCU signed (archive-v2 §1.1), read from the signed content.</summary>
+        public IssuerClaims Issuer => Content.Links.Issuer;
+
         /// <summary>True on the first entry of a chain, which carries no previous signature: the signed flag <c>N</c> (ADR 0001).</summary>
         public bool StartOfChain { get; }
 

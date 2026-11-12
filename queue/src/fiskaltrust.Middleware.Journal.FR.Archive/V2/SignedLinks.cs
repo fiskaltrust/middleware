@@ -31,8 +31,9 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         // FRCanonicalRequest.SignedField: the canonical-form version, a colon, the padded Base64 SHA-256 (ADR 0013).
         private static readonly Regex SignedRequestHashField = new Regex("^[0-9]+:[A-Za-z0-9+/]{43}=$", RegexOptions.CultureInvariant);
 
-        private SignedLinks(long chainCounter, string flag, string? previousSignature, string? siret, string? certificateSerialNumber, string? requestHash)
+        private SignedLinks(long chainCounter, string flag, string? previousSignature, string? siret, string? certificateSerialNumber, string? requestHash, IssuerClaims? issuer = null)
         {
+            Issuer = issuer ?? IssuerClaims.None;
             if (flag != "O" && flag != "N")
             {
                 throw new FormatException($"the start-of-chain flag '{flag}' is neither O nor N");
@@ -63,6 +64,12 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         public string? CertificateSerialNumber { get; }
 
         public string? RequestHash { get; }
+
+        /// <summary>
+        /// The issuer claims the SCU signed as configured (archive-v2 §1.1, fiskaltrust/middleware#827): LNE data-set fields 2 to 6,
+        /// InfoCert payload keys <c>rcs</c>, <c>naf</c>, <c>legalform</c>, <c>vatoption</c>, <c>elecaddress</c>. Empty when not signed.
+        /// </summary>
+        public IssuerClaims Issuer { get; }
 
         /// <summary>Reads the signed content of a receipt QR code.</summary>
         /// <param name="queueItemId">The entry's queue item, checked against the one an LNE data set signs; null to skip the check.</param>
@@ -100,7 +107,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     throw new FormatException($"field {LneRequestHashField + 1} '{requestHash}' is no canonical request value");
                 }
             }
-            return new SignedLinks(counter, fields[n - 2], fields[n - 1], fields[0], fields[n - 4], requestHash);
+            var issuer = n == LneDataSetFieldCount ? new IssuerClaims(fields[1], fields[2], fields[3], fields[4], fields[5]) : null;
+            return new SignedLinks(counter, fields[n - 2], fields[n - 1], fields[0], fields[n - 4], requestHash, issuer);
         }
 
         private static SignedLinks FromJws(string headerAndPayload)
@@ -130,8 +138,35 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 }
                 var counter = ArchiveEntry.Long(root, "chainCounter") ?? throw new FormatException("the JWS payload has no chainCounter");
                 var flag = ArchiveEntry.String(root, "previousSignatureCarriedOver") ?? throw new FormatException("the JWS payload has no previousSignatureCarriedOver");
-                return new SignedLinks(counter, flag, ArchiveEntry.String(root, "previousSignature"), ArchiveEntry.String(root, "siret"), ArchiveEntry.String(root, "csn"), null);
+                var issuer = new IssuerClaims(ArchiveEntry.String(root, "rcs"), ArchiveEntry.String(root, "naf"), ArchiveEntry.String(root, "legalform"),
+                    ArchiveEntry.String(root, "vatoption"), ArchiveEntry.String(root, "elecaddress"));
+                return new SignedLinks(counter, flag, ArchiveEntry.String(root, "previousSignature"), ArchiveEntry.String(root, "siret"), ArchiveEntry.String(root, "csn"), null, issuer);
             }
         }
+    }
+
+    /// <summary>The issuer claims an FR SCU signs (archive-v2 §1.1); a claim not configured is null.</summary>
+    public sealed class IssuerClaims
+    {
+        public static readonly IssuerClaims None = new IssuerClaims(null, null, null, null, null);
+
+        public IssuerClaims(string? rcs, string? naf, string? legalForm, string? vatOption, string? electronicAddress)
+        {
+            Rcs = string.IsNullOrEmpty(rcs) ? null : rcs;
+            Naf = string.IsNullOrEmpty(naf) ? null : naf;
+            LegalForm = string.IsNullOrEmpty(legalForm) ? null : legalForm;
+            VatOption = string.IsNullOrEmpty(vatOption) ? null : vatOption;
+            ElectronicAddress = string.IsNullOrEmpty(electronicAddress) ? null : electronicAddress;
+        }
+
+        public string? Rcs { get; }
+
+        public string? Naf { get; }
+
+        public string? LegalForm { get; }
+
+        public string? VatOption { get; }
+
+        public string? ElectronicAddress { get; }
     }
 }
