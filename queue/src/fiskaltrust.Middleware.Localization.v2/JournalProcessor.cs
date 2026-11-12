@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Mime;
+using System.Reflection;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -148,7 +149,7 @@ public class JournalProcessor
 
     private async Task<object> GetConfigurationAsync()
     {
-        var configurationRepository = await _configurationRepository.Value;
+        var configurationRepository = await _configurationRepository.Value;  
         return new
         {
             Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,

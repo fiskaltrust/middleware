@@ -1,0 +1,112 @@
+CREATE TABLE IF NOT EXISTS ftQueueBE
+(
+    ftQueueBEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitBEId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    LastSignature                NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,
+    SSCDFailMoment               BIGINT                    NULL,
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL,
+    UsedFailedCount              BIGINT                    NOT NULL,
+    UsedFailedMomentMin          BIGINT                    NULL,
+    UsedFailedMomentMax          BIGINT                    NULL,
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitBE
+(
+    ftSignaturCreationUnitBEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftQueueES
+(
+    ftQueueESId                       NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitESId        NVARCHAR(36)              NULL,
+    LastHash                          NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification             NVARCHAR(2147483647)      NULL,
+    SSCDSignQueueItemId               NVARCHAR(36)              NULL,
+    LastSimplifiedInvoiceMoment       BIGINT                    NULL,
+    LastSimplifiedInvoiceQueueItemId  NVARCHAR(36)              NULL,
+    SimplifiedInvoiceNumerator        BIGINT                    NOT NULL,
+    SimplifiedInvoiceSeries           NVARCHAR(2147483647)      NULL,
+    LastInvoiceMoment                 BIGINT                    NULL,
+    LastInvoiceQueueItemId            NVARCHAR(36)              NULL,
+    InvoiceNumerator                  BIGINT                    NOT NULL,
+    InvoiceSeries                     NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                     BIGINT                    NOT NULL,
+    SSCDFailMoment                    BIGINT                    NULL,
+    SSCDFailQueueItemId               NVARCHAR(36)              NULL,
+    UsedFailedCount                   BIGINT                    NOT NULL,
+    UsedFailedMomentMin               BIGINT                    NULL,
+    UsedFailedMomentMax               BIGINT                    NULL,
+    UsedFailedQueueItemId             NVARCHAR(36)              NULL,
+    TimeStamp                         BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitES
+(
+    ftSignaturCreationUnitESId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    InfoJson                     NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftQueueGR
+(
+    ftQueueGRId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitGRId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    LastSignature                NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,
+    SSCDFailMoment               BIGINT                    NULL,
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL,
+    UsedFailedCount              BIGINT                    NOT NULL,
+    UsedFailedMomentMin          BIGINT                    NULL,
+    UsedFailedMomentMax          BIGINT                    NULL,
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    InvoiceSeries                NVARCHAR(2147483647)      NULL,
+    InvoiceNumerator             BIGINT                    NOT NULL,
+    LastInvoiceMoment            BIGINT                    NULL,
+    LastInvoiceQueueItemId       NVARCHAR(36)              NULL,
+    LastInvoiceMark              BIGINT                    NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitGR
+(
+    ftSignaturCreationUnitGRId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftQueueEU
+(
+    ftQueueEUId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftQueuePT
+(
+    ftQueuePTId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitPTId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    LastSignature                NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,
+    SSCDFailMoment               BIGINT                    NULL,
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL,
+    UsedFailedCount              BIGINT                    NOT NULL,
+    UsedFailedMomentMin          BIGINT                    NULL,
+    UsedFailedMomentMax          BIGINT                    NULL,
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    IssuerTIN                    NVARCHAR(2147483647)      NULL,
+    NumeratorStorage             NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitPT
+(
+    ftSignaturCreationUnitPTId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    PrivateKey                   NVARCHAR(2147483647)      NULL,
+    SoftwareCertificateNumber    NVARCHAR(2147483647)      NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
