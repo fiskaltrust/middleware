@@ -6,7 +6,7 @@ using Xunit;
 namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
 {
     /// <summary>
-    /// README.txt is readable without the software (archive-v2 §11.1, [06 D12, D13], [07 §6.9.2.5, §6.9.3.1], ADR 0018):
+    /// README.txt is readable without the software (archive-v2 §11.1, ADR 0013, ADR 0018, NF525 V2.3 §6.9.2.5):
     /// complete value lists, the canonical request form, the file cut at the one-year limit, the flags a POS acts on,
     /// keeping archives on external media, and the day an archive receipt closes.
     /// </summary>

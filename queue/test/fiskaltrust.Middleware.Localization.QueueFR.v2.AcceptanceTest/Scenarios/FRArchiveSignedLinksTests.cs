@@ -205,7 +205,7 @@ public class FRArchiveSignedLinksTests : IDisposable
         JsonSerializer.Serialize(response.ftSignatures).Should().Contain("cannot be read");
     }
 
-    /// <summary>The stop guard is on in the bootstrapped queue: a sale after the archive receipt keeps the queue running (C11).</summary>
+    /// <summary>The stop guard is on in the bootstrapped queue: a sale after the archive receipt keeps the queue running (Ref LNE 1.8 Ex. 7, 10).</summary>
     [Fact]
     public async Task OutOfOperation_AfterASaleThatFollowedTheArchiveReceipt_IsRefused()
     {

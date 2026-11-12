@@ -29,7 +29,7 @@ internal static class SelfCertifiedDataSetBuilder
 
     public static string Build(ReceiptRequest request, ReceiptResponse response, SelfCertifiedConfiguration configuration, long chainCounter, string? previousSignature, FRPeriodTotals? periodTotals = null, int? copyNumber = null, FRArchiveBoundaries? archive = null)
     {
-        // [01 #19]: a separator inside a field would shift every later field of the signed data set.
+        // A separator inside a field would shift every later field of the signed data set.
         FRIssuerClaims.RejectCharacter("self-certified", nameof(response.ftCashBoxIdentification), response.ftCashBoxIdentification, FieldSeparator);
         FRIssuerClaims.RejectCharacter("self-certified", nameof(response.ftReceiptIdentification), response.ftReceiptIdentification, FieldSeparator);
 

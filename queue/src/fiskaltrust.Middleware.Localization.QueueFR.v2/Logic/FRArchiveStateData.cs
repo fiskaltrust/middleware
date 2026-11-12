@@ -131,7 +131,7 @@ public static class FRArchiveStateData
 
             if (item.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount))
             {
-                // [01 #11]: the target is the line itself, never looked up again by a Position that may repeat. A
+                // The target is the line itself, never looked up again by a Position that may repeat. A
                 // named FR.AppliesTo picks the first sales line at that Position; a discount before any sales line,
                 // or naming none, is receipt-level.
                 var named = AppliesTo(item);

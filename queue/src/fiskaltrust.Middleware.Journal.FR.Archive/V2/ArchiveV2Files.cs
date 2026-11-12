@@ -556,7 +556,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             => ArchiveEntry.Property(element, name) is { ValueKind: JsonValueKind.Number } value ? Plain(value.GetRawText()) : null;
 
         /// <summary>
-        /// A JSON number as stored, unless it has an exponent: then its exact value in plain decimals ([06 D15], Conventions
+        /// A JSON number as stored, unless it has an exponent: then its exact value in plain decimals (archive-v2 Conventions
         /// <i>Decimals</i>), so no reader meets <c>1E-05</c>. A number beyond the decimal range is kept as stored.
         /// </summary>
         private static string Plain(string raw)

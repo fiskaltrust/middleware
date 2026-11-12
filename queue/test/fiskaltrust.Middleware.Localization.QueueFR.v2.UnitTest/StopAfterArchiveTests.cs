@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// A queue is taken out of operation (0x4002) only right after a non-training archive receipt, as v1.2 archived then
-/// stopped: every record is then in a signed archive range before the queue closes (C11; Ref LNE 1.8 Ex. 7, 10; [08 G6]).
+/// stopped: every record is then in a signed archive range before the queue closes (Ref LNE 1.8 Ex. 7, 10).
 /// </summary>
 public class StopAfterArchiveTests
 {

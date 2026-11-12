@@ -58,7 +58,7 @@ public class FRArchiveReceipt
 
     public async Task<ProcessCommandResponse?> SignAsync(ProcessCommandRequest request)
     {
-        // Defensive, as v1.3 ArchiveCommand ([04 F12]): the numerator only moves after the initial-operation receipt, so on an
+        // Defensive, as v1.3 ArchiveCommand: the numerator only moves after the initial-operation receipt, so on an
         // active queue this never fires; v1.2 ArchiveRequest has no such guard.
         if (request.queue.ftReceiptNumerator == 0)
         {

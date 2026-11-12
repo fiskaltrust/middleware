@@ -162,7 +162,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             (await Rows(Journal(0x003), entry))[0]["CustomerEndpointId"].Should().Be("0225:987654321_X");
         }
 
-        // §2 order and the Conventions' decimals ([06 D15, D16]).
+        // archive-v2 §2 column order and the Conventions' decimals.
 
         [Fact]
         public void TheChargeItemColumns_FollowTheContractTable()

@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
 /// <summary>
 /// SCU input variations never change what is signed or crash a receipt, and a configuration that would sign
-/// something unverifiable is refused at start-up (market-fr#221 review, P14).
+/// something unverifiable is refused at start-up (market-fr#221).
 /// </summary>
 public class ScuRobustnessTests
 {
@@ -52,7 +52,7 @@ public class ScuRobustnessTests
         _ => c => InfoCertConfiguration.FromConfiguration(c),
     };
 
-    // LNE certificate data, validated at start-up (Ref LNE 1.8 Ex. 9; [08] certificate serial, certification mention).
+    // LNE certificate data, validated at start-up (Ref LNE 1.8 Ex. 9: certificate serial, certification mention).
 
     [Theory]
     [InlineData("CertificateSerialNumber")]
@@ -85,7 +85,7 @@ public class ScuRobustnessTests
         ((Action) (() => Reader(scu)(configuration))).Should().NotThrow();
     }
 
-    // [01 #19]: a "|" in a field of the LNE and self-certified data set shifts every later field.
+    // A "|" in a field of the LNE and self-certified data set shifts every later field.
 
     [Theory]
     [InlineData("LNE", "Siret")]
@@ -115,7 +115,7 @@ public class ScuRobustnessTests
         JsonSerializer.Serialize(response.ReceiptResponse.ftSignatures).Should().Contain("ftCashBoxIdentification");
     }
 
-    // [01 #15]: the launcher hands Newtonsoft values and numbers in the configuration.
+    // The launcher hands Newtonsoft values and numbers in the configuration.
 
     [Theory]
     [InlineData("LNE")]
@@ -136,7 +136,7 @@ public class ScuRobustnessTests
         JsonSerializer.Serialize(result, result.GetType()).Should().Contain($"\"Siret\":\"{FRTestData.Siret}\"").And.Contain("\"SoftwareVersion\":\"2\"").And.Contain("\"PrivateKey\":\"aa\"");
     }
 
-    // The Launcher's sandbox key, read like every other configuration value (P14 reader).
+    // The Launcher's sandbox key, read like every other configuration value (FRScuConfiguration).
 
     public static TheoryData<object, bool> SandboxValues => new()
     {
@@ -158,7 +158,7 @@ public class ScuRobustnessTests
         InfoCertConfiguration.FromConfiguration(Lne(c => c["sandbox"] = value)).Sandbox.Should().Be(expected);
     }
 
-    // [01 #16]: the state data the SCU reads may come camelCased or as a Newtonsoft object.
+    // The state data the SCU reads may come camelCased or as a Newtonsoft object.
 
     [Fact]
     public void TheStateData_IsReadWhateverItsCasing()
@@ -176,7 +176,7 @@ public class ScuRobustnessTests
         FRStateData.CopyNumber(response).Should().Be(3);
     }
 
-    // [01 #17]: two rates the summary key cannot tell apart.
+    // Two rates the summary key cannot tell apart.
 
     [Fact]
     public async Task TwoRatesThatShareASummaryKey_SignOneSummaryLine()

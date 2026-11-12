@@ -68,11 +68,11 @@ public static class FRJetItems
 
         switch (request.ftReceiptCase.Case())
         {
-            // TODO pending A2: the archive contract (section 6) and ADR 0009 list queue start as JET 80.
+            // TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) and ADR 0009 list queue start as JET 80.
             case ReceiptCase.InitialOperationReceipt0x4001:
                 response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(DataInitialisation, DataInitialisationLabel, identification));
                 break;
-            // TODO pending A2: the archive contract (section 6) and ADR 0009 list queue stop as JET 40.
+            // TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) and ADR 0009 list queue stop as JET 40.
             case ReceiptCase.OutOfOperationReceipt0x4002:
                 response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(PointOfSaleRemoved, PointOfSaleRemovedLabel, identification));
                 break;
@@ -103,7 +103,7 @@ public static class FRJetItems
 
         var (code, label) = copiedCase switch
         {
-            // TODO pending A2: the archive contract (section 6) raises 155 on a copy of any bill (B) original, not only of 0x3004.
+            // TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) raises 155 on a copy of any bill (B) original, not only of 0x3004.
             ReceiptCase.Order0x3004 => (NoteCopy, NoteCopyLabel),
             ReceiptCase.Pay0x3005 or ReceiptCase.PaymentTransfer0x0002 => (PaymentProofCopy, PaymentProofCopyLabel),
             _ => (0, ""),

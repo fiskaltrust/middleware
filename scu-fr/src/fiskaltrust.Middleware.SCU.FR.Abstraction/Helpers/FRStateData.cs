@@ -70,7 +70,7 @@ public static class FRStateData
         _ => JsonSerializer.SerializeToElement(stateData, stateData.GetType()),
     };
 
-    /// <summary>A property matched case-insensitively: behind REST the casing may differ ([01 #16]).</summary>
+    /// <summary>A property matched case-insensitively: behind REST the casing may differ.</summary>
     private static bool TryGet(JsonElement element, string name, out JsonElement value)
     {
         foreach (var property in element.EnumerateObject())

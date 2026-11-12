@@ -77,7 +77,7 @@ public static class FRScuConfiguration
     }
 
     /// <summary>
-    /// Refuses a configured serial that is not the serial of the configured certificate (Ref LNE 1.8 Ex. 9, [08]):
+    /// Refuses a configured serial that is not the serial of the configured certificate (Ref LNE 1.8 Ex. 9):
     /// the verifier picks the certificate by the signed serial. Hex digits are compared in any case and without
     /// separators or leading zeros. Nothing is checked without a certificate, or with one that does not parse: signing
     /// an archive reports that (<see cref="FRHashSigning.SigningCertificate"/>).

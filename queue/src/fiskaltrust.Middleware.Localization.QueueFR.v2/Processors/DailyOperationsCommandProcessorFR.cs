@@ -32,7 +32,7 @@ public class DailyOperationsCommandProcessorFR : IDailyOperationsCommandProcesso
     public Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request) => ClosingAsync(request, "Yearly-Closing receipt was processed.");
 
     /// <summary>
-    /// Signs a closing, then journals it ([03 F13]): dated by the closing receipt's moment and naming it, with the period it
+    /// Signs a closing, then journals it: dated by the closing receipt's moment and naming it, with the period it
     /// closed and its totals as stored in the response, as v1.2 journalled its grand-total payload. An unsigned closing journals nothing.
     /// </summary>
     private async Task<ProcessCommandResponse> ClosingAsync(ProcessCommandRequest request, string message)

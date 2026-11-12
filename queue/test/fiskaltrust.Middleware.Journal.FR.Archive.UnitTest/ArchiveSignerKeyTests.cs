@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
 {
     /// <summary>
     /// An RSA archive signer holds a key of at least 2048 bits (Ref LNE 1.8 names 1024 as the floor and recommends 2048;
-    /// ANSSI RGS asks 2048): a weaker key is refused before anything is signed ([08] RSA path).
+    /// ANSSI RGS asks 2048): a weaker key is refused before anything is signed.
     /// </summary>
     public class ArchiveSignerKeyTests
     {

@@ -29,7 +29,7 @@ internal static class InfoCertVatSummary
             return null;
         }
 
-        // Grouped by the key itself ([01 #17]): two rates that differ past its precision make one line, not a duplicate key.
+        // Grouped by the key itself: two rates that differ past its precision make one line, not a duplicate key.
         return chargeItems
             .GroupBy(x => RateKey(x.VATRate))
             .OrderByDescending(x => x.Max(item => item.VATRate))

@@ -122,7 +122,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
 
         /// <summary>
         /// The partition of a copied reference. A receipt reference may hold characters Azure does not allow in a key, so it is
-        /// Base64Url-encoded; one too long for the 1 KiB key limit ([01 #25]) is keyed by its SHA-256 instead, prefixed so it
+        /// Base64Url-encoded; one too long for the 1 KiB key limit of Azure Table Storage is keyed by its SHA-256 instead, prefixed so it
         /// cannot meet an encoded reference. A reference that fits keeps the key it always had.
         /// </summary>
         public static string PartitionKeyOf(string copiedReceiptReference)

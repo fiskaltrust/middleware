@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Processors;
 /// Training receipts neither open nor close the mode: the training chain stays apart from the
 /// fiscal chains.
 /// </summary>
-// TODO pending A2: the archive contract (section 6) has the queue raise JET 120 on the zero receipt
+// TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) has the queue raise JET 120 on the zero receipt
 // that ends late signing; this branch leaves 120 to the POS.
 public class FRLateSigning
 {

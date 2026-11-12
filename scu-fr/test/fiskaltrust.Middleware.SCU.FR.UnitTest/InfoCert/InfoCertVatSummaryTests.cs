@@ -116,7 +116,7 @@ public class InfoCertVatSummaryTests
 
     /// <summary>
     /// R13 v4.2 marks the VAT summary I (forbidden) on a note, a pro forma and an order, which are not the sale's receipt
-    /// (NF525 V2.3 §6.2.2.3; [02], [07 §12]). The signed content is unchanged: only the printed items are left out.
+    /// (NF525 V2.3 §6.2.2.3, R13 v4.2 Récapitulatif). The signed content is unchanged: only the printed items are left out.
     /// </summary>
     [Theory]
     [InlineData(0x0006)]

@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// Every closing writes an action journal entry dated by the closing receipt and naming it, with the period it closed
-/// and its totals ([03 F13]); the shift closing writes one too ([03 0x2010]).
+/// and its totals; the shift closing (0x2010) writes one too.
 /// </summary>
 public class ClosingJournalTests
 {

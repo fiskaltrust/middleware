@@ -32,7 +32,7 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     private readonly FRChainStateProvider? _chains;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository>? _queueItems;
 
-    /// <param name="chains">With <paramref name="queueItems"/>, lets the out-of-operation receipt check it follows an archive receipt (C11). Required: the check never switches off.</param>
+    /// <param name="chains">With <paramref name="queueItems"/>, lets the out-of-operation receipt check it follows an archive receipt (Ref LNE 1.8 Ex. 7, 10). Required: the check never switches off.</param>
     public LifecycleCommandProcessorFR(IFRSSCD sscd, FRSigningPipeline pipeline, ILocalizedQueueStorageProvider localizedQueueStorageProvider,
         FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository> queueItems, FRMigration? migration = null)
         : this(sscd, pipeline, localizedQueueStorageProvider, migration)
@@ -112,7 +112,7 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     }
 
     /// <summary>
-    /// Why the queue may not be taken out of operation now, or null (C11; Ref LNE 1.8 Ex. 7, 10): as v1.2 archived then
+    /// Why the queue may not be taken out of operation now, or null (Ref LNE 1.8 Ex. 7, 10): as v1.2 archived then
     /// stopped, no record that adds to an archive may follow the non-training archive receipt the chain state names, so
     /// every such record lies in a signed archive range before the queue closes. Only JET events (chain L) and training
     /// documents (chain X) may follow it: a compliant POS sends the JET 20 its archive receipt asked for, and may answer

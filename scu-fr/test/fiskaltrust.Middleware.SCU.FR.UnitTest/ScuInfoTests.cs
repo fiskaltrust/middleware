@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
 /// <summary>
 /// Every configuration key of an FR SCU except secrets reaches the archive's compliance parameters through
-/// <c>InfoData</c> (contract §12, [06 D10]): the issuer claims of every SCU, and the InfoCert software category.
+/// <c>InfoData</c> (archive-v2 §12): the issuer claims of every SCU, and the InfoCert software category.
 /// </summary>
 public class ScuInfoTests
 {

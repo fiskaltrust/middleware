@@ -5,7 +5,7 @@ using Xunit;
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 {
     /// <summary>
-    /// An Azure partition key holds at most 1 KiB ([01 #25]): a copied receipt reference whose Base64Url form would not fit
+    /// An Azure partition key holds at most 1 KiB: a copied receipt reference whose Base64Url form would not fit
     /// is keyed by its SHA-256 instead; every reference that fits keeps the key it always had. No storage is needed.
     /// </summary>
     public class CopyPayloadPartitionKeyTests

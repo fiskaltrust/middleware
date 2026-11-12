@@ -61,7 +61,7 @@ public class MiddlewareStateDataFR
 
     /// <summary>
     /// On a copy: the <see cref="DocumentType"/> of the copied receipt (R13 ENC-DUP-TYP, archive-v2 §1.2 <c>CopyType</c>).
-    /// Archived, not signed (signing it waits on the InfoCert format, A5). Omitted when the copied receipt is not stored here.
+    /// Archived, not signed (signing it waits on the InfoCert signed format). Omitted when the copied receipt is not stored here.
     /// </summary>
     [JsonPropertyName("CopyType")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
