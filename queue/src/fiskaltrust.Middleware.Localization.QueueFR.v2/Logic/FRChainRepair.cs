@@ -124,6 +124,12 @@ public static class FRChainRepair
             pending.Reset();
         }
 
+        // A finish-migration receipt hands the v1 state over with its signed entry (ADR 0003).
+        if (!training && request.ftReceiptCase.Case() == FRMigrationGate.FinishMigration && FRStateData.Migration(response) is { } migrationEvent)
+        {
+            FRV1Handover.Migrate(queueFR, migrationEvent, response.ftReceiptMoment);
+        }
+
         return new FROpenArchiveFile(queueFR).Add(request, response, FRArchiveDue.CertificateSerialNumberOf(response));
     }
 }

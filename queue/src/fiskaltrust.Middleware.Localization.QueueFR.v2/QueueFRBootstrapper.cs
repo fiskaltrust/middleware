@@ -53,7 +53,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
         var receiptProcessorFR = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new ReceiptValidatorFR(new ReceiptReferenceProvider(queueItemRepository)),
-            new LifecycleCommandProcessorFR(frSSCD, pipeline, queueStorageProvider),
+            new LifecycleCommandProcessorFR(frSSCD, pipeline, queueStorageProvider, new FRMigration(pipeline, chains, queueItemRepository)),
             new ReceiptCommandProcessorFR(pipeline),
             new DailyOperationsCommandProcessorFR(pipeline),
             new InvoiceCommandProcessorFR(pipeline),
@@ -61,7 +61,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
                 new FRArchiveReceipt(pipeline, chains, queueItemRepository, storageProvider.CreateMiddlewareReceiptJournalRepository(), storageProvider.CreateMiddlewareActionJournalRepository())),
             validationConfig);
 
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, receiptProcessorFR.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, FRMigrationGate.Wrap(chains, receiptProcessorFR.ProcessAsync), cashBoxIdentification, middlewareConfiguration);
         // A locally exported archive is signed by the queue's SCU (ADR 0007 amendment); archiveSigner overrides it.
         Func<Task<IArchiveSigner>> createArchiveSigner = archiveSigner is null
             ? async () => await ScuArchiveSigner.CreateAsync(frSSCD).ConfigureAwait(false)

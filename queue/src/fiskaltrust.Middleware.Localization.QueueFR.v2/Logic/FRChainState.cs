@@ -164,6 +164,30 @@ public class FRChainStateProvider
     }
 
     /// <summary>
+    /// Changes the state a signature just advanced, together with it: the change is stored when the
+    /// signed queue item is, and dropped with it otherwise (e.g. the v1 handover of a finish-migration
+    /// receipt, market-fr ADR 0003).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No signature advanced the state.</exception>
+    public async Task ApplyToSignedStateAsync(Action<ftQueueFR> change)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!_pending || _queueFR is null)
+            {
+                throw new InvalidOperationException("Only the state a signature advanced can be changed with it.");
+            }
+
+            change(_queueFR);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
     /// Stores the state a signature advanced, once the signed queue item is stored. If the write
     /// fails the state stays in memory and is stored before the next signature.
     /// </summary>

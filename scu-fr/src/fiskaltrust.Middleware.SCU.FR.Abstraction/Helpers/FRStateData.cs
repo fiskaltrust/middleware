@@ -15,6 +15,7 @@ public static class FRStateData
     public const string Block = "FR";
     public const string CopyNumberProperty = "CopyNumber";
     public const string ArchiveProperty = "Archive";
+    public const string MigrationProperty = "Migration";
 
     /// <summary>
     /// The reprint number of a copy (0x3010), 1 for the first copy of the copied receipt (R13
@@ -41,6 +42,17 @@ public static class FRStateData
             && json.TryGetProperty(Block, out var fr) && fr.ValueKind == JsonValueKind.Object
             && fr.TryGetProperty(ArchiveProperty, out var archive) && archive.ValueKind == JsonValueKind.Object
                 ? archive.Deserialize<FRArchiveBoundaries>(ReadOptions)
+                : null;
+    }
+
+    /// <summary>The migration event a finish-migration receipt (0x4022) signs (market-fr ADR 0003); null on every other receipt.</summary>
+    public static FRMigrationEvent? Migration(ReceiptResponse response)
+    {
+        var stateData = AsJson(response.ftStateData);
+        return stateData is { ValueKind: JsonValueKind.Object } json
+            && json.TryGetProperty(Block, out var fr) && fr.ValueKind == JsonValueKind.Object
+            && fr.TryGetProperty(MigrationProperty, out var migration) && migration.ValueKind == JsonValueKind.Object
+                ? migration.Deserialize<FRMigrationEvent>(ReadOptions)
                 : null;
     }
 

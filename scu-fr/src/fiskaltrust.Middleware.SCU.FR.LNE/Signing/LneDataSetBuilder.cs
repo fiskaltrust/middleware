@@ -60,6 +60,8 @@ internal static class LneDataSetBuilder
             // market-fr#221: the boundaries an archive receipt signs, as v1.2; empty on every other
             // receipt. Placed before the period totals so the fields read from the end keep their place.
             FRArchiveBoundaries.SignedField(archive),
+            // TODO pending Louis (market-fr ADR 0003): where this data set carries the migration event of a
+            // finish-migration receipt (0x4022), field 20 reused or a 26th field. Until then it is not signed here.
             PeriodTotals(periodTotals),
             configuration.CertificateSerialNumber,
             // ADR 0001: the chain counter, the start-of-chain flag and the previous entry's

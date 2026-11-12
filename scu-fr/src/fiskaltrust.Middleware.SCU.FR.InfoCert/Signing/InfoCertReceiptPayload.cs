@@ -54,6 +54,9 @@ internal class InfoCertReceiptPayload
     /// </summary>
     [JsonPropertyName("archive"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public FRArchiveBoundaries? Archive { get; set; }
 
+    /// <summary>The migration event a finish-migration receipt signs (market-fr ADR 0003); omitted on every other receipt.</summary>
+    [JsonPropertyName("migration"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public FRMigrationEvent? Migration { get; set; }
+
     [JsonPropertyName("totalizer")] public decimal Totalizer { get; set; }
 
     [JsonPropertyName("ciNormal")] public decimal CINormal { get; set; }

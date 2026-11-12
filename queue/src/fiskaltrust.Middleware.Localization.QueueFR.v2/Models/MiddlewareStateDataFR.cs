@@ -69,6 +69,14 @@ public class MiddlewareStateDataFR
     public fiskaltrust.ifPOS.v2.fr.FRArchiveBoundaries? Archive { get; set; }
 
     /// <summary>
+    /// The migration event a finish-migration receipt (0x4022) signs: each v1 chain's last counter and
+    /// hash (market-fr ADR 0003). Omitted on every other receipt.
+    /// </summary>
+    [JsonPropertyName(fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers.FRStateData.MigrationProperty)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public fiskaltrust.ifPOS.v2.fr.FRMigrationEvent? Migration { get; set; }
+
+    /// <summary>
     /// The receipt's totals as the queue computed them when it signed: the receipt's own totals on the
     /// sales chains, the period and perpetual totals on a closing. The archive reads them from here, so
     /// they are stored data and never recomputed at export (archive-v2 §1.2, §1.3).

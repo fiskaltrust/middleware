@@ -91,6 +91,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             Currency = receiptRequest.Currency.ToString(),
             CopyNumber = FRStateData.CopyNumber(response),
             Archive = FRStateData.Archive(response),
+            Migration = FRStateData.Migration(response),
             Totalizer = totals.Totalizer,
             CINormal = totals.CINormal,
             CIReduced1 = totals.CIReduced1,

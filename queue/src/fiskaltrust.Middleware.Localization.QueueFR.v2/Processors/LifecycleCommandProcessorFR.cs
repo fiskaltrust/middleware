@@ -25,9 +25,11 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     private readonly IFRSSCD _sscd;
     private readonly FRSigningPipeline _pipeline;
     private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider;
+    private readonly FRMigration? _migration;
 
-    public LifecycleCommandProcessorFR(IFRSSCD sscd, FRSigningPipeline pipeline, ILocalizedQueueStorageProvider localizedQueueStorageProvider)
+    public LifecycleCommandProcessorFR(IFRSSCD sscd, FRSigningPipeline pipeline, ILocalizedQueueStorageProvider localizedQueueStorageProvider, FRMigration? migration = null)
     {
+        _migration = migration;
         _sscd = sscd;
         _pipeline = pipeline;
         _localizedQueueStorageProvider = localizedQueueStorageProvider;
@@ -102,6 +104,12 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     }
 
     public Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
+
+    /// <summary>Initiate migration of a v1.2 queue (market-fr ADR 0003): see <see cref="FRMigration"/>.</summary>
+    public Task<ProcessCommandResponse?> InitiateMigration0x4021Async(ProcessCommandRequest request) => _migration?.InitiateAsync(request) ?? Task.FromResult<ProcessCommandResponse?>(null);
+
+    /// <summary>Finish migration of a v1.2 queue (market-fr ADR 0003): see <see cref="FRMigration"/>.</summary>
+    public Task<ProcessCommandResponse?> FinishMigration0x4022Async(ProcessCommandRequest request) => _migration?.FinishAsync(request) ?? Task.FromResult<ProcessCommandResponse?>(null);
 
     public Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 }
