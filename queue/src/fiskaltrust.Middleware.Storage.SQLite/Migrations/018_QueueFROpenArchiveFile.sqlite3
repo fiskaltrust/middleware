@@ -1,5 +1,0 @@
-﻿-- The archive file a QueueFR v2 queue keeps open (market-fr ADR 0018).
--- The column is added in a transaction, so an interruption leaves the table as it was.
-BEGIN TRANSACTION;
-ALTER TABLE ftQueueFR ADD COLUMN OpenArchiveFile NVARCHAR(2147483647) NULL;
-COMMIT;

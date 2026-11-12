@@ -7,13 +7,13 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.4.4")]
-    public sealed partial class QueueFROpenArchiveFile : IMigrationMetadata
+    public sealed partial class QueueFRStateV2 : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(QueueFROpenArchiveFile));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(QueueFRStateV2));
         
         string IMigrationMetadata.Id
         {
-            get { return "202611121200000_QueueFROpenArchiveFile"; }
+            get { return "202611121200000_QueueFRStateV2"; }
         }
         
         string IMigrationMetadata.Source

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
@@ -10,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.Logic;
 /// by an archive receipt, a forced archive or a change of signing certificate. The queue flags an
 /// archive as due once the file reaches into an earlier month, and at the one-year limit it records a
 /// forced archive - it never signs anything on its own. The state lives in ftQueueFR
-/// (<c>OpenArchiveFile</c>, ADR 0012), written with the rest of the chain state.
+/// (<see cref="FRStateV2"/>, ADR 0012), written with the rest of the chain state.
 /// </summary>
 public sealed class FROpenArchiveFile
 {
@@ -104,12 +103,12 @@ public sealed class FROpenArchiveFile
         return first.ftReceiptMoment.Year * 12 + first.ftReceiptMoment.Month < utc.Year * 12 + utc.Month;
     }
 
-    private State Read()
-        => string.IsNullOrEmpty(_queueFR.OpenArchiveFile) ? new State() : JsonSerializer.Deserialize<State>(_queueFR.OpenArchiveFile) ?? new State();
+    private FileState Read() => FRStateV2.Read(_queueFR).OpenArchiveFile ?? new FileState();
 
-    private void Write(State state) => _queueFR.OpenArchiveFile = JsonSerializer.Serialize(state);
+    private void Write(FileState state) => FRStateV2.Update(_queueFR, x => x.OpenArchiveFile = state);
 
-    private sealed class State
+    /// <summary>The stored form of the open file.</summary>
+    public sealed class FileState
     {
         public Record? First { get; set; }
 

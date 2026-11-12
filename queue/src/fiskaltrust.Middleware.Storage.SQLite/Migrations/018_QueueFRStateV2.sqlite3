@@ -1,0 +1,5 @@
+﻿-- The QueueFR v2 state that has no v1 column (market-fr ADR 0012, 0018, 0003).
+-- The column is added in a transaction, so an interruption leaves the table as it was.
+BEGIN TRANSACTION;
+ALTER TABLE ftQueueFR ADD COLUMN StateV2 NVARCHAR(2147483647) NULL;
+COMMIT;

@@ -887,10 +887,10 @@ namespace fiskaltrust.storage.V0
         public string ALastSignature { get; set; }
 
         /// <summary>
-        /// QueueFR v2: the archive file still open (JSON), from which ArchiveIsDue and the forced archive at the
-        /// one-year limit are decided (market-fr ADR 0018)
+        /// QueueFR v2 state that has no v1 column (JSON): the archive file still open, from which ArchiveIsDue and
+        /// the forced archive at the one-year limit are decided (market-fr ADR 0018), and when a v1 queue was migrated
         /// </summary>
-        public string OpenArchiveFile { get; set; }
+        public string StateV2 { get; set; }
 
         #endregion
 
