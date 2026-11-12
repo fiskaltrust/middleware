@@ -16,8 +16,7 @@ public static class FRTotalsCalculator
     /// Down payments are kept out of every total, on both sides: the charge and pay items of the
     /// down-payment invoice that records the acompte, and the negative ones of the final invoice
     /// that settles it. Counting them would raise the turnover when the acompte is taken and again
-    /// when the sale is invoiced in full (NF525 V2.3 §6.18.1.3 as the Infocert auditor applied it,
-    /// fiskaltrust/market-fr#135).
+    /// when the sale is invoiced in full (NF525 V2.3 §6.18.1.3, fiskaltrust/market-fr#135).
     /// <para>
     /// A multipurpose voucher sold (a not-taxable, V=8, voucher, S=4, charge item) is kept out of the turnover too: it
     /// is a treasury operation, and the sale it pays for counts when the voucher is redeemed (NF525 V2.3 §6.18.1.3,
