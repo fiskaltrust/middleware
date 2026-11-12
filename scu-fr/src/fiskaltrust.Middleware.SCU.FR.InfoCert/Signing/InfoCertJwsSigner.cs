@@ -2,19 +2,20 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.Middleware.SCU.FR.Abstraction.Exceptions;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.FR.InfoCert.Signing;
 
 /// <summary>
-/// Produces the Infocert receipt signature: an ES256 JWS in compact serialization over the json
-/// receipt payload. The JWS signature segment returned alongside — Base64Url of the raw R||S
-/// signature — is what the next entry of the same chain covers (ADR 0001).
+/// Produces the Infocert receipt signature: an ES256 JWS in compact serialization whose payload is the string the
+/// dictionaries define for the entry (<see cref="InfoCertSignedString"/>, market-fr#108). The JWS signature segment
+/// returned alongside — Base64Url of the raw R||S signature — is what the next entry of the same chain covers (ADR 0001).
+/// The protected header names the signing certificate's serial number as <c>kid</c> (market-fr#221), so it is signed
+/// with every entry, as R13's key-ring identifier (<c>ENC-TIK-ID-KEY</c>) intends. The envelope is the shared
+/// <see cref="FRJws"/>; this class holds the key.
 /// </summary>
 internal sealed class InfoCertJwsSigner : IDisposable
 {
-    /// <summary>Base64url of <c>{"alg":"ES256","typ":"JWT"}</c>.</summary>
-    private const string Es256JwsHeader = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9";
-
     /// <summary>OID of secp256r1 / NIST P-256, the only curve ES256 is defined over.</summary>
     private const string NistP256Oid = "1.2.840.10045.3.1.7";
 
@@ -25,17 +26,9 @@ internal sealed class InfoCertJwsSigner : IDisposable
         _key = ImportKey(privateKeyBase64);
     }
 
-    public (string jws, string signature) Sign(string payloadJson)
-    {
-        var signingInput = $"{Es256JwsHeader}.{ToBase64Url(Encoding.UTF8.GetBytes(payloadJson))}";
-        var signingInputBytes = Encoding.UTF8.GetBytes(signingInput);
-
-        // JWS mandates the raw R||S form (RFC 7518 §3.4), not the DER sequence.
-        var signature = _key.SignData(signingInputBytes, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-        var signatureBase64Url = ToBase64Url(signature);
-
-        return ($"{signingInput}.{signatureBase64Url}", signatureBase64Url);
-    }
+    /// <param name="payload">The signed string, UTF-8 encoded into the payload.</param>
+    /// <param name="keyId">The signing certificate's serial number, the header's <c>kid</c>; none when empty.</param>
+    public (string jws, string signature) Sign(string payload, string? keyId = null) => FRJws.SignES256(_key, payload, keyId);
 
     /// <summary>The signing key, also used to sign archive hashes.</summary>
     public ECDsa Key => _key;
@@ -102,6 +95,4 @@ internal sealed class InfoCertJwsSigner : IDisposable
             throw new FRCertificateException($"The configured PrivateKey is not a secp256r1 (NIST P-256) key: {curve.Oid.FriendlyName ?? curve.Oid.Value} with a key size of {key.KeySize} bits. NF525 signatures are created as ES256, which is defined over P-256 only.");
         }
     }
-
-    private static string ToBase64Url(byte[] data) => Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }

@@ -259,10 +259,19 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("ftState", e => CsvValueFormatter.Hex(e.State), "État de la file au moment du document (hexadécimal), dont le mode de signature différée."),
             Col("RequestHash", e => e.RequestHash, "Empreinte signée de la requête canonique (version:SHA-256 Base64), recalculable depuis requests.jsonl ; vide si le module de signature n'en signe pas."),
             Col("Siret", e => e.Siret, "Numéro SIRET de l'émetteur (14 chiffres), signé."),
-            Col("Rcs", e => e.Issuer.Rcs, "Immatriculation RCS de l'émetteur, signée telle que configurée ; vide si elle n'est pas configurée."),
-            Col("Naf", e => e.Issuer.Naf, "Code NAF (APE) de l'émetteur, signé tel que configuré ; vide s'il n'est pas configuré."),
-            Col("LegalForm", e => e.Issuer.LegalForm, "Forme juridique et capital social de l'émetteur, signés tels que configurés ; vide s'ils ne sont pas configurés."),
-            Col("VatOption", e => e.Issuer.VatOption, "Option de TVA de l'émetteur : debits (sur les débits) ou receipts (sur les encaissements), signée ; vide si elle n'est pas configurée."),
+            Col("Siren", e => Issuer(e, "SIREN"), IssuerNote("Numéro SIREN de l'émetteur (9 chiffres)")),
+            Col("IssuerName", e => Issuer(e, "Dénomination"), IssuerNote("Dénomination de l'émetteur")),
+            Col("IssuerNameType", e => Issuer(e, "Type de dénomination"), IssuerNote("Type de la dénomination de l'émetteur (raison sociale, enseigne…)")),
+            Col("IssuerAddress", e => Issuer(e, "Adresse"), IssuerNote("Adresse de l'émetteur")),
+            Col("IssuerPostalCode", e => Issuer(e, "Code postal"), IssuerNote("Code postal de l'émetteur")),
+            Col("IssuerCity", e => Issuer(e, "Ville"), IssuerNote("Ville de l'émetteur")),
+            Col("IssuerCountry", e => Issuer(e, "Pays"), IssuerNote("Pays de l'émetteur")),
+            Col("IssuerVatNumber", e => Issuer(e, "N° TVA intracommunautaire"), IssuerNote("Numéro de TVA intracommunautaire de l'émetteur")),
+            Col("Rcs", e => Issuer(e, "RCS", x => x.Rcs), IssuerNote("Immatriculation RCS de l'émetteur")),
+            Col("Naf", e => Issuer(e, "NAF", x => x.Naf), IssuerNote("Code NAF (APE) de l'émetteur")),
+            Col("LegalForm", e => Issuer(e, "Forme juridique", x => x.LegalForm), IssuerNote("Forme juridique de l'émetteur")),
+            Col("ShareCapital", e => Issuer(e, "Capital social"), IssuerNote("Capital social de l'émetteur")),
+            Col("VatOption", e => Issuer(e, "Option TVA", x => x.VatOption), IssuerNote("Option de TVA de l'émetteur : debits (sur les débits) ou receipts (sur les encaissements)")),
             Col("ElectronicAddress", SellerElectronicAddress, "Adresse électronique de l'émetteur (BT-34), telle que le système de caisse l'envoie (ftReceiptCaseData FR.SellerElectronicAddress, son schéma dans case-data.csv) ; non signée, renseignée uniquement sur les factures (chaîne I) d'un module InfoCert, vide ailleurs."),
             Col("CertificateSerialNumber", e => e.CertificateSerialNumber, "Numéro de série du certificat qui a signé le document."),
             Col("SoftwareVersion", e => SoftwareVersion(e.ProcessingVersion), "Version du logiciel fiskaltrust qui a traité le document, sous la forme majeure.mineure.correctif."),
@@ -508,6 +517,20 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
         /// unsigned as R12 lists it (conditional), never read from the signed content or the configuration (market-fr#221)
         ///.
         /// </summary>
+        /// <summary>The chains whose documents carry the issuer in their header: notes, tickets, payment proofs (R13 ENC-TIK-SOC-*) and invoices (R12 SOC-*).</summary>
+        private static bool HasIssuer(ArchiveEntry entry) => entry.Chain is "T" or "B" or "P" or "I";
+
+        /// <summary>
+        /// An issuer column (archive-v2 §1.1, market-fr#221): on chains T, B, P and I, the value of the issuer item the SCU
+        /// printed (signature type 0x0013), else the claim the SCU signed (an LNE or self-certified data set, until its SCU
+        /// prints the item too); empty on every other chain.
+        /// </summary>
+        private static object? Issuer(ArchiveEntry entry, string label, Func<IssuerClaims, string?>? signed = null)
+            => !HasIssuer(entry) ? null : entry.IssuerValue(label) ?? (signed is null ? null : signed(entry.Issuer));
+
+        private static string IssuerNote(string what)
+            => what + ", telle que le module de signature l'imprime en en-tête (élément émetteur, non signé) ; renseignée sur les notes, tickets, justificatifs de paiement et factures (chaînes T, B, P, I), vide ailleurs ou si elle n'est pas configurée.";
+
         private static object? SellerElectronicAddress(ArchiveEntry entry)
             => entry.Chain == "I" && entry.SignedByInfoCert ? ReceiptCaseDataFR(entry.Request, "SellerElectronicAddress") : null;
 

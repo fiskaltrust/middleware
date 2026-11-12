@@ -87,15 +87,45 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         /// <summary>Reads the signed content of a receipt QR code.</summary>
         /// <param name="queueItemId">The entry's queue item, checked against the one an LNE data set signs; null to skip the check.</param>
+        /// <param name="receiptIdentification">The entry's <c>ftReceiptIdentification</c>: an R13/R12/R19 string signs it as its
+        /// identification field, which gives the chain counter (market-fr#221).</param>
+        /// <param name="receiptCase">The entry's <c>ftReceiptCase</c>: it chooses which R13/R12/R19 string a JWS payload is.</param>
         /// <exception cref="FormatException">The signed content lacks a field, or a field does not read.</exception>
-        public static SignedLinks Parse(string qrCode, Guid? queueItemId)
+        public static SignedLinks Parse(string qrCode, Guid? queueItemId, string? receiptIdentification = null, long? receiptCase = null)
         {
+            // A compact JWS first: its payload may be an R13/R12 string, which holds '|' (the VAT breakdown) once decoded.
+            var segments = qrCode.Split('.');
+            if (segments.Length == 3)
+            {
+                return FromJws(segments[0], segments[1], queueItemId, receiptIdentification, receiptCase);
+            }
             var dot = qrCode.LastIndexOf('.');
             var content = dot < 0 ? "" : qrCode.Substring(0, dot);
-            return content.IndexOf('|') >= 0 ? FromDataSet(content, queueItemId) : FromJws(content);
+            return content.IndexOf('|') >= 0
+                ? FromDataSet(content, queueItemId)
+                : throw new FormatException("the signed content is neither a data set nor a JWS");
         }
 
-        private static SignedLinks FromDataSet(string dataSet, Guid? queueItemId)
+        /// <summary>
+        /// The signing certificate's serial number of a receipt QR code: a JWS header's <c>kid</c>, else what the signed
+        /// content carries (a pre-<c>kid</c> InfoCert payload's <c>csn</c>, the data set's fourth-from-last field).
+        /// </summary>
+        public static string? CertificateSerialNumberOf(string qrCode)
+        {
+            var segments = qrCode.Split('.');
+            if (segments.Length == 3 && KeyId(segments[0]) is { } kid)
+            {
+                return kid;
+            }
+            if (segments.Length == 3 && TryDecode(segments[1], out var payload) && IsJson(payload))
+            {
+                using var document = JsonDocument.Parse(payload);
+                return document.RootElement.ValueKind == JsonValueKind.Object ? ArchiveEntry.String(document.RootElement, "csn") : null;
+            }
+            return segments.Length == 3 ? null : Parse(qrCode, null).CertificateSerialNumber;
+        }
+
+        private static SignedLinks FromDataSet(string dataSet, Guid? queueItemId, bool jws = false, string? keyId = null)
         {
             var fields = dataSet.Split('|');
             var n = fields.Length;
@@ -122,26 +152,147 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 }
             }
             var issuer = n == LneDataSetFieldCount ? new IssuerClaims(fields[1], fields[2], fields[3], fields[4], fields[5]) : null;
-            return new SignedLinks(counter, fields[n - 2], fields[n - 1], fields[0], fields[n - 4], requestHash, issuer, field20: n == LneDataSetFieldCount ? fields[LneField20] : null);
+            return new SignedLinks(counter, fields[n - 2], fields[n - 1], fields[0], keyId ?? fields[n - 4], requestHash, issuer, jws, field20: n == LneDataSetFieldCount ? fields[LneField20] : null);
         }
 
-        private static SignedLinks FromJws(string headerAndPayload)
+        /// <summary>
+        /// A compact JWS, whatever SCU signed it. Its payload is one of:
+        /// <list type="bullet">
+        /// <item>a JSON object (InfoCert entries signed before market-fr#221, kept readable): <c>chainCounter</c>,
+        /// <c>previousSignatureCarriedOver</c>, <c>previousSignature</c>, <c>siret</c>, <c>csn</c>, the issuer claims;</item>
+        /// <item>the 25-field data set, recognised by its 25 <c>|</c> fields with the entry's identification at field 11;</item>
+        /// <item>an R13/R12/R19 string (InfoCert): <c>,</c>-separated, the flag and the previous signature last, the chain
+        /// counter in the identification field, which is <c>ftReceiptIdentification</c>. No SIRET, serial number, request
+        /// value or issuer claim is signed in it.</item>
+        /// </list>
+        /// The header's <c>kid</c>, when present, is the signing certificate's serial number.
+        /// </summary>
+        private static SignedLinks FromJws(string header, string payloadSegment, Guid? queueItemId, string? receiptIdentification, long? receiptCase)
         {
-            var segments = headerAndPayload.Split('.');
-            if (segments.Length != 2)
+            var keyId = KeyId(header);
+            if (!TryDecode(payloadSegment, out var payload))
             {
-                throw new FormatException("the signed content is neither a data set nor a JWS");
+                throw new FormatException("the JWS payload is no Base64Url UTF-8");
             }
+            if (IsJson(payload))
+            {
+                return FromJsonPayload(payload, keyId);
+            }
+            var fields = payload.Split('|');
+            if (fields.Length == LneDataSetFieldCount && (receiptIdentification is null || fields[10] == receiptIdentification))
+            {
+                return FromDataSet(payload, queueItemId, jws: true, keyId: keyId);
+            }
+            return FromReferentialString(payload, keyId, receiptIdentification, receiptCase);
+        }
+
+        /// <summary>An R13/R12/R19 string (market-fr#108, #221); the shape per receipt case is checked, then the chain fields read.</summary>
+        private static SignedLinks FromReferentialString(string text, string? keyId, string? receiptIdentification, long? receiptCase)
+        {
+            var fields = text.Split(',');
+            var n = fields.Length;
+            if (n < 3)
+            {
+                throw new FormatException($"the signed string has {n} fields, fewer than an identification, a flag and a previous signature");
+            }
+            var kind = receiptCase is { } rc ? KindOf(rc) : (ReferentialString?) null;
+            var shapeOk = kind switch
+            {
+                ReferentialString.NoteTicket => n == 7,
+                ReferentialString.PaymentProof => n == 6,
+                ReferentialString.Invoice => n == 10,
+                ReferentialString.Jet => n == 8,
+                ReferentialString.Archive => n == 29,
+                ReferentialString.Duplicate => n == 8 || n == 9,
+                ReferentialString.GrandTotals => n >= 7 && (n - 2) % 5 == 0,
+                _ => true,
+            };
+            if (!shapeOk)
+            {
+                throw new FormatException($"the {kind} string has {n} fields");
+            }
+            var identification = kind switch
+            {
+                ReferentialString.NoteTicket or ReferentialString.Invoice => fields[3],
+                ReferentialString.GrandTotals => fields[4].Split(':')[0],
+                ReferentialString.PaymentProof or ReferentialString.Jet or ReferentialString.Archive or ReferentialString.Duplicate => fields[0],
+                _ => receiptIdentification ?? "",
+            };
+            if (receiptIdentification is not null && identification != receiptIdentification)
+            {
+                throw new FormatException($"the string is signed for '{identification}', not '{receiptIdentification}'");
+            }
+            if (!ArchiveEntry.TryReadChain(identification, out _, out var counter))
+            {
+                throw new FormatException($"the signed identification '{identification}' names no chain and counter");
+            }
+            return new SignedLinks(counter, fields[n - 2], fields[n - 1], null, keyId, null, null, jws: true);
+        }
+
+        /// <summary>The R13/R12/R19 string of a receipt case, as the Infocert SCU chooses it (training flag ignored).</summary>
+        private enum ReferentialString { NoteTicket, PaymentProof, Invoice, Duplicate, GrandTotals, Archive, Jet, DataSet }
+
+        private static ReferentialString KindOf(long receiptCase)
+        {
+            var training = (receiptCase & 0x0000_0000_0002_0000) != 0;
+            switch (receiptCase & 0xFFFF)
+            {
+                case 0x0000: case 0x0001: case 0x0004: case 0x0003: case 0x0005: case 0x0006: case 0x3004: return ReferentialString.NoteTicket;
+                case 0x0002: case 0x3005: return ReferentialString.PaymentProof;
+                case 0x0007: case 0x1000: case 0x1001: case 0x1002: case 0x1003: return ReferentialString.Invoice;
+                case 0x3010: return ReferentialString.Duplicate;
+                case 0x2010: case 0x2011: case 0x2012: case 0x2013: return ReferentialString.GrandTotals;
+                case 0x3011: return ReferentialString.Archive;
+                case 0x3001: return training ? ReferentialString.DataSet : ReferentialString.Jet;
+                default: return ReferentialString.DataSet;
+            }
+        }
+
+        private static string? KeyId(string header)
+        {
+            if (!TryDecode(header, out var json) || !IsJson(json))
+            {
+                return null;
+            }
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                return document.RootElement.ValueKind == JsonValueKind.Object && ArchiveEntry.String(document.RootElement, "kid") is { Length: > 0 } kid ? kid : null;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        private static bool TryDecode(string segment, out string text)
+        {
+            try
+            {
+                var padded = segment.Replace('-', '+').Replace('_', '/');
+                padded = padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '=');
+                text = new System.Text.UTF8Encoding(false, true).GetString(Convert.FromBase64String(padded));
+                return true;
+            }
+            catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
+            {
+                text = "";
+                return false;
+            }
+        }
+
+        private static bool IsJson(string text) => text.TrimStart().StartsWith("{", StringComparison.Ordinal);
+
+        private static SignedLinks FromJsonPayload(string payload, string? keyId)
+        {
             JsonDocument document;
             try
             {
-                var payload = segments[1].Replace('-', '+').Replace('_', '/');
-                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-                document = JsonDocument.Parse(Convert.FromBase64String(payload));
+                document = JsonDocument.Parse(payload);
             }
-            catch (Exception ex) when (ex is FormatException || ex is JsonException)
+            catch (JsonException ex)
             {
-                throw new FormatException("the JWS payload is no Base64Url JSON", ex);
+                throw new FormatException("the JWS payload is no JSON", ex);
             }
             using (document)
             {
@@ -154,7 +305,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                 var flag = ArchiveEntry.String(root, "previousSignatureCarriedOver") ?? throw new FormatException("the JWS payload has no previousSignatureCarriedOver");
                 var issuer = new IssuerClaims(ArchiveEntry.String(root, "rcs"), ArchiveEntry.String(root, "naf"), ArchiveEntry.String(root, "legalform"),
                     ArchiveEntry.String(root, "vatoption"), ArchiveEntry.String(root, "elecaddress"));
-                return new SignedLinks(counter, flag, ArchiveEntry.String(root, "previousSignature"), ArchiveEntry.String(root, "siret"), ArchiveEntry.String(root, "csn"), null, issuer, jws: true);
+                return new SignedLinks(counter, flag, ArchiveEntry.String(root, "previousSignature"), ArchiveEntry.String(root, "siret"), keyId ?? ArchiveEntry.String(root, "csn"), null, issuer, jws: true);
             }
         }
     }

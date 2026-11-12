@@ -20,6 +20,13 @@ public sealed class FRStateV2
     /// <summary>When the finish-migration receipt (0x4022) applied the v1 handover; null on a queue never migrated.</summary>
     public DateTime? MigratedAt { get; set; }
 
+    /// <summary>
+    /// The turnover per VAT rate of each block of totals, by its ftQueueFR column prefix (<c>GDay</c>, <c>T</c>, <c>A</c>…):
+    /// the v1 columns keep the VAT classes only (market-fr#221, P12c). A prefix missing here has never been written by
+    /// v2 and is read from its class columns (<see cref="FRQueueFRColumns.GetTotals"/>).
+    /// </summary>
+    public Dictionary<string, Dictionary<string, decimal>>? RateTotals { get; set; }
+
     public static FRStateV2 Read(ftQueueFR queueFR)
         => string.IsNullOrEmpty(queueFR.StateV2) ? new FRStateV2() : JsonSerializer.Deserialize<FRStateV2>(queueFR.StateV2) ?? new FRStateV2();
 

@@ -72,6 +72,13 @@ public enum SignatureTypeFR : long
     /// low word 0x0002 stays reserved (market-fr#221, G5).
     /// </summary>
     ShiftPeriodTotals = 0x4652_2000_0000_000D,
+
+    /// <summary>
+    /// The seller's identity for the receipt header (R13 <c>ENC-TIK-SOC-*</c>, R12 <c>SOC-*</c>): one
+    /// <c>Label : value</c> line per configured value, printed after the POS header, not signed
+    /// (<see cref="Helpers.FRIssuerItem"/>, market-fr#221). Emitted on notes, tickets, payment proofs and invoices.
+    /// </summary>
+    Issuer = 0x4652_2000_0000_0013,
 }
 
 public static class SignatureTypeFRExt

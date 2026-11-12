@@ -92,6 +92,65 @@ public static class FRStateData
     public const string ClosingProperty = "Closing";
     public const string PeriodsProperty = "Periods";
 
+    public const string CopyTypeProperty = "CopyType";
+    public const string CopiedReceiptIdentificationProperty = "CopiedReceiptIdentification";
+    public const string OriginReceiptIdentificationProperty = "OriginReceiptIdentification";
+    public const string CopiedReceiptCaseProperty = "CopiedReceiptCase";
+
+    /// <summary>
+    /// A number of the FR block (<c>ftStateData.FR.&lt;name&gt;</c>), written as a JSON number or as a hex string
+    /// (<c>0x…</c>), e.g. <see cref="CopiedReceiptCaseProperty"/>. Null when absent or unreadable.
+    /// </summary>
+    public static long? Number(ReceiptResponse response, string name)
+    {
+        var stateData = AsJson(response.ftStateData);
+        if (stateData is not { ValueKind: JsonValueKind.Object } json
+            || !TryGet(json, Block, out var fr) || fr.ValueKind != JsonValueKind.Object
+            || !TryGet(fr, name, out var value))
+        {
+            return null;
+        }
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var number))
+        {
+            return number;
+        }
+        if (value.ValueKind == JsonValueKind.String && value.GetString() is { } text)
+        {
+            var hex = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? text.Substring(2).Replace("_", "") : null;
+            if (hex is not null && long.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+            {
+                return parsed;
+            }
+            if (long.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out parsed))
+            {
+                return parsed;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// A text value of the FR block (<c>ftStateData.FR.&lt;name&gt;</c>), e.g. <see cref="CopyTypeProperty"/>; an array of
+    /// texts is joined with <c>,</c>. Null when absent or empty.
+    /// </summary>
+    public static string? Text(ReceiptResponse response, string name)
+    {
+        var stateData = AsJson(response.ftStateData);
+        if (stateData is not { ValueKind: JsonValueKind.Object } json
+            || !TryGet(json, Block, out var fr) || fr.ValueKind != JsonValueKind.Object
+            || !TryGet(fr, name, out var value))
+        {
+            return null;
+        }
+        var text = value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Array => string.Join(",", value.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString())),
+            _ => null,
+        };
+        return string.IsNullOrEmpty(text) ? null : text;
+    }
+
     // The queue writes its state data as typed objects; behind REST the casing may differ.
     private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
 

@@ -130,6 +130,11 @@ public static class FRQueueFRColumns
         (x => x.PIUnknown, (x, v) => x.PIUnknown = v, "PITotalUnknown"),
     ];
 
+    /// <summary>
+    /// A block of totals: the class columns, and the per-rate turnover kept in <see cref="FRStateV2.RateTotals"/>
+    /// (market-fr#221, P12c). A block v2 has never written (a queue migrated from v1.2) gets its per-rate turnover from its
+    /// class columns, each class under its French rate (<see cref="RatesOfClasses"/>).
+    /// </summary>
     public static FRTotals GetTotals(this ftQueueFR queueFR, string prefix)
     {
         var totals = new FRTotals();
@@ -137,6 +142,9 @@ public static class FRQueueFRColumns
         {
             set(totals, (decimal) Column(prefix, suffix).GetValue(queueFR)!);
         }
+        totals.ByRate = FRStateV2.Read(queueFR).RateTotals?.TryGetValue(prefix, out var byRate) == true
+            ? new Dictionary<string, decimal>(byRate)
+            : RatesOfClasses(totals);
         return totals;
     }
 
@@ -146,7 +154,24 @@ public static class FRQueueFRColumns
         {
             Column(prefix, suffix).SetValue(queueFR, get(totals));
         }
+        FRStateV2.Update(queueFR, state =>
+        {
+            state.RateTotals ??= new Dictionary<string, Dictionary<string, decimal>>();
+            state.RateTotals[prefix] = totals.ByRate.Where(x => x.Value != 0).ToDictionary(x => x.Key, x => x.Value);
+        });
     }
+
+    /// <summary>
+    /// The class totals under their French rate: Normal 20, Reduced1 5.5, Reduced2 10, ReducedS 2.1, Zero 0, and the
+    /// unknown class under <see cref="FRTotals.UnknownRateKey"/>. v1.2 kept only the classes, so a migrated block's
+    /// ReducedS is taken as 2.1 % (the only super-reduced rate of metropolitan France).
+    /// </summary>
+    public static Dictionary<string, decimal> RatesOfClasses(FRTotals totals)
+        => new (string Key, decimal Amount)[]
+        {
+            ("20", totals.CINormal), ("10", totals.CIReduced2), ("5.5", totals.CIReduced1), ("2.1", totals.CIReducedS),
+            ("0", totals.CIZero), (FRTotals.UnknownRateKey, totals.CIUnknown),
+        }.Where(x => x.Amount != 0).ToDictionary(x => x.Key, x => x.Amount);
 
     private static PropertyInfo Column(string prefix, string suffix)
         => typeof(ftQueueFR).GetProperty(prefix + suffix) ?? throw new InvalidOperationException($"ftQueueFR has no column {prefix}{suffix}.");

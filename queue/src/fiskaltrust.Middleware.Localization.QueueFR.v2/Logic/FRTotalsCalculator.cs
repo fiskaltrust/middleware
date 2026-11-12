@@ -47,11 +47,17 @@ public static class FRTotalsCalculator
             PINonCash = PaySum(FRPayBucket.NonCash),
             PIInternal = PaySum(FRPayBucket.Internal),
             PIUnknown = PaySum(FRPayBucket.Unknown),
+            // market-fr#221 (P12c): the same charge items per VAT rate, so 2.1 % is no longer merged into ReducedS.
+            ByRate = chargeItems.GroupBy(x => FRTotals.RateKey(x.VATRate)).ToDictionary(x => x.Key, x => x.Sum(item => item.Amount)),
         };
     }
 
     public static void Add(this FRTotals target, FRTotals addend)
     {
+        foreach (var (rate, amount) in addend.ByRate)
+        {
+            target.ByRate[rate] = (target.ByRate.TryGetValue(rate, out var sum) ? sum : 0m) + amount;
+        }
         target.Totalizer += addend.Totalizer;
         target.CINormal += addend.CINormal;
         target.CIReduced1 += addend.CIReduced1;
@@ -67,6 +73,7 @@ public static class FRTotalsCalculator
 
     public static FRTotals Copy(this FRTotals source) => new()
     {
+        ByRate = new Dictionary<string, decimal>(source.ByRate),
         Totalizer = source.Totalizer,
         CINormal = source.CINormal,
         CIReduced1 = source.CIReduced1,

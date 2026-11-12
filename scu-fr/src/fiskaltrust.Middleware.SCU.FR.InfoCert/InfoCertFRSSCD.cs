@@ -82,51 +82,15 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             return response.ToSigningFailure($"The technical event cannot enter the NF525 technical event journal: {jetError}", StateFR.Error);
         }
 
-        var totals = InfoCertTotals.From(receiptRequest);
-        var payload = new InfoCertReceiptPayload
-        {
-            QueueId = response.ftQueueID,
-            QueueItemId = response.ftQueueItemID,
-            CashBoxIdentification = response.ftCashBoxIdentification,
-            Siret = _configuration.Siret,
-            Rcs = NullIfEmpty(_configuration.Rcs),
-            Naf = NullIfEmpty(_configuration.Naf),
-            LegalForm = NullIfEmpty(_configuration.LegalForm),
-            VatOption = NullIfEmpty(_configuration.VatOption),
-            ElectronicAddress = NullIfEmpty(_configuration.ElectronicAddress),
-            ReceiptId = response.ftReceiptIdentification,
-            ReceiptMoment = response.ftReceiptMoment,
-            ReceiptCase = (long) receiptRequest.ftReceiptCase,
-            Currency = receiptRequest.Currency.ToString(),
-            CopyNumber = FRStateData.CopyNumber(response),
-            Archive = FRStateData.Archive(response),
-            Migration = FRStateData.Migration(response),
-            Totalizer = totals.Totalizer,
-            CINormal = totals.CINormal,
-            CIReduced1 = totals.CIReduced1,
-            CIReduced2 = totals.CIReduced2,
-            CIReducedS = totals.CIReducedS,
-            CIZero = totals.CIZero,
-            CIUnknown = totals.CIUnknown,
-            PICash = totals.PICash,
-            PINonCash = totals.PINonCash,
-            PIInternal = totals.PIInternal,
-            PIUnknown = totals.PIUnknown,
-            ChainCounter = request.ChainCounter,
-            PreviousSignatureCarriedOver = FRChaining.Flag(previousSignature),
-            PreviousSignature = previousSignature ?? "",
-            CertificateSerialNumber = _configuration.CertificateSerialNumber,
-            AttestationNumber = _configuration.AttestationNumber,
-            PeriodTotals = request.PeriodTotals,
-        };
+        // market-fr#108, #221: the JWS payload is the string R13/R12/R19 define for this kind of entry (the 25-field data
+        // set on chain E), not a JSON object. The protected header names the certificate serial as kid.
+        var (jws, signature) = _signer.Sign(InfoCertSignedString.Build(request, previousSignature, _configuration), _configuration.CertificateSerialNumber);
 
-        // A technical event signs its R19 JET content instead of the receipt data set (market-fr#200).
-        var jetPayload = InfoCertJetPayload.TryCreate(request, previousSignature, _configuration.CertificateSerialNumber);
-        var (jws, signature) = _signer.Sign(jetPayload is null ? JsonSerializer.Serialize(payload) : JsonSerializer.Serialize(jetPayload));
-
-        // The QR code is the compact JWS; the certificate serial is its payload's csn, as in v1.2.
+        // The QR code is the compact JWS; the certificate serial is its header's kid.
         response.AddReceiptQrCode(jws);
         response.AddSignatureItem(SignatureTypeFR.Siret, "SIRET", _configuration.Siret);
+        // market-fr#221 (decisions 32, 35): the seller's identity for the header of a document, not signed.
+        response.AddIssuerItem(receiptRequest, _configuration.Issuer());
         // market-fr#131: the NF525 mention (NF525 V2.3 §6.1.6.1) is the whole line, so the caption
         // stays empty. It is left out rather than emitted incomplete. A sandbox is not certified, so
         // "en cours de certif." stands where the attestation number goes.

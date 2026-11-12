@@ -114,8 +114,88 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             entry.Siret.Should().Be("12345678901234");
         }
 
+        private static string B64(string text) => Convert.ToBase64String(Encoding.UTF8.GetBytes(text)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+        /// <summary>The InfoCert JWS since market-fr#221: header with kid, the R13/R12/R19 string (or the data set) as payload.</summary>
+        private static string StringJws(string signed, string signature, string? kid = "IC-2")
+            => B64(kid is null ? "{\"alg\":\"ES256\",\"typ\":\"JWT\"}" : "{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":\"" + kid + "\"}") + "." + B64(signed) + "." + signature;
+
+        [Fact]
+        public void Read_TakesTheLinksFromAnR13TicketString_AndTheSerialFromTheHeaderKid()
+        {
+            var qr = StringJws("1000:440,440,20260301100001,ft1#T7,VENTE,O,t6-sig", "t7-sig");
+
+            var entry = Read(Request(), Response("ft1#T7", qr))!;
+
+            entry.ChainCounter.Should().Be(7, "the counter is the one of TAG-TIK-NUM, the receipt identification");
+            entry.StartOfChain.Should().BeFalse();
+            entry.PreviousSignature.Should().Be("t6-sig");
+            entry.CertificateSerialNumber.Should().Be("IC-2");
+            entry.Siret.Should().Be("12345678901234", "the string signs no SIRET: the printed item gives it");
+            entry.Issuer.Rcs.Should().BeNull("R13 signs no issuer claim");
+            entry.SignedByInfoCert.Should().BeTrue();
+            entry.ChainedSignature.Should().Be("t7-sig");
+            ArchiveEntry.CertificateSerialNumberOf(qr).Should().Be("IC-2");
+        }
+
+        [Theory]
+        [InlineData(0x4652_2000_0000_0002, "ft1#P3", "ft1#P3,440,20260301100001,ticket-1,O,p2")]
+        [InlineData(0x4652_2000_0000_1001, "ft1#I3", "1000:440,440,20260301100001,ft1#I3,FACTURE,Dupont,75008,,O,p2")]
+        [InlineData(0x4652_2000_0000_3010, "ft1#D3", "ft1#D3,NOTE,1,Ana,20260301100001,ft1#B1,perte,O,p2")]
+        [InlineData(0x4652_2000_0000_3010, "ft1#D3", "ft1#D3,TICKET,1,Ana,20260301100001,ft1#T1,O,p2")]
+        [InlineData(0x4652_2000_0000_2011, "ft1#Z3", "1000:440,440,9000,20260301100001,ft1#Z3:20260228100000-20260301100001,O,p2")]
+        [InlineData(0x4652_2000_0000_3001, "ft1#L3", "ft1#L3,20,info,20260301100001,Ana,cashbox-fr,O,p2")]
+        [InlineData(0x4652_2000_0002_0001, "ft1#X3", "1000:440,440,20260301100001,ft1#X3,FORMATION-VENTE,O,p2")]
+        public void Read_TakesTheCounterFromTheIdentificationFieldOfEveryString(long receiptCase, string identification, string signed)
+        {
+            var entry = Read(Request(receiptCase), Response(identification, StringJws(signed, "s3")))!;
+
+            entry.ChainCounter.Should().Be(3);
+            entry.PreviousSignature.Should().Be("p2");
+        }
+
+        [Fact]
+        public void Read_TakesTheLinksOfAnArchiveReceiptString()
+        {
+            var values = new List<string> { "ft1#A2", "", Guid.NewGuid().ToString("D"), "20260101000000", Guid.NewGuid().ToString("D"), "20260301100001", "", "", "" };
+            values.AddRange(Enumerable.Repeat("", 18));
+            values.AddRange(new[] { "N", "" });
+
+            var entry = Read(Request(0x4652_2000_0000_3011), Response("ft1#A2", StringJws(string.Join(",", values), "a2")))!;
+
+            entry.ChainCounter.Should().Be(2);
+            entry.StartOfChain.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Read_TakesTheDataSetOfAChainEEntry_FromTheJwsPayload()
+        {
+            var id = Guid.NewGuid();
+            var qr = StringJws(LneDataSet(id, "ft1#E4", 4, "e3", serial: "IC-2"), "e4");
+
+            var entry = Read(Request(0x4652_2000_0000_2000), Response("ft1#E4", qr), id: id)!;
+
+            entry.ChainCounter.Should().Be(4);
+            entry.PreviousSignature.Should().Be("e3");
+            entry.RequestHash.Should().Be(SignedRequestField);
+            entry.Issuer.Rcs.Should().Be("RCS Paris");
+            entry.CertificateSerialNumber.Should().Be("IC-2");
+            entry.SignedByInfoCert.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Read_KeepsReadingTheJsonPayloadOfEarlierInfoCertEntries_AndPrefersAKid()
+        {
+            var qr = B64("{\"alg\":\"ES256\",\"typ\":\"JWT\",\"kid\":\"IC-9\"}") + "." + B64("{\"chainCounter\":7,\"previousSignatureCarriedOver\":\"O\",\"previousSignature\":\"t6\",\"csn\":\"IC-1\"}") + ".t7";
+
+            Read(Request(), Response("ft1#T7", qr))!.CertificateSerialNumber.Should().Be("IC-9");
+        }
+
         public static IEnumerable<object[]> UnreadableSignedEntries()
         {
+            yield return new object[] { "an R13 string signed for another identification", Request(), Response("ft1#T7", StringJws("1000:440,440,20260301100001,ft1#T8,VENTE,O,t6", "t7")) };
+            yield return new object[] { "an R13 ticket string with a missing field", Request(), Response("ft1#T7", StringJws("440,20260301100001,ft1#T7,VENTE,O,t6", "t7")) };
+            yield return new object[] { "an R13 string whose flag is neither O nor N", Request(), Response("ft1#T7", StringJws("1000:440,440,20260301100001,ft1#T7,VENTE,X,t6", "t7")) };
             var id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
             yield return new object[] { "a response that is not JSON", Request(), "{\"ftSignatures\":[" };
             yield return new object[] { "a request that is not JSON", "not json", Response("ft1#T1", LneDataSet(id, "ft1#T1", 1, null) + ".t1") };

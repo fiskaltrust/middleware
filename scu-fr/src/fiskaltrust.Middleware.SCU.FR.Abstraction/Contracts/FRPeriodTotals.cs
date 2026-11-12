@@ -28,6 +28,22 @@ public class FRTotals
     public decimal PIInternal { get; set; }
 
     public decimal PIUnknown { get; set; }
+
+    /// <summary>
+    /// The turnover per VAT rate, tax included (market-fr#221): the key is the rate rounded to the hundredth, written
+    /// culture-invariant without trailing zeros (<see cref="RateKey"/>: <c>20</c>, <c>5.5</c>, <c>2.1</c>, <c>0</c>), so 2.1 %
+    /// is no longer merged into <see cref="CIReducedS"/>. The same charge items as <see cref="Totalizer"/>. A queue migrated
+    /// from v1.2 starts with the v1 class totals under their rate (<see cref="UnknownRateKey"/> for the unknown class).
+    /// Empty when the totals were produced without it.
+    /// </summary>
+    public Dictionary<string, decimal> ByRate { get; set; } = new();
+
+    /// <summary>The key of the v1 unknown-VAT class in <see cref="ByRate"/>, which has no rate.</summary>
+    public const string UnknownRateKey = "UNKN";
+
+    /// <summary>A VAT rate as a <see cref="ByRate"/> key: rounded to the hundredth, no trailing zeros.</summary>
+    public static string RateKey(decimal rate)
+        => Math.Round(rate, 2, MidpointRounding.AwayFromZero).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 }
 
 /// <summary>

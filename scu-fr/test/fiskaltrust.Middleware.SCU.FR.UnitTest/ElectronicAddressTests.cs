@@ -89,6 +89,27 @@ public class ElectronicAddressTests
         sink.Warnings.Should().BeEmpty();
     }
 
+    /// <summary>The Infocert SCU likewise ignores the address, with one warning, and signs it nowhere.</summary>
+    [Theory]
+    [InlineData("123456789", 1)]
+    [InlineData(null, 0)]
+    public async Task Infocert_IgnoresAConfiguredAddress_WithOneWarning(string? electronicAddress, int warnings)
+    {
+        var (privateKey, key) = FRTestData.CreateKey();
+        using var _ = key;
+        var (provider, sink) = Start(new fiskaltrust.Middleware.SCU.FR.InfoCert.ScuBootstrapper { Configuration = Configuration(privateKey, electronicAddress) });
+        using var __ = provider;
+
+        var scu = provider.GetRequiredService<IFRSSCD>();
+        provider.GetRequiredService<IFRSSCD>();
+
+        sink.Warnings.Should().HaveCount(warnings);
+        sink.Warnings.Where(x => !(x.Contains("ElectronicAddress") && x.Contains("BT-34"))).Should().BeEmpty();
+        var (response, _) = await scu.ProcessReceiptAsync(FRTestData.Request(), null);
+        var jws = response.ReceiptResponse.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data;
+        FRJws.Decode(jws).SignedString.Should().NotContain("123456789");
+    }
+
     public sealed class LogSink
     {
         public List<string> Warnings { get; } = new();
