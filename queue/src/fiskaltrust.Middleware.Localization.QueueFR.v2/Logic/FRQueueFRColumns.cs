@@ -132,7 +132,7 @@ public static class FRQueueFRColumns
 
     /// <summary>
     /// A block of totals: the class columns, and the per-rate turnover kept in <see cref="FRStateV2.RateTotals"/>
-    /// (market-fr#221, P12c). A block v2 has never written (a queue migrated from v1.2) gets its per-rate turnover from its
+    /// (market-fr#221, ADR 0021). A block v2 has never written (a queue migrated from v1.2) gets its per-rate turnover from its
     /// class columns, each class under its French rate (<see cref="RatesOfClasses"/>).
     /// </summary>
     public static FRTotals GetTotals(this ftQueueFR queueFR, string prefix)

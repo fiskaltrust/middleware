@@ -183,8 +183,8 @@ internal static class InfoCertSignedString
     /// </summary>
     /// <remarks>
     /// One block per period the closing reports (<see cref="FRPeriodTotals.Reported"/>, as field 21 of the data set): a
-    /// monthly closing signs the day and the month, a yearly closing the day, the month and the year (market-fr#221, P08).
-    /// The breakdown is per VAT rate (P12c).
+    /// monthly closing signs the day and the month, a yearly closing the day, the month and the year (market-fr#221, contract §1.3).
+    /// The breakdown is per VAT rate (ADR 0021).
     /// </remarks>
     private static string GrandTotals(ProcessRequest request, string? previousSignature)
     {
@@ -323,7 +323,7 @@ internal static class InfoCertSignedString
         => [FRChaining.Flag(previousSignature).ToCode(), previousSignature ?? ""];
 
     /// <summary>
-    /// The breakdown of accumulated totals per VAT rate (market-fr#221, P12c): <see cref="FRTotals.ByRate"/>, highest rate
+    /// The breakdown of accumulated totals per VAT rate (market-fr#221, ADR 0021): <see cref="FRTotals.ByRate"/>, highest rate
     /// first, each rate on four digits; the v1 unknown class, which has no rate, last under <c>UNKN</c>. Only non-zero
     /// rates. Totals produced without per-rate amounts are broken down by class, each under its French rate (ReducedS as
     /// 2.1 %).

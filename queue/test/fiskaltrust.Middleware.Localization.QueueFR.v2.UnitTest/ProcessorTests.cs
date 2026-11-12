@@ -124,7 +124,7 @@ public class ProcessorTests
         response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
     }
 
-    /// <summary>[04 F10]: as v1.2, an unsigned response carries LateSigningModeIsActive 0x0008 while the range is open.</summary>
+    /// <summary>As v1.2 (contract §1.4), an unsigned response carries LateSigningModeIsActive 0x0008 while the range is open.</summary>
     [Theory]
     [InlineData(ReceiptCase.DeliveryNote0x0005)]
     [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]

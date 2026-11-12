@@ -11,8 +11,8 @@ using Xunit;
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
-/// market-fr#221, decisions A8 and A12. A8: the negative-sign exemptions for a down-payment deduction and for money
-/// leaving the drawer are French, applied by the FR validator over the shared NegativeAmounts rule. A12: a
+/// market-fr#221, ADR 0016. The negative-sign exemptions for a down-payment deduction and for money
+/// leaving the drawer are French, applied by the FR validator over the shared NegativeAmounts rule; a
 /// handwritten receipt (flag 0x0008) keeps the balance, VAT and description checks.
 /// </summary>
 public class FRNegativeAndHandwrittenTests
@@ -50,7 +50,7 @@ public class FRNegativeAndHandwrittenTests
         cbPayItems = pay,
     };
 
-    // A8: the exemptions are French.
+    // ADR 0016: the exemptions are French.
 
     [Fact]
     public async Task AFinalInvoice_DeductsTheDownPaymentAsANegativeLine()
@@ -91,7 +91,7 @@ public class FRNegativeAndHandwrittenTests
         (await ErrorsAsync(request)).Count(x => x == "NegativeAmountNotAllowed").Should().Be(1, "the shared instance's code is exempt, the FR instance reports it");
     }
 
-    // A12: a handwritten receipt keeps the checks.
+    // ADR 0016: a handwritten receipt keeps the checks.
 
     [Fact]
     public async Task AnUnbalancedHandwrittenReceipt_IsRefused()

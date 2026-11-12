@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
 /// market-fr#221: sandbox and production queues sign with a real FR SCU, the in-memory one runs only locally or in
-/// development; and a French queue always validates at Error (decision 24b).
+/// development; and a French queue always validates at Error (ADR 0020).
 /// </summary>
 public class StartupGuardTests
 {
@@ -109,7 +109,7 @@ public class StartupGuardTests
         (await SignAsync(guard)).signature.Should().BeEmpty();
     }
 
-    // ValidationLevel (decision 24b).
+    // ValidationLevel (ADR 0020).
 
     private sealed class CountingLogger : ILogger
     {

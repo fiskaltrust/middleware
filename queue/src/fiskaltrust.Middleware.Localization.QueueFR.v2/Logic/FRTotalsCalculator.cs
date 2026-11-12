@@ -47,7 +47,7 @@ public static class FRTotalsCalculator
             PINonCash = PaySum(FRPayBucket.NonCash),
             PIInternal = PaySum(FRPayBucket.Internal),
             PIUnknown = PaySum(FRPayBucket.Unknown),
-            // market-fr#221 (P12c): the same charge items per VAT rate, so 2.1 % is no longer merged into ReducedS.
+            // market-fr#221 (ADR 0021, R13 grand totals): the same charge items per VAT rate, so 2.1 % is no longer merged into ReducedS.
             ByRate = chargeItems.GroupBy(x => FRTotals.RateKey(x.VATRate)).ToDictionary(x => x.Key, x => x.Sum(item => item.Amount)),
         };
     }

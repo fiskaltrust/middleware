@@ -22,7 +22,7 @@ public sealed class FRStateV2
 
     /// <summary>
     /// The turnover per VAT rate of each block of totals, by its ftQueueFR column prefix (<c>GDay</c>, <c>T</c>, <c>A</c>…):
-    /// the v1 columns keep the VAT classes only (market-fr#221, P12c). A prefix missing here has never been written by
+    /// the v1 columns keep the VAT classes only (market-fr#221, ADR 0021). A prefix missing here has never been written by
     /// v2 and is read from its class columns (<see cref="FRQueueFRColumns.GetTotals"/>).
     /// </summary>
     public Dictionary<string, Dictionary<string, decimal>>? RateTotals { get; set; }

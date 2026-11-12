@@ -302,7 +302,7 @@ public class InfoCertSignedStringTests
         Build(request, PreviousSignature).Should().Be($"2000:1850|0550:550,2400,100000,20260301100000,Z42:20260228090000-20260301100000,O,{PreviousSignature}");
     }
 
-    /// <summary>P12c: a monthly closing signs one block per closed period (day, then month), each broken down per VAT rate, 2.1 % on its own.</summary>
+    /// <summary>Contract §1.3, ADR 0021: a monthly closing signs one block per closed period (day, then month), each broken down per VAT rate, 2.1 % on its own.</summary>
     [Fact]
     public void MonthlyClosing_SignsOneBlockPerClosedPeriod_PerVatRate()
     {

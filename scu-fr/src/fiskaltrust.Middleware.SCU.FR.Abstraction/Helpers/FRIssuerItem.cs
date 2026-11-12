@@ -4,7 +4,7 @@ using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
 
 namespace fiskaltrust.Middleware.SCU.FR.Abstraction.Helpers;
 
-/// <summary>The seller's identity as an FR SCU is configured with it (market-fr#221, decisions 32 and 35).</summary>
+/// <summary>The seller's identity as an FR SCU is configured with it (market-fr#221, ADR 0021).</summary>
 public sealed record FRIssuer(
     string? Siret,
     string? Name,
@@ -28,7 +28,7 @@ public sealed record FRIssuer(
 /// The issuer item (<see cref="SignatureTypeFR.Issuer"/>): the seller's identity the receipt header must show (R13 v4.2
 /// <c>ENC-TIK-SOC-*</c> on notes, tickets and payment proofs, R12 v4.2 <c>SOC-*</c> on invoices), from the SCU
 /// configuration. It is printed after the POS header and is <b>not signed</b>: the R13/R12 strings carry no issuer field
-/// (market-fr#221, decisions 32 and 35). The archive copies it into the issuer columns of chains T, B, P and I.
+/// (market-fr#221, ADR 0021). The archive copies it into the issuer columns of chains T, B, P and I.
 /// </summary>
 /// <remarks>
 /// One line per configured value, <c>Label : value</c>, with the fixed French labels of <see cref="Labels"/> in that
@@ -55,7 +55,7 @@ public static class FRIssuerItem
     public const string ShareCapitalLabel = "Capital social";
     public const string VatOptionLabel = "Option TVA";
 
-    /// <summary>The labels, in the order the lines are printed (decision 35).</summary>
+    /// <summary>The labels, in the order the lines are printed (ADR 0021).</summary>
     public static readonly IReadOnlyList<string> Labels =
     [
         SiretLabel, SirenLabel, NameLabel, NameTypeLabel, AddressLabel, PostalCodeLabel, CityLabel, CountryLabel,

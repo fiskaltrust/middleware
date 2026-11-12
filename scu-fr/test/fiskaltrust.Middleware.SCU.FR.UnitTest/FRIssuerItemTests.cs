@@ -10,7 +10,7 @@ using Xunit;
 namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
 
 /// <summary>
-/// The issuer item (market-fr#221, decisions 32 and 35): the seller's identity from the SCU configuration, printed after
+/// The issuer item (market-fr#221, ADR 0021): the seller's identity from the SCU configuration, printed after
 /// the header of notes, tickets, payment proofs and invoices, one labelled line per configured value, not signed.
 /// </summary>
 public class FRIssuerItemTests

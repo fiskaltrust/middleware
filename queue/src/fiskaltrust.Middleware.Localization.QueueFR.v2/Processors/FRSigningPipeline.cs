@@ -142,7 +142,7 @@ public class FRSigningPipeline
             // closing must leave the period open so it can be retried.
             ProcessCommandResponse Unsigned(string reason, bool refused)
             {
-                // An unsigned response still tells the POS the late-signing range is open ([04 F10], as v1.2).
+                // An unsigned response still tells the POS the late-signing range is open (as v1.2, contract §1.4).
                 FRLateSigning.MarkMode(receiptResponse, lateSigning);
                 chain.Numerator--;
                 receiptResponse.ftReceiptIdentification = identificationBeforeSigning;

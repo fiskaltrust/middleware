@@ -71,7 +71,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
     }
 
     /// <summary>
-    /// FR always validates at <c>Error</c> (market-fr#221, fiscal-perimeter decision 24b): the FR rules refuse rather
+    /// FR always validates at <c>Error</c> (market-fr#221, ADR 0020): the FR rules refuse rather
     /// than log, so no receipt reaches signing unvalidated. A configured lower level is ignored and said so once, at
     /// start-up.
     /// </summary>

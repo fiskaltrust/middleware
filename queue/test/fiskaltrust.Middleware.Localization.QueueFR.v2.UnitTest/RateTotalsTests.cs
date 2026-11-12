@@ -9,7 +9,7 @@ using Xunit;
 namespace fiskaltrust.Middleware.Localization.QueueFR.v2.UnitTest;
 
 /// <summary>
-/// P12c (market-fr#221): the grand totals are kept per VAT rate as well as per VAT class, so 2.1 % is no longer merged
+/// ADR 0021 (market-fr#221): the grand totals are kept per VAT rate as well as per VAT class, so 2.1 % is no longer merged
 /// into ReducedS. The per-rate amounts live in ftQueueFR StateV2 next to the v1 class columns.
 /// </summary>
 public class RateTotalsTests

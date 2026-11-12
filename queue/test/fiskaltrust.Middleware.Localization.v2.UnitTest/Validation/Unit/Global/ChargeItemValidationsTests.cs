@@ -261,7 +261,7 @@ public class ChargeItemValidationsTests
 
     /// <summary>
     /// A negative down-payment line (flag 0x0008) stays refused by the shared rule: France exempts it in its own
-    /// validator (market-fr#221, decision A8), the other markets keep the rule.
+    /// validator (market-fr#221, ADR 0016), the other markets keep the rule.
     /// </summary>
     [Fact]
     public void NegativeAmounts_DownpaymentDeduction_StillFails()
@@ -290,7 +290,7 @@ public class ChargeItemValidationsTests
 
     /// <summary>
     /// Money leaving the drawer (a negative not-taxable cash transfer, receivable or voucher) stays refused by the
-    /// shared rule; France exempts it in its own validator (market-fr#221, decision A8).
+    /// shared rule; France exempts it in its own validator (market-fr#221, ADR 0016).
     /// </summary>
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, 0x00A8)]

@@ -40,7 +40,7 @@ public class ScuInfoTests
         }
 
         // market-fr#221: BT-34 is no longer reported by LNE and self-certified (ElectronicAddressTests);
-        // the InfoCert SCU still reports it until its payload drops it (P12a).
+        // the InfoCert SCU still reports it until its payload drops it (ADR 0021).
         (await InfoData(scus[2])).GetProperty("ElectronicAddress").GetString().Should().Be("123456789");
         (await InfoData(scus[2])).GetProperty("SoftwareCategory").GetString().Should().Be("B");
     }

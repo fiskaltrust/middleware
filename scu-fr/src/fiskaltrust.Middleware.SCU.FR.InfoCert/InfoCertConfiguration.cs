@@ -63,7 +63,7 @@ public class InfoCertConfiguration
     /// </summary>
     public string? ElectronicAddress { get; set; }
 
-    // market-fr#221 (decision 35): the rest of the seller's identity the receipt header shows (R13 ENC-TIK-SOC-*,
+    // market-fr#221 (ADR 0021): the rest of the seller's identity the receipt header shows (R13 ENC-TIK-SOC-*,
     // R12 SOC-*), printed by the issuer item and not signed. Optional; a value not configured has no line.
 
     /// <summary>Issuer: company name (ENC-TIK-SOC-ETS, SOC-RSO).</summary>

@@ -8,7 +8,7 @@ using static fiskaltrust.Middleware.Journal.FR.Archive.UnitTest.ArchiveV2FilesTe
 namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
 {
     /// <summary>
-    /// The issuer columns (archive-v2 §1.1, market-fr#221, decisions 32 and 35) copy the issuer item the SCU printed
+    /// The issuer columns (archive-v2 §1.1, market-fr#221, ADR 0021) copy the issuer item the SCU printed
     /// (signature type 0x0013, not signed) on the documents that carry the issuer in their header: chains T, B, P and I.
     /// </summary>
     public class ArchiveIssuerColumnsTests

@@ -74,7 +74,7 @@ public class ReceiptValidationsFRTests
     public void PaymentProofs_TakeANotTaxableDrawerMoveChargeItem(long receiptCase, long chargeItemCase)
     {
         Errors(DrawerMove(receiptCase, chargeItemCase, 500m)).Should().BeEmpty();
-        Errors(DrawerMove(receiptCase, chargeItemCase, -500m)).Should().BeEmpty("France lets money leave the drawer (decision A8)");
+        Errors(DrawerMove(receiptCase, chargeItemCase, -500m)).Should().BeEmpty("France lets money leave the drawer (ADR 0016)");
     }
 
     [Theory]
