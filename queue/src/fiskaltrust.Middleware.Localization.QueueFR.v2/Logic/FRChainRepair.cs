@@ -86,8 +86,11 @@ public static class FRChainRepair
         return (Kind.Signed, new SignedEntry(item, request, response, chain, number, FRChaining.ChainedSignatureOf(signature)));
     }
 
-    /// <summary>Applies one signed entry to the state, as <c>FRSigningPipeline</c> did when it signed it.</summary>
-    public static void Apply(ftQueueFR queueFR, SignedEntry entry)
+    /// <summary>
+    /// Applies one signed entry to the state, as <c>FRSigningPipeline</c> did when it signed it, and
+    /// returns the files the one-year limit cut at that entry (their journal entries are the caller's).
+    /// </summary>
+    public static List<FROpenArchiveFile.ForcedFile> Apply(ftQueueFR queueFR, SignedEntry entry)
     {
         var (_, request, response, chain, number, signature) = entry;
         queueFR.SetNumerator(chain, number);
@@ -113,15 +116,14 @@ public static class FRChainRepair
             lateSigning.Close();
         }
 
-        // The open archive file follows the entry; a forced archive the lost entry recorded is not
-        // recorded again (its action journal belonged to the entry's own store).
-        new FROpenArchiveFile(queueFR).Add(request, response, FRArchiveDue.CertificateSerialNumberOf(response));
-
-        // A zero receipt that still answered "message pending" did not hand the messages over.
+        // A zero receipt that still answered "message pending" did not hand the messages over. As in
+        // the pipeline, this comes before a forced archive the same entry may raise.
         var pending = new FRPendingMessagesState(queueFR);
         if (zeroReceipt && pending.AnyPending && !response.ftState.IsFlag(StateFlags.MessageIsPending))
         {
             pending.Reset();
         }
+
+        return new FROpenArchiveFile(queueFR).Add(request, response, FRArchiveDue.CertificateSerialNumberOf(response));
     }
 }

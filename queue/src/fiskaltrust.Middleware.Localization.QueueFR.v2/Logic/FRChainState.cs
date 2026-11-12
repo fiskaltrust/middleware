@@ -236,7 +236,7 @@ public class FRChainStateProvider
     /// start-up and again after a store whose outcome was unknown; returns the number of entries replayed.
     /// </summary>
     /// <exception cref="InvalidOperationException">ftQueueFR is missing, or the repaired state cannot be stored.</exception>
-    public async Task<int> ReconcileAsync(IMiddlewareQueueItemRepository queueItems, Func<ReceiptCase, Task> lifecycle)
+    public async Task<int> ReconcileAsync(IMiddlewareQueueItemRepository queueItems, Func<ReceiptCase, Task> lifecycle, IMiddlewareActionJournalRepository? actionJournals = null)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -286,7 +286,10 @@ public class FRChainStateProvider
             ahead.Reverse();
             foreach (var entry in ahead)
             {
-                FRChainRepair.Apply(_queueFR, entry);
+                foreach (var file in FRChainRepair.Apply(_queueFR, entry))
+                {
+                    await RecordForcedArchiveAsync(entry, file, actionJournals).ConfigureAwait(false);
+                }
                 if (!entry.Request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
                 {
                     await lifecycle(entry.Request.ftReceiptCase.Case()).ConfigureAwait(false);
@@ -312,6 +315,34 @@ public class FRChainStateProvider
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// The journal entries of a forced file met while rolling forward (ADR 0018). The limit and the
+    /// closing rule are deterministic over the stored entries, so the file is the one the lost store
+    /// recorded. An entry stored with the receipt is kept and never written twice; the pending count is
+    /// replayed either way, since ftQueueFR is what lagged.
+    /// </summary>
+    private async Task RecordForcedArchiveAsync(FRChainRepair.SignedEntry entry, FROpenArchiveFile.ForcedFile file, IMiddlewareActionJournalRepository? actionJournals)
+    {
+        if (actionJournals is null)
+        {
+            return;
+        }
+
+        var stored = await actionJournals.GetByQueueItemId(entry.Response.ftQueueItemID).ToListAsync().ConfigureAwait(false);
+        var forced = stored.FirstOrDefault(x => FRArchiveDue.IsForcedArchiveOf(x, file));
+        if (forced is null)
+        {
+            forced = Factories.ftActionJournalFactory.CreateForcedArchiveActionJournal(entry.Request, entry.Response, file);
+            await actionJournals.InsertAsync(forced).ConfigureAwait(false);
+        }
+
+        var pending = FRArchiveDue.PendingJet30(new FRPendingMessagesState(_queueFR!), entry.Response, file, forced.ftActionJournalId);
+        if (!stored.Any(x => FRArchiveDue.IsPendingJet30Of(x, file)))
+        {
+            await actionJournals.InsertAsync(pending).ConfigureAwait(false);
         }
     }
 

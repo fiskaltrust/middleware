@@ -37,7 +37,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
 
         var chains = new FRChainStateProvider(storageProvider.CreateConfigurationRepository(), id);
         // The chain state is stored only once the signed queue item is (FRQueueStorageProvider).
-        var queueStorageProvider = new FRQueueStorageProvider(new QueueStorageProvider(id, storageProvider), chains, storageProvider.CreateMiddlewareQueueItemRepository());
+        var queueStorageProvider = new FRQueueStorageProvider(new QueueStorageProvider(id, storageProvider), chains, storageProvider.CreateMiddlewareQueueItemRepository(), storageProvider.CreateMiddlewareActionJournalRepository());
         var queueItemRepository = storageProvider.CreateMiddlewareQueueItemRepository();
         var pipeline = new FRSigningPipeline(frSSCD, chains, queueItemRepository, storageProvider.CreateMiddlewareActionJournalRepository());
 

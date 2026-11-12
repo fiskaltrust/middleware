@@ -26,12 +26,14 @@ public sealed class FRQueueStorageProvider : IQueueStorageProvider
     private readonly FRChainStateProvider _chains;
 
     private readonly AsyncLazy<IMiddlewareQueueItemRepository>? _queueItems;
+    private readonly AsyncLazy<IMiddlewareActionJournalRepository>? _actionJournals;
 
-    public FRQueueStorageProvider(IQueueStorageProvider inner, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null)
+    public FRQueueStorageProvider(IQueueStorageProvider inner, FRChainStateProvider chains, AsyncLazy<IMiddlewareQueueItemRepository>? queueItems = null, AsyncLazy<IMiddlewareActionJournalRepository>? actionJournals = null)
     {
         _inner = inner;
         _chains = chains;
         _queueItems = queueItems;
+        _actionJournals = actionJournals;
     }
 
     // The opening or closing a lifecycle receipt asked for, applied once its signed item is stored.
@@ -138,7 +140,7 @@ public sealed class FRQueueStorageProvider : IQueueStorageProvider
             return;
         }
 
-        var replayed = await _chains.ReconcileAsync(await _queueItems, ApplyLifecycleAsync).ConfigureAwait(false);
+        var replayed = await _chains.ReconcileAsync(await _queueItems, ApplyLifecycleAsync, _actionJournals is null ? null : await _actionJournals).ConfigureAwait(false);
         if (replayed > 0)
         {
             await TryRecordAsync($"The French chain state was {replayed} stored signed entr{(replayed == 1 ? "y" : "ies")} behind and was rolled forward from the stored queue items.", null).ConfigureAwait(false);

@@ -41,8 +41,11 @@ public class ChainStateRepairTests
 
     private FRChainStateProvider NewChains() => new(new AsyncLazy<IConfigurationRepository>(() => Task.FromResult(_configuration.Object)), _queueId);
 
+    private readonly InMemoryActionJournalRepository _actionJournals = new();
+
     private FRQueueStorageProvider Storage(FRChainStateProvider chains)
-        => new(_inner.Object, chains, new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(_queueItems)));
+        => new(_inner.Object, chains, new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult<IMiddlewareQueueItemRepository>(_queueItems)),
+            new AsyncLazy<IMiddlewareActionJournalRepository>(() => Task.FromResult<IMiddlewareActionJournalRepository>(_actionJournals)));
 
     private static ReceiptRequest TicketRequest(decimal amount = 10m, ReceiptCase receiptCase = ReceiptCase.PointOfSaleReceipt0x0001) => new()
     {
@@ -268,15 +271,76 @@ public class ChainStateRepairTests
         private static ftQueueFR? Copy(ftQueueFR? queue) => queue is null ? null : JsonSerializer.Deserialize<ftQueueFR>(JsonSerializer.Serialize(queue));
     }
 
-    private async Task StoreSignedAsync(ReceiptRequest request, string identification, string signature, long row)
+    /// <summary>
+    /// A forced archive whose action journal entries were lost with a failed store is recorded again
+    /// when the chain state rolls forward: the limit and the closing rule give the same file.
+    /// </summary>
+    [Fact]
+    public async Task AtStartUp_AForcedArchiveLostWithItsStore_IsRecordedAgain()
     {
+        var (first, last) = SeedOpenArchiveFile();
+        var crossing = await StoreSignedAsync(TicketRequest(), "ft9#T3", "stored-sig-3", row: 3, moment: new DateTime(2026, 3, 11, 9, 0, 0, DateTimeKind.Utc));
+
+        var chains = NewChains();
+        await Storage(chains).ReserveNextQueueItem(TicketRequest());
+
+        var journals = await _actionJournals.GetByQueueItemId(crossing).ToListAsync();
+        var forced = journals.Should().ContainSingle(x => x.Type.EndsWith("-ForcedArchive")).Subject;
+        forced.DataJson.Should().Contain(first.ToString()).And.Contain(last.ToString());
+        journals.Should().ContainSingle(x => x.Type == "30-JetPending").Which.DataJson.Should().Contain(forced.ftActionJournalId.ToString());
+        (await _configuration.GetQueueFRAsync(_queueId)).MessageCount.Should().Be(1, "the JET 30 is pending again");
+    }
+
+    [Fact]
+    public async Task AtStartUp_AForcedArchiveWhoseJournalsWereStored_IsNotRecordedTwice()
+    {
+        var (first, last) = SeedOpenArchiveFile();
+        var crossing = await StoreSignedAsync(TicketRequest(), "ft9#T3", "stored-sig-3", row: 3, moment: new DateTime(2026, 3, 11, 9, 0, 0, DateTimeKind.Utc));
+        var storedForced = new ftActionJournal
+        {
+            ftActionJournalId = Guid.NewGuid(), ftQueueId = _queueId, ftQueueItemId = crossing, Type = "4652200000000001-ForcedArchive", Moment = DateTime.UtcNow,
+            DataJson = JsonSerializer.Serialize(new { First = new { ftQueueItemId = first }, Last = new { ftQueueItemId = last } }),
+        };
+        await _actionJournals.InsertAsync(storedForced);
+        await _actionJournals.InsertAsync(new ftActionJournal
+        {
+            ftActionJournalId = Guid.NewGuid(), ftQueueId = _queueId, ftQueueItemId = crossing, Type = "30-JetPending", Moment = DateTime.UtcNow, Priority = -1,
+            DataJson = JsonSerializer.Serialize(new { Code = 30, Message = "x", Information = $"first.ftQueueItemId={first}; last.ftQueueItemId={last}; ftActionJournalId={storedForced.ftActionJournalId}" }),
+        });
+
+        var chains = NewChains();
+        await Storage(chains).ReserveNextQueueItem(TicketRequest());
+
+        var journals = await _actionJournals.GetByQueueItemId(crossing).ToListAsync();
+        journals.Should().HaveCount(2, "both entries were stored with the receipt");
+        (await _configuration.GetQueueFRAsync(_queueId)).MessageCount.Should().Be(1, "the stored JET 30 is still pending, once");
+    }
+
+    /// <summary>A stored state whose open file runs from 2025-03-10 to a sale on 2025-12-01, two tickets signed.</summary>
+    private (Guid first, Guid last) SeedOpenArchiveFile()
+    {
+        var queueFR = _configuration.GetQueueFRAsync(_queueId).GetAwaiter().GetResult();
+        var file = new FROpenArchiveFile(queueFR);
+        var first = Guid.NewGuid();
+        var last = Guid.NewGuid();
+        file.Add(TicketRequest(), new ReceiptResponse { ftQueueItemID = first, ftReceiptMoment = new DateTime(2025, 3, 10, 9, 0, 0, DateTimeKind.Utc) }, null);
+        file.Add(TicketRequest(), new ReceiptResponse { ftQueueItemID = last, ftReceiptMoment = new DateTime(2025, 12, 1, 9, 0, 0, DateTimeKind.Utc) }, null);
+        queueFR.TNumerator = 2;
+        queueFR.TLastSignature = "stored-sig-2";
+        _configuration.InsertOrUpdateQueueFRAsync(queueFR).GetAwaiter().GetResult();
+        return (first, last);
+    }
+
+    private async Task<Guid> StoreSignedAsync(ReceiptRequest request, string identification, string signature, long row, DateTime? moment = null)
+    {
+        var at = moment ?? DateTime.UtcNow.AddMinutes(-5);
         var id = Guid.NewGuid();
         var response = new ReceiptResponse
         {
             ftQueueID = _queueId,
             ftQueueItemID = id,
             ftReceiptIdentification = identification,
-            ftReceiptMoment = DateTime.UtcNow.AddMinutes(-5),
+            ftReceiptMoment = at,
             ftState = (State) StateFR.Success,
             ftSignatures = [new SignatureItem { ftSignatureType = (SignatureType) (long) SignatureTypeFR.ReceiptSignature, ftSignatureFormat = SignatureFormat.QRCode, Caption = "www.fiskaltrust.fr", Data = $"data.{signature}" }],
         };
@@ -285,9 +349,10 @@ public class ChainStateRepairTests
             ftQueueItemId = id,
             ftQueueId = _queueId,
             ftQueueRow = row,
-            TimeStamp = DateTime.UtcNow.AddMinutes(-5).Ticks,
+            TimeStamp = at.Ticks,
             request = JsonSerializer.Serialize(request),
             response = JsonSerializer.Serialize(response),
         });
+        return id;
     }
 }
