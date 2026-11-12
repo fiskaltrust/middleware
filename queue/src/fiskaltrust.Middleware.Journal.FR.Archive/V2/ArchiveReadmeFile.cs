@@ -109,9 +109,8 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
                     + "(section 5.9).");
                 Para("Conservation : cette archive doit être conservée sur un support externe (support amovible ou "
                     + "stockage distinct de la caisse), pendant la durée légale de conservation.");
-                Para("Clôtures : le logiciel ne bénéficie pas de la dispense de clôture. Les périodes sont closes par "
-                    + "les clôtures journalières, mensuelles et annuelles, et chaque reçu d'archive clôt lui-même le jour "
-                    + "avant l'archivage.");
+                // Whether the NF525 closing exemption applies is the integrator's statement, not the middleware's (#864).
+                Para("Clôtures : chaque reçu d'archive clôt lui-même le jour avant l'archivage.");
                 Para("Les fichiers se joignent par ftQueueItemID (identifiant du document), présent dans chaque "
                     + "fichier ; ftReceiptIdentification permet de contrôler la jointure. Une ligne d'article se "
                     + "joint à ses données complémentaires de case-data.csv par ftQueueItemID et Position, avec "

@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
     /// <summary>
     /// README.txt is readable without the software (archive-v2 §11.1, [06 D12, D13], [07 §6.9.2.5, §6.9.3.1], ADR 0018):
     /// complete value lists, the canonical request form, the file cut at the one-year limit, the flags a POS acts on,
-    /// keeping archives on external media and the closing statement.
+    /// keeping archives on external media, and the day an archive receipt closes.
     /// </summary>
     public class ArchiveReadmeContentTests
     {
@@ -67,8 +67,14 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
         public void KeepingArchivesOnExternalMedia_IsRequired()
             => Readme().Should().Contain("support externe");
 
+        /// <summary>Whether the NF525 closing exemption applies is the integrator's statement, not the middleware's (#864).</summary>
         [Fact]
-        public void TheClosingStatement_IsMade()
-            => Readme().Should().Contain("dispense de clôture");
+        public void TheReadme_StatesTheArchiveReceiptClosesTheDay_AndNothingOnTheClosingExemption()
+        {
+            var readme = Readme();
+
+            readme.Should().Contain("chaque reçu d'archive clôt lui-même le jour avant l'archivage");
+            readme.Should().NotContain("dispense");
+        }
     }
 }
