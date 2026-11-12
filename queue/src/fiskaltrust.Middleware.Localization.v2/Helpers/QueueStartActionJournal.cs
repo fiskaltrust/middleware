@@ -78,9 +78,9 @@ public static class QueueStartActionJournal
                 middlewareConfiguration.IsSandbox,
                 middlewareConfiguration.ServiceFolder,
                 Configuration = configuration,
-                middlewareConfiguration.ProcessingVersion,
-                middlewareConfiguration.AssemblyName,
-                middlewareConfiguration.AssemblyVersion,
+                ProcessingVersion = ThisAssembly.AssemblyInformationalVersion,
+                ThisAssembly.AssemblyName,
+                ThisAssembly.AssemblyVersion,
                 middlewareConfiguration.LauncherEnvironment,
                 middlewareConfiguration.PreviewFeatures,
                 middlewareConfiguration.LauncherVersion
