@@ -87,7 +87,7 @@ public abstract class LateSigningScenarioTests
         JetCodes(firstLate).Should().Equal("70");
         JetCodes(secondLate).Should().BeEmpty();
         JetCodes(ordinary).Should().BeEmpty();
-        JetCodes(zero).Should().BeEmpty("the POS sends JET 120 on its own");
+        JetCodes(zero).Should().Equal(new string?[] { "120" }, "the queue asks for JET 120 on the zero receipt that ends late signing (contract §6, ADR 0009)");
         JetCodes(after).Should().BeEmpty();
 
         zero.ftSignatures.Single(x => x.Caption == "Défaillance enregistrée").Data
@@ -100,14 +100,12 @@ public abstract class LateSigningScenarioTests
         var late = await SignAsync(CashSale(lateSigned: true, cbReceiptMoment: DateTime.UtcNow.AddHours(-1)));
         var zero = await SignAsync(Request(ReceiptCase.ZeroReceipt0x2000));
 
-        // JET 70 is prompted by the item on the first late-signed receipt; JET 120 is the POS's own
-        // event when it leaves the mode, sent without a prompt (market-fr#200, 2026-11-05).
-        zero.ftSignatures.Should().NotContain(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent));
-        var posOwn120 = "{\"FR\":{\"Code\":\"120\",\"Message\":\"Fin de mode dégradé\",\"Information\":\"reconnected\"}}";
-        foreach (var (trigger, code, caseData) in new[] { (late, "70", late.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).Data), (zero, "120", posOwn120) })
+        // JET 70 is prompted by the item on the first late-signed receipt, JET 120 by the item on the
+        // zero receipt that ends the mode (contract §6, ADR 0009).
+        foreach (var (trigger, code) in new[] { (late, "70"), (zero, "120") })
         {
             var jetEvent = Request(ReceiptCase.ProtocolTechnicalEvent0x3001);
-            jetEvent.ftReceiptCaseData = caseData;
+            jetEvent.ftReceiptCaseData = trigger.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).Data;
             jetEvent.cbPreviousReceiptReference = RequestReferenceOf(trigger);
 
             var response = await SignAsync(jetEvent);

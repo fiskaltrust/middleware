@@ -94,7 +94,7 @@ public class FRChainStateProvider
     /// The state of an earlier stored receipt still cannot be written to ftQueueFR; nothing is
     /// signed until it is.
     /// </exception>
-    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, FRPendingMessagesState, FROpenArchiveFile, Task<T>> operation)
+    public async Task<T> ExecuteInChainAsync<T>(ReceiptRequest request, Func<FRChainState, FRPeriodTotalsAccumulator, FRLateSigningState, FRPendingMessagesState, FROpenArchiveFile, FRClosingDue, Task<T>> operation)
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
@@ -119,7 +119,7 @@ public class FRChainStateProvider
             T result;
             try
             {
-                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR), new FRPendingMessagesState(_queueFR), new FROpenArchiveFile(_queueFR)).ConfigureAwait(false);
+                result = await operation(state, new FRPeriodTotalsAccumulator(_queueFR), new FRLateSigningState(_queueFR), new FRPendingMessagesState(_queueFR), new FROpenArchiveFile(_queueFR), new FRClosingDue(_queueFR)).ConfigureAwait(false);
             }
             catch
             {

@@ -73,6 +73,9 @@ public static class FRReceiptChainExt
     /// <summary>The archive receipt; ifPOS has no name for the case yet.</summary>
     public const ReceiptCase ArchiveReceipt = (ReceiptCase) 0x3011;
 
+    /// <summary>0x0006 (Note [FR]); ifPOS has no name for the case yet.</summary>
+    public const ReceiptCase Note = (ReceiptCase) 0x0006;
+
     /// <summary>The letter that prefixes the national numbering of this chain.</summary>
     public static string Identifier(this FRReceiptChain chain) => chain switch
     {

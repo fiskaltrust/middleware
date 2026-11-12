@@ -56,9 +56,9 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
-        if (RejectTraining(receiptRequest, receiptResponse, "initial-operation"))
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
         {
-            return new ProcessCommandResponse(receiptResponse, []);
+            return await SignTrainingAsync(request).ConfigureAwait(false);
         }
 
         var info = await _sscd.GetInfoAsync().ConfigureAwait(false);
@@ -84,9 +84,9 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
-        if (RejectTraining(receiptRequest, receiptResponse, "out-of-operation"))
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
         {
-            return new ProcessCommandResponse(receiptResponse, []);
+            return await SignTrainingAsync(request).ConfigureAwait(false);
         }
 
         if (await NotRightAfterAnArchiveReceiptAsync(receiptResponse.ftQueueItemID).ConfigureAwait(false) is { } refusal)
@@ -163,20 +163,11 @@ public class LifecycleCommandProcessorFR : ILifecycleCommandProcessor
     }
 
     /// <summary>
-    /// A lifecycle receipt opens or closes the real queue, so it cannot be simulated: a training
-    /// one would be signed into the training chain and still change the fiscal queue. v1.2 signed it
-    /// as a training receipt without touching the queue; v2 refuses it before anything is signed.
+    /// A training 0x4001 (Queue-start receipt) or 0x4002 (Queue-stop receipt) is signed on chain X, as v1.2 signed it
+    /// as a training receipt: it neither activates nor deactivates the queue, closes no period, writes no lifecycle
+    /// action journal and prints no start or stop mention; the stop needs no archive receipt before it.
     /// </summary>
-    private static bool RejectTraining(ReceiptRequest request, ReceiptResponse response, string receipt)
-    {
-        if (!request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training))
-        {
-            return false;
-        }
-
-        response.SetReceiptResponseError($"An {receipt} receipt cannot be sent in training mode: it opens or closes the fiscal queue. Send it without the training flag.");
-        return true;
-    }
+    private Task<ProcessCommandResponse> SignTrainingAsync(ProcessCommandRequest request) => _pipeline.SignAsync(request);
 
     public Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => FRFallBackOperations.NoOp(request);
 

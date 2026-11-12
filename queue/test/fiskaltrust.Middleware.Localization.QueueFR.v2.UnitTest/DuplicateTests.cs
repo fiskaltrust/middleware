@@ -165,9 +165,11 @@ public class DuplicateTests
     }
 
     [Theory]
-    [InlineData(ReceiptCase.Order0x3004, "155")]
+    [InlineData((ReceiptCase) 0x0006, "155")]
     [InlineData(ReceiptCase.Pay0x3005, "156")]
     [InlineData(ReceiptCase.PointOfSaleReceipt0x0001, null)]
+    [InlineData((ReceiptCase) 0x0007, null)]
+    [InlineData(ReceiptCase.Order0x3004, null)]
     public async Task ACopy_AsksForTheJetEventOfTheCopiedReceipt(ReceiptCase copiedCase, string? code)
     {
         var sut = CreateSut();
@@ -186,7 +188,7 @@ public class DuplicateTests
         var jet = copy.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypeFR.JetEvent)).ToList();
         if (code is null)
         {
-            jet.Should().BeEmpty("R19 has no code for a copy of a ticket");
+            jet.Should().BeEmpty("R19 has no code for a copy of a ticket, a pro forma or an order");
         }
         else
         {

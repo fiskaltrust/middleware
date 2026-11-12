@@ -25,8 +25,11 @@ public static class FRJetItems
     public const int DegradedModeStart = 70;
     public const string DegradedModeStartLabel = "Début de mode dégradé";
 
-    public const int PointOfSaleRemoved = 127;
-    public const string PointOfSaleRemovedLabel = "Suppression d'un point de vente ou d'un poste utilisateur";
+    public const int DataExport = 110;
+    public const string DataExportLabel = "Exportation de données";
+
+    public const int DegradedModeEnd = 120;
+    public const string DegradedModeEndLabel = "Fin de mode dégradé";
 
     public const int NoteCopy = 155;
     public const string NoteCopyLabel = "Duplicata d'une note";
@@ -51,9 +54,11 @@ public static class FRJetItems
 
     /// <summary>
     /// The items a signed, non-training receipt carries because of its own receipt case: the
-    /// lifecycle receipts (0x4001 → 260, 0x4002 → 127, decided 2026-11-04) and the closings
-    /// (daily and monthly → 50, yearly → 60). The shift closing is not a period of R19's code 50
-    /// ("Jour/Mois").
+    /// queue start 0x4001 (Queue-start receipt) → 260, the closings (daily and monthly → 50,
+    /// yearly → 60) and the archive receipt → 20 (contract §6). The shift closing is not a period of
+    /// R19's code 50 ("Jour/Mois"). The queue raises nothing on 0x4002 (Queue-stop receipt): the POS
+    /// sends JET 40 and 127 before the last archive receipt, and JET 80 on queue start is the
+    /// InfoCert SCU's own item (contract §6).
     /// </summary>
     public static void AddForSignedReceipt(ReceiptRequest request, ReceiptResponse response)
     {
@@ -68,13 +73,8 @@ public static class FRJetItems
 
         switch (request.ftReceiptCase.Case())
         {
-            // TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) and ADR 0009 list queue start as JET 80.
             case ReceiptCase.InitialOperationReceipt0x4001:
                 response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(DataInitialisation, DataInitialisationLabel, identification));
-                break;
-            // TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) and ADR 0009 list queue stop as JET 40.
-            case ReceiptCase.OutOfOperationReceipt0x4002:
-                response.ftSignatures.Add(SignaturItemFactory.CreateJetEventSignature(PointOfSaleRemoved, PointOfSaleRemovedLabel, identification));
                 break;
             case ReceiptCase.DailyClosing0x2011:
             case ReceiptCase.MonthlyClosing0x2012:
@@ -91,8 +91,10 @@ public static class FRJetItems
     }
 
     /// <summary>
-    /// The item a signed copy carries: 155 for a copy of a bill (<c>0x3004</c>, the "note"), 156 for
-    /// a copy of a payment proof (chain P: <c>0x0002</c> or <c>0x3005</c>, contract §6). A copy of any other receipt has no R19 code.
+    /// The item a signed copy carries: 155 ("Duplicata d'une note", R19) for a copy of a
+    /// <c>0x0006</c> (Note [FR]) only, 156 for a copy of a payment proof (chain P: <c>0x0002</c> or
+    /// <c>0x3005</c> (Pay)), contract §6. A copy of any other receipt, 0x0007 (Proforma invoice) and
+    /// 0x3004 (Order) included, has no R19 code.
     /// </summary>
     public static void AddForCopy(ReceiptRequest request, ReceiptResponse response, string copiedReceiptReference, ReceiptCase? copiedCase)
     {
@@ -103,8 +105,7 @@ public static class FRJetItems
 
         var (code, label) = copiedCase switch
         {
-            // TODO pending the decision on the JET events the queue raises (market-fr#200): the archive contract (section 6) raises 155 on a copy of any bill (B) original, not only of 0x3004.
-            ReceiptCase.Order0x3004 => (NoteCopy, NoteCopyLabel),
+            FRReceiptChainExt.Note => (NoteCopy, NoteCopyLabel),
             ReceiptCase.Pay0x3005 or ReceiptCase.PaymentTransfer0x0002 => (PaymentProofCopy, PaymentProofCopyLabel),
             _ => (0, ""),
         };

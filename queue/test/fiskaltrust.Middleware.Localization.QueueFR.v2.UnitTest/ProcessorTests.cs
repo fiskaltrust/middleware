@@ -106,6 +106,64 @@ public class ProcessorTests
         response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
     }
 
+    /// <summary>As v1.2, a training 0x0005, 0x3000 or 0x3003 is signed on chain X with the training mention.</summary>
+    [Theory]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
+    [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
+    public async Task UnsignedDocuments_InTraining_AreSignedOnX(ReceiptCase receiptCase)
+    {
+        var (pipeline, sscd) = CreatePipeline();
+        var request = CommandRequest(receiptCase);
+        request.ReceiptRequest.ftReceiptCase = request.ReceiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Training);
+
+        var response = await UnsignedDocumentAsync(pipeline, receiptCase, request);
+
+        sscd.Calls.Should().ContainSingle();
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+    }
+
+    /// <summary>[04 F10]: as v1.2, an unsigned response carries LateSigningModeIsActive 0x0008 while the range is open.</summary>
+    [Theory]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
+    [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
+    [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
+    public async Task UnsignedDocuments_CarryTheLateSigningFlag_WhileTheRangeIsOpen(ReceiptCase receiptCase)
+    {
+        var state = new StoredChainState(new ftQueueFR { ftQueueFRId = Guid.NewGuid(), UsedFailedCount = 2, UsedFailedQueueItemId = Guid.NewGuid() });
+        var sscd = new FakeFRSSCD();
+        var pipeline = new FRSigningPipeline(sscd, state.Provider());
+
+        var open = await UnsignedDocumentAsync(pipeline, receiptCase, CommandRequest(receiptCase));
+        var closed = await UnsignedDocumentAsync(CreatePipeline().pipeline, receiptCase, CommandRequest(receiptCase));
+
+        open.receiptResponse.ftState.IsFlag(StateFlags.LateSigningModeIsActive).Should().BeTrue();
+        closed.receiptResponse.ftState.IsFlag(StateFlags.LateSigningModeIsActive).Should().BeFalse();
+        sscd.Calls.Should().BeEmpty();
+        (await state.ReadAsync()).UsedFailedCount.Should().Be(2, "an unsigned receipt neither opens nor extends the range");
+    }
+
+    [Fact]
+    public async Task AFailedSignature_CarriesTheLateSigningFlag_WhileTheRangeIsOpen()
+    {
+        var state = new StoredChainState(new ftQueueFR { ftQueueFRId = Guid.NewGuid(), UsedFailedCount = 1, UsedFailedQueueItemId = Guid.NewGuid() });
+        var sscd = new FakeFRSSCD { FailWith = "unreachable" };
+        var pipeline = new FRSigningPipeline(sscd, state.Provider());
+
+        var response = await pipeline.SignAsync(CommandRequest(ReceiptCase.PointOfSaleReceipt0x0001));
+
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        response.receiptResponse.ftState.IsFlag(StateFlags.LateSigningModeIsActive).Should().BeTrue();
+    }
+
+    private static async Task<ProcessCommandResponse> UnsignedDocumentAsync(FRSigningPipeline pipeline, ReceiptCase receiptCase, ProcessCommandRequest request) => receiptCase switch
+    {
+        ReceiptCase.DeliveryNote0x0005 => await new ReceiptCommandProcessorFR(pipeline).DeliveryNote0x0005Async(request),
+        ReceiptCase.ProtocolUnspecified0x3000 => await ProtocolProcessor(pipeline).ProtocolUnspecified0x3000Async(request),
+        _ => await ProtocolProcessor(pipeline).InternalUsageMaterialConsumption0x3003Async(request),
+    };
+
     /// <summary>v1.2 prints "justificatif non valable pour encaissement" on every payment proof (v0 0x02).</summary>
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
@@ -225,10 +283,14 @@ public class ProcessorTests
         sscd.Calls.Should().ContainSingle();
     }
 
+    /// <summary>
+    /// As v1.2, a training 0x4001 (Queue-start receipt) or 0x4002 (Queue-stop receipt) is signed on chain X and
+    /// leaves the queue alone: no activation or deactivation, no lifecycle journal, no start or stop mention.
+    /// </summary>
     [Theory]
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
     [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
-    public async Task TrainingLifecycleReceipt_IsRefusedBeforeSigning_AndLeavesTheQueueAlone(ReceiptCase receiptCase)
+    public async Task TrainingLifecycleReceipt_IsSignedOnX_AndLeavesTheQueueAlone(ReceiptCase receiptCase)
     {
         var (pipeline, sscd) = CreatePipeline();
         var storage = new Mock<ILocalizedQueueStorageProvider>();
@@ -240,9 +302,10 @@ public class ProcessorTests
             ? await sut.InitialOperationReceipt0x4001Async(request)
             : await sut.OutOfOperationReceipt0x4002Async(request);
 
-        response.receiptResponse.ftState.IsState(State.Error).Should().BeTrue();
+        response.receiptResponse.ftState.IsState(State.Error).Should().BeFalse();
+        response.receiptResponse.ftReceiptIdentification.Should().Be("ft1#X1");
+        sscd.Calls.Should().ContainSingle();
         response.actionJournals.Should().BeEmpty("no activation or deactivation is journaled");
-        sscd.Calls.Should().BeEmpty("nothing is signed into the training chain");
         storage.Verify(x => x.ActivateQueueAsync(), Times.Never);
         storage.Verify(x => x.DeactivateQueueAsync(), Times.Never);
     }

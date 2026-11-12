@@ -132,7 +132,7 @@ public class LateSigningTests
     }
 
     [Fact]
-    public async Task ZeroReceipt_ClosesTheMode_WithTheMention_AndTheJournal_ButNoJetItem()
+    public async Task ZeroReceipt_ClosesTheMode_WithTheMention_TheJournal_AndJet120()
     {
         await SignAsync(ReceiptCase.PointOfSaleReceipt0x0001, lateSigned: true, reference: "R-1", cbReceiptMoment: _t0);
         await SignAsync(ReceiptCase.PointOfSaleReceipt0x0001, lateSigned: true, reference: "R-2", cbReceiptMoment: _t0.AddMinutes(5));
@@ -141,7 +141,10 @@ public class LateSigningTests
 
         InLateSigningMode(zero).Should().BeFalse("the zero receipt that ends the mode is answered outside it");
         Mention(zero)!.Data.Should().Be("du ft1#T1 au ft1#E1");
-        JetItems(zero).Should().BeEmpty("JET 120 is the POS's own event, sent without a prompt (2026-11-05, market-fr#200)");
+        var jet = JetItems(zero).Should().ContainSingle("the queue asks for JET 120 on the zero receipt that ends late signing (contract §6, ADR 0009)").Which;
+        JetData(jet).GetProperty("Code").GetString().Should().Be("120");
+        JetData(jet).GetProperty("Message").GetString().Should().Be("Fin de mode dégradé");
+        JetData(jet).GetProperty("Information").GetString().Should().Contain("count=2").And.Contain("first.cbReceiptReference=R-1").And.Contain("closing.cbReceiptReference=Z-1");
         zero.actionJournals.Should().ContainSingle(x => x.Type.EndsWith("-LateSigningEnded")).Which.DataJson.Should().Contain("\"Count\":2");
 
         var stored = await _state.ReadAsync();
@@ -181,7 +184,7 @@ public class LateSigningTests
         var zero = await SignAsync(ReceiptCase.ZeroReceipt0x2000, lateSigned: true, reference: "Z-1");
 
         InLateSigningMode(zero).Should().BeFalse();
-        JetItems(zero).Select(x => JetData(x).GetProperty("Code").GetString()).Should().Equal("70");
+        JetItems(zero).Select(x => JetData(x).GetProperty("Code").GetString()).Should().Equal("70", "120");
         Mention(zero)!.Data.Should().Be("du ft1#E1 au ft1#E1");
         (await _state.ReadAsync()).UsedFailedCount.Should().Be(0);
     }
@@ -257,7 +260,7 @@ public class LateSigningTests
 
         var zero = await test.SignAsync(ReceiptCase.ZeroReceipt0x2000);
 
-        JetItems(zero).Should().BeEmpty("JET 120 is the POS's own event");
+        JetItems(zero).Select(x => JetData(x).GetProperty("Code").GetString()).Should().Equal("120");
         zero.actionJournals.Should().ContainSingle(x => x.Type.EndsWith("-LateSigningEnded")).Which.DataJson.Should().Contain("\"Count\":3");
         Mention(zero)!.Data.Should().Be($"du {firstQueueItemId} au ft1#E1", "a first receipt that cannot be read back is named by its queue item id");
     }

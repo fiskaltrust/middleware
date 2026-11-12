@@ -1,4 +1,7 @@
 using System;
+using System.Globalization;
+using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
@@ -134,6 +137,7 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
             response.AddSignatureItem(SignatureTypeFR.CertificationBody, "", mention);
         }
         response.AddPeriodTotalsItems(request.PeriodTotals);
+        AddJetItems(receiptRequest, response);
 
         // The VAT summary is printed on the receipt (R13 v4.2 Récapitulatif), so it travels as
         // signature items (ADR 0011), one per rate. R13 forbids it (I) on a note, a pro forma and an
@@ -147,6 +151,42 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         }
 
         return (new ProcessResponse { ReceiptResponse = response }, signature);
+    }
+
+    /// <summary>JET 80, R19 "Démarrage du terminal, connexion, ouverture de session".</summary>
+    public const int TerminalStartJetCode = 80;
+
+    public const string TerminalStartJetLabel = "Démarrage du terminal, connexion, ouverture de session";
+
+    private static readonly JsonSerializerOptions _jetJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    /// <summary>
+    /// The JET event the Infocert SCU raises itself (contract §6): 80 on a non-training 0x4001
+    /// (Queue-start receipt), as a JET item on that response, which the POS sends as a 0x3001
+    /// (Protocol (technical event)), like the queue's JET 20 on an archive receipt (ADR 0009). The
+    /// Data has the queue's JET item format, <c>{"FR":{Code, Message, Information}}</c>. JET 40 and 127
+    /// are the POS's own events, sent before the last archive receipt; the SCU raises nothing on
+    /// 0x4002 (Queue-stop receipt).
+    /// </summary>
+    private static void AddJetItems(ReceiptRequest request, ReceiptResponse response)
+    {
+        if (request.ftReceiptCase.IsFlag(ReceiptCaseFlags.Training) || request.ftReceiptCase.Case() != ReceiptCase.InitialOperationReceipt0x4001)
+        {
+            return;
+        }
+
+        var information = string.Join("; ", new[]
+        {
+            ("cbReceiptReference", request.cbReceiptReference),
+            ("ftReceiptIdentification", response.ftReceiptIdentification),
+        }.Where(x => !string.IsNullOrEmpty(x.Item2)).Select(x => $"{x.Item1}={x.Item2}"));
+        response.ftSignatures.Add(new SignatureItem
+        {
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = ((SignatureType) (ulong) (long) SignatureTypeFR.JetEvent).WithFlag(SignatureTypeFlags.VisualizationOptional),
+            Caption = "JET",
+            Data = JsonSerializer.Serialize(new { FR = new { Code = TerminalStartJetCode.ToString(CultureInfo.InvariantCulture), Message = TerminalStartJetLabel, Information = string.IsNullOrEmpty(information) ? null : information } }, _jetJson),
+        });
     }
 
     /// <summary>A note (0x0006), a pro forma (0x0007) or an order (0x3004), training or not.</summary>
