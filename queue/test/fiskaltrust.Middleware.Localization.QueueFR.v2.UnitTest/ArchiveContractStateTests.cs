@@ -72,6 +72,55 @@ public class ArchiveContractStateTests
         (response.ftStateData is null || JsonSerializer.Serialize(response.ftStateData).Contains("DocumentType") == false).Should().BeTrue();
     }
 
+    /// <summary>
+    /// market-fr#221, decided 2026-11-12: TotalHT is the HT of the charge items as signed, down-payment deduction
+    /// included, so it equals the HT of the VAT summary.
+    /// </summary>
+    [Fact]
+    public void TheTotalHT_IncludesTheDownPaymentDeduction()
+    {
+        var deduction = new ChargeItem { Position = 2, Quantity = -1, Amount = -1200m, VATRate = 20, Description = "Acompte", ftChargeItemCase = Charge(ChargeItemCaseFlags.Downpayment), Currency = Currency.EUR };
+
+        var state = Apply(Request(0x1001, Sale(1, 3000m), deduction));
+
+        state.TotalHT.Should().Be(1500.00m, "2500.00 HT sold, 1000.00 HT already received");
+        state.TotalHT.Should().Be(state.VATSummary!.Values.Sum(x => x.AmountHT));
+    }
+
+    [Theory]
+    [InlineData(0x0001)]
+    [InlineData(0x0006)]
+    [InlineData(0x0002_0001)]
+    public void TheTotalHT_OfADocumentWithoutCharges_IsZero(long receiptCase)
+    {
+        var request = Request(receiptCase);
+        request.cbPayItems = [new PayItem { Amount = 0m, Description = "x", ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") }];
+
+        Apply(request).TotalHT.Should().Be(0m);
+    }
+
+    [Fact]
+    public void APaymentProof_HasNoTotalHT()
+        => Apply(Request(0x0002, new ChargeItem { Position = 1, Quantity = 1, Amount = 50m, VATRate = 0, Description = "x", ftChargeItemCase = (ChargeItemCase) 0x4652_2000_0000_00A8, Currency = Currency.EUR })).TotalHT.Should().BeNull();
+
+    [Theory]
+    [InlineData(0x0001)]
+    [InlineData(0x0002)]
+    [InlineData(0x0006)]
+    [InlineData(0x1001)]
+    [InlineData(0x0002_0001)]
+    public void AnOriginal_IsPrintedOnce(long receiptCase)
+        => Apply(Request(receiptCase, Sale(1, 10))).PrintCount.Should().Be(1);
+
+    [Fact]
+    public void ReceiptsOutsideTheSalesChains_StoreNoTotalHTAndNoPrintCount()
+    {
+        var response = new ReceiptResponse { ftState = State.Success.WithCountry("FR") };
+        FRArchiveStateData.Apply(Request(0x2011, Sale(1, 10)), response, FRReceiptChain.DailyClosing, null);
+        var json = JsonSerializer.Serialize(response.ftStateData, response.ftStateData!.GetType());
+        json.Should().NotContain("TotalHT").And.NotContain("PrintCount");
+    }
+
     [Fact]
     public void TheDiscountTotal_AndTheLineCount_CoverEveryDiscountAndSalesLine()
     {

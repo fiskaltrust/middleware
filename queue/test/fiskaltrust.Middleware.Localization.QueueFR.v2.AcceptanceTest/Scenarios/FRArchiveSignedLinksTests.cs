@@ -42,6 +42,7 @@ public class FRArchiveSignedLinksTests : IDisposable
         queueFR.Siret = "12345678901234";
         var configuration = new Dictionary<string, object>
         {
+            { "FRLocalDevelopment", true },
             { "cashboxid", _cashBoxId },
             { "init_ftCashBox", JsonSerializer.Serialize(new ftCashBox { ftCashBoxId = _cashBoxId, TimeStamp = DateTime.UtcNow.Ticks }) },
             { "init_ftQueue", JsonSerializer.Serialize(new List<ftQueue> { new() { ftQueueId = _queueId, ftCashBoxId = _cashBoxId, StartMoment = DateTime.UtcNow, CountryCode = "FR" } }) },

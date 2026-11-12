@@ -123,6 +123,19 @@ public class MiddlewareStateDataFR
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OperationType { get; set; }
 
+    /// <summary>
+    /// On chains T, I, B and X: the basis of the charge items as signed, the sum of their <c>AmountHT</c>, down-payment
+    /// deductions included (archive-v2 §1.2, #135, #147).
+    /// </summary>
+    [JsonPropertyName("TotalHT")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? TotalHT { get; set; }
+
+    /// <summary>On the sales chains: 1, the original (R13 <c>ENC-TIK-PRN-NBR</c>); a copy carries its reprint number in <see cref="CopyNumber"/>.</summary>
+    [JsonPropertyName("PrintCount")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? PrintCount { get; set; }
+
     /// <summary>On a receipt with charge items: the sum of its discount and extra items, line and receipt level (archive-v2 §1.2, D9).</summary>
     [JsonPropertyName("DiscountTotal")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

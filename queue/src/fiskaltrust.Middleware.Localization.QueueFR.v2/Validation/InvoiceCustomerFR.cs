@@ -111,6 +111,37 @@ internal static class FRCaseData
     /// <summary><c>ftReceiptCaseData.FR.CopyReason</c> (contract §1.2 <i>Copy chain</i>, D5), or null.</summary>
     public static string? CopyReason(object? caseData) => Key(caseData, "CopyReason");
 
+    /// <summary>
+    /// True when the case data carries nothing: null, a JSON null, a blank string or an empty JSON object. Anything
+    /// else, unreadable text included, carries something.
+    /// </summary>
+    public static bool IsEmpty(object? caseData)
+    {
+        JsonElement element;
+        try
+        {
+            element = caseData switch
+            {
+                null => default,
+                JsonElement json => json,
+                string text when string.IsNullOrWhiteSpace(text) => default,
+                string text => JsonDocument.Parse(text).RootElement.Clone(),
+                var other => JsonSerializer.SerializeToElement(other),
+            };
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.Undefined or JsonValueKind.Null => true,
+            JsonValueKind.Object => !element.EnumerateObject().Any(),
+            _ => false,
+        };
+    }
+
     /// <summary>A string key of the FR block of a case data, or null.</summary>
     public static string? Key(object? caseData, string key)
     {

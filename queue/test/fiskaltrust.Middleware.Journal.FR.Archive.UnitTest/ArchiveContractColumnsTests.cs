@@ -104,15 +104,32 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             row["LineCount"].Should().Be("3");
         }
 
+        /// <summary>market-fr#221, decided 2026-11-12: TotalHT and PrintCount as the queue stored them at signing.</summary>
         [Fact]
-        public async Task PendingSources_AreWrittenAsEmptyColumns()
+        public async Task TotalHTAndPrintCount_ReadWhatTheQueueStored()
         {
-            var row = (await Rows(Journal(0x001), Ticket(ArchiveV2FilesTests.Request())))[0];
+            var state = "{\"FR\":{\"DocumentType\":\"ticket\",\"TotalHT\":1500.00,\"PrintCount\":1}}";
 
-            row.Should().ContainKeys("TotalHT", "PrintCount", "GuestCount");
-            row["TotalHT"].Should().BeEmpty();
-            row["PrintCount"].Should().BeEmpty();
-            row["GuestCount"].Should().BeEmpty();
+            var row = (await Rows(Journal(0x001), Ticket(ArchiveV2FilesTests.Request(), state)))[0];
+
+            row["TotalHT"].Should().Be("1500.00");
+            row["PrintCount"].Should().Be("1");
+        }
+
+        private static string WithGuests(string caseData) => ArchiveV2FilesTests.Request(extra: ",\"ftReceiptCaseData\":" + caseData);
+
+        [Theory]
+        [InlineData("ticket", "{\"FR\":{\"GuestCount\":4}}", "4")]
+        [InlineData("note", "{\"FR\":{\"guestcount\":\"2\"}}", "2")]
+        [InlineData("note", "\"{\\\"FR\\\":{\\\"GuestCount\\\":6}}\"", "6")]
+        [InlineData("ticket", "{\"FR\":{\"ManagerId\":\"m\"}}", "")]
+        [InlineData("invoice", "{\"FR\":{\"GuestCount\":4}}", "")]
+        [InlineData("payment-proof", "{\"FR\":{\"GuestCount\":4}}", "")]
+        public async Task GuestCount_IsArchivedAsSent_OnTicketsAndNotesOnly(string documentType, string caseData, string expected)
+        {
+            var entry = Ticket(WithGuests(caseData), $"{{\"FR\":{{\"DocumentType\":\"{documentType}\"}}}}");
+
+            (await Rows(Journal(0x001), entry))[0]["GuestCount"].Should().Be(expected);
         }
 
         [Fact]

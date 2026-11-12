@@ -41,7 +41,24 @@ public static class FRArchiveStateData
             stateData.FR.DiscountTotal = request.cbChargeItems!.Where(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.ExtraOrDiscount)).Sum(x => x.Amount);
             stateData.FR.LineCount = lines.Count(x => x.CountsAsLine);
         }
+        StoreDocumentFigures(stateData.FR, chain, lines);
         response.ftStateData = stateData;
+    }
+
+    /// <summary>
+    /// Archive-v2 §1.2, decided 2026-11-12 (market-fr#221). <c>TotalHT</c> on chains T, I, B and X: the basis of the
+    /// charge items as signed, the sum of their <c>AmountHT</c>, down-payment deductions included (#135, #147), so it
+    /// equals the HT of the VAT summary. <c>PrintCount</c> on every sales document: 1, the original (R13
+    /// <c>ENC-TIK-PRN-NBR</c>); a copy carries its reprint number on chain D (<c>CopyNumber</c>).
+    /// </summary>
+    private static void StoreDocumentFigures(MiddlewareStateDataFR fr, FRReceiptChain chain, List<FRStateChargeItem>? lines)
+    {
+        if (!IsSalesChain(chain))
+        {
+            return;
+        }
+        fr.TotalHT = chain == FRReceiptChain.PaymentProof ? null : lines?.Sum(x => x.AmountHT) ?? 0m;
+        fr.PrintCount = 1;
     }
 
     private static bool IsSalesChain(FRReceiptChain chain)

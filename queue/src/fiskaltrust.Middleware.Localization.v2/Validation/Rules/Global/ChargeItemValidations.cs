@@ -66,7 +66,12 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
 
     public class NegativeAmounts : AbstractValidator<ReceiptRequest>
     {
-        public NegativeAmounts()
+        /// <param name="exempt">
+        /// Charge items a market lets the receipt send with a negative sign, on top of discounts, refunds
+        /// and voids. None by default; a market that passes one also lists this rule's error codes in its
+        /// <c>ExemptGlobalErrorCodes</c> and applies its own instance.
+        /// </param>
+        public NegativeAmounts(Func<ReceiptRequest, ChargeItem, bool>? exempt = null)
         {
             When(x => x.cbChargeItems != null
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten)
@@ -74,42 +79,28 @@ public class ChargeItemValidations : AbstractValidator<ReceiptRequest>
                     && !x.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
                     && !x.IsPartialRefundReceipt(), () =>
             {
-                When(x => !IsDrawerMoveReceipt(x), () => NonNegativeItems(_ => false));
-
-                // Money leaving the drawer is a negative not-taxable cash transfer, receivable or
-                // voucher. Only on these two cases: a negative voucher on a sale is a redemption,
-                // which this rule does not decide.
-                When(IsDrawerMoveReceipt, () => NonNegativeItems(IsDrawerMoveItem));
+                RuleForEach(x => x.cbChargeItems).SetValidator((request, _) => new NonNegativeItem(request, exempt));
             });
         }
 
-        /// <param name="exempt">Charge items the receipt may send with a negative sign.</param>
-        private void NonNegativeItems(Func<ChargeItem, bool> exempt)
+        /// <summary>One charge item, judged with the receipt it belongs to so the market exemption can see both.</summary>
+        private sealed class NonNegativeItem : AbstractValidator<ChargeItem>
         {
-            // A down payment is deducted on the final invoice as a negative line (flag 0x0008).
-            RuleForEach(x => x.cbChargeItems).ChildRules(chargeItem =>
+            public NonNegativeItem(ReceiptRequest request, Func<ReceiptRequest, ChargeItem, bool>? exempt)
             {
-                chargeItem.RuleFor(x => x.Quantity)
+                RuleFor(x => x.Quantity)
                     .GreaterThanOrEqualTo(0)
-                    .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment() && !exempt(x))
+                    .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !(exempt?.Invoke(request, x) ?? false))
                     .WithMessage(item => $"Negative quantity ({item.Quantity}) is not allowed for non-refund charge items")
                     .WithErrorCode("NegativeQuantityNotAllowed");
 
-                chargeItem.RuleFor(x => x.Amount)
+                RuleFor(x => x.Amount)
                     .GreaterThanOrEqualTo(0)
-                    .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !x.IsDownpayment() && !exempt(x))
+                    .When(x => !x.IsDiscount() && !x.IsRefund() && !x.IsVoid() && !(exempt?.Invoke(request, x) ?? false))
                     .WithMessage(item => $"Negative amount ({item.Amount}) is not allowed for non-refund charge items")
                     .WithErrorCode("NegativeAmountNotAllowed");
-            });
+            }
         }
-
-        private static bool IsDrawerMoveReceipt(ReceiptRequest request) => request.ftReceiptCase.Case() is ReceiptCase.PaymentTransfer0x0002 or ReceiptCase.Pay0x3005;
-
-        /// <summary>A not-taxable (V=8) cash transfer (S=A), receivable (S=9) or voucher (S=4).</summary>
-        private static bool IsDrawerMoveItem(ChargeItem item) => item.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable
-            && item.ftChargeItemCase.TypeOfService() is ChargeItemCaseTypeOfService.CashTransfer
-                or ChargeItemCaseTypeOfService.Receivable
-                or ChargeItemCaseTypeOfService.Voucher;
     }
 
     public class ZeroVatRateMustHaveNature : AbstractValidator<ReceiptRequest>
