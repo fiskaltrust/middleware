@@ -269,6 +269,36 @@ public class FRJournalExportTests : IDisposable
         zip.Entries.Should().NotContain(e => e.Name.StartsWith("scu_") || e.Name.StartsWith("subarchive_"), "archive-certificate.cer is the file's own SCU certificate (ADR 0019)");
     }
 
+    /// <summary>
+    /// Contract §12: the rows in their order, the SCU package before its keys, no runtime state; §1.1 and §12:
+    /// SoftwareVersion as major.minor.patch (#124).
+    /// </summary>
+    [Fact]
+    public async Task ArchiveExport_WritesTheComplianceParametersOfTheContract()
+    {
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        var sale = await SignAsync(CashSale());
+
+        var bytes = await ReadAsync(_journal, JournalTypeFR.ArchiveExport, from.Ticks);
+
+        using var zip = new ZipArchive(new MemoryStream(bytes));
+        var parameters = ReadCsv(zip, "compliance-parameters.csv");
+        var middleware = parameters.Single(r => r["Component"] == "Middleware");
+        middleware["Parameter"].Should().Be("SoftwareVersion");
+        middleware["Value"].Should().MatchRegex(@"^[0-9]+\.[0-9]+\.[0-9]+$");
+        parameters.Where(r => r["Component"] == "Queue").Select(r => r["Parameter"]).Should()
+            .Equal("ftQueueID", "CountryCode", "ftCashBoxIdentification", "Siret", "Sandbox", "ValidationLevel");
+        parameters.Single(r => r["Parameter"] == "Sandbox")["Value"].Should().Be("false");
+        var scu = parameters.Where(r => r["Component"] == "SCU").ToList();
+        scu[0]["Parameter"].Should().Be("Package");
+        scu[0]["Value"].Should().Be("InMemory");
+        scu.Select(r => r["Parameter"]).Should().Contain("CertificateSerialNumber")
+            .And.NotContain(new[] { "Description", "Version", "CertificationBody", "SignatureCreationDataAvailable" }, "the SCU rows are its configuration, not its runtime state");
+
+        var ticket = ReadCsv(zip, "journal-T-ticket.csv").Single(r => r["ftReceiptIdentification"] == sale.ftReceiptIdentification);
+        ticket["SoftwareVersion"].Should().Be(middleware["Value"]);
+    }
+
     [Fact]
     public async Task ArchiveExport_CarriesTheStoredRequestVerbatim()
     {

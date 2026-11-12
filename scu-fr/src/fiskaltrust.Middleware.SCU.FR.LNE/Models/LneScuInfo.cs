@@ -22,6 +22,17 @@ public class LneScuInfo
 
     public string SoftwareVersion { get; set; } = "";
 
+    /// <summary>The issuer claims as configured (market-fr#141), reported for the archive's compliance parameters (contract §12).</summary>
+    public string? Rcs { get; set; }
+
+    public string? Naf { get; set; }
+
+    public string? LegalForm { get; set; }
+
+    public string? VatOption { get; set; }
+
+    public string? ElectronicAddress { get; set; }
+
     /// <summary>True once the configured key material was loaded successfully.</summary>
     public bool SignatureCreationDataAvailable { get; set; }
 

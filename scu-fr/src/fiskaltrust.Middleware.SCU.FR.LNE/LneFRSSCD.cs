@@ -47,6 +47,11 @@ public class LneFRSSCD : IFRSSCD, IDisposable
         LneCertificateNumber = _configuration.LneCertificateNumber,
         SoftwareName = _configuration.SoftwareName,
         SoftwareVersion = _configuration.SoftwareVersion,
+        Rcs = _configuration.Rcs,
+        Naf = _configuration.Naf,
+        LegalForm = _configuration.LegalForm,
+        VatOption = _configuration.VatOption,
+        ElectronicAddress = _configuration.ElectronicAddress,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 

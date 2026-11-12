@@ -66,7 +66,7 @@ public class QueueFRBootstrapper : IV2QueueBootstrapper
         Func<Task<IArchiveSigner>> createArchiveSigner = archiveSigner is null
             ? async () => await ScuArchiveSigner.CreateAsync(frSSCD).ConfigureAwait(false)
             : () => Task.FromResult(archiveSigner);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorFR(id, storageProvider, createArchiveSigner, scuInfo: async () => await frSSCD.GetInfoAsync().ConfigureAwait(false), validationLevel: configuration.TryGetValue("ValidationLevel", out var configuredLevel) ? configuredLevel?.ToString() : null, chains: chains), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorFR(id, storageProvider, createArchiveSigner, scuInfo: async () => await frSSCD.GetInfoAsync().ConfigureAwait(false), validationLevel: configuration.TryGetValue("ValidationLevel", out var configuredLevel) ? configuredLevel?.ToString() : null, chains: chains, sandbox: middlewareConfiguration.IsSandbox), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(new FRSignProcessor(signProcessor, chains), journalProcessor, loggerFactory)
         {
             Id = id,

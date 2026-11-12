@@ -65,6 +65,7 @@ public class JournalProcessorFR : IJournalProcessor
     private readonly Func<Task<FRSSCDInfo?>>? _scuInfo;
     private readonly string? _validationLevel;
     private readonly FRChainStateProvider? _chains;
+    private readonly bool _sandbox;
     private readonly AsyncLazy<IMiddlewareActionJournalRepository> _actionJournalRepository;
 
     /// <param name="archiveSigner">
@@ -78,9 +79,10 @@ public class JournalProcessorFR : IJournalProcessor
     /// event (ADR 0009, #208). Null leaves the export unchecked.
     /// </param>
     public JournalProcessorFR(Guid queueId, IStorageProvider storageProvider, Func<Task<IArchiveSigner>>? archiveSigner = null, Func<Task<FRSSCDInfo?>>? scuInfo = null, string? validationLevel = null,
-        FRChainStateProvider? chains = null)
+        FRChainStateProvider? chains = null, bool sandbox = false)
     {
         _chains = chains;
+        _sandbox = sandbox;
         _actionJournalRepository = storageProvider.CreateMiddlewareActionJournalRepository();
         _scuInfo = scuInfo;
         _queueId = queueId;
@@ -264,20 +266,21 @@ public class JournalProcessorFR : IJournalProcessor
     {
         var parameters = new List<ComplianceParameter>
         {
-            new("Middleware", "SoftwareVersion", typeof(JournalProcessor).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
-                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion),
+            new("Middleware", "SoftwareVersion", ArchiveV2Files.SoftwareVersion(typeof(JournalProcessor).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion)),
             new("Queue", "ftQueueID", _queueId.ToString("D")),
             new("Queue", "CountryCode", "FR"),
             new("Queue", "ftCashBoxIdentification", queueFR?.CashBoxIdentification),
             new("Queue", "Siret", queueFR?.Siret),
+            new("Queue", "Sandbox", _sandbox ? "true" : "false"),
             new("Queue", "ValidationLevel", _validationLevel),
         };
 
         var info = _scuInfo is null ? null : await _scuInfo().ConfigureAwait(false);
         if (info is not null)
         {
-            parameters.Add(new("SCU", "Description", info.Description));
-            parameters.Add(new("SCU", "Version", info.Version));
+            // Contract §12: the package first, then the SCU's configuration keys; its runtime state is no parameter.
+            parameters.Add(new("SCU", "Package", FRSSCDInfoHelper.GetCertificationBody(info)));
             if (!string.IsNullOrEmpty(info.InfoData))
             {
                 try
@@ -285,7 +288,7 @@ public class JournalProcessorFR : IJournalProcessor
                     using var document = JsonDocument.Parse(info.InfoData!);
                     if (document.RootElement.ValueKind == JsonValueKind.Object)
                     {
-                        foreach (var property in document.RootElement.EnumerateObject().Where(p => !LooksSecret(p.Name)))
+                        foreach (var property in document.RootElement.EnumerateObject().Where(p => !LooksSecret(p.Name) && !NotAParameter.Contains(p.Name)))
                         {
                             if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
                             {
@@ -308,6 +311,9 @@ public class JournalProcessorFR : IJournalProcessor
         }
         return parameters;
     }
+
+    /// <summary>What an SCU reports that is not configuration: the package, given first, and whether its key loaded.</summary>
+    private static readonly HashSet<string> NotAParameter = new(StringComparer.OrdinalIgnoreCase) { "CertificationBody", "SignatureCreationDataAvailable" };
 
     private static bool LooksSecret(string name)
         => new[] { "key", "secret", "password", "token", "connection" }.Any(word => name.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0);

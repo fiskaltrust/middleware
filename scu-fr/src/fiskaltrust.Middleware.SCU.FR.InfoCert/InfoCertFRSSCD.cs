@@ -45,6 +45,12 @@ public class InfoCertFRSSCD : IFRSSCD, IDisposable
         AttestationNumber = _configuration.AttestationNumber,
         SoftwareName = _configuration.SoftwareName,
         SoftwareVersion = _configuration.SoftwareVersion,
+        SoftwareCategory = _configuration.SoftwareCategory,
+        Rcs = _configuration.Rcs,
+        Naf = _configuration.Naf,
+        LegalForm = _configuration.LegalForm,
+        VatOption = _configuration.VatOption,
+        ElectronicAddress = _configuration.ElectronicAddress,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 

@@ -225,6 +225,15 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
 
         private static CsvColumn<ArchiveEntry> Col(string name, Func<ArchiveEntry, object?> value, string description) => new CsvColumn<ArchiveEntry>(name, value, description);
 
+        private static readonly System.Text.RegularExpressions.Regex MajorMinorPatch = new System.Text.RegularExpressions.Regex("^[0-9]+\\.[0-9]+\\.[0-9]+", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// A version as <c>major.minor.patch</c> (archive-v2 §1.1, §12, #124): the leading three numbers of an informational
+        /// version such as <c>1.3.93-ci.46+commit</c>. A version that does not start with them is kept as recorded.
+        /// </summary>
+        public static string? SoftwareVersion(string? version)
+            => version is null ? null : MajorMinorPatch.Match(version) is { Success: true } match ? match.Value : version;
+
         private static CsvColumn<ChildRow<ArchiveEntry, T>> Child<T>(string name, Func<ChildRow<ArchiveEntry, T>, object?> value, string description)
             => new CsvColumn<ChildRow<ArchiveEntry, T>>(name, value, description);
 
@@ -257,7 +266,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.V2
             Col("VatOption", e => e.Issuer.VatOption, "Option de TVA de l'émetteur : debits (sur les débits) ou receipts (sur les encaissements), signée ; vide si elle n'est pas configurée."),
             Col("ElectronicAddress", e => e.Issuer.ElectronicAddress, "Adresse électronique de facturation de l'émetteur (SIREN ou SIREN_XXX, schéma 0225), signée ; vide si elle n'est pas configurée."),
             Col("CertificateSerialNumber", e => e.CertificateSerialNumber, "Numéro de série du certificat qui a signé le document."),
-            Col("SoftwareVersion", e => e.ProcessingVersion, "Version complète du logiciel fiskaltrust qui a traité le document (version, build et révision)."),
+            Col("SoftwareVersion", e => SoftwareVersion(e.ProcessingVersion), "Version du logiciel fiskaltrust qui a traité le document, sous la forme majeure.mineure.correctif."),
             Col("Training", e => e.Training, "true si le document est émis en mode école (formation) ; sans valeur fiscale."),
             Col("Signature", e => e.Signature, "Signature du document : jeton JWS (InfoCert) ou données signées suivies de la signature après le dernier point (LNE)."),
         };

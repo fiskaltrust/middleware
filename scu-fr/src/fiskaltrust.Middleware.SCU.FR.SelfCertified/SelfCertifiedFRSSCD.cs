@@ -45,6 +45,11 @@ public class SelfCertifiedFRSSCD : IFRSSCD, IDisposable
         CertificateSerialNumber = _configuration.CertificateSerialNumber,
         SoftwareName = _configuration.SoftwareName,
         SoftwareVersion = _configuration.SoftwareVersion,
+        Rcs = _configuration.Rcs,
+        Naf = _configuration.Naf,
+        LegalForm = _configuration.LegalForm,
+        VatOption = _configuration.VatOption,
+        ElectronicAddress = _configuration.ElectronicAddress,
         SignatureCreationDataAvailable = true,
     }.ToFRSSCDInfo());
 

@@ -231,7 +231,7 @@ namespace fiskaltrust.Middleware.Journal.FR.Archive.UnitTest
             var lines = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.ChargeItemsFileName), t1));
             var vat = Rows(await Write(ArchiveV2Files.Files().Single(f => f.FileName == ArchiveV2Files.VatSummaryFileName), t1));
 
-            journal[0]["SoftwareVersion"].Should().Be("1.3.80+abc");
+            journal[0]["SoftwareVersion"].Should().Be("1.3.80", "the contract writes major.minor.patch (#124)");
             journal[0]["Totalizer"].Should().Be("4.40");
             journal[0]["CIDiscounted2"].Should().Be("4.40");
             journal[0]["PICash"].Should().Be("4.40");
