@@ -102,12 +102,50 @@ public class MigrationScenarioTests : IDisposable
         row["StartOfChain"].Should().Be("true", "no v1 signature was readable, so T121 starts the v2 chain");
     }
 
+    /// <summary>
+    /// After a route-A migration, the first v2 entry of a chain is signed as a chain start (flag N, no
+    /// previous signature), the archive manifest anchors the chain as starting in the file, and the
+    /// verifier accepts the archive.
+    /// </summary>
+    [Fact]
+    public async Task AfterTheMigration_TheArchiveRecordsEachV2ChainAsStarting_AndVerifies()
+    {
+        var from = DateTime.UtcNow.AddMinutes(-1);
+        await SignAsync(Request(0x4021));
+        await SignAsync(Request(0x4022));
+        var sale = await SignAsync(Sale());
+
+        var signed = SCU.FR.Abstraction.Helpers.FRReceiptQrCode.SignedContentOf(sale.ftSignatures.Single(x => x.ftSignatureType.IsType(SignatureTypeFR.ReceiptSignature)).Data).Split('|');
+        signed[^2].Should().Be("N", "T121 carries over no previous signature");
+        signed[^1].Should().BeEmpty();
+
+        var bytes = await ReadAsync(JournalTypeFR.ArchiveExport, from.Ticks);
+
+        Journal.FR.Archive.Packaging.ArchiveVerifier.Verify(new MemoryStream(bytes)).Errors.Should().BeEmpty();
+        using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(bytes));
+        using var manifest = JsonDocument.Parse(ReadEntry(zip, Journal.FR.Archive.Packaging.ArchivePackager<object>.ManifestFileName));
+        var anchors = manifest.RootElement.GetProperty("chainAnchors").EnumerateArray().ToDictionary(a => a.GetProperty("chain").GetString()!);
+        anchors["T"].GetProperty("firstReceiptIdentification").GetString().Should().Be(sale.ftReceiptIdentification);
+        anchors["T"].GetProperty("previousSignature").GetString().Should().BeEmpty("the T chain starts in this file");
+        anchors["E"].GetProperty("previousSignature").GetString().Should().BeEmpty();
+    }
+
+    private static byte[] ReadEntry(System.IO.Compression.ZipArchive zip, string name)
+    {
+        using var buffer = new MemoryStream();
+        using (var stream = zip.GetEntry(name)!.Open())
+        {
+            stream.CopyTo(buffer);
+        }
+        return buffer.ToArray();
+    }
+
     private async Task<ReceiptResponse> SignAsync(ReceiptRequest request)
         => JsonSerializer.Deserialize<ReceiptResponse>(await _sign(JsonSerializer.Serialize(request)))!;
 
-    private async Task<byte[]> ReadAsync(JournalTypeFR type)
+    private async Task<byte[]> ReadAsync(JournalTypeFR type, long from = 0)
     {
-        var (_, reader) = await _journal(JsonSerializer.Serialize(new JournalRequest { ftJournalType = type.As<JournalType>() }));
+        var (_, reader) = await _journal(JsonSerializer.Serialize(new JournalRequest { ftJournalType = type.As<JournalType>(), From = from }));
         using var buffer = new MemoryStream();
         await reader.CopyToAsync(buffer);
         return buffer.ToArray();
