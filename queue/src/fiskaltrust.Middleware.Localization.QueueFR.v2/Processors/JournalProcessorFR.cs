@@ -129,7 +129,7 @@ public class JournalProcessorFR : IJournalProcessor
 
         var journal = ArchiveV2Files.JournalOf((int) ((long) journalTypeFR & 0xFFF))
             ?? throw new InvalidOperationException($"No archive journal for {journalTypeFR}.");
-        return (new ContentType("text/csv") { CharSet = Encoding.UTF8.WebName }, JournalAsync(journal, new ArchivePeriod(from, to), journalTypeFR == JournalTypeFR.Log));
+        return (new ContentType("text/csv") { CharSet = Encoding.UTF8.WebName }, JournalAsync(journal, journalTypeFR, new ArchivePeriod(from, to)));
     }
 
     /// <summary>[From, To] in ticks, inclusive, as a half-open UTC period.</summary>
@@ -173,7 +173,7 @@ public class JournalProcessorFR : IJournalProcessor
         });
     }
 
-    private async IAsyncEnumerable<byte[]> JournalAsync(ArchiveJournal journal, ArchivePeriod period, bool raisesExportEvent, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private async IAsyncEnumerable<byte[]> JournalAsync(ArchiveJournal journal, JournalTypeFR journalType, ArchivePeriod period, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using var read = await ReadEntriesAsync(period, rejectV1: false).ConfigureAwait(false);
         var entries = ArchiveSplitter.Select(read.Entries, e => e.ReceiptMoment, period);
@@ -185,9 +185,10 @@ public class JournalProcessorFR : IJournalProcessor
             using var writer = new StreamWriter(stream, new UTF8Encoding(false), ChunkSize, leaveOpen: true) { NewLine = options.NewLine };
             await file.WriteAsync(entries, writer, options, cancellationToken).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
-            if (raisesExportEvent)
+            // A journal with no entry in the period exported no data.
+            if (entries.Any(journal.Holds))
             {
-                await RaiseExportEventAsync(JournalTypeFR.Log, period, null).ConfigureAwait(false);
+                await RaiseExportEventAsync(journalType, period, journal.FileName).ConfigureAwait(false);
             }
         }).ConfigureAwait(false))
         {
@@ -248,9 +249,11 @@ public class JournalProcessorFR : IJournalProcessor
 
     /// <summary>
     /// A local export of fiscal data raises JET 110 (R19 "Exportation de données") as a pending event (ADR 0009, contract
-    /// §6), returned on the next non-training 0x2000 (Zero receipt): the archive export (0x4652_2000_0000_0010) and the
-    /// export of the L log journal (0x4652_2000_0000_0009), which is the JET itself. Raised once the file is written, so a
-    /// refused request (several files, a foreign certificate, an empty period) raises nothing. The portal archive's
+    /// §6, decision of 2026-11-12), returned on the next non-training 0x2000 (Zero receipt): the archive export
+    /// (0x4652_2000_0000_0010) and every journal export (0x4652_2000_0000_0001 to _000F), the L log journal, which is the
+    /// JET itself, included; R19 counts any production of a data file. Raised once the file is written, so a refused
+    /// request (several files, a foreign certificate, an empty period) and a journal export with no entry raise nothing.
+    /// The status information (0x4652_2000_0000_0000) holds no fiscal data and raises nothing. The portal archive's
     /// trace stays with the integrator (ADR 0019).
     /// </summary>
     private async Task RaiseExportEventAsync(JournalTypeFR journalType, ArchivePeriod period, string? fileName)

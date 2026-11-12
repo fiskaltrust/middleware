@@ -85,7 +85,7 @@ public class FRExportIntegrityTests : IDisposable
 
     /// <summary>
     /// JET 110 (R19 "Exportation de données") on a local export of fiscal data (contract §6): the archive export
-    /// (0x4652_2000_0000_0010) and the L log journal (0x4652_2000_0000_0009), returned on the next zero receipt.
+    /// (0x4652_2000_0000_0010) and every journal export (001-00F), returned on the next zero receipt.
     /// </summary>
     [Fact]
     public async Task AnArchiveExport_RaisesAPendingJet110_ReturnedOnTheNextZeroReceipt()
@@ -103,17 +103,31 @@ public class FRExportIntegrityTests : IDisposable
             .Should().Equal("110");
     }
 
+    [Theory]
+    [InlineData(JournalTypeFR.Ticket, "0x4652200000000001", "journal-T-")]
+    [InlineData(JournalTypeFR.Log, "0x4652200000000009", "journal-L-")]
+    public async Task AJournalExport_RaisesJet110(JournalTypeFR journalType, string code, string file)
+    {
+        var from = DateTime.UtcNow;
+        await SignAsync(CashSale());
+        var jetEvent = Request(ReceiptCase.ProtocolTechnicalEvent0x3001);
+        jetEvent.ftReceiptCaseData = "{\"FR\":{\"Code\":\"900\",\"Message\":\"editor event\"}}";
+        await SignAsync(jetEvent);
+
+        await JournalAsync(journalType, from);
+
+        (await PendingAsync()).Should().ContainSingle().Which.DataJson.Should().Contain($"ftJournalType={code}").And.Contain($"file={file}");
+    }
+
     [Fact]
-    public async Task ALogJournalExport_RaisesJet110_AnotherJournalExportDoesNot()
+    public async Task AJournalExportWithNoEntry_RaisesNothing()
     {
         var from = DateTime.UtcNow;
         await SignAsync(CashSale());
 
-        await JournalAsync(JournalTypeFR.Ticket, from);
-        (await PendingAsync()).Should().BeEmpty("only the archive and the JET (L) exports raise 110");
+        await JournalAsync(JournalTypeFR.Invoice, from);
 
-        await JournalAsync(JournalTypeFR.Log, from);
-        (await PendingAsync()).Should().ContainSingle().Which.DataJson.Should().Contain("ftJournalType=0x4652200000000009");
+        (await PendingAsync()).Should().BeEmpty("no invoice lies in the period, so no data was exported");
     }
 
     [Fact]
