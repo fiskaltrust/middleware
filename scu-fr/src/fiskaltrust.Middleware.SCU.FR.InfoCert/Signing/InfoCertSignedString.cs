@@ -148,14 +148,17 @@ internal static class InfoCertSignedString
     private static string Duplicate(ReceiptRequest request, ReceiptResponse response, string? previousSignature)
     {
         var copyType = FRStateData.Text(response, FRStateData.CopyTypeProperty);
-        var (type, withReason) = copyType switch
-        {
-            "invoice" => ("FACTURE", false),
-            "pro-forma" => ("PROFORMA", false),
-            "payment-proof" => ("JUSTIFICATIF", true),
-            "note" or "order" or "delivery-note" or "receipt-without-obligation" => ("NOTE", true),
-            _ => ("TICKET", false),
-        };
+        var (type, withReason) = FRStateData.Number(response, FRStateData.CopiedReceiptCaseProperty) is { } copiedCase
+            ? CopiedType(copiedCase, copyType)
+            : copyType switch
+            {
+                "invoice" => ("FACTURE", false),
+                DownPaymentInvoice => ("ACOMPTE", false),
+                "pro-forma" => ("PROFORMA", false),
+                "payment-proof" => ("JUSTIFICATIF", true),
+                "note" or "order" or "delivery-note" or "receipt-without-obligation" => ("NOTE", true),
+                _ => ("TICKET", false),
+            };
         var fields = new List<string>
         {
             Text(response.ftReceiptIdentification),
@@ -272,6 +275,38 @@ internal static class InfoCertSignedString
         }
         var items = request.cbChargeItems ?? new List<ChargeItem>();
         return items.Count > 0 && items.All(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Downpayment)) ? "ACOMPTE" : "FACTURE";
+    }
+
+    /// <summary>
+    /// The copy type a queue may hand over (<c>ftStateData.FR.CopyType</c>) for an invoice whose charge items are all down
+    /// payments: no receipt-case flag tells an ACOMPTE (R12 §7.2) from a FACTURE.
+    /// </summary>
+    public const string DownPaymentInvoice = "down-payment-invoice";
+
+    /// <summary>
+    /// <c>TAG-DUP-TYP</c> and whether the reason is signed, from the copied receipt's case and flags
+    /// (<c>ftStateData.FR.CopiedReceiptCase</c>): 0x0007 (Proforma invoice) is <c>PROFORMA</c>; an invoice 0x1000–0x1003 is
+    /// <c>AVOIR</c> when refunded or voided, <c>ACOMPTE</c> when the copy type says <see cref="DownPaymentInvoice"/>, else
+    /// <c>FACTURE</c>. R12 duplicates sign no reason; R13's note/payment-proof duplicate does.
+    /// </summary>
+    private static (string Type, bool WithReason) CopiedType(long copiedCase, string? copyType)
+    {
+        var receiptCase = (ReceiptCase) copiedCase;
+        switch (copiedCase & 0xFFFF)
+        {
+            case 0x0007:
+                return ("PROFORMA", false);
+            case >= 0x1000 and <= 0x1003:
+                return receiptCase.IsFlag(ReceiptCaseFlags.Void) || receiptCase.IsFlag(ReceiptCaseFlags.Refund) ? ("AVOIR", false)
+                    : copyType == DownPaymentInvoice ? ("ACOMPTE", false)
+                    : ("FACTURE", false);
+            case 0x0002 or 0x3005:
+                return ("JUSTIFICATIF", true);
+            case 0x0003 or 0x0005 or 0x0006 or 0x3004:
+                return ("NOTE", true);
+            default:
+                return ("TICKET", false);
+        }
     }
 
     private static string Training(ReceiptRequest request, string value)

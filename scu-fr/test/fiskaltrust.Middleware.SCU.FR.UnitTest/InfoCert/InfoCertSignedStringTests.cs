@@ -239,6 +239,41 @@ public class InfoCertSignedStringTests
         Build(request).Should().Be($"D2,{type},1,Marie,20260301100000,B4,perte; client,N,");
     }
 
+    /// <summary>R12 §7.2: TAG-DUP-TYP from the copied receipt's case and flags (FR.CopiedReceiptCase), as a number or hex.</summary>
+    [Theory]
+    [InlineData(0x4652_2000_0000_1001L, null, "FACTURE")]
+    [InlineData(0x4652_2000_0100_1001L, null, "AVOIR")]
+    [InlineData(0x4652_2000_0004_1002L, null, "AVOIR")]
+    [InlineData(0x4652_2000_0000_1001L, "down-payment-invoice", "ACOMPTE")]
+    [InlineData(0x4652_2000_0000_0007L, null, "PROFORMA")]
+    public void CopyOfAnR12Document_TakesItsTypeFromTheCopiedCase(long copiedCase, string? copyType, string type)
+    {
+        foreach (var value in new object[] { copiedCase, $"0x{copiedCase:X16}" })
+        {
+            var request = WithCase(0x3010, "D2");
+            var state = new Dictionary<string, object> { ["CopyNumber"] = 1, ["CopiedReceiptCase"] = value, ["CopiedReceiptIdentification"] = "I4" };
+            if (copyType is not null)
+            {
+                state["CopyType"] = copyType;
+            }
+            StateData(request, state);
+
+            Build(request).Should().Be($"D2,{type},1,,20260301100000,I4,N,");
+        }
+    }
+
+    [Theory]
+    [InlineData(0x4652_2000_0000_0001L, "TICKET")]
+    [InlineData(0x4652_2000_0000_3005L, "JUSTIFICATIF")]
+    [InlineData(0x4652_2000_0000_3004L, "NOTE")]
+    public void CopyOfAnR13Document_TakesItsStringFromTheCopiedCase(long copiedCase, string type)
+    {
+        var request = WithCase(0x3010, "D2");
+        StateData(request, new() { ["CopyNumber"] = 1, ["CopiedReceiptCase"] = copiedCase, ["CopyType"] = "invoice" });
+
+        Build(request).Split(',')[1].Should().Be(type, "the copied case wins over the copy type");
+    }
+
     [Theory]
     [InlineData("invoice", "FACTURE")]
     [InlineData("pro-forma", "PROFORMA")]
