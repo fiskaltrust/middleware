@@ -26,8 +26,12 @@ public sealed class FROpenArchiveFile
         _queueFR = queueFR;
     }
 
-    /// <summary>The limit of a file whose first record is <paramref name="firstMoment"/>: an entry stays in it while its moment is earlier (v1.2 <c>workerFR.cs:756</c>).</summary>
-    public static DateTime LimitOf(DateTime firstMoment) => firstMoment.ToUniversalTime().AddYears(1).Date;
+    /// <summary>
+    /// The limit of a file whose first record is <paramref name="firstMoment"/>: an entry stays in it while its moment is
+    /// earlier (v1.2 <c>workerFR.cs:756</c>). The archive export cuts with the same expression, so the queue and the
+    /// export cannot disagree on where a file ends.
+    /// </summary>
+    public static DateTime LimitOf(DateTime firstMoment) => fiskaltrust.Middleware.Journal.FR.Archive.Split.ArchiveSplitter.YearLimit(firstMoment);
 
     /// <summary>
     /// Adds a signed entry and returns the files the one-year limit cut before it, oldest first. A file
