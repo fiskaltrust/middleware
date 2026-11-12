@@ -97,7 +97,12 @@ public class ElectronicAddressTests
     {
         var (privateKey, key) = FRTestData.CreateKey();
         using var _ = key;
-        var (provider, sink) = Start(new fiskaltrust.Middleware.SCU.FR.InfoCert.ScuBootstrapper { Configuration = Configuration(privateKey, electronicAddress) });
+        // The Infocert SCU requires the NF525 mention keys outside a sandbox.
+        var configuration = Configuration(privateKey, electronicAddress);
+        configuration["SoftwareCategory"] = "B";
+        configuration["AttestationNumber"] = "0546";
+        configuration["SoftwareVersion"] = "06.07";
+        var (provider, sink) = Start(new fiskaltrust.Middleware.SCU.FR.InfoCert.ScuBootstrapper { Configuration = configuration });
         using var __ = provider;
 
         var scu = provider.GetRequiredService<IFRSSCD>();
