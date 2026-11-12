@@ -21,7 +21,9 @@ public static class FRTotalsCalculator
     /// <para>
     /// A multipurpose voucher sold (a not-taxable, V=8, voucher, S=4, charge item) is kept out of the turnover too: it
     /// is a treasury operation, and the sale it pays for counts when the voucher is redeemed (NF525 V2.3 §6.18.1.3,
-    /// market-fr#221). A single-purpose voucher is taxed when sold and stays in.
+    /// market-fr#221). A single-purpose voucher is taxed when sold and stays in. The pay items stay as they are: they record the
+    /// money received, so on a multipurpose-voucher sale the charge and pay totals no longer balance, by design. The payment-
+    /// proof totals (1.2 <c>P</c> columns) leave the voucher out too.
     /// </para>
     /// </remarks>
     public static FRTotals From(ReceiptRequest request)
