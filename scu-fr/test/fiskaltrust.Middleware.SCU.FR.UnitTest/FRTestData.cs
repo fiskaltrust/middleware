@@ -1,0 +1,98 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.fr;
+using fiskaltrust.Middleware.SCU.FR.Abstraction.Cases;
+using FluentAssertions;
+
+namespace fiskaltrust.Middleware.SCU.FR.UnitTest;
+
+/// <summary>Key material and receipts the FR SCU tests share.</summary>
+public static class FRTestData
+{
+    public const string Siret = "12345678901234";
+
+    /// <summary>A freshly generated secp256r1 key, exported the way the SCUs expect it.</summary>
+    public static (string privateKeyBase64, ECDsa key) CreateKey()
+    {
+        var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        return (Convert.ToBase64String(key.ExportPkcs8PrivateKey()), key);
+    }
+
+    /// <summary>Decodes RFC 4648 §5 Base64Url without padding, the encoding chained signatures use.</summary>
+    public static byte[] FromBase64Url(string value)
+    {
+        var padded = value.Replace('-', '+').Replace('_', '/');
+        return Convert.FromBase64String(padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '='));
+    }
+
+    /// <summary>True when <paramref name="value"/> only uses the Base64Url alphabet, unpadded.</summary>
+    public static bool IsBase64Url(string value)
+        => value.Length > 0 && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_');
+
+    public static ProcessRequest Request(long chainCounter = 1) => new()
+    {
+        ReceiptRequest = CashSaleRequest(),
+        ReceiptResponse = Response(),
+        ChainCounter = chainCounter,
+    };
+
+    /// <summary>
+    /// A copy as the queue hands it over: the reprint number in the FR block of ftStateData, as JSON
+    /// (an SCU behind REST) or as the queue's own object (an SCU in the queue's process).
+    /// </summary>
+    public static ProcessRequest Copy(int copyNumber, bool asJson = true)
+    {
+        var request = Request();
+        object stateData = new Dictionary<string, object> { ["FR"] = new Dictionary<string, object> { ["CopyNumber"] = copyNumber } };
+        request.ReceiptResponse.ftStateData = asJson ? System.Text.Json.JsonSerializer.SerializeToElement(stateData) : stateData;
+        return request;
+    }
+
+    public static ReceiptRequest CashSaleRequest() => new()
+    {
+        ftCashBoxID = Guid.NewGuid(),
+        cbTerminalID = "1",
+        cbReceiptReference = "receipt-1",
+        cbReceiptMoment = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc),
+        Currency = Currency.EUR,
+        ftReceiptCase = ReceiptCase.PointOfSaleReceipt0x0001.WithCountry("FR"),
+        cbChargeItems =
+        [
+            new ChargeItem { Amount = 12.00m, VATAmount = 2.00m, VATRate = 20m, Quantity = 1, Description = "Cafe", ftChargeItemCase = ChargeItemCase.NormalVatRate.WithCountry("FR") },
+            new ChargeItem { Amount = 5.50m, VATAmount = 0.29m, VATRate = 5.5m, Quantity = 1, Description = "Pain", ftChargeItemCase = ChargeItemCase.DiscountedVatRate1.WithCountry("FR") },
+        ],
+        cbPayItems =
+        [
+            new PayItem { Amount = 17.50m, Description = "Especes", ftPayItemCase = PayItemCase.CashPayment.WithCountry("FR") },
+        ],
+    };
+
+    public static ReceiptResponse Response() => new()
+    {
+        ftCashBoxIdentification = "cashbox-fr",
+        ftQueueID = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+        ftQueueItemID = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+        ftQueueRow = 1,
+        ftReceiptIdentification = "T1",
+        ftReceiptMoment = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc),
+        ftState = (State) 0x4652_2000_0000_0000,
+        ftSignatures = new List<SignatureItem>(),
+    };
+
+    /// <summary>
+    /// Asserts the SCU reported a failed signature the only way it may: in its response, with the
+    /// signing-unavailable ftState, the reason in a FAILURE item and no chain signature.
+    /// </summary>
+    public static void ShouldBeASigningFailure(ProcessResponse response, string signature)
+    {
+        response.ReceiptResponse.ftState.Should().Be((State) StateFR.SigningUnavailableError);
+        response.ReceiptResponse.ftSignatures.Should().ContainSingle()
+            .Which.Caption.Should().Be("FAILURE");
+        response.ReceiptResponse.ftSignatures.Single().Data.Should().Contain("could not be created");
+        signature.Should().BeEmpty("an unsigned receipt gives the chain nothing to continue from");
+    }
+}

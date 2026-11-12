@@ -35,6 +35,12 @@
       "environmentVariables": {
         "MW_MARKET": "ES"
       }
+    },
+    "FR (InMemory SCU, scripted run)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MW_MARKET": "FR"
+      }
     }
   }
 }

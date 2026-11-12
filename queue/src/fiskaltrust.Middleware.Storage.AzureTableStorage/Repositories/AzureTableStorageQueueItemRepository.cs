@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Data.Tables;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -198,6 +199,20 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                              orderby queueItem.TimeStamp descending
                              select queueItem).ToAsyncEnumerable().Take(1);
             return await queueItemsForReceiptReference.FirstOrDefaultAsync();
+        }
+
+        /// <summary>A point read: queue items are partitioned by their queue row, keyed by their ID.</summary>
+        public async Task<ftQueueItem> GetAsync(Guid ftQueueItemId, long ftQueueRow)
+        {
+            try
+            {
+                var entity = await _tableClient.GetEntityAsync<TableEntity>(Mapper.GetHashString(ftQueueRow), ftQueueItemId.ToString()).ConfigureAwait(false);
+                return MapToStorageEntity(entity.Value);
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                return null;
+            }
         }
 
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow)

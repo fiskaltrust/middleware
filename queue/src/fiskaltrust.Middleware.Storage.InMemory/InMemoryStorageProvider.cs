@@ -2,9 +2,11 @@
 using System.Text;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.InMemory;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ES;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.storage.V0;
@@ -35,6 +37,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
     private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;
     private readonly IMiddlewareJournalESRepository _journalESRepository;
+    private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
     private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
     private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
     private readonly IMasterDataRepository<AgencyMasterData> _agencyMasterDataRepository;
@@ -51,6 +54,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
         _receiptJournalRepository = new InMemoryReceiptJournalRepository();
         _accountMasterDataRepository = new InMemoryAccountMasterDataRepository();
         _journalESRepository = new InMemoryJournalESRepository();
+        _journalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
         _outletMasterDataRepository = new InMemoryOutletMasterDataRepository();
         _posSystemMasterDataRepository = new InMemoryPosSystemMasterDataRepository();
         _agencyMasterDataRepository = new InMemoryAgencyMasterDataRepository();
@@ -66,6 +70,7 @@ public class InMemoryStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => CreateAsyncLazy(_receiptJournalRepository);
     public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => CreateAsyncLazy(_accountMasterDataRepository);
     public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => CreateAsyncLazy(_journalESRepository);
+    public AsyncLazy<IJournalFRCopyPayloadRepository> CreateJournalFRCopyPayloadRepository() => CreateAsyncLazy(_journalFRCopyPayloadRepository);
     public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => CreateAsyncLazy(_outletMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => CreateAsyncLazy(_posSystemMasterDataRepository);
     public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => CreateAsyncLazy(_agencyMasterDataRepository);

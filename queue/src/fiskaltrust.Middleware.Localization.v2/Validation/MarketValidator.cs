@@ -32,13 +32,19 @@ public class MarketValidator : IMarketValidator
 
     protected virtual IEnumerable<IValidator<ReceiptRequest>> GetMarketValidators(ReceiptResponse? response = null, object? numberSeries = null) => [];
 
+    /// <summary>
+    /// The error codes of global rules a market does not apply. Defaults to none; a market lists a
+    /// code only where its own rules deliberately differ.
+    /// </summary>
+    protected virtual IReadOnlyCollection<string> ExemptGlobalErrorCodes => [];
+
     public async Task<ValidationResult> ValidateAsync(ReceiptRequest request, ftQueue? queue = null, ReceiptResponse? response = null, object? numberSeries = null)
     {
         var result = new ValidationResult();
 
         foreach (var validator in GetGlobalValidators(queue))
         {
-            result.Errors.AddRange((await validator.ValidateAsync(request)).Errors);
+            result.Errors.AddRange((await validator.ValidateAsync(request)).Errors.Where(error => !ExemptGlobalErrorCodes.Contains(error.ErrorCode)));
         }
 
         foreach (var validator in GetMarketValidators(response, numberSeries))

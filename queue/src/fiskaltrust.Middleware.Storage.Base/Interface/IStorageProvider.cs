@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Base.Helpers;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -14,6 +15,7 @@ public interface IStorageProvider
     AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository();
     AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository();
     AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository();
+    AsyncLazy<IJournalFRCopyPayloadRepository> CreateJournalFRCopyPayloadRepository();
     AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository();
     AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository();
     AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository();

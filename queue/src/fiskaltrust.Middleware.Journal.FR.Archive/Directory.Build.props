@@ -1,0 +1,9 @@
+<Project>
+    <!--
+      Skips queue/src/Directory.Build.props on purpose. That file adds fiskaltrust.interface and a
+      project reference to fiskaltrust.storage to every queue project. This package is also consumed
+      by service-datapipes (market-fr#218, ADR 0008), so it must not drag storage or interface
+      versions into its consumers. It imports queue/Directory.Build.props directly instead.
+    -->
+    <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props" />
+</Project>
