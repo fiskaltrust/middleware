@@ -91,7 +91,7 @@ public static class PortugalValidationRules
         new("EEEE_VatAmountMismatch", "VATAmount must match the calculated VAT amount within tolerance.", PortugalValidationFields.ChargeItemsVatAmount);
 
     public static readonly ValidationRuleDefinition DiscountVatRateOrCaseMismatch =
-        new("EEEE_DiscountVatRateOrCaseMismatch", "Discounts/extras must use the same VAT rate and VAT case as their related line item.", PortugalValidationFields.ChargeItemsCase);
+        new("EEEE_DiscountVatRateOrCaseMismatch", "Discounts/extras must use the same VAT rate and VAT case as their related line item, and must not differ from it in being not subject to VAT.", PortugalValidationFields.ChargeItemsCase);
 
     public static readonly ValidationRuleDefinition PositiveDiscountNotAllowed =
         new("EEEE_PositiveDiscountNotAllowed", "Discounts/extras must not be positive.", PortugalValidationFields.ChargeItemsAmount);
@@ -103,7 +103,7 @@ public static class PortugalValidationRules
         new("EEEE_NegativeAmountNotAllowed", "Negative amounts are not allowed for non-refund items.", PortugalValidationFields.ChargeItemsAmount);
 
     public static readonly ValidationRuleDefinition ZeroVatRateMissingNature =
-        new("EEEE_ZeroVatRateMissingNature", "VAT rate 0 requires a valid nature of VAT (exemption).", PortugalValidationFields.ChargeItemsCase);
+        new("EEEE_ZeroVatRateMissingNature", "VAT rate 0 requires a valid nature of VAT (exemption), unless the VAT category is NotTaxable (not subject to VAT).", PortugalValidationFields.ChargeItemsCase);
 
     public static readonly ValidationRuleDefinition UnknownTaxExemptionCode =
         new("EEEE_UnknownTaxExemptionCode", "Nature of VAT exemption code must be valid.", PortugalValidationFields.ChargeItemsCase);

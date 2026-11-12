@@ -258,6 +258,95 @@ public class TaxExemptionResolverTests
         PTMappings.GetIVATAxCode(CreateChargeItem(NormalVat, vatRate: 23m)).Should().Be("NOR");
     }
 
+    // NotTaxable (V=8), Delivery (S=1), NN 99 (M99 as exemption code)
+    private const long NotTaxableM99 = 0x5054_2000_0000_9918;
+
+    [Fact]
+    public void NotTaxableWithoutExemptionCode_IsMappedToNotSubject()
+    {
+        var chargeItem = CreateChargeItem(NotTaxableNoNature);
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeTrue();
+        PTMappings.GetTaxType(chargeItem).Should().Be("NS");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("NS");
+        PTMappings.GetTaxExemptionCode(chargeItem).Should().Be("M99");
+        PTMappings.GetTaxExemptionReason(chargeItem).Should().Be("Não sujeito ou não tributado");
+    }
+
+    [Theory]
+    [InlineData(NotTaxableM99, "M99")]
+    [InlineData(NotTaxableM06, "M06")]
+    public void NotTaxableWithNatureOfVat_IsMappedToExempt(long chargeItemCase, string expectedCode)
+    {
+        var chargeItem = CreateChargeItem(chargeItemCase);
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
+        PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("ISE");
+        PTMappings.GetTaxExemptionCode(chargeItem).Should().Be(expectedCode);
+    }
+
+    [Fact]
+    public void NotTaxableWithOverride_IsMappedToExempt()
+    {
+        var chargeItem = CreateChargeItem(NotTaxableNoNature, caseData: OverrideAsJsonElement("M99"));
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
+        PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be("ISE");
+    }
+
+    [Fact]
+    public void Validation_NotTaxableWithoutNatureOfVat_Passes()
+    {
+        var request = CreateRequest(CreateChargeItem(NotTaxableNoNature));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validation_ZeroVatRateWithoutNatureOfVat_StillFails()
+    {
+        var request = CreateRequest(CreateChargeItem(ZeroVatRateNoNature));
+
+        ChargeItemValidations.Validate_ChargeItems_VATRate_ZeroVatRateNature(request)
+            .SelectMany(x => x.Errors).Should().ContainSingle(x => x.Code == PortugalValidationRules.ZeroVatRateMissingNature.Code);
+    }
+
+    [Theory]
+    [InlineData(NotTaxableNoNature, NotTaxableM06)]
+    [InlineData(NotTaxableM06, NotTaxableNoNature)]
+    public void Validation_DiscountWithDifferentNotSubjectClassification_Fails(long mainCase, long discountCase)
+    {
+        var request = CreateRequest(
+            CreateChargeItem(mainCase),
+            new ChargeItem
+            {
+                Position = 2,
+                Description = "Discount",
+                Quantity = 1,
+                Amount = -10,
+                VATRate = 0,
+                ftChargeItemCase = ((ChargeItemCase) discountCase).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount)
+            });
+
+        ChargeItemValidations.Validate_ChargeItems_DiscountVatRateAndCaseAlignment(request)
+            .Should().ContainSingle()
+            .Which.Errors.Should().ContainSingle(x => x.Code == PortugalValidationRules.DiscountVatRateOrCaseMismatch.Code);
+    }
+
+    [Theory]
+    [InlineData(NotTaxableM06, "ISE")]
+    [InlineData(NormalVat, "NOR")]
+    public void OtherCodes_StayVat(long chargeItemCase, string expectedTaxCode)
+    {
+        var chargeItem = CreateChargeItem(chargeItemCase, vatRate: chargeItemCase == NormalVat ? 23m : 0m);
+
+        TaxExemptionResolver.IsNotSubject(chargeItem).Should().BeFalse();
+        PTMappings.GetTaxType(chargeItem).Should().Be("IVA");
+        PTMappings.GetIVATAxCode(chargeItem).Should().Be(expectedTaxCode);
+    }
+
     [Fact]
     public void Validation_ZeroVatRateCategoryWithNatureOfVat_IsSupported()
     {
@@ -300,10 +389,10 @@ public class TaxExemptionResolverTests
         error.Field.Should().Be(PortugalValidationFields.ChargeItemsCase);
     }
 
-    private static ReceiptRequest CreateRequest(ChargeItem chargeItem) => new()
+    private static ReceiptRequest CreateRequest(params ChargeItem[] chargeItems) => new()
     {
         ftReceiptCase = ReceiptCase.InvoiceB2B0x1002.WithCountry("PT"),
-        cbChargeItems = [chargeItem],
+        cbChargeItems = [.. chargeItems],
         cbPayItems = []
     };
 }

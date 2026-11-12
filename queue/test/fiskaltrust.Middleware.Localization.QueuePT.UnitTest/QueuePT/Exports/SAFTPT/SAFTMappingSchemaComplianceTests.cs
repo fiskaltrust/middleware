@@ -63,6 +63,39 @@ public class SAFTMappingSchemaComplianceTests
     }
 
     [Fact]
+    public void NotSubjectChargeItem_ShouldBeExportedWithTaxTypeNS()
+    {
+        var exporter = CreateExporter();
+        var receipt = CreateInvoice("ftD#FT ft20250a62/1", new DateTime(2026, 9, 10, 10, 0, 0, DateTimeKind.Utc));
+        receipt.Item1.cbChargeItems.Add(new ChargeItem
+        {
+            Quantity = 1,
+            Description = "Not subject item",
+            Amount = 50m,
+            VATRate = 0m,
+            ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0018 // NotTaxable without exemption code
+        });
+        receipt.Item1.cbPayItems[0].Amount = 150m;
+
+        var auditFile = exporter.CreateAuditFile(_accountMasterData, [receipt]);
+
+        var invoice = auditFile.SourceDocuments.SalesInvoices.Invoice.Single();
+        var notSubjectLine = invoice.Line.Single(x => x.ProductDescription == "Not subject item");
+        notSubjectLine.Tax.TaxType.Should().Be("NS");
+        notSubjectLine.Tax.TaxCode.Should().Be("NS");
+        notSubjectLine.Tax.TaxPercentage.Should().Be(0m);
+        notSubjectLine.TaxExemptionCode.Should().Be("M99");
+        notSubjectLine.TaxExemptionReason.Should().Be("Não sujeito ou não tributado");
+        invoice.Line.Single(x => x.ProductDescription == "Line item").Tax.TaxType.Should().Be("IVA");
+
+        auditFile.MasterFiles.TaxTable!.TaxTableEntry.Should().HaveCount(2)
+            .And.ContainSingle(x => x.TaxType == "NS" && x.TaxCode == "NS" && x.TaxCountryRegion == "PT" && x.TaxPercentage == 0m);
+
+        invoice.DocumentTotals.GrossTotal.Should().Be(150m);
+        invoice.DocumentTotals.TaxPayable.Should().Be(18.70m);
+    }
+
+    [Fact]
     public void Header_ShouldCoverMonthsOfExportedDocuments()
     {
         var exporter = CreateExporter();
